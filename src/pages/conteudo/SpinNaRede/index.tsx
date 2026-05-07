@@ -21,18 +21,82 @@ function stripHtml(s: string): string {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Limite de caracteres no cartão (meio termo entre resumo curto e texto completo). */
+const RESUMO_MAX_CARACTERES = 520;
+
+function resumoParaCartao(limpo: string): string {
+  if (limpo.length <= RESUMO_MAX_CARACTERES) return limpo;
+  return `${limpo.slice(0, RESUMO_MAX_CARACTERES).trim()}…`;
+}
+
 function fmtData(iso: string | null): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("pt-BR", {
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
     });
   } catch {
     return "—";
   }
 }
+
+const IMG_URL_ATTR_RES = [
+  /\bdata-lazy-src=["']([^"']+)["']/i,
+  /\bdata-src=["']([^"']+)["']/i,
+  /\bdata-original=["']([^"']+)["']/i,
+  /\bsrc=["']([^"']+)["']/i,
+] as const;
+
+/** Primeira URL útil em HTML de resumo (lazy-load costuma não usar `src` real). */
+function primeiraUrlImgNoHtml(html: string): string | null {
+  for (const re of IMG_URL_ATTR_RES) {
+    const m = html.match(re);
+    const raw = m?.[1]?.trim();
+    if (!raw) continue;
+    if (/^data:image\//i.test(raw)) continue;
+    if (/^(about:|javascript:)/i.test(raw)) continue;
+    return raw;
+  }
+  return null;
+}
+
+/** URL absoluta http(s) segura para <img src>; corrige &amp;; `basePageUrl` resolve caminhos relativos. */
+function sanitizarImagemUrl(raw: string | null | undefined, basePageUrl?: string | null): string | null {
+  if (!raw?.trim()) return null;
+  let u = raw
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/^['"]|['"]$/g, "");
+  if (/[<>]/.test(u) || u.length > 2048) return null;
+  if (u.startsWith("//")) u = `https:${u}`;
+  try {
+    const parsed = /^https?:\/\//i.test(u)
+      ? new URL(u)
+      : basePageUrl?.trim()
+        ? new URL(u, basePageUrl.trim())
+        : new URL(u);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (!parsed.hostname || parsed.hostname.length < 2) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function urlMiniaturaParaCartao(row: SpinNaRedeMencaoRow): string | null {
+  const base = row.item_url?.trim() || null;
+  const daColuna = sanitizarImagemUrl(row.imagem_url, base);
+  if (daColuna) return daColuna;
+  if (!row.resumo?.trim()) return null;
+  const raw = primeiraUrlImgNoHtml(row.resumo);
+  return sanitizarImagemUrl(raw, base);
+}
+
+/** 1ª tentativa sem referrerPolicy; 2ª com no-referrer (CDNs divergentes); depois esconde. */
+type ThumbLoadPhase = "a" | "b" | "dead";
 
 export default function SpinNaRede() {
   const { theme: t } = useApp();
@@ -42,6 +106,8 @@ export default function SpinNaRede() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [itens, setItens] = useState<SpinNaRedeMencaoRow[]>([]);
+  /** Fase de carregamento da miniatura por item (retry com referrer antes de esconder). */
+  const [thumbPhase, setThumbPhase] = useState<Record<string, ThumbLoadPhase>>({});
 
   const carregar = useCallback(async () => {
     if (perm.loading || perm.canView === "nao") return;
@@ -59,6 +125,7 @@ export default function SpinNaRede() {
       setItens([]);
     } else {
       setItens((data ?? []) as SpinNaRedeMencaoRow[]);
+      setThumbPhase({});
     }
     setLoading(false);
   }, [perm.loading, perm.canView]);
@@ -123,8 +190,7 @@ export default function SpinNaRede() {
       </div>
 
       <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, maxWidth: 720, lineHeight: 1.45 }}>
-        Citações e menções públicas à Spin em notícias e feeds. Os itens são preenchidos automaticamente (Edge Function
-        agendada) ou manualmente por quem tiver permissão de edição nesta página.
+        Citações e menções públicas à Spin em notícias e feeds.
       </p>
 
       {erro && (
@@ -157,9 +223,14 @@ export default function SpinNaRede() {
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
           {itens.map((row) => {
             const resumoLimpo = row.resumo ? stripHtml(row.resumo) : "";
+            const resumoCard = resumoParaCartao(resumoLimpo);
             const fonte = row.fonte_host?.trim() || "—";
             const imgAlt = row.titulo.length > 120 ? `${row.titulo.slice(0, 117)}…` : row.titulo;
-            const thumb = row.imagem_url?.trim();
+            const thumb = urlMiniaturaParaCartao(row);
+            const phase = thumbPhase[row.id];
+            const thumbMorto = phase === "dead";
+            const thumbNoReferrer = phase === "b";
+            const mostrarThumb = Boolean(thumb) && !thumbMorto;
             return (
               <li
                 key={row.id}
@@ -180,7 +251,7 @@ export default function SpinNaRede() {
                     alignItems: "flex-start",
                   }}
                 >
-                  {thumb && /^https?:\/\//i.test(thumb) && (
+                  {mostrarThumb && thumb && (
                     <a
                       href={row.item_url}
                       target="_blank"
@@ -191,16 +262,28 @@ export default function SpinNaRede() {
                         overflow: "hidden",
                         border: `1px solid ${t.cardBorder}`,
                         lineHeight: 0,
+                        textDecoration: "none",
+                        color: "transparent",
                       }}
-                      aria-label={`Abrir notícia: ${imgAlt}`}
+                      aria-label={`Ir para a matéria: ${imgAlt}`}
                     >
                       <img
+                        key={`${row.id}-${phase ?? "a"}`}
                         src={thumb}
-                        alt={imgAlt}
+                        alt=""
                         width={160}
                         height={90}
                         loading="lazy"
                         decoding="async"
+                        referrerPolicy={thumbNoReferrer ? "no-referrer" : undefined}
+                        onError={() =>
+                          setThumbPhase((prev) => {
+                            const cur = prev[row.id];
+                            if (cur === undefined) return { ...prev, [row.id]: "b" };
+                            if (cur === "b") return { ...prev, [row.id]: "dead" };
+                            return prev;
+                          })
+                        }
                         style={{
                           display: "block",
                           width: 160,
@@ -223,15 +306,28 @@ export default function SpinNaRede() {
                     <h2 style={{ margin: "8px 0 6px", fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 }}>
                       {row.titulo}
                     </h2>
-                    {resumoLimpo.length > 0 && (
-                      <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-                        {resumoLimpo.length > 220 ? `${resumoLimpo.slice(0, 220).trim()}…` : resumoLimpo}
+                    {resumoCard.length > 0 && (
+                      <p
+                        style={{
+                          margin: "0 0 10px",
+                          fontSize: 13,
+                          color: t.textMuted,
+                          lineHeight: 1.55,
+                          wordBreak: "break-word",
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical" as const,
+                          WebkitLineClamp: 8,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {resumoCard}
                       </p>
                     )}
                     <a
                       href={row.item_url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`Ir para a matéria: ${imgAlt}`}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -243,7 +339,7 @@ export default function SpinNaRede() {
                       }}
                     >
                       <ExternalLink size={14} aria-hidden="true" />
-                      Abrir fonte
+                      Ir para a matéria
                     </a>
                   </div>
                 </div>
