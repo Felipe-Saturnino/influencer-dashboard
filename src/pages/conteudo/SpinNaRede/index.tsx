@@ -26,11 +26,35 @@ function fmtData(iso: string | null): string {
   try {
     return new Date(iso).toLocaleDateString("pt-BR", {
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
     });
   } catch {
     return "—";
+  }
+}
+
+/** URL absoluta http(s) segura para <img src>; corrige &amp; e evita lixo da BD. */
+function sanitizarImagemUrl(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  let u = raw
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/^['"]|['"]$/g, "");
+  if (/[<>"']/.test(u) || u.length > 2048) return null;
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (!parsed.hostname || parsed.hostname.length < 2) return null;
+    // App em HTTPS: tentar https primeiro (evita conteúdo misto e CDNs que redireccionam)
+    if (typeof window !== "undefined" && window.location.protocol === "https:" && parsed.protocol === "http:") {
+      const tryHttps = `https://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
+      return tryHttps;
+    }
+    return parsed.href;
+  } catch {
+    return null;
   }
 }
 
@@ -42,6 +66,8 @@ export default function SpinNaRede() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [itens, setItens] = useState<SpinNaRedeMencaoRow[]>([]);
+  /** Miniaturas que falharam a carregar (hotlink, URL inválida, etc.) — esconde caixa partida. */
+  const [thumbFalhou, setThumbFalhou] = useState<Record<string, boolean>>({});
 
   const carregar = useCallback(async () => {
     if (perm.loading || perm.canView === "nao") return;
@@ -123,8 +149,7 @@ export default function SpinNaRede() {
       </div>
 
       <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, maxWidth: 720, lineHeight: 1.45 }}>
-        Citações e menções públicas à Spin em notícias e feeds. Os itens são preenchidos automaticamente (Edge Function
-        agendada) ou manualmente por quem tiver permissão de edição nesta página.
+        Citações e menções públicas à Spin em notícias e feeds.
       </p>
 
       {erro && (
@@ -159,7 +184,8 @@ export default function SpinNaRede() {
             const resumoLimpo = row.resumo ? stripHtml(row.resumo) : "";
             const fonte = row.fonte_host?.trim() || "—";
             const imgAlt = row.titulo.length > 120 ? `${row.titulo.slice(0, 117)}…` : row.titulo;
-            const thumb = row.imagem_url?.trim();
+            const thumb = sanitizarImagemUrl(row.imagem_url);
+            const mostrarThumb = Boolean(thumb) && !thumbFalhou[row.id];
             return (
               <li
                 key={row.id}
@@ -180,7 +206,7 @@ export default function SpinNaRede() {
                     alignItems: "flex-start",
                   }}
                 >
-                  {thumb && /^https?:\/\//i.test(thumb) && (
+                  {mostrarThumb && thumb && (
                     <a
                       href={row.item_url}
                       target="_blank"
@@ -191,16 +217,20 @@ export default function SpinNaRede() {
                         overflow: "hidden",
                         border: `1px solid ${t.cardBorder}`,
                         lineHeight: 0,
+                        textDecoration: "none",
+                        color: "transparent",
                       }}
-                      aria-label={`Abrir notícia: ${imgAlt}`}
+                      aria-label={`Ir para a matéria: ${imgAlt}`}
                     >
                       <img
                         src={thumb}
-                        alt={imgAlt}
+                        alt=""
                         width={160}
                         height={90}
                         loading="lazy"
                         decoding="async"
+                        referrerPolicy="no-referrer"
+                        onError={() => setThumbFalhou((p) => ({ ...p, [row.id]: true }))}
                         style={{
                           display: "block",
                           width: 160,
@@ -232,6 +262,7 @@ export default function SpinNaRede() {
                       href={row.item_url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`Ir para a matéria: ${imgAlt}`}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -243,7 +274,7 @@ export default function SpinNaRede() {
                       }}
                     >
                       <ExternalLink size={14} aria-hidden="true" />
-                      Abrir fonte
+                      Ir para a matéria
                     </a>
                   </div>
                 </div>
