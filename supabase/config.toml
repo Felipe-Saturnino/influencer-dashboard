@@ -2,6 +2,7 @@
 # Deploy exemplos: supabase functions deploy criar-usuario
 #                   supabase functions deploy atualizar-perfil
 #                   supabase functions deploy sync-rh-prestador-auth-user
+#                   supabase functions deploy sync-spin-na-rede-rss
 
 [functions.criar-usuario]
 verify_jwt = false
@@ -38,3 +39,7 @@ verify_jwt = false
 [functions.email-agenda-diaria]
 verify_jwt = false
 # Agenda do dia (operacional); destinatários em EMAIL_AGENDA_DESTINATARIOS
+
+[functions.sync-spin-na-rede-rss]
+verify_jwt = false
+# Ingestão RSS → spin_na_rede_mencao (service role). Proteger com SPIN_NA_REDE_INGEST_SECRET ou Bearer service_role.

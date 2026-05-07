@@ -4,6 +4,9 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
+import { getThStyle, getTdStyle, getTdNumStyle, TOTAL_ROW_BG, zebraStripe } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
@@ -20,8 +23,19 @@ import {
   compareNumber,
   comparePagamentoStatus,
 } from "../../../lib/classificacaoSort";
-import { AlertTriangle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
-import { GiReceiveMoney } from "react-icons/gi";
+import {
+  AlertTriangle,
+  Banknote,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Shield,
+  Wallet,
+} from "lucide-react";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
@@ -124,30 +138,19 @@ const MESES_NOMES = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
 ];
 
-const STATUS_PAG: Record<string, { label: string; color: string; icon: string }> = {
-  em_analise: { label: "Em análise",        color: "#f59e0b", icon: "⏳" },
-  a_pagar:    { label: "Aguard. pagamento",  color: "#6b7fff", icon: "💳" },
-  pago:       { label: "Pago",               color: "#10b981", icon: "✅" },
+const STATUS_PAG: Record<string, { label: string; color: string }> = {
+  em_analise: { label: "Em análise", color: "#f59e0b" },
+  a_pagar: { label: "Aguard. pagamento", color: "#a78bfa" },
+  pago: { label: "Pago", color: "#22c55e" },
 };
 
 const STATUS_INFLUENCER: Record<string, { label: string; color: string }> = {
-  ativo:     { label: "Ativo",     color: "#10b981" },
-  inativo:   { label: "Inativo",   color: "#94a3b8" },
-  cancelado: { label: "Cancelado", color: "#ef4444" },
+  ativo: { label: "Ativo", color: "#22c55e" },
+  inativo: { label: "Inativo", color: "#f59e0b" },
+  cancelado: { label: "Cancelado", color: "#e84025" },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function fmtMoeda(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function fmtHoras(h: number) {
-  if (!h || h === 0) return "0h";
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
-  return mm === 0 ? `${hh}h` : `${hh}h ${mm}m`;
-}
 
 function gerarMeses(): { value: string; label: string }[] {
   const lista: { value: string; label: string }[] = [{ value: "", label: "Total" }];
@@ -308,32 +311,40 @@ function Avatar({ name, size = 28 }: { name: string; size?: number }) {
   );
 }
 
-function Badge({ status, config }: {
-  status: string;
-  config: Record<string, { label: string; color: string; icon?: string }>;
-}) {
-  const cfg = config[status] ?? { label: status, color: "#94a3b8" };
+function Badge({ status, config }: { status: string; config: Record<string, { label: string; color: string }> }) {
+  const cfg = config[status] ?? { label: status, color: "#6b7280" };
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: "4px",
-      fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px",
-      background: `${cfg.color}22`, color: cfg.color,
-      border: `1px solid ${cfg.color}44`, whiteSpace: "nowrap",
-    }}>
-      {cfg.icon ?? ""} {cfg.label}
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        fontSize: "10px",
+        fontWeight: 700,
+        padding: "3px 9px",
+        borderRadius: "20px",
+        background: `${cfg.color}22`,
+        color: cfg.color,
+        border: `1px solid ${cfg.color}44`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {cfg.label}
     </span>
   );
 }
 
-function SelectInput({ value, onChange, options, style }: {
+function SelectInput({ value, onChange, options, style, "aria-label": ariaLabel }: {
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   style?: React.CSSProperties;
+  "aria-label"?: string;
 }) {
   const { theme: t } = useApp();
   return (
     <select
+      aria-label={ariaLabel}
       value={value}
       onChange={e => onChange(e.target.value)}
       style={{
@@ -382,6 +393,7 @@ function BtnAcao({ onClick, children, color }: {
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         padding: "5px 12px", borderRadius: "8px",
@@ -389,6 +401,9 @@ function BtnAcao({ onClick, children, color }: {
         background: `${color}15`, color,
         fontSize: "11px", fontWeight: 700,
         fontFamily: FONT.body, cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
       }}
     >
       {children}
@@ -405,6 +420,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   onConfirm: (id: string, novoTotal: number, isAgente: boolean) => Promise<void>;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [valor, setValor] = useState(String(row.total));
@@ -487,23 +503,39 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         onClose={onClose}
       />
 
-      {error && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+      {error ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            background: "rgba(239,68,68,0.12)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            color: "#e84025",
+            borderRadius: 10,
+            padding: "12px 14px",
+            fontSize: 13,
+            marginBottom: 16,
+            fontFamily: FONT.body,
+          }}
+        >
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
           <span>{error}</span>
         </div>
-      )}
+      ) : null}
 
       {!row.is_agente && (
         <div style={{ marginBottom: "16px" }}>
           <div style={rowStyle}>
             <span style={{ color: t.textMuted }}>Horas realizadas</span>
-            <span style={{ fontWeight: 700 }}>{fmtHoras(row.horas_realizadas)}</span>
+            <span style={{ fontWeight: 700 }}>{fmtHorasTotal(row.horas_realizadas)}</span>
           </div>
           <div style={{ ...rowStyle, borderBottom: "none" }}>
             <span style={{ color: t.textMuted }}>Cachê/hora</span>
             <span style={{ fontWeight: 700 }}>
-              {row.cache_hora > 0 ? fmtMoeda(row.cache_hora) : <span style={{ color: "#ef4444" }}>Não cadastrado</span>}
+              {row.cache_hora > 0 ? fmtBRL(row.cache_hora) : <span style={{ color: "#e84025" }}>Não cadastrado</span>}
             </span>
           </div>
         </div>
@@ -531,7 +563,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
             return (
               <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${t.divider}`, fontSize: "12px" }}>
                 <span style={{ color: t.text }}>{l.data} · {l.plataforma}</span>
-                <span style={{ color: t.textMuted, fontFamily: FONT.body }}>{fmtHoras(h)}</span>
+                <span style={{ color: t.textMuted, fontFamily: FONT.body }}>{fmtHorasTotal(h)}</span>
               </div>
             );
           })}
@@ -565,7 +597,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
               fontSize: "16px", fontWeight: 700, fontFamily: FONT.body, outline: "none",
             }}
           />
-          {editado && <span style={{ fontSize: "11px", color: "#f59e0b", whiteSpace: "nowrap" }}>era {fmtMoeda(row.total)}</span>}
+          {editado && <span style={{ fontSize: "11px", color: "#f59e0b", whiteSpace: "nowrap" }}>era {fmtBRL(row.total)}</span>}
         </div>
         {editado && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "8px", fontSize: "11px", color: "#f59e0b", fontFamily: FONT.body }}>
@@ -576,16 +608,59 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       </div>
 
       <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1,
+            padding: "12px",
+            borderRadius: "10px",
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
           Cancelar
         </button>
         <button
           type="button"
           onClick={handleConfirmClick}
           disabled={saving || !Number.isFinite(valorNum) || valorNum < 0}
-          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? "not-allowed" : "pointer", opacity: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+          style={{
+            flex: 2,
+            padding: "12px",
+            borderRadius: "10px",
+            border: "none",
+            cursor: saving || !Number.isFinite(valorNum) || valorNum < 0 ? "not-allowed" : "pointer",
+            opacity: saving || !Number.isFinite(valorNum) || valorNum < 0 ? 0.7 : 1,
+            background: brand.useBrand
+              ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+              : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
+          {saving ? (
+            <>
+              <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={13} aria-hidden />
+              Aprovar valor
+            </>
+          )}
         </button>
       </div>
     </ModalBase>
@@ -601,6 +676,7 @@ function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
   onRetornar: (id: string, isAgente: boolean) => Promise<void>;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -631,37 +707,109 @@ function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
   return (
     <ModalBase maxWidth={380} onClose={onClose}>
       <ModalHeader title="Registrar pagamento" onClose={onClose} />
-      {error && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+      {error ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            background: "rgba(239,68,68,0.12)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            color: "#e84025",
+            borderRadius: 10,
+            padding: "12px 14px",
+            fontSize: 13,
+            marginBottom: 16,
+            fontFamily: FONT.body,
+          }}
+        >
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
           <span>{error}</span>
         </div>
-      )}
+      ) : null}
       <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
         Confirmar pagamento para <strong style={{ color: t.text }}>{row.influencer_name}</strong>
         {row.is_agente && row.descricao && <> — {row.descricao}</>}
       </p>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderTop: `1px solid ${t.divider}`, borderBottom: `1px solid ${t.divider}`, marginBottom: "20px" }}>
         <span style={{ color: t.textMuted, fontSize: "14px" }}>Total</span>
-        <span style={{ fontWeight: 900, color: "#10b981", fontSize: "24px", fontFamily: FONT.title }}>{fmtMoeda(row.total)}</span>
+        <span style={{ fontWeight: 900, color: "#22c55e", fontSize: "24px", fontFamily: FONT_TITLE }}>{fmtBRL(row.total)}</span>
       </div>
       <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px", lineHeight: 1.6 }}>
         A data de pagamento será registrada como hoje.
       </p>
       <div style={{ display: "flex", gap: "10px" }}>
         <button
+          type="button"
           onClick={handleRetornarClick}
           disabled={saving}
-          style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+          style={{
+            flex: 1,
+            padding: "12px",
+            borderRadius: "10px",
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.text,
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.7 : 1,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          {saving ? "⏳ Salvando..." : "↩️ Retornar"}
+          {saving ? (
+            <>
+              <Loader2 size={13} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <RotateCcw size={13} aria-hidden />
+              Retornar
+            </>
+          )}
         </button>
         <button
+          type="button"
           onClick={handleConfirm}
           disabled={saving}
-          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: "linear-gradient(135deg, #065f46, #10b981)", color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+          style={{
+            flex: 2,
+            padding: "12px",
+            borderRadius: "10px",
+            border: "none",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.7 : 1,
+            background: brand.useBrand
+              ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+              : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          {saving ? "⏳ Salvando..." : "💰 Confirmar pagamento"}
+          {saving ? (
+            <>
+              <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Banknote size={13} aria-hidden />
+              Confirmar pagamento
+            </>
+          )}
         </button>
       </div>
     </ModalBase>
@@ -679,6 +827,7 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
   onSalvo: () => Promise<void>;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [saving, setSaving] = useState(false);
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
@@ -728,7 +877,12 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
               Operadora
               <CampoObrigatorioMark />
             </label>
-            <select value={operadoraSlug} onChange={e => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+            <select
+              aria-label="Filtrar por operadora"
+              value={operadoraSlug}
+              onChange={e => setOperadoraSlug(e.target.value)}
+              style={{ ...inputStyle, cursor: "pointer" }}
+            >
               <option value="">Selecione...</option>
               {[...opcoes].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
@@ -765,15 +919,59 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
         </div>
       </div>
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1,
+            padding: "12px",
+            borderRadius: "10px",
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
           Cancelar
         </button>
         <button
+          type="button"
           onClick={handleConfirm}
           disabled={saving || !canSubmit}
-          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !canSubmit) ? "not-allowed" : "pointer", opacity: (saving || !canSubmit) ? 0.6 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+          style={{
+            flex: 2,
+            padding: "12px",
+            borderRadius: "10px",
+            border: "none",
+            cursor: saving || !canSubmit ? "not-allowed" : "pointer",
+            opacity: saving || !canSubmit ? 0.6 : 1,
+            background: brand.useBrand
+              ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+              : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          {saving ? "⏳ Salvando..." : "➕ Adicionar"}
+          {saving ? (
+            <>
+              <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Plus size={13} aria-hidden />
+              Adicionar
+            </>
+          )}
         </button>
       </div>
     </ModalBase>
@@ -900,24 +1098,84 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
         <BlocoLabel label="KPIs" />
       </div>
 
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <div style={innerCard(BASE_COLORS.purple)}>
-          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#c9b8f0", lineHeight: 1, marginBottom: "6px" }}>
-            {loading ? "—" : fmtMoeda(totalPago)}
+      <div className="app-grid-kpi-3" style={{ gap: "12px" }}>
+        <div style={innerCard("var(--brand-primary, #7c3aed)")}>
+          <div
+            style={{
+              fontFamily: FONT_TITLE,
+              fontSize: "26px",
+              fontWeight: 900,
+              color: "var(--brand-primary, #7c3aed)",
+              lineHeight: 1,
+              marginBottom: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minHeight: 32,
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
+              </>
+            ) : (
+              fmtBRL(totalPago)
+            )}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total pago</div>
         </div>
 
         <div style={innerCard("#f59e0b")}>
-          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#f59e0b", lineHeight: 1, marginBottom: "6px" }}>
-            {loading ? "—" : fmtMoeda(pendente)}
+          <div
+            style={{
+              fontFamily: FONT_TITLE,
+              fontSize: "26px",
+              fontWeight: 900,
+              color: "#f59e0b",
+              lineHeight: 1,
+              marginBottom: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minHeight: 32,
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
+              </>
+            ) : (
+              fmtBRL(pendente)
+            )}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Pendente</div>
         </div>
 
-        <div style={innerCard("#10b981")}>
-          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#10b981", lineHeight: 1, marginBottom: "6px" }}>
-            {loading ? "—" : fmtHoras(horas)}
+        <div style={innerCard("#22c55e")}>
+          <div
+            style={{
+              fontFamily: FONT_TITLE,
+              fontSize: "26px",
+              fontWeight: 900,
+              color: "#22c55e",
+              lineHeight: 1,
+              marginBottom: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minHeight: 32,
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
+              </>
+            ) : (
+              fmtHorasTotal(horas)
+            )}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
         </div>
@@ -1439,15 +1697,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
   }
 
-  const th: React.CSSProperties = {
-    padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
-    letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
-    background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
-  const td: React.CSSProperties = {
-    padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
-  };
+  const thCiclo = getThStyle(t);
+  const tdCiclo = getTdStyle(t);
+  const tdNumCiclo = getTdNumStyle(t);
 
   const opcioesCiclo = ciclos.map(c => ({
     value: c.id,
@@ -1465,15 +1717,16 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           {ciclo && (
             <span style={{
               fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "20px",
-              background: isAberto ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.12)",
-              color: isAberto ? "#f59e0b" : "#10b981",
-              border: `1px solid ${isAberto ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)"}`,
+              background: isAberto ? "rgba(245,158,11,0.15)" : "rgba(34,197,94,0.12)",
+              color: isAberto ? "#f59e0b" : "#22c55e",
+              border: `1px solid ${isAberto ? "rgba(245,158,11,0.3)" : "rgba(34,197,94,0.35)"}`,
             }}>
               {isAberto ? "Atual" : "Fechado"}
             </span>
           )}
 
           <SelectInput
+            aria-label="Selecionar ciclo de pagamento"
             value={cicloId}
             onChange={v => setCicloId(v)}
             options={opcioesCiclo}
@@ -1482,7 +1735,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
           {enviarPagamentoError ? (
-            <div style={{ maxWidth: 420, fontSize: 12, color: "#ef4444", fontFamily: FONT.body, textAlign: "right" }}>
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{ maxWidth: 420, fontSize: 12, color: "#e84025", fontFamily: FONT.body, textAlign: "right" }}
+            >
               {enviarPagamentoError}
             </div>
           ) : null}
@@ -1510,12 +1767,12 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         <div className="app-grid-kpi-4" style={{ gap: "10px", marginBottom: "20px" }}>
           {[
             { value: kpi.em,             label: "Em análise",   color: "#f59e0b" },
-            { value: kpi.ap,             label: "A pagar",      color: "#6b7fff" },
-            { value: kpi.pg,             label: "Pago",         color: "#10b981" },
-            { value: fmtMoeda(kpi.total), label: "Total do ciclo", color: t.text },
+            { value: kpi.ap,             label: "A pagar",      color: "#a78bfa" },
+            { value: kpi.pg,             label: "Pago",         color: "#22c55e" },
+            { value: fmtBRL(kpi.total), label: "Total do ciclo", color: t.text },
           ].map((item, i) => (
             <div key={i} style={{ background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: `1px solid ${t.cardBorder}`, borderRadius: "10px", padding: "12px 14px", textAlign: "center" }}>
-              <div style={{ fontFamily: FONT.title, fontSize: "20px", fontWeight: 900, color: item.color, marginBottom: "3px" }}>{item.value}</div>
+              <div style={{ fontFamily: FONT_TITLE, fontSize: "20px", fontWeight: 900, color: item.color, marginBottom: "3px" }}>{item.value}</div>
               <div style={{ fontSize: "10px", color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.8px", fontFamily: FONT.body }}>{item.label}</div>
             </div>
           ))}
@@ -1531,10 +1788,17 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
       {/* Tabela */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
+          <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando...
+        </div>
       ) : (
-        <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.cardBorder}` }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="app-table-wrap">
+          <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                Pagamentos do ciclo selecionado
+              </caption>
             <thead>
               <tr>
                 <SortTableTh<CicloSortCol>
@@ -1542,7 +1806,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="influencer"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={th}
+                  thStyle={thCiclo}
                   align="left"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
@@ -1552,11 +1816,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   }
                 />
                 <SortTableTh<CicloSortCol>
-                  label="Status"
+                  label="Perfil"
                   col="classificacao"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={th}
+                  thStyle={thCiclo}
                   align="left"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
@@ -1571,7 +1835,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     col="operadora"
                     sortCol={sortCiclo.col}
                     sortDir={sortCiclo.dir}
-                    thStyle={th}
+                    thStyle={thCiclo}
                     align="left"
                     onSort={(c) =>
                       setSortCiclo((s) => ({
@@ -1586,7 +1850,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="lives"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={th}
+                  thStyle={thCiclo}
                   align="left"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
@@ -1600,7 +1864,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="horas"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={th}
+                  thStyle={thCiclo}
                   align="left"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
@@ -1616,7 +1880,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="cache"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={th}
+                      thStyle={thCiclo}
                       align="left"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
@@ -1630,8 +1894,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="total"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={thCiclo}
+                      align="right"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1647,8 +1911,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="total"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={thCiclo}
+                      align="right"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1657,11 +1921,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       }
                     />
                     <SortTableTh<CicloSortCol>
-                      label="Status"
+                      label="Pagamento"
                       col="status"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={th}
+                      thStyle={thCiclo}
                       align="left"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
@@ -1670,7 +1934,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                         }))
                       }
                     />
-                    <th scope="col" style={th}>Ação</th>
+                    <th scope="col" style={getThStyle(t, { cursor: "default", userSelect: "none" })}>Ação</th>
                   </>
                 )}
               </tr>
@@ -1678,7 +1942,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...tdCiclo, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1690,19 +1954,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               ) : rowsOrdenados.map((row, i) => {
                 const sk = (row.statusInfluencer ?? "ativo").toLowerCase();
                 const slInf = STATUS_INFLUENCER[sk] ?? { label: row.statusInfluencer ?? "Ativo", color: "#94a3b8" };
-                const zebra = i % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
+                const zebraBg = zebraStripe(i);
                 return (
                 <tr
                   key={row.id}
-                  style={{ borderBottom: i < rowsOrdenados.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebra }}
+                  style={{ borderBottom: i < rowsOrdenados.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebraBg }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = zebra;
+                    e.currentTarget.style.background = zebraBg;
                   }}
                 >
-                  <td style={td}>
+                  <td style={tdCiclo}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <Avatar name={row.is_agente ? "A" : row.influencer_name} />
                       <div>
@@ -1714,7 +1978,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </div>
                   </td>
 
-                  <td style={td}>
+                  <td style={tdCiclo}>
                     {row.is_agente ? (
                       <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
                     ) : (
@@ -1737,36 +2001,42 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   </td>
 
                   {filterOperadora === "todas" && (
-                    <td style={{ ...td, color: t.textMuted, fontSize: "12px" }}>
+                    <td style={{ ...tdCiclo, color: t.textMuted, fontSize: "12px" }}>
                       {row.is_agente ? "—" : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
                     </td>
                   )}
 
                   {isAberto ? (
                     <>
-                      <td style={{ ...td, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
-                      <td style={td}>{fmtHoras(row.horas_realizadas)}</td>
-                      <td style={{ ...td, color: t.textMuted }}>
+                      <td style={{ ...tdCiclo, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
+                      <td style={tdNumCiclo}>{fmtHorasTotal(row.horas_realizadas)}</td>
+                      <td style={{ ...tdNumCiclo, color: t.textMuted }}>
                         {row.cache_hora > 0
-                          ? fmtMoeda(row.cache_hora)
-                          : <span style={{ color: "#ef4444", fontSize: "11px" }}>Não cadastrado</span>}
+                          ? fmtBRL(row.cache_hora)
+                          : <span style={{ color: "#e84025", fontSize: "11px" }}>Não cadastrado</span>}
                       </td>
-                      <td style={{ ...td, fontWeight: 700, color: row.cache_hora > 0 ? "#c9b8f0" : t.textMuted }}>
-                        {row.cache_hora > 0 ? fmtMoeda(row.total) : "—"}
+                      <td style={{ ...tdNumCiclo, fontWeight: 700, color: row.cache_hora > 0 ? "var(--brand-primary, #7c3aed)" : t.textMuted }}>
+                        {row.cache_hora > 0 ? fmtBRL(row.total) : "—"}
                       </td>
                     </>
                   ) : (
                     <>
-                      <td style={{ ...td, color: t.textMuted }}>{row.is_agente ? "—" : `${row.qtd_lives ?? 0} live${(row.qtd_lives ?? 0) !== 1 ? "s" : ""}`}</td>
-                      <td style={td}>{row.is_agente ? "—" : fmtHoras(row.horas_realizadas)}</td>
-                      <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(row.total)}</td>
-                      <td style={td}><Badge status={row.status} config={STATUS_PAG} /></td>
-                      <td style={td}>
+                      <td style={{ ...tdCiclo, color: t.textMuted }}>{row.is_agente ? "—" : `${row.qtd_lives ?? 0} live${(row.qtd_lives ?? 0) !== 1 ? "s" : ""}`}</td>
+                      <td style={tdNumCiclo}>{row.is_agente ? "—" : fmtHorasTotal(row.horas_realizadas)}</td>
+                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtBRL(row.total)}</td>
+                      <td style={tdCiclo}><Badge status={row.status} config={STATUS_PAG} /></td>
+                      <td style={tdCiclo}>
                         {row.status === "em_analise" && perm.canEditarOk && (perm.canEditar !== "proprios" || row.is_agente || (row.influencer_id && podeVerInfluencer(row.influencer_id))) && (
-                          <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">⏳ Analisar</BtnAcao>
+                          <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">
+                            <Clock size={12} aria-hidden />
+                            Analisar
+                          </BtnAcao>
                         )}
                         {row.status === "a_pagar" && perm.canEditarOk && (perm.canEditar !== "proprios" || row.is_agente || (row.influencer_id && podeVerInfluencer(row.influencer_id))) && (
-                          <BtnAcao onClick={() => setModalPagar(row)} color="#10b981">💰 Pagar</BtnAcao>
+                          <BtnAcao onClick={() => setModalPagar(row)} color="#22c55e">
+                            <Banknote size={12} aria-hidden />
+                            Pagar
+                          </BtnAcao>
                         )}
                         {row.status === "pago" && (
                           <span style={{ fontSize: "11px", color: t.textMuted }}>
@@ -1783,24 +2053,24 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
             {rowsOrdenados.length > 0 && (
               <tfoot>
-                <tr style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", borderTop: `2px solid ${t.cardBorder}` }}>
-                  <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
+                <tr style={{ background: TOTAL_ROW_BG, borderTop: `2px solid ${t.cardBorder}` }}>
+                  <td style={{ ...tdCiclo, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
-                  <td style={td} />
-                  {filterOperadora === "todas" && <td style={td}></td>}
+                  <td style={tdCiclo} />
+                  {filterOperadora === "todas" && <td style={tdCiclo}></td>}
                   {isAberto ? (
                     <>
-                      <td style={td}></td>
-                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={td}></td>
-                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
+                      <td style={tdCiclo}></td>
+                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtHorasTotal(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={tdCiclo}></td>
+                      <td style={{ ...tdNumCiclo, fontSize: "15px", color: "var(--brand-primary, #7c3aed)", fontWeight: 700 }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                     </>
                   ) : (
                     <>
-                      <td style={td}></td>
-                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rowsOrdenados.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
+                      <td style={tdCiclo}></td>
+                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtHorasTotal(rowsOrdenados.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...tdNumCiclo, fontSize: "15px", color: "var(--brand-primary, #7c3aed)", fontWeight: 700 }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                       <td colSpan={2}></td>
                     </>
                   )}
@@ -1808,6 +2078,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               </tfoot>
             )}
           </table>
+          </div>
         </div>
       )}
 
@@ -2026,15 +2297,9 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     return arr;
   }, [filtered, sortCons]);
 
-  const th: React.CSSProperties = {
-    padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
-    letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
-    background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
-  const td: React.CSSProperties = {
-    padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
-  };
+  const thCons = getThStyle(t);
+  const tdCons = getTdStyle(t);
+  const tdNumCons = getTdNumStyle(t);
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
@@ -2055,19 +2320,26 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
+          <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando...
+        </div>
       ) : (
-        <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.cardBorder}` }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="app-table-wrap">
+          <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                Consolidado de pagamentos por influencer
+              </caption>
             <thead>
               <tr>
-                <th scope="col" style={{ ...th, width: "32px" }} aria-label="Expandir" />
+                <th scope="col" style={{ ...thCons, width: "32px" }} aria-label="Expandir" />
                 <SortTableTh<ConsolidSortCol>
                   label="Influencer"
                   col="influencer"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
+                  thStyle={thCons}
                   align="left"
                   onSort={(c) =>
                     setSortCons((s) => ({
@@ -2081,8 +2353,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="totalPago"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={thCons}
+                  align="right"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2095,8 +2367,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="totalHoras"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={thCons}
+                  align="right"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2109,8 +2381,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="pendente"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={thCons}
+                  align="right"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2123,7 +2395,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="ultimoPag"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
+                  thStyle={thCons}
                   align="left"
                   onSort={(c) =>
                     setSortCons((s) => ({
@@ -2137,7 +2409,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="status"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={th}
+                  thStyle={thCons}
                   align="left"
                   onSort={(c) =>
                     setSortCons((s) => ({
@@ -2151,7 +2423,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
             <tbody>
               {filtered.length === 0 && !agentesRow ? (
                 <tr>
-                  <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "40px" }}>
+                  <td colSpan={7} style={{ ...tdCons, textAlign: "center", color: t.textMuted, padding: "40px" }}>
                     Nenhum influencer encontrado.
                   </td>
                 </tr>
@@ -2166,6 +2438,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                       style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }}
                       tabIndex={0}
                       role="row"
+                      aria-expanded={isOpen}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                       }}
@@ -2180,7 +2453,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                         }
                       }}
                     >
-                      <td style={td}>
+                      <td style={tdCons}>
                         <ChevronRight
                           size={14}
                           color={t.textMuted}
@@ -2188,7 +2461,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                           aria-hidden
                         />
                       </td>
-                      <td style={td}>
+                      <td style={tdCons}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <Avatar name={row.nome_artistico} />
                           <div>
@@ -2197,15 +2470,15 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                           </div>
                         </div>
                       </td>
-                      <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalPago)}</td>
-                      <td style={td}>{fmtHoras(row.totalHoras)}</td>
-                      <td style={{ ...td, color: row.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
-                        {fmtMoeda(row.pendente)}
+                      <td style={{ ...tdNumCons, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(row.totalPago)}</td>
+                      <td style={tdNumCons}>{fmtHorasTotal(row.totalHoras)}</td>
+                      <td style={{ ...tdNumCons, color: row.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
+                        {fmtBRL(row.pendente)}
                       </td>
-                      <td style={{ ...td, color: t.textMuted }}>
+                      <td style={{ ...tdCons, color: t.textMuted }}>
                         {row.ultimoPagamento ? new Date(row.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
                       </td>
-                      <td style={td}>
+                      <td style={tdCons}>
                         <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
                           {sl.label}
                         </span>
@@ -2219,15 +2492,22 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                             Histórico — {row.nome_artistico}
                           </div>
                           {loadingHist === row.influencer_id ? (
-                            <div style={{ color: t.textMuted, fontSize: "12px" }}>Carregando...</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.textMuted, fontSize: "12px" }}>
+                              <Loader2 size={14} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                              Carregando...
+                            </div>
                           ) : hist.length === 0 ? (
                             <div style={{ color: t.textMuted, fontSize: "12px" }}>Nenhum ciclo encontrado.</div>
                           ) : (
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <div className="app-table-wrap">
+                              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+                                <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                                  Histórico de pagamentos do influencer
+                                </caption>
                               <thead>
                                 <tr>
                                   {["Ciclo", "Horas", "Total", "Status", "Pago em"].map(h => (
-                                    <th key={h} style={{ ...th, background: "transparent", fontSize: "10px", padding: "6px 10px" }}>{h}</th>
+                                    <th key={h} scope="col" style={{ ...thCons, background: "transparent", fontSize: "10px", padding: "6px 10px" }}>{h}</th>
                                   ))}
                                 </tr>
                               </thead>
@@ -2243,21 +2523,22 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                                       e.currentTarget.style.background = "transparent";
                                     }}
                                   >
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>
+                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px" }}>
                                       {h.ciclos_pagamento?.data_inicio} – {h.ciclos_pagamento?.data_fim}
                                     </td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{fmtHoras(h.horas_realizadas)}</td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{fmtMoeda(h.total)}</td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>
+                                    <td style={{ ...tdNumCons, fontSize: "12px", padding: "8px 10px" }}>{fmtHorasTotal(h.horas_realizadas)}</td>
+                                    <td style={{ ...tdNumCons, fontSize: "12px", padding: "8px 10px" }}>{fmtBRL(h.total)}</td>
+                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px" }}>
                                       <Badge status={h.status} config={STATUS_PAG} />
                                     </td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px", color: t.textMuted }}>
+                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px", color: t.textMuted }}>
                                       {h.pago_em ? new Date(h.pago_em).toLocaleDateString("pt-BR") : "—"}
                                     </td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -2277,10 +2558,10 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                     e.currentTarget.style.background = t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)";
                   }}
                 >
-                  <td style={td}>
+                  <td style={tdCons}>
                     <span style={{ fontSize: "10px", color: t.textMuted }}>—</span>
                   </td>
-                  <td style={td}>
+                  <td style={tdCons}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <Avatar name="A" />
                       <div>
@@ -2289,15 +2570,15 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                       </div>
                     </div>
                   </td>
-                  <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(agentesRow.totalPago)}</td>
-                  <td style={{ ...td, color: t.textMuted }}>—</td>
-                  <td style={{ ...td, color: agentesRow.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: agentesRow.pendente > 0 ? 600 : 400 }}>
-                    {fmtMoeda(agentesRow.pendente)}
+                  <td style={{ ...tdNumCons, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(agentesRow.totalPago)}</td>
+                  <td style={{ ...tdCons, color: t.textMuted }}>—</td>
+                  <td style={{ ...tdNumCons, color: agentesRow.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: agentesRow.pendente > 0 ? 600 : 400 }}>
+                    {fmtBRL(agentesRow.pendente)}
                   </td>
-                  <td style={{ ...td, color: t.textMuted }}>
+                  <td style={{ ...tdCons, color: t.textMuted }}>
                     {agentesRow.ultimoPagamento ? new Date(agentesRow.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
                   </td>
-                  <td style={td}>
+                  <td style={tdCons}>
                     <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
                       Agência
                     </span>
@@ -2306,6 +2587,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -2385,7 +2667,7 @@ export default function Financeiro() {
   const chipBase = (active: boolean) => ({
     padding: "6px 14px", borderRadius: 999,
     border: `1px solid ${active ? brand.accent : t.cardBorder}`,
-    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
+    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : (t.inputBg ?? t.cardBg),
     color: active ? brand.accent : t.textMuted,
     fontSize: 13, fontWeight: active ? 700 : 400,
     fontFamily: FONT.body, cursor: "pointer", outline: "none",
@@ -2571,7 +2853,7 @@ export default function Financeiro() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar o financeiro.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -2579,7 +2861,8 @@ export default function Financeiro() {
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "400px" }}>
-        <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
+          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
           Carregando financeiro...
         </div>
       </div>
@@ -2590,12 +2873,12 @@ export default function Financeiro() {
     return (
       <div className="app-page-shell">
         <PageHeader
-          icon={<GiReceiveMoney size={14} aria-hidden />}
+          icon={<Wallet size={14} aria-hidden />}
           title="Financeiro"
           subtitle="Gestão de pagamentos e ciclos semanais de influencers."
         />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
-          <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
+          <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
             {user?.role === "influencer" ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
           </p>
           {user?.role === "influencer" ? (
@@ -2618,6 +2901,7 @@ export default function Financeiro() {
             </>
           )}
           <button
+            type="button"
             onClick={() => { carregarCiclos(); }}
             style={{
               padding: "10px 20px", borderRadius: "10px", border: "none",
@@ -2636,7 +2920,7 @@ export default function Financeiro() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<GiReceiveMoney size={14} aria-hidden />}
+        icon={<Wallet size={14} aria-hidden />}
         title="Financeiro"
         subtitle="Gestão de pagamentos e ciclos semanais de influencers."
       />
@@ -2650,17 +2934,17 @@ export default function Financeiro() {
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
-              <ChevronLeft size={14} />
+            <button type="button" aria-label="Mês anterior" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Total" : (MESES_OPCOES.find(m => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
-            <button onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
-              <ChevronRight size={14} />
+            <button type="button" aria-label="Próximo mês" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
+              <ChevronRight size={14} aria-hidden />
             </button>
 
-            <button onClick={() => setHistorico(h => !h)} style={chipBase(historico)}>
+            <button type="button" aria-pressed={historico} onClick={() => setHistorico(h => !h)} style={chipBase(historico)}>
               Histórico
             </button>
 
@@ -2679,6 +2963,7 @@ export default function Financeiro() {
                   <Shield size={13} aria-hidden />
                 </span>
                 <select
+                  aria-label="Filtrar por operadora"
                   value={filterOperadora}
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
