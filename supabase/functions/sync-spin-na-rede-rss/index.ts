@@ -394,6 +394,49 @@ function hostDeUrl(u: string): string | null {
   }
 }
 
+type SupabaseAdmin = ReturnType<typeof createClient>;
+
+async function gravarSyncLogSpin(
+  supabase: SupabaseAdmin,
+  opts: {
+    status: "ok" | "falha";
+    registros_inseridos: number;
+    registros_atualizados: number;
+    erros_count: number;
+    mensagem_erro: string | null;
+    duracao_ms: number;
+  },
+): Promise<void> {
+  try {
+    const hoje = new Date().toISOString().split("T")[0];
+    await supabase.from("sync_logs").insert({
+      integracao_slug: "spin_na_rede_rss",
+      status: opts.status,
+      registros_inseridos: opts.registros_inseridos,
+      registros_atualizados: opts.registros_atualizados,
+      erros_count: opts.erros_count,
+      mensagem_erro: opts.mensagem_erro,
+      duracao_ms: opts.duracao_ms,
+      periodo_inicio: hoje,
+      periodo_fim: hoje,
+    });
+  } catch (e) {
+    console.error("[sync-spin-na-rede-rss] Falha ao gravar sync_logs:", e);
+  }
+}
+
+async function gravarTechLogSpin(supabase: SupabaseAdmin, descricao: string): Promise<void> {
+  try {
+    await supabase.from("tech_logs").insert({
+      integracao_slug: "spin_na_rede_rss",
+      tipo: "spin_na_rede_rss",
+      descricao: descricao.slice(0, 2000),
+    });
+  } catch (e) {
+    console.error("[sync-spin-na-rede-rss] Falha ao gravar tech_logs:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(req) });
@@ -403,14 +446,16 @@ serve(async (req) => {
     return json({ ok: false, erro: "Use POST" }, req, 405);
   }
 
-  if (!autorizado(req)) {
-    return json({ ok: false, erro: "Não autorizado. Defina x-spin-na-rede-ingest-secret ou Bearer service_role." }, req, 401);
-  }
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
   if (!supabaseUrl || !serviceKey) {
     return json({ ok: false, erro: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY em falta." }, req, 500);
+  }
+
+  const supabase = createClient(supabaseUrl, serviceKey);
+
+  if (!autorizado(req)) {
+    return json({ ok: false, erro: "Não autorizado. Defina x-spin-na-rede-ingest-secret ou Bearer service_role." }, req, 401);
   }
 
   let body: IngestBody = {};
@@ -437,14 +482,20 @@ serve(async (req) => {
   const dry_run = body.dry_run === true;
 
   if (rss_urls.length === 0) {
-    return json({
-      ok: false,
-      erro:
-        "Nenhum feed configurado. Defina SPIN_NA_REDE_RSS_URLS (secrets) ou envie rss_urls no JSON do POST.",
-    }, req, 200);
+    const msg =
+      "Nenhum feed configurado. Defina SPIN_NA_REDE_RSS_URLS (secrets) ou envie rss_urls no JSON do POST.";
+    await gravarSyncLogSpin(supabase, {
+      status: "falha",
+      registros_inseridos: 0,
+      registros_atualizados: 0,
+      erros_count: 1,
+      mensagem_erro: msg,
+      duracao_ms: 0,
+    });
+    await gravarTechLogSpin(supabase, msg);
+    return json({ ok: false, erro: msg }, req, 200);
   }
 
-  const supabase = createClient(supabaseUrl, serviceKey);
   const errosFeed: string[] = [];
   const rows: Array<{
     item_url: string;
@@ -492,6 +543,7 @@ serve(async (req) => {
     const aceites = rows.filter((r) => r.passou_filtro);
     const rejeitados = rows.filter((r) => !r.passou_filtro);
     const maxAmostra = 10;
+    // dry_run: não grava sync_logs (evita poluir o Status Técnico / fluxo de dados).
     return json({
       ok: true,
       dry_run: true,
@@ -520,27 +572,53 @@ serve(async (req) => {
     }, req);
   }
 
+  const inicioMs = Date.now();
   let upserted = 0;
   const errosDb: string[] = [];
 
-  for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
-    const chunk = rows.slice(i, i + UPSERT_CHUNK);
-    if (chunk.length === 0) continue;
-    const { error } = await supabase.from("spin_na_rede_mencao").upsert(chunk, {
-      onConflict: "item_url",
-      ignoreDuplicates: false,
-    });
-    if (error) {
-      errosDb.push(error.message);
-      break;
+  try {
+    for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
+      const chunk = rows.slice(i, i + UPSERT_CHUNK);
+      if (chunk.length === 0) continue;
+      const { error } = await supabase.from("spin_na_rede_mencao").upsert(chunk, {
+        onConflict: "item_url",
+        ignoreDuplicates: false,
+      });
+      if (error) {
+        errosDb.push(error.message);
+        break;
+      }
+      upserted += chunk.length;
     }
-    upserted += chunk.length;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    errosDb.push(`Exceção no upsert: ${msg}`);
   }
 
   const aceites = rows.filter((r) => r.passou_filtro).length;
+  const duracaoMs = Date.now() - inicioMs;
+  const okRun = errosDb.length === 0;
+  const partesErro = [...errosFeed, ...errosDb];
+  const mensagemErro = partesErro.length > 0 ? partesErro.join(" | ").slice(0, 4000) : null;
+
+  await gravarSyncLogSpin(supabase, {
+    status: okRun ? "ok" : "falha",
+    registros_inseridos: upserted,
+    registros_atualizados: 0,
+    erros_count: errosFeed.length + errosDb.length,
+    mensagem_erro: okRun && errosFeed.length === 0 ? null : mensagemErro,
+    duracao_ms: duracaoMs,
+  });
+
+  if (!okRun || errosFeed.length > 0) {
+    const desc = okRun
+      ? `Feeds com aviso (${errosFeed.length}): ${errosFeed.join(" | ")}`.slice(0, 2000)
+      : mensagemErro ?? "Falha na ingestão RSS.";
+    await gravarTechLogSpin(supabase, desc);
+  }
 
   return json({
-    ok: errosDb.length === 0,
+    ok: okRun,
     feeds_processados: rss_urls.length,
     items_parseados: itemsParsed,
     linhas_upsert: upserted,

@@ -110,6 +110,8 @@ interface FluxoDia {
   data: string;
   cda: number;
   social: number;
+  /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia (UTC da data do log). */
+  spinRss: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
@@ -123,6 +125,8 @@ export default function StatusTecnico() {
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSocialExecutando, setSyncSocialExecutando] = useState(false);
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
+  const [syncSpinRssMensagem, setSyncSpinRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
   const [emailMensagem, setEmailMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailAgendaEnviando, setEmailAgendaEnviando] = useState(false);
@@ -138,7 +142,7 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
   const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
     typeof window !== "undefined" && window.innerWidth < 480,
@@ -214,11 +218,27 @@ export default function StatusTecnico() {
     dataInicio.setDate(dataInicio.getDate() - 14);
     const dataInicioStr = dataInicio.toISOString().split("T")[0];
 
-    const [resCda, resSocial, resEmails] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, registros_atualizados")
+        .eq("integracao_slug", "spin_na_rede_rss")
+        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .order("executado_em", { ascending: false })
+        .limit(500),
     ]);
+
+    const spinPorData = (resSpinSync.data ?? []).reduce<Record<string, number>>((acc, row) => {
+      const r = row as { executado_em: string; registros_inseridos: number | null; registros_atualizados: number | null };
+      const d = r.executado_em?.split("T")[0];
+      if (!d) return acc;
+      const n = (r.registros_inseridos ?? 0) + (r.registros_atualizados ?? 0);
+      acc[d] = (acc[d] ?? 0) + n;
+      return acc;
+    }, {});
 
     const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
       acc[row.data] = (acc[row.data] ?? 0) + 1;
@@ -248,6 +268,7 @@ export default function StatusTecnico() {
     const datasSet = new Set<string>([
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
+      ...Object.keys(spinPorData),
       ...Object.keys(emailsPorData),
       hoje,
     ]);
@@ -256,14 +277,16 @@ export default function StatusTecnico() {
       .map((data) => {
         const cda = cdaPorData[data] ?? 0;
         const social = socialPorData[data] ?? 0;
+        const spinRss = spinPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
         return {
           data,
           cda,
           social,
+          spinRss,
           emails,
-          total: cda + social + emailTotal,
+          total: cda + social + spinRss + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -425,6 +448,67 @@ export default function StatusTecnico() {
       setSyncSocialMensagem({ tipo: "erro", texto: msg });
     } finally {
       setSyncSocialExecutando(false);
+    }
+  };
+
+  const executarSyncSpinRss = async () => {
+    if (syncSpinRssExecutando || !perm.canEditarOk) return;
+    setSyncSpinRssExecutando(true);
+    setSyncSpinRssMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncSpinRssMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncSpinRssExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-spin-na-rede-rss", {
+        body: {},
+      });
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        linhas_upsert?: number;
+        items_parseados?: number;
+        erros_feed?: string[];
+        erros_db?: string[];
+      };
+
+      if (invokeError) {
+        let texto = invokeError.message ?? "Erro ao chamar sync-spin-na-rede-rss";
+        if (texto.includes("404") || texto.includes("not found")) {
+          texto =
+            "Edge Function sync-spin-na-rede-rss não encontrada. Execute: supabase functions deploy sync-spin-na-rede-rss";
+        }
+        setSyncSpinRssMensagem({ tipo: "erro", texto });
+        setSyncSpinRssExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros_feed ?? []), ...(resData?.erros_db ?? [])].filter(Boolean).join(" — ");
+        setSyncSpinRssMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : "Ingestão RSS concluída com erros (ver resposta da função).",
+        });
+        setSyncSpinRssExecutando(false);
+        return;
+      }
+
+      const ups = resData?.linhas_upsert ?? 0;
+      const parsed = resData?.items_parseados ?? 0;
+      setSyncSpinRssMensagem({
+        tipo: "ok",
+        texto: `Spin na Rede RSS: ${ups} linha(s) gravadas (${parsed} itens parseados nos feeds).`,
+      });
+      void carregar();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncSpinRssMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setSyncSpinRssExecutando(false);
     }
   };
 
@@ -628,6 +712,9 @@ export default function StatusTecnico() {
   const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
   const cdaStatusOk = ultimoSyncCdaLog?.status === "ok";
 
+  const ultimoSyncSpinRssLog = syncLogs.find((l) => l.integracao_slug === "spin_na_rede_rss");
+  const spinNaRedeRssStatusOk = ultimoSyncSpinRssLog?.status === "ok";
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -653,14 +740,20 @@ export default function StatusTecnico() {
     !!emailUltimoAgenda &&
     (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda);
 
-  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusDiretoriaOk, emailStatusAgendaOk].filter(Boolean)
-    .length;
-  const totalIntegracoes = 4;
+  const integracoesAtivasCount = [
+    cdaStatusOk,
+    socialStatusOk,
+    spinNaRedeRssStatusOk,
+    emailStatusDiretoriaOk,
+    emailStatusAgendaOk,
+  ].filter(Boolean).length;
+  const totalIntegracoes = 5;
 
-  // Último Sync: mais recente entre CDA, Social e e-mails (por data de execução)
+  // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
+  if (ultimoSyncSpinRssLog?.executado_em) timestamps.push({ ts: ultimoSyncSpinRssLog.executado_em, label: "Spin na Rede RSS" });
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
@@ -672,14 +765,16 @@ export default function StatusTecnico() {
   // Taxa de Erro: falhas / total de tentativas (CDA, Social, e-mails)
   const cdaTotal = syncLogs.filter((l) => l.integracao_slug === "casa_apostas").length;
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
+  const spinRssTotal = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss").length;
+  const spinRssFalhas = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss" && l.status === "falha").length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
     l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1);
-  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas;
+  const totalTentativas = cdaTotal + spinRssTotal + socialTotal + Math.max(emailTotal, 1);
+  const totalFalhas = cdaFalhas + spinRssFalhas + socialFalhas + emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -782,6 +877,26 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
   }
 
+  // ── Ingest Spin na Rede (RSS) ──
+  const syncLogsSpinRss = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
+  const ultimoSyncSpinRssOk = syncLogsSpinRss.find((l) => l.status === "ok");
+  const ultimoSyncSpinRssFalha = syncLogsSpinRss.find((l) => l.status === "falha");
+  const taxaErroSpinRss = syncLogsSpinRss.length > 0
+    ? ((syncLogsSpinRss.filter((l) => l.status === "falha").length / syncLogsSpinRss.length) * 100).toFixed(1)
+    : "0";
+
+  if (syncLogsSpinRss.length > 0 && !ultimoSyncSpinRssOk && ultimoSyncSpinRssFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhum ingest Spin na Rede (RSS) com sucesso" });
+  } else if (ultimoSyncSpinRssOk) {
+    const exec = new Date(ultimoSyncSpinRssOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({ nivel: "aviso", msg: "Ingest Spin na Rede (RSS) atrasada (> 24h sem execução OK)" });
+    }
+  }
+  if (parseFloat(taxaErroSpinRss) > 5 && syncLogsSpinRss.length > 0) {
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no ingest Spin na Rede RSS (${taxaErroSpinRss}%)` });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = integrations
     .map((int) => {
@@ -795,13 +910,19 @@ export default function StatusTecnico() {
     if (!ultimo) status = "falha";
     else if (ultimo.status === "falha") status = "falha";
     else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+    const syncTipo =
+      int.slug === "casa_apostas"
+        ? ("cda" as const)
+        : int.slug === "spin_na_rede_rss"
+          ? ("spin_rss" as const)
+          : ("none" as const);
     return {
       ...int,
       ultimoSync: ultimo?.executado_em ?? null,
       registrosHoje: regsExibir,
       erros: ultimo?.erros_count ?? 0,
       status,
-      syncTipo: "cda" as const,
+      syncTipo,
     };
   });
 
@@ -844,6 +965,7 @@ export default function StatusTecnico() {
     ({
       cda: "CDA (Casa de Apostas)",
       social: "Social Media",
+      spin_rss: "Spin na Rede (RSS)",
       relatorio_diretoria: "E-mail: Relatório Diretoria",
       email_agenda_diaria: "E-mail: Agenda do dia",
     }[k] ?? `E-mail: ${k}`);
@@ -851,6 +973,7 @@ export default function StatusTecnico() {
     ({
       cda: BRAND.roxoVivo,
       social: BRAND.azul,
+      spin_rss: "#a78bfa",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
     }[k] ?? "#10b981");
@@ -941,11 +1064,12 @@ export default function StatusTecnico() {
       {/* ── Status das Integrações ── */}
       <div style={card}>
         <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
-        {(syncMensagem || syncSocialMensagem || emailMensagem || emailAgendaMensagem) && (
+        {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
+              syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
               emailMensagem && { prefix: "E-mail Diretoria", msg: emailMensagem },
               emailAgendaMensagem && { prefix: "E-mail Agenda", msg: emailAgendaMensagem },
             ]
@@ -994,13 +1118,16 @@ export default function StatusTecnico() {
                 {linhasCompletas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
+                  const isSpinRss = row.syncTipo === "spin_rss";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
                   const syncExecutandoRow = isCda
                     ? syncExecutando
                     : isSocial
                       ? syncSocialExecutando
-                      : false;
+                      : isSpinRss
+                        ? syncSpinRssExecutando
+                        : false;
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
@@ -1031,10 +1158,11 @@ export default function StatusTecnico() {
                         )}
                       </td>
                       <td style={tdStyle}>
-                        {(isCda || isSocial) && (
+                        {(isCda || isSocial || isSpinRss) && (
                           <button
                             type="button"
-                            onClick={() => setConfirmarSync(isCda ? "cda" : "social")}
+                            onClick={() =>
+                              setConfirmarSync(isCda ? "cda" : isSocial ? "social" : "spin_rss")}
                             disabled={syncExecutandoRow || !perm.canEditarOk}
                             style={btnAcao(syncExecutandoRow)}
                           >
@@ -1081,6 +1209,7 @@ export default function StatusTecnico() {
           {[
             { key: "cda", label: "CDA" },
             { key: "social", label: "Social Media" },
+            { key: "spin_rss", label: "Spin RSS" },
             { key: "relatorio_diretoria", label: "E-mail Diretoria" },
             { key: "email_agenda_diaria", label: "E-mail Agenda" },
           ].map((item) => (
@@ -1123,6 +1252,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.social)}%`, minWidth: f.social > 0 ? 8 : 0, height: "100%", background: fluxoCor("social"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.spinRss > 0 && (
+                      <div
+                        title={`${fluxoLabel("spin_rss")}: ${f.spinRss.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.spinRss)}%`, minWidth: f.spinRss > 0 ? 8 : 0, height: "100%", background: fluxoCor("spin_rss"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                       <div
                         key={tipo}
@@ -1157,6 +1292,7 @@ export default function StatusTecnico() {
                     }}>
                       {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
+                      {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }}>●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -1264,13 +1400,15 @@ export default function StatusTecnico() {
                   {techLogsFiltrados.map((log, idx) => {
                     const integracaoLabel =
                       log.integracao_slug
-                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
+                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
+                          (log.integracao_slug === "spin_na_rede_rss" ? "Spin na Rede (RSS)" : log.integracao_slug)
                         : {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
                             relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
                             email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
                             resend: "E-mail (Resend)",
+                            spin_na_rede_rss: "Spin na Rede (RSS)",
                           }[log.tipo] ?? log.tipo;
                     return (
                       <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
@@ -1358,6 +1496,18 @@ export default function StatusTecnico() {
                   <td style={tdStyle}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
                   <td style={tdStyle}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Nenhum ingest Spin na Rede (RSS) com sucesso</td>
+                  <td style={tdStyle}>Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Ingest Spin na Rede (RSS) atrasada</td>
+                  <td style={tdStyle}>&gt; 24h sem sync_logs OK</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Taxa de erro alta no ingest Spin na Rede RSS</td>
+                  <td style={tdStyle}>&gt; 5% em sync_logs (slug spin_na_rede_rss)</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1400,6 +1550,7 @@ export default function StatusTecnico() {
             <h2 id="status-tecnico-confirm-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
+              {confirmarSync === "spin_rss" && "Confirmar ingest Spin na Rede (RSS)"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
             </h2>
@@ -1437,6 +1588,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "social") {
                     setConfirmarSync(null);
                     void executarSyncSocial();
+                  } else if (confirmarSync === "spin_rss") {
+                    setConfirmarSync(null);
+                    void executarSyncSpinRss();
                   } else if (confirmarEmail === "diretoria") {
                     setConfirmarEmail(null);
                     void enviarEmailDiretoria();
