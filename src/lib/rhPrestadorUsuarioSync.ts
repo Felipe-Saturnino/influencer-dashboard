@@ -14,8 +14,8 @@ export function normRhOrgTimeNomeParaUsuarioSync(nome: string | null | undefined
 
 /**
  * Mapeia Área de atuação + nome do time (organograma) → slug de `user_scopes` (prestador_tipo).
- * A criação automática de usuário a partir da Gestão de Prestadores usa a Edge `sync-rh-prestador-auth-user`,
- * que aplica também gerência (Figurino/RH) e times staff (Shift Leader, Service Manager) — fonte de verdade lá.
+ * A criação automática de usuário a partir da Gestão de Prestadores usa a Edge `sync-rh-prestador-auth-user`
+ * (gerências, times, `area_atuacao` escritório/estúdio) — fonte de verdade lá.
  */
 export function prestadorTipoSlugDeAreaETimeRh(
   area: RhAreaAtuacao | "" | null | undefined,

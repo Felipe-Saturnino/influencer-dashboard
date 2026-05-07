@@ -7,7 +7,9 @@ import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
  * Cria usuário Auth + profile + user_scopes (prestador_tipo) quando aplicável.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerência (Figurino, RH) > time (Shift Leader, Service Manager, GP, CS, Shuffler) > default Prestador + Escritório.
+ * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento) >
+ *   times (Performance Coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
+ *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
@@ -180,13 +182,13 @@ function normTimeNome(s: string | null | undefined): string {
 }
 
 /**
- * Prioridade: Gerência Figurino / RH → perfis staff sem `prestador_tipo`.
- * Depois: time Shift Leader / Service Manager idem.
- * Caso contrário: perfil prestador + área de atuação (slug) conforme time conhecido ou Escritório.
+ * Prioridade: gerências específicas → perfil staff ou Prestador + `prestador_tipo`;
+ * depois times; por fim `rh_funcionarios.area_atuacao` (escritorio | estudio); default Escritório.
  */
 function resolvePerfilEscopo(
   gerenciaNome: string | null | undefined,
   timeNome: string | null | undefined,
+  areaAtuacaoRh: string | null | undefined,
 ): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null } {
   const g = normTimeNome(gerenciaNome)
   if (g === 'figurino') {
@@ -195,7 +197,26 @@ function resolvePerfilEscopo(
   if (g === 'rh' || g === 'recursos humanos') {
     return { role: 'rh', prestadorTipo: null }
   }
+  if (g === 'facilities') {
+    return { role: 'prestador', prestadorTipo: 'facilities' }
+  }
+  if (g === 'financeiro') {
+    return { role: 'prestador', prestadorTipo: 'financeiro' }
+  }
+  if (g === 'tech ops') {
+    return { role: 'prestador', prestadorTipo: 'tech_ops' }
+  }
+  if (g === 'ti') {
+    return { role: 'prestador', prestadorTipo: 'ti' }
+  }
+  if (g === 'treinamento') {
+    return { role: 'prestador', prestadorTipo: 'treinamento' }
+  }
+
   const t = normTimeNome(timeNome)
+  if (t === 'performance coach') {
+    return { role: 'prestador', prestadorTipo: 'treinamento' }
+  }
   if (t === 'shift leader') {
     return { role: 'shift_leader', prestadorTipo: null }
   }
@@ -210,6 +231,14 @@ function resolvePerfilEscopo(
   }
   if (t === 'shuffler') {
     return { role: 'prestador', prestadorTipo: 'shuffler' }
+  }
+
+  const a = normTimeNome(areaAtuacaoRh)
+  if (a === 'escritorio') {
+    return { role: 'prestador', prestadorTipo: 'escritorio' }
+  }
+  if (a === 'estudio') {
+    return { role: 'prestador', prestadorTipo: 'estudio' }
   }
   return { role: 'prestador', prestadorTipo: 'escritorio' }
 }
@@ -384,7 +413,7 @@ serve(async (req) => {
 
   const { data: row, error: rowErr } = await supabase
     .from('rh_funcionarios')
-    .select('id, nome, email, email_spin, org_time_id, org_gerencia_id')
+    .select('id, nome, email, email_spin, area_atuacao, org_time_id, org_gerencia_id')
     .eq('id', rhId)
     .maybeSingle()
 
@@ -433,7 +462,11 @@ serve(async (req) => {
   }
 
   const nomePlataforma = String(row.nome ?? '').trim() || loginEmail.split('@')[0] || 'Prestador'
-  const { role: perfilRole, prestadorTipo: tipoSlug } = resolvePerfilEscopo(gerenciaNome, timeNome)
+  const { role: perfilRole, prestadorTipo: tipoSlug } = resolvePerfilEscopo(
+    gerenciaNome,
+    timeNome,
+    (row as { area_atuacao?: string | null }).area_atuacao,
+  )
 
   const created = await goTrueAdminCreateUser(
     supabaseUrl,
