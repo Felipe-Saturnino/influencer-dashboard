@@ -200,8 +200,36 @@ function normalizeImagemHref(href: string, baseUrl: string): string | null {
   return u;
 }
 
+/** Primeira URL útil em <img> (lazy-load WordPress usa data-src / data-lazy-src). */
+const IMG_URL_ATTR_RES = [
+  /\bdata-lazy-src=["']([^"']+)["']/i,
+  /\bdata-src=["']([^"']+)["']/i,
+  /\bdata-original=["']([^"']+)["']/i,
+  /\bsrc=["']([^"']+)["']/i,
+] as const;
+
+function primeiraUrlImgNoHtml(html: string): string | null {
+  for (const re of IMG_URL_ATTR_RES) {
+    const m = html.match(re);
+    const raw = m?.[1]?.trim();
+    if (!raw) continue;
+    if (/^data:image\//i.test(raw)) continue;
+    if (/^(about:|javascript:)/i.test(raw)) continue;
+    return raw;
+  }
+  return null;
+}
+
+/** HTML do resumo (description/content:encoded): imagens relativas ao artigo costumam resolver com item_url. */
+function extractImagemUrlFromHtmlFragment(html: string | null, baseUrl: string): string | null {
+  if (!html?.trim()) return null;
+  const raw = primeiraUrlImgNoHtml(html);
+  if (!raw) return null;
+  return normalizeImagemHref(raw, baseUrl);
+}
+
 /** Extrai thumbnail de um bloco <item> RSS 2.0 (media:, enclosure, primeiro <img>). */
-function extractImagemUrlFromRssItemBlock(block: string, feedUrl: string): string | null {
+function extractImagemUrlFromRssItemBlock(block: string, feedUrl: string, itemUrl: string): string | null {
   const th = block.match(/<media:thumbnail[^>]*\burl=["']([^"']+)["']/i);
   if (th?.[1]) {
     const u = normalizeImagemHref(th[1], feedUrl);
@@ -229,16 +257,18 @@ function extractImagemUrlFromRssItemBlock(block: string, feedUrl: string): strin
     const u = normalizeImagemHref(enc, feedUrl);
     if (u) return u;
   }
-  const imgM = block.match(/<img[^>]*\bsrc=["']([^"']+)["']/i);
-  if (imgM?.[1]) {
-    const u = normalizeImagemHref(imgM[1], feedUrl);
-    if (u) return u;
+  const rawImg = primeiraUrlImgNoHtml(block);
+  if (rawImg) {
+    const uItem = normalizeImagemHref(rawImg, itemUrl);
+    if (uItem) return uItem;
+    const uFeed = normalizeImagemHref(rawImg, feedUrl);
+    if (uFeed) return uFeed;
   }
   return null;
 }
 
 /** Extrai thumbnail de um bloco <entry> Atom (link enclosure image, media:, <img>). */
-function extractImagemUrlFromAtomEntryBlock(block: string, feedUrl: string): string | null {
+function extractImagemUrlFromAtomEntryBlock(block: string, feedUrl: string, itemUrl: string): string | null {
   const linkRe = /<link([^>]+)\/?>/gi;
   let lm: RegExpExecArray | null;
   while ((lm = linkRe.exec(block)) !== null) {
@@ -255,10 +285,12 @@ function extractImagemUrlFromAtomEntryBlock(block: string, feedUrl: string): str
     const u = normalizeImagemHref(th[1], feedUrl);
     if (u) return u;
   }
-  const imgM = block.match(/<img[^>]*\bsrc=["']([^"']+)["']/i);
-  if (imgM?.[1]) {
-    const u = normalizeImagemHref(imgM[1], feedUrl);
-    if (u) return u;
+  const rawImg = primeiraUrlImgNoHtml(block);
+  if (rawImg) {
+    const uItem = normalizeImagemHref(rawImg, itemUrl);
+    if (uItem) return uItem;
+    const uFeed = normalizeImagemHref(rawImg, feedUrl);
+    if (uFeed) return uFeed;
   }
   return null;
 }
@@ -286,7 +318,12 @@ function parseRss2Items(xml: string, feedUrl: string): ParsedItem[] {
       getTagBlock(block, "dc:date") ??
       getTagBlock(block, "published");
     const published_at = parsePubDateToIso(pubRaw);
-    const imagem_url = extractImagemUrlFromRssItemBlock(block, feedUrl);
+    let imagem_url = extractImagemUrlFromRssItemBlock(block, feedUrl, link);
+    if (!imagem_url && resumo) {
+      imagem_url =
+        extractImagemUrlFromHtmlFragment(resumo, link) ??
+        extractImagemUrlFromHtmlFragment(resumo, feedUrl);
+    }
     out.push({ titulo, item_url: link, resumo, published_at, imagem_url });
   }
   return out;
@@ -306,7 +343,12 @@ function parseAtomEntries(xml: string, feedUrl: string): ParsedItem[] {
     const resumo = summary && summary.length > 0 ? summary.slice(0, MAX_RESUMO) : null;
     const pubRaw = getTagBlock(block, "updated") ?? getTagBlock(block, "published");
     const published_at = parsePubDateToIso(pubRaw);
-    const imagem_url = extractImagemUrlFromAtomEntryBlock(block, feedUrl);
+    let imagem_url = extractImagemUrlFromAtomEntryBlock(block, feedUrl, link);
+    if (!imagem_url && resumo) {
+      imagem_url =
+        extractImagemUrlFromHtmlFragment(resumo, link) ??
+        extractImagemUrlFromHtmlFragment(resumo, feedUrl);
+    }
     out.push({ titulo: titulo || link, item_url: link, resumo, published_at, imagem_url });
   }
   return out;

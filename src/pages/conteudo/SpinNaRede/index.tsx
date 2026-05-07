@@ -21,6 +21,14 @@ function stripHtml(s: string): string {
   return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Limite de caracteres no cartão (meio termo entre resumo curto e texto completo). */
+const RESUMO_MAX_CARACTERES = 520;
+
+function resumoParaCartao(limpo: string): string {
+  if (limpo.length <= RESUMO_MAX_CARACTERES) return limpo;
+  return `${limpo.slice(0, RESUMO_MAX_CARACTERES).trim()}…`;
+}
+
 function fmtData(iso: string | null): string {
   if (!iso) return "—";
   try {
@@ -34,8 +42,28 @@ function fmtData(iso: string | null): string {
   }
 }
 
-/** URL absoluta http(s) segura para <img src>; corrige &amp; e evita lixo da BD. */
-function sanitizarImagemUrl(raw: string | null | undefined): string | null {
+const IMG_URL_ATTR_RES = [
+  /\bdata-lazy-src=["']([^"']+)["']/i,
+  /\bdata-src=["']([^"']+)["']/i,
+  /\bdata-original=["']([^"']+)["']/i,
+  /\bsrc=["']([^"']+)["']/i,
+] as const;
+
+/** Primeira URL útil em HTML de resumo (lazy-load costuma não usar `src` real). */
+function primeiraUrlImgNoHtml(html: string): string | null {
+  for (const re of IMG_URL_ATTR_RES) {
+    const m = html.match(re);
+    const raw = m?.[1]?.trim();
+    if (!raw) continue;
+    if (/^data:image\//i.test(raw)) continue;
+    if (/^(about:|javascript:)/i.test(raw)) continue;
+    return raw;
+  }
+  return null;
+}
+
+/** URL absoluta http(s) segura para <img src>; corrige &amp;; `basePageUrl` resolve caminhos relativos. */
+function sanitizarImagemUrl(raw: string | null | undefined, basePageUrl?: string | null): string | null {
   if (!raw?.trim()) return null;
   let u = raw
     .trim()
@@ -43,14 +71,28 @@ function sanitizarImagemUrl(raw: string | null | undefined): string | null {
     .replace(/&amp;/g, "&")
     .replace(/^['"]|['"]$/g, "");
   if (/[<>]/.test(u) || u.length > 2048) return null;
+  if (u.startsWith("//")) u = `https:${u}`;
   try {
-    const parsed = new URL(u);
+    const parsed = /^https?:\/\//i.test(u)
+      ? new URL(u)
+      : basePageUrl?.trim()
+        ? new URL(u, basePageUrl.trim())
+        : new URL(u);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
     if (!parsed.hostname || parsed.hostname.length < 2) return null;
     return parsed.href;
   } catch {
     return null;
   }
+}
+
+function urlMiniaturaParaCartao(row: SpinNaRedeMencaoRow): string | null {
+  const base = row.item_url?.trim() || null;
+  const daColuna = sanitizarImagemUrl(row.imagem_url, base);
+  if (daColuna) return daColuna;
+  if (!row.resumo?.trim()) return null;
+  const raw = primeiraUrlImgNoHtml(row.resumo);
+  return sanitizarImagemUrl(raw, base);
 }
 
 /** 1ª tentativa sem referrerPolicy; 2ª com no-referrer (CDNs divergentes); depois esconde. */
@@ -181,9 +223,10 @@ export default function SpinNaRede() {
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
           {itens.map((row) => {
             const resumoLimpo = row.resumo ? stripHtml(row.resumo) : "";
+            const resumoCard = resumoParaCartao(resumoLimpo);
             const fonte = row.fonte_host?.trim() || "—";
             const imgAlt = row.titulo.length > 120 ? `${row.titulo.slice(0, 117)}…` : row.titulo;
-            const thumb = sanitizarImagemUrl(row.imagem_url);
+            const thumb = urlMiniaturaParaCartao(row);
             const phase = thumbPhase[row.id];
             const thumbMorto = phase === "dead";
             const thumbNoReferrer = phase === "b";
@@ -263,7 +306,7 @@ export default function SpinNaRede() {
                     <h2 style={{ margin: "8px 0 6px", fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 }}>
                       {row.titulo}
                     </h2>
-                    {resumoLimpo.length > 0 && (
+                    {resumoCard.length > 0 && (
                       <p
                         style={{
                           margin: "0 0 10px",
@@ -273,11 +316,11 @@ export default function SpinNaRede() {
                           wordBreak: "break-word",
                           display: "-webkit-box",
                           WebkitBoxOrient: "vertical" as const,
-                          WebkitLineClamp: 14,
+                          WebkitLineClamp: 8,
                           overflow: "hidden",
                         }}
                       >
-                        {resumoLimpo}
+                        {resumoCard}
                       </p>
                     )}
                     <a
