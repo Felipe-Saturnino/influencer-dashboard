@@ -14,6 +14,7 @@ type SpinNaRedeMencaoRow = {
   published_at: string | null;
   feed_url: string | null;
   fonte_host: string | null;
+  imagem_url: string | null;
 };
 
 function stripHtml(s: string): string {
@@ -48,7 +49,7 @@ export default function SpinNaRede() {
     setErro(null);
     const { data, error } = await supabase
       .from("spin_na_rede_mencao")
-      .select("id, item_url, titulo, resumo, published_at, feed_url, fonte_host")
+      .select("id, item_url, titulo, resumo, published_at, feed_url, fonte_host, imagem_url")
       .eq("passou_filtro", true)
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(200);
@@ -157,6 +158,8 @@ export default function SpinNaRede() {
           {itens.map((row) => {
             const resumoLimpo = row.resumo ? stripHtml(row.resumo) : "";
             const fonte = row.fonte_host?.trim() || "—";
+            const imgAlt = row.titulo.length > 120 ? `${row.titulo.slice(0, 117)}…` : row.titulo;
+            const thumb = row.imagem_url?.trim();
             return (
               <li
                 key={row.id}
@@ -168,39 +171,82 @@ export default function SpinNaRede() {
                   padding: "14px 16px",
                 }}
               >
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                  <time dateTime={row.published_at ?? undefined} style={{ fontSize: 11, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
-                    {fmtData(row.published_at)}
-                  </time>
-                  <span style={{ fontSize: 11, color: t.textMuted }} title={row.feed_url ?? undefined}>
-                    {fonte}
-                  </span>
-                </div>
-                <h2 style={{ margin: "8px 0 6px", fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 }}>
-                  {row.titulo}
-                </h2>
-                {resumoLimpo.length > 0 && (
-                  <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-                    {resumoLimpo.length > 220 ? `${resumoLimpo.slice(0, 220).trim()}…` : resumoLimpo}
-                  </p>
-                )}
-                <a
-                  href={row.item_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <div
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: brand.accent,
-                    textDecoration: "none",
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 14,
+                    alignItems: "flex-start",
                   }}
                 >
-                  <ExternalLink size={14} aria-hidden="true" />
-                  Abrir fonte
-                </a>
+                  {thumb && /^https?:\/\//i.test(thumb) && (
+                    <a
+                      href={row.item_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        flexShrink: 0,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                        lineHeight: 0,
+                      }}
+                      aria-label={`Abrir notícia: ${imgAlt}`}
+                    >
+                      <img
+                        src={thumb}
+                        alt={imgAlt}
+                        width={160}
+                        height={90}
+                        loading="lazy"
+                        decoding="async"
+                        style={{
+                          display: "block",
+                          width: 160,
+                          height: 90,
+                          objectFit: "cover",
+                          background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                        }}
+                      />
+                    </a>
+                  )}
+                  <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                      <time dateTime={row.published_at ?? undefined} style={{ fontSize: 11, color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                        {fmtData(row.published_at)}
+                      </time>
+                      <span style={{ fontSize: 11, color: t.textMuted }} title={row.feed_url ?? undefined}>
+                        {fonte}
+                      </span>
+                    </div>
+                    <h2 style={{ margin: "8px 0 6px", fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 }}>
+                      {row.titulo}
+                    </h2>
+                    {resumoLimpo.length > 0 && (
+                      <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
+                        {resumoLimpo.length > 220 ? `${resumoLimpo.slice(0, 220).trim()}…` : resumoLimpo}
+                      </p>
+                    )}
+                    <a
+                      href={row.item_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: brand.accent,
+                        textDecoration: "none",
+                      }}
+                    >
+                      <ExternalLink size={14} aria-hidden="true" />
+                      Abrir fonte
+                    </a>
+                  </div>
+                </div>
               </li>
             );
           })}

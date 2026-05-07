@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 /**
  * Edge Function: sync-spin-na-rede-rss
  * Lê feeds RSS/Atom, aplica filtros por texto e faz upsert em public.spin_na_rede_mencao (service role).
+ * Thumbnail: media:thumbnail, media:content (image), enclosure (image), ou primeiro <img> no item/entry.
  *
  * Secrets (Supabase → Edge Functions → Secrets):
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — já existem no projeto.
@@ -28,6 +29,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const MAX_TITLE = 2000;
 const MAX_RESUMO = 12000;
+const MAX_IMAGEM_URL = 2048;
 const FETCH_TIMEOUT_MS = 25_000;
 const UPSERT_CHUNK = 80;
 
@@ -36,6 +38,7 @@ interface ParsedItem {
   item_url: string;
   resumo: string | null;
   published_at: string | null;
+  imagem_url: string | null;
 }
 
 interface IngestBody {
@@ -187,6 +190,79 @@ function resolveUrl(href: string, base: string): string {
   }
 }
 
+/** Normaliza href de imagem do RSS para URL absoluta http(s); null se inválida. */
+function normalizeImagemHref(href: string, baseUrl: string): string | null {
+  let u = unescapeXml(href.trim()).replace(/&amp;/g, "&");
+  if (u.startsWith("//")) u = `https:${u}`;
+  u = resolveUrl(u, baseUrl);
+  if (!/^https?:\/\//i.test(u)) return null;
+  if (u.length > MAX_IMAGEM_URL) u = u.slice(0, MAX_IMAGEM_URL);
+  return u;
+}
+
+/** Extrai thumbnail de um bloco <item> RSS 2.0 (media:, enclosure, primeiro <img>). */
+function extractImagemUrlFromRssItemBlock(block: string, feedUrl: string): string | null {
+  const th = block.match(/<media:thumbnail[^>]*\burl=["']([^"']+)["']/i);
+  if (th?.[1]) {
+    const u = normalizeImagemHref(th[1], feedUrl);
+    if (u) return u;
+  }
+  const mc1 = block.match(
+    /<media:content[^>]*\btype=["']image\/[^"']*["'][^>]*\burl=["']([^"']+)["']/i,
+  );
+  const mc2 = block.match(
+    /<media:content[^>]*\burl=["']([^"']+)["'][^>]*\btype=["']image\/[^"']*["']/i,
+  );
+  const mc = mc1?.[1] ?? mc2?.[1];
+  if (mc) {
+    const u = normalizeImagemHref(mc, feedUrl);
+    if (u) return u;
+  }
+  const enc1 = block.match(
+    /<enclosure[^>]*\btype=["']image\/[^"']*["'][^>]*\burl=["']([^"']+)["']/i,
+  );
+  const enc2 = block.match(
+    /<enclosure[^>]*\burl=["']([^"']+)["'][^>]*\btype=["']image\/[^"']*["']/i,
+  );
+  const enc = enc1?.[1] ?? enc2?.[1];
+  if (enc) {
+    const u = normalizeImagemHref(enc, feedUrl);
+    if (u) return u;
+  }
+  const imgM = block.match(/<img[^>]*\bsrc=["']([^"']+)["']/i);
+  if (imgM?.[1]) {
+    const u = normalizeImagemHref(imgM[1], feedUrl);
+    if (u) return u;
+  }
+  return null;
+}
+
+/** Extrai thumbnail de um bloco <entry> Atom (link enclosure image, media:, <img>). */
+function extractImagemUrlFromAtomEntryBlock(block: string, feedUrl: string): string | null {
+  const linkRe = /<link([^>]+)\/?>/gi;
+  let lm: RegExpExecArray | null;
+  while ((lm = linkRe.exec(block)) !== null) {
+    const attrs = lm[1];
+    if (!/type=["']image\//i.test(attrs)) continue;
+    const hm = attrs.match(/\bhref=["']([^"']+)["']/i);
+    if (hm?.[1]) {
+      const u = normalizeImagemHref(hm[1], feedUrl);
+      if (u) return u;
+    }
+  }
+  const th = block.match(/<media:thumbnail[^>]*\burl=["']([^"']+)["']/i);
+  if (th?.[1]) {
+    const u = normalizeImagemHref(th[1], feedUrl);
+    if (u) return u;
+  }
+  const imgM = block.match(/<img[^>]*\bsrc=["']([^"']+)["']/i);
+  if (imgM?.[1]) {
+    const u = normalizeImagemHref(imgM[1], feedUrl);
+    if (u) return u;
+  }
+  return null;
+}
+
 function parseRss2Items(xml: string, feedUrl: string): ParsedItem[] {
   const out: ParsedItem[] = [];
   const re = /<item\b[^>]*>([\s\S]*?)<\/item>/gi;
@@ -210,7 +286,8 @@ function parseRss2Items(xml: string, feedUrl: string): ParsedItem[] {
       getTagBlock(block, "dc:date") ??
       getTagBlock(block, "published");
     const published_at = parsePubDateToIso(pubRaw);
-    out.push({ titulo, item_url: link, resumo, published_at });
+    const imagem_url = extractImagemUrlFromRssItemBlock(block, feedUrl);
+    out.push({ titulo, item_url: link, resumo, published_at, imagem_url });
   }
   return out;
 }
@@ -229,7 +306,8 @@ function parseAtomEntries(xml: string, feedUrl: string): ParsedItem[] {
     const resumo = summary && summary.length > 0 ? summary.slice(0, MAX_RESUMO) : null;
     const pubRaw = getTagBlock(block, "updated") ?? getTagBlock(block, "published");
     const published_at = parsePubDateToIso(pubRaw);
-    out.push({ titulo: titulo || link, item_url: link, resumo, published_at });
+    const imagem_url = extractImagemUrlFromAtomEntryBlock(block, feedUrl);
+    out.push({ titulo: titulo || link, item_url: link, resumo, published_at, imagem_url });
   }
   return out;
 }
@@ -331,6 +409,7 @@ serve(async (req) => {
     titulo: string;
     resumo: string | null;
     published_at: string | null;
+    imagem_url: string | null;
     feed_url: string;
     fonte_host: string | null;
     passou_filtro: boolean;
@@ -359,6 +438,7 @@ serve(async (req) => {
         titulo: it.titulo,
         resumo: it.resumo,
         published_at: it.published_at,
+        imagem_url: it.imagem_url,
         feed_url: feedUrl,
         fonte_host: itemHost,
         passou_filtro,
@@ -387,11 +467,13 @@ serve(async (req) => {
         titulo: r.titulo,
         item_url: r.item_url,
         fonte_host: r.fonte_host,
+        imagem_url: r.imagem_url,
       })),
       amostra_rejeitados: rejeitados.slice(0, maxAmostra).map((r) => ({
         titulo: r.titulo,
         item_url: r.item_url,
         fonte_host: r.fonte_host,
+        imagem_url: r.imagem_url,
       })),
     }, req);
   }
