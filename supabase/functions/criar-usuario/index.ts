@@ -42,6 +42,12 @@ const PRESTADOR_TIPO_SLUGS = [
   'game_presenter',
   'shuffler',
   'escritorio',
+  'facilities',
+  'financeiro',
+  'tech_ops',
+  'ti',
+  'treinamento',
+  'estudio',
 ] as const
 
 /** Evita timers/listeners de Auth no cliente service_role (comum em Edge Functions travarem o isolate). */

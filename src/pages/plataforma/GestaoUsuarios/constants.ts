@@ -23,6 +23,12 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "game_presenter", label: "Game Presenter" },
   { slug: "shuffler", label: "Shuffler" },
   { slug: "escritorio", label: "Escritório" },
+  { slug: "facilities", label: "Facilities" },
+  { slug: "financeiro", label: "Financeiro" },
+  { slug: "tech_ops", label: "Tech Ops" },
+  { slug: "ti", label: "TI" },
+  { slug: "treinamento", label: "Treinamento" },
+  { slug: "estudio", label: "Estúdio" },
 ];
 
 /** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */

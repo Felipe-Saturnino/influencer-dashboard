@@ -194,7 +194,13 @@ export type PrestadorTipoSlug =
   | "customer_service"
   | "game_presenter"
   | "shuffler"
-  | "escritorio";
+  | "escritorio"
+  | "facilities"
+  | "financeiro"
+  | "tech_ops"
+  | "ti"
+  | "treinamento"
+  | "estudio";
 
 export interface UserScope {
   id:          string;

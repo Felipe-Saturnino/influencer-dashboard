@@ -1622,10 +1622,10 @@ export default function RhPrestadoresPage() {
       emailValidoNormalizado(emailsDoFormulario?.emailSpin) || emailValidoNormalizado(row.email_spin ?? null);
     const personal =
       emailValidoNormalizado(emailsDoFormulario?.emailPessoal) || emailValidoNormalizado(row.email ?? null);
-    if (!spin && !personal) return;
+    /** Sempre chamar a Edge: ela lê `email` / `email_spin` em `rh_funcionarios` quando o body não traz reforço. */
     const res = await syncUsuarioPrestadorAposSalvarRh(row.id, {
-      emailSpin: spin || undefined,
-      emailPessoal: personal || undefined,
+      ...(spin ? { emailSpin: spin } : {}),
+      ...(personal ? { emailPessoal: personal } : {}),
     });
     const m = mensagemFeedbackSyncPrestador(res);
     if (m) setErroGlobal(m);
