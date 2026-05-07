@@ -42,21 +42,19 @@ function sanitizarImagemUrl(raw: string | null | undefined): string | null {
     .replace(/\s+/g, "")
     .replace(/&amp;/g, "&")
     .replace(/^['"]|['"]$/g, "");
-  if (/[<>"']/.test(u) || u.length > 2048) return null;
+  if (/[<>]/.test(u) || u.length > 2048) return null;
   try {
     const parsed = new URL(u);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
     if (!parsed.hostname || parsed.hostname.length < 2) return null;
-    // App em HTTPS: tentar https primeiro (evita conteúdo misto e CDNs que redireccionam)
-    if (typeof window !== "undefined" && window.location.protocol === "https:" && parsed.protocol === "http:") {
-      const tryHttps = `https://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
-      return tryHttps;
-    }
     return parsed.href;
   } catch {
     return null;
   }
 }
+
+/** 1ª tentativa sem referrerPolicy; 2ª com no-referrer (CDNs divergentes); depois esconde. */
+type ThumbLoadPhase = "a" | "b" | "dead";
 
 export default function SpinNaRede() {
   const { theme: t } = useApp();
@@ -66,8 +64,8 @@ export default function SpinNaRede() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [itens, setItens] = useState<SpinNaRedeMencaoRow[]>([]);
-  /** Miniaturas que falharam a carregar (hotlink, URL inválida, etc.) — esconde caixa partida. */
-  const [thumbFalhou, setThumbFalhou] = useState<Record<string, boolean>>({});
+  /** Fase de carregamento da miniatura por item (retry com referrer antes de esconder). */
+  const [thumbPhase, setThumbPhase] = useState<Record<string, ThumbLoadPhase>>({});
 
   const carregar = useCallback(async () => {
     if (perm.loading || perm.canView === "nao") return;
@@ -85,6 +83,7 @@ export default function SpinNaRede() {
       setItens([]);
     } else {
       setItens((data ?? []) as SpinNaRedeMencaoRow[]);
+      setThumbPhase({});
     }
     setLoading(false);
   }, [perm.loading, perm.canView]);
@@ -185,7 +184,10 @@ export default function SpinNaRede() {
             const fonte = row.fonte_host?.trim() || "—";
             const imgAlt = row.titulo.length > 120 ? `${row.titulo.slice(0, 117)}…` : row.titulo;
             const thumb = sanitizarImagemUrl(row.imagem_url);
-            const mostrarThumb = Boolean(thumb) && !thumbFalhou[row.id];
+            const phase = thumbPhase[row.id];
+            const thumbMorto = phase === "dead";
+            const thumbNoReferrer = phase === "b";
+            const mostrarThumb = Boolean(thumb) && !thumbMorto;
             return (
               <li
                 key={row.id}
@@ -223,14 +225,22 @@ export default function SpinNaRede() {
                       aria-label={`Ir para a matéria: ${imgAlt}`}
                     >
                       <img
+                        key={`${row.id}-${phase ?? "a"}`}
                         src={thumb}
                         alt=""
                         width={160}
                         height={90}
                         loading="lazy"
                         decoding="async"
-                        referrerPolicy="no-referrer"
-                        onError={() => setThumbFalhou((p) => ({ ...p, [row.id]: true }))}
+                        referrerPolicy={thumbNoReferrer ? "no-referrer" : undefined}
+                        onError={() =>
+                          setThumbPhase((prev) => {
+                            const cur = prev[row.id];
+                            if (cur === undefined) return { ...prev, [row.id]: "b" };
+                            if (cur === "b") return { ...prev, [row.id]: "dead" };
+                            return prev;
+                          })
+                        }
                         style={{
                           display: "block",
                           width: 160,
@@ -254,8 +264,20 @@ export default function SpinNaRede() {
                       {row.titulo}
                     </h2>
                     {resumoLimpo.length > 0 && (
-                      <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-                        {resumoLimpo.length > 220 ? `${resumoLimpo.slice(0, 220).trim()}…` : resumoLimpo}
+                      <p
+                        style={{
+                          margin: "0 0 10px",
+                          fontSize: 13,
+                          color: t.textMuted,
+                          lineHeight: 1.55,
+                          wordBreak: "break-word",
+                          display: "-webkit-box",
+                          WebkitBoxOrient: "vertical" as const,
+                          WebkitLineClamp: 14,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {resumoLimpo}
                       </p>
                     )}
                     <a
