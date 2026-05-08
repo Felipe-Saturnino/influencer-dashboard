@@ -62,6 +62,7 @@ const TIPO_CONTATO_OPTS = [
   { value: "agente" as const, label: "Agente" },
   { value: "plataforma" as const, label: "Plataforma" },
   { value: "direto" as const, label: "Direto" },
+  { value: "site_spin" as const, label: "Site Spin" },
 ];
 
 const LIVE_CASSINO_OPTS = [
@@ -800,7 +801,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
         {tab === "contato" && (
           <>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(scout.email)}</div>
-            <div style={row}><label style={labelStyle}>Tipo de Contato</label>{val(scout.tipo_contato ? TIPO_CONTATO_OPTS.find((o) => o.value === scout.tipo_contato)?.label : null)}</div>
+            <div style={row}><label style={labelStyle}>Tipo de Contato</label>{val(scout.tipo_contato ? (TIPO_CONTATO_OPTS.find((o) => o.value === scout.tipo_contato)?.label ?? scout.tipo_contato) : null)}</div>
             {scout.tipo_contato === "agente" && <div style={row}><label style={labelStyle}>Nome do Agente</label>{val(scout.nome_agente)}</div>}
             <div style={row}><label style={labelStyle}>Telefone</label>{val(scout.telefone)}</div>
             <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(toCacheNumber(scout.cache_negociado) > 0 ? fmtBRL(toCacheNumber(scout.cache_negociado)) : null)}</div>
@@ -965,7 +966,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
       status,
       tipo_contato: tipoContato || null,
       nome_agente: tipoContato === "agente" ? nomeAgente.trim() || null : null,
-      telefone: (tipoContato === "agente" || tipoContato === "direto") ? telefone.trim() || null : null,
+      telefone: (tipoContato === "agente" || tipoContato === "direto" || tipoContato === "site_spin") ? telefone.trim() || null : null,
       cache_negociado: cacheNegociado || null,
       live_cassino: liveCassino || null,
       email: email.trim() || null,
@@ -1043,7 +1044,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         status,
         tipo_contato: tipoContato || null,
         nome_agente: tipoContato === "agente" ? nomeAgente.trim() || null : null,
-        telefone: (tipoContato === "agente" || tipoContato === "direto") ? telefone.trim() || null : null,
+        telefone: (tipoContato === "agente" || tipoContato === "direto" || tipoContato === "site_spin") ? telefone.trim() || null : null,
         cache_negociado: cacheNegociado || null,
         live_cassino: liveCassino || null,
         email: email.trim() || null,
@@ -1270,7 +1271,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 <input value={nomeAgente} onChange={(e) => setNomeAgente(e.target.value)} style={inputStyle} placeholder="Nome do agente" />
               </div>
             )}
-            {(tipoContato === "agente" || tipoContato === "direto") && (
+            {(tipoContato === "agente" || tipoContato === "direto" || tipoContato === "site_spin") && (
               <div style={row}>
                 <label style={labelStyle}>Telefone</label>
                 <input value={telefone} onChange={(e) => setTelefone(e.target.value)} style={inputStyle} placeholder="(11) 99999-9999" />

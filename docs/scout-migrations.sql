@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS scout_influencer (
   nome_artistico    TEXT NOT NULL,
   status            TEXT NOT NULL DEFAULT 'visualizado' CHECK (status IN ('visualizado', 'contato', 'negociacao', 'fechado')),
   -- Contato
-  tipo_contato      TEXT CHECK (tipo_contato IN ('agente', 'plataforma', 'direto')),
+  tipo_contato      TEXT CHECK (tipo_contato IS NULL OR tipo_contato IN ('agente', 'plataforma', 'direto', 'site_spin')),
   nome_agente       TEXT,
   telefone          TEXT,
   cache_negociado   NUMERIC(12,2) DEFAULT 0,

@@ -1,0 +1,210 @@
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  Cadastro de influencer → Scout (Plataforma Spin)
+  ═══════════════════════════════════════════════════════════════════════════
+
+  PARA TI / DEVOPS (antes de publicar no site)
+  ───────────────────────────────────────────
+  1) Supabase → SQL: aplicar a migration que inclui tipo_contato "site_spin"
+     (arquivo: supabase/migrations/20260507120000_scout_tipo_contato_site_spin.sql).
+
+  2) Supabase → Edge Functions → deploy:
+       supabase functions deploy prospecto-scout-site
+
+  3) Supabase → Project Settings → Edge Functions → Secrets:
+       PROSPECTO_SCOUT_FORM_SECRET = <uma string longa e aleatória>
+
+  4) Cloudflare Pages (mesmo projeto do dashboard) → Settings → Environment
+     variables → adicionar para Production (e Preview se quiser testar):
+       PROSPECTO_SCOUT_FORM_SECRET = <o mesmo valor do passo 3>
+     Garantir que a variável está disponível para Functions.
+
+  5) No trecho "CONFIG" abaixo, substituir ENDPOINT pela URL pública do proxy,
+     por exemplo: https://SEU-DASHBOARD.seudominio.com/api/prospecto-scout-site
+     (sem barra no final). O segredo NÃO vai no site — só no servidor (CF + Supabase).
+
+  PARA MARKETING / WORDPRESS
+  ──────────────────────────
+  • Colar o bloco entre "COPIAR DAQUI" e "ATÉ AQUI" num bloco HTML personalizado
+    (ou página Elementor "HTML").
+
+  • Ajustar apenas ENDPOINT no script CONFIG (TI passa o link final).
+
+  Plataformas aceitas no formulário (igual à plataforma interna):
+  Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp, Telegram.
+
+  Os envios aparecem em Lives → Scout com status "Visualizado" e tipo de contato
+  "Site Spin"; operadora e cachê negociado vêm vazios para o time preencher depois.
+
+  COPIAR DAQUI ↓↓↓
+-->
+
+<div id="spin-cadastro-influencer-root"></div>
+<script>
+(function () {
+  var CONFIG = {
+    /** URL do proxy na hospedagem do dashboard (Cloudflare Pages Function). */
+    ENDPOINT: "https://SUBSTITUIR_PELO_DOMINIO_DA_PLATAFORMA/api/prospecto-scout-site",
+  };
+
+  var PLATS = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok", "Discord", "WhatsApp", "Telegram"];
+  var root = document.getElementById("spin-cadastro-influencer-root");
+  if (!root || !CONFIG.ENDPOINT || CONFIG.ENDPOINT.indexOf("SUBSTITUIR") !== -1) {
+    if (root) {
+      root.innerHTML =
+        '<p style="color:#b91c1c;font-family:system-ui,sans-serif;font-size:14px;">Formulário: configure o ENDPOINT (TI).</p>';
+    }
+    return;
+  }
+
+  var css =
+    "#spin-cadastro-influencer{font-family:system-ui,-apple-system,sans-serif;max-width:520px;color:#111}" +
+    "#spin-cadastro-influencer label{display:block;font-size:12px;font-weight:600;margin:0 0 6px;color:#374151}" +
+    "#spin-cadastro-influencer input,#spin-cadastro-influencer select{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:14px}" +
+    "#spin-cadastro-influencer .spin-row{margin-bottom:4px}" +
+    "#spin-cadastro-influencer .spin-canal{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px;background:#fafafa}" +
+    "#spin-cadastro-influencer button.spin-primary{background:linear-gradient(135deg,#4a2082,#1e36f8);color:#fff;border:none;padding:12px 20px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;width:100%}" +
+    "#spin-cadastro-influencer button.spin-primary:disabled{opacity:0.6;cursor:not-allowed}" +
+    "#spin-cadastro-influencer button.spin-secondary{background:#fff;color:#4a2082;border:1px solid #4a2082;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px}" +
+    "#spin-cadastro-influencer .spin-msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:14px}" +
+    "#spin-cadastro-influencer .spin-ok{background:#dcfce7;color:#166534;border:1px solid #86efac}" +
+    "#spin-cadastro-influencer .spin-err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}";
+
+  var style = document.createElement("style");
+  style.textContent = css;
+  root.appendChild(style);
+
+  var wrap = document.createElement("div");
+  wrap.id = "spin-cadastro-influencer";
+  wrap.innerHTML =
+    '<h2 style="font-size:1.25rem;margin:0 0 16px;font-weight:800">Quero ser influencer parceiro</h2>' +
+    '<div class="spin-row"><label for="spin-nome">Nome artístico ou como quer ser chamado(a)</label><input id="spin-nome" type="text" autocomplete="name" maxlength="300" required /></div>' +
+    '<div class="spin-row"><label for="spin-tel">Telefone (WhatsApp)</label><input id="spin-tel" type="tel" autocomplete="tel" maxlength="80" required /></div>' +
+    '<div class="spin-row"><label for="spin-email">E-mail</label><input id="spin-email" type="email" autocomplete="email" maxlength="254" required /></div>' +
+    '<div class="spin-row"><label for="spin-cassino">Faz live de cassino?</label><select id="spin-cassino" required><option value="">Selecione</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>' +
+    '<p style="font-size:13px;color:#6b7280;margin:8px 0 10px">Canais — informe plataforma, link do perfil/canal e seguidores ou média de views.</p>' +
+    '<div id="spin-canais"></div>' +
+    '<button type="button" class="spin-secondary" id="spin-add-canal">+ Adicionar outro canal</button>' +
+    '<button type="submit" class="spin-primary" id="spin-submit" style="margin-top:16px">Enviar cadastro</button>' +
+    '<div id="spin-feedback" role="status" aria-live="polite"></div>';
+
+  root.appendChild(wrap);
+
+  var canaisEl = document.getElementById("spin-canais");
+  var feedbackEl = document.getElementById("spin-feedback");
+
+  function platOptions() {
+    return PLATS.map(function (p) {
+      return '<option value="' + p + '">' + p + "</option>";
+    }).join("");
+  }
+
+  function addCanalRow() {
+    var div = document.createElement("div");
+    div.className = "spin-canal";
+    div.innerHTML =
+      '<label>Plataforma</label><select class="spin-plat" required>' +
+      '<option value="">Selecione</option>' +
+      platOptions() +
+      "</select>" +
+      '<label>Link do perfil ou canal</label><input class="spin-link" type="url" placeholder="https://…" maxlength="2048" required />' +
+      '<label>Seguidores ou média de views</label><input class="spin-metrica" type="number" min="0" step="1" placeholder="Ex.: 1500" required />';
+    canaisEl.appendChild(div);
+  }
+
+  addCanalRow();
+
+  document.getElementById("spin-add-canal").onclick = function () {
+    addCanalRow();
+  };
+
+  function showMsg(ok, text) {
+    feedbackEl.className = "spin-msg " + (ok ? "spin-ok" : "spin-err");
+    feedbackEl.textContent = text;
+  }
+
+  document.getElementById("spin-submit").onclick = function () {
+    var btn = document.getElementById("spin-submit");
+    var nome = document.getElementById("spin-nome").value.trim();
+    var tel = document.getElementById("spin-tel").value.trim();
+    var email = document.getElementById("spin-email").value.trim().toLowerCase();
+    var cassino = document.getElementById("spin-cassino").value;
+
+    feedbackEl.textContent = "";
+    feedbackEl.className = "";
+
+    if (!nome || !tel || !email || !cassino) {
+      showMsg(false, "Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    var rows = canaisEl.querySelectorAll(".spin-canal");
+    var canais = [];
+    for (var i = 0; i < rows.length; i++) {
+      var plat = rows[i].querySelector(".spin-plat").value;
+      var link = rows[i].querySelector(".spin-link").value.trim();
+      var met = rows[i].querySelector(".spin-metrica").value;
+      if (!plat && !link && !met) continue;
+      if (!plat || !link) {
+        showMsg(false, "Cada canal precisa de plataforma e link.");
+        return;
+      }
+      var n = parseInt(String(met).replace(/\D/g, ""), 10);
+      if (String(met).trim() === "" || isNaN(n) || n < 0) {
+        showMsg(false, "Informe um número válido (≥ 0) em seguidores/média de views.");
+        return;
+      }
+      canais.push({ plataforma: plat, link: link, metrica: n });
+    }
+
+    if (canais.length === 0) {
+      showMsg(false, "Adicione ao menos um canal completo.");
+      return;
+    }
+
+    var body = {
+      nome_artistico: nome,
+      telefone: tel,
+      email: email,
+      live_cassino: cassino,
+      canais: canais,
+    };
+
+    btn.disabled = true;
+    fetch(CONFIG.ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { res: res, data: data };
+        });
+      })
+      .then(function (x) {
+        if (x.res.ok && x.data && x.data.success) {
+          showMsg(true, "Recebemos seu cadastro! Nossa equipe entrará em contato em breve.");
+          document.getElementById("spin-nome").value = "";
+          document.getElementById("spin-tel").value = "";
+          document.getElementById("spin-email").value = "";
+          document.getElementById("spin-cassino").value = "";
+          canaisEl.innerHTML = "";
+          addCanalRow();
+        } else {
+          var err = (x.data && x.data.error) || "Não foi possível enviar. Tente novamente.";
+          showMsg(false, err);
+        }
+      })
+      .catch(function () {
+        showMsg(false, "Erro de conexão. Tente novamente.");
+      })
+      .finally(function () {
+        btn.disabled = false;
+      });
+  };
+})();
+</script>
+
+<!--
+  ATÉ AQUI ↑↑↑
+-->

@@ -38,7 +38,8 @@ function isAbortError(e: unknown): boolean {
 
 export async function proxyPostToSupabaseEdge(
   context: SupabaseProxyContext,
-  functionName: string
+  functionName: string,
+  options?: { forwardHeaders?: Record<string, string> }
 ): Promise<Response> {
   const { url, anonKey } = resolveProxySupabaseEnv(context);
 
@@ -81,6 +82,7 @@ export async function proxyPostToSupabaseEdge(
         "Content-Type": "application/json",
         Authorization: context.request.headers.get("Authorization") || `Bearer ${anonKey}`,
         Apikey: anonKey,
+        ...(options?.forwardHeaders ?? {}),
       },
       body: body || "{}",
       signal: ctrl.signal,

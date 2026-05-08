@@ -20,6 +20,10 @@ verify_jwt = false
 verify_jwt = false
 # Cria influencer a partir do Scout; usa service_role internamente
 
+[functions.prospecto-scout-site]
+verify_jwt = false
+# Prospecto vindo do site (WordPress); valida PROSPECTO_SCOUT_FORM_SECRET e insere em scout_influencer
+
 [functions.sync-rh-prestador-auth-user]
 verify_jwt = false
 # Sincroniza usuário prestador (Auth + profile + user_scopes) a partir de rh_funcionarios; permissão rh_funcionarios no corpo
