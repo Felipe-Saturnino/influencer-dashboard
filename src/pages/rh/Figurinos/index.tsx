@@ -10,6 +10,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
+import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -49,6 +50,19 @@ function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
+}
+
+/** Retirada via Gestão de Prestadores grava `borrower_ref` = id de `rh_funcionarios`; login casa por e-mail como em Dados de Cadastro. */
+function emprestimoFigurinoEhDoProprioLogin(
+  emp: RhFigurinoEmprestimo | undefined,
+  rhPrestadorIds: Set<string>,
+  nomePerfilNorm: string,
+): boolean {
+  if (!emp) return false;
+  const ref = (emp.borrower_ref ?? "").trim();
+  if (ref.length > 0 && rhPrestadorIds.has(ref)) return true;
+  const nb = normNomeParaFiltroPrestadorFig(emp.borrower_name);
+  return nb.length > 0 && nomePerfilNorm.length > 0 && nb === nomePerfilNorm;
 }
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
@@ -139,6 +153,9 @@ export default function FigurinosPage() {
   const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("rh_figurinos");
 
+  const [rhPrestadorIdsLogin, setRhPrestadorIdsLogin] = useState<string[]>([]);
+  const [loadingRhPrestadorMatch, setLoadingRhPrestadorMatch] = useState(false);
+
   const [pecas, setPecas] = useState<RhFigurinoPeca[]>([]);
   const [empPorItem, setEmpPorItem] = useState<Record<string, RhFigurinoEmprestimo>>({});
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -226,6 +243,25 @@ export default function FigurinosPage() {
   }, [carregar]);
 
   useEffect(() => {
+    if (perm.canView !== "proprios" || !user?.email?.trim()) {
+      setRhPrestadorIdsLogin([]);
+      setLoadingRhPrestadorMatch(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingRhPrestadorMatch(true);
+    void buscarRhFuncionarioIdsPorEmailLogin(user.email).then((ids) => {
+      if (!cancelled) {
+        setRhPrestadorIdsLogin(ids);
+        setLoadingRhPrestadorMatch(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.canView, user?.email]);
+
+  useEffect(() => {
     if (user?.role === "operador" && operadoraSlugsForcado?.length === 1) {
       setFiltroOp(operadoraSlugsForcado[0]);
     }
@@ -250,18 +286,16 @@ export default function FigurinosPage() {
 
   const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
 
-  /** Gestão de Usuários — permissão Figurinos «Próprios»: só peças com retirada ativa em nome do utilizador (borrower_name). */
+  const rhPrestadorIdsSet = useMemo(() => new Set(rhPrestadorIdsLogin), [rhPrestadorIdsLogin]);
+  const nomeUsuarioFigNorm = useMemo(() => normNomeParaFiltroPrestadorFig(user?.name), [user?.name]);
+
+  /** Gestão de Usuários — permissão Figurinos «Próprios»: retiradas do próprio cadastro RH (`borrower_ref`) ou, em legado, nome igual ao perfil. */
   const pecasVisiveisPermissao = useMemo(() => {
     if (perm.loading || perm.canView !== "proprios") return pecasComFiltroTopo;
-    const nu = normNomeParaFiltroPrestadorFig(user?.name);
-    if (!nu) return [];
-    return pecasComFiltroTopo.filter((p) => {
-      const emp = empPorItem[p.id];
-      if (!emp) return false;
-      const nb = normNomeParaFiltroPrestadorFig(emp.borrower_name);
-      return nb.length > 0 && nb === nu;
-    });
-  }, [pecasComFiltroTopo, perm.loading, perm.canView, user?.name, empPorItem]);
+    return pecasComFiltroTopo.filter((p) =>
+      emprestimoFigurinoEhDoProprioLogin(empPorItem[p.id], rhPrestadorIdsSet, nomeUsuarioFigNorm),
+    );
+  }, [pecasComFiltroTopo, perm.loading, perm.canView, empPorItem, rhPrestadorIdsSet, nomeUsuarioFigNorm]);
 
   const kpis = useMemo(() => {
     const tot = pecasVisiveisPermissao.length;
@@ -445,12 +479,10 @@ export default function FigurinosPage() {
     }
     if (p.status === "borrowed") {
       if (perm.canView === "proprios") {
-        const nu = normNomeParaFiltroPrestadorFig(user?.name);
         const emp = empPorItem[p.id];
-        const nb = normNomeParaFiltroPrestadorFig(emp?.borrower_name);
-        if (!nu || !nb || nb !== nu) {
+        if (!emprestimoFigurinoEhDoProprioLogin(emp, rhPrestadorIdsSet, nomeUsuarioFigNorm)) {
           setErroGlobal(
-            "Esta peça não está associada ao seu nome como prestador. Só pode abrir devolução das suas próprias retiradas.",
+            "Esta peça não está associada ao seu cadastro de prestador (retirada). Só pode abrir devolução das suas próprias retiradas.",
           );
           return;
         }
@@ -828,7 +860,7 @@ export default function FigurinosPage() {
       </div>
 
       <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`}>
-        {loading ? (
+        {loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, color: t.textMuted }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             <span style={{ fontFamily: FONT.body, fontSize: 13 }}>Carregando…</span>

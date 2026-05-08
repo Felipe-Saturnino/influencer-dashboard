@@ -27,6 +27,7 @@ import {
 import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import { filtraFuncionariosParaLoginEmail } from "../../../lib/rhFuncionarioLoginMatch";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
@@ -48,16 +49,6 @@ const TIPOS_CONTRATO_LABEL: Record<RhFuncionarioTipoContrato, string> = {
   Estagio: "Estágio",
   Temporario: "Temporário",
 };
-
-/** Prestadores cujo e-mail pessoal ou E-mail Spin coincide com o login (comparação normalizada). */
-function filtraFuncionariosParaLoginEmail(rows: RhFuncionario[], loginEmail: string): RhFuncionario[] {
-  const n = loginEmail.trim().toLowerCase();
-  return rows.filter((r) => {
-    const em = (r.email ?? "").trim().toLowerCase();
-    const sp = (r.email_spin ?? "").trim().toLowerCase();
-    return em === n || (sp.length > 0 && sp === n);
-  });
-}
 
 /** Anotação do RH «Particular»: não listar na aba Histórico desta página (só no modal em Gestão de Prestadores). */
 function historicoVisivelAbaDadosCadastro(h: RhFuncionarioHistorico): boolean {
