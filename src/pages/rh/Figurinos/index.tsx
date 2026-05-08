@@ -42,6 +42,15 @@ import {
 
 type Aba = RhFigurinoStatus;
 
+/** Alinha nome do perfil com o texto gravado em «Emprestado para» / retirada (borrower_name). */
+function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
+  return (s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
@@ -241,21 +250,34 @@ export default function FigurinosPage() {
 
   const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
 
+  /** Gestão de Usuários — permissão Figurinos «Próprios»: só peças com retirada ativa em nome do utilizador (borrower_name). */
+  const pecasVisiveisPermissao = useMemo(() => {
+    if (perm.loading || perm.canView !== "proprios") return pecasComFiltroTopo;
+    const nu = normNomeParaFiltroPrestadorFig(user?.name);
+    if (!nu) return [];
+    return pecasComFiltroTopo.filter((p) => {
+      const emp = empPorItem[p.id];
+      if (!emp) return false;
+      const nb = normNomeParaFiltroPrestadorFig(emp.borrower_name);
+      return nb.length > 0 && nb === nu;
+    });
+  }, [pecasComFiltroTopo, perm.loading, perm.canView, user?.name, empPorItem]);
+
   const kpis = useMemo(() => {
-    const tot = pecasComFiltroTopo.length;
-    const av = pecasComFiltroTopo.filter((p) => p.status === "available").length;
-    const emprestadas = pecasComFiltroTopo.filter((p) => {
+    const tot = pecasVisiveisPermissao.length;
+    const av = pecasVisiveisPermissao.filter((p) => p.status === "available").length;
+    const emprestadas = pecasVisiveisPermissao.filter((p) => {
       if (p.status !== "borrowed") return false;
       const w = empPorItem[p.id]?.withdrawal_type ?? "emprestar";
       return w === "emprestar";
     }).length;
-    const fixos = pecasComFiltroTopo.filter((p) => {
+    const fixos = pecasVisiveisPermissao.filter((p) => {
       if (p.status !== "borrowed") return false;
       return empPorItem[p.id]?.withdrawal_type === "fixo";
     }).length;
-    const ma = pecasComFiltroTopo.filter((p) => p.status === "maintenance").length;
+    const ma = pecasVisiveisPermissao.filter((p) => p.status === "maintenance").length;
     return { tot, av, bo: emprestadas, fx: fixos, ma };
-  }, [pecasComFiltroTopo, empPorItem]);
+  }, [pecasVisiveisPermissao, empPorItem]);
 
   const buscaNorm = useMemo(
     () => busca.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""),
@@ -263,7 +285,7 @@ export default function FigurinosPage() {
   );
 
   const pecasFiltradas = useMemo(() => {
-    return pecasComFiltroTopo.filter((p) => {
+    return pecasVisiveisPermissao.filter((p) => {
       if (p.status !== aba) return false;
       if (!buscaNorm) return true;
       const emp = empPorItem[p.id];
@@ -274,7 +296,7 @@ export default function FigurinosPage() {
         .replace(/\p{M}/gu, "");
       return hay.includes(buscaNorm);
     });
-  }, [pecasComFiltroTopo, aba, buscaNorm, empPorItem, operadoraNome]);
+  }, [pecasVisiveisPermissao, aba, buscaNorm, empPorItem, operadoraNome]);
 
   const pecasOrdenadas = useMemo(() => {
     const arr = [...pecasFiltradas];
@@ -356,8 +378,8 @@ export default function FigurinosPage() {
   }, [pecasFiltradas, sortFig, empPorItem, operadoraNome]);
 
   const pecasNaAbaComFiltroTopo = useMemo(
-    () => pecasComFiltroTopo.filter((p) => p.status === aba),
-    [pecasComFiltroTopo, aba],
+    () => pecasVisiveisPermissao.filter((p) => p.status === aba),
+    [pecasVisiveisPermissao, aba],
   );
 
   const sortHeader = useCallback(
@@ -422,6 +444,17 @@ export default function FigurinosPage() {
       return;
     }
     if (p.status === "borrowed") {
+      if (perm.canView === "proprios") {
+        const nu = normNomeParaFiltroPrestadorFig(user?.name);
+        const emp = empPorItem[p.id];
+        const nb = normNomeParaFiltroPrestadorFig(emp?.borrower_name);
+        if (!nu || !nb || nb !== nu) {
+          setErroGlobal(
+            "Esta peça não está associada ao seu nome como prestador. Só pode abrir devolução das suas próprias retiradas.",
+          );
+          return;
+        }
+      }
       setDevPeca(p);
       setModalScanner(false);
     }
