@@ -80,6 +80,7 @@ export const PAGES: {
   // Marketing
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "afiliados_network", label: "Network", secao: "Afiliados", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Estúdio (menu)
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   {

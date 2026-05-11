@@ -23,6 +23,7 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   Lives: true,
   Aquisição: true,
   Marketing: true,
+  Afiliados: true,
   Estúdio: true,
   RH: true,
   Conteúdo: true,

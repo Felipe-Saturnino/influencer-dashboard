@@ -35,6 +35,7 @@ export type PageKey =
   | "feedback"
   | "influencers"
   | "scout"
+  | "afiliados_network"
   | "financeiro"
   | "banca_jogo"
   | "gestao_links"
