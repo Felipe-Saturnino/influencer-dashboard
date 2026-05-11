@@ -30,7 +30,7 @@ import {
   GiNewspaper,
 } from "react-icons/gi";
 import { createElement } from "react";
-import { CalendarRange, Network, Radio } from "lucide-react";
+import { CalendarRange, Network, Radio, Users } from "lucide-react";
 
 function IconRhCalendarioMenu({ size = 15, color }: { size?: number; color?: string }) {
   return createElement(CalendarRange, { size, color, "aria-hidden": true });
@@ -44,6 +44,10 @@ function IconAfiliadosNetworkMenu({ size = 15, color }: { size?: number; color?:
   return createElement(Network, { size, color, "aria-hidden": true });
 }
 
+function IconAfiliadosListaMenu({ size = 15, color }: { size?: number; color?: string }) {
+  return createElement(Users, { size, color, "aria-hidden": true });
+}
+
 export interface MenuItem {
   key: PageKey;
   label: string;
@@ -55,7 +59,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Aquisição, Marketing, Afiliados, Estúdio, RH, Conteúdo, Plataforma. A secção "Financeiro" fica reservada no produto para páginas futuras — não entra no menu. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Estúdio, RH, Conteúdo, Plataforma. A secção "Financeiro" fica reservada no produto para páginas futuras — não entra no menu. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -77,6 +81,13 @@ export const MENU: MenuSection[] = [
     ],
   },
   {
+    section: "Afiliados",
+    items: [
+      { key: "afiliados", label: "Afiliados", icon: IconAfiliadosListaMenu },
+      { key: "afiliados_network", label: "Network", icon: IconAfiliadosNetworkMenu },
+    ],
+  },
+  {
     section: "Aquisição",
     items: [
       { key: "financeiro", label: "Financeiro", icon: GiCash },
@@ -89,10 +100,6 @@ export const MENU: MenuSection[] = [
       { key: "campanhas", label: "Campanhas", icon: GiMegaphone },
       { key: "gestao_links", label: "Gestão de Links", icon: GiLinkedRings },
     ],
-  },
-  {
-    section: "Afiliados",
-    items: [{ key: "afiliados_network", label: "Network", icon: IconAfiliadosNetworkMenu }],
   },
   {
     section: "Estúdio",

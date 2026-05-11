@@ -204,9 +204,6 @@ export default function AfiliadosNetwork() {
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
             Funil de Prospecção
           </div>
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px 2px", maxWidth: 720 }}>
-            Sem seleção, a lista oculta afiliados em Fechado. Clique em um ou mais status para ver apenas os selecionados (incluindo Fechado).
-          </p>
           <div className="app-grid-kpi-4" style={{ width: "100%" }}>
             {STATUS_OPTS.map((s) => {
               const active = funnelSel.includes(s);

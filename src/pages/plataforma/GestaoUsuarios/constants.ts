@@ -75,13 +75,15 @@ export const PAGES: {
   { key: "feedback", label: "Feedback", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: true },
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Afiliados
+  { key: "afiliados", label: "Afiliados", secao: "Afiliados", hasCriar: false, hasEditar: true, hasExcluir: true },
+  { key: "afiliados_network", label: "Network", secao: "Afiliados", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Aquisição
   { key: "financeiro", label: "Financeiro", secao: "Aquisição", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "banca_jogo", label: "Banca de Jogo", secao: "Aquisição", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Marketing
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "afiliados_network", label: "Network", secao: "Afiliados", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Estúdio (menu)
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
