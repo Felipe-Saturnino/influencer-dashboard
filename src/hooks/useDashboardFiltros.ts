@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
-import { ROLES_VISAO_OPERACAO_SPIN } from "../lib/staffRoles";
+import { ROLES_VISAO_OPERACAO_SPIN, roleParidadeInfluencer } from "../lib/staffRoles";
 
 /**
  * Regras de exibição de filtros por role (Etapa 8):
@@ -23,7 +23,7 @@ export function useDashboardFiltros() {
     if (!user) return false;
     if (user.role === "operador" && escoposVisiveis.operadorasVisiveis.length > 0) return false;
     if (ROLES_VISAO_OPERACAO_SPIN.includes(user.role)) return true;
-    if (["influencer", "agencia"].includes(user.role))
+    if (roleParidadeInfluencer(user.role) || user.role === "agencia")
       return escoposVisiveis.operadorasVisiveis.length >= 2;
     return false;
   }, [user, escoposVisiveis.operadorasVisiveis.length]);

@@ -22,6 +22,8 @@ import {
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Shield } from "lucide-react";
 import { GiChipsBag } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
+import type { Role } from "../../../types";
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 type BancaStatus = "solicitado" | "aprovado" | "liberado";
 type BancaStatusConta = "liberada" | "bloqueada";
@@ -148,7 +150,12 @@ function Avatar({ name, size = 28 }: { name: string; size?: number }) {
 
 /** Filtro operadora: oculto para influencer, agência e operador (este último com escopo forçado). */
 function useBancaFiltroOperadoraUI(userRole: string | undefined) {
-  return userRole && !["influencer", "agencia", "operador"].includes(userRole);
+  return (
+    !!userRole &&
+    !roleParidadeInfluencer(userRole as Role) &&
+    userRole !== "agencia" &&
+    userRole !== "operador"
+  );
 }
 
 function ModalBloqueioSolicitacaoCampanha({
@@ -221,7 +228,7 @@ function ModalSolicitar({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [infSel, setInfSel] = useState(userRole === "influencer" ? userId : "");
+  const [infSel, setInfSel] = useState(roleParidadeInfluencer(userRole as Role) ? userId : "");
   const [opSlug, setOpSlug] = useState("");
   const [idOp, setIdOp] = useState("");
   const [valorStr, setValorStr] = useState("");
@@ -238,7 +245,7 @@ function ModalSolicitar({
   };
 
   useEffect(() => {
-    if (userRole !== "influencer" || !userId) return;
+    if (!roleParidadeInfluencer(userRole as Role) || !userId) return;
     void carregarIo(userId);
   }, [userRole, userId]);
 
@@ -307,7 +314,7 @@ function ModalSolicitar({
   }, [opSlug, opcoesIo]);
 
   const valorNum = parseFloat(valorStr.replace(",", ".")) || 0;
-  const escopoOk = userRole === "influencer" || !!infSel;
+  const escopoOk = roleParidadeInfluencer(userRole as Role) || !!infSel;
   const regraCampanhaOk = userRole !== "agencia" || agenciaElegivel === true;
   const podeSubmeter =
     escopoOk &&
@@ -319,7 +326,7 @@ function ModalSolicitar({
   async function handleSolicitar() {
     setErr("");
     if (!podeSubmeter) return;
-    const influencerAlvo = userRole === "influencer" ? userId : infSel;
+    const influencerAlvo = roleParidadeInfluencer(userRole as Role) ? userId : infSel;
     const check = await verificarElegibilidadeAgendaLive(influencerAlvo);
     if (check.perfilIncompleto) {
       onBloqueioGate("perfil");
@@ -350,7 +357,7 @@ function ModalSolicitar({
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title="Nova solicitação de banca" onClose={onClose} />
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {userRole === "influencer" && (
+        {roleParidadeInfluencer(userRole as Role) && (
           <div>
             <label style={labelStyle}>Influencer</label>
             <input value={nomeInfluencerLocked ?? ""} readOnly disabled style={{ ...inputStyle, opacity: 0.85, cursor: "not-allowed" }} />
@@ -661,7 +668,7 @@ function BlocoSolicitacoes({
 
   async function aoClicarSolicitar() {
     if (!user?.id) return;
-    if (user.role === "influencer") {
+    if (roleParidadeInfluencer(user.role)) {
       const check = await verificarElegibilidadeAgendaLive(user.id);
       if (check.perfilIncompleto) {
         setBloqueioSolicitacao("perfil");
@@ -784,7 +791,7 @@ function BlocoSolicitacoes({
     padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
   };
 
-  const podeSolicitar = user && ["influencer", "agencia"].includes(user.role);
+  const podeSolicitar = user && (roleParidadeInfluencer(user.role) || user.role === "agencia");
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
@@ -1780,7 +1787,7 @@ export default function BancaJogo() {
   useEffect(() => { void carregarDados(); }, []);
 
   useEffect(() => {
-    void supabase.from("profiles").select("id, name").eq("role", "influencer").then(({ data }) => {
+    void supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
       if (data) setInfluencerList(data);
     });
   }, []);
@@ -1795,7 +1802,7 @@ export default function BancaJogo() {
     const { data: perfis } = await supabase
       .from("influencer_perfil")
       .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status");
-    const { data: emails } = await supabase.from("profiles").select("id, email").eq("role", "influencer");
+    const { data: emails } = await supabase.from("profiles").select("id, email").in("role", [...ROLES_PARIDADE_INFLUENCER]);
     const emailM: Record<string, string> = {};
     for (const e of emails ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
     const m: Record<string, BancaPerfilMapRow> = {};
@@ -1827,7 +1834,8 @@ export default function BancaJogo() {
 
   const staffPodeAcao =
     !!user &&
-    !["influencer", "agencia"].includes(user.role) &&
+    !roleParidadeInfluencer(user.role) &&
+    user.role !== "agencia" &&
     perm.canEditarOk;
 
   const staffPodeAprovar = staffPodeAcao && user?.role !== "operador";

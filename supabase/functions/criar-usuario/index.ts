@@ -50,6 +50,10 @@ const PRESTADOR_TIPO_SLUGS = [
   'estudio',
 ] as const
 
+function paridadeInfluencer(role: string): boolean {
+  return role === 'influencer' || role === 'afiliado'
+}
+
 /** Evita timers/listeners de Auth no cliente service_role (comum em Edge Functions travarem o isolate). */
 const supabaseServiceOptions = {
   auth: {
@@ -342,7 +346,7 @@ serve(async (req) => {
   }
 
   let influencerScoutRow: ScoutRowForSync | null = null
-  if (role === 'influencer') {
+  if (paridadeInfluencer(role)) {
     influencerScoutRow = await buscarScoutUsavelPorEmail(supabase, email.trim().toLowerCase())
     const slug = String(influencerScoutRow?.operadora_slug ?? '').trim()
     if (slug && !scopeOperadorasArr.includes(slug)) {
@@ -356,8 +360,8 @@ serve(async (req) => {
   const bloqueado = ROLES_BLOQUEADOS.includes(role)
 
   // Validações por role
-  if (role === 'influencer' && scopeOperadorasArr.length === 0) {
-    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o influencer' }), {
+  if (paridadeInfluencer(role) && scopeOperadorasArr.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o perfil' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -491,8 +495,8 @@ serve(async (req) => {
         }
       }
 
-      // 4. Se influencer: influencer_perfil e influencer_operadoras
-      if (role === 'influencer') {
+      // 4. Influenciador ou afiliado: influencer_perfil e influencer_operadoras
+      if (paridadeInfluencer(role)) {
         const cacheHoraScout = influencerScoutRow
           ? parseCacheNumeric(influencerScoutRow.cache_negociado)
           : 0

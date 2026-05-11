@@ -23,6 +23,7 @@ import {
   compareNumber,
   comparePagamentoStatus,
 } from "../../../lib/classificacaoSort";
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import {
   AlertTriangle,
   Banknote,
@@ -2145,7 +2146,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, email")
-      .eq("role", "influencer");
+      .in("role", [...ROLES_PARIDADE_INFLUENCER]);
 
     if (!perfis) { setLoading(false); return; }
 
@@ -2674,7 +2675,7 @@ export default function Financeiro() {
   });
 
   useEffect(() => {
-    supabase.from("profiles").select("id, name").eq("role", "influencer")
+    supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER])
       .then(({ data }) => { if (data) setInfluencerList(data); });
   }, []);
 
@@ -2879,9 +2880,9 @@ export default function Financeiro() {
         />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
-            {user?.role === "influencer" ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
+            {roleParidadeInfluencer(user?.role) ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
           </p>
-          {user?.role === "influencer" ? (
+          {roleParidadeInfluencer(user?.role) ? (
             <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
               Os ciclos são criados automaticamente. Caso tenha realizado lives recentemente e os dados não apareçam, aguarde até 24h ou entre em contato com a equipe.
             </p>

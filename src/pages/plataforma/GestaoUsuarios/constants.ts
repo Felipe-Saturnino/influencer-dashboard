@@ -44,6 +44,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
   { value: "influencer", label: "Influenciador" },
+  { value: "afiliado", label: "Afiliado" },
   { value: "investidor", label: "Investidor" },
 ];
 
@@ -51,7 +52,7 @@ export const ROLES: { value: Role; label: string }[] = [
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
   { titulo: "Perfis Internos", roles: ["rh", "figurino", "service_manager", "shift_leader", "prestador"] },
-  { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "investidor"] },
+  { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
 /** Ordem alinhada ao menu lateral (`constants/menu.ts`); secção Geral por último. */
@@ -130,6 +131,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "operador",
   "agencia",
   "influencer",
+  "afiliado",
   "investidor",
 ];
 
@@ -154,6 +156,7 @@ export function roleBadgeColor(role: Role): string {
     figurino: BRAND.roxoVivo,
     rh: BRAND.roxo,
     influencer: BRAND.verde,
+    afiliado: BRAND.ciano,
     operador: BRAND.amarelo,
     agencia: BRAND.vermelho,
     investidor: BRAND.roxo,

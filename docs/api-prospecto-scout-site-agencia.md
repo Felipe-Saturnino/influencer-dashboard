@@ -106,3 +106,5 @@ Após sucesso, o cadastro aparece na plataforma em **Lives → Scout** com:
 ## Pré-requisito de infra (TI Spin — não é da agência)
 
 Migration no banco, deploy da Edge Function `prospecto-scout-site`, secrets no Supabase e no Cloudflare alinhados. A agência só precisa do **URL final** do `POST`.
+
+**Outro formulário público (afiliados):** ver `api-prospecto-afiliados-network-site-agencia.md` — endpoint `/api/prospecto-afiliados-network-site` e secret próprio (`PROSPECTO_AFILIADOS_NETWORK_FORM_SECRET`).

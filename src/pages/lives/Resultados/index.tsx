@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
+import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_OPTS: { value: LiveStatus; label: string; color: string }[] = [
@@ -619,7 +620,7 @@ export default function Resultados() {
   useEffect(() => { void loadData(); }, [loadData]);
 
   useEffect(() => {
-    supabase.from("profiles").select("id, name").eq("role", "influencer")
+    supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER])
       .then(({ data }) => { if (data) setInfluencerList(data); });
   }, []);
 

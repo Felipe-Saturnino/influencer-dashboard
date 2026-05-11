@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
@@ -225,7 +226,7 @@ export default function Agenda() {
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
       Promise.all([
-        showFiltroInfluencer ? supabase.from("profiles").select("id, name").eq("role", "influencer").order("name") : Promise.resolve({ data: [] }),
+        showFiltroInfluencer ? supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name") : Promise.resolve({ data: [] }),
         showFiltroOperadora  ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
       ]).then(([profRes, opsRes]) => {
         if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
@@ -608,7 +609,7 @@ export default function Agenda() {
 
   async function tentarAbrirNovaLive() {
     if (!user) return;
-    if (user.role === "influencer") {
+    if (roleParidadeInfluencer(user.role)) {
       setChecandoNovaLive(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(user.id);

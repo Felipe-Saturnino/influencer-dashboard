@@ -18,7 +18,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
-import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
@@ -228,7 +228,7 @@ export default function Influencers() {
 
     if (showManagementUI) {
       const { data: profiles } = await supabase
-        .from("profiles").select("id, name, email").eq("role", "influencer").order("name");
+        .from("profiles").select("id, name, email").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([

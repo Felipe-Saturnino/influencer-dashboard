@@ -7,6 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import {
   buildSpinBrandedQrPngBlob,
   buildSpinBrandedQrPreviewDataUrl,
@@ -73,7 +74,7 @@ export default function LinksMateriais() {
   const dark = isDark ?? false;
   const narrowMobile = useMediaQuery("(max-width: 479px)");
 
-  const precisaSelecionarInfluencer = !!user && user.role !== "influencer";
+  const precisaSelecionarInfluencer = !!user && !roleParidadeInfluencer(user.role);
   const podeEmitir = perm.canEditarOk && !perm.loading;
 
   const [nomeArtistico, setNomeArtistico] = useState("");
@@ -100,7 +101,7 @@ export default function LinksMateriais() {
   const [verificandoGateEmissao, setVerificandoGateEmissao] = useState(false);
 
   const carregarMeuPerfil = useCallback(async () => {
-    if (!user?.id || user.role !== "influencer") {
+    if (!user?.id || !roleParidadeInfluencer(user.role)) {
       setLoadingPerfil(false);
       setNomeArtistico("");
       setUtmInput("");
@@ -144,7 +145,7 @@ export default function LinksMateriais() {
   }, [carregarMeuPerfil]);
 
   useEffect(() => {
-    if (!user || user.role === "influencer" || perm.canView === "nao") {
+    if (!user || roleParidadeInfluencer(user.role) || perm.canView === "nao") {
       setInfluenciadores([]);
       setInfluencerSelecionado("");
       setLoadingInfluenciadores(false);
@@ -177,7 +178,7 @@ export default function LinksMateriais() {
   }, [user, perm.canView, podeVerInfluencer]);
 
   useEffect(() => {
-    if (user?.role === "influencer") return;
+    if (roleParidadeInfluencer(user?.role)) return;
     if (!influencerSelecionado) {
       setEmitido(false);
       setLinkCompleto("");
@@ -240,7 +241,7 @@ export default function LinksMateriais() {
   }, [linkCompleto]);
 
   const aguardandoOpcoes =
-    user?.role === "influencer"
+    roleParidadeInfluencer(user?.role)
       ? loadingPerfil
       : precisaSelecionarInfluencer &&
           (loadingInfluenciadores || (!!influencerSelecionado && loadingAliasInfluencer));
@@ -257,7 +258,7 @@ export default function LinksMateriais() {
       return;
     }
 
-    if (user.role === "influencer") {
+    if (roleParidadeInfluencer(user.role)) {
       setVerificandoGateEmissao(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(user.id);
@@ -274,7 +275,7 @@ export default function LinksMateriais() {
     setSalvando(true);
     try {
       const payload =
-        user.role === "influencer"
+        roleParidadeInfluencer(user.role)
           ? { p_utm_source: raw, p_influencer_id: null }
           : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
@@ -537,8 +538,8 @@ export default function LinksMateriais() {
           </div>
         )}
 
-        {(user?.role === "influencer" && loadingPerfil) ||
-        (user?.role !== "influencer" && !!influencerSelecionado && loadingAliasInfluencer) ? (
+        {(roleParidadeInfluencer(user?.role) && loadingPerfil) ||
+        (!roleParidadeInfluencer(user?.role) && !!influencerSelecionado && loadingAliasInfluencer) ? (
           <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
             Carregando link salvo…
           </p>

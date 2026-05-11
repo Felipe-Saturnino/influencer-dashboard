@@ -7,14 +7,14 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { Live, Plataforma, Role } from "../../../types";
+import { Live, Plataforma, type Role } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { X, Trash2, Lock, Video, Loader2 } from "lucide-react";
 
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 function dateToISOLocal(d: Date): string {
   const y = d.getFullYear();
@@ -46,11 +46,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const brand = useDashboardBrand();
   const { podeVerInfluencer } = useDashboardFiltros();
   const perm = usePermission("agenda");
-  const isInfluencer = user?.role === "influencer";
+  const isInfluencer = roleParidadeInfluencer(user?.role);
   const isEdit       = !!live;
   const isAdminOuGestor =
     !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
-  const exigeAgendarSoDiaSeguinte = user?.role === "influencer" || user?.role === "operador";
+  const exigeAgendarSoDiaSeguinte = roleParidadeInfluencer(user?.role) || user?.role === "operador";
   const statusValidado = live?.status === "realizada" || live?.status === "nao_realizada";
   // Apenas Admin e Gestor podem editar/excluir lives com status realizada ou não realizada
   const podeEditar   = isEdit && perm.canEditarOk && (!statusValidado || isAdminOuGestor);
@@ -62,7 +62,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id: live?.influencer_id ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
+    influencer_id: live?.influencer_id ?? (roleParidadeInfluencer(user?.role) ? user?.id ?? "" : ""),
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
     plataforma:    (live?.plataforma    ?? "Twitch") as Plataforma,
@@ -88,7 +88,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!isInfluencer) {
-      supabase.from("profiles").select("id, name").eq("role", "influencer").then(({ data }) => {
+      supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
         if (data) setInfluencers(data.filter((i: { id: string }) => podeVerInfluencer(i.id)));
       });
     }

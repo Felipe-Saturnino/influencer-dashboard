@@ -50,6 +50,10 @@ const PRESTADOR_TIPO_SLUGS = [
   'estudio',
 ] as const
 
+function paridadeInfluencer(role: string): boolean {
+  return role === 'influencer' || role === 'afiliado'
+}
+
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
 } as const
@@ -240,8 +244,8 @@ serve(async (req) => {
 
   const bloqueado = ROLES_BLOQUEADOS.includes(role)
 
-  if (role === 'influencer' && scopeOperadorasArr.length === 0) {
-    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o influencer' }), {
+  if (paridadeInfluencer(role) && scopeOperadorasArr.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o perfil' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -355,7 +359,7 @@ serve(async (req) => {
         }
       }
 
-      if (role === 'influencer') {
+      if (paridadeInfluencer(role)) {
         const { error: perfilErr } = await supabase.from('influencer_perfil').upsert(
           {
             id: userId,

@@ -9,6 +9,7 @@ export type Role =
   | "figurino"
   | "rh"
   | "influencer"
+  | "afiliado"
   | "operador"
   | "agencia"
   | "investidor";

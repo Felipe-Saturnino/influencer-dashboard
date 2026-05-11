@@ -29,6 +29,7 @@ import {
   GiRoundTable,
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
+import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 const BRAND = {
   roxo: "#4a2082",
@@ -112,6 +113,7 @@ const ROLE_LABELS: Record<Role, string> = {
   figurino: "Figurino",
   rh: "RH",
   influencer: "Influencer",
+  afiliado: "Afiliado",
   investidor: "Investidor",
   operador: "Operador",
   agencia: "Agência",
@@ -160,6 +162,10 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
       "Foco em prestadores, escala e ferramentas de RH liberadas ao seu perfil.",
   },
   influencer: {
+    title: "Seu dashboard",
+    subtitle: "Spin. Play. Win. Acompanhe cada passo da sua jornada.",
+  },
+  afiliado: {
     title: "Seu dashboard",
     subtitle: "Spin. Play. Win. Acompanhe cada passo da sua jornada.",
   },
@@ -224,7 +230,7 @@ export default function Home() {
   const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
 
   useEffect(() => {
-    if (!user || user.role !== "influencer") {
+    if (!user || !roleParidadeInfluencer(user.role)) {
       setInfluencerHomeReady(true);
       return;
     }
@@ -317,7 +323,7 @@ export default function Home() {
   }
 
   const atalhosOrdenados = [...atalhos];
-  if (role === "influencer" || role === "agencia") {
+  if (roleParidadeInfluencer(role) || role === "agencia") {
     const idxOverview = atalhosOrdenados.findIndex((a) => a.key === "dash_overview_influencer");
     if (idxOverview > 0) {
       const [item] = atalhosOrdenados.splice(idxOverview, 1);
@@ -344,19 +350,19 @@ export default function Home() {
   const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
 
   const showPerfilIncompleto =
-    role === "influencer" &&
+    roleParidadeInfluencer(role) &&
     influencerHomeReady &&
     (perfilRow?.status ?? "ativo") === "ativo" &&
     isPerfilIncompleto(perfilRow, nomePerfil);
 
   const showPlaybookAlert =
-    role === "influencer" && influencerHomeReady && playbookPendente;
+    roleParidadeInfluencer(role) && influencerHomeReady && playbookPendente;
 
   const showProximasLives =
-    role === "influencer" && influencerHomeReady && livesFuturas.length > 0;
+    roleParidadeInfluencer(role) && influencerHomeReady && livesFuturas.length > 0;
 
   const showFeedbacksRecentes =
-    role === "influencer" && influencerHomeReady && livesRealizadasRecentes.length > 0;
+    roleParidadeInfluencer(role) && influencerHomeReady && livesRealizadasRecentes.length > 0;
 
   const alertBoxStyle: React.CSSProperties = {
     display: "flex",

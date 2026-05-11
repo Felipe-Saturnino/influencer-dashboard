@@ -9,7 +9,7 @@ import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
-import { ROLES_STAFF_APENAS_PERMISSOES } from "../../../lib/staffRoles";
+import { ROLES_STAFF_APENAS_PERMISSOES, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -40,7 +40,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name, email")
-        .eq("role", "influencer")
+        .in("role", ["influencer", "afiliado"])
         .order("name");
       if (!profiles?.length) {
         setInfluencers([]);
@@ -98,7 +98,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
   useEffect(() => {
     if (editando?.id) return;
-    if (role !== "influencer") return;
+    if (!roleParidadeInfluencer(role)) return;
     const em = email.trim().toLowerCase();
     if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return;
 
@@ -155,8 +155,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       setErro("E-mail é obrigatório.");
       return;
     }
-    if (role === "influencer" && scopeOperadoras.length === 0) {
-      setErro("Selecione pelo menos uma operadora para o influencer.");
+    if (roleParidadeInfluencer(role) && scopeOperadoras.length === 0) {
+      setErro("Selecione pelo menos uma operadora para o perfil.");
       return;
     }
     if (role === "operador" && scopeOperadoras.length === 0) {
@@ -530,11 +530,11 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             field={field}
             t={t}
           />
-        ) : role === "influencer" ? (
+        ) : roleParidadeInfluencer(role) ? (
           <MultiSelect
             label="Operadoras atribuídas"
             obrigatorio
-            cor={roleBadgeColor("influencer")}
+            cor={roleBadgeColor(role)}
             items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
             selected={scopeOperadoras}
             onToggle={(v) => toggleItem(scopeOperadoras, setScopeOperadoras, v)}

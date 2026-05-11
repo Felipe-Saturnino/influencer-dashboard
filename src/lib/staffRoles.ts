@@ -1,5 +1,12 @@
 import type { Role } from "../types";
 
+/** Mesmo contrato de escopo que Influenciador: `user_scopes` operadora + `influencer_perfil` / `influencer_operadoras`. */
+export const ROLES_PARIDADE_INFLUENCER: readonly Role[] = ["influencer", "afiliado"];
+
+export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
+  return !!role && ROLES_PARIDADE_INFLUENCER.includes(role);
+}
+
 /**
  * Perfis staff Spin: sem escopo por operadora na Gestão nem na app — só `role_permissions` (aba Permissões).
  * Mesma visão ampla de operadoras/influencers nos filtros que Executivo (sem user_scopes).

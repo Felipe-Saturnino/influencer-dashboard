@@ -11,6 +11,7 @@ import {
 import {
   ROLES_STAFF_APENAS_PERMISSOES,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
+  roleParidadeInfluencer,
 } from "../lib/staffRoles";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
@@ -209,7 +210,7 @@ async function carregarEscoposVisiveis(
 
   const lista = scopes ?? [];
 
-  if (role === "influencer") {
+  if (roleParidadeInfluencer(role)) {
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
@@ -291,7 +292,7 @@ async function carregarPermissoes(
   });
 
   // Overview Influencer: padrão "proprios" para influencer e agencia (único dash para eles)
-  if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
+  if (mapa.dash_overview_influencer === null && (roleParidadeInfluencer(role) || role === "agencia")) {
     mapa.dash_overview_influencer = "proprios";
   }
   if (mapa.dash_overview_influencer === null && ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM.includes(role)) {

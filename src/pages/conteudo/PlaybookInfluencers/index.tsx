@@ -11,6 +11,7 @@ import {
   BookOpen, Users, Calendar, Gamepad2,
   Zap, Wrench, Star, MonitorPlay, ShieldCheck,
 } from "lucide-react";
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 /** Texto introdutório fixo abaixo do título (visível em todas as abas). */
 const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
@@ -411,7 +412,7 @@ function PainelAuditoria({
       setLoading(true);
       const [confRes, influRes, perfilRes] = await Promise.all([
         supabase.from("guia_confirmacoes").select("id, influencer_id, item_key, confirmed_at").eq("item_key", itemKey),
-        supabase.from("profiles").select("id, name").eq("role", "influencer"),
+        supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]),
         supabase.from("influencer_perfil").select("id, status"),
       ]);
       const statusMap = mapaStatusPerfil((perfilRes.data ?? []) as { id: string; status: string | null }[]);
@@ -691,7 +692,7 @@ export default function PlaybookInfluencers() {
   const influencerId = user?.id ?? "";
 
   const podeInfluencerConfirmar =
-    user?.role === "influencer" &&
+    roleParidadeInfluencer(user?.role) &&
     (perm.canCriarOk || perm.canEditarOk);
 
   const carregarConfirmacoes = useCallback(async () => {
@@ -700,7 +701,7 @@ export default function PlaybookInfluencers() {
 
     if (exibirAuditoria) {
       const [{ data: influsRaw }, { data: perfilRows }] = await Promise.all([
-        supabase.from("profiles").select("id").eq("role", "influencer"),
+        supabase.from("profiles").select("id").in("role", [...ROLES_PARIDADE_INFLUENCER]),
         supabase.from("influencer_perfil").select("id, status"),
       ]);
       const statusMap = mapaStatusPerfil((perfilRows ?? []) as { id: string; status: string | null }[]);
@@ -722,7 +723,7 @@ export default function PlaybookInfluencers() {
         itensOb.every((k) => porInflu[row.id]?.has(k)),
       ).length;
       setTotalConfAll(completos);
-    } else if (user?.role === "influencer" && influencerId) {
+    } else if (roleParidadeInfluencer(user?.role) && influencerId) {
       const { data } = await supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", influencerId);
       setConfirmacoes(new Set((data ?? []).map((c: { item_key: string }) => c.item_key)));
     } else {
@@ -749,7 +750,7 @@ export default function PlaybookInfluencers() {
   const Conteudo = abaConfig.content;
   const totalOb = ITENS_OBRIGATORIOS.length;
   const confirmadosOb = ITENS_OBRIGATORIOS.filter((a) => confirmacoes.has(a.itemKey!)).length;
-  const tudoConfirmado = user?.role === "influencer" && confirmadosOb === totalOb && totalOb > 0;
+  const tudoConfirmado = roleParidadeInfluencer(user?.role) && confirmadosOb === totalOb && totalOb > 0;
 
   return (
     <div className="app-page-shell">
@@ -788,7 +789,7 @@ export default function PlaybookInfluencers() {
                   {totalConfAll} de {totalInflu} influencers confirmaram tudo
                 </span>
               </div>
-            ) : user?.role === "influencer" ? (
+            ) : roleParidadeInfluencer(user?.role) ? (
               tudoConfirmado ? (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
@@ -839,7 +840,7 @@ export default function PlaybookInfluencers() {
         </div>
       </div>
 
-      {user?.role === "influencer" && tudoConfirmado && (
+      {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
         <div style={{
           marginBottom: 20, padding: "16px 20px", borderRadius: 12,
           background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
@@ -860,7 +861,7 @@ export default function PlaybookInfluencers() {
         </div>
       )}
 
-      {user?.role === "influencer" && !tudoConfirmado && totalOb > 0 && (
+      {roleParidadeInfluencer(user?.role) && !tudoConfirmado && totalOb > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -892,7 +893,7 @@ export default function PlaybookInfluencers() {
           >
           {ABAS.map((aba) => {
             const isAtiva = abaAtiva === aba.key;
-            const jaConfirmou = user?.role === "influencer" && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
+            const jaConfirmou = roleParidadeInfluencer(user?.role) && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
             return (
               <button
                 key={aba.key}
@@ -920,10 +921,10 @@ export default function PlaybookInfluencers() {
               >
                 <span style={{ color: isAtiva ? aba.accentColor : t.textMuted, display: "flex" }}>{aba.icon}</span>
                 {aba.label}
-                {aba.obrigatoria && user?.role === "influencer" && !jaConfirmou && (
+                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.vermelho, flexShrink: 0 }} />
                 )}
-                {aba.obrigatoria && user?.role === "influencer" && jaConfirmou && (
+                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && jaConfirmou && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.verde, flexShrink: 0 }} />
                 )}
                 {aba.obrigatoria && exibirAuditoria && (
@@ -994,7 +995,7 @@ export default function PlaybookInfluencers() {
 
         <Conteudo dark={dark} />
 
-        {abaConfig.obrigatoria && abaConfig.itemKey && user?.role === "influencer" && influencerId && (
+        {abaConfig.obrigatoria && abaConfig.itemKey && roleParidadeInfluencer(user?.role) && influencerId && (
           <BlocoCiencia
             key={abaConfig.itemKey}
             itemKey={abaConfig.itemKey}
