@@ -7,8 +7,6 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import type { RhFuncionarioHistorico } from "../../../types/rhFuncionario";
-import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import {
   Eye,
   History,
@@ -853,7 +851,7 @@ function DealerCard({
             <button
               type="button"
               onClick={onHistoricoSolicitacoes}
-              aria-label={`Histórico de cadastro e solicitações de ${dealer.nickname}`}
+              aria-label={`Histórico de solicitações de ${dealer.nickname}`}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
             >
               <History size={13} aria-hidden /> Histórico
@@ -865,7 +863,7 @@ function DealerCard({
   );
 }
 
-// ─── Modal Histórico (cadastro RH + solicitações à Central) ────────────────────
+// ─── Modal Histórico de solicitações (por dealer) ─────────────────────────────
 interface SolicResumo {
   id: string;
   tipo: SolicitacaoTipo;
@@ -874,34 +872,6 @@ interface SolicResumo {
   created_at: string;
   aguarda_resposta_de: string | null;
   operadora_slug: string;
-}
-
-type AbaHistoricoDealer = "cadastro_rh" | "solicitacoes";
-
-type FiltroTipoAcaoHistoricoDealer =
-  | "todos"
-  | "revisao_contrato"
-  | "indisponibilidade"
-  | "alinhamento_formal"
-  | "anotacao_rh";
-
-const FILTRO_TIPO_ACAO_OPTS: { value: FiltroTipoAcaoHistoricoDealer; label: string }[] = [
-  { value: "todos", label: "Todos os tipos" },
-  { value: "revisao_contrato", label: "Revisão de Contrato" },
-  { value: "indisponibilidade", label: "Indisponibilidade (saída e retorno)" },
-  { value: "alinhamento_formal", label: "Alinhamento" },
-  { value: "anotacao_rh", label: "Anotações" },
-];
-
-function historicoRhPassaFiltroTipo(tipo: string, filtro: FiltroTipoAcaoHistoricoDealer): boolean {
-  if (filtro === "todos") return true;
-  if (filtro === "revisao_contrato") return tipo === "revisao_contrato";
-  if (filtro === "indisponibilidade") {
-    return tipo === "periodo_indisponibilidade" || tipo === "retorno_indisponibilidade";
-  }
-  if (filtro === "alinhamento_formal") return tipo === "alinhamento_formal";
-  if (filtro === "anotacao_rh") return tipo === "anotacao_rh";
-  return true;
 }
 
 function ModalHistoricoSolicitacoesDealer({
@@ -919,19 +889,8 @@ function ModalHistoricoSolicitacoesDealer({
   onAbrirThread: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
-  const rhId = dealer.rh_funcionario_id?.trim() ?? "";
-  const [aba, setAba] = useState<AbaHistoricoDealer>(() => (rhId ? "cadastro_rh" : "solicitacoes"));
-  const [filtroTipoAcao, setFiltroTipoAcao] = useState<FiltroTipoAcaoHistoricoDealer>("todos");
-
   const [solicitacoes, setSolicitacoes] = useState<SolicResumo[]>([]);
   const [solLoading, setSolLoading] = useState(true);
-  const [histItems, setHistItems] = useState<RhFuncionarioHistorico[]>([]);
-  const [histLoading, setHistLoading] = useState(false);
-
-  const histFiltrado = useMemo(
-    () => histItems.filter((h) => historicoRhPassaFiltroTipo(h.tipo, filtroTipoAcao)),
-    [histItems, filtroTipoAcao],
-  );
 
   useEffect(() => {
     let cancel = false;
@@ -955,196 +914,80 @@ function ModalHistoricoSolicitacoesDealer({
     };
   }, [dealer.id, slugSolicitacaoFiltro]);
 
-  useEffect(() => {
-    if (!rhId) {
-      setHistItems([]);
-      setHistLoading(false);
-      return;
-    }
-    let cancel = false;
-    setHistLoading(true);
-    void (async () => {
-      const { data, error } = await supabase
-        .from("rh_funcionario_historico")
-        .select("*")
-        .eq("rh_funcionario_id", rhId)
-        .order("created_at", { ascending: false })
-        .limit(250);
-      if (!cancel) {
-        if (error) setHistItems([]);
-        else setHistItems((data ?? []) as RhFuncionarioHistorico[]);
-        setHistLoading(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [rhId]);
-
-  useEffect(() => {
-    if (!rhId && aba === "cadastro_rh") setAba("solicitacoes");
-  }, [rhId, aba]);
-
-  const tabBtn = (key: AbaHistoricoDealer, label: string) => {
-    const ativo = aba === key;
-    return (
-      <button
-        type="button"
-        onClick={() => setAba(key)}
-        style={{
-          flex: 1,
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: `1px solid ${ativo ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
-          background: ativo ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)" : "transparent",
-          color: ativo ? "var(--brand-action, #7c3aed)" : t.textMuted,
-          fontSize: 12,
-          fontWeight: 700,
-          fontFamily: FONT.body,
-          cursor: "pointer",
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-
   return (
-    <ModalBase onClose={onClose} maxWidth={560} zIndex={1050}>
-      <ModalHeader title={`Histórico · ${dealer.nickname}`} onClose={onClose} />
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        {rhId ? tabBtn("cadastro_rh", "Cadastro RH") : null}
-        {tabBtn("solicitacoes", "Solicitações")}
-      </div>
-
-      {!rhId ? (
-        <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Este dealer não está vinculado a um prestador em RH — o histórico de cadastro (revisões, indisponibilidade, alinhamentos e anotações) não está disponível aqui.
-        </p>
-      ) : null}
-
-      {aba === "cadastro_rh" && rhId ? (
-        <>
-          <p style={{ margin: "0 0 10px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Registros da Gestão de Prestadores vinculados a este dealer.
-          </p>
-          <label htmlFor="filtro-tipo-acao-historico-dealer" style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-            Tipo de ação
-          </label>
-          <select
-            id="filtro-tipo-acao-historico-dealer"
-            aria-label="Filtrar por tipo de ação"
-            value={filtroTipoAcao}
-            onChange={(e) => setFiltroTipoAcao(e.target.value as FiltroTipoAcaoHistoricoDealer)}
-            style={{
-              width: "100%",
-              marginBottom: 14,
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontSize: 13,
-              fontFamily: FONT.body,
-            }}
-          >
-            {FILTRO_TIPO_ACAO_OPTS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <div style={{ maxHeight: "min(52vh, 380px)", overflowY: "auto", paddingRight: 2 }}>
-            <ListaHistoricoRh
-              items={histFiltrado}
-              loading={histLoading}
-              t={t}
-              emptyMessage={
-                histItems.length === 0 && !histLoading
-                  ? "Sem dados para o período selecionado."
-                  : "Nenhum registro deste tipo no histórico."
-              }
-            />
-          </div>
-        </>
-      ) : null}
-
-      {aba === "solicitacoes" ? (
-        <>
-          <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Solicitações à Central ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
-          </p>
-          {solLoading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
-              <Loader2 size={22} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
-            </div>
-          ) : solicitacoes.length === 0 ? (
-            <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
-          ) : (
-            <ul
-              style={{
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                maxHeight: "min(52vh, 380px)",
-                overflowY: "auto",
-              }}
-            >
-              {solicitacoes.map((s) => {
-                const cor = corStatusSolicitacao(s.status);
-                const opRow = operadoras.find((o) => o.slug === s.operadora_slug);
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => onAbrirThread(s.id)}
+    <ModalBase onClose={onClose} maxWidth={520} zIndex={1050}>
+      <ModalHeader title={`Solicitações · ${dealer.nickname}`} onClose={onClose} />
+      <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+        Todas as solicitações ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
+      </p>
+      {solLoading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+        </div>
+      ) : solicitacoes.length === 0 ? (
+        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
+      ) : (
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            maxHeight: "min(60vh, 420px)",
+            overflowY: "auto",
+          }}
+        >
+          {solicitacoes.map((s) => {
+            const cor = corStatusSolicitacao(s.status);
+            const opRow = operadoras.find((o) => o.slug === s.operadora_slug);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => onAbrirThread(s.id)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg ?? t.cardBg,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                    <span
                       style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg ?? t.cardBg,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: `${cor}22`,
+                        color: cor,
+                        border: `1px solid ${cor}44`,
                       }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            padding: "2px 8px",
-                            borderRadius: 20,
-                            background: `${cor}22`,
-                            color: cor,
-                            border: `1px solid ${cor}44`,
-                          }}
-                        >
-                          {s.status}
-                        </span>
-                        <span style={{ fontSize: 11, color: t.textMuted }}>
-                          {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        </span>
-                        {!slugSolicitacaoFiltro ? (
-                          <span style={{ fontSize: 11, color: t.textMuted }}>
-                            <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.brand_action} />
-                          </span>
-                        ) : null}
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </>
-      ) : null}
-
+                      {s.status}
+                    </span>
+                    <span style={{ fontSize: 11, color: t.textMuted }}>
+                      {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                    {!slugSolicitacaoFiltro ? (
+                      <span style={{ fontSize: 11, color: t.textMuted }}>
+                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.brand_action} />
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <div style={{ marginTop: 18 }}>
         <button
           type="button"

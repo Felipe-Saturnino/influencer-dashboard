@@ -78,6 +78,32 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
   { value: "Temporario", label: "Temporário" },
 ];
 
+type FiltroTipoAcaoHistoricoPrestador =
+  | "todos"
+  | "revisao_contrato"
+  | "indisponibilidade"
+  | "alinhamento_formal"
+  | "anotacao_rh";
+
+const FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS: { value: FiltroTipoAcaoHistoricoPrestador; label: string }[] = [
+  { value: "todos", label: "Todos os tipos" },
+  { value: "revisao_contrato", label: "Revisão de Contrato" },
+  { value: "indisponibilidade", label: "Indisponibilidade (saída e retorno)" },
+  { value: "alinhamento_formal", label: "Alinhamento" },
+  { value: "anotacao_rh", label: "Anotações" },
+];
+
+function historicoPrestadorPassaFiltroTipo(tipo: string, filtro: FiltroTipoAcaoHistoricoPrestador): boolean {
+  if (filtro === "todos") return true;
+  if (filtro === "revisao_contrato") return tipo === "revisao_contrato";
+  if (filtro === "indisponibilidade") {
+    return tipo === "periodo_indisponibilidade" || tipo === "retorno_indisponibilidade";
+  }
+  if (filtro === "alinhamento_formal") return tipo === "alinhamento_formal";
+  if (filtro === "anotacao_rh") return tipo === "anotacao_rh";
+  return true;
+}
+
 /** Valores permitidos para o campo Escala (cadastro de prestador). */
 const ESCALAS_PERMITIDAS = ["5x2", "3x3", "4x2", "5x1"] as const;
 
@@ -872,6 +898,7 @@ export default function RhPrestadoresPage() {
   const [histModalRow, setHistModalRow] = useState<RhFuncionario | null>(null);
   const [histModalItems, setHistModalItems] = useState<RhFuncionarioHistorico[]>([]);
   const [histModalLoading, setHistModalLoading] = useState(false);
+  const [histModalFiltroTipo, setHistModalFiltroTipo] = useState<FiltroTipoAcaoHistoricoPrestador>("todos");
 
   const [rhTalksOpen, setRhTalksOpen] = useState(false);
   const [rtAssunto, setRtAssunto] = useState("");
@@ -959,8 +986,12 @@ export default function RhPrestadoresPage() {
     })();
   }, [histModalRow]);
 
+  const histModalItemsFiltrados = useMemo(
+    () => histModalItems.filter((h) => historicoPrestadorPassaFiltroTipo(h.tipo, histModalFiltroTipo)),
+    [histModalItems, histModalFiltroTipo],
+  );
+
   useEffect(() => {
-    if (!acaoModalRow) return;
     if (acaoTipo !== "revisao_contrato" && acaoTipo !== "reativacao_prestacao") return;
     setAcaoForm(formDeFuncionario(acaoModalRow));
     acaoBaselineRef.current = sliceContratacaoDeRow(acaoModalRow);
@@ -1267,9 +1298,11 @@ export default function RhPrestadoresPage() {
   const fecharModalHistorico = () => {
     setHistModalRow(null);
     setHistModalItems([]);
+    setHistModalFiltroTipo("todos");
   };
 
   const abrirModalHistorico = (row: RhFuncionario) => {
+    setHistModalFiltroTipo("todos");
     setHistModalRow(row);
   };
 
@@ -4707,7 +4740,47 @@ export default function RhPrestadoresPage() {
             <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
               <strong style={{ color: t.text }}>{histModalRow.nome}</strong>
             </div>
-            <ListaHistoricoRh items={histModalItems} loading={histModalLoading} t={t} />
+            <label
+              htmlFor="filtro-tipo-acao-historico-prestador"
+              style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
+            >
+              Tipo de ação
+            </label>
+            <select
+              id="filtro-tipo-acao-historico-prestador"
+              aria-label="Filtrar por tipo de ação"
+              value={histModalFiltroTipo}
+              onChange={(e) => setHistModalFiltroTipo(e.target.value as FiltroTipoAcaoHistoricoPrestador)}
+              style={{
+                width: "100%",
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontSize: 13,
+                fontFamily: FONT.body,
+              }}
+            >
+              {FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <div style={{ maxHeight: "min(60vh, 480px)", overflowY: "auto", paddingRight: 2 }}>
+              <ListaHistoricoRh
+                items={histModalItemsFiltrados}
+                loading={histModalLoading}
+                t={t}
+                emptyMessage={
+                  histModalItems.length === 0 && !histModalLoading
+                    ? "Sem dados para o período selecionado."
+                    : "Nenhum registro deste tipo no histórico."
+                }
+              />
+            </div>
           </div>
         </ModalBase>
       ) : null}
