@@ -10,6 +10,26 @@ interface AbaPermissoesProps {
   t: Theme;
 }
 
+/** Verde #22c55e / vermelho #e84025 — paleta semântica global; leve tinte nos selects da matriz. */
+function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { background: string; borderColor: string } {
+  if (val === "sim") {
+    return {
+      background: isDark ? "rgba(34, 197, 94, 0.14)" : "rgba(34, 197, 94, 0.11)",
+      borderColor: "rgba(34, 197, 94, 0.42)",
+    };
+  }
+  if (val === "nao") {
+    return {
+      background: isDark ? "rgba(232, 64, 37, 0.14)" : "rgba(232, 64, 37, 0.09)",
+      borderColor: "rgba(232, 64, 37, 0.40)",
+    };
+  }
+  return {
+    background: "",
+    borderColor: "",
+  };
+}
+
 export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
   const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
@@ -165,16 +185,18 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
             }
 
             const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
+            const tint = estiloSelectPermissao(val, !!t.isDark);
             return (
               <td key={campo} style={{ ...tdBase, textAlign: "center" }}>
                 <select
                   value={val ?? ""}
+                  aria-label={`${page.label}: ${campo === "can_view" ? "Ver" : campo === "can_criar" ? "Criar" : campo === "can_editar" ? "Editar" : "Excluir"}`}
                   onChange={(e) =>
                     setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)
                   }
                   style={{
-                    background: t.inputBg ?? t.cardBg,
-                    border: `1px solid ${t.cardBorder}`,
+                    background: tint.background || (t.inputBg ?? t.cardBg),
+                    border: `1px solid ${tint.borderColor || t.cardBorder}`,
                     borderRadius: 6,
                     padding: "4px 8px",
                     color: t.text,
