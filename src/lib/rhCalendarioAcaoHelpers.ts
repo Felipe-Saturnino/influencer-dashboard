@@ -22,6 +22,27 @@ export const RH_CALENDARIO_ACAO_LABEL: Record<RhCalendarioAcaoTipo, string> = {
   agendamento_reuniao: "Agendar Reunião",
 };
 
+/** Resumo legível do `payload` na aba Ofertas do modal do dia. */
+export function textoResumoPayloadAcaoCalendario(
+  tipoAcao: string,
+  payload: Record<string, unknown> | null | undefined,
+): string {
+  const p = payload ?? {};
+  if (tipoAcao === "venda_folga") {
+    const turnos = p.turnos;
+    if (Array.isArray(turnos) && turnos.length > 0) {
+      const parts = turnos.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+      if (parts.length) return `Turnos: ${parts.join(", ")}`;
+    }
+    return "";
+  }
+  if (tipoAcao === "venda_turno" || tipoAcao === "oferta_troca") {
+    const turno = p.turno;
+    return typeof turno === "string" && turno.trim() ? `Turno: ${turno.trim()}` : "";
+  }
+  return "";
+}
+
 export const RH_REUNIAO_COM_OPCOES = [
   { value: "shift_lead", label: "Shift Lead" },
   { value: "gerente_operacoes", label: "Gerente de Operações" },

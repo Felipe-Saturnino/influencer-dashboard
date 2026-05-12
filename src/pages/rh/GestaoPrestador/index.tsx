@@ -992,6 +992,7 @@ export default function RhPrestadoresPage() {
   );
 
   useEffect(() => {
+    if (!acaoModalRow) return;
     if (acaoTipo !== "revisao_contrato" && acaoTipo !== "reativacao_prestacao") return;
     setAcaoForm(formDeFuncionario(acaoModalRow));
     acaoBaselineRef.current = sliceContratacaoDeRow(acaoModalRow);

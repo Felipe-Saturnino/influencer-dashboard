@@ -34,6 +34,11 @@ import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalAcaoCalendario } from "./ModalAcaoCalendario";
+import {
+  RH_CALENDARIO_ACAO_LABEL,
+  textoResumoPayloadAcaoCalendario,
+  type RhCalendarioAcaoTipo,
+} from "../../../lib/rhCalendarioAcaoHelpers";
 
 /** Tipos de compromisso filtráveis; conjunto vazio na UI = mostrar todos. */
 type ChaveFiltroCompromissoCal = "reunioes" | "treinamentos" | "feedback" | "turnos";
@@ -156,6 +161,16 @@ type RpcGradeCalendarioRow = {
   dia_iso: string;
   valor: string;
   area_key: string;
+};
+
+type RhCalAcaoOfertaDiaRow = {
+  id: string;
+  solicitante_funcionario_id: string;
+  tipo_acao: string;
+  status: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  solicitante_nome: string | null;
 };
 
 /** Alinha login (e-mail da sessão) a `rh_funcionarios` — mesma lógica da vista «Próprios». */
@@ -338,6 +353,9 @@ export default function RhCalendarioPage() {
   const [chavesFiltroCompromissos, setChavesFiltroCompromissos] = useState<ChaveFiltroCompromissoCal[]>([]);
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalDiaTab, setModalDiaTab] = useState<"compromissos" | "ofertas">("compromissos");
+  const [acoesOfertadasNoDia, setAcoesOfertadasNoDia] = useState<RhCalAcaoOfertaDiaRow[]>([]);
+  const [loadingAcoesOfertadasDia, setLoadingAcoesOfertadasDia] = useState(false);
+  const [erroAcoesOfertadasDia, setErroAcoesOfertadasDia] = useState<string | null>(null);
   const [modalAcaoAberto, setModalAcaoAberto] = useState(false);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
@@ -721,6 +739,41 @@ export default function RhCalendarioPage() {
     }
     return m;
   }, [rawGradeRowsFiltrados, meuRhFuncionarioId]);
+
+  useEffect(() => {
+    if (!modalDia || perm.loading || perm.canView === "nao") {
+      setAcoesOfertadasNoDia([]);
+      setErroAcoesOfertadasDia(null);
+      setLoadingAcoesOfertadasDia(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAcoesOfertadasDia(true);
+    setErroAcoesOfertadasDia(null);
+    const iso = toISO(modalDia);
+    void supabase.rpc("rh_calendario_acoes_ofertadas_no_dia", { p_dia_iso: iso }).then(({ data, error }) => {
+      if (cancelled) return;
+      setLoadingAcoesOfertadasDia(false);
+      if (error) {
+        setErroAcoesOfertadasDia(error.message || "Não foi possível carregar as ofertas.");
+        setAcoesOfertadasNoDia([]);
+        return;
+      }
+      const rows = (data ?? []) as RhCalAcaoOfertaDiaRow[];
+      setAcoesOfertadasNoDia(
+        rows.map((r) => ({
+          ...r,
+          payload:
+            r.payload != null && typeof r.payload === "object" && !Array.isArray(r.payload)
+              ? (r.payload as Record<string, unknown>)
+              : {},
+        })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [modalDia, perm.loading, perm.canView]);
 
   function reunioesAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
     return [];
@@ -1260,9 +1313,14 @@ export default function RhCalendarioPage() {
                 {mostrarBotaoMeuCalendario ? (
                   <button
                     type="button"
+                    aria-pressed={calendarioSoMeuAtivo}
                     onClick={() => {
-                      setFilterTimeIds([]);
-                      setFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                      if (calendarioSoMeuAtivo) {
+                        setFilterStaffIds([]);
+                      } else {
+                        setFilterTimeIds([]);
+                        setFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                      }
                     }}
                     style={{
                       padding: "6px 14px",
@@ -1280,7 +1338,11 @@ export default function RhCalendarioPage() {
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}
-                    aria-label="Filtrar calendário apenas para o meu registo de prestador"
+                    aria-label={
+                      calendarioSoMeuAtivo
+                        ? "Mostrar calendário geral de todos os prestadores"
+                        : "Filtrar calendário apenas para o meu registo de prestador"
+                    }
                   >
                     Meu Calendário
                   </button>
@@ -1568,7 +1630,48 @@ export default function RhCalendarioPage() {
               <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 12, fontFamily: FONT_TITLE }}>
                 Ofertas de Troca e Compra
               </div>
-              <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+              {loadingAcoesOfertadasDia ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    color: t.textMuted,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                  Carregando…
+                </div>
+              ) : erroAcoesOfertadasDia ? (
+                <p style={{ margin: 0, fontSize: 13, color: "#e84025", fontFamily: FONT.body }} role="alert">
+                  {erroAcoesOfertadasDia}
+                </p>
+              ) : acoesOfertadasNoDia.length === 0 ? (
+                <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+              ) : (
+                <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc", fontFamily: FONT.body }}>
+                  {acoesOfertadasNoDia.map((row) => {
+                    const labelTipo =
+                      RH_CALENDARIO_ACAO_LABEL[row.tipo_acao as RhCalendarioAcaoTipo] ?? row.tipo_acao;
+                    const detalhe = textoResumoPayloadAcaoCalendario(row.tipo_acao, row.payload);
+                    return (
+                      <li key={row.id} style={{ marginBottom: 12, color: t.text, fontSize: 13 }}>
+                        <div style={{ fontWeight: 700 }}>{(row.solicitante_nome ?? "").trim() || "—"}</div>
+                        <div style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>
+                          {labelTipo}
+                          {" · "}
+                          {row.status}
+                        </div>
+                        {detalhe ? (
+                          <div style={{ fontSize: 12, marginTop: 4, color: t.text }}>{detalhe}</div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           )}
         </ModalBase>
