@@ -28,6 +28,10 @@ verify_jwt = false
 verify_jwt = false
 # Afiliado vindo do site; valida PROSPECTO_AFILIADOS_NETWORK_FORM_SECRET e insere em afiliados_network
 
+[functions.criar-afiliado-network]
+verify_jwt = false
+# Cria utilizador afiliado + perfil a partir de afiliados_network (service_role internamente)
+
 [functions.sync-rh-prestador-auth-user]
 verify_jwt = false
 # Sincroniza usuário prestador (Auth + profile + user_scopes) a partir de rh_funcionarios; permissão rh_funcionarios no corpo

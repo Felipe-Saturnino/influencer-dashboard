@@ -4,7 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { supabase } from "../../../lib/supabase";
+import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
@@ -50,9 +50,28 @@ export interface AfiliadoNetworkRow {
   live_cassino?: string | null;
   operadora_slug?: string | null;
   operacao?: string | null;
+  /** Definido após criar utilizador Afiliado + cadastro em influencer_perfil (Edge criar-afiliado-network). */
+  afiliado_user_id?: string | null;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+async function criarAfiliadoDesdeNetwork(networkId: string): Promise<void> {
+  const res = await fetch("/api/criar-afiliado-network", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      Apikey: supabaseAnonKey,
+    },
+    body: JSON.stringify({
+      network_id: networkId,
+      ...(typeof window !== "undefined" ? { loginUrl: window.location.origin } : {}),
+    }),
+  });
+  const fnData = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(fnData.error ?? `Erro ${res.status}`);
 }
 
 interface AfiliadoAnotacao {
@@ -745,6 +764,17 @@ function ModalEditar({
       setError("Nome é obrigatório.");
       return;
     }
+    const aindaSemAfiliado = !row?.afiliado_user_id;
+    if (aindaSemAfiliado) {
+      if (!email.trim()) {
+        setError("E-mail é obrigatório para criar o cadastro de afiliado na plataforma.");
+        return;
+      }
+      if (!operadoraSlug.trim()) {
+        setError("Operadora é obrigatória para criar o vínculo do afiliado.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -761,10 +791,14 @@ function ModalEditar({
       if (row) {
         const { error: err } = await supabase.from("afiliados_network").update(payload).eq("id", row.id);
         if (err) throw new Error(err.message);
+        if (!row.afiliado_user_id) {
+          await criarAfiliadoDesdeNetwork(row.id);
+        }
       } else {
         const ins = { ...payload, created_by: user?.id ?? null };
-        const { error: err } = await supabase.from("afiliados_network").insert(ins);
+        const { data: inserted, error: err } = await supabase.from("afiliados_network").insert(ins).select("id").single();
         if (err) throw new Error(err.message);
+        await criarAfiliadoDesdeNetwork(inserted.id);
       }
       onSaved();
     } catch (e) {
@@ -867,6 +901,12 @@ function ModalEditar({
           </button>
         </div>
 
+        {row?.afiliado_user_id ? (
+          <p style={{ fontSize: 12, color: t.textMuted, margin: "0 0 16px", fontFamily: FONT.body }}>
+            Cadastro de afiliado já criado na plataforma; e-mail e operadora não podem ser alterados aqui.
+          </p>
+        ) : null}
+
         <div style={rowS}>
           <label style={labelStyle}>
             Nome
@@ -941,10 +981,13 @@ function ModalEditar({
 
         {tab === "contato" && (
           <div role="tabpanel" id="panel-af-ed-contato" aria-labelledby="tab-af-ed-contato">
-            <div style={rowS}>
-              <label style={labelStyle}>E-mail</label>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="email@exemplo.com" />
-            </div>
+        <div style={rowS}>
+          <label style={labelStyle}>
+            E-mail
+            {(!row || !row.afiliado_user_id) && <CampoObrigatorioMark />}
+          </label>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="email@exemplo.com" disabled={!!row?.afiliado_user_id} aria-required={!row?.afiliado_user_id} />
+        </div>
             <div style={rowS}>
               <label style={labelStyle}>Tipo de Contato</label>
               <select value={tipoContato} onChange={(e) => setTipoContato(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }} aria-label="Tipo de contato">
@@ -971,11 +1014,14 @@ function ModalEditar({
               </select>
             </div>
             <div style={rowS}>
-              <label style={labelStyle}>Operadora</label>
+              <label style={labelStyle}>
+                Operadora
+                {(!row || !row.afiliado_user_id) && <CampoObrigatorioMark />}
+              </label>
               {operadorasList.length === 0 ? (
                 <p style={{ fontSize: 12, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>Cadastre operadoras em Gestão de Operadoras.</p>
               ) : (
-                <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }} aria-label="Operadora">
+                <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer", opacity: row?.afiliado_user_id ? 0.75 : 1 }} aria-label="Operadora" disabled={!!row?.afiliado_user_id}>
                   <option value="">—</option>
                   {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
                     <option key={o.slug} value={o.slug}>
