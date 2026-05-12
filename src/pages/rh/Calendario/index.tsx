@@ -158,6 +158,43 @@ type RpcGradeCalendarioRow = {
   area_key: string;
 };
 
+/** Alinha login (e-mail da sessão) a `rh_funcionarios` — mesma lógica da vista «Próprios». */
+async function buscarRhFuncionarioAtivoPorEmailLogin(emailBruto: string): Promise<RhFuncionario | null> {
+  const em = emailBruto.trim();
+  if (!em) return null;
+  const el = em.toLowerCase();
+  const { data: porEmailEq } = await supabase
+    .from("rh_funcionarios")
+    .select("*")
+    .eq("email", em)
+    .in("status", ["ativo", "indisponivel"])
+    .maybeSingle();
+  let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
+  if (!row) {
+    const { data: porSpinEq } = await supabase
+      .from("rh_funcionarios")
+      .select("*")
+      .eq("email_spin", em)
+      .in("status", ["ativo", "indisponivel"])
+      .maybeSingle();
+    row = (porSpinEq as RhFuncionario | null) ?? null;
+  }
+  if (!row) {
+    const { data: cand } = await supabase
+      .from("rh_funcionarios")
+      .select("*")
+      .in("status", ["ativo", "indisponivel"])
+      .limit(80);
+    row =
+      (cand as RhFuncionario[] | undefined)?.find(
+        (p) =>
+          (p.email ?? "").trim().toLowerCase() === el ||
+          (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
+      ) ?? null;
+  }
+  return row;
+}
+
 type CompromissoEscalaCal = {
   prestadorId: string;
   nome: string;
@@ -317,6 +354,8 @@ export default function RhCalendarioPage() {
   const [loadingEscala, setLoadingEscala] = useState(false);
   /** Quando `rh_calendario` está em «Próprios»: id do `rh_funcionarios` do utilizador autenticado (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
+  /** Vista completa (`canView === "sim"`): id do prestador ligado ao utilizador, para filtro «Meu Calendário». */
+  const [meuPrestadorRhIdVistaCompleta, setMeuPrestadorRhIdVistaCompleta] = useState<string | null>(null);
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
 
   const carregarTimes = useCallback(async () => {
@@ -355,39 +394,7 @@ export default function RhCalendarioPage() {
     let cancelled = false;
     setLoadingStaff(true);
     void (async () => {
-      const em = user.email.trim();
-      const el = em.toLowerCase();
-      const { data: porEmailEq } = await supabase
-        .from("rh_funcionarios")
-        .select("*")
-        .eq("email", em)
-        .in("status", ["ativo", "indisponivel"])
-        .maybeSingle();
-      let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
-      if (!row) {
-        const { data: porSpinEq } = await supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .eq("email_spin", em)
-          .in("status", ["ativo", "indisponivel"])
-          .maybeSingle();
-        row = (porSpinEq as RhFuncionario | null) ?? null;
-      }
-      if (!row) {
-        const { data: cand } = await supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("status", ["ativo", "indisponivel"])
-          .limit(80);
-        if (!cancelled && cand?.length) {
-          row =
-            (cand as RhFuncionario[]).find(
-              (p) =>
-                (p.email ?? "").trim().toLowerCase() === el ||
-                (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
-            ) ?? null;
-        }
-      }
+      const row = await buscarRhFuncionarioAtivoPorEmailLogin(user.email!);
       if (cancelled) return;
       if (row) {
         setPrestadores([row]);
@@ -406,8 +413,23 @@ export default function RhCalendarioPage() {
   }, [perm.loading, perm.canView, user?.email]);
 
   useEffect(() => {
-    if (!perm.loading && perm.canView === "sim") setMeuRhFuncionarioId(null);
-  }, [perm.loading, perm.canView]);
+    if (perm.loading) return;
+    if (perm.canView !== "sim") {
+      setMeuPrestadorRhIdVistaCompleta(null);
+      return;
+    }
+    if (!user?.email?.trim()) {
+      setMeuPrestadorRhIdVistaCompleta(null);
+      return;
+    }
+    let cancelled = false;
+    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((row) => {
+      if (!cancelled) setMeuPrestadorRhIdVistaCompleta(row?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, user?.email]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -1112,6 +1134,12 @@ export default function RhCalendarioPage() {
   const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
   const hasStaffFilter = filterStaffIds.length > 0;
   const hasTimeFilter = filterTimeIds.length > 0;
+  const mostrarBotaoMeuCalendario =
+    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
+  const calendarioSoMeuAtivo =
+    Boolean(meuPrestadorRhIdVistaCompleta) &&
+    filterStaffIds.length === 1 &&
+    filterStaffIds[0] === meuPrestadorRhIdVistaCompleta;
   const podeRetrocederMes = podeRetrocederMesCalendario(current);
 
   return (
@@ -1228,6 +1256,34 @@ export default function RhCalendarioPage() {
                     enableSearch
                     searchPlaceholder="Pesquisar prestador…"
                   />
+                ) : null}
+                {mostrarBotaoMeuCalendario ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterTimeIds([]);
+                      setFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                    }}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 20,
+                      border: `1.5px solid ${calendarioSoMeuAtivo ? brand.accent : t.cardBorder}`,
+                      background: calendarioSoMeuAtivo
+                        ? brand.accent.startsWith("var(")
+                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                          : `${String(brand.accent)}22`
+                        : t.inputBg,
+                      color: calendarioSoMeuAtivo ? brand.accent : t.textMuted,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                    aria-label="Filtrar calendário apenas para o meu registo de prestador"
+                  >
+                    Meu Calendário
+                  </button>
                 ) : null}
               </>
             )}
