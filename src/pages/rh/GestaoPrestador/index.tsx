@@ -1508,8 +1508,8 @@ export default function RhPrestadoresPage() {
     const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
     const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
 
-    /** Novo prestador: só os campos mínimos; demais na edição posterior. RG, CPF e telefone opcionais. */
-    if (modalForm === "novo") {
+    /** Novo ou editar: mesmo conjunto obrigatório (nome, e-mail + aba Dados de contratação); demais opcionais. */
+    if (modalForm === "novo" || modalForm === "editar") {
       req("nome", "Nome completo", form.nome);
       req("email", "E-mail", form.email);
       if (usarOrg) {
@@ -1553,87 +1553,6 @@ export default function RhPrestadoresPage() {
       }
 
       return e;
-    }
-
-    req("nome", "Nome completo", form.nome);
-    req("rg", "RG", form.rg);
-    req("telefone", "Telefone", form.telefone);
-    req("email", "E-mail", form.email);
-    req("res_logradouro", "Logradouro (residencial)", form.res_logradouro);
-    req("res_numero", "Número (residencial)", form.res_numero);
-    req("res_cidade", "Cidade (residencial)", form.res_cidade);
-    if (!form.res_estado.trim()) e.res_estado = "UF (residencial) é obrigatória.";
-    else if (!UFS_BR.includes(form.res_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
-      e.res_estado = "UF inválida.";
-    }
-    const cepRes = somenteDigitos(form.res_cep);
-    if (cepRes.length > 0 && cepRes.length !== 8) e.res_cep = "CEP residencial deve ter 8 dígitos.";
-    req("emerg_nome", "Nome do contato de emergência", form.emerg_nome);
-    req("emerg_telefone", "Telefone do contato de emergência", form.emerg_telefone);
-    if (usarOrg) {
-      if (!temOrgVinculo && !form.setor.trim()) {
-        e.setor = "Informe o setor ou selecione um nível do organograma.";
-      }
-    } else {
-      req("setor", "Setor", form.setor);
-    }
-    req("cargo", "Função", form.cargo);
-    req("nivel", "Nível", form.nivel);
-    req("data_inicio", "Data de início", form.data_inicio);
-    if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
-    else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
-    if (form.tipo_contrato === "PJ") {
-      req("nome_empresa", "Nome da empresa", form.nome_empresa);
-      req("emp_logradouro", "Logradouro da empresa", form.emp_logradouro);
-      req("emp_numero", "Número da empresa", form.emp_numero);
-      req("emp_cidade", "Cidade da empresa", form.emp_cidade);
-      if (!form.emp_estado.trim()) e.emp_estado = "UF da empresa é obrigatória.";
-      else if (!UFS_BR.includes(form.emp_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
-        e.emp_estado = "UF inválida.";
-      }
-      const cepEmp = somenteDigitos(form.emp_cep);
-      if (cepEmp.length > 0 && cepEmp.length !== 8) e.emp_cep = "CEP da empresa deve ter 8 dígitos.";
-    }
-    if (podeVerDadosSensiveis) {
-      req("banco", "Banco", form.banco);
-      req("agencia", "Agência", form.agencia);
-      req("conta_corrente", "Conta corrente", form.conta_corrente);
-      req("pix", "PIX", form.pix);
-    }
-
-    const cpfD = somenteDigitos(form.cpf);
-    if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
-    else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
-
-    if (form.tipo_contrato === "PJ") {
-      const cnpjD = somenteDigitos(form.cnpj);
-      if (cnpjD.length !== 14) e.cnpj = "CNPJ deve ter 14 dígitos.";
-      else if (!validarCnpjDigitos(cnpjD)) e.cnpj = "CNPJ inválido.";
-    }
-
-    if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
-    if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
-      e.email_spin = "E-mail Spin inválido.";
-    }
-    if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
-      e.data_nascimento = "Data de nascimento inválida.";
-    }
-
-    const telD = somenteDigitos(form.telefone);
-    if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
-
-    const telEmerg = somenteDigitos(form.emerg_telefone);
-    if (telEmerg.length < 10 || telEmerg.length > 11) e.emerg_telefone = "Telefone de emergência inválido.";
-
-    if (podeVerDadosSensiveis) {
-      if (form.area_atuacao === "estudio") {
-        const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
-        if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
-        if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
-      } else {
-        const sal = numeroDeCentavosStr(form.salarioCentavos);
-        if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
-      }
     }
 
     return e;
@@ -2199,11 +2118,11 @@ export default function RhPrestadoresPage() {
       {astReq}
     </label>
   );
-  /** `obrigatorioNoNovo`: no fluxo «Novo Prestador» (cadastro mínimo), asterisco só onde a validação exige. */
-  const lblReqCad = (htmlFor: string, text: string, obrigatorioNoNovo = true) => (
+  /** Asterisco só quando `comAsterisco` — alinhado a `obterErrosFormulario` (novo / editar). */
+  const lblReqCad = (htmlFor: string, text: string, comAsterisco = true) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
       {text}
-      {!leitura && (modalForm !== "novo" || obrigatorioNoNovo) ? astReq : null}
+      {!leitura && comAsterisco ? astReq : null}
     </label>
   );
 
@@ -3059,7 +2978,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-rg", "RG", modalForm !== "novo")}
+                  {lblReqCad("f-rg", "RG", false)}
                   <input
                     id="f-rg"
                     disabled={desabilitarCampos}
@@ -3071,7 +2990,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-cpf", "CPF", modalForm !== "novo")}
+                  {lblReqCad("f-cpf", "CPF", false)}
                   <input
                     id="f-cpf"
                     disabled={desabilitarCampos || cpfCampoTravadoEdicao}
@@ -3103,7 +3022,7 @@ export default function RhPrestadoresPage() {
                   ) : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-tel", "Telefone", modalForm !== "novo")}
+                  {lblReqCad("f-tel", "Telefone", false)}
                   <input
                     id="f-tel"
                     disabled={desabilitarCampos}
