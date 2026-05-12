@@ -746,30 +746,21 @@ export default function RhDadosCadastroPage() {
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Dados pessoais</h2>
           <div className="app-grid-2-tight">
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-nome" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <span id="dc-nome-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
                 Nome completo
-              </label>
-              <input
-                id="dc-nome"
-                disabled={!perm.canEditarOk}
-                value={form.nome}
-                onChange={(e) => setForm((s) => (s ? { ...s, nome: e.target.value } : s))}
-                style={inputStyle}
-              />
+              </span>
+              <div id="dc-nome" style={readOnlyBox} aria-labelledby="dc-nome-lbl">
+                {form.nome.trim() || "—"}
+              </div>
               {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-nickname" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <span id="dc-nickname-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
                 Nickname
-              </label>
-              <input
-                id="dc-nickname"
-                disabled={!perm.canEditarOk}
-                value={form.staff_nickname}
-                onChange={(e) => setForm((s) => (s ? { ...s, staff_nickname: e.target.value } : s))}
-                placeholder="Como prefere ser chamado no estúdio"
-                style={inputStyle}
-              />
+              </span>
+              <div id="dc-nickname" style={readOnlyBox} aria-labelledby="dc-nickname-lbl">
+                {form.staff_nickname.trim() || "—"}
+              </div>
             </div>
             <div style={{ marginBottom: 10 }}>
               <label htmlFor="dc-rg" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
@@ -831,17 +822,12 @@ export default function RhDadosCadastroPage() {
               {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
             </div>
             <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-              <label htmlFor="dc-email" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <span id="dc-email-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
                 E-mail
-              </label>
-              <input
-                id="dc-email"
-                type="email"
-                disabled={!perm.canEditarOk}
-                value={form.email}
-                onChange={(e) => setForm((s) => (s ? { ...s, email: e.target.value } : s))}
-                style={inputStyle}
-              />
+              </span>
+              <div id="dc-email" style={{ ...readOnlyBox, wordBreak: "break-word" }} aria-labelledby="dc-email-lbl">
+                {form.email.trim() || "—"}
+              </div>
               {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
             </div>
           </div>
