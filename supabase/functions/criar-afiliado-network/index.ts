@@ -7,8 +7,6 @@ const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
 } as const
 
-type SupabaseSvc = ReturnType<typeof createClient>
-
 const AUTH_ADMIN_MS = 45_000
 
 function corsHeaders(req: Request) {
