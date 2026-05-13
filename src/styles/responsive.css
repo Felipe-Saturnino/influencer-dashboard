@@ -289,3 +289,12 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Central de Denúncias — filtro tipo (details): sem marcador nativo do summary */
+.canal-denuncias-tipo-details > summary {
+  list-style: none;
+}
+
+.canal-denuncias-tipo-details > summary::-webkit-details-marker {
+  display: none;
+}

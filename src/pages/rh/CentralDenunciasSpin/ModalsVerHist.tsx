@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from "react";
 import { X, Loader2, Eye, EyeOff, Download } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Theme } from "../../../constants/theme";
 import { statusLabel, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
 import type { DenunciaListRow, AnexoRow } from "./types";
@@ -19,17 +20,6 @@ function useEscClose(open: boolean, onClose: () => void) {
   }, [open, onClose]);
 }
 
-function maskEmail(v: string): string {
-  const [a, d] = v.split("@");
-  if (!d) return "••••••••";
-  return `${(a ?? "").slice(0, 2)}***@${d}`;
-}
-function maskPhone(v: string): string {
-  const d = v.replace(/\D/g, "");
-  if (d.length < 4) return "••••";
-  return `••••${d.slice(-4)}`;
-}
-
 function fmtDt(iso: string) {
   try {
     return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -37,6 +27,11 @@ function fmtDt(iso: string) {
     return "—";
   }
 }
+
+const blurSensivel: CSSProperties = {
+  filter: "blur(7px)",
+  userSelect: "none",
+};
 
 function LinhaInfo({ label, valor, t }: { label: string; valor: string; t: Theme }) {
   return (
@@ -65,13 +60,13 @@ export function ModalVerDenuncia({
   canDownload: boolean;
 }) {
   const [aba, setAba] = useState<"dados" | "relato">("dados");
-  const [reveal, setReveal] = useState(false);
+  const [exibirSensiveis, setExibirSensiveis] = useState(false);
   useEscClose(open, onClose);
 
   useEffect(() => {
     if (open) {
       setAba("dados");
-      setReveal(false);
+      setExibirSensiveis(false);
     }
   }, [open, row?.id]);
 
@@ -79,6 +74,7 @@ export function ModalVerDenuncia({
 
   const tiposTxt = row.tipos_denuncia.map((k) => tipoLabel(k)).join("; ");
   const relatoAnexos = anexos.filter((x) => !x.anotacao_id);
+  const temIdent = row.deseja_identificar && Boolean((row.nome ?? "").trim() || (row.email ?? "").trim() || (row.telefone ?? "").trim());
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 2001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -100,11 +96,56 @@ export function ModalVerDenuncia({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "18px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
-          <h2 id="modal-ver-titulo" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: t.text }}>
-            {row.protocolo}
-          </h2>
-          <button type="button" aria-label="Fechar" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: "18px 20px",
+            borderBottom: `1px solid ${t.cardBorder}`,
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+            <h2
+              id="modal-ver-titulo"
+              style={{
+                margin: 0,
+                fontSize: 17,
+                fontWeight: 900,
+                color: t.text,
+                fontFamily: FONT_TITLE,
+              }}
+            >
+              {row.protocolo}
+            </h2>
+            {temIdent ? (
+              <button
+                type="button"
+                onClick={() => setExibirSensiveis(!exibirSensiveis)}
+                aria-label={exibirSensiveis ? "Ocultar dados sensíveis" : "Exibir dados sensíveis"}
+                title={exibirSensiveis ? "Ocultar" : "Ver"}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.textMuted,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {exibirSensiveis ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                {exibirSensiveis ? "Ocultar" : "Ver"}
+              </button>
+            ) : null}
+          </div>
+          <button type="button" aria-label="Fechar" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4, flexShrink: 0 }}>
             <X size={20} aria-hidden />
           </button>
         </div>
@@ -122,36 +163,53 @@ export function ModalVerDenuncia({
               <LinhaInfo label="Data/hora da denúncia" valor={fmtDt(row.created_at)} t={t} />
               <LinhaInfo label="Status" valor={statusLabel(row.status)} t={t} />
               <LinhaInfo label="Tipo de denúncia" valor={tiposTxt} t={t} />
-              {row.deseja_identificar && (row.nome || row.email || row.telefone) && (
+              {temIdent ? (
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 8 }}>Identificação</div>
-                  <button
-                    type="button"
-                    onClick={() => setReveal((r) => !r)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 10,
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    {reveal ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                    {reveal ? "Ocultar dados" : "Mostrar nome, e-mail e telefone"}
-                  </button>
-                  <LinhaInfo label="Nome" valor={reveal ? (row.nome ?? "—") : row.nome ? "••••••••" : "—"} t={t} />
-                  <LinhaInfo label="E-mail" valor={reveal ? (row.email ?? "—") : row.email ? maskEmail(row.email) : "—"} t={t} />
-                  <LinhaInfo label="Telefone" valor={reveal ? (row.telefone ?? "—") : row.telefone ? maskPhone(row.telefone) : "—"} t={t} />
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 10 }}>Identificação</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 4 }}>Nome</div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: t.text,
+                          lineHeight: 1.45,
+                          ...(exibirSensiveis ? {} : blurSensivel),
+                        }}
+                      >
+                        {row.nome?.trim() ? row.nome : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 4 }}>E-mail</div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: t.text,
+                          lineHeight: 1.45,
+                          wordBreak: "break-all",
+                          ...(exibirSensiveis ? {} : blurSensivel),
+                        }}
+                      >
+                        {row.email?.trim() ? row.email : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 4 }}>Telefone</div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: t.text,
+                          lineHeight: 1.45,
+                          ...(exibirSensiveis ? {} : blurSensivel),
+                        }}
+                      >
+                        {row.telefone?.trim() ? row.telefone : "—"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ) : null}
             </div>
           )}
           {aba === "relato" && (

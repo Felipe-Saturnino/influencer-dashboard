@@ -25,16 +25,19 @@ function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
     : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
+/** Primeiro mês com denúncias no canal: maio/2026 — não listar meses anteriores. */
 function monthKeys(): { value: string; label: string }[] {
-  const out: { value: string; label: string }[] = [{ value: "historico", label: "Histórico (todos)" }];
+  const out: { value: string; label: string }[] = [{ value: "historico", label: "Histórico" }];
+  const minStart = new Date(2026, 4, 1);
   const now = new Date();
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  let d = new Date(now.getFullYear(), now.getMonth(), 1);
+  while (d >= minStart) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const value = `${y}-${m}`;
     const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
     out.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   }
   return out;
 }
@@ -51,7 +54,6 @@ export default function CentralDenunciasSpin() {
   const brand = useDashboardBrand();
   const perm = usePermission("rh_central_denuncias");
 
-  const [periodoConsolidado, setPeriodoConsolidado] = useState("historico");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroPeriodoLista, setFiltroPeriodoLista] = useState("historico");
   const [filtroTipos, setFiltroTipos] = useState<TipoDenunciaKey[]>([]);
@@ -84,15 +86,15 @@ export default function CentralDenunciasSpin() {
     };
     for (const s of stats) {
       let q = supabase.from("canal_denuncias_spin").select("id", { count: "exact", head: true }).eq("status", s);
-      if (periodoConsolidado !== "historico") {
-        const { start, end } = rangeForMonth(periodoConsolidado);
+      if (filtroPeriodoLista !== "historico") {
+        const { start, end } = rangeForMonth(filtroPeriodoLista);
         q = q.gte("created_at", start).lte("created_at", end);
       }
       const { count } = await q;
       next[s] = count ?? 0;
     }
     setKpis(next);
-  }, [periodoConsolidado]);
+  }, [filtroPeriodoLista]);
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
@@ -204,7 +206,7 @@ export default function CentralDenunciasSpin() {
       <PageHeader
         icon={<Shield size={22} aria-hidden />}
         title="Central de Denúncias"
-        subtitle="Canal de denúncias Spin — tratamento interno"
+        subtitle="Canal de denúncias Spin"
       />
 
       {/* Bloco 1 — Filtros */}
@@ -221,33 +223,18 @@ export default function CentralDenunciasSpin() {
             ]}
           />
           <FiltroSelect
-            label="Período (lista)"
+            label="Período"
             value={filtroPeriodoLista}
             onChange={setFiltroPeriodoLista}
             t={t}
             options={meses.map((m) => ({ v: m.value, l: m.label }))}
           />
-          <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo (contém)</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <button
-                type="button"
-                aria-pressed={filtroTipos.length === 0}
-                onClick={() => setFiltroTipos([])}
-                style={chip(filtroTipos.length === 0, t)}
-              >
-                Todos
-              </button>
-              {TIPOS_DENUNCIA.map((tp) => {
-                const on = filtroTipos.includes(tp.key);
-                return (
-                  <button key={tp.key} type="button" aria-pressed={on} onClick={() => toggleTipoFiltro(tp.key)} style={chip(on, t)}>
-                    {tp.key === "outro" ? "Outro" : tp.label.slice(0, 28) + (tp.label.length > 28 ? "…" : "")}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <FiltroTipoDrilldown
+            t={t}
+            filtroTipos={filtroTipos}
+            onLimpar={() => setFiltroTipos([])}
+            onToggle={toggleTipoFiltro}
+          />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: "1 1 280px", minWidth: 0 }}>
@@ -294,17 +281,10 @@ export default function CentralDenunciasSpin() {
               </button>
             </div>
           </div>
-          <FiltroSelect
-            label="Período (consolidados)"
-            value={periodoConsolidado}
-            onChange={setPeriodoConsolidado}
-            t={t}
-            options={meses.map((m) => ({ v: m.value, l: m.label }))}
-          />
         </div>
       </section>
 
-      {/* Bloco 2 — só período consolidado */}
+      {/* Bloco 2 — KPIs por status (mesmo período do filtro acima) */}
       <div className="app-grid-kpi-4" style={{ marginBottom: 24 }}>
         {STATUS_OPTIONS.map((s) => (
           <div
@@ -444,18 +424,99 @@ function fmtDt(iso: string) {
   }
 }
 
-function chip(on: boolean, t: ReturnType<typeof useApp>["theme"]) {
-  return {
-    padding: "6px 10px",
-    borderRadius: 999,
-    border: `1px solid ${on ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-    background: on ? "rgba(124,58,237,0.12)" : t.inputBg,
-    color: t.text,
-    fontSize: 11,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-  } as const;
+function FiltroTipoDrilldown({
+  t,
+  filtroTipos,
+  onLimpar,
+  onToggle,
+}: {
+  t: ReturnType<typeof useApp>["theme"];
+  filtroTipos: TipoDenunciaKey[];
+  onLimpar: () => void;
+  onToggle: (k: TipoDenunciaKey) => void;
+}) {
+  const summaryLabel =
+    filtroTipos.length === 0
+      ? "Todos os tipos"
+      : `${filtroTipos.length} tipo${filtroTipos.length === 1 ? "" : "s"} selecionado${filtroTipos.length === 1 ? "" : "s"}`;
+
+  return (
+    <div style={{ flex: "1 1 260px", minWidth: 0, alignSelf: "flex-end" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo</div>
+      <details
+        className="canal-denuncias-tipo-details"
+        style={{
+          borderRadius: 10,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg,
+        }}
+      >
+        <summary
+          style={{
+            padding: "10px 12px",
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            fontSize: 13,
+            color: t.text,
+            fontWeight: 600,
+            listStyle: "none",
+          }}
+        >
+          {summaryLabel}
+        </summary>
+        <div
+          style={{
+            padding: "8px 12px 12px",
+            borderTop: `1px solid ${t.cardBorder}`,
+            maxHeight: 280,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onLimpar}
+            style={{
+              alignSelf: "flex-start",
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.cardBg,
+              color: t.textMuted,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+            }}
+          >
+            Limpar seleção
+          </button>
+          {TIPOS_DENUNCIA.map((tp) => {
+            const on = filtroTipos.includes(tp.key);
+            return (
+              <label
+                key={tp.key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <input type="checkbox" checked={on} onChange={() => onToggle(tp.key)} />
+                <span>{tp.titulo}</span>
+              </label>
+            );
+          })}
+        </div>
+      </details>
+    </div>
+  );
 }
 
 function FiltroSelect({

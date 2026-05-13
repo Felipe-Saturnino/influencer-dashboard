@@ -246,7 +246,7 @@ export function ModalAtenderDenuncia({
               <LinhaInfo label="Data/hora da denúncia" valor={fmtDt(row.created_at)} t={t} />
               <div style={{ marginTop: 14 }}>
                 <label htmlFor="st-atender" style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>
-                  Status da denúncia (editável)
+                  Status da denúncia
                 </label>
                 <select
                   id="st-atender"
@@ -330,7 +330,7 @@ export function ModalAtenderDenuncia({
 
           {aba === "anotacoes" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%" }}>
                 <label htmlFor="nota-nova" style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>
                   Nova anotação
                 </label>
@@ -352,13 +352,20 @@ export function ModalAtenderDenuncia({
                     resize: "vertical",
                   }}
                 />
-                <input type="file" multiple onChange={(e) => setNotaFiles(e.target.files)} style={{ marginTop: 10, fontSize: 13 }} />
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setNotaFiles(e.target.files)}
+                  style={{ marginTop: 10, display: "block", width: "100%", maxWidth: "100%", fontSize: 13, boxSizing: "border-box" }}
+                />
                 <button
                   type="button"
                   onClick={() => void registrarNota()}
                   disabled={notaSaving}
                   style={{
-                    marginTop: 12,
+                    marginTop: 14,
+                    width: "100%",
+                    boxSizing: "border-box",
                     padding: "10px 16px",
                     borderRadius: 10,
                     border: "none",
