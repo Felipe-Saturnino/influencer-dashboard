@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Eye, History, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, Eye, History, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -229,7 +229,7 @@ export default function CentralDenunciasSpin() {
             t={t}
             options={meses.map((m) => ({ v: m.value, l: m.label }))}
           />
-          <FiltroTipoDrilldown
+          <FiltroTipoMultiSelect
             t={t}
             filtroTipos={filtroTipos}
             onLimpar={() => setFiltroTipos([])}
@@ -424,7 +424,7 @@ function fmtDt(iso: string) {
   }
 }
 
-function FiltroTipoDrilldown({
+function FiltroTipoMultiSelect({
   t,
   filtroTipos,
   onLimpar,
@@ -435,41 +435,90 @@ function FiltroTipoDrilldown({
   onLimpar: () => void;
   onToggle: (k: TipoDenunciaKey) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
   const summaryLabel =
     filtroTipos.length === 0
       ? "Todos os tipos"
       : `${filtroTipos.length} tipo${filtroTipos.length === 1 ? "" : "s"} selecionado${filtroTipos.length === 1 ? "" : "s"}`;
 
+  const triggerStyle = {
+    width: "100%",
+    minWidth: 180,
+    boxSizing: "border-box" as const,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 13,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    textAlign: "left" as const,
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div style={{ flex: "1 1 260px", minWidth: 0, alignSelf: "flex-end" }}>
+    <div ref={wrapRef} style={{ flex: "1 1 260px", minWidth: 0, alignSelf: "flex-end", position: "relative" }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo</div>
-      <details
-        className="canal-denuncias-tipo-details"
-        style={{
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg,
-        }}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label="Tipo de denúncia — multi-seleção"
+        onClick={() => setOpen((v) => !v)}
+        style={triggerStyle}
       >
-        <summary
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{summaryLabel}</span>
+        <ChevronDown
+          size={16}
+          aria-hidden
           style={{
-            padding: "10px 12px",
-            cursor: "pointer",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            color: t.text,
-            fontWeight: 600,
-            listStyle: "none",
+            flexShrink: 0,
+            opacity: 0.65,
+            transition: "transform 0.15s ease",
+            transform: open ? "rotate(180deg)" : undefined,
           }}
-        >
-          {summaryLabel}
-        </summary>
+        />
+      </button>
+      {open ? (
         <div
+          role="listbox"
+          aria-multiselectable="true"
           style={{
-            padding: "8px 12px 12px",
-            borderTop: `1px solid ${t.cardBorder}`,
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: "100%",
+            marginTop: 4,
+            zIndex: 50,
             maxHeight: 280,
             overflowY: "auto",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            boxShadow: t.isDark ? "0 10px 28px rgba(0,0,0,0.5)" : "0 10px 28px rgba(0,0,0,0.12)",
+            padding: "10px 12px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
@@ -477,13 +526,15 @@ function FiltroTipoDrilldown({
         >
           <button
             type="button"
-            onClick={onLimpar}
+            onClick={() => {
+              onLimpar();
+            }}
             style={{
               alignSelf: "flex-start",
               padding: "6px 10px",
               borderRadius: 8,
               border: `1px solid ${t.cardBorder}`,
-              background: t.cardBg,
+              background: t.inputBg,
               color: t.textMuted,
               fontSize: 12,
               fontWeight: 600,
@@ -514,7 +565,7 @@ function FiltroTipoDrilldown({
             );
           })}
         </div>
-      </details>
+      ) : null}
     </div>
   );
 }
