@@ -16,6 +16,12 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import {
+  MSG_PRESTADOR_PONTO_REDE,
+  obterPrestadorPontoEstado,
+  registrarPrestadorPonto,
+  type PrestadorPontoEstado,
+} from "../../../lib/prestadorPontoApi";
 import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
@@ -376,6 +382,11 @@ export default function RhCalendarioPage() {
   const [meuPrestadorRhIdVistaCompleta, setMeuPrestadorRhIdVistaCompleta] = useState<string | null>(null);
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
 
+  const [pontoEstado, setPontoEstado] = useState<PrestadorPontoEstado | null>(null);
+  const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
+  const [pontoSubmitting, setPontoSubmitting] = useState(false);
+  const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
+
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
     const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
@@ -619,6 +630,40 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [mesesRefISOConsulta, perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading) return;
+    if (perm.canView !== "sim" && perm.canView !== "proprios") {
+      setPontoEstado(null);
+      setPontoEstadoLoading(false);
+      return;
+    }
+    if (loadingEscala) return;
+    let cancelled = false;
+    async function loadPonto() {
+      setPontoEstadoLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const tok = session?.access_token;
+        if (!tok) {
+          if (!cancelled) setPontoEstado(null);
+          return;
+        }
+        const est = await obterPrestadorPontoEstado(tok);
+        if (!cancelled) setPontoEstado(est);
+      } finally {
+        if (!cancelled) setPontoEstadoLoading(false);
+      }
+    }
+    void loadPonto();
+    const id = window.setInterval(() => {
+      void loadPonto();
+    }, 120_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [perm.loading, perm.canView, loadingEscala, user?.id]);
 
   const rawGradeRowsFiltrados = useMemo(() => {
     if (perm.canView !== "proprios") return rawGradeRows;
@@ -1183,6 +1228,50 @@ export default function RhCalendarioPage() {
     );
   }
 
+  const onPrestadorPontoRegistrar = useCallback(async () => {
+    setPontoMsgModal(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const tok = session?.access_token;
+    if (!tok) return;
+    setPontoSubmitting(true);
+    try {
+      const res = await registrarPrestadorPonto(tok);
+      if (res.ok && res.estado) {
+        setPontoEstado(res.estado);
+        return;
+      }
+      if (res.code === "rede" || res.code === "config") {
+        setPontoMsgModal(MSG_PRESTADOR_PONTO_REDE);
+      } else {
+        setPontoMsgModal(res.error ?? "Não foi possível registar.");
+      }
+      if (res.estado) setPontoEstado(res.estado);
+    } finally {
+      setPontoSubmitting(false);
+    }
+  }, []);
+
+  const mostrarBotaoPontoCalendario =
+    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
+  const labelBotaoPonto = pontoEstado?.proximoTipo === "check_out" ? "Check-out" : "Check-in";
+  const pontoBotaoHabilitado =
+    mostrarBotaoPontoCalendario &&
+    !pontoEstadoLoading &&
+    !pontoSubmitting &&
+    pontoEstado?.escaladoHoje === true &&
+    pontoEstado?.proximoTipo != null;
+  const pontoBotaoTitle = (() => {
+    if (!mostrarBotaoPontoCalendario) return undefined;
+    if (pontoEstadoLoading) return "A carregar estado do ponto…";
+    if (!pontoEstado) return "Não foi possível obter o estado do ponto.";
+    if (!pontoEstado.rhFuncionarioId) {
+      return "Não há colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).";
+    }
+    if (pontoEstado.escaladoHoje !== true) return "Sem escala aprovada para hoje na Gestão de Escala.";
+    if (pontoEstado.proximoTipo == null) return "Check-in e Check-out de hoje já foram registados.";
+    return undefined;
+  })();
+
   const showTimeFilter = !soPropriosCal && timeMultiselectItems.length > 0;
   const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
   const hasStaffFilter = filterStaffIds.length > 0;
@@ -1351,7 +1440,41 @@ export default function RhCalendarioPage() {
             )}
             </div>
 
-            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center" }}>
+            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              {mostrarBotaoPontoCalendario ? (
+                <button
+                  type="button"
+                  onClick={() => void onPrestadorPontoRegistrar()}
+                  disabled={!pontoBotaoHabilitado}
+                  title={pontoBotaoTitle}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 999,
+                    border: `1px solid ${brand.accent}`,
+                    background: pontoBotaoHabilitado
+                      ? brand.accent.startsWith("var(")
+                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 22%, transparent)"
+                        : `${String(brand.accent)}28`
+                      : t.cardBorder,
+                    color: pontoBotaoHabilitado ? brand.accent : t.textMuted,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: pontoBotaoHabilitado ? "pointer" : "not-allowed",
+                    lineHeight: 1,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    opacity: pontoBotaoHabilitado ? 1 : 0.72,
+                  }}
+                  aria-label={labelBotaoPonto}
+                >
+                  {(pontoEstadoLoading || pontoSubmitting) && (
+                    <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                  )}
+                  {labelBotaoPonto}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setModalAcaoAberto(true)}
@@ -1701,6 +1824,34 @@ export default function RhCalendarioPage() {
             </p>
           </ModalBase>
         ))}
+
+      {pontoMsgModal ? (
+        <ModalBase maxWidth={440} onClose={() => setPontoMsgModal(null)} zIndex={1200}>
+          <ModalHeader title="Check-in / Check-out" onClose={() => setPontoMsgModal(null)} />
+          <p style={{ margin: 0, color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
+            {pontoMsgModal}
+          </p>
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              onClick={() => setPontoMsgModal(null)}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 10,
+                border: "none",
+                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
+                color: "#fff",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </ModalBase>
+      ) : null}
     </div>
   );
 }

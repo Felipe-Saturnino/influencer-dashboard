@@ -685,7 +685,7 @@ function buildRhFuncionarioPayloadFromState(
     status: statusPrestador,
     nome: form.nome.trim(),
     rg: form.rg.trim(),
-    cpf: cadastroMinimoNovo && cpfDigits.length === 0 ? null : cpfDigits,
+    cpf: cpfDigits.length === 0 ? null : cpfDigits,
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
     email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
@@ -1508,7 +1508,7 @@ export default function RhPrestadoresPage() {
     const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
     const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
 
-    /** Novo ou editar: mesmo conjunto obrigatório (nome, e-mail + aba Dados de contratação); demais opcionais. */
+    /** Novo ou editar: nome, e-mail, CPF (âncora de duplicidade), aba Dados de contratação; demais conforme regras. */
     if (modalForm === "novo" || modalForm === "editar") {
       req("nome", "Nome completo", form.nome);
       req("email", "E-mail", form.email);
@@ -1527,8 +1527,9 @@ export default function RhPrestadoresPage() {
       else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
 
       const cpfD = somenteDigitos(form.cpf);
-      if (cpfD.length > 0 && cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
-      else if (cpfD.length === 11 && !validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
+      if (cpfD.length === 0) e.cpf = "CPF é obrigatório.";
+      else if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
+      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
 
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
@@ -2990,7 +2991,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-cpf", "CPF", false)}
+                  {lblReqCad("f-cpf", "CPF")}
                   <input
                     id="f-cpf"
                     disabled={desabilitarCampos || cpfCampoTravadoEdicao}
