@@ -874,80 +874,59 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <div
+            <p
+              id="staff-filtros-legenda"
               style={{
                 textAlign: "center",
                 fontSize: 12,
                 fontWeight: 600,
                 color: t.textMuted,
-                marginBottom: 10,
+                margin: "0 0 10px",
                 fontFamily: FONT.body,
               }}
             >
-              Pesquisar
-            </div>
+              Pesquisar / Operadora / Turno
+            </p>
             <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
               <div
+                role="group"
+                aria-labelledby="staff-filtros-legenda"
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  alignItems: "flex-end",
+                  alignItems: "center",
                   justifyContent: "center",
                   gap: 12,
                   rowGap: 14,
                   maxWidth: "100%",
                 }}
               >
-                <div style={{ flex: "0 0 auto" }}>
-                  <span
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
+                  <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
+                  <input
+                    id="staff-busca-nome-nick"
+                    type="search"
+                    value={buscaNomeNickname}
+                    onChange={(e) => setBuscaNomeNickname(e.target.value)}
+                    placeholder="Nome ou nickname"
+                    autoComplete="off"
+                    aria-label="Pesquisar por nome ou nickname"
                     style={{
-                      display: "block",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: t.textMuted,
-                      marginBottom: 6,
+                      width: "clamp(200px, 50vw, 320px)",
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontSize: 13,
                       fontFamily: FONT.body,
-                      visibility: "hidden",
-                      userSelect: "none",
-                      lineHeight: 1.2,
+                      outline: "none",
                     }}
-                    aria-hidden
-                  >
-                    &nbsp;
-                  </span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
-                    <input
-                      id="staff-busca-nome-nick"
-                      type="search"
-                      value={buscaNomeNickname}
-                      onChange={(e) => setBuscaNomeNickname(e.target.value)}
-                      placeholder="Nome ou nickname"
-                      autoComplete="off"
-                      aria-label="Pesquisar por nome ou nickname"
-                      style={{
-                        width: "clamp(200px, 50vw, 320px)",
-                        maxWidth: "100%",
-                        boxSizing: "border-box",
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        color: t.text,
-                        fontSize: 13,
-                        fontFamily: FONT.body,
-                        outline: "none",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
                 <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
-                  <label
-                    htmlFor="staff-filtro-operadora"
-                    style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-                  >
-                    Operadora
-                  </label>
                   <select
                     id="staff-filtro-operadora"
                     aria-label="Filtrar por operadora"
@@ -974,12 +953,6 @@ export default function RhGestaoStaffPage() {
                   </select>
                 </div>
                 <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
-                  <label
-                    htmlFor="staff-filtro-turno"
-                    style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-                  >
-                    Turno
-                  </label>
                   <select
                     id="staff-filtro-turno"
                     aria-label="Filtrar por turno"
