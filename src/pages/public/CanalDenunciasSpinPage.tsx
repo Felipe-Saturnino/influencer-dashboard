@@ -159,18 +159,41 @@ export default function CanalDenunciasSpinPage() {
         tipo_outro_descricao: tiposSel.has("outro") ? outroTexto.trim() : null,
         relato: relato.trim(),
       };
-      const { data: ins, error: insErr } = await supabase
-        .from("canal_denuncias_spin")
-        .insert(row)
-        .select("id, protocolo")
-        .single();
-      if (insErr || !ins) {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("registrar_denuncia_spin", {
+        p_deseja_identificar: row.deseja_identificar,
+        p_nome: row.nome,
+        p_telefone: row.telefone,
+        p_email: row.email,
+        p_tipos_denuncia: row.tipos_denuncia,
+        p_tipo_outro_descricao: row.tipo_outro_descricao,
+        p_relato: row.relato,
+      });
+      if (rpcErr) {
         setErroEnvio("Não foi possível registrar a denúncia. Tente novamente.");
         setEnviando(false);
         return;
       }
-      const denunciaId = ins.id as string;
-      const prot = ins.protocolo as string;
+      const ins = rpcData as { ok?: boolean; id?: string; protocolo?: string; error?: string } | null;
+      if (!ins?.ok || !ins.id || !ins.protocolo) {
+        const code = ins?.error;
+        const msg =
+          code === "identificacao_incompleta"
+            ? "Preencha nome, e-mail e telefone para se identificar."
+            : code === "outro_sem_descricao"
+              ? "Descreva o motivo em «Outro»."
+              : code === "tipos_vazio"
+                ? "Selecione ao menos um tipo de relato."
+                : code === "relato_vazio"
+                  ? "Preencha o relato do ocorrido."
+                  : code === "tipo_invalido"
+                    ? "Tipo de relato inválido. Atualize a página e tente novamente."
+                    : "Não foi possível registrar a denúncia. Tente novamente.";
+        setErroEnvio(msg);
+        setEnviando(false);
+        return;
+      }
+      const denunciaId = ins.id;
+      const prot = ins.protocolo;
 
       if (arquivos && arquivos.length > 0) {
         for (let i = 0; i < arquivos.length; i++) {
