@@ -10,6 +10,8 @@ import Header  from "./components/Header";
 // Páginas de fluxo inicial (eager — Login e TrocarSenha bloqueiam antes do layout)
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
+import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
+import { isCanalDenunciasPublicPath } from "./lib/canalDenunciasSpin";
 
 // Helper: retry automático em falhas de carregamento de chunk (ex.: rede instável)
 function lazyWithRetry<T extends ComponentType>(
@@ -68,6 +70,7 @@ const RhVagas = lazyWithRetry(() => import("./pages/rh/Vagas"));
 const RhGestaoEscala = lazyWithRetry(() => import("./pages/rh/GestaoEscala"));
 const RhGestaoStaff = lazyWithRetry(() => import("./pages/rh/GestaoStaff"));
 const RhCalendario = lazyWithRetry(() => import("./pages/rh/Calendario"));
+const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -106,6 +109,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_gestao_escala:  RhGestaoEscala,
   rh_staff:          RhGestaoStaff,
   rh_calendario:     RhCalendario,
+  rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
@@ -221,6 +225,17 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking } = useApp();
+  const [publicCanal, setPublicCanal] = useState(() =>
+    typeof window !== "undefined" ? isCanalDenunciasPublicPath() : false,
+  );
+
+  useEffect(() => {
+    setPublicCanal(isCanalDenunciasPublicPath());
+    const onPop = () => setPublicCanal(isCanalDenunciasPublicPath());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   async function handleLogout() {
     await supabase.auth.signOut();
     setUser(null);
@@ -250,6 +265,7 @@ function Root() {
       </div>
     );
   }
+  if (publicCanal) return <CanalDenunciasSpinPage />;
   if (!user) return <Login onLogin={setUser} />;
   if (user.must_change_password) return <TrocarSenhaObrigatorio />;
   return <AppLayout onLogout={handleLogout} />;

@@ -104,6 +104,14 @@ export const PAGES: {
   { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_staff", label: "Gestão de Staff", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_calendario", label: "Calendário", secao: "RH", hasCriar: false, hasEditar: false, hasExcluir: false },
+  {
+    key: "rh_central_denuncias",
+    label: "Central de Denúncias",
+    secao: "RH",
+    hasCriar: false,
+    hasEditar: true,
+    hasExcluir: true,
+  },
   // Conteúdo
   { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },

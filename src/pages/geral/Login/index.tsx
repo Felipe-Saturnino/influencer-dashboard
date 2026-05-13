@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { lerEmailLoginDaUrl } from "../../../lib/rhLoginDadosCadastroDeepLink";
+import { canalDenunciasPublicPath } from "../../../lib/canalDenunciasSpin";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 import { useApp } from "../../../context/AppContext";
@@ -330,6 +331,21 @@ export default function Login({ onLogin }: Props) {
               </a>
             </p>
           </div>
+        </div>
+
+        <div style={{ textAlign: "center", marginTop: 28 }}>
+          <a
+            href={canalDenunciasPublicPath()}
+            style={{
+              color: CONTACT_LINK_COLOR,
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "underline",
+              fontFamily: FONT.body,
+            }}
+          >
+            Canal de Denúncias Spin
+          </a>
         </div>
       </div>
     </div>

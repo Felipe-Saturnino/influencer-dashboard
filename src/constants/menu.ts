@@ -30,7 +30,7 @@ import {
   GiNewspaper,
 } from "react-icons/gi";
 import { createElement } from "react";
-import { CalendarRange, Network, Radio, Users } from "lucide-react";
+import { CalendarRange, Network, Radio, Scale, Users } from "lucide-react";
 
 function IconRhCalendarioMenu({ size = 15, color }: { size?: number; color?: string }) {
   return createElement(CalendarRange, { size, color, "aria-hidden": true });
@@ -46,6 +46,10 @@ function IconAfiliadosNetworkMenu({ size = 15, color }: { size?: number; color?:
 
 function IconAfiliadosListaMenu({ size = 15, color }: { size?: number; color?: string }) {
   return createElement(Users, { size, color, "aria-hidden": true });
+}
+
+function IconRhCentralDenunciasMenu({ size = 15, color }: { size?: number; color?: string }) {
+  return createElement(Scale, { size, color, "aria-hidden": true });
 }
 
 export interface MenuItem {
@@ -120,6 +124,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
       { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
       { key: "rh_calendario", label: "Calendário", icon: IconRhCalendarioMenu },
+      { key: "rh_central_denuncias", label: "Central de Denúncias", icon: IconRhCentralDenunciasMenu },
     ],
   },
   {
