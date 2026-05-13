@@ -32,6 +32,7 @@ import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
@@ -873,39 +874,87 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-              Pesquisar e filtrar
-            </div>
             <div
               style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "flex-end",
-                gap: 12,
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 600,
+                color: t.textMuted,
+                marginBottom: 10,
+                fontFamily: FONT.body,
               }}
             >
-              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-                <label
-                  htmlFor="staff-busca-nome-nick"
-                  style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-                >
-                  Prestador
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
-                  <input
-                    id="staff-busca-nome-nick"
-                    type="search"
-                    value={buscaNomeNickname}
-                    onChange={(e) => setBuscaNomeNickname(e.target.value)}
-                    placeholder="Nome ou nickname"
-                    autoComplete="off"
-                    aria-label="Pesquisar por nome ou nickname"
+              Pesquisar
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  gap: 12,
+                  rowGap: 14,
+                  maxWidth: "100%",
+                }}
+              >
+                <div style={{ flex: "0 0 auto" }}>
+                  <span
                     style={{
-                      flex: 1,
-                      minWidth: 0,
-                      maxWidth: 420,
-                      boxSizing: "border-box",
+                      display: "block",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: t.textMuted,
+                      marginBottom: 6,
+                      fontFamily: FONT.body,
+                      visibility: "hidden",
+                      userSelect: "none",
+                      lineHeight: 1.2,
+                    }}
+                    aria-hidden
+                  >
+                    &nbsp;
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
+                    <input
+                      id="staff-busca-nome-nick"
+                      type="search"
+                      value={buscaNomeNickname}
+                      onChange={(e) => setBuscaNomeNickname(e.target.value)}
+                      placeholder="Nome ou nickname"
+                      autoComplete="off"
+                      aria-label="Pesquisar por nome ou nickname"
+                      style={{
+                        width: "clamp(200px, 50vw, 320px)",
+                        maxWidth: "100%",
+                        boxSizing: "border-box",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        fontSize: 13,
+                        fontFamily: FONT.body,
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
+                  <label
+                    htmlFor="staff-filtro-operadora"
+                    style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
+                  >
+                    Operadora
+                  </label>
+                  <select
+                    id="staff-filtro-operadora"
+                    aria-label="Filtrar por operadora"
+                    value={filtroOperadoraStaff}
+                    onChange={(e) => setFiltroOperadoraStaff(e.target.value)}
+                    style={{
+                      width: "100%",
                       padding: "10px 12px",
                       borderRadius: 10,
                       border: `1px solid ${t.cardBorder}`,
@@ -913,73 +962,48 @@ export default function RhGestaoStaffPage() {
                       color: t.text,
                       fontSize: 13,
                       fontFamily: FONT.body,
-                      outline: "none",
                     }}
-                  />
+                  >
+                    <option value={FILTRO_STAFF_OPERADORA_TODAS}>Todas</option>
+                    <option value={FILTRO_STAFF_OPERADORA_NENHUMA}>Nenhuma</option>
+                    {operadorasFiltroOpts.map((o) => (
+                      <option key={o.slug} value={o.slug}>
+                        {o.nome}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-              <div style={{ flex: "0 1 200px", minWidth: 140 }}>
-                <label
-                  htmlFor="staff-filtro-operadora"
-                  style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-                >
-                  Operadora
-                </label>
-                <select
-                  id="staff-filtro-operadora"
-                  aria-label="Filtrar por operadora"
-                  value={filtroOperadoraStaff}
-                  onChange={(e) => setFiltroOperadoraStaff(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg,
-                    color: t.text,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <option value={FILTRO_STAFF_OPERADORA_TODAS}>Todas</option>
-                  <option value={FILTRO_STAFF_OPERADORA_NENHUMA}>Nenhuma</option>
-                  {operadorasFiltroOpts.map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: "0 1 180px", minWidth: 120 }}>
-                <label
-                  htmlFor="staff-filtro-turno"
-                  style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-                >
-                  Turno
-                </label>
-                <select
-                  id="staff-filtro-turno"
-                  aria-label="Filtrar por turno"
-                  value={filtroTurnoStaff}
-                  onChange={(e) => setFiltroTurnoStaff(e.target.value as FiltroTurnoStaffTabela)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg,
-                    color: t.text,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <option value="todos">Todos</option>
-                  <option value="nenhum">Nenhum</option>
-                  <option value="manha">Manhã</option>
-                  <option value="tarde">Tarde</option>
-                  <option value="noite">Noite</option>
-                  <option value="comercial">Comercial</option>
-                </select>
+                <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
+                  <label
+                    htmlFor="staff-filtro-turno"
+                    style={{ display: "block", fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
+                  >
+                    Turno
+                  </label>
+                  <select
+                    id="staff-filtro-turno"
+                    aria-label="Filtrar por turno"
+                    value={filtroTurnoStaff}
+                    onChange={(e) => setFiltroTurnoStaff(e.target.value as FiltroTurnoStaffTabela)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="nenhum">Nenhum</option>
+                    <option value="manha">Manhã</option>
+                    <option value="tarde">Tarde</option>
+                    <option value="noite">Noite</option>
+                    <option value="comercial">Comercial</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -1371,6 +1395,7 @@ function ModalStaffVer({
         <div role="tabpanel">
           <CampoLeitura k="Nome" v={row.nome} t={t} />
           <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
+          <CampoLeitura k="Data de início" v={fmtDataIsoPtBr(row.data_inicio)} t={t} />
           <CampoLeitura k="Telefone" v={row.telefone} t={t} />
           <CampoLeitura k="E-mail" v={row.email} t={t} />
           <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />
