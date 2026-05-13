@@ -18,6 +18,7 @@ import {
   getTdNumStyle,
   zebraStripe,
   zebraStripeBrandContrast,
+  TOTAL_ROW_BG,
 } from "../../../lib/tableStyles";
 import {
   ArrowUpDown,
@@ -802,6 +803,47 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
   };
 }
 
+/** Soma as colunas numéricas da tabela por mesa; margem e aposta média recalculadas a partir dos totais. */
+function totaisLinhasMesaPorDia(linhas: LinhaMesaPorDia[]): LinhaMesaPorDia | null {
+  if (linhas.length === 0) return null;
+  let ggr = 0;
+  let turnover = 0;
+  let bets = 0;
+  let gN = 0;
+  let tN = 0;
+  let bN = 0;
+  for (const row of linhas) {
+    if (row.ggr != null) {
+      ggr += Number(row.ggr);
+      gN++;
+    }
+    if (row.turnover != null) {
+      turnover += Number(row.turnover);
+      tN++;
+    }
+    if (row.bets != null) {
+      bets += Number(row.bets);
+      bN++;
+    }
+  }
+  const ggrOut = gN > 0 ? ggr : null;
+  const turnoverOut = tN > 0 ? turnover : null;
+  const betsOut = bN > 0 ? bets : null;
+  const margin_pct =
+    turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
+  const bet_size =
+    betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
+  return {
+    dataIso: "__total_mesa__",
+    labelData: "Total",
+    ggr: ggrOut,
+    turnover: turnoverOut,
+    bets: betsOut,
+    margin_pct,
+    bet_size,
+  };
+}
+
 /** ARPU no comparativo de jogo: GGR ÷ UAP (por jogo e no total oficial). */
 function arpuComparativoFromGgrUap(ggr: number | null, uap: number | null): number | null {
   if (ggr == null || uap == null || Number(uap) === 0) return null;
@@ -983,6 +1025,68 @@ function linhaComparativoJogoAgregadaMes(
       arpu: arpuComparativoFromGgrUap(bcAgg.ggr, uapBc),
     },
     totaisOficiais,
+  };
+}
+
+/** Agrega várias linhas do comparativo de jogo (soma GGR/turnover/apostas/UAP; margem, aposta média e ARPU recalculados). */
+function agregarCelulasJogoMetricasParaLinha(
+  cels: ReadonlyArray<TotaisOficiaisComparativo | CelulaJogoMetricas>,
+): CelulaJogoMetricas {
+  let ggr = 0;
+  let turnover = 0;
+  let bets = 0;
+  let uap = 0;
+  let gN = 0;
+  let tN = 0;
+  let bN = 0;
+  let uN = 0;
+  for (const c of cels) {
+    if (c.ggr != null) {
+      ggr += Number(c.ggr);
+      gN++;
+    }
+    if (c.turnover != null) {
+      turnover += Number(c.turnover);
+      tN++;
+    }
+    if (c.bets != null) {
+      bets += Number(c.bets);
+      bN++;
+    }
+    if (c.uap != null) {
+      uap += Number(c.uap);
+      uN++;
+    }
+  }
+  const ggrOut = gN > 0 ? ggr : null;
+  const turnoverOut = tN > 0 ? turnover : null;
+  const betsOut = bN > 0 ? bets : null;
+  const uapOut = uN > 0 ? uap : null;
+  const margin_pct =
+    turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
+  const bet_size =
+    betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
+  const arpu = arpuComparativoFromGgrUap(ggrOut, uapOut);
+  return {
+    ggr: ggrOut,
+    turnover: turnoverOut,
+    bets: betsOut,
+    margin_pct,
+    bet_size,
+    uap: uapOut,
+    arpu,
+  };
+}
+
+function agregarLinhasComparativoJogo(linhas: LinhaComparativoJogoTab[]): LinhaComparativoJogoTab {
+  const tot = agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.totaisOficiais));
+  return {
+    dataIso: "__totais_periodo__",
+    labelData: "Total",
+    totaisOficiais: tot,
+    blackjack: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.blackjack)),
+    roleta: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.roleta)),
+    baccarat: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.baccarat)),
   };
 }
 
@@ -1741,6 +1845,12 @@ export default function OverviewSpin() {
     uapPorJogoRows,
   ]);
 
+  const linhaTotaisComparativoJogo = useMemo(
+    () =>
+      linhasComparativoJogo.length === 0 ? null : agregarLinhasComparativoJogo(linhasComparativoJogo),
+    [linhasComparativoJogo],
+  );
+
   const kpisAtivosComparativo = useMemo(
     () => KPIS_DISPONIVEIS.filter((k) => kpisSelecionados.has(k.key)),
     [kpisSelecionados],
@@ -2067,7 +2177,46 @@ export default function OverviewSpin() {
               </td>
             </tr>
           ) : (
-            linhas.map((row, i) => {
+            <>
+              {(() => {
+                const tot = totaisLinhasMesaPorDia(linhas);
+                if (!tot) return null;
+                const ggrT = tot.ggr ?? 0;
+                return (
+                  <tr
+                    key={tot.dataIso}
+                    style={{
+                      background: TOTAL_ROW_BG,
+                      fontWeight: 700,
+                      borderBottom: `2px solid ${t.cardBorder}`,
+                    }}
+                  >
+                    <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary, fontFamily: FONT.body }}>
+                      {tot.labelData}
+                    </td>
+                    <td
+                      style={{
+                        ...tdNum,
+                        color: ggrT > 0 ? BRAND.verde : ggrT < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {tot.ggr != null ? fmtBRL(tot.ggr) : "—"}
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>{tot.turnover != null ? fmtBRL(tot.turnover) : "—"}</td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      {tot.bets != null ? tot.bets.toLocaleString("pt-BR") : "—"}
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      <MarginBadge value={tot.margin_pct} />
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      {tot.bet_size != null ? fmtBRL(Number(tot.bet_size)) : "—"}
+                    </td>
+                  </tr>
+                );
+              })()}
+              {linhas.map((row, i) => {
               const ggr = row.ggr ?? 0;
               return (
                 <tr key={row.dataIso} style={{ background: i % 2 === 1 ? rowStripe : "transparent" }}>
@@ -2089,7 +2238,8 @@ export default function OverviewSpin() {
                   <td style={tdNum}>{row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}</td>
                 </tr>
               );
-            })
+            })}
+            </>
           )}
         </tbody>
       </table>
@@ -2951,6 +3101,99 @@ export default function OverviewSpin() {
                 </tr>
               </thead>
               <tbody>
+                {linhaTotaisComparativoJogo != null && (() => {
+                  const row = linhaTotaisComparativoJogo;
+                  const totaisOficiais = row.totaisOficiais;
+                  return (
+                    <tr
+                      key="__totais-comparativo-jogo__"
+                      style={{
+                        background: TOTAL_ROW_BG,
+                        fontWeight: 700,
+                        borderBottom: `2px solid ${t.cardBorder}`,
+                      }}
+                    >
+                      <th
+                        scope="row"
+                        style={{
+                          ...tdStyle,
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 2,
+                          fontWeight: 700,
+                          background: TOTAL_ROW_BG,
+                          boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+                          color: brand.primary,
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        Total
+                      </th>
+                      {kpisAtivosComparativo.map((kpi) => (
+                        <Fragment key={`tot-${kpi.key}`}>
+                          <td
+                            style={{
+                              ...tdNum,
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                              fontWeight: 700,
+                              color: t.text,
+                              background: TOTAL_ROW_BG,
+                            }}
+                          >
+                            {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
+                          </td>
+                          {JOGOS_COMPARATIVO.map((jogo) => {
+                            const cel = row[jogo.key];
+                            const valorJogo = cel[kpi.key] as number | null;
+                            const pct = calcularPctComparativoOficial(valorJogo, row, kpi);
+                            return (
+                              <td
+                                key={jogo.key}
+                                style={{
+                                  ...tdNum,
+                                  textAlign: "right",
+                                  fontVariantNumeric: "tabular-nums",
+                                  color: jogo.cor,
+                                  fontWeight: 600,
+                                  background: TOTAL_ROW_BG,
+                                }}
+                              >
+                                {valorJogo != null ? (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "flex-end",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <span>{renderValorKpiComparativo(kpi, valorJogo)}</span>
+                                    {kpi.somavel && pct != null && (
+                                      <span
+                                        style={{
+                                          fontSize: 10,
+                                          color: t.textMuted,
+                                          fontWeight: 700,
+                                          opacity: 0.75,
+                                        }}
+                                      >
+                                        {pct.toFixed(0)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </tr>
+                  );
+                })()}
                 {linhasComparativoJogo.map((row, i) => {
                   const totaisOficiais = row.totaisOficiais;
                   return (
