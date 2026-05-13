@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, type CSSProperties } from "react";
-import { X, Loader2, Download } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
-import { STORAGE_BUCKET, sanitizeStorageFileName, statusLabel, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
+import { STORAGE_BUCKET, sanitizeStorageFileName, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
 import type { DenunciaListRow, AnexoRow } from "./types";
 
 const MODAL_MAX = "90dvh" as const;

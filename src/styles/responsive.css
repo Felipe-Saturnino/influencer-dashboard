@@ -13,6 +13,23 @@
   }
 }
 
+/* Canal de Denúncias Spin (público) — badges informativos */
+.canal-denuncias-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .canal-denuncias-badges-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .canal-denuncias-badges-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Telas de auth (login / senha) */
 .app-auth-screen {
   box-sizing: border-box;

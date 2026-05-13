@@ -1,5 +1,5 @@
-import { useState, useCallback, type CSSProperties, type ReactNode } from "react";
-import { Loader2, Search } from "lucide-react";
+import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } from "react";
+import { Loader2, Search, Lock, CircleCheckBig, VenetianMask, ShieldBan, Info } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { FONT, BASE_COLORS } from "../../constants/theme";
 import { CampoObrigatorioMark } from "../../components/CampoObrigatorioMark";
@@ -10,10 +10,34 @@ import {
   type TipoDenunciaKey,
 } from "../../lib/canalDenunciasSpin";
 
-const INTRO =
-  "Este canal de denúncias foi criado para garantir um ambiente seguro, ético e transparente, onde qualquer pessoa possa relatar irregularidades, comportamentos inadequados ou situações que violem as normas e valores da nossa empresa.\n\n" +
-  "As informações enviadas são tratadas com confidencialidade, respeito e responsabilidade, contribuindo para a melhoria contínua e a promoção de boas práticas dentro da organização.\n\n" +
-  "Se preferir, fique à vontade para fazer a denúncia de forma anônima.";
+const MAX_ANEXO_BYTES = 20 * 1024 * 1024;
+
+const BADGES: {
+  Icon: typeof Lock;
+  title: string;
+  text: string;
+}[] = [
+  {
+    Icon: Lock,
+    title: "Confidencial",
+    text: "Suas informações são protegidas e tratadas com total sigilo.",
+  },
+  {
+    Icon: CircleCheckBig,
+    title: "Toda Denúncia Importa",
+    text: "Nenhum relato é ignorado. Cada caso recebe atenção dedicada e retorno formal.",
+  },
+  {
+    Icon: VenetianMask,
+    title: "Anônimo",
+    text: "Você pode denunciar sem se identificar. O anonimato é garantido.",
+  },
+  {
+    Icon: ShieldBan,
+    title: "Sem retaliação",
+    text: "Qualquer forma de retaliação a denunciantes é proibida e punível.",
+  },
+];
 
 type TabKey = "denunciar" | "consultar";
 
@@ -36,7 +60,45 @@ function fmtDataHora(iso: string | null | undefined): string {
   }
 }
 
+/** Evita faixa clara no rodapé: tema claro do `body`/`#root` ficava visível atrás do zoom. */
+function useCanalDenunciasPublicViewportBg() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById("root");
+    const snap = {
+      htmlBg: html.style.background,
+      htmlMinH: html.style.minHeight,
+      bodyBg: body.style.background,
+      bodyMinH: body.style.minHeight,
+      rootBg: root?.style.background ?? "",
+      rootMinH: root?.style.minHeight ?? "",
+    };
+    const grad = "linear-gradient(135deg, #0a0a0f 0%, #2d1b4e 100%)";
+    html.style.background = "#0a0a0f";
+    html.style.minHeight = "100%";
+    body.style.background = grad;
+    body.style.minHeight = "100%";
+    if (root) {
+      root.style.minHeight = "100%";
+      root.style.background = grad;
+    }
+    return () => {
+      html.style.background = snap.htmlBg;
+      html.style.minHeight = snap.htmlMinH;
+      body.style.background = snap.bodyBg;
+      body.style.minHeight = snap.bodyMinH;
+      if (root) {
+        root.style.background = snap.rootBg;
+        root.style.minHeight = snap.rootMinH;
+      }
+    };
+  }, []);
+}
+
 export default function CanalDenunciasSpinPage() {
+  useCanalDenunciasPublicViewportBg();
+
   const [aba, setAba] = useState<TabKey>("denunciar");
   const [desejaIdentificar, setDesejaIdentificar] = useState<"sim" | "nao" | "">("");
   const [nome, setNome] = useState("");
@@ -76,6 +138,14 @@ export default function CanalDenunciasSpinPage() {
     if (tiposSel.size === 0) return setErroEnvio("Selecione ao menos um tipo de relato.");
     if (tiposSel.has("outro") && !outroTexto.trim()) return setErroEnvio("Descreva o motivo em «Outro».");
     if (!relato.trim()) return setErroEnvio("Preencha o relato do ocorrido.");
+
+    if (arquivos && arquivos.length > 0) {
+      for (let i = 0; i < arquivos.length; i++) {
+        if (arquivos[i].size > MAX_ANEXO_BYTES) {
+          return setErroEnvio("Cada anexo deve ter no máximo 20MB.");
+        }
+      }
+    }
 
     setEnviando(true);
     try {
@@ -200,8 +270,8 @@ export default function CanalDenunciasSpinPage() {
         boxSizing: "border-box",
       }}
     >
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <img
             src="/Logo Spin Gaming White.png"
             alt="Spin Gaming"
@@ -218,19 +288,55 @@ export default function CanalDenunciasSpinPage() {
           >
             Canal de Denúncias Spin
           </h1>
+          <p
+            style={{
+              margin: "10px 0 0",
+              fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)",
+              color: "#d4c4e8",
+              lineHeight: 1.5,
+              maxWidth: 520,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            Um espaço seguro para relatar irregularidades com total confidencialidade.
+          </p>
         </div>
 
-        <p
-          style={{
-            whiteSpace: "pre-line",
-            lineHeight: 1.65,
-            fontSize: 14,
-            color: "#d4c4e8",
-            marginBottom: 28,
-          }}
-        >
-          {INTRO}
-        </p>
+        <div className="canal-denuncias-badges-grid" style={{ marginBottom: 28 }}>
+          {BADGES.map(({ Icon, title, text }) => (
+            <div
+              key={title}
+              style={{
+                padding: "14px 14px 16px",
+                borderRadius: 14,
+                border: "1px solid rgba(124,58,237,0.35)",
+                background: "rgba(15,15,26,0.75)",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(124,58,237,0.25)",
+                    color: "var(--brand-icon, #70cae4)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={18} strokeWidth={2} aria-hidden />
+                </span>
+                <span style={{ fontWeight: 800, fontSize: 13, color: "#fff", lineHeight: 1.25 }}>{title}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: "#c9b8e0", lineHeight: 1.5 }}>{text}</p>
+            </div>
+          ))}
+        </div>
 
         <div role="tablist" aria-label="Formulário do canal de denúncias" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {tabBtn("denunciar", "Realizar denúncia")}
@@ -345,19 +451,33 @@ export default function CanalDenunciasSpinPage() {
                     O que você gostaria de relatar? <CampoObrigatorioMark />
                   </span>
                   <p style={{ fontSize: 12, color: "#9b8ab8", margin: "8px 0 10px" }}>Pode marcar mais de uma opção.</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {TIPOS_DENUNCIA.map((t) => (
                       <label
                         key={t.key}
-                        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, lineHeight: 1.45 }}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          cursor: "pointer",
+                          fontSize: 13,
+                          lineHeight: 1.45,
+                        }}
                       >
                         <input
                           type="checkbox"
                           checked={tiposSel.has(t.key)}
                           onChange={() => toggleTipo(t.key)}
-                          style={{ marginTop: 3 }}
+                          style={{ marginTop: 5, flexShrink: 0 }}
                         />
-                        <span>{t.label}</span>
+                        <span>
+                          <span style={{ fontWeight: 700, color: "#fff", display: "block" }}>{t.titulo}</span>
+                          {t.detalhe ? (
+                            <span style={{ display: "block", fontStyle: "italic", color: "#b8a6d4", fontSize: 12, marginTop: 2 }}>
+                              {t.detalhe}
+                            </span>
+                          ) : null}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -372,11 +492,15 @@ export default function CanalDenunciasSpinPage() {
                   )}
                 </div>
 
-                <Campo label="Relate o ocorrido" obrigatorio>
+                <Campo
+                  label="Relate o ocorrido"
+                  obrigatorio
+                  legenda="Descreva o que aconteceu, quando, onde e quem estava envolvido. Quanto mais detalhes, melhor a apuração."
+                >
                   <textarea
                     value={relato}
                     onChange={(e) => setRelato(e.target.value)}
-                    placeholder="Por favor, inclua o máximo de informações relevantes possíveis para que possamos apurar corretamente os fatos."
+                    placeholder="Descreva os fatos com o máximo de detalhes possível…"
                     rows={8}
                     style={{ ...inp, resize: "vertical", minHeight: 140 }}
                   />
@@ -390,8 +514,8 @@ export default function CanalDenunciasSpinPage() {
                     onChange={(e) => setArquivos(e.target.files)}
                     style={{ fontSize: 13, color: "#c4b5d4" }}
                   />
-                  <p style={{ fontSize: 11, color: "#7a6b94", marginTop: 8 }}>
-                    Documentos, fotos ou vídeos como evidências (tamanho e tipos permitidos pelo sistema).
+                  <p style={{ fontSize: 11, color: "#9b8ab8", marginTop: 8, lineHeight: 1.45 }}>
+                    Documentos, fotos ou vídeos como evidências. Formatos aceitos: PDF, JPG, PNG, MP4. Tamanho máximo: 20MB por arquivo.
                   </p>
                 </div>
 
@@ -400,6 +524,24 @@ export default function CanalDenunciasSpinPage() {
                     {erroEnvio}
                   </div>
                 )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "flex-start",
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(112,202,228,0.35)",
+                    background: "rgba(112,202,228,0.08)",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Info size={20} color="var(--brand-icon, #70cae4)" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ margin: 0, fontSize: 13, color: "#d4c4e8", lineHeight: 1.55 }}>
+                    Após o envio, você receberá um número de protocolo. Use-o na aba «Consultar denúncia» para acompanhar o andamento.
+                  </p>
+                </div>
 
                 <button
                   type="button"
@@ -490,25 +632,16 @@ export default function CanalDenunciasSpinPage() {
               <div style={{ marginTop: 24 }}>
                 <h2 style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 16 }}>Linha do tempo</h2>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 18 }}>
-                  <TimelineItem
-                    titulo="Relatado"
-                    subtitulo={fmtDataHora(consultaData.relatado_em as string)}
-                  />
+                  <TimelineItem titulo="Relatado" subtitulo={fmtDataHora(consultaData.relatado_em as string)} />
                   {(consultaData.status === "em_avaliacao" ||
                     consultaData.status === "procedente" ||
                     consultaData.status === "nao_procedente") &&
                     consultaData.em_avaliacao_em && (
-                      <TimelineItem
-                        titulo="Denúncia em avaliação"
-                        subtitulo={fmtDataHora(consultaData.em_avaliacao_em as string)}
-                      />
+                      <TimelineItem titulo="Denúncia em avaliação" subtitulo={fmtDataHora(consultaData.em_avaliacao_em as string)} />
                     )}
                   {(consultaData.status === "procedente" || consultaData.status === "nao_procedente") && (
                     <>
-                      <TimelineItem
-                        titulo="Denúncia atendida"
-                        subtitulo={fmtDataHora(consultaData.atendida_em as string)}
-                      />
+                      <TimelineItem titulo="Denúncia atendida" subtitulo={fmtDataHora(consultaData.atendida_em as string)} />
                       {typeof consultaData.descricao_resolucao === "string" && consultaData.descricao_resolucao && (
                         <li
                           style={{
@@ -532,7 +665,7 @@ export default function CanalDenunciasSpinPage() {
           </div>
         )}
 
-        <p style={{ textAlign: "center", marginTop: 32, fontSize: 12, color: "#6b6b8a" }}>
+        <p style={{ textAlign: "center", marginTop: 32, marginBottom: 24, fontSize: 12, color: "#8a7aa8" }}>
           <a href="/" style={{ color: "var(--brand-icon, #70cae4)", fontWeight: 600 }}>
             Voltar ao login da plataforma
           </a>
@@ -561,10 +694,12 @@ function TimelineItem({ titulo, subtitulo }: { titulo: string; subtitulo: string
 function Campo({
   label,
   obrigatorio,
+  legenda,
   children,
 }: {
   label: string;
   obrigatorio?: boolean;
+  legenda?: string;
   children: ReactNode;
 }) {
   return (
@@ -573,6 +708,9 @@ function Campo({
         {label}
         {obrigatorio ? <CampoObrigatorioMark /> : null}
       </label>
+      {legenda ? (
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: "#9b8ab8", lineHeight: 1.5 }}>{legenda}</p>
+      ) : null}
       {children}
     </div>
   );
