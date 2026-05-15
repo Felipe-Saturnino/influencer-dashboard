@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { List, MoreHorizontal, Store } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -18,9 +18,15 @@ import {
   type OfertaStatusUi,
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
-import { MesCarrosselPeriodo, mesReferenciaInicialCarrossel, type MesRef } from "../components/MesCarrosselPeriodo";
+import {
+  getMesesDisponiveisEscalaCarrossel,
+  idxMesInicialEscalaCarrossel,
+} from "../../../lib/escalaMesCarrosselOverviewStyle";
+import { MesCarrosselPeriodo } from "../components/MesCarrosselPeriodo";
 
 const MOCK_OFERTAS: LinhaOfertaMarketplace[] = [];
+
+const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 
 function inicioFimMesUtc(ano: number, mes0: number): { ini: string; fim: string } {
   const ini = new Date(Date.UTC(ano, mes0, 1));
@@ -48,8 +54,8 @@ function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: EscalaTimeFiltro):
   return row.timeKey === filtro;
 }
 
-function filtrarPorMesRef(rows: LinhaOfertaMarketplace[], ref: MesRef): LinhaOfertaMarketplace[] {
-  return rows.filter((r) => dataIsoNoMes(r.dataOfertaIso, ref.ano, ref.mes0));
+function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: number): LinhaOfertaMarketplace[] {
+  return rows.filter((r) => dataIsoNoMes(r.dataOfertaIso, ano, mes0));
 }
 
 export default function EscalaMarketplaceTurnosPage() {
@@ -58,13 +64,23 @@ export default function EscalaMarketplaceTurnosPage() {
   const perm = usePermission("escala_marketplace_turnos");
 
   const hoje = useMemo(() => new Date(), []);
-  const [refMes, setRefMes] = useState<MesRef>(() => mesReferenciaInicialCarrossel(hoje));
+  const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
+  const [idxMes, setIdxMes] = useState(() => idxMesInicialEscalaCarrossel(getMesesDisponiveisEscalaCarrossel(new Date()), new Date()));
+
+  useEffect(() => {
+    setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
+  }, [mesesDisponiveis.length]);
+
   const [aba, setAba] = useState<"todas" | "minhas">("todas");
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
-  const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<Exclude<EscalaAcaoFiltro, "todos">>("venda_turno");
+  const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
 
-  const linhasMes = useMemo(() => filtrarPorMesRef(MOCK_OFERTAS, refMes), [refMes]);
+  const linhasMes = useMemo(() => {
+    const m = mesesDisponiveis[idxMes];
+    if (!m) return [];
+    return filtrarPorMesEscala(MOCK_OFERTAS, m.ano, m.mes);
+  }, [mesesDisponiveis, idxMes]);
 
   const linhasVendasTodas = useMemo(() => {
     return linhasMes.filter(
@@ -129,7 +145,13 @@ export default function EscalaMarketplaceTurnosPage() {
         alignItems: "center",
       }}
     >
-      <MesCarrosselPeriodo value={refMes} onChange={setRefMes} t={t} brand={brand} />
+      <MesCarrosselPeriodo
+        mesesDisponiveis={mesesDisponiveis}
+        idxMes={idxMes}
+        onIdxMesChange={setIdxMes}
+        t={t}
+        brand={{ blockBg: brand.blockBg, cardBorder: t.cardBorder }}
+      />
       {aba === "todas" && (
         <>
           <select
@@ -163,7 +185,7 @@ export default function EscalaMarketplaceTurnosPage() {
           <select
             aria-label="Filtrar por tipo de ação"
             value={filtroTipoMinhas}
-            onChange={(e) => setFiltroTipoMinhas(e.target.value as Exclude<EscalaAcaoFiltro, "todos">)}
+            onChange={(e) => setFiltroTipoMinhas(e.target.value as EscalaAcaoFiltro)}
             style={selectStyle}
           >
             {ESCALA_ACAO_TIPO_OPCOES_MINHAS.map((o) => (
@@ -199,7 +221,7 @@ export default function EscalaMarketplaceTurnosPage() {
     if (rows.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
@@ -262,7 +284,7 @@ export default function EscalaMarketplaceTurnosPage() {
     if (rows.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
@@ -338,7 +360,7 @@ export default function EscalaMarketplaceTurnosPage() {
     if (rows.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
@@ -445,7 +467,7 @@ export default function EscalaMarketplaceTurnosPage() {
     if (rows.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
@@ -509,8 +531,8 @@ export default function EscalaMarketplaceTurnosPage() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
         icon={<Store size={14} aria-hidden="true" />}
-        title="Marketplace de Turnos"
-        subtitle="Consulte ofertas de venda e troca de turnos, e acompanhe as suas próprias ofertas."
+        title="Marketplace"
+        subtitle="Ofertas de venda e troca de turnos — todas as publicações e as suas."
         brand={brand}
         t={t}
       />

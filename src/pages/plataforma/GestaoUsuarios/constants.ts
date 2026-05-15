@@ -102,7 +102,7 @@ export const PAGES: {
   { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: false, hasExcluir: false },
   {
     key: "escala_marketplace_turnos",
-    label: "Marketplace de Turnos",
+    label: "Marketplace",
     secao: "Escala",
     hasCriar: true,
     hasEditar: true,

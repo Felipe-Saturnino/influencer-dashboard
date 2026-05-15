@@ -48,6 +48,16 @@ import {
 } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
+import {
+  normalizarSelecaoUnica,
+  TREINAMENTO_FILTRO_ID,
+  CALENDARIO_TIMES_FILTRO_ORDEM,
+  normalizarNomeCalFiltro,
+  timeRowPorRotuloCanonica,
+  prestadorAtendeFiltroTime,
+  type StaffTimeRow,
+} from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 
 /** Tipos de compromisso (filtro único na UI; `todos` = default). */
 type ChaveTipoCompromissoCal = "eventos" | "reunioes" | "treinamentos" | "feedback" | "turnos";
@@ -61,59 +71,6 @@ const OPCOES_TIPO_COMPROMISSO_SELECT: { value: FiltroTipoCompromissoUi; label: s
   { value: "feedback", label: "Feedback" },
   { value: "turnos", label: "Turnos" },
 ];
-
-/** Multi → uma opção (filtros Time/Staff na aba Controle de Presença). */
-function normalizarSelecaoUnica(prev: string[], ids: string[]): string[] {
-  if (ids.length === 0) return [];
-  if (ids.length === 1) return ids;
-  const pset = new Set(prev);
-  const added = ids.find((x) => !pset.has(x));
-  return [added ?? ids[ids.length - 1]!];
-}
-
-type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
-
-/** Id sintético no multiselect (não é uuid de `rh_org_times`). */
-const TREINAMENTO_FILTRO_ID = "rh-cal-filtro-treinamento";
-
-/** Ordem e rótulos exibidos no filtro (nome do time; Treinamento = gerência Treinamento). */
-const CALENDARIO_TIMES_FILTRO_ORDEM = [
-  "Customer Service",
-  "Service Manager",
-  "Game Presenter",
-  "Performance Coach",
-  "Shift Leader",
-  "Shuffler",
-  "Treinamento",
-] as const;
-
-function normalizarNomeCalFiltro(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function timeRowPorRotuloCanonica(times: StaffTimeRow[], rotulo: string): StaffTimeRow | undefined {
-  const target = normalizarNomeCalFiltro(rotulo);
-  return times.find((t) => normalizarNomeCalFiltro(t.nome) === target);
-}
-
-function prestadorAtendeFiltroTime(
-  p: RhFuncionario,
-  opts: {
-    filtroAtivo: boolean;
-    filtroTimeIdsReais: Set<string>;
-    treinamentoSelecionado: boolean;
-    treinamentoGerenciaId: string | null;
-    treinamentoTimeIds: Set<string>;
-  },
-): boolean {
-  if (!opts.filtroAtivo) return true;
-  if (p.org_time_id && opts.filtroTimeIdsReais.has(p.org_time_id)) return true;
-  if (opts.treinamentoSelecionado && opts.treinamentoGerenciaId) {
-    if (p.org_gerencia_id === opts.treinamentoGerenciaId) return true;
-    if (p.org_time_id && opts.treinamentoTimeIds.has(p.org_time_id)) return true;
-  }
-  return false;
-}
 
 const MONTHS = [
   "Janeiro",
@@ -191,43 +148,6 @@ type RhCalAcaoOfertaDiaRow = {
   created_at: string;
   solicitante_nome: string | null;
 };
-
-/** Alinha login (e-mail da sessão) a `rh_funcionarios` — mesma lógica da vista «Próprios». */
-async function buscarRhFuncionarioAtivoPorEmailLogin(emailBruto: string): Promise<RhFuncionario | null> {
-  const em = emailBruto.trim();
-  if (!em) return null;
-  const el = em.toLowerCase();
-  const { data: porEmailEq } = await supabase
-    .from("rh_funcionarios")
-    .select("*")
-    .eq("email", em)
-    .in("status", ["ativo", "indisponivel"])
-    .maybeSingle();
-  let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
-  if (!row) {
-    const { data: porSpinEq } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .eq("email_spin", em)
-      .in("status", ["ativo", "indisponivel"])
-      .maybeSingle();
-    row = (porSpinEq as RhFuncionario | null) ?? null;
-  }
-  if (!row) {
-    const { data: cand } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .in("status", ["ativo", "indisponivel"])
-      .limit(80);
-    row =
-      (cand as RhFuncionario[] | undefined)?.find(
-        (p) =>
-          (p.email ?? "").trim().toLowerCase() === el ||
-          (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
-      ) ?? null;
-  }
-  return row;
-}
 
 type CompromissoEscalaCal = {
   prestadorId: string;

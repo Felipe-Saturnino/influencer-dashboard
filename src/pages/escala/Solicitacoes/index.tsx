@@ -1,14 +1,16 @@
-import { useMemo, useState } from "react";
-import { ClipboardList, MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClipboardList, Loader2, MoreHorizontal } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { DashboardPageHeader, SectionTitle } from "../../../components/dashboard";
+import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
   ESCALA_TIME_OPCOES,
+  ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
   type EscalaAcaoFiltro,
@@ -16,16 +18,27 @@ import {
   type LinhaOfertaMarketplace,
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
-import { MesCarrosselPeriodo, mesReferenciaInicialCarrossel, type MesRef } from "../components/MesCarrosselPeriodo";
+import {
+  getMesesDisponiveisEscalaCarrossel,
+  idxMesInicialEscalaCarrossel,
+} from "../../../lib/escalaMesCarrosselOverviewStyle";
+import { MesCarrosselPeriodo } from "../components/MesCarrosselPeriodo";
+import { supabase } from "../../../lib/supabase";
+import type { RhFuncionario } from "../../../types/rhFuncionario";
+import {
+  normalizarSelecaoUnica,
+  TREINAMENTO_FILTRO_ID,
+  normalizarNomeCalFiltro,
+  timeRowPorRotuloCanonica,
+  prestadorAtendeFiltroTime,
+  type StaffTimeRow,
+} from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { BRAND } from "../../../lib/dashboardConstants";
 
 const MOCK_SOLICITACOES: LinhaOfertaMarketplace[] = [];
 
-const MOCK_STAFF: { id: string; nome: string; time: EscalaTimeFiltro }[] = [
-  { id: "s1", nome: "Ana Costa", time: "customer_service" },
-  { id: "s2", nome: "Bruno Silva", time: "customer_service" },
-  { id: "s3", nome: "Carla Mendes", time: "game_presenter" },
-  { id: "s4", nome: "Diego Ramos", time: "shift_leader" },
-];
+const MSG_VAZIO_SOLICITACOES = "Sem solicitações para os filtros selecionados.";
 
 function inicioFimMesUtc(ano: number, mes0: number): { ini: string; fim: string } {
   const ini = new Date(Date.UTC(ano, mes0, 1));
@@ -43,6 +56,10 @@ function dataIsoNoMes(dataIso: string, ano: number, mes0: number): boolean {
   return s >= ini && s <= fim;
 }
 
+function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: number): LinhaOfertaMarketplace[] {
+  return rows.filter((r) => dataIsoNoMes(r.dataOfertaIso, ano, mes0));
+}
+
 function passaFiltroTipo(row: LinhaOfertaMarketplace, filtro: EscalaAcaoFiltro): boolean {
   if (filtro === "todos") return true;
   return row.tipo === filtro;
@@ -54,28 +71,218 @@ function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: EscalaTimeFiltro):
 }
 
 export default function EscalaSolicitacoesPage() {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("escala_solicitacoes");
+  const soProprios = !perm.loading && perm.canView === "proprios";
+
+  const [times, setTimes] = useState<StaffTimeRow[]>([]);
+  const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [erroStaff, setErroStaff] = useState<string | null>(null);
+  const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
+  const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
 
   const hoje = useMemo(() => new Date(), []);
+  const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
+  const [idxMes, setIdxMes] = useState(() => idxMesInicialEscalaCarrossel(getMesesDisponiveisEscalaCarrossel(new Date()), new Date()));
+
+  useEffect(() => {
+    setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
+  }, [mesesDisponiveis.length]);
+
   const [aba, setAba] = useState<"aberto" | "arquivadas">("aberto");
-  const [refMesArq, setRefMesArq] = useState<MesRef>(() => mesReferenciaInicialCarrossel(hoje));
   const [filtroTipo, setFiltroTipo] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTime, setFiltroTime] = useState<EscalaTimeFiltro>("todos");
-  const [buscaStaff, setBuscaStaff] = useState("");
-  const [staffId, setStaffId] = useState<string>("");
+  const [filtroStaffIds, setFiltroStaffIds] = useState<string[]>([]);
 
-  const staffFiltrado = useMemo(() => {
-    const q = buscaStaff.trim().toLowerCase();
-    return MOCK_STAFF.filter((s) => {
-      if (filtroTime !== "todos" && s.time !== filtroTime) return false;
-      if (q && !s.nome.toLowerCase().includes(q)) return false;
-      return true;
+  const carregarTimes = useCallback(async () => {
+    setErroStaff(null);
+    const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
+    if (error) {
+      setErroStaff("Não foi possível carregar os times de staff.");
+      setTimes([]);
+      return;
+    }
+    setTimes((data ?? []) as StaffTimeRow[]);
+  }, []);
+
+  const timeIds = useMemo(() => times.map((x) => x.id), [times]);
+  const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    if (perm.canView !== "sim" && perm.canView !== "proprios") return;
+    if (perm.canView === "proprios") {
+      setTimes([]);
+      setErroStaff(null);
+      return;
+    }
+    setLoadingStaff(true);
+    void carregarTimes().finally(() => setLoadingStaff(false));
+  }, [perm.loading, perm.canView, carregarTimes]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView !== "proprios") return;
+    if (!user?.email?.trim()) {
+      setPrestadores([]);
+      setLoadingStaff(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingStaff(true);
+    void (async () => {
+      const row = await buscarRhFuncionarioAtivoPorEmailLogin(user.email!);
+      if (cancelled) return;
+      if (row) {
+        setPrestadores([row]);
+        setErroStaff(null);
+      } else {
+        setPrestadores([]);
+        setErroStaff(null);
+      }
+      setLoadingStaff(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, user?.email]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_org_gerencias")
+        .select("id, nome")
+        .eq("status", "ativo")
+        .ilike("nome", "%treinamento%");
+      if (cancelled) return;
+      if (error || !data?.length) {
+        setTreinamentoGerenciaId(null);
+        return;
+      }
+      const exato = data.find((r: { nome: string }) => normalizarNomeCalFiltro(r.nome) === "treinamento");
+      setTreinamentoGerenciaId(exato?.id ?? data[0]!.id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    if (perm.canView === "proprios") return;
+    let cancelled = false;
+    void (async () => {
+      const idsStaff = times.map((x) => x.id);
+      const merged = new Map<string, RhFuncionario>();
+
+      if (idsStaff.length > 0) {
+        const { data, error } = await supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .in("org_time_id", idsStaff)
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true });
+        if (!cancelled && !error) (data ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
+      }
+
+      let ttIdsLocal: string[] = [];
+      if (treinamentoGerenciaId) {
+        const { data: tt } = await supabase
+          .from("rh_org_times")
+          .select("id")
+          .eq("gerencia_id", treinamentoGerenciaId)
+          .eq("status", "ativo");
+        ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
+        if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
+
+        let q = supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true });
+        if (ttIdsLocal.length > 0) {
+          q = q.or(`org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`);
+        } else {
+          q = q.eq("org_gerencia_id", treinamentoGerenciaId);
+        }
+        const { data: d2, error: e2 } = await q;
+        if (!cancelled && !e2) (d2 ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
+      } else if (!cancelled) {
+        setTreinamentoTimeIdsList([]);
+      }
+
+      if (!cancelled) {
+        setPrestadores(
+          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, times, treinamentoGerenciaId]);
+
+  const filtroTimeCompIds = useMemo(() => {
+    if (filtroTime === "todos") return [];
+    if (filtroTime === "treinamento") return [TREINAMENTO_FILTRO_ID];
+    const rotulo = ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO[filtroTime];
+    const row = timeRowPorRotuloCanonica(times, rotulo);
+    return row ? [row.id] : [];
+  }, [filtroTime, times]);
+
+  const filtroTimeIdsReais = useMemo(() => {
+    const allowed = new Set(timeIds);
+    return new Set(filtroTimeCompIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+  }, [filtroTimeCompIds, timeIds]);
+
+  const treinamentoSelecionado = filtroTimeCompIds.includes(TREINAMENTO_FILTRO_ID);
+  const filtroTimeAtivo = filtroTime !== "todos";
+
+  const staffMultiselectItems = useMemo(() => {
+    const opts = {
+      filtroAtivo: filtroTimeAtivo,
+      filtroTimeIdsReais,
+      treinamentoSelecionado,
+      treinamentoGerenciaId,
+      treinamentoTimeIds,
+    };
+    return prestadores
+      .filter((p) => prestadorAtendeFiltroTime(p, opts))
+      .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds]);
+
+  useEffect(() => {
+    if (prestadores.length === 0 || !filtroTimeAtivo) return;
+    const opts = {
+      filtroAtivo: true,
+      filtroTimeIdsReais,
+      treinamentoSelecionado,
+      treinamentoGerenciaId,
+      treinamentoTimeIds,
+    };
+    setFiltroStaffIds((prev) => {
+      if (prev.length === 0) return prev;
+      const allowedStaff = new Set(prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id));
+      const next = prev.filter((id) => allowedStaff.has(id));
+      return next.length === prev.length ? prev : next;
     });
-  }, [buscaStaff, filtroTime]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, filtroTimeCompIds]);
+
+  useEffect(() => {
+    const allowedIds = new Set(staffMultiselectItems.map((x) => x.id));
+    setFiltroStaffIds((prev) => {
+      if (prev.length === 0) return prev;
+      const next = prev.filter((id) => allowedIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [staffMultiselectItems]);
 
   const linhasBase = MOCK_SOLICITACOES;
+
+  const staffFiltroId = filtroStaffIds[0];
 
   const linhasAberto = useMemo(() => {
     return linhasBase.filter(
@@ -83,20 +290,21 @@ export default function EscalaSolicitacoesPage() {
         r.status === "em_analise" &&
         passaFiltroTipo(r, filtroTipo) &&
         passaFiltroTime(r, filtroTime) &&
-        (!staffId || r.solicitanteStaffId === staffId),
+        (!staffFiltroId || r.solicitanteStaffId === staffFiltroId),
     );
-  }, [linhasBase, filtroTipo, filtroTime, staffId]);
+  }, [linhasBase, filtroTipo, filtroTime, staffFiltroId]);
 
   const linhasArquivadas = useMemo(() => {
-    return linhasBase.filter(
+    const m = mesesDisponiveis[idxMes];
+    const noMes = m ? filtrarPorMesEscala(linhasBase, m.ano, m.mes) : [];
+    return noMes.filter(
       (r) =>
         (r.status === "cancelada" || r.status === "aprovada" || r.status === "recusada") &&
-        dataIsoNoMes(r.dataOfertaIso, refMesArq.ano, refMesArq.mes0) &&
         passaFiltroTipo(r, filtroTipo) &&
         passaFiltroTime(r, filtroTime) &&
-        (!staffId || r.solicitanteStaffId === staffId),
+        (!staffFiltroId || r.solicitanteStaffId === staffFiltroId),
     );
-  }, [linhasBase, refMesArq, filtroTipo, filtroTime, staffId]);
+  }, [linhasBase, mesesDisponiveis, idxMes, filtroTipo, filtroTime, staffFiltroId]);
 
   const selectStyle = {
     padding: "8px 12px",
@@ -114,7 +322,7 @@ export default function EscalaSolicitacoesPage() {
     if (rows.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Sem dados para o período selecionado.
+          {MSG_VAZIO_SOLICITACOES}
         </div>
       );
     }
@@ -193,6 +401,38 @@ export default function EscalaSolicitacoesPage() {
     );
   }
 
+  const blocoStaff = loadingStaff ? (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        color: t.textMuted,
+        fontSize: 12,
+        fontFamily: FONT.body,
+      }}
+    >
+      <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+      {soProprios ? "Carregando…" : "Carregando staff…"}
+    </span>
+  ) : erroStaff ? (
+    <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+  ) : (
+    <div style={{ flex: "1 1 260px", minWidth: 220 }}>
+      <InfluencerMultiSelect
+        selected={filtroStaffIds}
+        onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
+        influencers={staffMultiselectItems}
+        t={t}
+        triggerEmptyLabel="Staff"
+        ariaFilterPrefix="Filtrar por staff"
+        listboxAriaLabel="Selecionar membro do staff"
+        enableSearch
+        searchPlaceholder="Pesquisar prestador…"
+      />
+    </div>
+  );
+
   const blocoFiltrosComum = (
     <>
       <select
@@ -212,7 +452,7 @@ export default function EscalaSolicitacoesPage() {
         value={filtroTime}
         onChange={(e) => {
           setFiltroTime(e.target.value as EscalaTimeFiltro);
-          setStaffId("");
+          setFiltroStaffIds([]);
         }}
         style={selectStyle}
       >
@@ -222,87 +462,7 @@ export default function EscalaSolicitacoesPage() {
           </option>
         ))}
       </select>
-      <div style={{ flex: "1 1 220px", minWidth: 200 }}>
-        <label htmlFor="escala-sol-staff-busca" style={{ display: "block", fontSize: 11, color: t.textMuted, marginBottom: 6 }}>
-          Pesquisar staff por nome
-        </label>
-        <input
-          id="escala-sol-staff-busca"
-          type="search"
-          value={buscaStaff}
-          onChange={(e) => setBuscaStaff(e.target.value)}
-          placeholder="Nome…"
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "8px 12px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontSize: 13,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        />
-        <div
-          role="listbox"
-          aria-label="Selecionar colaborador"
-          style={{
-            maxHeight: 140,
-            overflowY: "auto",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-          }}
-        >
-          <button
-            type="button"
-            role="option"
-            aria-selected={staffId === ""}
-            onClick={() => setStaffId("")}
-            style={{
-              display: "block",
-              width: "100%",
-              textAlign: "left",
-              padding: "8px 12px",
-              border: "none",
-              borderBottom: `1px solid ${t.cardBorder}`,
-              background: staffId === "" ? "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)" : "transparent",
-              color: t.text,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-            }}
-          >
-            Todos
-          </button>
-          {staffFiltrado.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              role="option"
-              aria-selected={staffId === s.id}
-              onClick={() => setStaffId(s.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "8px 12px",
-                border: "none",
-                borderBottom: `1px solid ${t.cardBorder}`,
-                background: staffId === s.id ? "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)" : "transparent",
-                color: t.text,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              {s.nome}
-            </button>
-          ))}
-        </div>
-      </div>
+      {blocoStaff}
     </>
   );
 
@@ -424,7 +584,13 @@ export default function EscalaSolicitacoesPage() {
               alignItems: "center",
             }}
           >
-            <MesCarrosselPeriodo value={refMesArq} onChange={setRefMesArq} t={t} brand={brand} />
+            <MesCarrosselPeriodo
+              mesesDisponiveis={mesesDisponiveis}
+              idxMes={idxMes}
+              onIdxMesChange={setIdxMes}
+              t={t}
+              brand={{ blockBg: brand.blockBg, cardBorder: t.cardBorder }}
+            />
             {blocoFiltrosComum}
           </div>
           <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>

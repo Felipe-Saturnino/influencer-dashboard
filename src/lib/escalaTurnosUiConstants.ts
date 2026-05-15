@@ -11,7 +11,8 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
   { value: "troca_cassada", label: "Troca Casada" },
 ];
 
-export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: Exclude<EscalaAcaoFiltro, "todos">; label: string }[] = [
+export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: string }[] = [
+  { value: "todos", label: "Todos" },
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
@@ -38,6 +39,17 @@ export const ESCALA_TIME_OPCOES: { value: EscalaTimeFiltro; label: string }[] = 
   { value: "shuffler", label: "Shuffler" },
   { value: "treinamento", label: "Treinamento" },
 ];
+
+/** Alinha o slug do filtro «Time» às strings do Calendário / `CALENDARIO_TIMES_FILTRO_ORDEM`. */
+export const ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO: Record<Exclude<EscalaTimeFiltro, "todos">, string> = {
+  customer_service: "Customer Service",
+  service_manager: "Service Manager",
+  game_presenter: "Game Presenter",
+  performance_coach: "Performance Coach",
+  shift_leader: "Shift Leader",
+  shuffler: "Shuffler",
+  treinamento: "Treinamento",
+};
 
 export type OfertaStatusUi =
   | "interessado"
