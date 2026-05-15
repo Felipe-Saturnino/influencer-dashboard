@@ -732,6 +732,19 @@ function buildRhFuncionarioPayloadFromState(
   };
 }
 
+/** Insert/update em `rh_funcionarios`: evita expor texto cru do Postgres (ex. constraint de CPF). */
+function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string }): string {
+  const raw = error.message ?? "";
+  const lower = raw.toLowerCase();
+  if (error.code === "23505" || lower.includes("duplicate")) {
+    return "Já existe um funcionário cadastrado com este CPF.";
+  }
+  if (error.code === "23514" && lower.includes("rh_funcionarios_cpf_digits")) {
+    return "CPF Inválido";
+  }
+  return raw;
+}
+
 function RhFuncModalHeaderDetalhes({
   t,
   perm,
@@ -1528,8 +1541,8 @@ export default function RhPrestadoresPage() {
 
       const cpfD = somenteDigitos(form.cpf);
       if (cpfD.length === 0) e.cpf = "CPF é obrigatório.";
-      else if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
-      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
+      else if (cpfD.length !== 11) e.cpf = "CPF Inválido";
+      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF Inválido";
 
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
@@ -1615,11 +1628,7 @@ export default function RhPrestadoresPage() {
       const { data: criado, error } = await supabase.from("rh_funcionarios").insert(payload).select("*").single();
       setSalvando(false);
       if (error) {
-        if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
-          setErroGlobal("Já existe um funcionário cadastrado com este CPF.");
-        } else {
-          setErroGlobal(error.message);
-        }
+        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
         return;
       }
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
@@ -1671,11 +1680,7 @@ export default function RhPrestadoresPage() {
       const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
       setSalvando(false);
       if (error) {
-        if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
-          setErroGlobal("Já existe um funcionário cadastrado com este CPF.");
-        } else {
-          setErroGlobal(error.message);
-        }
+        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
         return;
       }
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
@@ -2034,9 +2039,10 @@ export default function RhPrestadoresPage() {
     } catch (e: unknown) {
       let msg = "Erro ao salvar.";
       if (e && typeof e === "object") {
-        const o = e as { message?: unknown; details?: unknown };
-        if (typeof o.message === "string" && o.message.trim()) msg = o.message;
-        else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
+        const o = e as { message?: string; code?: string; details?: string };
+        if (typeof o.message === "string" && o.message.trim()) {
+          msg = mensagemErroSupabaseRhFuncionarioSalvar(o);
+        } else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
       }
       setErroGlobal(msg);
     } finally {
