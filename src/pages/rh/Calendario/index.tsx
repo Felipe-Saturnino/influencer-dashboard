@@ -43,6 +43,8 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   RH_CALENDARIO_ACAO_LABEL,
+  labelReuniaoCom,
+  listarDatasEscaladoFuturasNoMes,
   textoResumoPayloadAcaoCalendario,
   type RhCalendarioAcaoTipo,
 } from "../../../lib/rhCalendarioAcaoHelpers";
@@ -58,6 +60,7 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 
 /** Tipos de compromisso (filtro único na UI; `todos` = default). */
 type ChaveTipoCompromissoCal = "eventos" | "reunioes" | "treinamentos" | "feedback" | "turnos";
@@ -149,13 +152,45 @@ type RhCalAcaoOfertaDiaRow = {
   solicitante_nome: string | null;
 };
 
+type RpcReuniaoMesRow = {
+  id: string;
+  solicitante_funcionario_id: string;
+  solicitante_nome: string | null;
+  dia_iso: string;
+  reuniao_com: string | null;
+  reuniao_com_label: string | null;
+  motivo: string | null;
+  turno: string | null;
+  status: string;
+  created_at: string;
+};
+
+function isoChaveDiaReuniaoRpc(raw: string | Date | undefined): string {
+  if (raw == null) return "";
+  if (typeof raw === "string") return raw.slice(0, 10);
+  try {
+    return new Date(raw).toISOString().slice(0, 10);
+  } catch {
+    return String(raw).slice(0, 10);
+  }
+}
+
+function tituloReuniaoNoCalendario(row: RpcReuniaoMesRow, viewerSolicitanteId: string | null): string {
+  const alvo = ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() || "—";
+  if (viewerSolicitanteId && row.solicitante_funcionario_id !== viewerSolicitanteId) {
+    const nome = (row.solicitante_nome ?? "").trim() || "—";
+    return `${nome} — Reunião (${alvo})`;
+  }
+  return `Reunião (${alvo})`;
+}
+
 type CompromissoEscalaCal = {
   prestadorId: string;
   nome: string;
   turno: string;
 };
 
-/** Compromissos não-turno (futuro: API); hoje lista vazia por dia. */
+/** Compromissos não-turno (reuniões via `rh_calendario_reunioes_mes`; demais em evolução). */
 type CompromissoAgendaExtra = { id: string; titulo: string };
 
 /** Ordem na grelha do dia: eventos → reuniões → treinamentos → feedback → turnos. */
@@ -459,6 +494,8 @@ export default function RhCalendarioPage() {
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
   const [pontoMesTick, setPontoMesTick] = useState(0);
+  const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
+  const [reunioesMesTick, setReunioesMesTick] = useState(0);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -824,6 +861,35 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  /**
+   * ID em `rh_calendario_acoes.solicitante_funcionario_id`: a política RLS só permite INSERT quando este
+   * funcionário coincide com o login (e-mail / e-mail Spin em `rh_funcionarios`). Sem esse vínculo o
+   * agendamento seria rejeitado — por isso o botão «Agendar» só aparece quando conseguimos resolver o id.
+   */
+  const solicitanteAgendarId = useMemo(
+    () => meuRhFuncionarioId ?? meuPrestadorRhIdVistaCompleta,
+    [meuRhFuncionarioId, meuPrestadorRhIdVistaCompleta],
+  );
+
+  const gradeValorPorDiaIsoAgendar = useMemo(() => {
+    const m = new Map<string, string>();
+    const fid = solicitanteAgendarId;
+    if (!fid) return m;
+    for (const r of rawGradeRows) {
+      if (r.funcionario_id !== fid) continue;
+      const iso = diaIsoChaveGrade(r);
+      if (!iso) continue;
+      if (!m.has(iso)) m.set(iso, (r.valor ?? "").trim());
+    }
+    return m;
+  }, [rawGradeRows, solicitanteAgendarId]);
+
+  /** Dias escalados do mês em datas estritamente futuras (regra de agendamento de reunião). */
+  const diasEscaladosAgendarMes = useMemo(
+    () => listarDatasEscaladoFuturasNoMes(new Date(current.getFullYear(), current.getMonth(), 1), gradeValorPorDiaIsoAgendar),
+    [current, gradeValorPorDiaIsoAgendar],
+  );
+
   const mapaPontoPorDiaIso = useMemo(() => {
     const m = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
     for (const row of pontoMesLinhas) {
@@ -973,9 +1039,70 @@ export default function RhCalendarioPage() {
     };
   }, [modalDia, perm.loading, perm.canView]);
 
-  function reunioesAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
-    return [];
-  }
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") {
+      setReunioesMesRaw([]);
+      return;
+    }
+    let cancelled = false;
+    const refIso = refMesPrimeiroDiaISO(current);
+    void supabase.rpc("rh_calendario_reunioes_mes", { p_ref_mes: refIso }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setReunioesMesRaw([]);
+        return;
+      }
+      setReunioesMesRaw((data ?? []) as RpcReuniaoMesRow[]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, current, reunioesMesTick]);
+
+  const reunioesItemsPorIso = useMemo(() => {
+    const map = new Map<string, CompromissoAgendaExtra[]>();
+    for (const row of reunioesMesRaw) {
+      if (compFilterStaffIds.length > 0 && !compFilterStaffIds.includes(row.solicitante_funcionario_id)) continue;
+      if (filtroTimeAtivo) {
+        const tid = orgTimeIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
+        const gid = orgGerenciaIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
+        let pass = false;
+        if (tid && filtroTimeIdsReais.has(tid)) pass = true;
+        if (treinamentoSelecionado && treinamentoGerenciaId) {
+          if (gid === treinamentoGerenciaId) pass = true;
+          if (tid && treinamentoTimeIds.has(tid)) pass = true;
+        }
+        if (!pass) continue;
+      }
+      const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
+      if (!iso) continue;
+      const item: CompromissoAgendaExtra = {
+        id: row.id,
+        titulo: tituloReuniaoNoCalendario(row, solicitanteAgendarId),
+      };
+      const arr = map.get(iso) ?? [];
+      arr.push(item);
+      map.set(iso, arr);
+    }
+    return map;
+  }, [
+    reunioesMesRaw,
+    solicitanteAgendarId,
+    compFilterStaffIds,
+    filtroTimeAtivo,
+    filtroTimeIdsReais,
+    treinamentoSelecionado,
+    treinamentoGerenciaId,
+    treinamentoTimeIds,
+    orgTimeIdPorPrestadorId,
+    orgGerenciaIdPorPrestadorId,
+  ]);
+
+  const obterReunioesDiaIso = useCallback(
+    (iso: string) => reunioesItemsPorIso.get(iso) ?? [],
+    [reunioesItemsPorIso],
+  );
+
   function treinamentosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
     return [];
   }
@@ -996,7 +1123,7 @@ export default function RhCalendarioPage() {
     const turnosOrd = ordenarTurnosCalendario(compromissosPorDiaIso.get(iso) ?? []);
     const turnLinhas: LinhaCalendarioDia[] = turnosOrd.map((comp) => ({ tipo: "turno", comp }));
     const ev: LinhaCalendarioDia[] = eventosAgendaDoDia(iso).map((item) => ({ tipo: "evento", item }));
-    const r: LinhaCalendarioDia[] = reunioesAgendaDoDia(iso).map((item) => ({ tipo: "reuniao", item }));
+    const r: LinhaCalendarioDia[] = obterReunioesDiaIso(iso).map((item) => ({ tipo: "reuniao", item }));
     const tr: LinhaCalendarioDia[] = treinamentosAgendaDoDia(iso).map((item) => ({ tipo: "treinamento", item }));
     const fb: LinhaCalendarioDia[] = feedbackAgendaDoDia(iso).map((item) => ({ tipo: "feedback", item }));
 
@@ -1014,7 +1141,7 @@ export default function RhCalendarioPage() {
     const iso = toISO(date);
     const turnos = compromissosPorDiaIso.get(iso) ?? [];
     const ev = eventosAgendaDoDia(iso);
-    const r = reunioesAgendaDoDia(iso);
+    const r = obterReunioesDiaIso(iso);
     const tr = treinamentosAgendaDoDia(iso);
     const fb = feedbackAgendaDoDia(iso);
     if (filtroTipoCompromisso === "todos") {
@@ -1706,27 +1833,29 @@ export default function RhCalendarioPage() {
               </div>
 
               <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setModalAgendarAberto(true)}
-                  style={{
-                    padding: "8px 18px",
-                    borderRadius: 999,
-                    border: `1px solid ${brand.accent}`,
-                    background: brand.accent.startsWith("var(")
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
-                      : `${String(brand.accent)}18`,
-                    color: brand.accent,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    lineHeight: 1,
-                  }}
-                  aria-label="Agendar compromisso ou oferta"
-                >
-                  Agendar
-                </button>
+                {solicitanteAgendarId ? (
+                  <button
+                    type="button"
+                    onClick={() => setModalAgendarAberto(true)}
+                    style={{
+                      padding: "8px 18px",
+                      borderRadius: 999,
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.accent.startsWith("var(")
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
+                        : `${String(brand.accent)}18`,
+                      color: brand.accent,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      lineHeight: 1,
+                    }}
+                    aria-label="Agendar reunião"
+                  >
+                    Agendar
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -2258,7 +2387,7 @@ export default function RhCalendarioPage() {
                 const mostrarTipo = (ch: FiltroTipoCompromissoUi) =>
                   filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
                 const ev = eventosAgendaDoDia(iso);
-                const r = reunioesAgendaDoDia(iso);
+                const r = obterReunioesDiaIso(iso);
                 const tr = treinamentosAgendaDoDia(iso);
                 const fb = feedbackAgendaDoDia(iso);
                 const turnos = turnosAgendadosNoDia(modalDia);
@@ -2414,32 +2543,19 @@ export default function RhCalendarioPage() {
         </ModalBase>
       )}
 
-      {modalAgendarAberto ? (
-        <ModalBase maxWidth={440} onClose={() => setModalAgendarAberto(false)} zIndex={1140}>
-          <ModalHeader title="Agendar" onClose={() => setModalAgendarAberto(false)} />
-          <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
-            O fluxo de agendamento será configurado em breve.
-          </p>
-          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={() => setModalAgendarAberto(false)}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 10,
-                border: "none",
-                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
-                color: "#fff",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              Fechar
-            </button>
-          </div>
-        </ModalBase>
+      {modalAgendarAberto && solicitanteAgendarId ? (
+        <ModalAgendarReuniaoCalendario
+          open
+          onClose={() => setModalAgendarAberto(false)}
+          onAgendado={() => {
+            setReunioesMesTick((x) => x + 1);
+          }}
+          t={t}
+          brand={brand}
+          refMesIso={refMesPrimeiroDiaISO(current)}
+          solicitanteFuncionarioId={solicitanteAgendarId}
+          diasEscalados={diasEscaladosAgendarMes}
+        />
       ) : null}
 
       {pontoMsgModal ? (

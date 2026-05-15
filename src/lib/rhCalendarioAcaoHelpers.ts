@@ -40,13 +40,22 @@ export function textoResumoPayloadAcaoCalendario(
     const turno = p.turno;
     return typeof turno === "string" && turno.trim() ? `Turno: ${turno.trim()}` : "";
   }
+  if (tipoAcao === "agendamento_reuniao") {
+    const com = typeof p.reuniao_com_label === "string" ? p.reuniao_com_label.trim() : "";
+    const m = typeof p.motivo === "string" ? p.motivo.trim() : "";
+    if (m && com) return `${com}: ${m.length > 100 ? `${m.slice(0, 100)}…` : m}`;
+    if (m) return m.length > 120 ? `${m.slice(0, 120)}…` : m;
+    return com ? `Com: ${com}` : "";
+  }
   return "";
 }
 
+/** Opções «com quem» ao agendar reunião no Calendário RH (`ModalAgendarReuniaoCalendario`). */
 export const RH_REUNIAO_COM_OPCOES = [
   { value: "shift_lead", label: "Shift Lead" },
   { value: "gerente_operacoes", label: "Gerente de Operações" },
   { value: "rh", label: "RH" },
+  { value: "figurino", label: "Figurino" },
 ] as const;
 
 export type RhReuniaoComValor = (typeof RH_REUNIAO_COM_OPCOES)[number]["value"];
@@ -155,3 +164,4 @@ export function listarDatasEscaladoFuturasNoMes(
   }
   return out;
 }
+
