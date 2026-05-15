@@ -317,13 +317,13 @@ export default function StatusTecnico() {
     else setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
 
     setLoading(false);
-  }, [perm.canView]);
+  }, []);
 
   useEffect(() => {
     carregar();
     const interval = setInterval(carregar, 60000); // refresh a cada 1 min
     return () => clearInterval(interval);
-  }, [carregar]);
+  }, [carregar, perm.canView]);
 
   useEffect(() => {
     if (confirmarSync == null && confirmarEmail == null) return;

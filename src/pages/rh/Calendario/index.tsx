@@ -41,20 +41,20 @@ import {
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { ModalAcaoCalendario } from "./ModalAcaoCalendario";
 import {
   RH_CALENDARIO_ACAO_LABEL,
   textoResumoPayloadAcaoCalendario,
   type RhCalendarioAcaoTipo,
 } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 
 /** Tipos de compromisso (filtro único na UI; `todos` = default). */
 type ChaveTipoCompromissoCal = "eventos" | "reunioes" | "treinamentos" | "feedback" | "turnos";
 type FiltroTipoCompromissoUi = "todos" | ChaveTipoCompromissoCal;
 
 const OPCOES_TIPO_COMPROMISSO_SELECT: { value: FiltroTipoCompromissoUi; label: string }[] = [
-  { value: "todos", label: "TODOS" },
+  { value: "todos", label: "Todos" },
   { value: "eventos", label: "Eventos" },
   { value: "reunioes", label: "Reuniões" },
   { value: "treinamentos", label: "Treinamentos" },
@@ -320,6 +320,16 @@ function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
 }
 
+/** Situação na grade (Gestão de Escala) para o dia — Folga vs escalado de turno; CVT mantém o rótulo. */
+function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
+  const v = (valorCelulaRaw ?? "").trim();
+  if (!v) return "—";
+  const vl = v.toLowerCase();
+  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return "Folga";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  return "Escalado";
+}
+
 /** Início/fim do turno para o modal (null = não calculado; usar "—" no UI). */
 function resumoHorarioTurnoModalCalendario(
   p: RhFuncionario | undefined,
@@ -362,6 +372,128 @@ function resumoHorarioTurnoModalCalendario(
   return null;
 }
 
+type RpcPontoMesRow = {
+  dia_sp: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+};
+
+/** Primeiro valor de célula da grade com turno exibível (por dia / funcionário). */
+function primeiroValorGradeDia(rows: RpcGradeCalendarioRow[], funcionarioId: string, iso: string): string | null {
+  const hits = rows.filter((r) => r.funcionario_id === funcionarioId && diaIsoChaveGrade(r) === iso);
+  if (hits.length === 0) return null;
+  for (const h of hits) {
+    const t = turnoExibicaoDeValorCelulaEscala((h.valor ?? "").trim());
+    if (t) return (h.valor ?? "").trim() || null;
+  }
+  const v0 = (hits[0]?.valor ?? "").trim();
+  return v0 || null;
+}
+
+function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { entrada: string; saida: string } | null {
+  const raw = (valor ?? "").trim();
+  const m = /^(\d{1,2})-(\d{1,2})$/.exec(raw);
+  if (!m) return null;
+  const h1 = parseInt(m[1]!, 10);
+  const h2 = parseInt(m[2]!, 10);
+  return {
+    entrada: `${String(h1).padStart(2, "0")}:00`,
+    saida: `${String(h2).padStart(2, "0")}:00`,
+  };
+}
+
+/** Entrada / saída programadas (HH:mm) a partir da escala e do cadastro do prestador. */
+function obterEntradaSaidaEscaladasPrestadorDia(
+  p: RhFuncionario | undefined,
+  valorCelula: string | null | undefined,
+  op: OpTurnosHorarioPick | null | undefined,
+): { entrada: string; saida: string } | null {
+  if (!p) return null;
+  const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
+  if (!turnoNome) return null;
+  if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
+
+  const escala = p.escala ?? "";
+
+  if (turnoNome === "Comercial" && turnoStaffEhComercial5x2(p.staff_turno)) {
+    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    return parsed ?? { entrada: "—", saida: "—" };
+  }
+
+  if (turnoNome !== "Manhã" && turnoNome !== "Tarde" && turnoNome !== "Noite") {
+    return { entrada: "—", saida: "—" };
+  }
+
+  if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
+    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    return parsed ?? { entrada: "—", saida: "—" };
+  }
+
+  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+    const k = normalizarEscalaCadastro(escala);
+    const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
+    let iniDb: string | null = null;
+    if (turnoNome === "Manhã") iniDb = op.turno_manha_inicio ?? null;
+    else if (turnoNome === "Tarde") iniDb = op.turno_tarde_inicio ?? null;
+    else iniDb = op.turno_noite_inicio ?? null;
+    const hi = formatarHoraInicioOperadora(iniDb ?? undefined);
+    if (hi === "—") return { entrada: "—", saida: "—" };
+    const hf = adicionarMinutosAoRelogioHHMM(hi, durMin);
+    return { entrada: hi, saida: hf };
+  }
+
+  return { entrada: "—", saida: "—" };
+}
+
+function duracaoMinutosRelogioHHMM(entrada: string, saida: string): number | null {
+  if (entrada === "—" || saida === "—") return null;
+  const m1 = /^(\d{1,2}):(\d{2})$/.exec(entrada.trim());
+  const m2 = /^(\d{1,2}):(\d{2})$/.exec(saida.trim());
+  if (!m1 || !m2) return null;
+  const a = parseInt(m1[1]!, 10) * 60 + parseInt(m1[2]!, 10);
+  const b = parseInt(m2[1]!, 10) * 60 + parseInt(m2[2]!, 10);
+  let d = b - a;
+  if (d <= 0) d += 24 * 60;
+  return d;
+}
+
+function formatoDuracaoFmtHorasTotal(entrada: string, saida: string): string {
+  const min = duracaoMinutosRelogioHHMM(entrada, saida);
+  if (min == null) return "—";
+  return fmtHorasTotal(min / 60);
+}
+
+function horaRegistoSP(isoTs: string | null | undefined): string {
+  if (!isoTs) return "—";
+  const d = new Date(isoTs);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+}
+
+function duracaoEntreTimestamps(isoIn: string | null | undefined, isoOut: string | null | undefined): string {
+  if (!isoIn || !isoOut) return "—";
+  const t0 = new Date(isoIn).getTime();
+  const t1 = new Date(isoOut).getTime();
+  if (Number.isNaN(t0) || Number.isNaN(t1) || t1 <= t0) return "—";
+  return fmtHorasTotal((t1 - t0) / 3600000);
+}
+
+function statusPresencaNoDia(
+  escaladas: { entrada: string; saida: string } | null,
+  checkIn: string | null | undefined,
+  checkOut: string | null | undefined,
+): string {
+  if (!escaladas) return "Folga";
+  const semHorarioProgramado = escaladas.entrada === "—" && escaladas.saida === "—";
+  const temHorarioProgramado =
+    !semHorarioProgramado && (escaladas.entrada !== "—" || escaladas.saida !== "—");
+  if (!temHorarioProgramado) return "Sem horário";
+  if (!checkIn && !checkOut) return "Pendente";
+  if (checkIn && !checkOut) return "Em aberto";
+  if (checkIn && checkOut) return "Registado";
+  return "—";
+}
+
 export default function RhCalendarioPage() {
   const { theme: t, isDark, user } = useApp();
   const brand = useDashboardBrand();
@@ -376,7 +508,6 @@ export default function RhCalendarioPage() {
   const [acoesOfertadasNoDia, setAcoesOfertadasNoDia] = useState<RhCalAcaoOfertaDiaRow[]>([]);
   const [loadingAcoesOfertadasDia, setLoadingAcoesOfertadasDia] = useState(false);
   const [erroAcoesOfertadasDia, setErroAcoesOfertadasDia] = useState<string | null>(null);
-  const [modalAcaoAberto, setModalAcaoAberto] = useState(false);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
@@ -405,6 +536,9 @@ export default function RhCalendarioPage() {
   const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
   const [pontoSubmitting, setPontoSubmitting] = useState(false);
   const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
+  const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
+  const [loadingPontoMes, setLoadingPontoMes] = useState(false);
+  const [pontoMesTick, setPontoMesTick] = useState(0);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -770,6 +904,49 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  const mapaPontoPorDiaIso = useMemo(() => {
+    const m = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
+    for (const row of pontoMesLinhas) {
+      m.set(row.dia_sp.slice(0, 10), { check_in_at: row.check_in_at, check_out_at: row.check_out_at });
+    }
+    return m;
+  }, [pontoMesLinhas]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") {
+      setPontoMesLinhas([]);
+      return;
+    }
+    if (abaPrincipal !== "presenca") return;
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      setPontoMesLinhas([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingPontoMes(true);
+    const refIso = refMesPrimeiroDiaISO(current);
+    void supabase.rpc("rh_calendario_ponto_registros_mes", { p_funcionario_id: fid, p_ref_mes: refIso }).then(({ data, error }) => {
+      if (cancelled) return;
+      setLoadingPontoMes(false);
+      if (error) {
+        setPontoMesLinhas([]);
+        return;
+      }
+      const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
+      setPontoMesLinhas(
+        rows.map((r) => {
+          const raw = r.dia_sp as string | Date;
+          const diaStr = typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw));
+          return { dia_sp: diaStr, check_in_at: r.check_in_at, check_out_at: r.check_out_at };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, pontoMesTick]);
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     const slugs = [
@@ -840,19 +1017,6 @@ export default function RhCalendarioPage() {
     treinamentoGerenciaId,
     treinamentoTimeIds,
   ]);
-
-  /** Valores brutos da grade (por dia) só do colaborador autenticado — para o modal Ação. */
-  const gradeValorPorDiaIso = useMemo(() => {
-    const m = new Map<string, string>();
-    if (!meuRhFuncionarioId) return m;
-    for (const r of rawGradeRowsFiltrados) {
-      if (r.funcionario_id !== meuRhFuncionarioId) continue;
-      const iso = diaIsoChaveGrade(r);
-      if (!iso) continue;
-      m.set(iso, (r.valor ?? "").trim());
-    }
-    return m;
-  }, [rawGradeRowsFiltrados, meuRhFuncionarioId]);
 
   useEffect(() => {
     if (!modalDia || perm.loading || perm.canView === "nao") {
@@ -1312,6 +1476,7 @@ export default function RhCalendarioPage() {
       const res = await registrarPrestadorPonto(tok);
       if (res.ok && res.estado) {
         setPontoEstado(res.estado);
+        setPontoMesTick((x) => x + 1);
         return;
       }
       if (res.code === "rede" || res.code === "config") {
@@ -1641,25 +1806,6 @@ export default function RhCalendarioPage() {
                   aria-label="Agendar compromisso ou oferta"
                 >
                   Agendar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalAcaoAberto(true)}
-                  style={{
-                    padding: "8px 18px",
-                    borderRadius: 999,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg,
-                    color: t.text,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    lineHeight: 1,
-                  }}
-                  aria-label="Abrir ações na escala"
-                >
-                  Ação
                 </button>
               </div>
             </div>
@@ -2026,6 +2172,22 @@ export default function RhCalendarioPage() {
               </div>
             ) : (
               <div className="app-table-wrap">
+                {loadingPontoMes ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 12,
+                      color: t.textMuted,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                    Atualizando registos de ponto…
+                  </div>
+                ) : null}
                 <table
                   style={{
                     width: "100%",
@@ -2040,39 +2202,73 @@ export default function RhCalendarioPage() {
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col" style={getThStyle(t)}>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
                         Data
                       </th>
-                      <th scope="col" style={getThStyle(t)}>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                        Situação
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Entrada Escalada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Entrada Realizada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Saída Escalada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Saída Realizada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Horas Escaladas
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Horas Realizadas
+                      </th>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
                         Status
                       </th>
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                        Entrada
-                      </th>
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                        Saída
-                      </th>
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                        Horas realizadas
-                      </th>
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
                         Ações
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {diasDoMesPresenca.map((dia, i) => (
-                      <tr key={toISO(dia)} style={{ background: zebraStripe(i) }}>
-                        <td style={getTdStyle(t)}>
-                          {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
-                        </td>
-                        <td style={getTdStyle(t)}>—</td>
-                        <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
-                        <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
-                        <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
-                        <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
-                      </tr>
-                    ))}
+                    {diasDoMesPresenca.map((dia, i) => {
+                      const fid = presencaFilterStaffIds[0]!;
+                      const iso = toISO(dia);
+                      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+                      const pRow = prestadorPorId.get(fid);
+                      const slug = (pRow?.staff_operadora_slug ?? "").trim();
+                      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+                      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+                      const pt = mapaPontoPorDiaIso.get(iso);
+                      const entEsc = esc ? esc.entrada : "—";
+                      const saiEsc = esc ? esc.saida : "—";
+                      const entReal = horaRegistoSP(pt?.check_in_at);
+                      const saiReal = horaRegistoSP(pt?.check_out_at);
+                      const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
+                      const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
+                      const st = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+                      const situacao = situacaoGestaoEscalaParaDia(valorG);
+                      return (
+                        <tr key={iso} style={{ background: zebraStripe(i) }}>
+                          <td style={getTdStyle(t)}>
+                            {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+                          </td>
+                          <td style={getTdStyle(t)}>{situacao}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entEsc}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entReal}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiEsc}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiReal}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasEsc}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasReal}</td>
+                          <td style={getTdStyle(t)}>{st}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2298,36 +2494,11 @@ export default function RhCalendarioPage() {
         </ModalBase>
       )}
 
-      {modalAcaoAberto &&
-        (soPropriosCal && meuRhFuncionarioId && prestadores[0] ? (
-          <ModalAcaoCalendario
-            open={modalAcaoAberto}
-            onClose={() => setModalAcaoAberto(false)}
-            t={t}
-            brand={brand}
-            refMes={current}
-            meuFuncionario={prestadores[0]}
-            meuFuncionarioId={meuRhFuncionarioId}
-            gradeValorPorDiaIso={gradeValorPorDiaIso}
-            operadoraTurnos={(() => {
-              const slug = (prestadores[0]?.staff_operadora_slug ?? "").trim();
-              return slug ? mapOpTurnos.get(slug) ?? null : null;
-            })()}
-          />
-        ) : (
-          <ModalBase maxWidth={440} onClose={() => setModalAcaoAberto(false)} zIndex={1150}>
-            <ModalHeader title="Ação" onClose={() => setModalAcaoAberto(false)} />
-            <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
-              As ações do calendário (venda de folga ou turno, trocas e agendamento de reunião) estão disponíveis na vista do seu próprio calendário enquanto prestador.
-            </p>
-          </ModalBase>
-        ))}
-
       {modalAgendarAberto ? (
         <ModalBase maxWidth={440} onClose={() => setModalAgendarAberto(false)} zIndex={1140}>
           <ModalHeader title="Agendar" onClose={() => setModalAgendarAberto(false)} />
           <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
-            O fluxo de agendamento será configurado em breve. Utilize o botão Ação para ofertas e pedidos já disponíveis na vista de prestador.
+            O fluxo de agendamento será configurado em breve.
           </p>
           <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
             <button
