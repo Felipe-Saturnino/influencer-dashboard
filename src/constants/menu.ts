@@ -123,6 +123,7 @@ export const MENU: MenuSection[] = [
     section: "Escala",
     items: [
       { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
+      { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
       { key: "rh_calendario", label: "Calendário", icon: IconRhCalendarioMenu },
       { key: "escala_marketplace_turnos", label: "Marketplace de Turnos", icon: GiShoppingCart },
       { key: "escala_solicitacoes", label: "Solicitações", icon: IconEscalaSolicitacoesMenu },
@@ -135,7 +136,6 @@ export const MENU: MenuSection[] = [
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: GiFiles },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
       { key: "rh_vagas", label: "Vagas", icon: GiBriefcase },
-      { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: IconRhCentralDenunciasMenu },
     ],
   },
