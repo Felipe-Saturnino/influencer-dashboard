@@ -100,12 +100,15 @@ function dataInicialCarrosselCalendarioRh(): Date {
   return new Date(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN, 1);
 }
 
-/** Ao abrir a página: mês civil atual (dia 1); não antes do primeiro mês com dados na grade. */
+/** Mês inicial: mês civil atual (ou mínimo do produto), e nunca acima do limite do carrossel. */
 function mesInicialCalendarioRhNaEntrada(): Date {
   const hoje = new Date();
   const primeiroDoMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const minimo = dataInicialCarrosselCalendarioRh();
-  return primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
+  const maximo = mesMaximoCarrosselCalendarioRh();
+  let d = primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
+  if (d.getTime() > maximo.getTime()) d = maximo;
+  return d;
 }
 
 function mesCalendarioAntesDoMinimo(c: Date): boolean {
@@ -115,6 +118,34 @@ function mesCalendarioAntesDoMinimo(c: Date): boolean {
 /** Permite ir ao mês anterior (nunca antes de abril/2026). */
 function podeRetrocederMesCalendario(c: Date): boolean {
   return c.getFullYear() > CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() > CALENDARIO_MES0_MIN);
+}
+
+/** Primeiro dia do mês civil «hoje» (fuso local). */
+function primeiroDiaMesCivilHoje(): Date {
+  const h = new Date();
+  return new Date(h.getFullYear(), h.getMonth(), 1);
+}
+
+/**
+ * Último mês que o carrossel pode mostrar: apenas o mês civil seguinte ao atual (não há +2 meses, etc.).
+ */
+function mesMaximoCarrosselCalendarioRh(): Date {
+  const ref = primeiroDiaMesCivilHoje();
+  return new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+}
+
+/** `true` se o mês de `c` (dia 1) é estritamente depois do limite máximo do carrossel. */
+function mesCalendarioAlemDoMaximoFuturo(c: Date): boolean {
+  const max = mesMaximoCarrosselCalendarioRh();
+  const cur = new Date(c.getFullYear(), c.getMonth(), 1);
+  return cur.getTime() > max.getTime();
+}
+
+/** Pode avançar um mês sem ultrapassar o mês seguinte ao mês civil atual. */
+function podeAvancarMesCalendario(c: Date): boolean {
+  const max = mesMaximoCarrosselCalendarioRh();
+  const cur = new Date(c.getFullYear(), c.getMonth(), 1);
+  return cur.getTime() < max.getTime();
 }
 
 function getMonthDays(year: number, month: number): (Date | null)[] {
@@ -1167,9 +1198,11 @@ export default function RhCalendarioPage() {
     else setCurrent(d);
   }
   function next() {
+    if (!podeAvancarMesCalendario(current)) return;
     const d = new Date(current);
     d.setMonth(d.getMonth() + 1);
-    setCurrent(d);
+    if (mesCalendarioAlemDoMaximoFuturo(d)) setCurrent(mesMaximoCarrosselCalendarioRh());
+    else setCurrent(d);
   }
 
   function headerTitle() {
@@ -1578,6 +1611,7 @@ export default function RhCalendarioPage() {
   const showTimeFilterPresenca = !soPropriosCal && timeMultiselectItems.length > 0;
   const showStaffFilterPresenca = !soPropriosCal && staffPresencaMultiselectItems.length > 0;
   const podeRetrocederMes = podeRetrocederMesCalendario(current);
+  const podeAvancarMes = podeAvancarMesCalendario(current);
 
   const diasDoMesPresenca = useMemo(() => {
     const y = current.getFullYear();
@@ -1719,7 +1753,21 @@ export default function RhCalendarioPage() {
                 >
                   {headerTitle()}
                 </span>
-                <button type="button" onClick={next} style={btnNav} aria-label="Próximo mês">
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!podeAvancarMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeAvancarMes ? 1 : 0.38,
+                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeAvancarMes
+                      ? "Próximo mês"
+                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                  }
+                >
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>
 
@@ -2000,7 +2048,21 @@ export default function RhCalendarioPage() {
                 >
                   {headerTitle()}
                 </span>
-                <button type="button" onClick={next} style={btnNav} aria-label="Próximo mês">
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!podeAvancarMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeAvancarMes ? 1 : 0.38,
+                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeAvancarMes
+                      ? "Próximo mês"
+                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                  }
+                >
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>
 
