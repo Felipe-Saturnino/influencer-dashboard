@@ -41,13 +41,7 @@ import {
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import {
-  RH_CALENDARIO_ACAO_LABEL,
-  labelReuniaoCom,
-  listarDatasEscaladoFuturasNoMes,
-  textoResumoPayloadAcaoCalendario,
-  type RhCalendarioAcaoTipo,
-} from "../../../lib/rhCalendarioAcaoHelpers";
+import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import {
@@ -173,16 +167,6 @@ type RpcGradeCalendarioRow = {
   area_key: string;
 };
 
-type RhCalAcaoOfertaDiaRow = {
-  id: string;
-  solicitante_funcionario_id: string;
-  tipo_acao: string;
-  status: string;
-  payload: Record<string, unknown>;
-  created_at: string;
-  solicitante_nome: string | null;
-};
-
 type RpcReuniaoMesRow = {
   id: string;
   solicitante_funcionario_id: string;
@@ -221,8 +205,17 @@ type CompromissoEscalaCal = {
   turno: string;
 };
 
-/** Compromissos não-turno (reuniões via `rh_calendario_reunioes_mes`; demais em evolução). */
-type CompromissoAgendaExtra = { id: string; titulo: string };
+/** Compromissos não-turno; `reuniaoDetalhe` preenchido para reuniões agendadas (modal do dia). */
+type CompromissoAgendaExtra = {
+  id: string;
+  titulo: string;
+  reuniaoDetalhe?: {
+    solicitanteNome: string;
+    comQuemLabel: string;
+    turno: string;
+    motivo: string;
+  };
+};
 
 /** Ordem na grelha do dia: eventos → reuniões → treinamentos → feedback → turnos. */
 type LinhaCalendarioDia =
@@ -490,10 +483,6 @@ export default function RhCalendarioPage() {
   const [abaPrincipal, setAbaPrincipal] = useState<"compromissos" | "presenca">("compromissos");
   const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<FiltroTipoCompromissoUi>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
-  const [modalDiaTab, setModalDiaTab] = useState<"compromissos" | "ofertas">("compromissos");
-  const [acoesOfertadasNoDia, setAcoesOfertadasNoDia] = useState<RhCalAcaoOfertaDiaRow[]>([]);
-  const [loadingAcoesOfertadasDia, setLoadingAcoesOfertadasDia] = useState(false);
-  const [erroAcoesOfertadasDia, setErroAcoesOfertadasDia] = useState<string | null>(null);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
@@ -1036,41 +1025,6 @@ export default function RhCalendarioPage() {
   ]);
 
   useEffect(() => {
-    if (!modalDia || perm.loading || perm.canView === "nao") {
-      setAcoesOfertadasNoDia([]);
-      setErroAcoesOfertadasDia(null);
-      setLoadingAcoesOfertadasDia(false);
-      return;
-    }
-    let cancelled = false;
-    setLoadingAcoesOfertadasDia(true);
-    setErroAcoesOfertadasDia(null);
-    const iso = toISO(modalDia);
-    void supabase.rpc("rh_calendario_acoes_ofertadas_no_dia", { p_dia_iso: iso }).then(({ data, error }) => {
-      if (cancelled) return;
-      setLoadingAcoesOfertadasDia(false);
-      if (error) {
-        setErroAcoesOfertadasDia(error.message || "Não foi possível carregar as ofertas.");
-        setAcoesOfertadasNoDia([]);
-        return;
-      }
-      const rows = (data ?? []) as RhCalAcaoOfertaDiaRow[];
-      setAcoesOfertadasNoDia(
-        rows.map((r) => ({
-          ...r,
-          payload:
-            r.payload != null && typeof r.payload === "object" && !Array.isArray(r.payload)
-              ? (r.payload as Record<string, unknown>)
-              : {},
-        })),
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [modalDia, perm.loading, perm.canView]);
-
-  useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
       setReunioesMesRaw([]);
       return;
@@ -1107,9 +1061,16 @@ export default function RhCalendarioPage() {
       }
       const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
       if (!iso) continue;
+      const comQuem = ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() || "—";
       const item: CompromissoAgendaExtra = {
         id: row.id,
         titulo: tituloReuniaoNoCalendario(row, solicitanteAgendarId),
+        reuniaoDetalhe: {
+          solicitanteNome: (row.solicitante_nome ?? "").trim() || "—",
+          comQuemLabel: comQuem,
+          turno: (row.turno ?? "").trim() || "—",
+          motivo: (row.motivo ?? "").trim() || "—",
+        },
       };
       const arr = map.get(iso) ?? [];
       arr.push(item);
@@ -1187,7 +1148,6 @@ export default function RhCalendarioPage() {
 
   function abrirModalDia(d: Date) {
     setModalDia(d);
-    setModalDiaTab("compromissos");
   }
 
   function prev() {
@@ -2391,217 +2351,163 @@ export default function RhCalendarioPage() {
       {modalDia && (
         <ModalBase maxWidth={520} onClose={() => setModalDia(null)} zIndex={1100}>
           <ModalHeader title={tituloModalDiaPt(modalDia)} onClose={() => setModalDia(null)} />
-          <div
-            role="tablist"
-            aria-label="Conteúdo do dia"
-            style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: `1px solid ${t.cardBorder}`, paddingBottom: 10 }}
-          >
-            <button
-              type="button"
-              onClick={() => setModalDiaTab("compromissos")}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: modalDiaTab === "compromissos" ? 800 : 500,
-                color: modalDiaTab === "compromissos" ? brand.accent : t.textMuted,
-                background: modalDiaTab === "compromissos" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
-                boxShadow: modalDiaTab === "compromissos" ? `inset 0 -2px 0 ${brand.accent}` : "none",
-              }}
-              aria-selected={modalDiaTab === "compromissos"}
-              role="tab"
-              aria-controls="cal-modal-tab-compromissos"
-              id="cal-modal-tab-btn-compromissos"
-            >
-              Compromissos
-            </button>
-            <button
-              type="button"
-              onClick={() => setModalDiaTab("ofertas")}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: modalDiaTab === "ofertas" ? 800 : 500,
-                color: modalDiaTab === "ofertas" ? brand.accent : t.textMuted,
-                background: modalDiaTab === "ofertas" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
-                boxShadow: modalDiaTab === "ofertas" ? `inset 0 -2px 0 ${brand.accent}` : "none",
-              }}
-              aria-selected={modalDiaTab === "ofertas"}
-              role="tab"
-              aria-controls="cal-modal-tab-ofertas"
-              id="cal-modal-tab-btn-ofertas"
-            >
-              Ofertas
-            </button>
-          </div>
-
-          {modalDiaTab === "compromissos" ? (
-            <div id="cal-modal-tab-compromissos" role="tabpanel" aria-labelledby="cal-modal-tab-btn-compromissos">
-              {(() => {
-                const iso = toISO(modalDia);
-                const mostrarTipo = (ch: FiltroTipoCompromissoUi) =>
-                  filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
-                const ev = eventosAgendaDoDia(iso);
-                const r = obterReunioesDiaIso(iso);
-                const tr = treinamentosAgendaDoDia(iso);
-                const fb = feedbackAgendaDoDia(iso);
-                const turnos = turnosAgendadosNoDia(modalDia);
-                const partes: { key: string; node: ReactNode }[] = [];
-                if (mostrarTipo("eventos") && ev.length > 0) {
-                  partes.push({
-                    key: "eventos",
-                    node: (
-                      <div key="eventos" style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                          Eventos
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                          {ev.map((x) => (
-                            <li key={x.id}>{x.titulo}</li>
-                          ))}
-                        </ul>
+          <div aria-label="Compromissos do dia">
+            {(() => {
+              const iso = toISO(modalDia);
+              const mostrarTipo = (ch: FiltroTipoCompromissoUi) =>
+                filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
+              const ev = eventosAgendaDoDia(iso);
+              const r = obterReunioesDiaIso(iso);
+              const tr = treinamentosAgendaDoDia(iso);
+              const fb = feedbackAgendaDoDia(iso);
+              const turnos = turnosAgendadosNoDia(modalDia);
+              const partes: { key: string; node: ReactNode }[] = [];
+              if (mostrarTipo("eventos") && ev.length > 0) {
+                partes.push({
+                  key: "eventos",
+                  node: (
+                    <div key="eventos" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Eventos
                       </div>
-                    ),
-                  });
-                }
-                if (mostrarTipo("reunioes") && r.length > 0) {
-                  partes.push({
-                    key: "reunioes",
-                    node: (
-                      <div key="reunioes" style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                          Reuniões
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                          {r.map((x) => (
-                            <li key={x.id}>{x.titulo}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                  });
-                }
-                if (mostrarTipo("treinamentos") && tr.length > 0) {
-                  partes.push({
-                    key: "treinamentos",
-                    node: (
-                      <div key="treinamentos" style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                          Treinamentos
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                          {tr.map((x) => (
-                            <li key={x.id}>{x.titulo}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                  });
-                }
-                if (mostrarTipo("feedback") && fb.length > 0) {
-                  partes.push({
-                    key: "feedback",
-                    node: (
-                      <div key="feedback" style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                          Feedback
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                          {fb.map((x) => (
-                            <li key={x.id}>{x.titulo}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                  });
-                }
-                if (mostrarTipo("turnos") && turnos.length > 0) {
-                  partes.push({
-                    key: "turnos",
-                    node: (
-                      <div key="turnos">
-                        <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                          Turnos
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
-                          {turnos.map((comp) => (
-                            <EscalaCompromissoChip
-                              key={`${comp.prestadorId}-${comp.turno}`}
-                              comp={comp}
-                              subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ),
-                  });
-                }
-                if (partes.length === 0) {
-                  return (
-                    <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                      Sem dados para o período selecionado.
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {ev.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
                     </div>
-                  );
-                }
-                return <>{partes.map((p) => p.node)}</>;
-              })()}
-            </div>
-          ) : (
-            <div id="cal-modal-tab-ofertas" role="tabpanel" aria-labelledby="cal-modal-tab-btn-ofertas">
-              <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 12, fontFamily: FONT_TITLE }}>
-                Ofertas de Troca e Compra
-              </div>
-              {loadingAcoesOfertadasDia ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    color: t.textMuted,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                  Carregando…
-                </div>
-              ) : erroAcoesOfertadasDia ? (
-                <p style={{ margin: 0, fontSize: 13, color: "#e84025", fontFamily: FONT.body }} role="alert">
-                  {erroAcoesOfertadasDia}
-                </p>
-              ) : acoesOfertadasNoDia.length === 0 ? (
-                <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-              ) : (
-                <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc", fontFamily: FONT.body }}>
-                  {acoesOfertadasNoDia.map((row) => {
-                    const labelTipo =
-                      RH_CALENDARIO_ACAO_LABEL[row.tipo_acao as RhCalendarioAcaoTipo] ?? row.tipo_acao;
-                    const detalhe = textoResumoPayloadAcaoCalendario(row.tipo_acao, row.payload);
-                    return (
-                      <li key={row.id} style={{ marginBottom: 12, color: t.text, fontSize: 13 }}>
-                        <div style={{ fontWeight: 700 }}>{(row.solicitante_nome ?? "").trim() || "—"}</div>
-                        <div style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>
-                          {labelTipo}
-                          {" · "}
-                          {row.status}
-                        </div>
-                        {detalhe ? (
-                          <div style={{ fontSize: 12, marginTop: 4, color: t.text }}>{detalhe}</div>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
+                  ),
+                });
+              }
+              if (mostrarTipo("reunioes") && r.length > 0) {
+                partes.push({
+                  key: "reunioes",
+                  node: (
+                    <div key="reunioes" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Reuniões
+                      </div>
+                      <div
+                        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                        role="list"
+                        aria-label="Reuniões agendadas para este dia"
+                      >
+                        {r.map((x) => {
+                          const det = x.reuniaoDetalhe;
+                          if (!det) {
+                            return (
+                              <div key={x.id} style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }} role="listitem">
+                                {x.titulo}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              key={x.id}
+                              role="listitem"
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                                padding: "10px 12px",
+                                borderRadius: 10,
+                                border: "1px solid rgba(245,158,11,0.35)",
+                                background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+                                <div style={{ fontSize: 13, color: t.text, lineHeight: 1.4, minWidth: 0 }}>
+                                  <span style={{ fontWeight: 800 }}>{det.solicitanteNome}</span>
+                                  <span style={{ fontWeight: 500, color: t.textMuted }}> — {det.comQuemLabel}</span>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: BRAND.azul, paddingLeft: 22 }}>{det.turno}</div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: t.text,
+                                  paddingLeft: 22,
+                                  lineHeight: 1.45,
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {det.motivo}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("treinamentos") && tr.length > 0) {
+                partes.push({
+                  key: "treinamentos",
+                  node: (
+                    <div key="treinamentos" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Treinamentos
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {tr.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("feedback") && fb.length > 0) {
+                partes.push({
+                  key: "feedback",
+                  node: (
+                    <div key="feedback" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Feedback
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {fb.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("turnos") && turnos.length > 0) {
+                partes.push({
+                  key: "turnos",
+                  node: (
+                    <div key="turnos">
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Turnos
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
+                        {turnos.map((comp) => (
+                          <EscalaCompromissoChip
+                            key={`${comp.prestadorId}-${comp.turno}`}
+                            comp={comp}
+                            subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                });
+              }
+              if (partes.length === 0) {
+                return (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    Sem dados para o período selecionado.
+                  </div>
+                );
+              }
+              return <>{partes.map((p) => p.node)}</>;
+            })()}
+          </div>
         </ModalBase>
       )}
 
