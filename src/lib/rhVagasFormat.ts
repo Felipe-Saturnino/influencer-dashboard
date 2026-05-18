@@ -13,18 +13,11 @@ export function dataIsoDateOnly(v: string | null | undefined): string {
   return v.slice(0, 10);
 }
 
-export function checkboxesFromTipoVaga(tipo: RhVagaTipo): { interna: boolean; externa: boolean } {
-  if (tipo === "mista") return { interna: true, externa: true };
-  if (tipo === "externa") return { interna: false, externa: true };
-  return { interna: true, externa: false };
-}
+export type RhVagaTipoSelecionavel = "interna" | "externa";
 
-/** Pelo menos uma opção deve estar ativa. */
-export function tipoVagaDeCheckboxes(interna: boolean, externa: boolean): RhVagaTipo | null {
-  if (interna && externa) return "mista";
-  if (interna) return "interna";
-  if (externa) return "externa";
-  return null;
+/** Valor inicial no formulário (vagas legadas `mista` viram interna). */
+export function tipoVagaParaEdicao(tipo: RhVagaTipo): RhVagaTipoSelecionavel {
+  return tipo === "externa" ? "externa" : "interna";
 }
 
 export function normalizarBuscaVaga(s: string): string {

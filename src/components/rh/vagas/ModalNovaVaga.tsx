@@ -4,7 +4,8 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { hojeIsoDate, tipoVagaDeCheckboxes } from "../../../lib/rhVagasFormat";
+import { hojeIsoDate, type RhVagaTipoSelecionavel } from "../../../lib/rhVagasFormat";
+import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
@@ -42,8 +43,7 @@ export function ModalNovaVaga({
   const [erroOrg, setErroOrg] = useState<string | null>(null);
 
   const [titulo, setTitulo] = useState("");
-  const [chkInterna, setChkInterna] = useState(true);
-  const [chkExterna, setChkExterna] = useState(false);
+  const [tipoVaga, setTipoVaga] = useState<RhVagaTipoSelecionavel>("interna");
   const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
   const [dataAbertura, setDataAbertura] = useState(hojeIsoDate());
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
@@ -58,8 +58,7 @@ export function ModalNovaVaga({
 
   const resetForm = useCallback(() => {
     setTitulo("");
-    setChkInterna(true);
-    setChkExterna(false);
+    setTipoVaga("interna");
     setOrgTimeId(null);
     setDataAbertura(hojeIsoDate());
     setDataFimInscricoes("");
@@ -106,8 +105,6 @@ export function ModalNovaVaga({
   function validar(): boolean {
     const e: Record<string, string> = {};
     if (!titulo.trim()) e.titulo = "Informe o título.";
-    const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna);
-    if (!tipo) e.tipo_vaga = "Selecione Interna e/ou Externa.";
     if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
     if (!dataAbertura.trim()) e.data_abertura = "Informe a data de abertura.";
     if (!dataFimInscricoes.trim()) e.data_fim = "Informe a data fim das inscrições.";
@@ -125,11 +122,10 @@ export function ModalNovaVaga({
   async function salvar() {
     setErroSalvar(null);
     if (!validar()) return;
-    const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
     setSalvando(true);
     const payload = {
       titulo: titulo.trim(),
-      tipo_vaga: tipo,
+      tipo_vaga: tipoVaga,
       org_time_id: orgTimeId,
       remuneracao_centavos: 0,
       data_abertura: dataAbertura.trim(),
@@ -177,23 +173,7 @@ export function ModalNovaVaga({
           {fieldErr.titulo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.titulo}</div> : null}
         </div>
 
-        <fieldset style={{ border: "none", margin: "0 0 14px", padding: 0 }}>
-          <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>
-            Tipo de vaga
-            <CampoObrigatorioMark />
-          </legend>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
-              <input type="checkbox" checked={chkInterna} onChange={(e) => setChkInterna(e.target.checked)} aria-label="Vaga interna" />
-              Interna
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
-              <input type="checkbox" checked={chkExterna} onChange={(e) => setChkExterna(e.target.checked)} aria-label="Vaga externa" />
-              Externa
-            </label>
-          </div>
-          {fieldErr.tipo_vaga ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 6 }}>{fieldErr.tipo_vaga}</div> : null}
-        </fieldset>
+        <TipoVagaField name="nv-tipo-vaga" value={tipoVaga} onChange={setTipoVaga} t={t} erro={fieldErr.tipo_vaga} />
 
         <div style={{ marginBottom: 14 }}>
           {lblReq("nv-org", "Organograma")}
