@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   BookOpen,
   CalendarRange,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -16,6 +18,12 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import {
+  MSG_PRESTADOR_PONTO_REDE,
+  obterPrestadorPontoEstado,
+  registrarPrestadorPonto,
+  type PrestadorPontoEstado,
+} from "../../../lib/prestadorPontoApi";
 import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
@@ -33,68 +41,33 @@ import {
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { ModalAcaoCalendario } from "./ModalAcaoCalendario";
+import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import {
-  RH_CALENDARIO_ACAO_LABEL,
-  textoResumoPayloadAcaoCalendario,
-  type RhCalendarioAcaoTipo,
-} from "../../../lib/rhCalendarioAcaoHelpers";
+  normalizarSelecaoUnica,
+  TREINAMENTO_FILTRO_ID,
+  CALENDARIO_TIMES_FILTRO_ORDEM,
+  normalizarNomeCalFiltro,
+  timeRowPorRotuloCanonica,
+  prestadorAtendeFiltroTime,
+  type StaffTimeRow,
+} from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 
-/** Tipos de compromisso filtráveis; conjunto vazio na UI = mostrar todos. */
-type ChaveFiltroCompromissoCal = "reunioes" | "treinamentos" | "feedback" | "turnos";
+/** Tipos de compromisso (filtro único na UI; `todos` = default). */
+type ChaveTipoCompromissoCal = "eventos" | "reunioes" | "treinamentos" | "feedback" | "turnos";
+type FiltroTipoCompromissoUi = "todos" | ChaveTipoCompromissoCal;
 
-const COMPROMISSOS_FILTRO_BOTOES: { chave: ChaveFiltroCompromissoCal; label: string }[] = [
-  { chave: "reunioes", label: "Reuniões" },
-  { chave: "treinamentos", label: "Treinamentos" },
-  { chave: "feedback", label: "Feedback" },
-  { chave: "turnos", label: "Turnos" },
+const OPCOES_TIPO_COMPROMISSO_SELECT: { value: FiltroTipoCompromissoUi; label: string }[] = [
+  { value: "todos", label: "Todos" },
+  { value: "eventos", label: "Eventos" },
+  { value: "reunioes", label: "Reuniões" },
+  { value: "treinamentos", label: "Treinamentos" },
+  { value: "feedback", label: "Feedback" },
+  { value: "turnos", label: "Turnos" },
 ];
-
-const ORDEM_CHAVE_FILTRO_NA_LISTA: ChaveFiltroCompromissoCal[] = ["reunioes", "treinamentos", "feedback", "turnos"];
-
-type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
-
-/** Id sintético no multiselect (não é uuid de `rh_org_times`). */
-const TREINAMENTO_FILTRO_ID = "rh-cal-filtro-treinamento";
-
-/** Ordem e rótulos exibidos no filtro (nome do time; Treinamento = gerência Treinamento). */
-const CALENDARIO_TIMES_FILTRO_ORDEM = [
-  "Customer Service",
-  "Service manager",
-  "Game Presenter",
-  "Performance Coach",
-  "Shift Leader",
-  "Shuffler",
-  "Treinamento",
-] as const;
-
-function normalizarNomeCalFiltro(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function timeRowPorRotuloCanonica(times: StaffTimeRow[], rotulo: string): StaffTimeRow | undefined {
-  const target = normalizarNomeCalFiltro(rotulo);
-  return times.find((t) => normalizarNomeCalFiltro(t.nome) === target);
-}
-
-function prestadorAtendeFiltroTime(
-  p: RhFuncionario,
-  opts: {
-    filtroAtivo: boolean;
-    filtroTimeIdsReais: Set<string>;
-    treinamentoSelecionado: boolean;
-    treinamentoGerenciaId: string | null;
-    treinamentoTimeIds: Set<string>;
-  },
-): boolean {
-  if (!opts.filtroAtivo) return true;
-  if (p.org_time_id && opts.filtroTimeIdsReais.has(p.org_time_id)) return true;
-  if (opts.treinamentoSelecionado && opts.treinamentoGerenciaId) {
-    if (p.org_gerencia_id === opts.treinamentoGerenciaId) return true;
-    if (p.org_time_id && opts.treinamentoTimeIds.has(p.org_time_id)) return true;
-  }
-  return false;
-}
 
 const MONTHS = [
   "Janeiro",
@@ -121,12 +94,15 @@ function dataInicialCarrosselCalendarioRh(): Date {
   return new Date(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN, 1);
 }
 
-/** Ao abrir a página: mês civil atual (dia 1); não antes do primeiro mês com dados na grade. */
+/** Mês inicial: mês civil atual (ou mínimo do produto), e nunca acima do limite do carrossel. */
 function mesInicialCalendarioRhNaEntrada(): Date {
   const hoje = new Date();
   const primeiroDoMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const minimo = dataInicialCarrosselCalendarioRh();
-  return primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
+  const maximo = mesMaximoCarrosselCalendarioRh();
+  let d = primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
+  if (d.getTime() > maximo.getTime()) d = maximo;
+  return d;
 }
 
 function mesCalendarioAntesDoMinimo(c: Date): boolean {
@@ -136,6 +112,34 @@ function mesCalendarioAntesDoMinimo(c: Date): boolean {
 /** Permite ir ao mês anterior (nunca antes de abril/2026). */
 function podeRetrocederMesCalendario(c: Date): boolean {
   return c.getFullYear() > CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() > CALENDARIO_MES0_MIN);
+}
+
+/** Primeiro dia do mês civil «hoje» (fuso local). */
+function primeiroDiaMesCivilHoje(): Date {
+  const h = new Date();
+  return new Date(h.getFullYear(), h.getMonth(), 1);
+}
+
+/**
+ * Último mês que o carrossel pode mostrar: apenas o mês civil seguinte ao atual (não há +2 meses, etc.).
+ */
+function mesMaximoCarrosselCalendarioRh(): Date {
+  const ref = primeiroDiaMesCivilHoje();
+  return new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+}
+
+/** `true` se o mês de `c` (dia 1) é estritamente depois do limite máximo do carrossel. */
+function mesCalendarioAlemDoMaximoFuturo(c: Date): boolean {
+  const max = mesMaximoCarrosselCalendarioRh();
+  const cur = new Date(c.getFullYear(), c.getMonth(), 1);
+  return cur.getTime() > max.getTime();
+}
+
+/** Pode avançar um mês sem ultrapassar o mês seguinte ao mês civil atual. */
+function podeAvancarMesCalendario(c: Date): boolean {
+  const max = mesMaximoCarrosselCalendarioRh();
+  const cur = new Date(c.getFullYear(), c.getMonth(), 1);
+  return cur.getTime() < max.getTime();
 }
 
 function getMonthDays(year: number, month: number): (Date | null)[] {
@@ -163,51 +167,36 @@ type RpcGradeCalendarioRow = {
   area_key: string;
 };
 
-type RhCalAcaoOfertaDiaRow = {
+type RpcReuniaoMesRow = {
   id: string;
   solicitante_funcionario_id: string;
-  tipo_acao: string;
-  status: string;
-  payload: Record<string, unknown>;
-  created_at: string;
   solicitante_nome: string | null;
+  dia_iso: string;
+  reuniao_com: string | null;
+  reuniao_com_label: string | null;
+  motivo: string | null;
+  turno: string | null;
+  status: string;
+  created_at: string;
 };
 
-/** Alinha login (e-mail da sessão) a `rh_funcionarios` — mesma lógica da vista «Próprios». */
-async function buscarRhFuncionarioAtivoPorEmailLogin(emailBruto: string): Promise<RhFuncionario | null> {
-  const em = emailBruto.trim();
-  if (!em) return null;
-  const el = em.toLowerCase();
-  const { data: porEmailEq } = await supabase
-    .from("rh_funcionarios")
-    .select("*")
-    .eq("email", em)
-    .in("status", ["ativo", "indisponivel"])
-    .maybeSingle();
-  let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
-  if (!row) {
-    const { data: porSpinEq } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .eq("email_spin", em)
-      .in("status", ["ativo", "indisponivel"])
-      .maybeSingle();
-    row = (porSpinEq as RhFuncionario | null) ?? null;
+function isoChaveDiaReuniaoRpc(raw: string | Date | undefined): string {
+  if (raw == null) return "";
+  if (typeof raw === "string") return raw.slice(0, 10);
+  try {
+    return new Date(raw).toISOString().slice(0, 10);
+  } catch {
+    return String(raw).slice(0, 10);
   }
-  if (!row) {
-    const { data: cand } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .in("status", ["ativo", "indisponivel"])
-      .limit(80);
-    row =
-      (cand as RhFuncionario[] | undefined)?.find(
-        (p) =>
-          (p.email ?? "").trim().toLowerCase() === el ||
-          (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
-      ) ?? null;
+}
+
+function tituloReuniaoNoCalendario(row: RpcReuniaoMesRow, viewerSolicitanteId: string | null): string {
+  const alvo = ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() || "—";
+  if (viewerSolicitanteId && row.solicitante_funcionario_id !== viewerSolicitanteId) {
+    const nome = (row.solicitante_nome ?? "").trim() || "—";
+    return `${nome} — Reunião (${alvo})`;
   }
-  return row;
+  return `Reunião (${alvo})`;
 }
 
 type CompromissoEscalaCal = {
@@ -216,11 +205,21 @@ type CompromissoEscalaCal = {
   turno: string;
 };
 
-/** Compromissos não-turno (futuro: API); hoje lista vazia por dia. */
-type CompromissoAgendaExtra = { id: string; titulo: string };
+/** Compromissos não-turno; `reuniaoDetalhe` preenchido para reuniões agendadas (modal do dia). */
+type CompromissoAgendaExtra = {
+  id: string;
+  titulo: string;
+  reuniaoDetalhe?: {
+    solicitanteNome: string;
+    comQuemLabel: string;
+    turno: string;
+    motivo: string;
+  };
+};
 
-/** Ordem na grelha do dia: reuniões → treinamentos → feedback → turnos (ver `pesoTurnoExibicaoCalendario`). */
+/** Ordem na grelha do dia: eventos → reuniões → treinamentos → feedback → turnos. */
 type LinhaCalendarioDia =
+  | { tipo: "evento"; item: CompromissoAgendaExtra }
   | { tipo: "reuniao"; item: CompromissoAgendaExtra }
   | { tipo: "treinamento"; item: CompromissoAgendaExtra }
   | { tipo: "feedback"; item: CompromissoAgendaExtra }
@@ -300,6 +299,16 @@ function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
 }
 
+/** Situação na grade (Gestão de Escala) para o dia — Folga vs escalado de turno; CVT mantém o rótulo. */
+function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
+  const v = (valorCelulaRaw ?? "").trim();
+  if (!v) return "—";
+  const vl = v.toLowerCase();
+  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return "Folga";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  return "Escalado";
+}
+
 /** Início/fim do turno para o modal (null = não calculado; usar "—" no UI). */
 function resumoHorarioTurnoModalCalendario(
   p: RhFuncionario | undefined,
@@ -342,6 +351,174 @@ function resumoHorarioTurnoModalCalendario(
   return null;
 }
 
+type RpcPontoMesRow = {
+  dia_sp: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+};
+
+/** Primeiro valor de célula da grade com turno exibível (por dia / funcionário). */
+function primeiroValorGradeDia(rows: RpcGradeCalendarioRow[], funcionarioId: string, iso: string): string | null {
+  const hits = rows.filter((r) => r.funcionario_id === funcionarioId && diaIsoChaveGrade(r) === iso);
+  if (hits.length === 0) return null;
+  for (const h of hits) {
+    const t = turnoExibicaoDeValorCelulaEscala((h.valor ?? "").trim());
+    if (t) return (h.valor ?? "").trim() || null;
+  }
+  const v0 = (hits[0]?.valor ?? "").trim();
+  return v0 || null;
+}
+
+function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { entrada: string; saida: string } | null {
+  const raw = (valor ?? "").trim();
+  const m = /^(\d{1,2})-(\d{1,2})$/.exec(raw);
+  if (!m) return null;
+  const h1 = parseInt(m[1]!, 10);
+  const h2 = parseInt(m[2]!, 10);
+  return {
+    entrada: `${String(h1).padStart(2, "0")}:00`,
+    saida: `${String(h2).padStart(2, "0")}:00`,
+  };
+}
+
+/** Entrada / saída programadas (HH:mm) a partir da escala e do cadastro do prestador. */
+function obterEntradaSaidaEscaladasPrestadorDia(
+  p: RhFuncionario | undefined,
+  valorCelula: string | null | undefined,
+  op: OpTurnosHorarioPick | null | undefined,
+): { entrada: string; saida: string } | null {
+  if (!p) return null;
+  const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
+  if (!turnoNome) return null;
+  if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
+
+  const escala = p.escala ?? "";
+
+  if (turnoNome === "Comercial" && turnoStaffEhComercial5x2(p.staff_turno)) {
+    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    return parsed ?? { entrada: "—", saida: "—" };
+  }
+
+  if (turnoNome !== "Manhã" && turnoNome !== "Tarde" && turnoNome !== "Noite") {
+    return { entrada: "—", saida: "—" };
+  }
+
+  if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
+    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    return parsed ?? { entrada: "—", saida: "—" };
+  }
+
+  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+    const k = normalizarEscalaCadastro(escala);
+    const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
+    let iniDb: string | null = null;
+    if (turnoNome === "Manhã") iniDb = op.turno_manha_inicio ?? null;
+    else if (turnoNome === "Tarde") iniDb = op.turno_tarde_inicio ?? null;
+    else iniDb = op.turno_noite_inicio ?? null;
+    const hi = formatarHoraInicioOperadora(iniDb ?? undefined);
+    if (hi === "—") return { entrada: "—", saida: "—" };
+    const hf = adicionarMinutosAoRelogioHHMM(hi, durMin);
+    return { entrada: hi, saida: hf };
+  }
+
+  return { entrada: "—", saida: "—" };
+}
+
+function duracaoMinutosRelogioHHMM(entrada: string, saida: string): number | null {
+  if (entrada === "—" || saida === "—") return null;
+  const m1 = /^(\d{1,2}):(\d{2})$/.exec(entrada.trim());
+  const m2 = /^(\d{1,2}):(\d{2})$/.exec(saida.trim());
+  if (!m1 || !m2) return null;
+  const a = parseInt(m1[1]!, 10) * 60 + parseInt(m1[2]!, 10);
+  const b = parseInt(m2[1]!, 10) * 60 + parseInt(m2[2]!, 10);
+  let d = b - a;
+  if (d <= 0) d += 24 * 60;
+  return d;
+}
+
+function formatoDuracaoFmtHorasTotal(entrada: string, saida: string): string {
+  const min = duracaoMinutosRelogioHHMM(entrada, saida);
+  if (min == null) return "—";
+  return fmtHorasTotal(min / 60);
+}
+
+function horaRegistoSP(isoTs: string | null | undefined): string {
+  if (!isoTs) return "—";
+  const d = new Date(isoTs);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+}
+
+function duracaoEntreTimestamps(isoIn: string | null | undefined, isoOut: string | null | undefined): string {
+  if (!isoIn || !isoOut) return "—";
+  const t0 = new Date(isoIn).getTime();
+  const t1 = new Date(isoOut).getTime();
+  if (Number.isNaN(t0) || Number.isNaN(t1) || t1 <= t0) return "—";
+  return fmtHorasTotal((t1 - t0) / 3600000);
+}
+
+/** Duração real em minutos (check-in → check-out). */
+function duracaoMinutosEntreTimestampsIso(
+  isoIn: string | null | undefined,
+  isoOut: string | null | undefined,
+): number | null {
+  if (!isoIn || !isoOut) return null;
+  const t0 = new Date(isoIn).getTime();
+  const t1 = new Date(isoOut).getTime();
+  if (Number.isNaN(t0) || Number.isNaN(t1) || t1 <= t0) return null;
+  return Math.round((t1 - t0) / 60000);
+}
+
+const COR_DESVIO_PONTO = "#e84025";
+
+/** Minutos desde 00:00 para "HH:mm" no mesmo dia civil. */
+function minutosRelogioHHmm(s: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+/** Diferença mínima em minutos entre dois relógios no mesmo dia (considera envoltório 24h). */
+function diffMinutosAbsRelogioMesmoDia(esc: string, real: string): number | null {
+  if (esc === "—" || real === "—") return null;
+  const a = minutosRelogioHHmm(esc);
+  const b = minutosRelogioHHmm(real);
+  if (a == null || b == null) return null;
+  let d = Math.abs(b - a);
+  d = Math.min(d, 24 * 60 - d);
+  return d;
+}
+
+/** Desvio estritamente superior a 5 minutos entre horário escalado e realizado. */
+function presencaDesvioRelogioMaior5Min(esc: string, real: string): boolean {
+  const d = diffMinutosAbsRelogioMesmoDia(esc, real);
+  return d != null && d > 5;
+}
+
+/** Desvio na duração total (minutos) entre escalado e realizado. */
+function presencaDesvioHorasMaior5Min(escEnt: string, escSai: string, isoIn: string | null, isoOut: string | null): boolean {
+  const escMin = duracaoMinutosRelogioHHMM(escEnt, escSai);
+  const realMin = duracaoMinutosEntreTimestampsIso(isoIn, isoOut);
+  if (escMin == null || realMin == null) return false;
+  return Math.abs(realMin - escMin) > 5;
+}
+
+function statusPresencaNoDia(
+  escaladas: { entrada: string; saida: string } | null,
+  checkIn: string | null | undefined,
+  checkOut: string | null | undefined,
+): string {
+  if (!escaladas) return "Folga";
+  const semHorarioProgramado = escaladas.entrada === "—" && escaladas.saida === "—";
+  const temHorarioProgramado =
+    !semHorarioProgramado && (escaladas.entrada !== "—" || escaladas.saida !== "—");
+  if (!temHorarioProgramado) return "Sem horário";
+  if (!checkIn && !checkOut) return "Pendente";
+  if (checkIn && !checkOut) return "Em aberto";
+  if (checkIn && checkOut) return "Registado";
+  return "—";
+}
+
 export default function RhCalendarioPage() {
   const { theme: t, isDark, user } = useApp();
   const brand = useDashboardBrand();
@@ -349,22 +526,22 @@ export default function RhCalendarioPage() {
   const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
   const [current, setCurrent] = useState(() => mesInicialCalendarioRhNaEntrada());
-  /** Vazio = mostrar todos os tipos de compromisso na grelha e contagens. */
-  const [chavesFiltroCompromissos, setChavesFiltroCompromissos] = useState<ChaveFiltroCompromissoCal[]>([]);
+  const [abaPrincipal, setAbaPrincipal] = useState<"compromissos" | "presenca">("compromissos");
+  const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<FiltroTipoCompromissoUi>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
-  const [modalDiaTab, setModalDiaTab] = useState<"compromissos" | "ofertas">("compromissos");
-  const [acoesOfertadasNoDia, setAcoesOfertadasNoDia] = useState<RhCalAcaoOfertaDiaRow[]>([]);
-  const [loadingAcoesOfertadasDia, setLoadingAcoesOfertadasDia] = useState(false);
-  const [erroAcoesOfertadasDia, setErroAcoesOfertadasDia] = useState<string | null>(null);
-  const [modalAcaoAberto, setModalAcaoAberto] = useState(false);
+  const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [erroStaff, setErroStaff] = useState<string | null>(null);
 
-  const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
-  const [filterTimeIds, setFilterTimeIds] = useState<string[]>([]);
+  /** Filtros da aba Compromissos (multi). */
+  const [compFilterStaffIds, setCompFilterStaffIds] = useState<string[]>([]);
+  const [compFilterTimeIds, setCompFilterTimeIds] = useState<string[]>([]);
+  /** Filtros da aba Controle de Presença (Time e Staff: seleção única). */
+  const [presencaFilterTimeIds, setPresencaFilterTimeIds] = useState<string[]>([]);
+  const [presencaFilterStaffIds, setPresencaFilterStaffIds] = useState<string[]>([]);
   const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
   const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
 
@@ -375,6 +552,16 @@ export default function RhCalendarioPage() {
   /** Vista completa (`canView === "sim"`): id do prestador ligado ao utilizador, para filtro «Meu Calendário». */
   const [meuPrestadorRhIdVistaCompleta, setMeuPrestadorRhIdVistaCompleta] = useState<string | null>(null);
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
+
+  const [pontoEstado, setPontoEstado] = useState<PrestadorPontoEstado | null>(null);
+  const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
+  const [pontoSubmitting, setPontoSubmitting] = useState(false);
+  const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
+  const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
+  const [loadingPontoMes, setLoadingPontoMes] = useState(false);
+  const [pontoMesTick, setPontoMesTick] = useState(0);
+  const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
+  const [reunioesMesTick, setReunioesMesTick] = useState(0);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -528,20 +715,25 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.canView === "proprios") {
-      setFilterStaffIds([]);
-      setFilterTimeIds([]);
+      setCompFilterStaffIds([]);
+      setCompFilterTimeIds([]);
     }
   }, [perm.canView]);
+
+  useEffect(() => {
+    if (perm.canView !== "proprios" || !meuRhFuncionarioId) return;
+    setPresencaFilterStaffIds([meuRhFuncionarioId]);
+  }, [perm.canView, meuRhFuncionarioId]);
 
   const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(filterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
-  }, [filterTimeIds, timeIds]);
+    return new Set(compFilterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+  }, [compFilterTimeIds, timeIds]);
 
-  const treinamentoSelecionado = filterTimeIds.includes(TREINAMENTO_FILTRO_ID);
-  const filtroTimeAtivo = filterTimeIds.length > 0;
+  const treinamentoSelecionado = compFilterTimeIds.includes(TREINAMENTO_FILTRO_ID);
+  const filtroTimeAtivo = compFilterTimeIds.length > 0;
 
   const timeMultiselectItems = useMemo(() => {
     const items: { id: string; name: string }[] = [];
@@ -558,7 +750,7 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     const valid = new Set(timeMultiselectItems.map((x) => x.id));
-    setFilterTimeIds((prev) => {
+    setCompFilterTimeIds((prev) => {
       const next = prev.filter((id) => valid.has(id));
       return next.length === prev.length ? prev : next;
     });
@@ -573,13 +765,13 @@ export default function RhCalendarioPage() {
       treinamentoGerenciaId,
       treinamentoTimeIds,
     };
-    setFilterStaffIds((prev) => {
+    setCompFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
       const allowedStaff = new Set(prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id));
       const next = prev.filter((id) => allowedStaff.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, filterTimeIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, compFilterTimeIds]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
@@ -593,6 +785,51 @@ export default function RhCalendarioPage() {
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds]);
+
+  const presencaFiltroTimeIdsReais = useMemo(() => {
+    const allowed = new Set(timeIds);
+    return new Set(presencaFilterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+  }, [presencaFilterTimeIds, timeIds]);
+
+  const presencaTreinamentoSelecionado = presencaFilterTimeIds.includes(TREINAMENTO_FILTRO_ID);
+  const presencaFiltroTimeAtivo = presencaFilterTimeIds.length > 0;
+
+  const staffPresencaMultiselectItems = useMemo(() => {
+    const opts = {
+      filtroAtivo: presencaFiltroTimeAtivo,
+      filtroTimeIdsReais: presencaFiltroTimeIdsReais,
+      treinamentoSelecionado: presencaTreinamentoSelecionado,
+      treinamentoGerenciaId,
+      treinamentoTimeIds,
+    };
+    return prestadores
+      .filter((p) => prestadorAtendeFiltroTime(p, opts))
+      .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
+  }, [
+    prestadores,
+    presencaFiltroTimeAtivo,
+    presencaFiltroTimeIdsReais,
+    presencaTreinamentoSelecionado,
+    treinamentoGerenciaId,
+    treinamentoTimeIds,
+  ]);
+
+  useEffect(() => {
+    const valid = new Set(timeMultiselectItems.map((x) => x.id));
+    setPresencaFilterTimeIds((prev) => {
+      const next = prev.filter((id) => valid.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [timeMultiselectItems]);
+
+  useEffect(() => {
+    const allowedIds = new Set(staffPresencaMultiselectItems.map((x) => x.id));
+    setPresencaFilterStaffIds((prev) => {
+      if (prev.length === 0) return prev;
+      const next = prev.filter((id) => allowedIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [staffPresencaMultiselectItems]);
 
   const mesesRefISOConsulta = useMemo(() => [refMesPrimeiroDiaISO(current)], [current]);
 
@@ -619,6 +856,40 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [mesesRefISOConsulta, perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading) return;
+    if (perm.canView !== "sim" && perm.canView !== "proprios") {
+      setPontoEstado(null);
+      setPontoEstadoLoading(false);
+      return;
+    }
+    if (loadingEscala) return;
+    let cancelled = false;
+    async function loadPonto() {
+      setPontoEstadoLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const tok = session?.access_token;
+        if (!tok) {
+          if (!cancelled) setPontoEstado(null);
+          return;
+        }
+        const est = await obterPrestadorPontoEstado(tok);
+        if (!cancelled) setPontoEstado(est);
+      } finally {
+        if (!cancelled) setPontoEstadoLoading(false);
+      }
+    }
+    void loadPonto();
+    const id = window.setInterval(() => {
+      void loadPonto();
+    }, 120_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [perm.loading, perm.canView, loadingEscala, user?.id]);
 
   const rawGradeRowsFiltrados = useMemo(() => {
     if (perm.canView !== "proprios") return rawGradeRows;
@@ -656,6 +927,78 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  /**
+   * ID em `rh_calendario_acoes.solicitante_funcionario_id`: a política RLS só permite INSERT quando este
+   * funcionário coincide com o login (e-mail / e-mail Spin em `rh_funcionarios`). Sem esse vínculo o
+   * agendamento seria rejeitado — por isso o botão «Agendar» só aparece quando conseguimos resolver o id.
+   */
+  const solicitanteAgendarId = useMemo(
+    () => meuRhFuncionarioId ?? meuPrestadorRhIdVistaCompleta,
+    [meuRhFuncionarioId, meuPrestadorRhIdVistaCompleta],
+  );
+
+  const gradeValorPorDiaIsoAgendar = useMemo(() => {
+    const m = new Map<string, string>();
+    const fid = solicitanteAgendarId;
+    if (!fid) return m;
+    for (const r of rawGradeRows) {
+      if (r.funcionario_id !== fid) continue;
+      const iso = diaIsoChaveGrade(r);
+      if (!iso) continue;
+      if (!m.has(iso)) m.set(iso, (r.valor ?? "").trim());
+    }
+    return m;
+  }, [rawGradeRows, solicitanteAgendarId]);
+
+  /** Dias escalados do mês em datas estritamente futuras (regra de agendamento de reunião). */
+  const diasEscaladosAgendarMes = useMemo(
+    () => listarDatasEscaladoFuturasNoMes(new Date(current.getFullYear(), current.getMonth(), 1), gradeValorPorDiaIsoAgendar),
+    [current, gradeValorPorDiaIsoAgendar],
+  );
+
+  const mapaPontoPorDiaIso = useMemo(() => {
+    const m = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
+    for (const row of pontoMesLinhas) {
+      m.set(row.dia_sp.slice(0, 10), { check_in_at: row.check_in_at, check_out_at: row.check_out_at });
+    }
+    return m;
+  }, [pontoMesLinhas]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") {
+      setPontoMesLinhas([]);
+      return;
+    }
+    if (abaPrincipal !== "presenca") return;
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      setPontoMesLinhas([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingPontoMes(true);
+    const refIso = refMesPrimeiroDiaISO(current);
+    void supabase.rpc("rh_calendario_ponto_registros_mes", { p_funcionario_id: fid, p_ref_mes: refIso }).then(({ data, error }) => {
+      if (cancelled) return;
+      setLoadingPontoMes(false);
+      if (error) {
+        setPontoMesLinhas([]);
+        return;
+      }
+      const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
+      setPontoMesLinhas(
+        rows.map((r) => {
+          const raw = r.dia_sp as string | Date;
+          const diaStr = typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw));
+          return { dia_sp: diaStr, check_in_at: r.check_in_at, check_out_at: r.check_out_at };
+        }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, pontoMesTick]);
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     const slugs = [
@@ -688,7 +1031,7 @@ export default function RhCalendarioPage() {
   }, [prestadores, perm.loading, perm.canView]);
 
   const compromissosPorDiaIso = useMemo(() => {
-    const filtroStaff = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
+    const filtroStaff = compFilterStaffIds.length > 0 ? new Set(compFilterStaffIds) : null;
     const mapa = new Map<string, CompromissoEscalaCal[]>();
     for (const r of rawGradeRowsFiltrados) {
       if (filtroStaff && !filtroStaff.has(r.funcionario_id)) continue;
@@ -716,7 +1059,7 @@ export default function RhCalendarioPage() {
     return mapa;
   }, [
     rawGradeRowsFiltrados,
-    filterStaffIds,
+    compFilterStaffIds,
     nomePrestadorPorId,
     orgTimeIdPorPrestadorId,
     orgGerenciaIdPorPrestadorId,
@@ -727,61 +1070,84 @@ export default function RhCalendarioPage() {
     treinamentoTimeIds,
   ]);
 
-  /** Valores brutos da grade (por dia) só do colaborador autenticado — para o modal Ação. */
-  const gradeValorPorDiaIso = useMemo(() => {
-    const m = new Map<string, string>();
-    if (!meuRhFuncionarioId) return m;
-    for (const r of rawGradeRowsFiltrados) {
-      if (r.funcionario_id !== meuRhFuncionarioId) continue;
-      const iso = diaIsoChaveGrade(r);
-      if (!iso) continue;
-      m.set(iso, (r.valor ?? "").trim());
-    }
-    return m;
-  }, [rawGradeRowsFiltrados, meuRhFuncionarioId]);
-
   useEffect(() => {
-    if (!modalDia || perm.loading || perm.canView === "nao") {
-      setAcoesOfertadasNoDia([]);
-      setErroAcoesOfertadasDia(null);
-      setLoadingAcoesOfertadasDia(false);
+    if (perm.loading || perm.canView === "nao") {
+      setReunioesMesRaw([]);
       return;
     }
     let cancelled = false;
-    setLoadingAcoesOfertadasDia(true);
-    setErroAcoesOfertadasDia(null);
-    const iso = toISO(modalDia);
-    void supabase.rpc("rh_calendario_acoes_ofertadas_no_dia", { p_dia_iso: iso }).then(({ data, error }) => {
+    const refIso = refMesPrimeiroDiaISO(current);
+    void supabase.rpc("rh_calendario_reunioes_mes", { p_ref_mes: refIso }).then(({ data, error }) => {
       if (cancelled) return;
-      setLoadingAcoesOfertadasDia(false);
       if (error) {
-        setErroAcoesOfertadasDia(error.message || "Não foi possível carregar as ofertas.");
-        setAcoesOfertadasNoDia([]);
+        setReunioesMesRaw([]);
         return;
       }
-      const rows = (data ?? []) as RhCalAcaoOfertaDiaRow[];
-      setAcoesOfertadasNoDia(
-        rows.map((r) => ({
-          ...r,
-          payload:
-            r.payload != null && typeof r.payload === "object" && !Array.isArray(r.payload)
-              ? (r.payload as Record<string, unknown>)
-              : {},
-        })),
-      );
+      setReunioesMesRaw((data ?? []) as RpcReuniaoMesRow[]);
     });
     return () => {
       cancelled = true;
     };
-  }, [modalDia, perm.loading, perm.canView]);
+  }, [perm.loading, perm.canView, current, reunioesMesTick]);
 
-  function reunioesAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
-    return [];
-  }
+  const reunioesItemsPorIso = useMemo(() => {
+    const map = new Map<string, CompromissoAgendaExtra[]>();
+    for (const row of reunioesMesRaw) {
+      if (compFilterStaffIds.length > 0 && !compFilterStaffIds.includes(row.solicitante_funcionario_id)) continue;
+      if (filtroTimeAtivo) {
+        const tid = orgTimeIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
+        const gid = orgGerenciaIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
+        let pass = false;
+        if (tid && filtroTimeIdsReais.has(tid)) pass = true;
+        if (treinamentoSelecionado && treinamentoGerenciaId) {
+          if (gid === treinamentoGerenciaId) pass = true;
+          if (tid && treinamentoTimeIds.has(tid)) pass = true;
+        }
+        if (!pass) continue;
+      }
+      const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
+      if (!iso) continue;
+      const comQuem = ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() || "—";
+      const item: CompromissoAgendaExtra = {
+        id: row.id,
+        titulo: tituloReuniaoNoCalendario(row, solicitanteAgendarId),
+        reuniaoDetalhe: {
+          solicitanteNome: (row.solicitante_nome ?? "").trim() || "—",
+          comQuemLabel: comQuem,
+          turno: (row.turno ?? "").trim() || "—",
+          motivo: (row.motivo ?? "").trim() || "—",
+        },
+      };
+      const arr = map.get(iso) ?? [];
+      arr.push(item);
+      map.set(iso, arr);
+    }
+    return map;
+  }, [
+    reunioesMesRaw,
+    solicitanteAgendarId,
+    compFilterStaffIds,
+    filtroTimeAtivo,
+    filtroTimeIdsReais,
+    treinamentoSelecionado,
+    treinamentoGerenciaId,
+    treinamentoTimeIds,
+    orgTimeIdPorPrestadorId,
+    orgGerenciaIdPorPrestadorId,
+  ]);
+
+  const obterReunioesDiaIso = useCallback(
+    (iso: string) => reunioesItemsPorIso.get(iso) ?? [],
+    [reunioesItemsPorIso],
+  );
+
   function treinamentosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
     return [];
   }
   function feedbackAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
+    return [];
+  }
+  function eventosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
     return [];
   }
 
@@ -789,49 +1155,45 @@ export default function RhCalendarioPage() {
     return ordenarTurnosCalendario(compromissosPorDiaIso.get(toISO(date)) ?? []);
   }
 
-  /** Linhas do dia na grelha: Reuniões, Treinamentos, Feedback, Turnos (Comercial → Noite → ofertas). */
+  /** Linhas do dia na grelha: Eventos → Reuniões → Treinamentos → Feedback → Turnos. */
   function linhasCompromissosDiaCalendario(date: Date): LinhaCalendarioDia[] {
     const iso = toISO(date);
     const turnosOrd = ordenarTurnosCalendario(compromissosPorDiaIso.get(iso) ?? []);
     const turnLinhas: LinhaCalendarioDia[] = turnosOrd.map((comp) => ({ tipo: "turno", comp }));
-    const r: LinhaCalendarioDia[] = reunioesAgendaDoDia(iso).map((item) => ({ tipo: "reuniao", item }));
+    const ev: LinhaCalendarioDia[] = eventosAgendaDoDia(iso).map((item) => ({ tipo: "evento", item }));
+    const r: LinhaCalendarioDia[] = obterReunioesDiaIso(iso).map((item) => ({ tipo: "reuniao", item }));
     const tr: LinhaCalendarioDia[] = treinamentosAgendaDoDia(iso).map((item) => ({ tipo: "treinamento", item }));
     const fb: LinhaCalendarioDia[] = feedbackAgendaDoDia(iso).map((item) => ({ tipo: "feedback", item }));
 
-    if (chavesFiltroCompromissos.length === 0) {
-      return [...r, ...tr, ...fb, ...turnLinhas];
+    if (filtroTipoCompromisso === "todos") {
+      return [...ev, ...r, ...tr, ...fb, ...turnLinhas];
     }
-    const out: LinhaCalendarioDia[] = [];
-    for (const k of ORDEM_CHAVE_FILTRO_NA_LISTA) {
-      if (!chavesFiltroCompromissos.includes(k)) continue;
-      if (k === "reunioes") out.push(...r);
-      else if (k === "treinamentos") out.push(...tr);
-      else if (k === "feedback") out.push(...fb);
-      else if (k === "turnos") out.push(...turnLinhas);
-    }
-    return out;
+    if (filtroTipoCompromisso === "eventos") return ev;
+    if (filtroTipoCompromisso === "reunioes") return r;
+    if (filtroTipoCompromisso === "treinamentos") return tr;
+    if (filtroTipoCompromisso === "feedback") return fb;
+    return turnLinhas;
   }
 
   function contagemItensCalendarioNoDia(date: Date): number {
     const iso = toISO(date);
     const turnos = compromissosPorDiaIso.get(iso) ?? [];
-    const r = reunioesAgendaDoDia(iso);
+    const ev = eventosAgendaDoDia(iso);
+    const r = obterReunioesDiaIso(iso);
     const tr = treinamentosAgendaDoDia(iso);
     const fb = feedbackAgendaDoDia(iso);
-    if (chavesFiltroCompromissos.length === 0) {
-      return turnos.length + r.length + tr.length + fb.length;
+    if (filtroTipoCompromisso === "todos") {
+      return turnos.length + ev.length + r.length + tr.length + fb.length;
     }
-    let n = 0;
-    if (chavesFiltroCompromissos.includes("reunioes")) n += r.length;
-    if (chavesFiltroCompromissos.includes("treinamentos")) n += tr.length;
-    if (chavesFiltroCompromissos.includes("feedback")) n += fb.length;
-    if (chavesFiltroCompromissos.includes("turnos")) n += turnos.length;
-    return n;
+    if (filtroTipoCompromisso === "eventos") return ev.length;
+    if (filtroTipoCompromisso === "reunioes") return r.length;
+    if (filtroTipoCompromisso === "treinamentos") return tr.length;
+    if (filtroTipoCompromisso === "feedback") return fb.length;
+    return turnos.length;
   }
 
   function abrirModalDia(d: Date) {
     setModalDia(d);
-    setModalDiaTab("compromissos");
   }
 
   function prev() {
@@ -842,16 +1204,18 @@ export default function RhCalendarioPage() {
     else setCurrent(d);
   }
   function next() {
+    if (!podeAvancarMesCalendario(current)) return;
     const d = new Date(current);
     d.setMonth(d.getMonth() + 1);
-    setCurrent(d);
+    if (mesCalendarioAlemDoMaximoFuturo(d)) setCurrent(mesMaximoCarrosselCalendarioRh());
+    else setCurrent(d);
   }
 
   function headerTitle() {
     return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
-  function dayStyle(date: Date, todayISO: string): React.CSSProperties {
+  function dayStyle(date: Date, todayISO: string): CSSProperties {
     const iso = toISO(date);
     if (iso === todayISO) {
       return {
@@ -878,7 +1242,7 @@ export default function RhCalendarioPage() {
     return isDark ? "rgba(34,197,94,0.75)" : "rgba(34,197,94,0.85)";
   }
 
-  const card: React.CSSProperties = {
+  const card: CSSProperties = {
     background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
@@ -912,11 +1276,24 @@ export default function RhCalendarioPage() {
   function AgendaExtraDiaChip({
     linha,
   }: {
-    linha: Extract<LinhaCalendarioDia, { tipo: "reuniao" } | { tipo: "treinamento" } | { tipo: "feedback" }>;
+    linha: Extract<
+      LinhaCalendarioDia,
+      { tipo: "evento" } | { tipo: "reuniao" } | { tipo: "treinamento" } | { tipo: "feedback" }
+    >;
   }) {
     const { tipo, item } = linha;
-    const etiqueta = tipo === "reuniao" ? "Reunião" : tipo === "treinamento" ? "Treinamento" : "Feedback";
-    const Icon = tipo === "reuniao" ? Users : tipo === "treinamento" ? BookOpen : MessageSquare;
+    const etiqueta =
+      tipo === "evento"
+        ? "Evento"
+        : tipo === "reuniao"
+          ? "Reunião"
+          : tipo === "treinamento"
+            ? "Treinamento"
+            : "Feedback";
+    const Icon = tipo === "evento" ? CalendarDays : tipo === "reuniao" ? Users : tipo === "treinamento" ? BookOpen : MessageSquare;
+    const cor = tipo === "evento" ? "#a78bfa" : "#f59e0b";
+    const bg = tipo === "evento" ? (isDark ? "rgba(167,139,250,0.12)" : "rgba(167,139,250,0.08)") : isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)";
+    const border = tipo === "evento" ? "rgba(167,139,250,0.45)" : "rgba(245,158,11,0.35)";
     return (
       <div
         role="listitem"
@@ -927,15 +1304,15 @@ export default function RhCalendarioPage() {
           padding: "5px 8px",
           borderRadius: 8,
           marginBottom: 4,
-          background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
-          border: `1px solid rgba(245,158,11,0.35)`,
+          background: bg,
+          border: `1px solid ${border}`,
           width: "100%",
           boxSizing: "border-box",
           lineHeight: 1.2,
         }}
       >
-        <Icon size={11} color="#f59e0b" aria-hidden="true" />
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
+        <Icon size={11} color={cor} aria-hidden="true" />
+        <span style={{ fontSize: 11, fontWeight: 700, color: cor, fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
         <span
           style={{
             fontSize: 11,
@@ -1175,6 +1552,82 @@ export default function RhCalendarioPage() {
     );
   }
 
+  const onPrestadorPontoRegistrar = useCallback(async () => {
+    setPontoMsgModal(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const tok = session?.access_token;
+    if (!tok) return;
+    setPontoSubmitting(true);
+    try {
+      const res = await registrarPrestadorPonto(tok);
+      if (res.ok && res.estado) {
+        setPontoEstado(res.estado);
+        setPontoMesTick((x) => x + 1);
+        return;
+      }
+      if (res.code === "rede" || res.code === "config") {
+        setPontoMsgModal(MSG_PRESTADOR_PONTO_REDE);
+      } else {
+        setPontoMsgModal(res.error ?? "Não foi possível registar.");
+      }
+      if (res.estado) setPontoEstado(res.estado);
+    } finally {
+      setPontoSubmitting(false);
+    }
+  }, []);
+
+  const mostrarBotaoPontoCalendario =
+    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
+  const labelBotaoPonto = pontoEstado?.proximoTipo === "check_out" ? "Check-out" : "Check-in";
+  const pontoBotaoHabilitado =
+    mostrarBotaoPontoCalendario &&
+    !pontoEstadoLoading &&
+    !pontoSubmitting &&
+    pontoEstado?.escaladoHoje === true &&
+    pontoEstado?.proximoTipo != null;
+  const pontoBotaoTitle = (() => {
+    if (!mostrarBotaoPontoCalendario) return undefined;
+    if (pontoEstadoLoading) return "A carregar estado do ponto…";
+    if (!pontoEstado) return "Não foi possível obter o estado do ponto.";
+    if (!pontoEstado.rhFuncionarioId) {
+      return "Não há colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).";
+    }
+    if (pontoEstado.escaladoHoje !== true) return "Sem escala aprovada para hoje na Gestão de Escala.";
+    if (pontoEstado.proximoTipo == null) return "Check-in e Check-out de hoje já foram registados.";
+    return undefined;
+  })();
+
+  const showTimeFilter = !soPropriosCal && timeMultiselectItems.length > 0;
+  const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
+  const hasStaffFilterComp = compFilterStaffIds.length > 0;
+  const hasTimeFilterComp = compFilterTimeIds.length > 0;
+  const mostrarBotaoMeuCalendario =
+    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
+  const calendarioSoMeuAtivo =
+    Boolean(meuPrestadorRhIdVistaCompleta) &&
+    compFilterStaffIds.length === 1 &&
+    compFilterStaffIds[0] === meuPrestadorRhIdVistaCompleta;
+  const meuIdParaBotoesMeu = perm.canView === "proprios" ? meuRhFuncionarioId : meuPrestadorRhIdVistaCompleta;
+  const mostrarBotaoMeuControle =
+    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios") && Boolean(meuIdParaBotoesMeu);
+  const meuControleAtivo =
+    Boolean(meuIdParaBotoesMeu) &&
+    presencaFilterStaffIds.length === 1 &&
+    presencaFilterStaffIds[0] === meuIdParaBotoesMeu;
+  const showTimeFilterPresenca = !soPropriosCal && timeMultiselectItems.length > 0;
+  const showStaffFilterPresenca = !soPropriosCal && staffPresencaMultiselectItems.length > 0;
+  const podeRetrocederMes = podeRetrocederMesCalendario(current);
+  const podeAvancarMes = podeAvancarMesCalendario(current);
+
+  const diasDoMesPresenca = useMemo(() => {
+    const y = current.getFullYear();
+    const m = current.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const out: Date[] = [];
+    for (let d = 1; d <= last; d++) out.push(new Date(y, m, d));
+    return out;
+  }, [current]);
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -1183,48 +1636,79 @@ export default function RhCalendarioPage() {
     );
   }
 
-  const showTimeFilter = !soPropriosCal && timeMultiselectItems.length > 0;
-  const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
-  const hasStaffFilter = filterStaffIds.length > 0;
-  const hasTimeFilter = filterTimeIds.length > 0;
-  const mostrarBotaoMeuCalendario =
-    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
-  const calendarioSoMeuAtivo =
-    Boolean(meuPrestadorRhIdVistaCompleta) &&
-    filterStaffIds.length === 1 &&
-    filterStaffIds[0] === meuPrestadorRhIdVistaCompleta;
-  const podeRetrocederMes = podeRetrocederMesCalendario(current);
-
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
         icon={<CalendarRange size={14} aria-hidden="true" />}
         title="Calendário"
-        subtitle={
-          soPropriosCal
-            ? "Apenas as suas escalas (turno Manhã, Tarde, Noite ou Comercial), conforme a Gestão de Escala."
-            : "Grelha mensal — clique num dia para ver compromissos e ofertas. Turnos vêm da Gestão de Escala; reuniões, treinamentos e feedback serão integrados em breve."
-        }
+        subtitle="Organize a rotina operacional com visibilidade completa de turnos, trocas e compromissos."
         brand={brand}
         t={t}
       />
 
-      <div style={{ marginBottom: 14 }}>
-        <div
+      <div
+        role="tablist"
+        aria-label="Secção do calendário"
+        style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={abaPrincipal === "compromissos"}
+          onClick={() => setAbaPrincipal("compromissos")}
           style={{
-            borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
-            padding: "12px 20px",
+            padding: "10px 18px",
+            borderRadius: 12,
+            border: `1px solid ${abaPrincipal === "compromissos" ? brand.accent : t.cardBorder}`,
+            background:
+              abaPrincipal === "compromissos"
+                ? brand.accent.startsWith("var(")
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
+                  : `${String(brand.accent)}20`
+                : t.inputBg,
+            color: abaPrincipal === "compromissos" ? brand.accent : t.textMuted,
+            fontSize: 13,
+            fontWeight: abaPrincipal === "compromissos" ? 800 : 600,
+            fontFamily: FONT.body,
+            cursor: "pointer",
           }}
         >
+          Compromissos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={abaPrincipal === "presenca"}
+          onClick={() => setAbaPrincipal("presenca")}
+          style={{
+            padding: "10px 18px",
+            borderRadius: 12,
+            border: `1px solid ${abaPrincipal === "presenca" ? brand.accent : t.cardBorder}`,
+            background:
+              abaPrincipal === "presenca"
+                ? brand.accent.startsWith("var(")
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
+                  : `${String(brand.accent)}20`
+                : t.inputBg,
+            color: abaPrincipal === "presenca" ? brand.accent : t.textMuted,
+            fontSize: 13,
+            fontWeight: abaPrincipal === "presenca" ? 800 : 600,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Controle de Presença
+        </button>
+      </div>
+
+      {abaPrincipal === "compromissos" ? (
+        <div style={{ marginBottom: 14 }}>
           <div
             style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 16,
-              width: "100%",
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              background: brand.blockBg,
+              padding: "12px 20px",
             }}
           >
             <div
@@ -1232,248 +1716,496 @@ export default function RhCalendarioPage() {
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
-                gap: 18,
-                flex: "1 1 280px",
-                justifyContent: "center",
+                gap: 16,
+                width: "100%",
               }}
             >
-              <button
-                type="button"
-                onClick={prev}
-                disabled={!podeRetrocederMes}
+              <div
                 style={{
-                  ...btnNav,
-                  opacity: podeRetrocederMes ? 1 : 0.38,
-                  cursor: podeRetrocederMes ? "pointer" : "not-allowed",
-                }}
-                aria-label={
-                  podeRetrocederMes
-                    ? "Mês anterior"
-                    : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
-                }
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </button>
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  minWidth: 180,
-                  textAlign: "center",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 18,
+                  flex: "1 1 280px",
+                  justifyContent: "center",
                 }}
               >
-                {headerTitle()}
-              </span>
-              <button type="button" onClick={next} style={btnNav} aria-label="Próximo mês">
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
+                <button
+                  type="button"
+                  onClick={prev}
+                  disabled={!podeRetrocederMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeRetrocederMes ? 1 : 0.38,
+                    cursor: podeRetrocederMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeRetrocederMes
+                      ? "Mês anterior"
+                      : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
+                  }
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                <span
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: t.text,
+                    fontFamily: FONT.body,
+                    minWidth: 180,
+                    textAlign: "center",
+                  }}
+                >
+                  {headerTitle()}
+                </span>
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!podeAvancarMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeAvancarMes ? 1 : 0.38,
+                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeAvancarMes
+                      ? "Próximo mês"
+                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                  }
+                >
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
 
-              {loadingEscala && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
-                <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                Atualizando escala…
-              </span>
-            )}
-
-            {loadingStaff ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
-                <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                {soPropriosCal ? "Carregando…" : "Carregando staff…"}
-              </span>
-            ) : erroStaff ? (
-              <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-            ) : (
-              <>
-                {showTimeFilter ? (
-                  <InfluencerMultiSelect
-                    selected={filterTimeIds}
-                    onChange={setFilterTimeIds}
-                    influencers={timeMultiselectItems}
-                    t={t}
-                    triggerEmptyLabel="Time"
-                    ariaFilterPrefix="Filtrar por time"
-                    listboxAriaLabel="Selecionar time"
-                  />
-                ) : null}
-                {showStaffFilter ? (
-                  <InfluencerMultiSelect
-                    selected={filterStaffIds}
-                    onChange={setFilterStaffIds}
-                    influencers={staffMultiselectItems}
-                    t={t}
-                    triggerEmptyLabel="Staff"
-                    ariaFilterPrefix="Filtrar por staff"
-                    listboxAriaLabel="Selecionar membro do staff"
-                    enableSearch
-                    searchPlaceholder="Pesquisar prestador…"
-                  />
-                ) : null}
-                {mostrarBotaoMeuCalendario ? (
-                  <button
-                    type="button"
-                    aria-pressed={calendarioSoMeuAtivo}
-                    onClick={() => {
-                      if (calendarioSoMeuAtivo) {
-                        setFilterStaffIds([]);
-                      } else {
-                        setFilterTimeIds([]);
-                        setFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
-                      }
-                    }}
+                {loadingEscala && (
+                  <span
                     style={{
-                      padding: "6px 14px",
-                      borderRadius: 20,
-                      border: `1.5px solid ${calendarioSoMeuAtivo ? brand.accent : t.cardBorder}`,
-                      background: calendarioSoMeuAtivo
-                        ? brand.accent.startsWith("var(")
-                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                          : `${String(brand.accent)}22`
-                        : t.inputBg,
-                      color: calendarioSoMeuAtivo ? brand.accent : t.textMuted,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      color: t.textMuted,
                       fontSize: 12,
-                      fontWeight: 600,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Loader2
+                      size={14}
+                      className="app-lucide-spin"
+                      aria-hidden="true"
+                      color="var(--brand-primary, #7c3aed)"
+                    />
+                    Atualizando escala…
+                  </span>
+                )}
+
+                {loadingStaff ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      color: t.textMuted,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Loader2
+                      size={14}
+                      className="app-lucide-spin"
+                      aria-hidden="true"
+                      color="var(--brand-primary, #7c3aed)"
+                    />
+                    {soPropriosCal ? "Carregando…" : "Carregando staff…"}
+                  </span>
+                ) : erroStaff ? (
+                  <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+                ) : (
+                  <>
+                    {showTimeFilter ? (
+                      <InfluencerMultiSelect
+                        selected={compFilterTimeIds}
+                        onChange={setCompFilterTimeIds}
+                        influencers={timeMultiselectItems}
+                        t={t}
+                        triggerEmptyLabel="Time"
+                        ariaFilterPrefix="Filtrar por time"
+                        listboxAriaLabel="Selecionar time"
+                      />
+                    ) : null}
+                    {showStaffFilter ? (
+                      <InfluencerMultiSelect
+                        selected={compFilterStaffIds}
+                        onChange={setCompFilterStaffIds}
+                        influencers={staffMultiselectItems}
+                        t={t}
+                        triggerEmptyLabel="Staff"
+                        ariaFilterPrefix="Filtrar por staff"
+                        listboxAriaLabel="Selecionar membro do staff"
+                        enableSearch
+                        searchPlaceholder="Pesquisar prestador…"
+                      />
+                    ) : null}
+                    {mostrarBotaoMeuCalendario ? (
+                      <button
+                        type="button"
+                        aria-pressed={calendarioSoMeuAtivo}
+                        onClick={() => {
+                          if (calendarioSoMeuAtivo) {
+                            setCompFilterStaffIds([]);
+                          } else {
+                            setCompFilterTimeIds([]);
+                            setCompFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                          }
+                        }}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          border: `1.5px solid ${calendarioSoMeuAtivo ? brand.accent : t.cardBorder}`,
+                          background: calendarioSoMeuAtivo
+                            ? brand.accent.startsWith("var(")
+                              ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                              : `${String(brand.accent)}22`
+                            : t.inputBg,
+                          color: calendarioSoMeuAtivo ? brand.accent : t.textMuted,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          fontFamily: FONT.body,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        aria-label={
+                          calendarioSoMeuAtivo
+                            ? "Mostrar calendário geral de todos os prestadores"
+                            : "Filtrar calendário apenas para o meu registo de prestador"
+                        }
+                      >
+                        Meu Calendário
+                      </button>
+                    ) : null}
+                  </>
+                )}
+              </div>
+
+              <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                {solicitanteAgendarId ? (
+                  <button
+                    type="button"
+                    onClick={() => setModalAgendarAberto(true)}
+                    style={{
+                      padding: "8px 18px",
+                      borderRadius: 999,
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.accent.startsWith("var(")
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
+                        : `${String(brand.accent)}18`,
+                      color: brand.accent,
+                      fontSize: 13,
+                      fontWeight: 700,
                       fontFamily: FONT.body,
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
+                      lineHeight: 1,
                     }}
-                    aria-label={
-                      calendarioSoMeuAtivo
-                        ? "Mostrar calendário geral de todos os prestadores"
-                        : "Filtrar calendário apenas para o meu registo de prestador"
-                    }
+                    aria-label="Agendar reunião"
                   >
-                    Meu Calendário
+                    Agendar
                   </button>
                 ) : null}
-              </>
-            )}
+              </div>
             </div>
 
-            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={() => setModalAcaoAberto(true)}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 999,
-                  border: `1px solid ${brand.accent}`,
-                  background: brand.accent.startsWith("var(")
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
-                    : `${String(brand.accent)}18`,
-                  color: brand.accent,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  lineHeight: 1,
-                }}
-                aria-label="Abrir ações"
-              >
-                Ação
-              </button>
-            </div>
-          </div>
-
-          <div
-            role="group"
-            aria-label="Filtrar compromissos por tipo. Sem nenhum botão ativo, mostra todos."
-            style={{
-              paddingTop: 12,
-              marginTop: 12,
-              borderTop: `1px solid ${t.cardBorder}`,
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                maxWidth: "100%",
-              }}
-            >
-              {COMPROMISSOS_FILTRO_BOTOES.map(({ chave, label }) => {
-                const ativo = chavesFiltroCompromissos.includes(chave);
-                const accent = brand.accent;
-                return (
-                  <button
-                    key={chave}
-                    type="button"
-                    aria-pressed={ativo}
-                    onClick={() => {
-                      setChavesFiltroCompromissos((prev) =>
-                        prev.includes(chave) ? prev.filter((x) => x !== chave) : [...prev, chave],
-                      );
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: 999,
-                      border: `1px solid ${ativo ? accent : t.cardBorder}`,
-                      background: ativo
-                        ? accent.startsWith("var(")
-                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 18%, transparent)"
-                          : `${String(accent)}28`
-                        : "transparent",
-                      color: ativo ? accent : t.text,
-                      fontSize: 13,
-                      fontWeight: ativo ? 700 : 500,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {(hasStaffFilter || hasTimeFilter) && (
             <div
               style={{
                 paddingTop: 12,
                 marginTop: 12,
                 borderTop: `1px solid ${t.cardBorder}`,
+                width: "100%",
                 display: "flex",
-                justifyContent: "center",
                 flexWrap: "wrap",
-                gap: 10,
+                alignItems: "center",
+                gap: 12,
+                justifyContent: "center",
               }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterTimeIds([]);
-                  setFilterStaffIds([]);
-                }}
+              <label
+                htmlFor="cal-filtro-tipo-compromisso"
+                style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body }}
+              >
+                Tipo de compromisso
+              </label>
+              <select
+                id="cal-filtro-tipo-compromisso"
+                aria-label="Filtrar por tipo de compromisso"
+                value={filtroTipoCompromisso}
+                onChange={(e) => setFiltroTipoCompromisso(e.target.value as FiltroTipoCompromissoUi)}
                 style={{
-                  padding: "5px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${BRAND.vermelho}44`,
-                  background: `${BRAND.vermelho}11`,
-                  color: BRAND.vermelho,
-                  fontSize: 12,
-                  fontWeight: 600,
+                  minWidth: 200,
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
                 }}
               >
-                <X size={12} aria-hidden="true" /> Limpar filtros
-              </button>
+                {OPCOES_TIPO_COMPROMISSO_SELECT.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+
+            {(hasStaffFilterComp || hasTimeFilterComp || filtroTipoCompromisso !== "todos") && (
+              <div
+                style={{
+                  paddingTop: 12,
+                  marginTop: 12,
+                  borderTop: `1px solid ${t.cardBorder}`,
+                  display: "flex",
+                  justifyContent: "center",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompFilterTimeIds([]);
+                    setCompFilterStaffIds([]);
+                    setFiltroTipoCompromisso("todos");
+                  }}
+                  style={{
+                    padding: "5px 14px",
+                    borderRadius: 999,
+                    border: `1px solid ${BRAND.vermelho}44`,
+                    background: `${BRAND.vermelho}11`,
+                    color: BRAND.vermelho,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <X size={12} aria-hidden="true" /> Limpar filtros
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ marginBottom: 14 }}>
+          <div
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              background: brand.blockBg,
+              padding: "12px 20px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 16,
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 18,
+                  flex: "1 1 280px",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={prev}
+                  disabled={!podeRetrocederMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeRetrocederMes ? 1 : 0.38,
+                    cursor: podeRetrocederMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeRetrocederMes
+                      ? "Mês anterior"
+                      : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
+                  }
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                <span
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: t.text,
+                    fontFamily: FONT.body,
+                    minWidth: 180,
+                    textAlign: "center",
+                  }}
+                >
+                  {headerTitle()}
+                </span>
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!podeAvancarMes}
+                  style={{
+                    ...btnNav,
+                    opacity: podeAvancarMes ? 1 : 0.38,
+                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
+                  }}
+                  aria-label={
+                    podeAvancarMes
+                      ? "Próximo mês"
+                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                  }
+                >
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+
+                {loadingStaff ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      color: t.textMuted,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Loader2
+                      size={14}
+                      className="app-lucide-spin"
+                      aria-hidden="true"
+                      color="var(--brand-primary, #7c3aed)"
+                    />
+                    {soPropriosCal ? "Carregando…" : "Carregando staff…"}
+                  </span>
+                ) : erroStaff ? (
+                  <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+                ) : (
+                  <>
+                    {showTimeFilterPresenca ? (
+                      <InfluencerMultiSelect
+                        selected={presencaFilterTimeIds}
+                        onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                        influencers={timeMultiselectItems}
+                        t={t}
+                        triggerEmptyLabel="Time"
+                        ariaFilterPrefix="Filtrar por time"
+                        listboxAriaLabel="Selecionar time"
+                      />
+                    ) : null}
+                    {showStaffFilterPresenca ? (
+                      <InfluencerMultiSelect
+                        selected={presencaFilterStaffIds}
+                        onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                        influencers={staffPresencaMultiselectItems}
+                        t={t}
+                        triggerEmptyLabel="Staff"
+                        ariaFilterPrefix="Filtrar por staff"
+                        listboxAriaLabel="Selecionar membro do staff"
+                        enableSearch
+                        searchPlaceholder="Pesquisar prestador…"
+                      />
+                    ) : null}
+                    {mostrarBotaoMeuControle ? (
+                      <button
+                        type="button"
+                        aria-pressed={meuControleAtivo}
+                        onClick={() => {
+                          if (meuControleAtivo) {
+                            setPresencaFilterStaffIds([]);
+                            setPresencaFilterTimeIds([]);
+                          } else {
+                            setPresencaFilterTimeIds([]);
+                            setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
+                          }
+                        }}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          border: `1.5px solid ${meuControleAtivo ? brand.accent : t.cardBorder}`,
+                          background: meuControleAtivo
+                            ? brand.accent.startsWith("var(")
+                              ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                              : `${String(brand.accent)}22`
+                            : t.inputBg,
+                          color: meuControleAtivo ? brand.accent : t.textMuted,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          fontFamily: FONT.body,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        aria-label={
+                          meuControleAtivo
+                            ? "Mostrar lista geral de staff"
+                            : "Filtrar controle de presença apenas para o meu utilizador"
+                        }
+                      >
+                        Meu Controle
+                      </button>
+                    ) : null}
+                  </>
+                )}
+              </div>
+
+              <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                {mostrarBotaoPontoCalendario ? (
+                  <button
+                    type="button"
+                    onClick={() => void onPrestadorPontoRegistrar()}
+                    disabled={!pontoBotaoHabilitado}
+                    title={pontoBotaoTitle}
+                    style={{
+                      padding: "8px 18px",
+                      borderRadius: 999,
+                      border: `1px solid ${brand.accent}`,
+                      background: pontoBotaoHabilitado
+                        ? brand.accent.startsWith("var(")
+                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 22%, transparent)"
+                          : `${String(brand.accent)}28`
+                        : t.cardBorder,
+                      color: pontoBotaoHabilitado ? brand.accent : t.textMuted,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: pontoBotaoHabilitado ? "pointer" : "not-allowed",
+                      lineHeight: 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      opacity: pontoBotaoHabilitado ? 1 : 0.72,
+                    }}
+                    aria-label={labelBotaoPonto}
+                  >
+                    {(pontoEstadoLoading || pontoSubmitting) && (
+                      <Loader2
+                        size={14}
+                        className="app-lucide-spin"
+                        aria-hidden="true"
+                        color={pontoBotaoHabilitado ? "#fff" : "var(--brand-primary, #7c3aed)"}
+                      />
+                    )}
+                    {labelBotaoPonto}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {soPropriosCal && !loadingStaff && !meuRhFuncionarioId && (
         <div
@@ -1494,213 +2226,450 @@ export default function RhCalendarioPage() {
         </div>
       )}
 
-      <div style={card}>
-        {loadingStaff ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 60,
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-            Carregando…
+      {abaPrincipal === "compromissos" ? (
+        <div style={card}>
+          {loadingStaff ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: 60,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+              Carregando…
+            </div>
+          ) : (
+            <ViewMes />
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
+            {(["Trabalhados", "Pendentes", "Aprovados"] as const).map((label) => (
+              <div
+                key={label}
+                style={{
+                  background: brand.blockBg,
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 18,
+                  padding: "16px 18px",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 800, color: t.textMuted, fontFamily: FONT_TITLE, marginBottom: 8 }}>
+                  {label}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>—</div>
+                <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 6 }}>Valores em definição</div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <ViewMes />
-        )}
-      </div>
+
+          <div style={{ ...card, marginBottom: 14 }}>
+            <div style={{ fontFamily: FONT_TITLE, fontSize: 16, fontWeight: 800, color: t.text, marginBottom: 14 }}>
+              Controle de Presença
+            </div>
+            {presencaFilterStaffIds.length === 0 ? (
+              <div
+                style={{
+                  padding: "40px 0",
+                  textAlign: "center",
+                  color: t.textMuted,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                }}
+              >
+                Selecione um colaborador na lista para ver o controle de presença do mês.
+              </div>
+            ) : (
+              <div className="app-table-wrap">
+                {loadingPontoMes ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 12,
+                      color: t.textMuted,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                    Atualizando registos de ponto…
+                  </div>
+                ) : null}
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "separate",
+                    borderSpacing: 0,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                  }}
+                >
+                  <caption style={{ display: "none" }}>
+                    Controle de presença por dia no mês selecionado
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                        Data
+                      </th>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                        Situação
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Entrada Escalada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Entrada Realizada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Saída Escalada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Saída Realizada
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Horas Escaladas
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Horas Realizadas
+                      </th>
+                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                        Status
+                      </th>
+                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diasDoMesPresenca.map((dia, i) => {
+                      const fid = presencaFilterStaffIds[0]!;
+                      const iso = toISO(dia);
+                      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+                      const pRow = prestadorPorId.get(fid);
+                      const slug = (pRow?.staff_operadora_slug ?? "").trim();
+                      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+                      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+                      const pt = mapaPontoPorDiaIso.get(iso);
+                      const entEsc = esc ? esc.entrada : "—";
+                      const saiEsc = esc ? esc.saida : "—";
+                      const entReal = horaRegistoSP(pt?.check_in_at);
+                      const saiReal = horaRegistoSP(pt?.check_out_at);
+                      const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
+                      const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
+                      const st = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+                      const situacao = situacaoGestaoEscalaParaDia(valorG);
+                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entReal);
+                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiReal);
+                      const horasRealDesvio = presencaDesvioHorasMaior5Min(
+                        entEsc,
+                        saiEsc,
+                        pt?.check_in_at ?? null,
+                        pt?.check_out_at ?? null,
+                      );
+                      const btnPresenca: CSSProperties = {
+                        padding: "4px 10px",
+                        borderRadius: 8,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      };
+                      const labelDiaAria = dia.toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      });
+                      return (
+                        <tr key={iso} style={{ background: zebraStripe(i) }}>
+                          <td style={getTdStyle(t)}>
+                            {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+                          </td>
+                          <td style={getTdStyle(t)}>{situacao}</td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entEsc}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {entReal}
+                          </td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiEsc}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {saiReal}
+                          </td>
+                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasEsc}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {horasReal}
+                          </td>
+                          <td style={getTdStyle(t)}>{st}</td>
+                          <td style={getTdStyle(t)}>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                                justifyContent: "flex-end",
+                              }}
+                            >
+                              <button type="button" style={btnPresenca} aria-label={`Aprovar presença — ${labelDiaAria}`}>
+                                Aprovar
+                              </button>
+                              <button type="button" style={btnPresenca} aria-label={`Editar presença — ${labelDiaAria}`}>
+                                Editar
+                              </button>
+                              <button type="button" style={btnPresenca} aria-label={`Histórico de presença — ${labelDiaAria}`}>
+                                Histórico
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {modalDia && (
         <ModalBase maxWidth={520} onClose={() => setModalDia(null)} zIndex={1100}>
           <ModalHeader title={tituloModalDiaPt(modalDia)} onClose={() => setModalDia(null)} />
-          <div
-            role="tablist"
-            aria-label="Conteúdo do dia"
-            style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: `1px solid ${t.cardBorder}`, paddingBottom: 10 }}
-          >
-            <button
-              type="button"
-              onClick={() => setModalDiaTab("compromissos")}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: modalDiaTab === "compromissos" ? 800 : 500,
-                color: modalDiaTab === "compromissos" ? brand.accent : t.textMuted,
-                background: modalDiaTab === "compromissos" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
-                boxShadow: modalDiaTab === "compromissos" ? `inset 0 -2px 0 ${brand.accent}` : "none",
-              }}
-              aria-selected={modalDiaTab === "compromissos"}
-              role="tab"
-              aria-controls="cal-modal-tab-compromissos"
-              id="cal-modal-tab-btn-compromissos"
-            >
-              Compromissos
-            </button>
-            <button
-              type="button"
-              onClick={() => setModalDiaTab("ofertas")}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: modalDiaTab === "ofertas" ? 800 : 500,
-                color: modalDiaTab === "ofertas" ? brand.accent : t.textMuted,
-                background: modalDiaTab === "ofertas" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
-                boxShadow: modalDiaTab === "ofertas" ? `inset 0 -2px 0 ${brand.accent}` : "none",
-              }}
-              aria-selected={modalDiaTab === "ofertas"}
-              role="tab"
-              aria-controls="cal-modal-tab-ofertas"
-              id="cal-modal-tab-btn-ofertas"
-            >
-              Ofertas
-            </button>
-          </div>
-
-          {modalDiaTab === "compromissos" ? (
-            <div id="cal-modal-tab-compromissos" role="tabpanel" aria-labelledby="cal-modal-tab-btn-compromissos">
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Reuniões</div>
-                {reunioesAgendaDoDia(toISO(modalDia)).length > 0 ? (
-                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                    {reunioesAgendaDoDia(toISO(modalDia)).map((x) => (
-                      <li key={x.id}>{x.titulo}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-                )}
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Treinamentos</div>
-                {treinamentosAgendaDoDia(toISO(modalDia)).length > 0 ? (
-                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                    {treinamentosAgendaDoDia(toISO(modalDia)).map((x) => (
-                      <li key={x.id}>{x.titulo}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-                )}
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Feedback</div>
-                {feedbackAgendaDoDia(toISO(modalDia)).length > 0 ? (
-                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                    {feedbackAgendaDoDia(toISO(modalDia)).map((x) => (
-                      <li key={x.id}>{x.titulo}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-                )}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Turnos</div>
-                {turnosAgendadosNoDia(modalDia).length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
-                    {turnosAgendadosNoDia(modalDia).map((comp) => (
-                      <EscalaCompromissoChip
-                        key={`${comp.prestadorId}-${comp.turno}`}
-                        comp={comp}
-                        subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
-                      />
-                    ))}
+          <div aria-label="Compromissos do dia">
+            {(() => {
+              const iso = toISO(modalDia);
+              const mostrarTipo = (ch: FiltroTipoCompromissoUi) =>
+                filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
+              const ev = eventosAgendaDoDia(iso);
+              const r = obterReunioesDiaIso(iso);
+              const tr = treinamentosAgendaDoDia(iso);
+              const fb = feedbackAgendaDoDia(iso);
+              const turnos = turnosAgendadosNoDia(modalDia);
+              const partes: { key: string; node: ReactNode }[] = [];
+              if (mostrarTipo("eventos") && ev.length > 0) {
+                partes.push({
+                  key: "eventos",
+                  node: (
+                    <div key="eventos" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Eventos
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {ev.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("reunioes") && r.length > 0) {
+                partes.push({
+                  key: "reunioes",
+                  node: (
+                    <div key="reunioes" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Reuniões
+                      </div>
+                      <div
+                        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                        role="list"
+                        aria-label="Reuniões agendadas para este dia"
+                      >
+                        {r.map((x) => {
+                          const det = x.reuniaoDetalhe;
+                          if (!det) {
+                            return (
+                              <div key={x.id} style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }} role="listitem">
+                                {x.titulo}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              key={x.id}
+                              role="listitem"
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                                padding: "10px 12px",
+                                borderRadius: 10,
+                                border: "1px solid rgba(245,158,11,0.35)",
+                                background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+                                <div style={{ fontSize: 13, color: t.text, lineHeight: 1.4, minWidth: 0 }}>
+                                  <span style={{ fontWeight: 800 }}>{det.solicitanteNome}</span>
+                                  <span style={{ fontWeight: 500, color: t.textMuted }}> — {det.comQuemLabel}</span>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: BRAND.azul, paddingLeft: 22 }}>{det.turno}</div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: t.text,
+                                  paddingLeft: 22,
+                                  lineHeight: 1.45,
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {det.motivo}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("treinamentos") && tr.length > 0) {
+                partes.push({
+                  key: "treinamentos",
+                  node: (
+                    <div key="treinamentos" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Treinamentos
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {tr.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("feedback") && fb.length > 0) {
+                partes.push({
+                  key: "feedback",
+                  node: (
+                    <div key="feedback" style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Feedback
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                        {fb.map((x) => (
+                          <li key={x.id}>{x.titulo}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ),
+                });
+              }
+              if (mostrarTipo("turnos") && turnos.length > 0) {
+                partes.push({
+                  key: "turnos",
+                  node: (
+                    <div key="turnos">
+                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
+                        Turnos
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
+                        {turnos.map((comp) => (
+                          <EscalaCompromissoChip
+                            key={`${comp.prestadorId}-${comp.turno}`}
+                            comp={comp}
+                            subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                });
+              }
+              if (partes.length === 0) {
+                return (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    Sem dados para o período selecionado.
                   </div>
-                ) : (
-                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div id="cal-modal-tab-ofertas" role="tabpanel" aria-labelledby="cal-modal-tab-btn-ofertas">
-              <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 12, fontFamily: FONT_TITLE }}>
-                Ofertas de Troca e Compra
-              </div>
-              {loadingAcoesOfertadasDia ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    color: t.textMuted,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                  Carregando…
-                </div>
-              ) : erroAcoesOfertadasDia ? (
-                <p style={{ margin: 0, fontSize: 13, color: "#e84025", fontFamily: FONT.body }} role="alert">
-                  {erroAcoesOfertadasDia}
-                </p>
-              ) : acoesOfertadasNoDia.length === 0 ? (
-                <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-              ) : (
-                <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc", fontFamily: FONT.body }}>
-                  {acoesOfertadasNoDia.map((row) => {
-                    const labelTipo =
-                      RH_CALENDARIO_ACAO_LABEL[row.tipo_acao as RhCalendarioAcaoTipo] ?? row.tipo_acao;
-                    const detalhe = textoResumoPayloadAcaoCalendario(row.tipo_acao, row.payload);
-                    return (
-                      <li key={row.id} style={{ marginBottom: 12, color: t.text, fontSize: 13 }}>
-                        <div style={{ fontWeight: 700 }}>{(row.solicitante_nome ?? "").trim() || "—"}</div>
-                        <div style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>
-                          {labelTipo}
-                          {" · "}
-                          {row.status}
-                        </div>
-                        {detalhe ? (
-                          <div style={{ fontSize: 12, marginTop: 4, color: t.text }}>{detalhe}</div>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
+                );
+              }
+              return <>{partes.map((p) => p.node)}</>;
+            })()}
+          </div>
         </ModalBase>
       )}
 
-      {modalAcaoAberto &&
-        (soPropriosCal && meuRhFuncionarioId && prestadores[0] ? (
-          <ModalAcaoCalendario
-            open={modalAcaoAberto}
-            onClose={() => setModalAcaoAberto(false)}
-            t={t}
-            brand={brand}
-            refMes={current}
-            meuFuncionario={prestadores[0]}
-            meuFuncionarioId={meuRhFuncionarioId}
-            gradeValorPorDiaIso={gradeValorPorDiaIso}
-            operadoraTurnos={(() => {
-              const slug = (prestadores[0]?.staff_operadora_slug ?? "").trim();
-              return slug ? mapOpTurnos.get(slug) ?? null : null;
-            })()}
-          />
-        ) : (
-          <ModalBase maxWidth={440} onClose={() => setModalAcaoAberto(false)} zIndex={1150}>
-            <ModalHeader title="Ação" onClose={() => setModalAcaoAberto(false)} />
-            <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
-              As ações do calendário (venda de folga ou turno, trocas e agendamento de reunião) estão disponíveis na vista do seu próprio calendário enquanto prestador.
-            </p>
-          </ModalBase>
-        ))}
+      {modalAgendarAberto && solicitanteAgendarId ? (
+        <ModalAgendarReuniaoCalendario
+          open
+          onClose={() => setModalAgendarAberto(false)}
+          onAgendado={() => {
+            setReunioesMesTick((x) => x + 1);
+          }}
+          t={t}
+          brand={brand}
+          refMesIso={refMesPrimeiroDiaISO(current)}
+          solicitanteFuncionarioId={solicitanteAgendarId}
+          diasEscalados={diasEscaladosAgendarMes}
+        />
+      ) : null}
+
+      {pontoMsgModal ? (
+        <ModalBase maxWidth={440} onClose={() => setPontoMsgModal(null)} zIndex={1200}>
+          <ModalHeader title="Check-in / Check-out" onClose={() => setPontoMsgModal(null)} />
+          <p style={{ margin: 0, color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
+            {pontoMsgModal}
+          </p>
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              onClick={() => setPontoMsgModal(null)}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 10,
+                border: "none",
+                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
+                color: "#fff",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </ModalBase>
+      ) : null}
     </div>
   );
 }

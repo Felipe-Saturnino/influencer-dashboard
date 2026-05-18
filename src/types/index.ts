@@ -60,6 +60,8 @@ export type PageKey =
   | "rh_gestao_escala"
   | "rh_staff"
   | "rh_calendario"
+  | "escala_marketplace_turnos"
+  | "escala_solicitacoes"
   | "rh_central_denuncias"
   | "rh_portal"
   | "configuracoes"

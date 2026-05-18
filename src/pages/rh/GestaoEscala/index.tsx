@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
+import { Building2, Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -163,6 +163,8 @@ type RpcPrestadorEscala = {
   org_time_id: string | null;
   nome_time: string;
   staff_nickname: string | null;
+  /** Slug da operadora na Staff (Gestão de Prestadores); vazio = sem operadora. */
+  staff_operadora_slug?: string | null;
 };
 
 type AreaEscalaKey =
@@ -242,6 +244,15 @@ function labelAreaEscala(area: AreaEscalaKey): string {
 
 function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPrestadorEscala[] {
   return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
+}
+
+/** Filtro global por operadora da Staff (`todas` | `nenhuma` | slug ativo). */
+function filtrarPrestadoresPorOperadora(rows: RpcPrestadorEscala[], filtroOperadora: string): RpcPrestadorEscala[] {
+  if (filtroOperadora === "todas") return rows;
+  if (filtroOperadora === "nenhuma") {
+    return rows.filter((p) => !(p.staff_operadora_slug ?? "").trim());
+  }
+  return rows.filter((p) => (p.staff_operadora_slug ?? "").trim() === filtroOperadora);
 }
 
 function contarCelulasComSigla(
@@ -467,6 +478,10 @@ export default function RhGestaoEscalaPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  /** Operadoras ativas (Gestão de Operadoras) para o select ao lado do período. */
+  const [operadorasAtivasEscala, setOperadorasAtivasEscala] = useState<{ slug: string; nome: string }[]>([]);
+  /** `todas` | `nenhuma` | slug da operadora. */
+  const [filtroOperadoraEscala, setFiltroOperadoraEscala] = useState<string>("todas");
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
@@ -508,6 +523,30 @@ export default function RhGestaoEscalaPage() {
     if (perm.loading || perm.canView === "nao") return;
     void carregarPrestadores();
   }, [perm.loading, perm.canView, carregarPrestadores]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    void supabase
+      .from("operadoras")
+      .select("slug, nome, ativo")
+      .eq("ativo", true)
+      .order("nome", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          setOperadorasAtivasEscala([]);
+          return;
+        }
+        const rows = (data ?? []) as { slug: string; nome: string; ativo?: boolean }[];
+        setOperadorasAtivasEscala(
+          rows.filter((o) => o.ativo).map((o) => ({ slug: o.slug, nome: (o.nome ?? "").trim() || o.slug })),
+        );
+      });
+  }, [perm.loading, perm.canView]);
+
+  const prestadoresFiltradosOperadora = useMemo(
+    () => filtrarPrestadoresPorOperadora(prestadoresRaw, filtroOperadoraEscala),
+    [prestadoresRaw, filtroOperadoraEscala],
+  );
 
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
   const tituloMes = useMemo(() => labelMesAno(ano, mes), [ano, mes]);
@@ -712,8 +751,8 @@ export default function RhGestaoEscalaPage() {
   );
 
   const linhas = useMemo(() => {
-    return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
-  }, [prestadoresRaw, filtroArea]);
+    return filtrarPorArea(prestadoresFiltradosOperadora, filtroArea).map(mapLinhaPrestador);
+  }, [prestadoresFiltradosOperadora, filtroArea]);
 
   const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim().toLowerCase();
@@ -727,8 +766,8 @@ export default function RhGestaoEscalaPage() {
   }, [linhasAposNickname, filtroTurnoConsolidado]);
 
   const linhasPorFiltroGerar = useCallback(
-    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador),
-    [prestadoresRaw],
+    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosOperadora, areaKey).map(mapLinhaPrestador),
+    [prestadoresFiltradosOperadora],
   );
 
   /**
@@ -1060,7 +1099,7 @@ export default function RhGestaoEscalaPage() {
 
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
-    const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
+    const linhasF = filtrarPorArea(prestadoresFiltradosOperadora, filtroArea).map(mapLinhaPrestador);
     const celulas = gerarPorFiltro[filtroArea]?.celulas;
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
@@ -1094,7 +1133,7 @@ export default function RhGestaoEscalaPage() {
       temLinhaComercialConsolidado,
       temLinhaTardeConsolidado,
     };
-  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosOperadora, dias, gerarPorFiltro]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     const est = gerarPorFiltro[filtroArea];
@@ -1201,49 +1240,109 @@ export default function RhGestaoEscalaPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 12,
+              gap: 16,
               flexWrap: "wrap",
               marginBottom: 0,
+              width: "100%",
             }}
           >
-            <button
-              type="button"
-              onClick={mesAnterior}
-              disabled={!podeMesAnterior}
-              aria-label="Mês anterior"
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={mesAnterior}
+                disabled={!podeMesAnterior}
+                aria-label="Mês anterior"
+                style={{
+                  ...btnNavStyle,
+                  opacity: podeMesAnterior ? 1 : 0.35,
+                  cursor: podeMesAnterior ? "pointer" : "not-allowed",
+                }}
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </button>
+              <span
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: t.text,
+                  fontFamily: FONT_TITLE,
+                  minWidth: 200,
+                  textAlign: "center",
+                }}
+              >
+                {tituloMes}
+              </span>
+              <button
+                type="button"
+                onClick={mesSeguinte}
+                disabled={!podeMesSeguinte}
+                aria-label="Próximo mês"
+                style={{
+                  ...btnNavStyle,
+                  opacity: podeMesSeguinte ? 1 : 0.35,
+                  cursor: podeMesSeguinte ? "pointer" : "not-allowed",
+                }}
+              >
+                <ChevronRight size={14} aria-hidden />
+              </button>
+            </div>
+            <div
               style={{
-                ...btnNavStyle,
-                opacity: podeMesAnterior ? 1 : 0.35,
-                cursor: podeMesAnterior ? "pointer" : "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                minWidth: 0,
               }}
             >
-              <ChevronLeft size={14} aria-hidden />
-            </button>
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT_TITLE,
-                minWidth: 200,
-                textAlign: "center",
-              }}
-            >
-              {tituloMes}
-            </span>
-            <button
-              type="button"
-              onClick={mesSeguinte}
-              disabled={!podeMesSeguinte}
-              aria-label="Próximo mês"
-              style={{
-                ...btnNavStyle,
-                opacity: podeMesSeguinte ? 1 : 0.35,
-                cursor: podeMesSeguinte ? "pointer" : "not-allowed",
-              }}
-            >
-              <ChevronRight size={14} aria-hidden />
-            </button>
+              <Building2 size={14} aria-hidden="true" style={{ color: t.textMuted, flexShrink: 0 }} />
+              <label
+                htmlFor="rh-gestao-escala-filtro-operadora"
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Operadora
+              </label>
+              <select
+                id="rh-gestao-escala-filtro-operadora"
+                aria-label="Filtrar por operadora da Staff"
+                value={filtroOperadoraEscala}
+                onChange={(e) => setFiltroOperadoraEscala(e.target.value)}
+                style={{
+                  minWidth: 160,
+                  maxWidth: 280,
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${filtroOperadoraEscala !== "todas" ? brand.accent : t.cardBorder}`,
+                  background:
+                    filtroOperadoraEscala !== "todas"
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+                        : "rgba(124,58,237,0.09)"
+                      : (t.inputBg ?? t.cardBg ?? "transparent"),
+                  color: filtroOperadoraEscala !== "todas" ? brand.accent : t.text,
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: filtroOperadoraEscala !== "todas" ? 700 : 500,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="todas">Todas</option>
+                <option value="nenhuma">Nenhuma</option>
+                {[...operadorasAtivasEscala]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>
+                      {o.nome}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           {mostrarFiltroArea ? (

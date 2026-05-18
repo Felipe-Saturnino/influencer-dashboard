@@ -28,12 +28,17 @@ import {
   GiThreeFriends,
   GiFiles,
   GiNewspaper,
+  GiShoppingCart,
 } from "react-icons/gi";
 import { createElement } from "react";
-import { CalendarRange, Network, Radio, Scale, Users } from "lucide-react";
+import { CalendarRange, ClipboardList, Network, Radio, Scale, Users } from "lucide-react";
 
 function IconRhCalendarioMenu({ size = 15, color }: { size?: number; color?: string }) {
   return createElement(CalendarRange, { size, color, "aria-hidden": true });
+}
+
+function IconEscalaSolicitacoesMenu({ size = 15, color }: { size?: number; color?: string }) {
+  return createElement(ClipboardList, { size, color, "aria-hidden": true });
 }
 
 function IconSpinNaRedeMenu({ size = 15, color }: { size?: number; color?: string }) {
@@ -63,7 +68,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Estúdio, RH, Conteúdo, Plataforma. A secção "Financeiro" fica reservada no produto para páginas futuras — não entra no menu. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Estúdio, Escala, RH, Conteúdo, Plataforma. A secção "Financeiro" fica reservada no produto para páginas futuras — não entra no menu. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -115,15 +120,22 @@ export const MENU: MenuSection[] = [
     ],
   },
   {
+    section: "Escala",
+    items: [
+      { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
+      { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
+      { key: "rh_calendario", label: "Calendário", icon: IconRhCalendarioMenu },
+      { key: "escala_marketplace_turnos", label: "Marketplace", icon: GiShoppingCart },
+      { key: "escala_solicitacoes", label: "Solicitações", icon: IconEscalaSolicitacoesMenu },
+    ],
+  },
+  {
     section: "RH",
     items: [
       { key: "rh_funcionarios", label: "Gestão de Prestadores", icon: GiPerson },
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: GiFiles },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
       { key: "rh_vagas", label: "Vagas", icon: GiBriefcase },
-      { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
-      { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
-      { key: "rh_calendario", label: "Calendário", icon: IconRhCalendarioMenu },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: IconRhCentralDenunciasMenu },
     ],
   },

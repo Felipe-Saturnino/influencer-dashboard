@@ -31,3 +31,43 @@ export async function buscarRhFuncionarioIdsPorEmailLogin(emailRaw: string | nul
   const filtered = filtraFuncionariosParaLoginEmail([...map.values()], emailLc).filter((r) => r.status !== "encerrado");
   return [...new Set(filtered.map((r) => r.id))];
 }
+
+/**
+ * Primeiro `rh_funcionarios` ativo/indisponível alinhado ao e-mail de login (e-mail ou e-mail Spin).
+ * Mesma lógica da vista «Próprios» do Calendário RH.
+ */
+export async function buscarRhFuncionarioAtivoPorEmailLogin(emailBruto: string): Promise<RhFuncionario | null> {
+  const em = emailBruto.trim();
+  if (!em) return null;
+  const el = em.toLowerCase();
+  const { data: porEmailEq } = await supabase
+    .from("rh_funcionarios")
+    .select("*")
+    .eq("email", em)
+    .in("status", ["ativo", "indisponivel"])
+    .maybeSingle();
+  let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
+  if (!row) {
+    const { data: porSpinEq } = await supabase
+      .from("rh_funcionarios")
+      .select("*")
+      .eq("email_spin", em)
+      .in("status", ["ativo", "indisponivel"])
+      .maybeSingle();
+    row = (porSpinEq as RhFuncionario | null) ?? null;
+  }
+  if (!row) {
+    const { data: cand } = await supabase
+      .from("rh_funcionarios")
+      .select("*")
+      .in("status", ["ativo", "indisponivel"])
+      .limit(80);
+    row =
+      (cand as RhFuncionario[] | undefined)?.find(
+        (p) =>
+          (p.email ?? "").trim().toLowerCase() === el ||
+          (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
+      ) ?? null;
+  }
+  return row;
+}

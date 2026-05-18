@@ -685,7 +685,7 @@ function buildRhFuncionarioPayloadFromState(
     status: statusPrestador,
     nome: form.nome.trim(),
     rg: form.rg.trim(),
-    cpf: cadastroMinimoNovo && cpfDigits.length === 0 ? null : cpfDigits,
+    cpf: cpfDigits.length === 0 ? null : cpfDigits,
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
     email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
@@ -730,6 +730,30 @@ function buildRhFuncionarioPayloadFromState(
     pix: pixV,
     observacao_rh: form.observacao_rh.trim() || null,
   };
+}
+
+/** Insert/update em `rh_funcionarios`: mensagens amigáveis sem confundir outras violações de unicidade com CPF. */
+function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string; details?: string }): string {
+  const raw = error.message ?? "";
+  const det = typeof error.details === "string" ? error.details : "";
+  const lower = `${raw} ${det}`.toLowerCase();
+
+  if (error.code === "23514" && lower.includes("rh_funcionarios_cpf_digits")) {
+    return "CPF Inválido";
+  }
+
+  const duplicidadeCpf =
+    error.code === "23505" &&
+    (lower.includes("rh_funcionarios_cpf_unique") ||
+      lower.includes("key (cpf)") ||
+      (lower.includes("duplicate") && lower.includes("cpf")));
+  if (duplicidadeCpf) {
+    return "Já existe um funcionário cadastrado com este CPF.";
+  }
+
+  if (raw.trim()) return raw;
+  if (det.trim()) return det;
+  return "Erro ao salvar.";
 }
 
 function RhFuncModalHeaderDetalhes({
@@ -1508,7 +1532,7 @@ export default function RhPrestadoresPage() {
     const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
     const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
 
-    /** Novo ou editar: mesmo conjunto obrigatório (nome, e-mail + aba Dados de contratação); demais opcionais. */
+    /** Novo ou editar: nome, e-mail, CPF (âncora de duplicidade), aba Dados de contratação; demais conforme regras. */
     if (modalForm === "novo" || modalForm === "editar") {
       req("nome", "Nome completo", form.nome);
       req("email", "E-mail", form.email);
@@ -1527,8 +1551,9 @@ export default function RhPrestadoresPage() {
       else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
 
       const cpfD = somenteDigitos(form.cpf);
-      if (cpfD.length > 0 && cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
-      else if (cpfD.length === 11 && !validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
+      if (cpfD.length === 0) e.cpf = "CPF é obrigatório.";
+      else if (cpfD.length !== 11) e.cpf = "CPF Inválido";
+      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF Inválido";
 
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
@@ -1614,11 +1639,7 @@ export default function RhPrestadoresPage() {
       const { data: criado, error } = await supabase.from("rh_funcionarios").insert(payload).select("*").single();
       setSalvando(false);
       if (error) {
-        if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
-          setErroGlobal("Já existe um funcionário cadastrado com este CPF.");
-        } else {
-          setErroGlobal(error.message);
-        }
+        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
         return;
       }
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
@@ -1653,7 +1674,7 @@ export default function RhPrestadoresPage() {
       const atual = lista.find((x) => x.id === editId);
       const payloadEdit = montarPayload(atual?.status ?? "ativo");
       const salarioFinal = podeVerDadosSensiveis ? payloadEdit.salario : (atual?.salario ?? 0);
-      const mesclado =
+      let mesclado =
         !podeVerDadosSensiveis && atual
           ? {
               ...payloadEdit,
@@ -1667,14 +1688,16 @@ export default function RhPrestadoresPage() {
               pix: atual.pix,
             }
           : { ...payloadEdit, salario: salarioFinal };
+      /** Não reenviar CPF idêntico no UPDATE: âncora de duplicidade aplica-se ao insert (Novo); evita ruído com índice único. */
+      if (atual && somenteDigitos(form.cpf) === somenteDigitos(atual.cpf ?? "")) {
+        const { cpf: _omitCpf, ...semCpf } = mesclado;
+        void _omitCpf;
+        mesclado = semCpf as typeof mesclado;
+      }
       const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
       setSalvando(false);
       if (error) {
-        if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
-          setErroGlobal("Já existe um funcionário cadastrado com este CPF.");
-        } else {
-          setErroGlobal(error.message);
-        }
+        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
         return;
       }
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
@@ -1963,7 +1986,7 @@ export default function RhPrestadoresPage() {
           }
           const rowAntes = lista.find((x) => x.id === fid) ?? acaoModalRow;
           const base = buildRhFuncionarioPayloadFromState(acaoForm, "ativo", podeVerDadosSensiveis);
-          const mesclado =
+          let mesclado =
             !podeVerDadosSensiveis && acaoModalRow
               ? {
                   ...base,
@@ -1974,6 +1997,11 @@ export default function RhPrestadoresPage() {
                   pix: acaoModalRow.pix,
                 }
               : base;
+          if (somenteDigitos(acaoForm.cpf) === somenteDigitos(rowAntes.cpf ?? "")) {
+            const { cpf: _omitCpfAcao, ...semCpfAcao } = mesclado;
+            void _omitCpfAcao;
+            mesclado = semCpfAcao as typeof mesclado;
+          }
           const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
           const depois = sliceContratacaoDeForm(acaoForm);
           const diffContrato = diffContratacaoSlices(antes, depois, opcoesVinculoFlat, opcoesTimes, fmtSal);
@@ -2033,9 +2061,12 @@ export default function RhPrestadoresPage() {
     } catch (e: unknown) {
       let msg = "Erro ao salvar.";
       if (e && typeof e === "object") {
-        const o = e as { message?: unknown; details?: unknown };
-        if (typeof o.message === "string" && o.message.trim()) msg = o.message;
-        else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
+        const o = e as { message?: string; code?: string; details?: string };
+        if (typeof o.message === "string" && o.message.trim()) {
+          msg = mensagemErroSupabaseRhFuncionarioSalvar(o);
+        } else if (typeof o.details === "string" && o.details.trim()) {
+          msg = mensagemErroSupabaseRhFuncionarioSalvar({ message: o.details, code: o.code, details: o.details });
+        }
       }
       setErroGlobal(msg);
     } finally {
@@ -2990,7 +3021,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-cpf", "CPF", false)}
+                  {lblReqCad("f-cpf", "CPF")}
                   <input
                     id="f-cpf"
                     disabled={desabilitarCampos || cpfCampoTravadoEdicao}

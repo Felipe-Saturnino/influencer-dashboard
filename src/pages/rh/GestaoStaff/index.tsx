@@ -15,7 +15,11 @@ import {
 } from "../../../lib/rhGamePresenterDealerSync";
 import type { DealerGenero } from "../../../types";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
+import {
+  opcoesTurnoPorEscalaRh,
+  turnoRhCoerenteComEscala,
+  turnoStaffEhComercial5x2,
+} from "../../../lib/rhEscalaTurnos";
 import {
   escalaComHorarioTurnoSomenteOperadora,
   escalaUsaHorarioTurnoEditavel,
@@ -28,6 +32,7 @@ import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
@@ -126,6 +131,32 @@ function skillsParaJson(s: Record<StaffSkillKey, StaffSkillStatus>): Record<stri
 
 function stringifySkills(s: Record<StaffSkillKey, StaffSkillStatus>): string {
   return JSON.stringify(skillsParaJson(s));
+}
+
+const FILTRO_STAFF_OPERADORA_TODAS = "todas";
+const FILTRO_STAFF_OPERADORA_NENHUMA = "nenhuma";
+
+type FiltroTurnoStaffTabela = "todos" | "nenhum" | "manha" | "tarde" | "noite" | "comercial";
+
+function staffRowPassaFiltroOperadora(row: RhFuncionario, filtro: string): boolean {
+  if (filtro === FILTRO_STAFF_OPERADORA_TODAS) return true;
+  const slug = (row.staff_operadora_slug ?? "").trim();
+  if (filtro === FILTRO_STAFF_OPERADORA_NENHUMA) return !slug;
+  return slug === filtro;
+}
+
+function staffRowPassaFiltroTurno(row: RhFuncionario, filtro: FiltroTurnoStaffTabela): boolean {
+  if (filtro === "todos") return true;
+  const eff = turnoRhCoerenteComEscala(row.escala, row.staff_turno).trim();
+  const raw = (row.staff_turno ?? "").trim();
+  if (filtro === "nenhum") {
+    return eff === "" && !turnoStaffEhComercial5x2(raw);
+  }
+  if (filtro === "manha") return eff === "Manhã";
+  if (filtro === "tarde") return eff === "Tarde";
+  if (filtro === "noite") return eff === "Noite";
+  if (filtro === "comercial") return turnoStaffEhComercial5x2(eff) || turnoStaffEhComercial5x2(raw);
+  return true;
 }
 
 /** Títulos no histórico: novos saves já usam nome curto; entradas antigas são normalizadas na leitura. */
@@ -428,6 +459,8 @@ export default function RhGestaoStaffPage() {
   const [todosTimes, setTodosTimes] = useState(true);
   const [idxTime, setIdxTime] = useState(0);
   const [buscaNomeNickname, setBuscaNomeNickname] = useState("");
+  const [filtroOperadoraStaff, setFiltroOperadoraStaff] = useState(FILTRO_STAFF_OPERADORA_TODAS);
+  const [filtroTurnoStaff, setFiltroTurnoStaff] = useState<FiltroTurnoStaffTabela>("todos");
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
@@ -486,6 +519,14 @@ export default function RhGestaoStaffPage() {
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
   const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
 
+  const operadorasFiltroOpts = useMemo(
+    () =>
+      Object.entries(operadorasNome)
+        .map(([slug, nome]) => ({ slug, nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [operadorasNome],
+  );
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     if (timeIds.length === 0) {
@@ -500,6 +541,11 @@ export default function RhGestaoStaffPage() {
     if (times.length === 0) return;
     if (idxTime >= times.length) setIdxTime(0);
   }, [times.length, idxTime]);
+
+  useEffect(() => {
+    if (filtroOperadoraStaff === FILTRO_STAFF_OPERADORA_TODAS || filtroOperadoraStaff === FILTRO_STAFF_OPERADORA_NENHUMA) return;
+    if (!operadorasNome[filtroOperadoraStaff]) setFiltroOperadoraStaff(FILTRO_STAFF_OPERADORA_TODAS);
+  }, [filtroOperadoraStaff, operadorasNome]);
 
   const linhasTabela = useMemo(() => {
     if (times.length === 0) return [];
@@ -517,8 +563,19 @@ export default function RhGestaoStaffPage() {
         return nome.includes(q) || nick.includes(q);
       });
     }
+    rows = rows.filter((p) => staffRowPassaFiltroOperadora(p, filtroOperadoraStaff));
+    rows = rows.filter((p) => staffRowPassaFiltroTurno(p, filtroTurnoStaff));
     return rows;
-  }, [prestadores, times, todosTimes, idxTime, timeIds, buscaNomeNickname]);
+  }, [
+    prestadores,
+    times,
+    todosTimes,
+    idxTime,
+    timeIds,
+    buscaNomeNickname,
+    filtroOperadoraStaff,
+    filtroTurnoStaff,
+  ]);
 
   const nomePorTimeId = useMemo(() => {
     const m = new Map<string, string>();
@@ -817,37 +874,110 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <label
-              htmlFor="staff-busca-nome-nick"
-              style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}
+            <p
+              id="staff-filtros-legenda"
+              style={{
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 600,
+                color: t.textMuted,
+                margin: "0 0 10px",
+                fontFamily: FONT.body,
+              }}
             >
-              Pesquisar prestador
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
-              <input
-                id="staff-busca-nome-nick"
-                type="search"
-                value={buscaNomeNickname}
-                onChange={(e) => setBuscaNomeNickname(e.target.value)}
-                placeholder="Nome ou nickname"
-                autoComplete="off"
-                aria-label="Pesquisar por nome ou nickname"
+              Pesquisar / Operadora / Turno
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+              <div
+                role="group"
+                aria-labelledby="staff-filtros-legenda"
                 style={{
-                  flex: 1,
-                  minWidth: 0,
-                  maxWidth: 420,
-                  boxSizing: "border-box",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  outline: "none",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                  rowGap: 14,
+                  maxWidth: "100%",
                 }}
-              />
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
+                  <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
+                  <input
+                    id="staff-busca-nome-nick"
+                    type="search"
+                    value={buscaNomeNickname}
+                    onChange={(e) => setBuscaNomeNickname(e.target.value)}
+                    placeholder="Nome ou nickname"
+                    autoComplete="off"
+                    aria-label="Pesquisar por nome ou nickname"
+                    style={{
+                      width: "clamp(200px, 50vw, 320px)",
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
+                  <select
+                    id="staff-filtro-operadora"
+                    aria-label="Filtrar por operadora"
+                    value={filtroOperadoraStaff}
+                    onChange={(e) => setFiltroOperadoraStaff(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <option value={FILTRO_STAFF_OPERADORA_TODAS}>Todas</option>
+                    <option value={FILTRO_STAFF_OPERADORA_NENHUMA}>Nenhuma</option>
+                    {operadorasFiltroOpts.map((o) => (
+                      <option key={o.slug} value={o.slug}>
+                        {o.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
+                  <select
+                    id="staff-filtro-turno"
+                    aria-label="Filtrar por turno"
+                    value={filtroTurnoStaff}
+                    onChange={(e) => setFiltroTurnoStaff(e.target.value as FiltroTurnoStaffTabela)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="nenhum">Nenhum</option>
+                    <option value="manha">Manhã</option>
+                    <option value="tarde">Tarde</option>
+                    <option value="noite">Noite</option>
+                    <option value="comercial">Comercial</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1238,6 +1368,7 @@ function ModalStaffVer({
         <div role="tabpanel">
           <CampoLeitura k="Nome" v={row.nome} t={t} />
           <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
+          <CampoLeitura k="Data de início" v={fmtDataIsoPtBr(row.data_inicio)} t={t} />
           <CampoLeitura k="Telefone" v={row.telefone} t={t} />
           <CampoLeitura k="E-mail" v={row.email} t={t} />
           <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />

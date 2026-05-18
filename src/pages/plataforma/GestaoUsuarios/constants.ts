@@ -96,14 +96,24 @@ export const PAGES: {
   },
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Escala
+  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: false, hasExcluir: false },
+  {
+    key: "escala_marketplace_turnos",
+    label: "Marketplace",
+    secao: "Escala",
+    hasCriar: true,
+    hasEditar: true,
+    hasExcluir: false,
+  },
+  { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   // RH
   { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "rh_staff", label: "Gestão de Staff", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "rh_calendario", label: "Calendário", secao: "RH", hasCriar: false, hasEditar: false, hasExcluir: false },
   {
     key: "rh_central_denuncias",
     label: "Central de Denúncias",

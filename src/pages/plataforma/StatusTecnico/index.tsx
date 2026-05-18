@@ -6,7 +6,9 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
-import { CheckCircle2, AlertTriangle, XCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, RefreshCw, Plus, Trash2, Network, AlertCircle } from "lucide-react";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
@@ -116,8 +118,15 @@ interface FluxoDia {
   total: number;
 }
 
+interface PrestadorPontoCidrRow {
+  id: string;
+  cidr: string;
+  rotulo: string | null;
+  created_at: string;
+}
+
 export default function StatusTecnico() {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const dashBrand = useDashboardBrand();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
@@ -147,6 +156,15 @@ export default function StatusTecnico() {
   const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
     typeof window !== "undefined" && window.innerWidth < 480,
   );
+  const [cidrRows, setCidrRows] = useState<PrestadorPontoCidrRow[]>([]);
+  const [modalCidrAdicionar, setModalCidrAdicionar] = useState(false);
+  const [novoCidr, setNovoCidr] = useState("");
+  const [novoRotuloCidr, setNovoRotuloCidr] = useState("");
+  const [cidrSalvando, setCidrSalvando] = useState(false);
+  const [cidrErroForm, setCidrErroForm] = useState<string | null>(null);
+  const [cidrExcluir, setCidrExcluir] = useState<PrestadorPontoCidrRow | null>(null);
+  const [cidrExcluindo, setCidrExcluindo] = useState(false);
+  const [cidrErroExcluir, setCidrErroExcluir] = useState<string | null>(null);
   const card: React.CSSProperties = {
     background: t.cardBg,
     borderRadius: 16,
@@ -291,6 +309,13 @@ export default function StatusTecnico() {
       });
     setFluxoDados(fluxoArray);
 
+    const { data: cidrData, error: cidrErr } = await supabase
+      .from("prestador_ponto_cidr_allowlist")
+      .select("id, cidr, rotulo, created_at")
+      .order("created_at", { ascending: true });
+    if (cidrErr) setCidrRows([]);
+    else setCidrRows((cidrData ?? []) as PrestadorPontoCidrRow[]);
+
     setLoading(false);
   }, []);
 
@@ -298,7 +323,7 @@ export default function StatusTecnico() {
     carregar();
     const interval = setInterval(carregar, 60000); // refresh a cada 1 min
     return () => clearInterval(interval);
-  }, [carregar]);
+  }, [carregar, perm.canView]);
 
   useEffect(() => {
     if (confirmarSync == null && confirmarEmail == null) return;
@@ -992,6 +1017,7 @@ export default function StatusTecnico() {
     fontFamily: FONT.body, cursor: disabled ? "not-allowed" : "pointer",
     display: "inline-flex", alignItems: "center", gap: 6,
   });
+  const mostrarColunaAcao = perm.canEditarOk;
   const formatarHora = (iso: string) => {
     const d = new Date(iso);
     const hoje = new Date();
@@ -999,6 +1025,51 @@ export default function StatusTecnico() {
       return `Hoje ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
     }
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  };
+
+  const salvarCidrAllowlist = async () => {
+    setCidrErroForm(null);
+    const c = novoCidr.trim();
+    if (!c) {
+      setCidrErroForm("Informe o prefixo CIDR.");
+      return;
+    }
+    if (!perm.canEditarOk) return;
+    setCidrSalvando(true);
+    try {
+      const { error } = await supabase.from("prestador_ponto_cidr_allowlist").insert({
+        cidr: c,
+        rotulo: novoRotuloCidr.trim() || null,
+        created_by: user?.id ?? null,
+      });
+      if (error) {
+        setCidrErroForm(error.message.includes("cidr") ? "CIDR inválido ou duplicado." : "Não foi possível guardar.");
+        return;
+      }
+      setModalCidrAdicionar(false);
+      setNovoCidr("");
+      setNovoRotuloCidr("");
+      await carregar();
+    } finally {
+      setCidrSalvando(false);
+    }
+  };
+
+  const excluirCidrConfirmado = async () => {
+    if (!cidrExcluir || !perm.canEditarOk) return;
+    setCidrExcluindo(true);
+    setCidrErroExcluir(null);
+    try {
+      const { error } = await supabase.from("prestador_ponto_cidr_allowlist").delete().eq("id", cidrExcluir.id);
+      if (error) {
+        setCidrErroExcluir("Não foi possível remover.");
+        return;
+      }
+      setCidrExcluir(null);
+      await carregar();
+    } finally {
+      setCidrExcluindo(false);
+    }
   };
 
   if (perm.canView === "nao") {
@@ -1109,8 +1180,8 @@ export default function StatusTecnico() {
             }}>
               <thead>
                 <tr>
-                  {["Integração", "Último Sync", "Registros Hoje", "Erros", "Status", "Ação"].map((h, i) => (
-                    <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "left" }}>{h}</th>
+                  {["Integração", "Último Sync", "Registros Hoje", "Erros", "Status", ...(mostrarColunaAcao ? ["Ação"] : [])].map((h) => (
+                    <th key={h} style={{ ...thStyle, textAlign: "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1157,6 +1228,7 @@ export default function StatusTecnico() {
                           </span>
                         )}
                       </td>
+                      {mostrarColunaAcao && (
                       <td style={tdStyle}>
                         {(isCda || isSocial || isSpinRss) && (
                           <button
@@ -1191,6 +1263,7 @@ export default function StatusTecnico() {
                           </button>
                         )}
                       </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1428,6 +1501,129 @@ export default function StatusTecnico() {
         })()}
       </div>
 
+      {/* Redes permitidas — check-in de prestadores */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: dashBrand.primaryIconBg,
+              border: dashBrand.primaryIconBorder,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: dashBrand.primaryIconColor, flexShrink: 0,
+            }}>
+              <Network size={14} aria-hidden="true" />
+            </span>
+            <span style={{
+              fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE,
+              letterSpacing: "0.05em", textTransform: "uppercase",
+            }}>
+              Redes permitidas — check-in de prestadores
+            </span>
+          </div>
+          {perm.canEditarOk && (
+            <button
+              type="button"
+              onClick={() => {
+                setCidrErroForm(null);
+                setNovoCidr("");
+                setNovoRotuloCidr("");
+                setModalCidrAdicionar(true);
+              }}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+              }}
+              aria-label="Adicionar prefixo CIDR"
+            >
+              <Plus size={16} aria-hidden="true" strokeWidth={2.5} />
+              Adicionar
+            </button>
+          )}
+        </div>
+        {loading ? (
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+        ) : cidrRows.length === 0 ? (
+          <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
+            Nenhum prefixo configurado. O Check-in/Check-out de prestadores fica bloqueado até existir pelo menos um CIDR.
+          </p>
+        ) : (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+            {cidrRows.map((row) => (
+              <li
+                key={row.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <code style={{
+                    fontFamily: FONT.body,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: t.text,
+                    wordBreak: "break-all",
+                  }}>
+                    {String(row.cidr)}
+                  </code>
+                  {row.rotulo?.trim() ? (
+                    <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginTop: 4 }}>
+                      {row.rotulo}
+                    </div>
+                  ) : null}
+                </div>
+                {perm.canEditarOk && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCidrErroExcluir(null);
+                      setCidrExcluir(row);
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${BRAND.vermelho}55`,
+                      background: `${BRAND.vermelho}14`,
+                      color: BRAND.vermelho,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 0,
+                    }}
+                    aria-label={`Remover prefixo ${String(row.cidr)}`}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Excluir
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* Configuração de Alertas */}
       <div style={card}>
         <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
@@ -1616,6 +1812,167 @@ export default function StatusTecnico() {
             </div>
           </div>
         </div>
+      )}
+
+      {modalCidrAdicionar && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="status-tecnico-cidr-add-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2050,
+            padding: 20,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !cidrSalvando) setModalCidrAdicionar(false);
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 440,
+              width: "100%",
+              maxHeight: "90dvh",
+              overflowY: "auto",
+            }}
+          >
+            <h2 id="status-tecnico-cidr-add-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
+              Adicionar CIDR
+            </h2>
+            {cidrErroForm && (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden="true" />
+                {cidrErroForm}
+              </div>
+            )}
+            <div style={{ marginBottom: 14 }}>
+              <label htmlFor="status-tecnico-cidr-input" style={{ display: "block", fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, marginBottom: 6 }}>
+                Prefixo CIDR
+                <CampoObrigatorioMark />
+              </label>
+              <input
+                id="status-tecnico-cidr-input"
+                type="text"
+                value={novoCidr}
+                onChange={(e) => setNovoCidr(e.target.value)}
+                placeholder="ex.: 187.102.187.36/30"
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  fontSize: 14,
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label htmlFor="status-tecnico-cidr-rotulo" style={{ display: "block", fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, marginBottom: 6 }}>
+                Rótulo
+              </label>
+              <input
+                id="status-tecnico-cidr-rotulo"
+                type="text"
+                value={novoRotuloCidr}
+                onChange={(e) => setNovoRotuloCidr(e.target.value)}
+                placeholder="ex.: WAN Mundivox"
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  fontSize: 14,
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                disabled={cidrSalvando}
+                onClick={() => !cidrSalvando && setModalCidrAdicionar(false)}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: cidrSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  color: t.text,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={cidrSalvando}
+                onClick={() => void salvarCidrAllowlist()}
+                style={{
+                  background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: cidrSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  opacity: cidrSalvando ? 0.75 : 1,
+                }}
+              >
+                {cidrSalvando ? "A guardar…" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cidrExcluir && (
+        <ModalConfirmDelete
+          texto={`Remover o prefixo ${String(cidrExcluir.cidr)} da lista?`}
+          onCancel={() => {
+            if (!cidrExcluindo) setCidrExcluir(null);
+            setCidrErroExcluir(null);
+          }}
+          onConfirm={() => void excluirCidrConfirmado()}
+          loading={cidrExcluindo}
+          error={cidrErroExcluir}
+          zIndex={2100}
+        />
       )}
     </div>
   );
