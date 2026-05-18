@@ -732,17 +732,28 @@ function buildRhFuncionarioPayloadFromState(
   };
 }
 
-/** Insert/update em `rh_funcionarios`: evita expor texto cru do Postgres (ex. constraint de CPF). */
-function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string }): string {
+/** Insert/update em `rh_funcionarios`: mensagens amigáveis sem confundir outras violações de unicidade com CPF. */
+function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string; details?: string }): string {
   const raw = error.message ?? "";
-  const lower = raw.toLowerCase();
-  if (error.code === "23505" || lower.includes("duplicate")) {
-    return "Já existe um funcionário cadastrado com este CPF.";
-  }
+  const det = typeof error.details === "string" ? error.details : "";
+  const lower = `${raw} ${det}`.toLowerCase();
+
   if (error.code === "23514" && lower.includes("rh_funcionarios_cpf_digits")) {
     return "CPF Inválido";
   }
-  return raw;
+
+  const duplicidadeCpf =
+    error.code === "23505" &&
+    (lower.includes("rh_funcionarios_cpf_unique") ||
+      lower.includes("key (cpf)") ||
+      (lower.includes("duplicate") && lower.includes("cpf")));
+  if (duplicidadeCpf) {
+    return "Já existe um funcionário cadastrado com este CPF.";
+  }
+
+  if (raw.trim()) return raw;
+  if (det.trim()) return det;
+  return "Erro ao salvar.";
 }
 
 function RhFuncModalHeaderDetalhes({
@@ -1663,7 +1674,7 @@ export default function RhPrestadoresPage() {
       const atual = lista.find((x) => x.id === editId);
       const payloadEdit = montarPayload(atual?.status ?? "ativo");
       const salarioFinal = podeVerDadosSensiveis ? payloadEdit.salario : (atual?.salario ?? 0);
-      const mesclado =
+      let mesclado =
         !podeVerDadosSensiveis && atual
           ? {
               ...payloadEdit,
@@ -1677,6 +1688,12 @@ export default function RhPrestadoresPage() {
               pix: atual.pix,
             }
           : { ...payloadEdit, salario: salarioFinal };
+      /** Não reenviar CPF idêntico no UPDATE: âncora de duplicidade aplica-se ao insert (Novo); evita ruído com índice único. */
+      if (atual && somenteDigitos(form.cpf) === somenteDigitos(atual.cpf ?? "")) {
+        const { cpf: _omitCpf, ...semCpf } = mesclado;
+        void _omitCpf;
+        mesclado = semCpf as typeof mesclado;
+      }
       const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
       setSalvando(false);
       if (error) {
@@ -1969,7 +1986,7 @@ export default function RhPrestadoresPage() {
           }
           const rowAntes = lista.find((x) => x.id === fid) ?? acaoModalRow;
           const base = buildRhFuncionarioPayloadFromState(acaoForm, "ativo", podeVerDadosSensiveis);
-          const mesclado =
+          let mesclado =
             !podeVerDadosSensiveis && acaoModalRow
               ? {
                   ...base,
@@ -1980,6 +1997,11 @@ export default function RhPrestadoresPage() {
                   pix: acaoModalRow.pix,
                 }
               : base;
+          if (somenteDigitos(acaoForm.cpf) === somenteDigitos(rowAntes.cpf ?? "")) {
+            const { cpf: _omitCpfAcao, ...semCpfAcao } = mesclado;
+            void _omitCpfAcao;
+            mesclado = semCpfAcao as typeof mesclado;
+          }
           const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
           const depois = sliceContratacaoDeForm(acaoForm);
           const diffContrato = diffContratacaoSlices(antes, depois, opcoesVinculoFlat, opcoesTimes, fmtSal);
@@ -2042,7 +2064,9 @@ export default function RhPrestadoresPage() {
         const o = e as { message?: string; code?: string; details?: string };
         if (typeof o.message === "string" && o.message.trim()) {
           msg = mensagemErroSupabaseRhFuncionarioSalvar(o);
-        } else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
+        } else if (typeof o.details === "string" && o.details.trim()) {
+          msg = mensagemErroSupabaseRhFuncionarioSalvar({ message: o.details, code: o.code, details: o.details });
+        }
       }
       setErroGlobal(msg);
     } finally {

@@ -457,6 +457,52 @@ function duracaoEntreTimestamps(isoIn: string | null | undefined, isoOut: string
   return fmtHorasTotal((t1 - t0) / 3600000);
 }
 
+/** Duração real em minutos (check-in → check-out). */
+function duracaoMinutosEntreTimestampsIso(
+  isoIn: string | null | undefined,
+  isoOut: string | null | undefined,
+): number | null {
+  if (!isoIn || !isoOut) return null;
+  const t0 = new Date(isoIn).getTime();
+  const t1 = new Date(isoOut).getTime();
+  if (Number.isNaN(t0) || Number.isNaN(t1) || t1 <= t0) return null;
+  return Math.round((t1 - t0) / 60000);
+}
+
+const COR_DESVIO_PONTO = "#e84025";
+
+/** Minutos desde 00:00 para "HH:mm" no mesmo dia civil. */
+function minutosRelogioHHmm(s: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+/** Diferença mínima em minutos entre dois relógios no mesmo dia (considera envoltório 24h). */
+function diffMinutosAbsRelogioMesmoDia(esc: string, real: string): number | null {
+  if (esc === "—" || real === "—") return null;
+  const a = minutosRelogioHHmm(esc);
+  const b = minutosRelogioHHmm(real);
+  if (a == null || b == null) return null;
+  let d = Math.abs(b - a);
+  d = Math.min(d, 24 * 60 - d);
+  return d;
+}
+
+/** Desvio estritamente superior a 5 minutos entre horário escalado e realizado. */
+function presencaDesvioRelogioMaior5Min(esc: string, real: string): boolean {
+  const d = diffMinutosAbsRelogioMesmoDia(esc, real);
+  return d != null && d > 5;
+}
+
+/** Desvio na duração total (minutos) entre escalado e realizado. */
+function presencaDesvioHorasMaior5Min(escEnt: string, escSai: string, isoIn: string | null, isoOut: string | null): boolean {
+  const escMin = duracaoMinutosRelogioHHMM(escEnt, escSai);
+  const realMin = duracaoMinutosEntreTimestampsIso(isoIn, isoOut);
+  if (escMin == null || realMin == null) return false;
+  return Math.abs(realMin - escMin) > 5;
+}
+
 function statusPresencaNoDia(
   escaladas: { entrada: string; saida: string } | null,
   checkIn: string | null | undefined,
@@ -2323,6 +2369,31 @@ export default function RhCalendarioPage() {
                       const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
                       const st = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
                       const situacao = situacaoGestaoEscalaParaDia(valorG);
+                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entReal);
+                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiReal);
+                      const horasRealDesvio = presencaDesvioHorasMaior5Min(
+                        entEsc,
+                        saiEsc,
+                        pt?.check_in_at ?? null,
+                        pt?.check_out_at ?? null,
+                      );
+                      const btnPresenca: CSSProperties = {
+                        padding: "4px 10px",
+                        borderRadius: 8,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      };
+                      const labelDiaAria = dia.toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      });
                       return (
                         <tr key={iso} style={{ background: zebraStripe(i) }}>
                           <td style={getTdStyle(t)}>
@@ -2330,13 +2401,59 @@ export default function RhCalendarioPage() {
                           </td>
                           <td style={getTdStyle(t)}>{situacao}</td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entEsc}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entReal}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {entReal}
+                          </td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiEsc}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiReal}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {saiReal}
+                          </td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasEsc}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasReal}</td>
+                          <td
+                            style={{
+                              ...getTdStyle(t),
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
+                            }}
+                          >
+                            {horasReal}
+                          </td>
                           <td style={getTdStyle(t)}>{st}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>—</td>
+                          <td style={getTdStyle(t)}>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                                justifyContent: "flex-end",
+                              }}
+                            >
+                              <button type="button" style={btnPresenca} aria-label={`Aprovar presença — ${labelDiaAria}`}>
+                                Aprovar
+                              </button>
+                              <button type="button" style={btnPresenca} aria-label={`Editar presença — ${labelDiaAria}`}>
+                                Editar
+                              </button>
+                              <button type="button" style={btnPresenca} aria-label={`Histórico de presença — ${labelDiaAria}`}>
+                                Histórico
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
