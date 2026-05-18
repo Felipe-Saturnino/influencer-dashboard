@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Loader2,
   Lock,
@@ -72,6 +74,52 @@ type ReadReceiptRow = {
 
 const PREVIEW_LEN = 200;
 
+type SubtabCategoriaConfig = {
+  key: string;
+  label: string;
+  slugs: string[];
+};
+
+/** Ordem fixa das sub-abas de Comunicados (após «Todos»). */
+const SUBTABS_COMUNICADO: SubtabCategoriaConfig[] = [
+  { key: "urgente", label: "Urgente", slugs: ["urgente"] },
+  { key: "geral", label: "Geral", slugs: ["geral"] },
+  { key: "pagamento", label: "Pagamento", slugs: ["pagamento"] },
+  { key: "eventos", label: "Eventos", slugs: ["eventos"] },
+];
+
+/** Ordem fixa das sub-abas de Políticas (após «Todos»). */
+const SUBTABS_POLITICA: SubtabCategoriaConfig[] = [
+  { key: "conduta", label: "Conduta", slugs: ["conduta"] },
+  { key: "seguranca", label: "Segurança", slugs: ["seguranca"] },
+  { key: "bonificacao", label: "Bonificação", slugs: ["bonificacao", "beneficios_pol"] },
+  { key: "folha_pagamento", label: "Folha de Pagamento", slugs: ["folha_pagamento", "operacional"] },
+];
+
+function resolveCategoriaTab(
+  cats: RhPortalCategoria[],
+  config: SubtabCategoriaConfig,
+): RhPortalCategoria | null {
+  for (const slug of config.slugs) {
+    const found = cats.find((c) => c.slug === slug);
+    if (found) return found;
+  }
+  return cats.find((c) => c.label.toLowerCase() === config.label.toLowerCase()) ?? null;
+}
+
+function itemNaSubtabCategoria(
+  categoria: RhPortalCategoria | null | undefined,
+  config: SubtabCategoriaConfig,
+): boolean {
+  if (!categoria) return false;
+  return config.slugs.includes(categoria.slug);
+}
+
+function fmtMesAnoCarrossel(ano: number, mes: number): string {
+  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 function truncPreview(s: string, max = PREVIEW_LEN): string {
   const t = (s ?? "").trim();
   if (t.length <= max) return t;
@@ -110,6 +158,67 @@ function receiptKey(ct: string, id: string): string {
   return `${ct}:${id}`;
 }
 
+function FiltroSubtabPills({
+  filtroAtivo,
+  onFiltro,
+  configs,
+  categorias,
+  t,
+}: {
+  filtroAtivo: string;
+  onFiltro: (key: string) => void;
+  configs: SubtabCategoriaConfig[];
+  categorias: RhPortalCategoria[];
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  const pillBase = (ativo: boolean, accent?: string) => ({
+    padding: "8px 14px",
+    borderRadius: 999,
+    border: ativo
+      ? accent
+        ? `1px solid ${accent}`
+        : "1px solid var(--brand-primary, #7c3aed)"
+      : `1px solid ${t.cardBorder}`,
+    background: ativo
+      ? accent
+        ? `${accent}22`
+        : "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)"
+      : t.cardBg,
+    color: t.text,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: FONT.body,
+  });
+
+  return (
+    <div
+      role="group"
+      aria-label="Filtrar por categoria"
+      style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}
+    >
+      <button type="button" aria-pressed={filtroAtivo === "todos"} onClick={() => onFiltro("todos")} style={pillBase(filtroAtivo === "todos")}>
+        Todos
+      </button>
+      {configs.map((cfg) => {
+        const cat = resolveCategoriaTab(categorias, cfg);
+        const ativo = filtroAtivo === cfg.key;
+        return (
+          <button
+            key={cfg.key}
+            type="button"
+            aria-pressed={ativo}
+            onClick={() => onFiltro(cfg.key)}
+            style={pillBase(ativo, cat?.accent_hex)}
+          >
+            {cfg.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -131,9 +240,9 @@ export default function PortalRhPage() {
   const [receipts, setReceipts] = useState<Map<string, ReadReceiptRow>>(new Map());
   const [nomeAutores, setNomeAutores] = useState<Record<string, string>>({});
 
-  const [filtroCatCom, setFiltroCatCom] = useState<string | "todos">("todos");
-  const [filtroCatPol, setFiltroCatPol] = useState<string | "todos">("todos");
-  const [anoTalk, setAnoTalk] = useState<number>(() => new Date().getFullYear());
+  const [filtroCatCom, setFiltroCatCom] = useState<string>("todos");
+  const [filtroCatPol, setFiltroCatPol] = useState<string>("todos");
+  const [idxMesTalk, setIdxMesTalk] = useState(0);
 
   const [modalCom, setModalCom] = useState<RhPortalComunicado | null>(null);
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
@@ -240,7 +349,8 @@ export default function PortalRhPage() {
   const comunicadosLista = useMemo(() => {
     let list = comunicados.filter((c) => !c.is_pinned);
     if (filtroCatCom !== "todos") {
-      list = list.filter((c) => c.categoria_id === filtroCatCom);
+      const cfg = SUBTABS_COMUNICADO.find((x) => x.key === filtroCatCom);
+      if (cfg) list = list.filter((c) => itemNaSubtabCategoria(c.categoria, cfg));
     }
     const recMap = receipts;
     const uid = user?.id;
@@ -261,27 +371,48 @@ export default function PortalRhPage() {
 
   const documentosFiltrados = useMemo(() => {
     let list = documentos;
-    if (filtroCatPol !== "todos") list = list.filter((d) => d.categoria_id === filtroCatPol);
+    if (filtroCatPol !== "todos") {
+      const cfg = SUBTABS_POLITICA.find((x) => x.key === filtroCatPol);
+      if (cfg) list = list.filter((d) => itemNaSubtabCategoria(d.categoria, cfg));
+    }
     return list;
   }, [documentos, filtroCatPol]);
 
-  const anosTalks = useMemo(() => {
-    const ys = new Set<number>();
+  const mesesTalksDisponiveis = useMemo(() => {
+    const keys = new Set<string>();
     for (const tk of talks) {
-      ys.add(new Date(tk.data_reuniao).getFullYear());
+      const d = new Date(tk.data_reuniao);
+      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
     }
-    const arr = [...ys].sort((a, b) => b - a);
-    return arr.length ? arr : [new Date().getFullYear()];
+    const entries = [...keys].map((k) => {
+      const [ano, mes] = k.split("-").map(Number);
+      return { ano, mes, label: fmtMesAnoCarrossel(ano, mes) };
+    });
+    entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+    if (entries.length) return entries;
+    const hoje = new Date();
+    return [{ ano: hoje.getFullYear(), mes: hoje.getMonth(), label: fmtMesAnoCarrossel(hoje.getFullYear(), hoje.getMonth()) }];
   }, [talks]);
 
   useEffect(() => {
-    if (!anosTalks.includes(anoTalk)) setAnoTalk(anosTalks[0] ?? new Date().getFullYear());
-  }, [anosTalks, anoTalk]);
+    if (mesesTalksDisponiveis.length === 0) return;
+    setIdxMesTalk((i) => Math.min(i, mesesTalksDisponiveis.length - 1));
+  }, [mesesTalksDisponiveis]);
 
-  const talksFiltrados = useMemo(
-    () => talks.filter((tk) => new Date(tk.data_reuniao).getFullYear() === anoTalk),
-    [talks, anoTalk],
-  );
+  useEffect(() => {
+    if (talks.length > 0 && mesesTalksDisponiveis.length > 0) {
+      setIdxMesTalk(mesesTalksDisponiveis.length - 1);
+    }
+  }, [talks.length, mesesTalksDisponiveis.length]);
+
+  const talksFiltrados = useMemo(() => {
+    const mesSel = mesesTalksDisponiveis[idxMesTalk];
+    if (!mesSel) return [];
+    return talks.filter((tk) => {
+      const d = new Date(tk.data_reuniao);
+      return d.getFullYear() === mesSel.ano && d.getMonth() === mesSel.mes;
+    });
+  }, [talks, mesesTalksDisponiveis, idxMesTalk]);
 
   const buscaAtiva = buscaDeb.length > 0;
 
@@ -465,6 +596,22 @@ export default function PortalRhPage() {
       </div>
     );
   }
+
+  const mesTalkSel = mesesTalksDisponiveis[idxMesTalk];
+  const talkCarouselPrimeiro = idxMesTalk <= 0;
+  const talkCarouselUltimo = idxMesTalk >= mesesTalksDisponiveis.length - 1;
+  const btnNavTalk = {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  } as const;
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
@@ -709,48 +856,13 @@ export default function PortalRhPage() {
                   </div>
                 ) : null}
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                  <button
-                    type="button"
-                    aria-pressed={filtroCatCom === "todos"}
-                    onClick={() => setFiltroCatCom("todos")}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 999,
-                      border: filtroCatCom === "todos" ? `1px solid var(--brand-primary, #7c3aed)` : `1px solid ${t.cardBorder}`,
-                      background: filtroCatCom === "todos" ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)" : t.cardBg,
-                      color: t.text,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    Todos
-                  </button>
-                  {categoriasCom.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      aria-pressed={filtroCatCom === cat.id}
-                      onClick={() => setFiltroCatCom(cat.id)}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: 999,
-                        border: filtroCatCom === cat.id ? `1px solid ${cat.accent_hex}` : `1px solid ${t.cardBorder}`,
-                        background: filtroCatCom === cat.id ? `${cat.accent_hex}22` : t.cardBg,
-                        color: t.text,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
+                <FiltroSubtabPills
+                  filtroAtivo={filtroCatCom}
+                  onFiltro={setFiltroCatCom}
+                  configs={SUBTABS_COMUNICADO}
+                  categorias={categoriasCom}
+                  t={t}
+                />
                 {comunicadosLista.length === 0 && !comunicadoPinned ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
                     Sem comunicados publicados.
@@ -835,47 +947,13 @@ export default function PortalRhPage() {
               </div>
             ) : aba === "politicas" ? (
               <div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                  <button
-                    type="button"
-                    aria-pressed={filtroCatPol === "todos"}
-                    onClick={() => setFiltroCatPol("todos")}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 999,
-                      border: filtroCatPol === "todos" ? `1px solid var(--brand-primary, #7c3aed)` : `1px solid ${t.cardBorder}`,
-                      background: filtroCatPol === "todos" ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)" : t.cardBg,
-                      color: t.text,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    Todas
-                  </button>
-                  {categoriasPol.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      aria-pressed={filtroCatPol === cat.id}
-                      onClick={() => setFiltroCatPol(cat.id)}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: 999,
-                        border: filtroCatPol === cat.id ? `1px solid ${cat.accent_hex}` : `1px solid ${t.cardBorder}`,
-                        background: filtroCatPol === cat.id ? `${cat.accent_hex}22` : t.cardBg,
-                        color: t.text,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
+                <FiltroSubtabPills
+                  filtroAtivo={filtroCatPol}
+                  onFiltro={setFiltroCatPol}
+                  configs={SUBTABS_POLITICA}
+                  categorias={categoriasPol}
+                  t={t}
+                />
                 {documentosFiltrados.length === 0 ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem políticas publicadas.</div>
                 ) : (
@@ -963,31 +1041,41 @@ export default function PortalRhPage() {
               </div>
             ) : (
               <div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                  {anosTalks.map((y) => (
+                <div
+                  style={{
+                    marginBottom: 16,
+                    borderRadius: 14,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.cardBg,
+                    padding: "12px 20px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
                     <button
-                      key={y}
                       type="button"
-                      aria-pressed={anoTalk === y}
-                      onClick={() => setAnoTalk(y)}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: 999,
-                        border: anoTalk === y ? `1px solid var(--brand-primary, #7c3aed)` : `1px solid ${t.cardBorder}`,
-                        background: anoTalk === y ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)" : t.cardBg,
-                        color: t.text,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
-                      }}
+                      aria-label="Mês anterior"
+                      style={{ ...btnNavTalk, opacity: talkCarouselPrimeiro ? 0.35 : 1, cursor: talkCarouselPrimeiro ? "not-allowed" : "pointer" }}
+                      onClick={() => setIdxMesTalk((i) => Math.max(0, i - 1))}
+                      disabled={talkCarouselPrimeiro}
                     >
-                      {y}
+                      <ChevronLeft size={14} aria-hidden="true" />
                     </button>
-                  ))}
+                    <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "min(100%, 180px)", textAlign: "center" }}>
+                      {mesTalkSel?.label ?? "—"}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Próximo mês"
+                      style={{ ...btnNavTalk, opacity: talkCarouselUltimo ? 0.35 : 1, cursor: talkCarouselUltimo ? "not-allowed" : "pointer" }}
+                      onClick={() => setIdxMesTalk((i) => Math.min(mesesTalksDisponiveis.length - 1, i + 1))}
+                      disabled={talkCarouselUltimo}
+                    >
+                      <ChevronRight size={14} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
                 {talksFiltrados.length === 0 ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem atas neste ano.</div>
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem atas neste período.</div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {talksFiltrados.map((tk) => {
