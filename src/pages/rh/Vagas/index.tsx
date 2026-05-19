@@ -11,12 +11,15 @@ import {
   labelStatusVaga,
   labelTipoVaga,
   organogramaLabelDeVaga,
+  statusVagaEfetivo,
   vagaPassaBuscaNomeOuDiretoria,
 } from "../../../lib/rhVagasFormat";
+import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasCandidaturasPainel";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
+import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
 import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarVaga";
 
@@ -30,6 +33,12 @@ const RH_VAGAS_SELECT = `
       diretoria:rh_org_diretorias ( nome )
     )
   ),
+  org_gerencia:rh_org_gerencias (
+    id,
+    nome,
+    diretoria:rh_org_diretorias ( nome )
+  ),
+  org_diretoria:rh_org_diretorias ( id, nome ),
   candidato:rh_funcionarios ( id, nome )
 `.trim();
 
@@ -85,17 +94,20 @@ export default function RhVagasPage() {
   const [modalStub, setModalStub] = useState<ModalStub>(null);
   const [modalNovaVagaAberto, setModalNovaVagaAberto] = useState(false);
   const [vagaAtualizar, setVagaAtualizar] = useState<RhVagaRow | null>(null);
+  const [vagaCandidatura, setVagaCandidatura] = useState<RhVagaRow | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
   const [vagaExcluirConfirm, setVagaExcluirConfirm] = useState<RhVagaRow | null>(null);
   const [excluindoVaga, setExcluindoVaga] = useState(false);
 
   const podeCriarVaga = perm.canCriarOk;
   const mostrarAbaGerenciamento = perm.canCriarOk || perm.canExcluirOk;
+  const mostrarAbaCandidaturas = perm.canCriarOk;
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   const carregar = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     setErro(null);
+    await supabase.rpc("rh_vagas_atualizar_status_inscricoes_encerradas");
     const { data, error } = await supabase.from("rh_vagas").select(RH_VAGAS_SELECT).order("data_abertura", { ascending: false });
     if (error) {
       setErro(error.message);
@@ -113,7 +125,8 @@ export default function RhVagasPage() {
 
   useEffect(() => {
     if (!mostrarAbaGerenciamento && aba === "gerenciamento") setAba("abertas");
-  }, [mostrarAbaGerenciamento, aba]);
+    if (!mostrarAbaCandidaturas && aba === "candidaturas") setAba("abertas");
+  }, [mostrarAbaGerenciamento, mostrarAbaCandidaturas, aba]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
@@ -122,18 +135,18 @@ export default function RhVagasPage() {
   }, [sucessoMsg]);
 
   const vagasAbertas = useMemo(
-    () => vagas.filter((v) => v.status === "aberta" && vagaPassaBuscaNomeOuDiretoria(v, busca)),
+    () => vagas.filter((v) => statusVagaEfetivo(v) === "aberta" && vagaPassaBuscaNomeOuDiretoria(v, busca)),
     [vagas, busca],
   );
 
   const vagasEmAndamento = useMemo(
-    () => vagas.filter((v) => v.status === "em_andamento" && vagaPassaBuscaNomeOuDiretoria(v, busca)),
+    () => vagas.filter((v) => statusVagaEfetivo(v) === "em_andamento" && vagaPassaBuscaNomeOuDiretoria(v, busca)),
     [vagas, busca],
   );
 
   const vagasGestaoLista = useMemo(() => {
     let list = vagas.filter((v) => vagaPassaBuscaNomeOuDiretoria(v, busca));
-    if (filtroStatusGestao !== "todos") list = list.filter((v) => v.status === filtroStatusGestao);
+    if (filtroStatusGestao !== "todos") list = list.filter((v) => statusVagaEfetivo(v) === filtroStatusGestao);
     return list;
   }, [vagas, busca, filtroStatusGestao]);
 
@@ -228,6 +241,7 @@ export default function RhVagasPage() {
       }}
     >
       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
+      <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
       {opts?.statusLabel != null ? <CampoVaga k="Status" v={opts.statusLabel} t={t} /> : null}
       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
@@ -360,6 +374,7 @@ export default function RhVagasPage() {
         aba={aba}
         setAba={setAba}
         mostrarGerenciamento={mostrarAbaGerenciamento}
+        mostrarCandidaturas={mostrarAbaCandidaturas}
         t={t}
         brand={{ blockBg: brand.blockBg, accent: brand.accent, useBrand: brand.useBrand }}
       />
@@ -400,7 +415,7 @@ export default function RhVagasPage() {
                   v,
                   <div style={{ marginTop: 4 }}>
                     {tipoInterna(v.tipo_vaga as RhVagaTipo)
-                      ? btnPrim("Candidatura", () => abrirModalStub("Candidatura", v.titulo))
+                      ? btnPrim("Candidatura", () => setVagaCandidatura(v))
                       : null}
                     {tipoExterna(v.tipo_vaga as RhVagaTipo)
                       ? btnSec("Compartilhar", () => abrirModalStub("Compartilhar", v.titulo))
@@ -430,6 +445,8 @@ export default function RhVagasPage() {
               vagasEmAndamento.map((v) => renderCardBase(v))
             )}
           </>
+        ) : aba === "candidaturas" ? (
+          <RhVagasCandidaturasPainel t={t} cardShadow={cardShadow} podeEditarEtapa={perm.canEditarOk} />
         ) : (
           <>
             <header style={{ marginBottom: 16 }}>
@@ -525,6 +542,7 @@ export default function RhVagasPage() {
                       }}
                     >
                       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
+                      <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
                       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
                       <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
                       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
@@ -533,7 +551,6 @@ export default function RhVagasPage() {
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
                       <CampoVaga k="Candidato selecionado" v={nomeCand} t={t} />
                       <div style={{ marginTop: 4 }}>
-                        {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
                         {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
                       </div>
                     </article>
@@ -553,6 +570,7 @@ export default function RhVagasPage() {
                       }}
                     >
                       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
+                      <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
                       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
                       <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
                       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
@@ -560,7 +578,6 @@ export default function RhVagasPage() {
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
                       <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
                       <div style={{ marginTop: 4 }}>
-                        {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
                         {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
                         {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
                       </div>
@@ -570,7 +587,6 @@ export default function RhVagasPage() {
                 return renderCardBase(
                   v,
                   <div style={{ marginTop: 4 }}>
-                    {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
                     {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
                     {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
                   </div>,
@@ -600,6 +616,14 @@ export default function RhVagasPage() {
           void carregar({ silent: true });
           setSucessoMsg("Vaga atualizada com sucesso.");
         }}
+        t={t}
+      />
+
+      <ModalCandidaturaVaga
+        open={vagaCandidatura !== null}
+        vaga={vagaCandidatura}
+        onClose={() => setVagaCandidatura(null)}
+        onSalvo={() => setSucessoMsg("Candidatura enviada com sucesso.")}
         t={t}
       />
 
