@@ -67,10 +67,6 @@ export interface SnapshotMesa {
   executado_em: string;
 }
 
-const MESES_PT = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
 const DIAS_SEM = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function fmtPosicao(p: number | null | undefined): string {
@@ -554,8 +550,6 @@ export function visibilidadePorCategoria(
 }
 
 export type HeatmapHistoricoModo = "dia" | "7d" | "30d";
-
-const MESES_CURTOS_POS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export function ultimaExecucaoNoDia(
   execucoes: LobbyExecucaoRow[],

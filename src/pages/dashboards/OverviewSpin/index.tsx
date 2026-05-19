@@ -37,7 +37,6 @@ import {
 import {
   ArrowUpDown,
   Calendar,
-  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -2146,7 +2145,7 @@ export default function OverviewSpin() {
   const refDatePosicionamento = useMemo(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  }, [aba]);
+  }, []);
 
   const carrosselAnteriorDisabled = useMemo(() => {
     if (aba === "posicionamento") return true;
