@@ -1,12 +1,16 @@
-# Monitor lobby Blaze — posição das mesas Spin (Cassino Ao Vivo)
-# A cada hora (UTC). Ajuste o cron se quiser alinhar a hora cheia em Brasília.
-# Secrets: SUPABASE_URL, SUPABASE_ANON_KEY (ou SERVICE_ROLE_KEY se configurado no projeto)
+# Monitor lobby Blaze — fetch no runner (evita HTTP 451 na Edge) + gravação via Edge Function
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (recomendado) ou SUPABASE_ANON_KEY
 name: Monitor Lobby Blaze (hourly)
 
 on:
   schedule:
     - cron: "0 * * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Apenas simular (não grava no banco)"
+        type: boolean
+        default: false
 
 concurrency:
   group: monitor-lobby-blaze-${{ github.workflow }}
@@ -21,34 +25,30 @@ jobs:
           echo "UTC:      $(date -u '+%Y-%m-%d %H:%M:%S')"
           echo "Brasília: $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M:%S %Z')"
 
-      - name: Invocar monitor-lobby-blaze
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Buscar lobby Blaze e gravar snapshot
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
-            echo "Defina SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "Defina SUPABASE_URL nos secrets do repositório."
             exit 1
           fi
-          URL="${SUPABASE_URL%/}/functions/v1/monitor-lobby-blaze"
-          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
-          HTTP=$(echo "$RES" | tail -n1)
-          BODY=$(echo "$RES" | sed '$d')
-          echo "HTTP ${HTTP}"
-          echo "$BODY" | head -c 4000
-          echo ""
-          if [ "$HTTP" != "200" ]; then
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ] && [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Defina SUPABASE_SERVICE_ROLE_KEY (recomendado) ou SUPABASE_ANON_KEY."
             exit 1
           fi
-          OK=$(echo "$BODY" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
-          STATUS=$(echo "$BODY" | grep -oE '"status"\s*:\s*"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/' || true)
-          if [ "$OK" != "true" ] && [ "$STATUS" != "parcial" ]; then
-            echo "Job retornou ok=false e status=${STATUS:-desconhecido}"
-            exit 1
+          ARGS=()
+          if [ "${DRY_RUN:-}" = "1" ]; then
+            ARGS+=(--dry-run)
           fi
-          echo "Monitor lobby Blaze concluído (status=${STATUS:-ok})."
+          node scripts/monitor-lobby-blaze-run.mjs "${ARGS[@]}"

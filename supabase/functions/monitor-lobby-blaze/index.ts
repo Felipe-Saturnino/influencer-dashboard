@@ -18,7 +18,27 @@ const LIMIT = 30;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
 const BLAZE_SEARCH_URL = "https://blaze.bet.br/api/games/search";
-const USER_AGENT = "SpinDataIntelligence-LobbyMonitor/1.0";
+const BLAZE_PAGE_REFERER =
+  "https://blaze.bet.br/pt/games/category/live-casino";
+
+/** Headers de browser — UA de bot/datacenter costuma receber HTTP 451 na Edge. */
+function blazeFetchHeaders(): Record<string, string> {
+  return {
+    Accept: "application/json, text/plain, */*",
+    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    Referer: BLAZE_PAGE_REFERER,
+    Origin: "https://blaze.bet.br",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  };
+}
+
+interface MonitorBody {
+  dry_run?: boolean;
+  /** Lobby já obtido fora da Edge (ex.: GitHub Actions) — contorna bloqueio 451. */
+  blaze_lobby?: LobbyGame[];
+  blaze_paginas_lidas?: number;
+}
 
 type TipoLobby = "roleta" | "baccarat" | "blackjack" | "blackjack_vip" | "other";
 
@@ -93,8 +113,8 @@ function autorizado(req: Request): boolean {
   return false;
 }
 
-function tipoLobbyFromCadastro(tipoJogo: string): TipoLobby {
-  const t = tipoJogo.toLowerCase();
+function tipoLobbyFromCadastro(tipoJogo: string, nomeMesa?: string): TipoLobby {
+  const t = `${tipoJogo} ${nomeMesa ?? ""}`.toLowerCase();
   if (t.includes("vip") && (t.includes("black") || t.includes("bj"))) {
     return "blackjack_vip";
   }
@@ -144,16 +164,31 @@ function concorrentesAFrente(
 
 async function fetchPagina(page: number): Promise<BlazeSearchResponse> {
   const url = `${BLAZE_SEARCH_URL}?page=${page}&${SEARCH_QUERY}`;
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-    },
-  });
+  const res = await fetch(url, { headers: blazeFetchHeaders() });
   if (!res.ok) {
-    throw new Error(`Blaze search HTTP ${res.status} (page=${page})`);
+    const hint = res.status === 451
+      ? " Blaze bloqueia IPs de datacenter (Edge). Use o workflow GitHub ou POST com blaze_lobby."
+      : "";
+    throw new Error(`Blaze search HTTP ${res.status} (page=${page}).${hint}`);
   }
   return (await res.json()) as BlazeSearchResponse;
+}
+
+function posicoesFromLobby(
+  mesasEsperadas: MesaCadastro[],
+  lobby: LobbyGame[],
+): Map<string, number> {
+  const idsEsperados = new Set(
+    mesasEsperadas.map((m) => m.mesa_identificacao_operadora!.trim()),
+  );
+  const posicoes = new Map<string, number>();
+  for (const g of lobby) {
+    const idStr = String(g.game_id);
+    if (idsEsperados.has(idStr)) {
+      posicoes.set(idStr, g.posicao);
+    }
+  }
+  return posicoes;
 }
 
 async function escanearLobby(
@@ -213,9 +248,10 @@ serve(async (req) => {
   }
 
   let dryRun = false;
+  let body: MonitorBody = {};
   try {
-    const body = await req.json().catch(() => ({}));
-    dryRun = Boolean((body as { dry_run?: boolean })?.dry_run);
+    body = (await req.json().catch(() => ({}))) as MonitorBody;
+    dryRun = Boolean(body.dry_run);
   } catch {
     /* body vazio */
   }
@@ -267,13 +303,19 @@ serve(async (req) => {
   let paginasLidas = 0;
   let apiErro: string | null = null;
 
-  try {
-    const scan = await escanearLobby(mesasList);
-    lobby = scan.lobby;
-    posicoes = scan.posicoes;
-    paginasLidas = scan.paginasLidas;
-  } catch (e) {
-    apiErro = e instanceof Error ? e.message : String(e);
+  if (Array.isArray(body.blaze_lobby) && body.blaze_lobby.length > 0) {
+    lobby = body.blaze_lobby;
+    paginasLidas = body.blaze_paginas_lidas ?? 1;
+    posicoes = posicoesFromLobby(mesasList, lobby);
+  } else {
+    try {
+      const scan = await escanearLobby(mesasList);
+      lobby = scan.lobby;
+      posicoes = scan.posicoes;
+      paginasLidas = scan.paginasLidas;
+    } catch (e) {
+      apiErro = e instanceof Error ? e.message : String(e);
+    }
   }
 
   const duracaoMs = Date.now() - inicioMs;
@@ -287,7 +329,7 @@ serve(async (req) => {
   const linhasPosicao = mesasList.map((m) => {
     const idOperadora = m.mesa_identificacao_operadora!.trim();
     const pos = posicoes.get(idOperadora) ?? null;
-    const tipo = tipoLobbyFromCadastro(m.tipo_jogo);
+    const tipo = tipoLobbyFromCadastro(m.tipo_jogo, m.nome_mesa);
     const concorrentes = pos != null
       ? concorrentesAFrente(lobby, pos, tipo)
       : [];

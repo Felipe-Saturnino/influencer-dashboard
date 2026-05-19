@@ -39,13 +39,39 @@ supabase functions deploy monitor-lobby-blaze
 
 **Secret opcional:** `MONITOR_LOBBY_BLAZE_INGEST_SECRET`
 
-## Teste
+## HTTP 451 na Edge (teste direto no painel Supabase)
 
-POST `monitor-lobby-blaze` com body `{"dry_run": true}` — não grava; retorna posições no JSON.
+A Blaze costuma **bloquear IPs de datacenter** (Supabase Edge, alguns clouds) com **HTTP 451**. No seu PC o mesmo URL responde 200.
+
+**Não teste só com POST vazio na Edge.** Use um destes caminhos:
+
+### A) Script local (recomendado para teste)
+
+Com a função já implantada e secrets no ambiente:
+
+```bash
+SUPABASE_URL=https://SEU_PROJETO.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+node scripts/monitor-lobby-blaze-run.mjs --dry-run
+```
+
+Sem `--dry-run` grava no banco.
+
+### B) GitHub Actions
+
+Workflow **Monitor Lobby Blaze (hourly)** → **Run workflow** (opção dry run disponível).
+
+Secrets: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+
+O script busca a Blaze no runner e chama a Edge com `blaze_lobby` no body (a Edge só processa e grava).
+
+### C) Edge com lobby pronto (avançado)
+
+POST `monitor-lobby-blaze` com `blaze_lobby` + `blaze_paginas_lidas` (array já montado) — útil se outro serviço fizer o fetch.
 
 ## Agendamento
 
-`.github/workflows/monitor-lobby-blaze-hourly.yml` (requer commit no GitHub + secrets).
+`.github/workflows/monitor-lobby-blaze-hourly.yml` — fetch no GitHub Actions, não na Edge.
 
 ## Tabelas
 
