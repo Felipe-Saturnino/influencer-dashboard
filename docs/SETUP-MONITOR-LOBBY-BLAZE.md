@@ -93,3 +93,9 @@ POST vazio na Edge → 451. Não usar para teste.
 - `lobby_monitor_posicao` (inclui `mesa_identificacao` Spin + `mesa_identificacao_operadora`)
 
 Migration: `20260521120000_lobby_monitor_pior_mesa_vitrine.sql`. Preenchido na Edge ao processar `blaze_lobby` (script Telecom inalterado).
+
+## Status Técnico (Plataforma)
+
+- Integração cadastrada em `integrations` com slug **`lobby_blaze`** e nome **Lobby Blaze** (migration `20260522120000_integrations_lobby_blaze.sql`).
+- Cada execução bem-sucedida da Edge grava também em `sync_logs` (`registros_inseridos` = mesas localizadas).
+- Na página **Status Técnico**, botão **Sync** dispara `monitor-lobby-blaze` (pode falhar com HTTP 451 na Edge; o job agendado no PC/GitHub continua sendo o caminho principal).

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -401,6 +401,42 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
   const semDados =
     operadoraSlug === "todas" || (!loading && execDia.length === 0);
 
+  const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
+
+  const zebraBgHistLinha = (i: number) => {
+    const base = brand.blockBg ?? t.cardBg;
+    if (i % 2 === 0) return base;
+    return t.isDark
+      ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 16%, #141118)"
+      : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
+  };
+
+  const thHistMesa: CSSProperties = {
+    ...getThStyle(t),
+    position: "sticky",
+    left: 0,
+    zIndex: 3,
+    minWidth: 140,
+    maxWidth: 180,
+    background: brand.blockBg,
+    boxShadow: sombraColMesaHist,
+  };
+
+  const tdHistMesa = (i: number): CSSProperties => ({
+    ...getTdStyle(t),
+    position: "sticky",
+    left: 0,
+    zIndex: 2,
+    minWidth: 140,
+    maxWidth: 160,
+    fontWeight: 600,
+    textAlign: "left",
+    background: zebraBgHistLinha(i),
+    boxShadow: sombraColMesaHist,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  });
+
   if (operadoraSlug === "todas") {
     return (
       <div
@@ -621,7 +657,6 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
               borderCollapse: "separate",
               borderSpacing: 0,
               borderRadius: 14,
-              overflow: "hidden",
               fontFamily: FONT.body,
               fontSize: 12,
             }}
@@ -629,7 +664,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
             <thead>
               <tr>
-                <th scope="col" style={getThStyle(t)}>
+                <th scope="col" style={thHistMesa}>
                   Mesa
                 </th>
                 {heatCols.map((c) => (
@@ -644,15 +679,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
                 const nome = snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
                 return (
                   <tr key={mid} style={{ background: zebraStripe(rowIdx) }}>
-                    <td
-                      style={{
-                        ...getTdStyle(t),
-                        maxWidth: 160,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                      title={nome}
-                    >
+                    <td style={tdHistMesa(rowIdx)} title={nome}>
                       {nome}
                     </td>
                     {heatCols.map((col) => {

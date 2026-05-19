@@ -114,6 +114,8 @@ interface FluxoDia {
   social: number;
   /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia (UTC da data do log). */
   spinRss: number;
+  /** Mesas localizadas no lobby (sync_logs lobby_blaze, campo registros_inseridos). */
+  lobbyBlaze: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
@@ -136,6 +138,8 @@ export default function StatusTecnico() {
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
   const [syncSpinRssMensagem, setSyncSpinRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncLobbyBlazeExecutando, setSyncLobbyBlazeExecutando] = useState(false);
+  const [syncLobbyBlazeMensagem, setSyncLobbyBlazeMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
   const [emailMensagem, setEmailMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailAgendaEnviando, setEmailAgendaEnviando] = useState(false);
@@ -151,7 +155,7 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "lobby_blaze" | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
   const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
     typeof window !== "undefined" && window.innerWidth < 480,
@@ -236,7 +240,7 @@ export default function StatusTecnico() {
     dataInicio.setDate(dataInicio.getDate() - 14);
     const dataInicioStr = dataInicio.toISOString().split("T")[0];
 
-    const [resCda, resSocial, resEmails, resSpinSync] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync, resLobbySync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -247,16 +251,33 @@ export default function StatusTecnico() {
         .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
         .order("executado_em", { ascending: false })
         .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_blaze")
+        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .order("executado_em", { ascending: false })
+        .limit(500),
     ]);
 
-    const spinPorData = (resSpinSync.data ?? []).reduce<Record<string, number>>((acc, row) => {
-      const r = row as { executado_em: string; registros_inseridos: number | null; registros_atualizados: number | null };
-      const d = r.executado_em?.split("T")[0];
-      if (!d) return acc;
-      const n = (r.registros_inseridos ?? 0) + (r.registros_atualizados ?? 0);
-      acc[d] = (acc[d] ?? 0) + n;
-      return acc;
-    }, {});
+    const agregarSyncPorData = (
+      rows: { executado_em: string; registros_inseridos: number | null; registros_atualizados?: number | null; status?: string }[],
+    ) =>
+      rows.reduce<Record<string, number>>((acc, row) => {
+        if (row.status === "falha") return acc;
+        const d = row.executado_em?.split("T")[0];
+        if (!d) return acc;
+        const n = (row.registros_inseridos ?? 0) + (row.registros_atualizados ?? 0);
+        acc[d] = (acc[d] ?? 0) + n;
+        return acc;
+      }, {});
+
+    const spinPorData = agregarSyncPorData(
+      (resSpinSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; registros_atualizados: number | null }[],
+    );
+    const lobbyPorData = agregarSyncPorData(
+      (resLobbySync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    );
 
     const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
       acc[row.data] = (acc[row.data] ?? 0) + 1;
@@ -287,6 +308,7 @@ export default function StatusTecnico() {
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
       ...Object.keys(spinPorData),
+      ...Object.keys(lobbyPorData),
       ...Object.keys(emailsPorData),
       hoje,
     ]);
@@ -296,6 +318,7 @@ export default function StatusTecnico() {
         const cda = cdaPorData[data] ?? 0;
         const social = socialPorData[data] ?? 0;
         const spinRss = spinPorData[data] ?? 0;
+        const lobbyBlaze = lobbyPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
         return {
@@ -303,8 +326,9 @@ export default function StatusTecnico() {
           cda,
           social,
           spinRss,
+          lobbyBlaze,
           emails,
-          total: cda + social + spinRss + emailTotal,
+          total: cda + social + spinRss + lobbyBlaze + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -537,6 +561,74 @@ export default function StatusTecnico() {
     }
   };
 
+  const executarSyncLobbyBlaze = async () => {
+    if (syncLobbyBlazeExecutando || !perm.canEditarOk) return;
+    setSyncLobbyBlazeExecutando(true);
+    setSyncLobbyBlazeMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncLobbyBlazeMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncLobbyBlazeExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("monitor-lobby-blaze", {
+        body: {},
+      });
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        status?: string;
+        erro?: string;
+        mesas_encontradas?: number;
+        mesas_esperadas?: number;
+        jogos_escaneados?: number;
+        execucao_id?: string | null;
+      };
+
+      if (invokeError) {
+        let texto = invokeError.message ?? "Erro ao chamar monitor-lobby-blaze";
+        if (texto.includes("404") || texto.includes("not found")) {
+          texto =
+            "Edge Function monitor-lobby-blaze não encontrada. Execute: supabase functions deploy monitor-lobby-blaze";
+        }
+        setSyncLobbyBlazeMensagem({ tipo: "erro", texto });
+        setSyncLobbyBlazeExecutando(false);
+        return;
+      }
+
+      const erroApi = resData?.erro ?? "";
+      if (!resData?.ok) {
+        let texto = erroApi || "Monitor Lobby Blaze concluído com erros.";
+        if (erroApi.includes("451") || erroApi.toLowerCase().includes("bloqueio")) {
+          texto +=
+            " A API da Blaze bloqueia IPs de datacenter (Edge). Use o job agendado (GitHub Actions ou script local scripts/monitor-lobby-blaze-run.mjs).";
+        }
+        setSyncLobbyBlazeMensagem({ tipo: "erro", texto });
+        void carregar();
+        setSyncLobbyBlazeExecutando(false);
+        return;
+      }
+
+      const mesas = resData.mesas_encontradas ?? 0;
+      const esperadas = resData.mesas_esperadas ?? mesas;
+      const parcial = resData.status === "parcial";
+      setSyncLobbyBlazeMensagem({
+        tipo: "ok",
+        texto: parcial
+          ? `Lobby Blaze: snapshot gravado (${mesas}/${esperadas} mesas). Verifique mesas sem ID ou ausentes no lobby.`
+          : `Lobby Blaze: ${mesas} mesa(s) posicionada(s), ${resData.jogos_escaneados ?? 0} jogos no lobby.`,
+      });
+      void carregar();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncLobbyBlazeMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setSyncLobbyBlazeExecutando(false);
+    }
+  };
+
   const enviarEmailDiretoria = async () => {
     if (emailEnviando || !perm.canEditarOk) return;
     setEmailEnviando(true);
@@ -740,6 +832,9 @@ export default function StatusTecnico() {
   const ultimoSyncSpinRssLog = syncLogs.find((l) => l.integracao_slug === "spin_na_rede_rss");
   const spinNaRedeRssStatusOk = ultimoSyncSpinRssLog?.status === "ok";
 
+  const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
+  const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -769,16 +864,18 @@ export default function StatusTecnico() {
     cdaStatusOk,
     socialStatusOk,
     spinNaRedeRssStatusOk,
+    lobbyBlazeStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 5;
+  const totalIntegracoes = 6;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (ultimoSyncSpinRssLog?.executado_em) timestamps.push({ ts: ultimoSyncSpinRssLog.executado_em, label: "Spin na Rede RSS" });
+  if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
@@ -792,14 +889,16 @@ export default function StatusTecnico() {
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
   const spinRssTotal = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss").length;
   const spinRssFalhas = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss" && l.status === "falha").length;
+  const lobbyBlazeTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze").length;
+  const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
     l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const totalTentativas = cdaTotal + spinRssTotal + socialTotal + Math.max(emailTotal, 1);
-  const totalFalhas = cdaFalhas + spinRssFalhas + socialFalhas + emailFalhas;
+  const totalTentativas = cdaTotal + spinRssTotal + lobbyBlazeTotal + socialTotal + Math.max(emailTotal, 1);
+  const totalFalhas = cdaFalhas + spinRssFalhas + lobbyBlazeFalhas + socialFalhas + emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -922,6 +1021,27 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no ingest Spin na Rede RSS (${taxaErroSpinRss}%)` });
   }
 
+  // ── Lobby Blaze ──
+  const syncLogsLobbyBlaze = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze");
+  const ultimoSyncLobbyOk = syncLogsLobbyBlaze.find((l) => l.status === "ok");
+  const ultimoSyncLobbyFalha = syncLogsLobbyBlaze.find((l) => l.status === "falha");
+  const taxaErroLobbyBlaze =
+    syncLogsLobbyBlaze.length > 0
+      ? ((syncLogsLobbyBlaze.filter((l) => l.status === "falha").length / syncLogsLobbyBlaze.length) * 100).toFixed(1)
+      : "0";
+
+  if (syncLogsLobbyBlaze.length > 0 && !ultimoSyncLobbyOk && ultimoSyncLobbyFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Blaze com sucesso" });
+  } else if (ultimoSyncLobbyOk) {
+    const exec = new Date(ultimoSyncLobbyOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({ nivel: "aviso", msg: "Coleta Lobby Blaze atrasada (> 24h sem execução OK)" });
+    }
+  }
+  if (parseFloat(taxaErroLobbyBlaze) > 5 && syncLogsLobbyBlaze.length > 0) {
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Lobby Blaze (${taxaErroLobbyBlaze}%)` });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = integrations
     .map((int) => {
@@ -940,7 +1060,9 @@ export default function StatusTecnico() {
         ? ("cda" as const)
         : int.slug === "spin_na_rede_rss"
           ? ("spin_rss" as const)
-          : ("none" as const);
+          : int.slug === "lobby_blaze"
+            ? ("lobby_blaze" as const)
+            : ("none" as const);
     return {
       ...int,
       ultimoSync: ultimo?.executado_em ?? null,
@@ -991,6 +1113,7 @@ export default function StatusTecnico() {
       cda: "CDA (Casa de Apostas)",
       social: "Social Media",
       spin_rss: "Spin na Rede (RSS)",
+      lobby_blaze: "Lobby Blaze",
       relatorio_diretoria: "E-mail: Relatório Diretoria",
       email_agenda_diaria: "E-mail: Agenda do dia",
     }[k] ?? `E-mail: ${k}`);
@@ -999,6 +1122,7 @@ export default function StatusTecnico() {
       cda: BRAND.roxoVivo,
       social: BRAND.azul,
       spin_rss: "#a78bfa",
+      lobby_blaze: "#f97316",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
     }[k] ?? "#10b981");
@@ -1135,12 +1259,13 @@ export default function StatusTecnico() {
       {/* ── Status das Integrações ── */}
       <div style={card}>
         <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
-        {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || emailMensagem || emailAgendaMensagem) && (
+        {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
+              syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
               emailMensagem && { prefix: "E-mail Diretoria", msg: emailMensagem },
               emailAgendaMensagem && { prefix: "E-mail Agenda", msg: emailAgendaMensagem },
             ]
@@ -1190,6 +1315,7 @@ export default function StatusTecnico() {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
                   const isSpinRss = row.syncTipo === "spin_rss";
+                  const isLobbyBlaze = row.syncTipo === "lobby_blaze";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
                   const syncExecutandoRow = isCda
@@ -1198,7 +1324,9 @@ export default function StatusTecnico() {
                       ? syncSocialExecutando
                       : isSpinRss
                         ? syncSpinRssExecutando
-                        : false;
+                        : isLobbyBlaze
+                          ? syncLobbyBlazeExecutando
+                          : false;
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
@@ -1230,11 +1358,13 @@ export default function StatusTecnico() {
                       </td>
                       {mostrarColunaAcao && (
                       <td style={tdStyle}>
-                        {(isCda || isSocial || isSpinRss) && (
+                        {(isCda || isSocial || isSpinRss || isLobbyBlaze) && (
                           <button
                             type="button"
                             onClick={() =>
-                              setConfirmarSync(isCda ? "cda" : isSocial ? "social" : "spin_rss")}
+                              setConfirmarSync(
+                                isCda ? "cda" : isSocial ? "social" : isSpinRss ? "spin_rss" : "lobby_blaze",
+                              )}
                             disabled={syncExecutandoRow || !perm.canEditarOk}
                             style={btnAcao(syncExecutandoRow)}
                           >
@@ -1283,6 +1413,7 @@ export default function StatusTecnico() {
             { key: "cda", label: "CDA" },
             { key: "social", label: "Social Media" },
             { key: "spin_rss", label: "Spin RSS" },
+            { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "relatorio_diretoria", label: "E-mail Diretoria" },
             { key: "email_agenda_diaria", label: "E-mail Agenda" },
           ].map((item) => (
@@ -1331,6 +1462,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.spinRss)}%`, minWidth: f.spinRss > 0 ? 8 : 0, height: "100%", background: fluxoCor("spin_rss"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyBlaze > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_blaze")}: ${f.lobbyBlaze.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyBlaze)}%`, minWidth: f.lobbyBlaze > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_blaze"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                       <div
                         key={tipo}
@@ -1366,6 +1503,7 @@ export default function StatusTecnico() {
                       {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
                       {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }}>●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }}>●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -1474,7 +1612,11 @@ export default function StatusTecnico() {
                     const integracaoLabel =
                       log.integracao_slug
                         ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
-                          (log.integracao_slug === "spin_na_rede_rss" ? "Spin na Rede (RSS)" : log.integracao_slug)
+                          (log.integracao_slug === "spin_na_rede_rss"
+                            ? "Spin na Rede (RSS)"
+                            : log.integracao_slug === "lobby_blaze"
+                              ? "Lobby Blaze"
+                              : log.integracao_slug)
                         : {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
@@ -1482,6 +1624,7 @@ export default function StatusTecnico() {
                             email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
                             resend: "E-mail (Resend)",
                             spin_na_rede_rss: "Spin na Rede (RSS)",
+                            lobby_blaze: "Lobby Blaze",
                           }[log.tipo] ?? log.tipo;
                     return (
                       <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
@@ -1704,6 +1847,18 @@ export default function StatusTecnico() {
                   <td style={tdStyle}>Taxa de erro alta no ingest Spin na Rede RSS</td>
                   <td style={tdStyle}>&gt; 5% em sync_logs (slug spin_na_rede_rss)</td>
                 </tr>
+                <tr>
+                  <td style={tdStyle}>Nenhuma coleta Lobby Blaze com sucesso</td>
+                  <td style={tdStyle}>Último sync_logs com falha, nenhum OK (slug lobby_blaze)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Coleta Lobby Blaze atrasada</td>
+                  <td style={tdStyle}>&gt; 24h sem sync_logs OK</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Taxa de erro alta no Lobby Blaze</td>
+                  <td style={tdStyle}>&gt; 5% em sync_logs (slug lobby_blaze)</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1747,6 +1902,7 @@ export default function StatusTecnico() {
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingest Spin na Rede (RSS)"}
+              {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
             </h2>
@@ -1787,6 +1943,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "spin_rss") {
                     setConfirmarSync(null);
                     void executarSyncSpinRss();
+                  } else if (confirmarSync === "lobby_blaze") {
+                    setConfirmarSync(null);
+                    void executarSyncLobbyBlaze();
                   } else if (confirmarEmail === "diretoria") {
                     setConfirmarEmail(null);
                     void enviarEmailDiretoria();

@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  */
 
 const OPERADORA_SLUG = "blaze";
+const INTEGRACAO_SLUG = "lobby_blaze";
 const LIMIT = 30;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
@@ -273,6 +274,36 @@ async function escanearLobby(
   return { lobby, posicoes, paginasLidas: page };
 }
 
+type SupabaseAdmin = ReturnType<typeof createClient>;
+
+async function gravarSyncLogLobby(
+  supabase: SupabaseAdmin,
+  opts: {
+    status: "ok" | "falha";
+    registros_inseridos: number;
+    erros_count: number;
+    mensagem_erro: string | null;
+    duracao_ms: number;
+  },
+): Promise<void> {
+  try {
+    const hoje = new Date().toISOString().split("T")[0];
+    await supabase.from("sync_logs").insert({
+      integracao_slug: INTEGRACAO_SLUG,
+      status: opts.status,
+      registros_inseridos: opts.registros_inseridos,
+      registros_atualizados: 0,
+      erros_count: opts.erros_count,
+      mensagem_erro: opts.mensagem_erro,
+      duracao_ms: opts.duracao_ms,
+      periodo_inicio: hoje,
+      periodo_fim: hoje,
+    });
+  } catch (e) {
+    console.error("[monitor-lobby-blaze] Falha ao gravar sync_logs:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(req) });
@@ -420,6 +451,14 @@ serve(async (req) => {
       .select("id")
       .single();
 
+    await gravarSyncLogLobby(supabase, {
+      status: "falha",
+      registros_inseridos: mesasEncontradas,
+      erros_count: Math.max(0, mesasList.length - mesasEncontradas),
+      mensagem_erro: apiErro.slice(0, 2000),
+      duracao_ms: duracaoMs,
+    });
+
     return json({
       ok: false,
       status: "erro_api",
@@ -430,6 +469,15 @@ serve(async (req) => {
 
   const piorMesa = piorMesaDry;
   const jogosVitrine = jogosVitrineDry;
+  const mensagemErroParcial =
+    status === "parcial"
+      ? `Mesas não encontradas no lobby: ${
+        mesasList
+          .filter((m) => !posicoes.has(m.mesa_identificacao_operadora!.trim()))
+          .map((m) => m.nome_mesa)
+          .join(", ")
+      }`.slice(0, 2000)
+      : null;
 
   const { data: exec, error: execInsertErr } = await supabase
     .from("lobby_monitor_execucao")
@@ -445,16 +493,7 @@ serve(async (req) => {
       pior_mesa_identificacao: piorMesa?.mesa_identificacao ?? null,
       pior_mesa_posicao: piorMesa?.posicao ?? null,
       jogos_a_frente_pior_mesa: jogosVitrine,
-      erro: status === "parcial"
-        ? `Mesas não encontradas no lobby: ${
-          mesasList
-            .filter((m) =>
-              !posicoes.has(m.mesa_identificacao_operadora!.trim())
-            )
-            .map((m) => m.nome_mesa)
-            .join(", ")
-        }`.slice(0, 2000)
-        : null,
+      erro: mensagemErroParcial,
     })
     .select("id")
     .single();
@@ -473,12 +512,28 @@ serve(async (req) => {
 
   const { error: posErr } = await supabase.from("lobby_monitor_posicao").insert(rows);
   if (posErr) {
+    await gravarSyncLogLobby(supabase, {
+      status: "falha",
+      registros_inseridos: 0,
+      erros_count: mesasList.length,
+      mensagem_erro: posErr.message.slice(0, 2000),
+      duracao_ms: duracaoMs,
+    });
     return json({
       ok: false,
       execucao_id: exec.id,
       erro: posErr.message,
     }, req, 500);
   }
+
+  const errosParcial = Math.max(0, mesasList.length - mesasEncontradas);
+  await gravarSyncLogLobby(supabase, {
+    status: "ok",
+    registros_inseridos: mesasEncontradas,
+    erros_count: errosParcial,
+    mensagem_erro: mensagemErroParcial,
+    duracao_ms: duracaoMs,
+  });
 
   return json({
     ok: status === "ok",
