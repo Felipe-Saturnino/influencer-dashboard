@@ -68,6 +68,12 @@ function fmtDataHora(iso: string): string {
   }
 }
 
+/** Valor para `<input type="date">` a partir de coluna `date` do Supabase. */
+function dataIsoParaInputDate(iso: string | null | undefined): string {
+  if (!iso?.trim()) return "";
+  return String(iso).trim().slice(0, 10);
+}
+
 /** Nome do time do organograma normalizado para regras de UI (acentos, espaços). */
 function normStaffNomeTimeUi(nome: string | null | undefined): string {
   return (nome ?? "")
@@ -1178,7 +1184,6 @@ export default function RhGestaoStaffPage() {
       {modalVer ? (
         <ModalStaffVer
           row={modalVer}
-          nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           dadosFuncaoOcultarOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
             modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
@@ -1233,7 +1238,6 @@ export default function RhGestaoStaffPage() {
 
 function ModalStaffVer({
   row,
-  nomeTimeOrganograma,
   operadorasNome,
   dadosFuncaoOcultarOperadora = false,
   dadosFuncaoOcultarBioFotos = false,
@@ -1242,8 +1246,6 @@ function ModalStaffVer({
   brand,
 }: {
   row: RhFuncionario;
-  /** Nome do time no organograma (rh_org_times), mesma regra que na tabela. */
-  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   /** Times Service Manager, Customer Service, Shift Leader, Performance Coach. */
   dadosFuncaoOcultarOperadora?: boolean;
@@ -1253,7 +1255,6 @@ function ModalStaffVer({
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
-  const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -1291,10 +1292,6 @@ function ModalStaffVer({
       setHistLoading(false);
     })();
   }, [aba, row.id]);
-
-  useEffect(() => {
-    if (!staffEhGamePresenter && aba === "skills") setAba("funcao");
-  }, [staffEhGamePresenter, aba]);
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const opSlug = row.staff_operadora_slug?.trim();
@@ -1360,7 +1357,7 @@ function ModalStaffVer({
       <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("pessoal", "Dados pessoais")}
         {tabBtn("funcao", "Dados de função")}
-        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
+        {tabBtn("skills", "Dados de skills")}
         {tabBtn("historico", "Histórico")}
       </div>
 
@@ -1432,6 +1429,8 @@ function ModalStaffVer({
 
       {aba === "skills" && (
         <div role="tabpanel">
+          <CampoLeitura k="Live no Estúdio" v={fmtDataIsoPtBr(row.staff_live_no_estudio)} t={t} />
+          <CampoLeitura k="Fim do Treinamento" v={fmtDataIsoPtBr(row.staff_fim_treinamento)} t={t} />
           <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
             Status de conhecimento por jogo.
           </div>
@@ -1585,6 +1584,7 @@ function ModalStaffEditar({
     "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
   > | null>(null);
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
+  const [liveNoEstudio, setLiveNoEstudio] = useState(() => dataIsoParaInputDate(row.staff_live_no_estudio));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [dealerGenero, setDealerGenero] = useState<DealerGenero>(() => readStaffDealerGeneroForUi(row));
@@ -1604,6 +1604,7 @@ function ModalStaffEditar({
       setHorarioTurno(hRaw && horarioTurnoStaffValorPermitido(row.escala, te, hRaw) ? hRaw : "");
     }
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
+    setLiveNoEstudio(dataIsoParaInputDate(row.staff_live_no_estudio));
     setAba("funcao");
     setDealerGenero(readStaffDealerGeneroForUi(row));
     setDealerBio(readStaffDealerBioForUi(row));
@@ -1619,6 +1620,7 @@ function ModalStaffEditar({
     row.staff_id_operacional,
     row.staff_horario_turno,
     row.staff_skills,
+    row.staff_live_no_estudio,
     row.staff_dealer_genero,
     row.staff_dealer_bio,
     row.staff_dealer_fotos,
@@ -1633,7 +1635,7 @@ function ModalStaffEditar({
   }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos, row]);
 
   useEffect(() => {
-    if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
+    if (!staffEhGamePresenter && aba === "dealer") setAba("funcao");
   }, [staffEhGamePresenter, aba]);
 
   useEffect(() => {
@@ -1768,6 +1770,7 @@ function ModalStaffEditar({
       idOp: (row.staff_id_operacional ?? "").trim(),
       horario: (row.staff_horario_turno ?? "").trim(),
       skills: stringifySkills(normalizarSkills(row.staff_skills as Record<string, unknown>)),
+      live: dataIsoParaInputDate(row.staff_live_no_estudio),
     };
     const depois = {
       nick: nick.trim(),
@@ -1777,6 +1780,7 @@ function ModalStaffEditar({
       idOp: idOperacional.trim(),
       horario: (horarioFinal ?? "").trim(),
       skills: stringifySkills(skills),
+      live: liveNoEstudio.trim(),
     };
     const alteracoes: { campo: string; antes: string; depois: string }[] = [];
     if (antes.nick !== depois.nick) alteracoes.push({ campo: "Nickname", antes: antes.nick || "—", depois: depois.nick || "—" });
@@ -1792,6 +1796,13 @@ function ModalStaffEditar({
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
     if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
     if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills", antes: antes.skills, depois: depois.skills });
+    if (antes.live !== depois.live) {
+      alteracoes.push({
+        campo: "Live no Estúdio",
+        antes: fmtDataIsoPtBr(antes.live || null),
+        depois: fmtDataIsoPtBr(depois.live || null),
+      });
+    }
 
     const patch = {
       staff_nickname: depois.nick || null,
@@ -1801,6 +1812,7 @@ function ModalStaffEditar({
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
       staff_skills: skillsParaJson(skills),
+      staff_live_no_estudio: depois.live ? depois.live : null,
     };
 
     const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
@@ -1861,7 +1873,7 @@ function ModalStaffEditar({
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("funcao", "Dados de função")}
-        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
+        {tabBtn("skills", "Dados de skills")}
         {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
       </div>
 
@@ -1981,6 +1993,30 @@ function ModalStaffEditar({
 
       {aba === "skills" && (
         <div role="tabpanel">
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-live-estudio">
+              Live no Estúdio
+            </label>
+            <input
+              id="staff-live-estudio"
+              type="date"
+              value={liveNoEstudio}
+              onChange={(e) => setLiveNoEstudio(e.target.value)}
+              style={inputStyle}
+              aria-label="Live no Estúdio"
+            />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={labelStyle}>Fim do Treinamento (somente leitura)</span>
+            <input
+              type="text"
+              readOnly
+              value={fmtDataIsoPtBr(row.staff_fim_treinamento)}
+              style={{ ...inputStyle, opacity: 0.85 }}
+              aria-readonly
+              aria-label="Fim do Treinamento"
+            />
+          </div>
           {STAFF_SKILL_KEYS.map(({ key, label }) => (
             <div key={key} style={{ marginBottom: 14 }}>
               <label style={labelStyle} htmlFor={`skill-${key}`}>

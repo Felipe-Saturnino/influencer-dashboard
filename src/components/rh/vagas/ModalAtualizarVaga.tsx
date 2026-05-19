@@ -11,12 +11,14 @@ import {
   tipoVagaParaEdicao,
   type RhVagaTipoSelecionavel,
 } from "../../../lib/rhVagasFormat";
+import { SimNaoField } from "./SimNaoField";
 import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
-import { SelectOrganogramaTimes } from "../SelectOrganogramaTimes";
+import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
+import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 
 type Theme = {
   text: string;
@@ -72,7 +74,7 @@ export function ModalAtualizarVaga({
 
   const [titulo, setTitulo] = useState("");
   const [tipoVaga, setTipoVaga] = useState<RhVagaTipoSelecionavel>("interna");
-  const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
+  const [orgVinculo, setOrgVinculo] = useState<RhVagaOrgVinculo>(orgVinculoVazio);
   const [dataAbertura, setDataAbertura] = useState("");
   /** Só usado em "Atualizar" para validar data fim vs abertura (campo oculto). */
   const [dataAberturaRef, setDataAberturaRef] = useState("");
@@ -81,6 +83,8 @@ export function ModalAtualizarVaga({
   const [responsabilidades, setResponsabilidades] = useState("");
   const [requisitos, setRequisitos] = useState("");
   const [escalaTrabalho, setEscalaTrabalho] = useState("");
+  const [necessarioVideoApresentacao, setNecessarioVideoApresentacao] = useState(false);
+  const [necessarioTurno, setNecessarioTurno] = useState(false);
 
   const [funcionarios, setFuncionarios] = useState<HcRow[]>([]);
   const [carregandoHc, setCarregandoHc] = useState(false);
@@ -119,12 +123,14 @@ export function ModalAtualizarVaga({
     if (!vaga) return;
     setTipoVaga(tipoVagaParaEdicao(vaga.tipo_vaga as RhVagaTipo));
     setTitulo(vaga.titulo);
-    setOrgTimeId(vaga.org_time_id);
+    setOrgVinculo(orgVinculoDeRow(vaga));
     setDataFimInscricoes(dataIsoDateOnly(vaga.data_fim_inscricoes));
     setDescricao(vaga.descricao ?? "");
     setResponsabilidades(vaga.responsabilidades ?? "");
     setRequisitos(vaga.requisitos ?? "");
     setEscalaTrabalho(vaga.escala_trabalho ?? "");
+    setNecessarioVideoApresentacao(Boolean(vaga.necessario_video_apresentacao));
+    setNecessarioTurno(Boolean(vaga.necessario_turno));
     const ab = dataIsoDateOnly(vaga.data_abertura);
     setDataAberturaRef(ab);
     if (accao === "reabrir") {
@@ -133,6 +139,13 @@ export function ModalAtualizarVaga({
       setDataAbertura(ab);
     }
   }, [open, passo, accao, vaga]);
+
+  useEffect(() => {
+    if (tipoVaga !== "externa") {
+      setNecessarioVideoApresentacao(false);
+      setNecessarioTurno(false);
+    }
+  }, [tipoVaga]);
 
   useEffect(() => {
     if (!open || passo !== "formulario" || accao !== "concluir" || !vaga) return;
@@ -215,7 +228,7 @@ export function ModalAtualizarVaga({
   function validarFormCorpo(): boolean {
     const e: Record<string, string> = {};
     if (!titulo.trim()) e.titulo = "Informe o título.";
-    if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
+    if (!orgVinculoTemSelecao(orgVinculo)) e.org_vinculo = "Selecione o organograma.";
     const abRef = accao === "atualizar" ? dataAberturaRef : dataAbertura;
     if (accao === "reabrir") {
       if (!dataAbertura.trim()) e.data_abertura = "Informe a data de abertura.";
@@ -261,19 +274,27 @@ export function ModalAtualizarVaga({
 
     setSalvando(true);
 
+    const camposExterna = {
+      necessario_video_apresentacao: tipoVaga === "externa" ? necessarioVideoApresentacao : false,
+      necessario_turno: tipoVaga === "externa" ? necessarioTurno : false,
+    };
+
     let patch: Record<string, unknown> = {};
 
     if (accao === "reabrir") {
       patch = {
         titulo: titulo.trim(),
         tipo_vaga: tipoVaga,
-        org_time_id: orgTimeId,
+        org_time_id: orgVinculo.org_time_id,
+        org_gerencia_id: orgVinculo.org_gerencia_id,
+        org_diretoria_id: orgVinculo.org_diretoria_id,
         data_abertura: dataAbertura.trim(),
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
         requisitos: requisitos.trim(),
         escala_trabalho: escalaTrabalho.trim(),
+        ...camposExterna,
         status: "aberta",
         data_encerramento: null,
         motivo_cancelamento: null,
@@ -283,12 +304,15 @@ export function ModalAtualizarVaga({
       patch = {
         titulo: titulo.trim(),
         tipo_vaga: tipoVaga,
-        org_time_id: orgTimeId,
+        org_time_id: orgVinculo.org_time_id,
+        org_gerencia_id: orgVinculo.org_gerencia_id,
+        org_diretoria_id: orgVinculo.org_diretoria_id,
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
         requisitos: requisitos.trim(),
         escala_trabalho: escalaTrabalho.trim(),
+        ...camposExterna,
       };
     } else if (accao === "concluir") {
       patch = {
@@ -441,20 +465,35 @@ export function ModalAtualizarVaga({
 
               <TipoVagaField name="atv-tipo-vaga" value={tipoVaga} onChange={setTipoVaga} t={t} erro={fieldErr.tipo_vaga} />
 
-              <div style={{ marginBottom: 14 }}>
-                {lblReq("atv-org", "Organograma")}
-                <SelectOrganogramaTimes
-                  id="atv-org"
-                  aria-label="Selecionar time no organograma"
-                  value={orgTimeId ?? ""}
-                  disabled={carregandoOrg || grupos.length === 0}
-                  grupos={grupos}
-                  acceptLevels={["time"]}
-                  onPick={(id) => setOrgTimeId(id)}
-                  style={inputStyle}
-                />
-                {fieldErr.org_time_id ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div> : null}
-              </div>
+              {tipoVaga === "externa" ? (
+                <div className="app-grid-2" style={{ marginBottom: 14 }}>
+                  <SimNaoField
+                    name="atv-video-apresentacao"
+                    label="Necessário Vídeo de Apresentação?"
+                    value={necessarioVideoApresentacao}
+                    onChange={setNecessarioVideoApresentacao}
+                    t={t}
+                  />
+                  <SimNaoField
+                    name="atv-turno"
+                    label="Necessário Turno?"
+                    value={necessarioTurno}
+                    onChange={setNecessarioTurno}
+                    t={t}
+                  />
+                </div>
+              ) : null}
+
+              <CampoOrganogramaVaga
+                id="atv-org"
+                value={orgVinculo}
+                onChange={setOrgVinculo}
+                grupos={grupos}
+                disabled={carregandoOrg || grupos.length === 0}
+                style={inputStyle}
+                t={t}
+                erro={fieldErr.org_vinculo}
+              />
 
               {accao === "reabrir" ? (
                 <div style={{ marginBottom: 14 }}>

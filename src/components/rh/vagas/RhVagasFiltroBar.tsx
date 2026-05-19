@@ -1,16 +1,17 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Briefcase, ClipboardList, SlidersHorizontal } from "lucide-react";
+import { Briefcase, ClipboardList, SlidersHorizontal, Users } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import type { RhVagasAba } from "../../../types/rhVaga";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg?: string; cardBg?: string };
 type BrandBar = { blockBg: string; accent: string; useBrand: boolean };
 
-const TAB_IDS: RhVagasAba[] = ["abertas", "em_andamento", "gerenciamento"];
+const TAB_BASE: RhVagasAba[] = ["abertas", "em_andamento", "gerenciamento"];
 const TAB_LABELS: Record<RhVagasAba, string> = {
   abertas: "Vagas Abertas",
   em_andamento: "Vagas em Andamento",
   gerenciamento: "Gerenciamento de Vagas",
+  candidaturas: "Candidaturas",
 };
 
 /** Bloco de abas no estilo do filtro do Organograma (sem carrossel de diretorias). */
@@ -18,16 +19,21 @@ export function RhVagasFiltroBar({
   aba,
   setAba,
   mostrarGerenciamento,
+  mostrarCandidaturas,
   t,
   brand,
 }: {
   aba: RhVagasAba;
   setAba: Dispatch<SetStateAction<RhVagasAba>>;
   mostrarGerenciamento: boolean;
+  mostrarCandidaturas: boolean;
   t: Theme;
   brand: BrandBar;
 }) {
-  const tabs = mostrarGerenciamento ? TAB_IDS : (["abertas", "em_andamento"] as const);
+  const tabs: RhVagasAba[] = [
+    ...TAB_BASE.filter((k) => k !== "gerenciamento" || mostrarGerenciamento),
+    ...(mostrarCandidaturas ? (["candidaturas"] as const) : []),
+  ];
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -99,6 +105,7 @@ export function RhVagasFiltroBar({
                 {key === "abertas" ? <Briefcase size={16} aria-hidden /> : null}
                 {key === "em_andamento" ? <ClipboardList size={16} aria-hidden /> : null}
                 {key === "gerenciamento" ? <SlidersHorizontal size={16} aria-hidden /> : null}
+                {key === "candidaturas" ? <Users size={16} aria-hidden /> : null}
                 {TAB_LABELS[key]}
               </button>
             );

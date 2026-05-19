@@ -5,11 +5,13 @@ import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { hojeIsoDate, type RhVagaTipoSelecionavel } from "../../../lib/rhVagasFormat";
+import { SimNaoField } from "./SimNaoField";
 import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
-import { SelectOrganogramaTimes } from "../SelectOrganogramaTimes";
+import { orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
+import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 
 type Theme = {
   text: string;
@@ -44,7 +46,9 @@ export function ModalNovaVaga({
 
   const [titulo, setTitulo] = useState("");
   const [tipoVaga, setTipoVaga] = useState<RhVagaTipoSelecionavel>("interna");
-  const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
+  const [necessarioVideoApresentacao, setNecessarioVideoApresentacao] = useState(false);
+  const [necessarioTurno, setNecessarioTurno] = useState(false);
+  const [orgVinculo, setOrgVinculo] = useState<RhVagaOrgVinculo>(orgVinculoVazio);
   const [dataAbertura, setDataAbertura] = useState(hojeIsoDate());
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -59,7 +63,9 @@ export function ModalNovaVaga({
   const resetForm = useCallback(() => {
     setTitulo("");
     setTipoVaga("interna");
-    setOrgTimeId(null);
+    setNecessarioVideoApresentacao(false);
+    setNecessarioTurno(false);
+    setOrgVinculo(orgVinculoVazio());
     setDataAbertura(hojeIsoDate());
     setDataFimInscricoes("");
     setDescricao("");
@@ -81,6 +87,13 @@ export function ModalNovaVaga({
       else setGrupos(g);
     });
   }, [open, resetForm]);
+
+  useEffect(() => {
+    if (tipoVaga !== "externa") {
+      setNecessarioVideoApresentacao(false);
+      setNecessarioTurno(false);
+    }
+  }, [tipoVaga]);
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -105,7 +118,7 @@ export function ModalNovaVaga({
   function validar(): boolean {
     const e: Record<string, string> = {};
     if (!titulo.trim()) e.titulo = "Informe o título.";
-    if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
+    if (!orgVinculoTemSelecao(orgVinculo)) e.org_vinculo = "Selecione o organograma.";
     if (!dataAbertura.trim()) e.data_abertura = "Informe a data de abertura.";
     if (!dataFimInscricoes.trim()) e.data_fim = "Informe a data fim das inscrições.";
     if (dataAbertura && dataFimInscricoes && dataFimInscricoes < dataAbertura) {
@@ -126,7 +139,9 @@ export function ModalNovaVaga({
     const payload = {
       titulo: titulo.trim(),
       tipo_vaga: tipoVaga,
-      org_time_id: orgTimeId,
+      org_time_id: orgVinculo.org_time_id,
+      org_gerencia_id: orgVinculo.org_gerencia_id,
+      org_diretoria_id: orgVinculo.org_diretoria_id,
       remuneracao_centavos: 0,
       data_abertura: dataAbertura.trim(),
       data_fim_inscricoes: dataFimInscricoes.trim(),
@@ -134,6 +149,8 @@ export function ModalNovaVaga({
       responsabilidades: responsabilidades.trim(),
       requisitos: requisitos.trim(),
       escala_trabalho: escalaTrabalho.trim(),
+      necessario_video_apresentacao: tipoVaga === "externa" ? necessarioVideoApresentacao : false,
+      necessario_turno: tipoVaga === "externa" ? necessarioTurno : false,
       status: "aberta" as const,
     };
     const { error } = await supabase.from("rh_vagas").insert(payload);
@@ -175,21 +192,35 @@ export function ModalNovaVaga({
 
         <TipoVagaField name="nv-tipo-vaga" value={tipoVaga} onChange={setTipoVaga} t={t} erro={fieldErr.tipo_vaga} />
 
-        <div style={{ marginBottom: 14 }}>
-          {lblReq("nv-org", "Organograma")}
-          <SelectOrganogramaTimes
-            id="nv-org"
-            aria-label="Selecionar time no organograma"
-            value={orgTimeId ?? ""}
-            disabled={carregandoOrg || grupos.length === 0}
-            grupos={grupos}
-            acceptLevels={["time"]}
-            onPick={(id) => setOrgTimeId(id)}
-            style={inputStyle}
-          />
-          {fieldErr.org_time_id ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div> : null}
-        </div>
+        {tipoVaga === "externa" ? (
+          <div className="app-grid-2" style={{ marginBottom: 14 }}>
+            <SimNaoField
+              name="nv-video-apresentacao"
+              label="Necessário Vídeo de Apresentação?"
+              value={necessarioVideoApresentacao}
+              onChange={setNecessarioVideoApresentacao}
+              t={t}
+            />
+            <SimNaoField
+              name="nv-turno"
+              label="Necessário Turno?"
+              value={necessarioTurno}
+              onChange={setNecessarioTurno}
+              t={t}
+            />
+          </div>
+        ) : null}
 
+        <CampoOrganogramaVaga
+          id="nv-org"
+          value={orgVinculo}
+          onChange={setOrgVinculo}
+          grupos={grupos}
+          disabled={carregandoOrg || grupos.length === 0}
+          style={inputStyle}
+          t={t}
+          erro={fieldErr.org_vinculo}
+        />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div>
             {lblReq("nv-abertura", "Data de abertura")}

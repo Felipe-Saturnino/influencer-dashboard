@@ -1,11 +1,9 @@
-# Monitor lobby Blaze — tentativa no runner GitHub (Azure). A Blaze costuma responder HTTP 451 aqui.
-# Preferir: workflow "Monitor Lobby Blaze (self-hosted)" ou script local (scripts/run-monitor-lobby-blaze.ps1).
-# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (recomendado) ou SUPABASE_ANON_KEY
-name: Monitor Lobby Blaze (hourly)
+# Monitor lobby Blaze — runner self-hosted (seu PC/servidor no Brasil).
+# Instale o runner: GitHub → Settings → Actions → Runners → New self-hosted runner
+# Depois: Actions → "Monitor Lobby Blaze (self-hosted)" → Run workflow
+name: Monitor Lobby Blaze (self-hosted)
 
 on:
-  schedule:
-    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -13,19 +11,10 @@ on:
         type: boolean
         default: false
 
-concurrency:
-  group: monitor-lobby-blaze-${{ github.workflow }}
-  cancel-in-progress: false
-
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Horário da execução (UTC e Brasília)
-        run: |
-          echo "UTC:      $(date -u '+%Y-%m-%d %H:%M:%S')"
-          echo "Brasília: $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M:%S %Z')"
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -41,15 +30,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ]; then
-            echo "Defina SUPABASE_URL nos secrets do repositório."
+            echo "Defina SUPABASE_URL nos secrets."
             exit 1
           fi
           if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ] && [ -z "${SUPABASE_ANON_KEY:-}" ]; then
-            echo "Defina SUPABASE_SERVICE_ROLE_KEY (recomendado) ou SUPABASE_ANON_KEY."
+            echo "Defina SUPABASE_SERVICE_ROLE_KEY (recomendado)."
             exit 1
           fi
           ARGS=()
-          if [ "${DRY_RUN:-}" = "1" ]; then
-            ARGS+=(--dry-run)
-          fi
+          if [ "${DRY_RUN:-}" = "1" ]; then ARGS+=(--dry-run); fi
           node scripts/monitor-lobby-blaze-run.mjs "${ARGS[@]}"

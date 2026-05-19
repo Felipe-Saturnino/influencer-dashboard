@@ -39,39 +39,53 @@ supabase functions deploy monitor-lobby-blaze
 
 **Secret opcional:** `MONITOR_LOBBY_BLAZE_INGEST_SECRET`
 
-## HTTP 451 na Edge (teste direto no painel Supabase)
+## HTTP 451 — bloqueio de IP (Edge, GitHub-hosted)
 
-A Blaze costuma **bloquear IPs de datacenter** (Supabase Edge, alguns clouds) com **HTTP 451**. No seu PC o mesmo URL responde 200.
+A Blaze responde **HTTP 451** para IPs de **datacenter** (Supabase Edge, runners `ubuntu-latest` no Azure). No seu PC (rede BR) o mesmo URL costuma responder **200**.
 
-**Não teste só com POST vazio na Edge.** Use um destes caminhos:
+O workflow **Monitor Lobby Blaze (hourly)** no GitHub **provavelmente falhará** com 451. Use uma das opções abaixo.
 
-### A) Script local (recomendado para teste)
+### A) Script no seu PC (recomendado)
 
-Com a função já implantada e secrets no ambiente:
+1. Implante a Edge Function `monitor-lobby-blaze`.
+2. Crie `.env.monitor` na raiz (não commitar):
+
+```env
+SUPABASE_URL=https://SEU_PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+3. Teste:
 
 ```bash
-SUPABASE_URL=https://SEU_PROJETO.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=eyJ... \
 node scripts/monitor-lobby-blaze-run.mjs --dry-run
 ```
 
-Sem `--dry-run` grava no banco.
+4. Agendador de Tarefas (Windows): a cada 1h execute `scripts\run-monitor-lobby-blaze.ps1`.
 
-### B) GitHub Actions
+O script busca a Blaze na sua rede e chama a Edge só para **calcular posições e gravar** (`blaze_lobby` no body).
 
-Workflow **Monitor Lobby Blaze (hourly)** → **Run workflow** (opção dry run disponível).
+### B) GitHub Actions self-hosted
 
-Secrets: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+1. [Instale um runner](https://docs.github.com/actions/hosting-your-own-runners/managing-self-hosted-runners) na sua máquina Windows.
+2. Workflow: **Monitor Lobby Blaze (self-hosted)** → Run workflow.
+3. Mesmos secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-O script busca a Blaze no runner e chama a Edge com `blaze_lobby` no body (a Edge só processa e grava).
+### C) Proxy (avançado)
 
-### C) Edge com lobby pronto (avançado)
+Secret `HTTPS_PROXY` no workflow (proxy residencial BR). O script `monitor-lobby-blaze-run.mjs` usa `undici` se a variável existir.
 
-POST `monitor-lobby-blaze` com `blaze_lobby` + `blaze_paginas_lidas` (array já montado) — útil se outro serviço fizer o fetch.
+### D) Painel Supabase / Edge direto
 
-## Agendamento
+POST vazio na Edge → 451. Não usar para teste.
 
-`.github/workflows/monitor-lobby-blaze-hourly.yml` — fetch no GitHub Actions, não na Edge.
+## Agendamento automático
+
+| Onde rodar | Como |
+|------------|------|
+| Seu PC | Agendador de Tarefas + `run-monitor-lobby-blaze.ps1` |
+| Runner self-hosted | Workflow `monitor-lobby-blaze-self-hosted.yml` |
+| GitHub cloud | `monitor-lobby-blaze-hourly.yml` — só se a Blaze passar a aceitar o IP |
 
 ## Tabelas
 
