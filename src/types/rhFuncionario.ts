@@ -102,6 +102,10 @@ export interface RhFuncionario {
   staff_horario_turno?: string | null;
   /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
+  /** Data da live no estúdio (Gestão de Staff > Dados de skills). */
+  staff_live_no_estudio?: string | null;
+  /** Fim do treinamento; preenchimento via Supabase (somente leitura na UI). */
+  staff_fim_treinamento?: string | null;
   /** Gênero no dealer (Gestão de Staff > Gestão de dealer). */
   staff_dealer_genero?: "feminino" | "masculino" | null;
   /** Bio do dealer (`dealers.perfil_influencer`). */
