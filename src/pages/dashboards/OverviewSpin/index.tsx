@@ -14,8 +14,18 @@ import {
   labelCarrosselPos,
   startOfWeekMonday,
   endOfWeekSunday,
+  POS_MONITOR_DIA_MIN,
+  POS_MONITOR_MIN_ANO,
+  POS_MONITOR_MIN_MES,
+  POS_MONITOR_SEMANA_MIN,
   type VisaoPosicionamento,
 } from "../../../lib/lobbyMonitorHelpers";
+
+const POS_VISAO_OPTIONS = [
+  { value: "mes", label: "Mês" },
+  { value: "semana", label: "Semana" },
+  { value: "dia", label: "Dia" },
+] as const;
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -27,7 +37,12 @@ const TAB_LABELS_SPIN: Record<OverviewSpinTab, string> = {
 };
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
-import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
+import {
+  MarginBadge,
+  SelectComIcone,
+  SingleDropdown,
+  SkeletonKpiCard,
+} from "../../../components/dashboard";
 import {
   getThStyle,
   getThStyleBrandAction,
@@ -40,6 +55,7 @@ import {
 import {
   ArrowUpDown,
   Calendar,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -1280,6 +1296,10 @@ export default function OverviewSpin() {
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const idxMesMinPosicionamento = useMemo(
+    () => mesesDisponiveis.findIndex((m) => m.ano === POS_MONITOR_MIN_ANO && m.mes === POS_MONITOR_MIN_MES),
+    [mesesDisponiveis],
+  );
   const hoje = new Date();
   const idxInicial = mesesDisponiveis.findIndex(
     (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth(),
@@ -1526,6 +1546,20 @@ export default function OverviewSpin() {
     if (aba !== "overview") return;
     void carregar();
   }, [carregar, aba]);
+
+  useEffect(() => {
+    if (aba !== "posicionamento") return;
+    const forced = operadoraSlugsForcado?.[0];
+    if (filtroOperadora === "todas") {
+      setFiltroOperadora(forced ?? "blaze");
+    }
+    const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
+    if (posVisao === "mes" && idxMes < minIdx) setIdxMes(minIdx);
+    const refDay = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
+    if (refDay.getTime() < POS_MONITOR_DIA_MIN.getTime()) {
+      setPosRefDate(new Date(POS_MONITOR_DIA_MIN));
+    }
+  }, [aba, filtroOperadora, operadoraSlugsForcado, idxMes, posVisao, idxMesMinPosicionamento, posRefDate]);
 
   useEffect(() => {
     setExpandedDetalhe(new Set());
@@ -2144,8 +2178,18 @@ export default function OverviewSpin() {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }, []);
 
-  const carrosselAnteriorDisabled =
-    aba === "posicionamento" && posVisao !== "mes" ? false : historico || isPrimeiro;
+  const carrosselAnteriorDisabled = useMemo(() => {
+    if (aba !== "posicionamento") return historico || isPrimeiro;
+    if (posVisao === "mes") {
+      const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
+      return idxMes <= minIdx;
+    }
+    if (posVisao === "semana") {
+      return startOfWeekMonday(posRefDate).getTime() <= POS_MONITOR_SEMANA_MIN.getTime();
+    }
+    const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
+    return ref.getTime() <= POS_MONITOR_DIA_MIN.getTime();
+  }, [aba, posVisao, posRefDate, historico, isPrimeiro, idxMes, idxMesMinPosicionamento]);
 
   const carrosselProximoDisabled = useMemo(() => {
     if (aba !== "posicionamento") return historico || isUltimo;
@@ -2166,7 +2210,9 @@ export default function OverviewSpin() {
       : labelCarrosselPos(posVisao, posRefDate, mesSelecionado);
 
   const operadoraSlugPosicionamento =
-    filtroOperadora !== "todas" ? filtroOperadora : (operadoraSlugsForcado?.[0] ?? "todas");
+    filtroOperadora !== "todas"
+      ? filtroOperadora
+      : (operadoraSlugsForcado?.[0] ?? "blaze");
 
   function irCarrosselAnterior() {
     if (aba === "posicionamento" && posVisao !== "mes") {
@@ -2194,15 +2240,9 @@ export default function OverviewSpin() {
     const idx = mesesDisponiveis.findIndex(
       (m) => m.ano === agora.getFullYear() && m.mes === agora.getMonth(),
     );
-    if (idx >= 0) setIdxMes(idx);
+    const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
+    if (idx >= 0) setIdxMes(Math.max(idx, minIdx));
   }
-
-  const sepFiltro: React.CSSProperties = {
-    width: 1,
-    height: 28,
-    background: t.cardBorder,
-    flexShrink: 0,
-  };
 
   const tabIdsSpin: OverviewSpinTab[] = ["overview", "posicionamento"];
 
@@ -3535,7 +3575,7 @@ export default function OverviewSpin() {
               Overview Spin
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.
+              Resultados consolidados das mesas ao vivo.
             </p>
           </div>
         </div>
@@ -3555,8 +3595,9 @@ export default function OverviewSpin() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 10,
+              gap: 18,
               flexWrap: "wrap",
+              marginBottom: 12,
             }}
           >
             <button
@@ -3628,7 +3669,6 @@ export default function OverviewSpin() {
             </button>
             ) : (
               <>
-                <span style={sepFiltro} aria-hidden />
                 <button
                   type="button"
                   aria-label="Ir para hoje"
@@ -3644,46 +3684,40 @@ export default function OverviewSpin() {
                     background: "transparent",
                     color: t.textMuted,
                     fontWeight: 500,
+                    lineHeight: 1,
                   }}
                 >
                   Hoje
                 </button>
-                <span style={sepFiltro} aria-hidden />
-                {(["mes", "semana", "dia"] as VisaoPosicionamento[]).map((v) => {
-                  const ativo = posVisao === v;
-                  const label = v === "mes" ? "Mês" : v === "semana" ? "Semana" : "Dia";
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      aria-pressed={ativo}
-                      onClick={() => {
-                        setPosVisao(v);
-                        if (v === "mes" && mesSelecionado) {
-                          setPosRefDate(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
-                        }
-                      }}
-                      style={{
-                        padding: "6px 14px",
-                        minHeight: 44,
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
-                        fontSize: 13,
-                        fontWeight: ativo ? 700 : 500,
-                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                        background: ativo
-                          ? brand.useBrand
-                            ? "var(--brand-action, #7c3aed)"
-                            : BRAND.roxoVivo
-                          : "transparent",
-                        color: ativo ? "#fff" : t.textMuted,
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+                <SingleDropdown
+                  value={posVisao}
+                  options={[...POS_VISAO_OPTIONS]}
+                  onChange={(v) => {
+                    const next = v as VisaoPosicionamento;
+                    setPosVisao(next);
+                    if (next === "mes" && mesSelecionado) {
+                      setPosRefDate(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
+                      const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
+                      if (idxMes < minIdx) setIdxMes(minIdx);
+                    }
+                    if (next === "semana") {
+                      const mon = startOfWeekMonday(posRefDate);
+                      if (mon.getTime() < POS_MONITOR_SEMANA_MIN.getTime()) {
+                        setPosRefDate(new Date(POS_MONITOR_SEMANA_MIN));
+                      }
+                    }
+                    if (next === "dia") {
+                      const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
+                      if (ref.getTime() < POS_MONITOR_DIA_MIN.getTime()) {
+                        setPosRefDate(new Date(POS_MONITOR_DIA_MIN));
+                      }
+                    }
+                  }}
+                  icon={<CalendarDays size={13} aria-hidden="true" />}
+                  t={t}
+                  accent={brand.accent}
+                  ariaLabelPrefix="Período de visualização"
+                />
               </>
             )}
 
@@ -3694,7 +3728,7 @@ export default function OverviewSpin() {
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
               >
-                <option value="todas">Todas as operadoras</option>
+                {aba === "overview" && <option value="todas">Todas as operadoras</option>}
                 {operadorasOcr
                   .filter((o) => podeVerOperadora(o.slug))
                   .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))

@@ -54,12 +54,17 @@ import {
   heatmapColunas,
   execucoesParaHeatCol,
   rankingConcorrentes,
-  visibilidadePorCategoria,
   concorrentesPorJogoSnapshot,
+  visibilidadePorCategoriaCompleta,
+  fmtUltimaAtualizacao,
   gerarAlertas,
   LINE_COLORS,
   POS_CHART_MAX,
+  POS_MONITOR_DIA_MIN,
+  POS_MONITOR_MIN_ANO,
+  POS_MONITOR_MIN_MES,
   SEMANTIC,
+  toDateKey,
 } from "../../../../lib/lobbyMonitorHelpers";
 
 interface Props {
@@ -305,11 +310,19 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
         : "Histórico de posicionamento — comparativo mensal";
 
   const chartData = useMemo(() => {
-    const buckets = assignExecucoesToBuckets(
+    let buckets = assignExecucoesToBuckets(
       bucketsHistorico(visao, refDate, mesAno),
       execPeriodo,
       visao,
     );
+    if (
+      visao === "mes" &&
+      mesAno?.ano === POS_MONITOR_MIN_ANO &&
+      mesAno.mes === POS_MONITOR_MIN_MES
+    ) {
+      const minKey = toDateKey(POS_MONITOR_DIA_MIN);
+      buckets = buckets.filter((b) => b.key >= minKey);
+    }
     const mesas = [...new Set(snapshotAtual.map((m) => m.mesa_identificacao))];
     return buckets.map((b) => {
       const row: Record<string, string | number | null> = { label: b.label };
@@ -342,7 +355,7 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
   const maxRank = ranking[0]?.count ?? 1;
 
   const cats = useMemo(
-    () => visibilidadePorCategoria(execPeriodo, posByExec),
+    () => visibilidadePorCategoriaCompleta(execPeriodo, posByExec),
     [execPeriodo, posByExec],
   );
 
@@ -438,15 +451,7 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
         <div style={card}>
           <SectionTitle icon={<ListOrdered size={15} />}>Posição atual das mesas</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            Último snapshot
-            {ultimaGlobal
-              ? ` · ${new Date(ultimaGlobal.executado_em).toLocaleString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}`
-              : ""}
+            {fmtUltimaAtualizacao(ultimaGlobal?.executado_em)}
           </p>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {mesasOrdenadas.map((m) => {
@@ -500,7 +505,7 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
         <div style={card}>
           <SectionTitle icon={<LayoutList size={15} />}>Concorrentes à frente por jogo</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            Snapshot mais recente
+            {fmtUltimaAtualizacao(ultimaGlobal?.executado_em)}
           </p>
           {concorrentesJogo.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>

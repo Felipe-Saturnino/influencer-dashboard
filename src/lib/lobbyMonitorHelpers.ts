@@ -15,6 +15,18 @@ export const SEMANTIC = {
 
 export type VisaoPosicionamento = "mes" | "semana" | "dia";
 
+/** Início do histórico de posicionamento no lobby (monitor Blaze). */
+export const POS_MONITOR_MIN_ANO = 2026;
+export const POS_MONITOR_MIN_MES = 4; // Maio (0-based)
+export const POS_MONITOR_DIA_MIN = new Date(2026, 4, 18);
+
+export const CATEGORIAS_LOBBY_EXIBICAO = [
+  "Baccarat",
+  "Roleta",
+  "Blackjack",
+  "Blackjack VIP",
+] as const;
+
 export interface LobbyExecucaoRow {
   id: string;
   operadora_slug: string;
@@ -78,13 +90,41 @@ export function posicaoTextColor(p: number | null | undefined): string {
   return SEMANTIC.vermelho;
 }
 
-export function labelTipoJogo(tipo: string): string {
+export function labelTipoJogo(tipo: string, nomeMesa?: string): string {
   const t = tipo.trim().toLowerCase();
-  if (t.includes("black") && t.includes("vip")) return "Blackjack VIP";
-  if (t.includes("black")) return "Blackjack";
+  const n = (nomeMesa ?? "").trim().toLowerCase();
+  if (
+    t === "blackjack_vip" ||
+    (t.includes("vip") && t.includes("black")) ||
+    n.includes("blackjack vip") ||
+    n.includes("vip blackjack")
+  ) {
+    return "Blackjack VIP";
+  }
+  if (t.includes("blackjack") || t.includes("black")) return "Blackjack";
   if (t.includes("roleta") || t === "roleta") return "Roleta";
   if (t.includes("baccarat") || t.includes("bacará")) return "Baccarat";
   return tipo.trim() || "Outros";
+}
+
+export function fmtUltimaAtualizacao(executadoEm: string | null | undefined): string {
+  if (!executadoEm) return "Última atualização: —";
+  const d = new Date(executadoEm);
+  const data = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `Última atualização: ${data} · ${hora}`;
+}
+
+export function isAntesMinimoPosicionamento(visao: VisaoPosicionamento, ref: Date): boolean {
+  if (visao === "mes") {
+    return ref.getFullYear() < POS_MONITOR_MIN_ANO ||
+      (ref.getFullYear() === POS_MONITOR_MIN_ANO && ref.getMonth() < POS_MONITOR_MIN_MES);
+  }
+  if (visao === "semana") {
+    return startOfWeekMonday(ref).getTime() < POS_MONITOR_SEMANA_MIN.getTime();
+  }
+  const day = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  return day.getTime() < POS_MONITOR_DIA_MIN.getTime();
 }
 
 export function toDateKey(d: Date): string {
@@ -106,6 +146,8 @@ export function startOfWeekMonday(d: Date): Date {
   x.setDate(x.getDate() + diff);
   return x;
 }
+
+export const POS_MONITOR_SEMANA_MIN = startOfWeekMonday(POS_MONITOR_DIA_MIN);
 
 export function endOfWeekSunday(monday: Date): Date {
   const x = new Date(monday);
@@ -487,7 +529,7 @@ export function visibilidadePorCategoria(
   const byTipo = new Map<string, { total: number; top10: number; top3: number; best: number | null }>();
   for (const ex of execucoes) {
     for (const p of posByExec.get(ex.id) ?? []) {
-      const cat = labelTipoJogo(p.tipo_jogo);
+      const cat = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
       if (!byTipo.has(cat)) byTipo.set(cat, { total: 0, top10: 0, top3: 0, best: null });
       const b = byTipo.get(cat)!;
       if (p.posicao == null) continue;
@@ -513,14 +555,39 @@ export function concorrentesPorJogoSnapshot(
   const by = new Map<string, number>();
   let max = 0;
   for (const p of posicoes) {
-    const j = labelTipoJogo(p.tipo_jogo);
+    const j = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
     const q = p.qtd_concorrentes_a_frente ?? 0;
     by.set(j, Math.max(by.get(j) ?? 0, q));
     if (q > max) max = q;
   }
-  return [...by.entries()]
-    .map(([jogo, qtd]) => ({ jogo, qtd, max }))
-    .sort((a, b) => a.jogo.localeCompare(b.jogo, "pt-BR"));
+  const baseMax = Math.max(1, max);
+  return CATEGORIAS_LOBBY_EXIBICAO.map((jogo) => ({
+    jogo,
+    qtd: by.get(jogo) ?? 0,
+    max: baseMax,
+  }));
+}
+
+export function visibilidadePorCategoriaCompleta(
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): {
+  categoria: string;
+  pctTop10: number;
+  melhorPos: number | null;
+  pctTop3: number;
+}[] {
+  const base = visibilidadePorCategoria(execucoes, posByExec);
+  const map = new Map(base.map((c) => [c.categoria, c]));
+  return CATEGORIAS_LOBBY_EXIBICAO.map(
+    (categoria) =>
+      map.get(categoria) ?? {
+        categoria,
+        pctTop10: 0,
+        pctTop3: 0,
+        melhorPos: null,
+      },
+  );
 }
 
 export interface AlertaPos {
