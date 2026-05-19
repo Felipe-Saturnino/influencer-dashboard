@@ -55,6 +55,10 @@ verify_jwt = false
 [functions.sync-spin-na-rede-rss]
 verify_jwt = false
 
+[functions.monitor-lobby-blaze]
+verify_jwt = false
+# Lobby Cassino Ao Vivo Blaze (API pública); grava lobby_monitor_* via service_role.
+
 [functions.prestador-ponto]
 verify_jwt = true
 # Ingestão RSS → spin_na_rede_mencao (service role). Proteger com SPIN_NA_REDE_INGEST_SECRET ou Bearer service_role.

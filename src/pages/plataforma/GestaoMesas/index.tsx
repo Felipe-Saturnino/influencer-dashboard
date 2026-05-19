@@ -23,6 +23,7 @@ type MesaSpinCadastroRow = {
   tipo_jogo: string;
   numero_mesa: string | null;
   mesa_identificacao: string;
+  mesa_identificacao_operadora: string | null;
   created_at: string;
   updated_at: string;
   /** PostgREST pode devolver objeto ou array de 1 elemento conforme hint da FK. */
@@ -48,14 +49,14 @@ export default function GestaoMesas() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident";
+  type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident" | "identOp";
   const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
 
   const carregar = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("mesas_spin_cadastro")
-      .select("id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, created_at, updated_at, operadoras(nome)")
+      .select("id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome)")
       .order("operadora_slug", { ascending: true })
       .order("nome_mesa", { ascending: true });
     if (error) {
@@ -106,6 +107,13 @@ export default function GestaoMesas() {
           break;
         case "ident":
           c = compareLocaleTexto((a.mesa_identificacao ?? "").trim(), (b.mesa_identificacao ?? "").trim(), dir);
+          break;
+        case "identOp":
+          c = compareLocaleTexto(
+            (a.mesa_identificacao_operadora ?? "").trim(),
+            (b.mesa_identificacao_operadora ?? "").trim(),
+            dir,
+          );
           break;
         default:
           c = 0;
@@ -315,8 +323,22 @@ export default function GestaoMesas() {
                     }
                   />
                   <SortTableTh<MesaSortCol>
-                    label="Identificação"
+                    label="ID Spin"
                     col="ident"
+                    sortCol={sortMesa.col}
+                    sortDir={sortMesa.dir}
+                    thStyle={getThStyle(t)}
+                    align="left"
+                    onSort={(c) =>
+                      setSortMesa((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<MesaSortCol>
+                    label="ID operadora"
+                    col="identOp"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
                     thStyle={getThStyle(t)}
@@ -346,8 +368,11 @@ export default function GestaoMesas() {
                     <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                       {r.numero_mesa?.trim() ? r.numero_mesa : "—"}
                     </td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={r.mesa_identificacao}>
+                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
                       {r.mesa_identificacao}
+                    </td>
+                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
+                      {r.mesa_identificacao_operadora?.trim() ? r.mesa_identificacao_operadora : "—"}
                     </td>
                     {(perm.canEditarOk || perm.canExcluirOk) && (
                       <td style={{ ...getTdStyle(t), textAlign: "right" }}>
@@ -432,7 +457,7 @@ export default function GestaoMesas() {
       {deleteTarget && (
         <ModalConfirmDelete
           zIndex={1100}
-          texto={`Remover a mesa «${deleteTarget.nome_mesa}» (${deleteTarget.mesa_identificacao})? Esta ação não pode ser desfeita.`}
+          texto={`Remover a mesa «${deleteTarget.nome_mesa}» (ID Spin: ${deleteTarget.mesa_identificacao})? Esta ação não pode ser desfeita.`}
           onCancel={() => {
             if (!deleteLoading) setDeleteTarget(null);
           }}
@@ -487,6 +512,9 @@ function ModalMesa({
   const [tipoJogoOutro, setTipoJogoOutro] = useState(ini.outro);
   const [numeroMesa, setNumeroMesa] = useState(editando?.numero_mesa ?? "");
   const [mesaIdentificacao, setMesaIdentificacao] = useState(editando?.mesa_identificacao ?? "");
+  const [mesaIdentificacaoOperadora, setMesaIdentificacaoOperadora] = useState(
+    editando?.mesa_identificacao_operadora ?? "",
+  );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -525,7 +553,11 @@ function ModalMesa({
       return;
     }
     if (!mesaIdentificacao.trim()) {
-      setErro("Informe a identificação da mesa (Table ID).");
+      setErro("Informe o ID interno Spin da mesa.");
+      return;
+    }
+    if (!mesaIdentificacaoOperadora.trim()) {
+      setErro("Informe o ID da mesa no catálogo da operadora.");
       return;
     }
 
@@ -537,6 +569,7 @@ function ModalMesa({
         tipo_jogo: tipoJogoEfetivo,
         numero_mesa: numeroMesa.trim(),
         mesa_identificacao: mesaIdentificacao.trim(),
+        mesa_identificacao_operadora: mesaIdentificacaoOperadora.trim(),
       };
       if (editando) {
         const { error } = await supabase.from("mesas_spin_cadastro").update(payload).eq("id", editando.id);
@@ -549,7 +582,11 @@ function ModalMesa({
       onClose();
     } catch (e: unknown) {
       const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
-      setErro(msg.includes("duplicate") || msg.includes("ux_mesas") ? "Já existe uma mesa com esta identificação para a operadora." : msg);
+      setErro(
+        msg.includes("duplicate") || msg.includes("ux_mesas")
+          ? "Já existe uma mesa com este ID Spin ou ID da operadora para esta operadora."
+          : msg,
+      );
     } finally {
       setSalvando(false);
     }
@@ -728,7 +765,7 @@ function ModalMesa({
         </div>
         <div>
           <label htmlFor={`${baseId}-id`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
-            Identificação da mesa (Table ID)
+            ID interno Spin
             <CampoObrigatorioMark />
           </label>
           <input
@@ -737,8 +774,8 @@ function ModalMesa({
             value={mesaIdentificacao}
             onChange={(e) => setMesaIdentificacao(e.target.value)}
             disabled={Boolean(editando)}
-            placeholder="Identificador único no fornecedor"
-            aria-label="Identificação da mesa Table ID (obrigatório)"
+            placeholder="Identificador Spin (estúdio)"
+            aria-label="ID interno Spin (obrigatório)"
             autoComplete="off"
             style={{
               width: "100%",
@@ -754,9 +791,35 @@ function ModalMesa({
           />
           {editando && (
             <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4 }}>
-              A identificação não pode ser alterada. Exclua e crie novamente se o ID estiver incorreto.
+              O ID Spin não pode ser alterado. Exclua e crie novamente se estiver incorreto.
             </p>
           )}
+        </div>
+        <div>
+          <label htmlFor={`${baseId}-id-op`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
+            ID na operadora
+            <CampoObrigatorioMark />
+          </label>
+          <input
+            id={`${baseId}-id-op`}
+            type="text"
+            value={mesaIdentificacaoOperadora}
+            onChange={(e) => setMesaIdentificacaoOperadora(e.target.value)}
+            placeholder="Ex.: 500617 (game id na Blaze)"
+            aria-label="ID da mesa no catálogo da operadora (obrigatório)"
+            autoComplete="off"
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+            }}
+          />
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
