@@ -373,6 +373,7 @@ type MesaCadastroResumo = {
   nome_mesa: string;
   numero_mesa: string | null;
   mesa_identificacao: string;
+  mesa_identificacao_operadora: string | null;
 };
 
 function timeDbToInput(v: string | null | undefined): string {
@@ -435,7 +436,7 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
     setMesasLoading(true);
     void supabase
       .from("mesas_spin_cadastro")
-      .select("tipo_jogo, nome_mesa, numero_mesa, mesa_identificacao")
+      .select("tipo_jogo, nome_mesa, numero_mesa, mesa_identificacao, mesa_identificacao_operadora")
       .eq("operadora_slug", editando.slug)
       .order("nome_mesa")
       .then(({ data, error }) => {
@@ -1033,7 +1034,8 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
                     <th scope="col" style={{ ...thM, textAlign: "left" }}>Jogo</th>
                     <th scope="col" style={{ ...thM, textAlign: "left" }}>Nome da mesa</th>
                     <th scope="col" style={{ ...thM, textAlign: "right" }}>Nº mesa</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Identificação</th>
+                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID Spin</th>
+                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID operadora</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1043,6 +1045,9 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
                       <td style={{ ...tdM, textAlign: "left", fontWeight: 600 }}>{m.nome_mesa}</td>
                       <td style={{ ...tdNum }}>{m.numero_mesa ?? "—"}</td>
                       <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
+                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>
+                        {m.mesa_identificacao_operadora?.trim() ? m.mesa_identificacao_operadora : "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -5,12 +5,13 @@ import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import {
-  checkboxesFromTipoVaga,
   dataIsoDateOnly,
   hojeIsoDate,
   normalizarBuscaVaga,
-  tipoVagaDeCheckboxes,
+  tipoVagaParaEdicao,
+  type RhVagaTipoSelecionavel,
 } from "../../../lib/rhVagasFormat";
+import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
@@ -70,8 +71,7 @@ export function ModalAtualizarVaga({
   const [erroOrg, setErroOrg] = useState<string | null>(null);
 
   const [titulo, setTitulo] = useState("");
-  const [chkInterna, setChkInterna] = useState(true);
-  const [chkExterna, setChkExterna] = useState(false);
+  const [tipoVaga, setTipoVaga] = useState<RhVagaTipoSelecionavel>("interna");
   const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
   const [dataAbertura, setDataAbertura] = useState("");
   /** Só usado em "Atualizar" para validar data fim vs abertura (campo oculto). */
@@ -117,9 +117,7 @@ export function ModalAtualizarVaga({
     if (!open || passo !== "formulario") return;
     if (accao !== "reabrir" && accao !== "atualizar") return;
     if (!vaga) return;
-    const checks = checkboxesFromTipoVaga(vaga.tipo_vaga as RhVagaTipo);
-    setChkInterna(checks.interna);
-    setChkExterna(checks.externa);
+    setTipoVaga(tipoVagaParaEdicao(vaga.tipo_vaga as RhVagaTipo));
     setTitulo(vaga.titulo);
     setOrgTimeId(vaga.org_time_id);
     setDataFimInscricoes(dataIsoDateOnly(vaga.data_fim_inscricoes));
@@ -217,8 +215,6 @@ export function ModalAtualizarVaga({
   function validarFormCorpo(): boolean {
     const e: Record<string, string> = {};
     if (!titulo.trim()) e.titulo = "Informe o título.";
-    const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna);
-    if (!tipo) e.tipo_vaga = "Selecione Interna e/ou Externa.";
     if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
     const abRef = accao === "atualizar" ? dataAberturaRef : dataAbertura;
     if (accao === "reabrir") {
@@ -268,10 +264,9 @@ export function ModalAtualizarVaga({
     let patch: Record<string, unknown> = {};
 
     if (accao === "reabrir") {
-      const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
       patch = {
         titulo: titulo.trim(),
-        tipo_vaga: tipo,
+        tipo_vaga: tipoVaga,
         org_time_id: orgTimeId,
         data_abertura: dataAbertura.trim(),
         data_fim_inscricoes: dataFimInscricoes.trim(),
@@ -285,10 +280,9 @@ export function ModalAtualizarVaga({
         candidato_selecionado_funcionario_id: null,
       };
     } else if (accao === "atualizar") {
-      const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
       patch = {
         titulo: titulo.trim(),
-        tipo_vaga: tipo,
+        tipo_vaga: tipoVaga,
         org_time_id: orgTimeId,
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
@@ -445,23 +439,7 @@ export function ModalAtualizarVaga({
                 {fieldErr.titulo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.titulo}</div> : null}
               </div>
 
-              <fieldset style={{ border: "none", margin: "0 0 14px", padding: 0 }}>
-                <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>
-                  Tipo de vaga
-                  <CampoObrigatorioMark />
-                </legend>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
-                    <input type="checkbox" checked={chkInterna} onChange={(e) => setChkInterna(e.target.checked)} aria-label="Vaga interna" />
-                    Interna
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
-                    <input type="checkbox" checked={chkExterna} onChange={(e) => setChkExterna(e.target.checked)} aria-label="Vaga externa" />
-                    Externa
-                  </label>
-                </div>
-                {fieldErr.tipo_vaga ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 6 }}>{fieldErr.tipo_vaga}</div> : null}
-              </fieldset>
+              <TipoVagaField name="atv-tipo-vaga" value={tipoVaga} onChange={setTipoVaga} t={t} erro={fieldErr.tipo_vaga} />
 
               <div style={{ marginBottom: 14 }}>
                 {lblReq("atv-org", "Organograma")}
