@@ -11,6 +11,7 @@ import {
   tipoVagaParaEdicao,
   type RhVagaTipoSelecionavel,
 } from "../../../lib/rhVagasFormat";
+import { SimNaoField } from "./SimNaoField";
 import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
@@ -82,6 +83,8 @@ export function ModalAtualizarVaga({
   const [responsabilidades, setResponsabilidades] = useState("");
   const [requisitos, setRequisitos] = useState("");
   const [escalaTrabalho, setEscalaTrabalho] = useState("");
+  const [necessarioVideoApresentacao, setNecessarioVideoApresentacao] = useState(false);
+  const [necessarioTurno, setNecessarioTurno] = useState(false);
 
   const [funcionarios, setFuncionarios] = useState<HcRow[]>([]);
   const [carregandoHc, setCarregandoHc] = useState(false);
@@ -126,6 +129,8 @@ export function ModalAtualizarVaga({
     setResponsabilidades(vaga.responsabilidades ?? "");
     setRequisitos(vaga.requisitos ?? "");
     setEscalaTrabalho(vaga.escala_trabalho ?? "");
+    setNecessarioVideoApresentacao(Boolean(vaga.necessario_video_apresentacao));
+    setNecessarioTurno(Boolean(vaga.necessario_turno));
     const ab = dataIsoDateOnly(vaga.data_abertura);
     setDataAberturaRef(ab);
     if (accao === "reabrir") {
@@ -134,6 +139,13 @@ export function ModalAtualizarVaga({
       setDataAbertura(ab);
     }
   }, [open, passo, accao, vaga]);
+
+  useEffect(() => {
+    if (tipoVaga !== "externa") {
+      setNecessarioVideoApresentacao(false);
+      setNecessarioTurno(false);
+    }
+  }, [tipoVaga]);
 
   useEffect(() => {
     if (!open || passo !== "formulario" || accao !== "concluir" || !vaga) return;
@@ -262,6 +274,11 @@ export function ModalAtualizarVaga({
 
     setSalvando(true);
 
+    const camposExterna = {
+      necessario_video_apresentacao: tipoVaga === "externa" ? necessarioVideoApresentacao : false,
+      necessario_turno: tipoVaga === "externa" ? necessarioTurno : false,
+    };
+
     let patch: Record<string, unknown> = {};
 
     if (accao === "reabrir") {
@@ -277,6 +294,7 @@ export function ModalAtualizarVaga({
         responsabilidades: responsabilidades.trim(),
         requisitos: requisitos.trim(),
         escala_trabalho: escalaTrabalho.trim(),
+        ...camposExterna,
         status: "aberta",
         data_encerramento: null,
         motivo_cancelamento: null,
@@ -294,6 +312,7 @@ export function ModalAtualizarVaga({
         responsabilidades: responsabilidades.trim(),
         requisitos: requisitos.trim(),
         escala_trabalho: escalaTrabalho.trim(),
+        ...camposExterna,
       };
     } else if (accao === "concluir") {
       patch = {
@@ -445,6 +464,25 @@ export function ModalAtualizarVaga({
               </div>
 
               <TipoVagaField name="atv-tipo-vaga" value={tipoVaga} onChange={setTipoVaga} t={t} erro={fieldErr.tipo_vaga} />
+
+              {tipoVaga === "externa" ? (
+                <div className="app-grid-2" style={{ marginBottom: 14 }}>
+                  <SimNaoField
+                    name="atv-video-apresentacao"
+                    label="Necessário Vídeo de Apresentação?"
+                    value={necessarioVideoApresentacao}
+                    onChange={setNecessarioVideoApresentacao}
+                    t={t}
+                  />
+                  <SimNaoField
+                    name="atv-turno"
+                    label="Necessário Turno?"
+                    value={necessarioTurno}
+                    onChange={setNecessarioTurno}
+                    t={t}
+                  />
+                </div>
+              ) : null}
 
               <CampoOrganogramaVaga
                 id="atv-org"

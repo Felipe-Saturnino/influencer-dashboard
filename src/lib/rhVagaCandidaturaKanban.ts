@@ -52,10 +52,10 @@ export function fmtDataHoraBR(iso: string | null | undefined): string {
 export function labelLinha4CardKanban(c: RhVagaCandidaturaRow): string {
   switch (c.etapa) {
     case "inscritos":
-      return fmtDataHoraBR(c.created_at);
+      return fmtDataBR(c.created_at);
     case "aguardando_retorno":
     case "em_avaliacao":
-      return fmtDataHoraBR(c.etapa_entrada_em ?? c.updated_at);
+      return fmtDataBR(c.etapa_entrada_em ?? c.updated_at);
     case "agendado":
       return fmtDataBR(c.data_agendamento);
     case "stand_by":

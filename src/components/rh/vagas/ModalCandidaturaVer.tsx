@@ -13,11 +13,7 @@ import {
   patchCamposParaEtapa,
   type CamposEtapaCandidatura,
 } from "../../../lib/rhVagaCandidaturaKanban";
-import {
-  downloadTextoComoArquivo,
-  urlAssinadaCurriculoCandidatura,
-  uploadAnexoCandidaturaVaga,
-} from "../../../lib/rhVagaCandidaturaFiles";
+import { urlAssinadaCurriculoCandidatura, uploadAnexoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFiles";
 import { inserirHistoricoCandidatura, resumoMudancaEtapa } from "../../../lib/rhVagaCandidaturaHistorico";
 import { RH_CANDIDATURAS_SELECT } from "../../../lib/rhVagaCandidaturaQueries";
 import { fmtDataBR, labelEtapaCandidatura, labelVagaComCodigo } from "../../../lib/rhVagasFormat";
@@ -170,12 +166,6 @@ export function ModalCandidaturaVer({
     </button>
   );
 
-  async function abrirCurriculo() {
-    if (!c?.curriculo_storage_path) return;
-    const url = await urlAssinadaCurriculoCandidatura(c.curriculo_storage_path);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  }
-
   async function baixarCurriculo() {
     if (!c?.curriculo_storage_path) return;
     const url = await urlAssinadaCurriculoCandidatura(c.curriculo_storage_path);
@@ -185,20 +175,6 @@ export function ModalCandidaturaVer({
     a.download = c.curriculo_nome_arquivo || "curriculo";
     a.target = "_blank";
     a.click();
-  }
-
-  function verCarta() {
-    if (!c) return;
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:16px">${c.carta_apresentacao.replace(/</g, "&lt;")}</pre>`);
-      w.document.close();
-    }
-  }
-
-  function baixarCarta() {
-    if (!c) return;
-    downloadTextoComoArquivo(c.carta_apresentacao, `carta-${c.nome_completo.replace(/\s+/g, "_")}.txt`);
   }
 
   async function salvarAnotacao() {
@@ -354,16 +330,21 @@ export function ModalCandidaturaVer({
                 ) : null}
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>Currículo</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <BtnSec t={t} label="Ver" onClick={() => void abrirCurriculo()} />
-                    <BtnSec t={t} label="Download" onClick={() => void baixarCurriculo()} />
-                  </div>
+                  <BtnSec t={t} label="Download" onClick={() => void baixarCurriculo()} />
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>Carta de Apresentação</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <BtnSec t={t} label="Ver" onClick={verCarta} />
-                    <BtnSec t={t} label="Download" onClick={baixarCarta} />
+                  <div
+                    style={{
+                      ...readOnlyStyle,
+                      whiteSpace: "pre-wrap",
+                      lineHeight: 1.5,
+                      minHeight: 80,
+                      maxHeight: 220,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {(c.carta_apresentacao ?? "").trim() || "—"}
                   </div>
                 </div>
               </>
