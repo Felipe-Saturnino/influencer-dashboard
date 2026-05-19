@@ -1,0 +1,583 @@
+/** Helpers para dashboard de posicionamento (lobby_monitor_*). */
+
+export const POS_TOP3_MAX = 3;
+export const POS_TOP10_MAX = 10;
+export const POS_MID_MAX = 20;
+export const POS_CHART_MAX = 30;
+
+export const SEMANTIC = {
+  verde: "#22c55e",
+  vermelho: "#e84025",
+  amarelo: "#f59e0b",
+  cinza: "#6b7280",
+  azul: "#3b82f6",
+} as const;
+
+export type VisaoPosicionamento = "mes" | "semana" | "dia";
+
+export interface LobbyExecucaoRow {
+  id: string;
+  operadora_slug: string;
+  executado_em: string;
+  status: string;
+}
+
+export interface ConcorrenteLobby {
+  posicao: number;
+  game_id: number;
+  name: string;
+  slug: string;
+  provider_name: string;
+  provider_slug: string;
+}
+
+export interface LobbyPosicaoRow {
+  execucao_id: string;
+  mesa_identificacao: string;
+  nome_mesa: string;
+  tipo_jogo: string;
+  posicao: number | null;
+  qtd_concorrentes_a_frente: number;
+  concorrentes_a_frente: ConcorrenteLobby[];
+}
+
+export interface SnapshotMesa {
+  mesa_identificacao: string;
+  nome_mesa: string;
+  tipo_jogo: string;
+  posicao: number | null;
+  qtd_concorrentes_a_frente: number;
+  concorrentes_a_frente: ConcorrenteLobby[];
+  executado_em: string;
+}
+
+const MESES_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const DIAS_SEM = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+export function fmtPosicao(p: number | null | undefined): string {
+  if (p == null || !Number.isFinite(p)) return "—";
+  return `P${Math.round(p)}`;
+}
+
+export function posicaoBgColor(p: number | null | undefined): string {
+  if (p == null || !Number.isFinite(p)) return "color-mix(in srgb, #6b7280 12%, transparent)";
+  if (p <= POS_TOP3_MAX) return "color-mix(in srgb, #22c55e 18%, transparent)";
+  if (p <= POS_TOP10_MAX) return "color-mix(in srgb, #3b82f6 18%, transparent)";
+  if (p <= POS_MID_MAX) return "color-mix(in srgb, #6b7280 14%, transparent)";
+  return "color-mix(in srgb, #e84025 16%, transparent)";
+}
+
+export function posicaoTextColor(p: number | null | undefined): string {
+  if (p == null || !Number.isFinite(p)) return SEMANTIC.cinza;
+  if (p <= POS_TOP3_MAX) return SEMANTIC.verde;
+  if (p <= POS_TOP10_MAX) return SEMANTIC.azul;
+  if (p <= POS_MID_MAX) return SEMANTIC.cinza;
+  return SEMANTIC.vermelho;
+}
+
+export function labelTipoJogo(tipo: string): string {
+  const t = tipo.trim().toLowerCase();
+  if (t.includes("black") && t.includes("vip")) return "Blackjack VIP";
+  if (t.includes("black")) return "Blackjack";
+  if (t.includes("roleta") || t === "roleta") return "Roleta";
+  if (t.includes("baccarat") || t.includes("bacará")) return "Baccarat";
+  return tipo.trim() || "Outros";
+}
+
+export function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function parseDateKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function startOfWeekMonday(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+export function endOfWeekSunday(monday: Date): Date {
+  const x = new Date(monday);
+  x.setDate(x.getDate() + 6);
+  return x;
+}
+
+export function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+export function addWeeks(d: Date, n: number): Date {
+  return addDays(d, n * 7);
+}
+
+export function periodoRange(
+  visao: VisaoPosicionamento,
+  ref: Date,
+  mesAno?: { ano: number; mes: number },
+): { inicio: string; fim: string; fimExclusive: string } {
+  if (visao === "dia") {
+    const k = toDateKey(ref);
+    const next = toDateKey(addDays(ref, 1));
+    return { inicio: `${k}T00:00:00.000Z`, fim: `${k}T23:59:59.999Z`, fimExclusive: next };
+  }
+  if (visao === "semana") {
+    const mon = startOfWeekMonday(ref);
+    const sun = endOfWeekSunday(mon);
+    const next = toDateKey(addDays(sun, 1));
+    return {
+      inicio: `${toDateKey(mon)}T00:00:00.000Z`,
+      fim: `${toDateKey(sun)}T23:59:59.999Z`,
+      fimExclusive: next,
+    };
+  }
+  const ano = mesAno?.ano ?? ref.getFullYear();
+  const mes = mesAno?.mes ?? ref.getMonth();
+  const inicio = `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(ano, mes + 1, 0).getDate();
+  const fim = `${ano}-${String(mes + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const nextMonth = mes === 11 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 2).padStart(2, "0")}-01`;
+  return {
+    inicio: `${inicio}T00:00:00.000Z`,
+    fim: `${fim}T23:59:59.999Z`,
+    fimExclusive: nextMonth,
+  };
+}
+
+export function periodoAnteriorRange(
+  visao: VisaoPosicionamento,
+  ref: Date,
+  mesAno?: { ano: number; mes: number },
+): { inicio: string; fim: string } {
+  if (visao === "dia") {
+    const prev = addDays(ref, -1);
+    const k = toDateKey(prev);
+    return { inicio: `${k}T00:00:00.000Z`, fim: `${k}T23:59:59.999Z` };
+  }
+  if (visao === "semana") {
+    const mon = startOfWeekMonday(addWeeks(ref, -1));
+    const sun = endOfWeekSunday(mon);
+    return {
+      inicio: `${toDateKey(mon)}T00:00:00.000Z`,
+      fim: `${toDateKey(sun)}T23:59:59.999Z`,
+    };
+  }
+  const ano = mesAno?.ano ?? ref.getFullYear();
+  const mes = mesAno?.mes ?? ref.getMonth();
+  const prevMes = mes === 0 ? 11 : mes - 1;
+  const prevAno = mes === 0 ? ano - 1 : ano;
+  const lastDay = new Date(prevAno, prevMes + 1, 0).getDate();
+  const inicio = `${prevAno}-${String(prevMes + 1).padStart(2, "0")}-01`;
+  const fim = `${prevAno}-${String(prevMes + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { inicio: `${inicio}T00:00:00.000Z`, fim: `${fim}T23:59:59.999Z` };
+}
+
+export function labelCarrosselPos(
+  visao: VisaoPosicionamento,
+  ref: Date,
+  mesAno?: { ano: number; mes: number; label: string },
+): string {
+  if (visao === "mes" && mesAno) return mesAno.label;
+  if (visao === "dia") {
+    return ref.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  const mon = startOfWeekMonday(ref);
+  const sun = endOfWeekSunday(mon);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return `${fmt(mon)} – ${fmt(sun)} ${sun.getFullYear()}`;
+}
+
+export function execucoesNoPeriodo(
+  execucoes: LobbyExecucaoRow[],
+  inicio: string,
+  fim: string,
+): LobbyExecucaoRow[] {
+  const t0 = new Date(inicio).getTime();
+  const t1 = new Date(fim).getTime();
+  return execucoes.filter((e) => {
+    const t = new Date(e.executado_em).getTime();
+    return t >= t0 && t <= t1;
+  });
+}
+
+export function ultimaExecucaoOk(execucoes: LobbyExecucaoRow[]): LobbyExecucaoRow | null {
+  const ok = execucoes.filter((e) => e.status === "ok" || e.status === "parcial");
+  if (ok.length === 0) return execucoes[0] ?? null;
+  return [...ok].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  )[0];
+}
+
+export function penultimaExecucao(
+  execucoes: LobbyExecucaoRow[],
+  atualId: string,
+): LobbyExecucaoRow | null {
+  const sorted = [...execucoes]
+    .filter((e) => e.status === "ok" || e.status === "parcial")
+    .sort((a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime());
+  const idx = sorted.findIndex((e) => e.id === atualId);
+  return idx >= 0 && idx + 1 < sorted.length ? sorted[idx + 1]! : sorted[1] ?? null;
+}
+
+export function mapPosicoesPorExecucao(
+  posicoes: LobbyPosicaoRow[],
+): Map<string, LobbyPosicaoRow[]> {
+  const m = new Map<string, LobbyPosicaoRow[]>();
+  for (const p of posicoes) {
+    if (!m.has(p.execucao_id)) m.set(p.execucao_id, []);
+    m.get(p.execucao_id)!.push(p);
+  }
+  return m;
+}
+
+/** % de leituras com posição ≤ 10 entre todas as leituras válidas do período. */
+export function calcVisibilidadeVitrine(
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): number | null {
+  let total = 0;
+  let top10 = 0;
+  for (const ex of execucoes) {
+    for (const p of posByExec.get(ex.id) ?? []) {
+      if (p.posicao == null) continue;
+      total++;
+      if (p.posicao <= POS_TOP10_MAX) top10++;
+    }
+  }
+  if (total === 0) return null;
+  return (top10 / total) * 100;
+}
+
+export function mesasNoTop10Snapshot(
+  posicoes: LobbyPosicaoRow[],
+): { noTop10: number; total: number } {
+  const total = posicoes.length;
+  const noTop10 = posicoes.filter((p) => p.posicao != null && p.posicao <= POS_TOP10_MAX).length;
+  return { noTop10, total };
+}
+
+export function melhorPosicaoSnapshot(posicoes: LobbyPosicaoRow[]): {
+  posicao: number;
+  nome_mesa: string;
+} | null {
+  let best: { posicao: number; nome_mesa: string } | null = null;
+  for (const p of posicoes) {
+    if (p.posicao == null) continue;
+    if (!best || p.posicao < best.posicao) {
+      best = { posicao: p.posicao, nome_mesa: p.nome_mesa };
+    }
+  }
+  return best;
+}
+
+export function maiorQuedaSnapshot(
+  atual: LobbyPosicaoRow[],
+  anterior: LobbyPosicaoRow[],
+): { delta: number; nome_mesa: string } | null {
+  const prev = new Map(anterior.map((p) => [p.mesa_identificacao, p.posicao]));
+  let worst: { delta: number; nome_mesa: string } | null = null;
+  for (const p of atual) {
+    const pa = prev.get(p.mesa_identificacao);
+    if (p.posicao == null || pa == null) continue;
+    const delta = p.posicao - pa;
+    if (delta > 0 && (!worst || delta > worst.delta)) {
+      worst = { delta, nome_mesa: p.nome_mesa };
+    }
+  }
+  return worst;
+}
+
+export function deltaPosicao(
+  atual: number | null,
+  anterior: number | null,
+): number | null {
+  if (atual == null || anterior == null) return null;
+  return atual - anterior;
+}
+
+export type BucketHistorico = { key: string; label: string; execucaoIds: string[] };
+
+export function bucketsHistorico(
+  visao: VisaoPosicionamento,
+  ref: Date,
+  mesAno?: { ano: number; mes: number },
+): BucketHistorico[] {
+  if (visao === "dia") {
+    return Array.from({ length: 24 }, (_, h) => ({
+      key: String(h),
+      label: `${String(h).padStart(2, "0")}h`,
+      execucaoIds: [],
+    }));
+  }
+  if (visao === "semana") {
+    const mon = startOfWeekMonday(ref);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(mon, i);
+      const k = toDateKey(d);
+      return {
+        key: k,
+        label: `${DIAS_SEM[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`,
+        execucaoIds: [],
+      };
+    });
+  }
+  const ano = mesAno?.ano ?? ref.getFullYear();
+  const mes = mesAno?.mes ?? ref.getMonth();
+  const days = new Date(ano, mes + 1, 0).getDate();
+  return Array.from({ length: days }, (_, i) => {
+    const day = i + 1;
+    const k = `${ano}-${String(mes + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return { key: k, label: String(day), execucaoIds: [] };
+  });
+}
+
+export function assignExecucoesToBuckets(
+  buckets: BucketHistorico[],
+  execucoes: LobbyExecucaoRow[],
+  visao: VisaoPosicionamento,
+): BucketHistorico[] {
+  const copy = buckets.map((b) => ({ ...b, execucaoIds: [...b.execucaoIds] }));
+  for (const ex of execucoes) {
+    const dt = new Date(ex.executado_em);
+    let key: string;
+    if (visao === "dia") {
+      key = String(dt.getHours());
+    } else if (visao === "semana") {
+      key = toDateKey(dt);
+    } else {
+      key = toDateKey(dt);
+    }
+    const b = copy.find((x) => x.key === key);
+    if (b) b.execucaoIds.push(ex.id);
+  }
+  return copy;
+}
+
+export function posicaoMediaMesaNoBucket(
+  mesaId: string,
+  execIds: string[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): number | null {
+  const vals: number[] = [];
+  for (const id of execIds) {
+    const row = (posByExec.get(id) ?? []).find((p) => p.mesa_identificacao === mesaId);
+    if (row?.posicao != null) vals.push(row.posicao);
+  }
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+export function heatmapColunas(visao: VisaoPosicionamento, ref: Date, mesAno?: { ano: number; mes: number }): {
+  key: string;
+  label: string;
+}[] {
+  if (visao === "dia") {
+    return [0, 3, 6, 9, 12, 15, 18, 21].map((h) => ({
+      key: String(h),
+      label: `${String(h).padStart(2, "0")}h`,
+    }));
+  }
+  if (visao === "semana") {
+    const mon = startOfWeekMonday(ref);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(mon, i);
+      return { key: toDateKey(d), label: DIAS_SEM[d.getDay()] };
+    });
+  }
+  const ano = mesAno?.ano ?? ref.getFullYear();
+  const mes = mesAno?.mes ?? ref.getMonth();
+  const first = new Date(ano, mes, 1);
+  const last = new Date(ano, mes + 1, 0);
+  const cols: { key: string; label: string }[] = [];
+  let w = 1;
+  let cur = new Date(first);
+  while (cur <= last) {
+    const end = addDays(cur, 6);
+    const endClamped = end > last ? last : end;
+    cols.push({ key: `S${w}`, label: `S${w}` });
+    w++;
+    cur = addDays(endClamped, 1);
+  }
+  return cols;
+}
+
+export function execucoesParaHeatCol(
+  execucoes: LobbyExecucaoRow[],
+  colKey: string,
+  visao: VisaoPosicionamento,
+  ref: Date,
+  mesAno?: { ano: number; mes: number },
+): string[] {
+  if (visao === "dia") {
+    const h = Number(colKey);
+    return execucoes
+      .filter((e) => new Date(e.executado_em).getHours() === h)
+      .map((e) => e.id);
+  }
+  if (visao === "semana") {
+    return execucoes.filter((e) => toDateKey(new Date(e.executado_em)) === colKey).map((e) => e.id);
+  }
+  const weekNum = Number(colKey.replace("S", ""));
+  const ano = mesAno?.ano ?? ref.getFullYear();
+  const mes = mesAno?.mes ?? ref.getMonth();
+  const first = new Date(ano, mes, 1);
+  const last = new Date(ano, mes + 1, 0);
+  let w = 1;
+  let cur = new Date(first);
+  while (cur <= last && w <= weekNum) {
+    if (w === weekNum) {
+      const end = addDays(cur, 6);
+      const endClamped = end > last ? last : end;
+      const t0 = cur.getTime();
+      const t1 = endClamped.getTime() + 86400000 - 1;
+      return execucoes
+        .filter((e) => {
+          const t = new Date(e.executado_em).getTime();
+          return t >= t0 && t <= t1;
+        })
+        .map((e) => e.id);
+    }
+    const end = addDays(cur, 6);
+    cur = addDays(end > last ? last : end, 1);
+    w++;
+  }
+  return [];
+}
+
+export function rankingConcorrentes(
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): { provider: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const ex of execucoes) {
+    for (const p of posByExec.get(ex.id) ?? []) {
+      for (const c of p.concorrentes_a_frente ?? []) {
+        const name = (c.provider_name || c.provider_slug || "Desconhecido").trim();
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+      }
+    }
+  }
+  return [...counts.entries()]
+    .map(([provider, count]) => ({ provider, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function visibilidadePorCategoria(
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): {
+  categoria: string;
+  pctTop10: number;
+  melhorPos: number | null;
+  pctTop3: number;
+}[] {
+  const byTipo = new Map<string, { total: number; top10: number; top3: number; best: number | null }>();
+  for (const ex of execucoes) {
+    for (const p of posByExec.get(ex.id) ?? []) {
+      const cat = labelTipoJogo(p.tipo_jogo);
+      if (!byTipo.has(cat)) byTipo.set(cat, { total: 0, top10: 0, top3: 0, best: null });
+      const b = byTipo.get(cat)!;
+      if (p.posicao == null) continue;
+      b.total++;
+      if (p.posicao <= POS_TOP10_MAX) b.top10++;
+      if (p.posicao <= POS_TOP3_MAX) b.top3++;
+      if (b.best == null || p.posicao < b.best) b.best = p.posicao;
+    }
+  }
+  return [...byTipo.entries()]
+    .map(([categoria, v]) => ({
+      categoria,
+      pctTop10: v.total > 0 ? (v.top10 / v.total) * 100 : 0,
+      pctTop3: v.total > 0 ? (v.top3 / v.total) * 100 : 0,
+      melhorPos: v.best,
+    }))
+    .sort((a, b) => a.categoria.localeCompare(b.categoria, "pt-BR"));
+}
+
+export function concorrentesPorJogoSnapshot(
+  posicoes: LobbyPosicaoRow[],
+): { jogo: string; qtd: number; max: number }[] {
+  const by = new Map<string, number>();
+  let max = 0;
+  for (const p of posicoes) {
+    const j = labelTipoJogo(p.tipo_jogo);
+    const q = p.qtd_concorrentes_a_frente ?? 0;
+    by.set(j, Math.max(by.get(j) ?? 0, q));
+    if (q > max) max = q;
+  }
+  return [...by.entries()]
+    .map(([jogo, qtd]) => ({ jogo, qtd, max }))
+    .sort((a, b) => a.jogo.localeCompare(b.jogo, "pt-BR"));
+}
+
+export interface AlertaPos {
+  tipo: "atencao" | "positivo";
+  texto: string;
+}
+
+export function gerarAlertas(
+  snapshot: LobbyPosicaoRow[],
+  anterior: LobbyPosicaoRow[],
+  execPeriodo: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): AlertaPos[] {
+  const alertas: AlertaPos[] = [];
+  const prev = new Map(anterior.map((p) => [p.mesa_identificacao, p.posicao]));
+
+  for (const p of snapshot) {
+    const pa = prev.get(p.mesa_identificacao);
+    if (p.posicao === 1 && pa != null && pa > 1) {
+      alertas.push({
+        tipo: "positivo",
+        texto: `${p.nome_mesa} conquistou P1 (antes ${fmtPosicao(pa)}).`,
+      });
+    }
+    if (p.posicao != null && p.posicao <= POS_TOP3_MAX && pa != null && pa > POS_TOP3_MAX) {
+      alertas.push({
+        tipo: "positivo",
+        texto: `${p.nome_mesa} entrou no top 3 (${fmtPosicao(p.posicao)}).`,
+      });
+    }
+    if (pa != null && p.posicao != null && p.posicao - pa >= 8) {
+      alertas.push({
+        tipo: "atencao",
+        texto: `Queda brusca em ${p.nome_mesa}: ${fmtPosicao(pa)} → ${fmtPosicao(p.posicao)}.`,
+      });
+    }
+  }
+
+  const cats = visibilidadePorCategoria(execPeriodo, posByExec);
+  for (const c of cats) {
+    if (c.pctTop10 < 25 && c.pctTop10 > 0) {
+      alertas.push({
+        tipo: "atencao",
+        texto: `Baixa presença no top 10 em ${c.categoria} (${c.pctTop10.toFixed(0)}%).`,
+      });
+    }
+  }
+
+  return alertas.slice(0, 12);
+}
+
+export const LINE_COLORS = [
+  "var(--brand-action, #7c3aed)",
+  "var(--brand-contrast, #1e36f8)",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#70cae4",
+  "#e84025",
+] as const;

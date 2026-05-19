@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback, Suspense, lazy, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -8,6 +8,23 @@ import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstant
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import {
+  addDays,
+  addWeeks,
+  labelCarrosselPos,
+  startOfWeekMonday,
+  endOfWeekSunday,
+  type VisaoPosicionamento,
+} from "../../../lib/lobbyMonitorHelpers";
+
+const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
+
+type OverviewSpinTab = "overview" | "posicionamento";
+
+const TAB_LABELS_SPIN: Record<OverviewSpinTab, string> = {
+  overview: "Overview",
+  posicionamento: "Posicionamento",
+};
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
@@ -1302,6 +1319,9 @@ export default function OverviewSpin() {
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
+  const [aba, setAba] = useState<OverviewSpinTab>("overview");
+  const [posVisao, setPosVisao] = useState<VisaoPosicionamento>("mes");
+  const [posRefDate, setPosRefDate] = useState(() => new Date());
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1503,8 +1523,9 @@ export default function OverviewSpin() {
   ]);
 
   useEffect(() => {
+    if (aba !== "overview") return;
     void carregar();
-  }, [carregar]);
+  }, [carregar, aba]);
 
   useEffect(() => {
     setExpandedDetalhe(new Set());
@@ -2117,6 +2138,73 @@ export default function OverviewSpin() {
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
+
+  const hojeStart = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }, []);
+
+  const carrosselAnteriorDisabled =
+    aba === "posicionamento" && posVisao !== "mes" ? false : historico || isPrimeiro;
+
+  const carrosselProximoDisabled = useMemo(() => {
+    if (aba !== "posicionamento") return historico || isUltimo;
+    if (posVisao === "mes") return isUltimo;
+    if (posVisao === "semana") {
+      const sun = endOfWeekSunday(startOfWeekMonday(posRefDate));
+      return sun.getTime() >= hojeStart.getTime();
+    }
+    const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
+    return ref.getTime() >= hojeStart.getTime();
+  }, [aba, posVisao, posRefDate, hojeStart, historico, isUltimo]);
+
+  const labelCarrosselCentral =
+    aba === "overview"
+      ? historico
+        ? "Todo o período"
+        : (mesSelecionado?.label ?? "")
+      : labelCarrosselPos(posVisao, posRefDate, mesSelecionado);
+
+  const operadoraSlugPosicionamento =
+    filtroOperadora !== "todas" ? filtroOperadora : (operadoraSlugsForcado?.[0] ?? "todas");
+
+  function irCarrosselAnterior() {
+    if (aba === "posicionamento" && posVisao !== "mes") {
+      if (posVisao === "semana") setPosRefDate((d) => addWeeks(d, -1));
+      else setPosRefDate((d) => addDays(d, -1));
+      return;
+    }
+    irMesAnterior();
+  }
+
+  function irCarrosselProximo() {
+    if (aba === "posicionamento" && posVisao !== "mes") {
+      if (posVisao === "semana") setPosRefDate((d) => addWeeks(d, 1));
+      else setPosRefDate((d) => addDays(d, 1));
+      return;
+    }
+    irMesProximo();
+  }
+
+  function irHojePosicionamento() {
+    const agora = new Date();
+    setPosRefDate(agora);
+    setPosVisao("dia");
+    setHistorico(false);
+    const idx = mesesDisponiveis.findIndex(
+      (m) => m.ano === agora.getFullYear() && m.mes === agora.getMonth(),
+    );
+    if (idx >= 0) setIdxMes(idx);
+  }
+
+  const sepFiltro: React.CSSProperties = {
+    width: 1,
+    height: 28,
+    background: t.cardBorder,
+    flexShrink: 0,
+  };
+
+  const tabIdsSpin: OverviewSpinTab[] = ["overview", "posicionamento"];
 
   const btnNav: React.CSSProperties = {
     width: 30,
@@ -3473,14 +3561,14 @@ export default function OverviewSpin() {
           >
             <button
               type="button"
-              aria-label="Mês anterior"
+              aria-label={aba === "posicionamento" && posVisao === "dia" ? "Dia anterior" : aba === "posicionamento" && posVisao === "semana" ? "Semana anterior" : "Mês anterior"}
               style={{
                 ...btnNav,
-                opacity: historico || isPrimeiro ? 0.35 : 1,
-                cursor: historico || isPrimeiro ? "not-allowed" : "pointer",
+                opacity: carrosselAnteriorDisabled ? 0.35 : 1,
+                cursor: carrosselAnteriorDisabled ? "not-allowed" : "pointer",
               }}
-              onClick={irMesAnterior}
-              disabled={historico || isPrimeiro}
+              onClick={irCarrosselAnterior}
+              disabled={carrosselAnteriorDisabled}
             >
               <ChevronLeft size={14} aria-hidden />
             </button>
@@ -3494,22 +3582,23 @@ export default function OverviewSpin() {
                 textAlign: "center",
               }}
             >
-              {historico ? "Todo o período" : mesSelecionado?.label}
+              {labelCarrosselCentral}
             </span>
             <button
               type="button"
-              aria-label="Próximo mês"
+              aria-label={aba === "posicionamento" && posVisao === "dia" ? "Próximo dia" : aba === "posicionamento" && posVisao === "semana" ? "Próxima semana" : "Próximo mês"}
               style={{
                 ...btnNav,
-                opacity: historico || isUltimo ? 0.35 : 1,
-                cursor: historico || isUltimo ? "not-allowed" : "pointer",
+                opacity: carrosselProximoDisabled ? 0.35 : 1,
+                cursor: carrosselProximoDisabled ? "not-allowed" : "pointer",
               }}
-              onClick={irMesProximo}
-              disabled={historico || isUltimo}
+              onClick={irCarrosselProximo}
+              disabled={carrosselProximoDisabled}
             >
               <ChevronRight size={14} aria-hidden />
             </button>
 
+            {aba === "overview" ? (
             <button
               type="button"
               aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
@@ -3537,6 +3626,66 @@ export default function OverviewSpin() {
             >
               <Calendar size={15} aria-hidden /> Histórico
             </button>
+            ) : (
+              <>
+                <span style={sepFiltro} aria-hidden />
+                <button
+                  type="button"
+                  aria-label="Ir para hoje"
+                  onClick={irHojePosicionamento}
+                  style={{
+                    padding: "6px 14px",
+                    minHeight: 44,
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: "transparent",
+                    color: t.textMuted,
+                    fontWeight: 500,
+                  }}
+                >
+                  Hoje
+                </button>
+                <span style={sepFiltro} aria-hidden />
+                {(["mes", "semana", "dia"] as VisaoPosicionamento[]).map((v) => {
+                  const ativo = posVisao === v;
+                  const label = v === "mes" ? "Mês" : v === "semana" ? "Semana" : "Dia";
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => {
+                        setPosVisao(v);
+                        if (v === "mes" && mesSelecionado) {
+                          setPosRefDate(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
+                        }
+                      }}
+                      style={{
+                        padding: "6px 14px",
+                        minHeight: 44,
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        fontWeight: ativo ? 700 : 500,
+                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                        background: ativo
+                          ? brand.useBrand
+                            ? "var(--brand-action, #7c3aed)"
+                            : BRAND.roxoVivo
+                          : "transparent",
+                        color: ativo ? "#fff" : t.textMuted,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </>
+            )}
 
             {showFiltroOperadora && (
               <SelectComIcone
@@ -3557,7 +3706,7 @@ export default function OverviewSpin() {
               </SelectComIcone>
             )}
 
-            {loading && (
+            {aba === "overview" && loading && (
               <span
                 style={{
                   fontSize: 12,
@@ -3573,9 +3722,71 @@ export default function OverviewSpin() {
               </span>
             )}
           </div>
+
+          <div
+            role="tablist"
+            aria-label="Seções Overview Spin"
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
+          >
+            {tabIdsSpin.map((key) => {
+              const ativo = aba === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  id={`tab-overview-spin-${key}`}
+                  tabIndex={ativo ? 0 : -1}
+                  aria-selected={ativo}
+                  aria-controls={`panel-overview-spin-${key}`}
+                  onClick={() => setAba(key)}
+                  onKeyDown={(e) => {
+                    const current = tabIdsSpin.indexOf(key);
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      const next = tabIdsSpin[(current + 1) % tabIdsSpin.length];
+                      setAba(next);
+                      requestAnimationFrame(() => {
+                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
+                      });
+                    }
+                    if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      const next = tabIdsSpin[(current - 1 + tabIdsSpin.length) % tabIdsSpin.length];
+                      setAba(next);
+                      requestAnimationFrame(() => {
+                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
+                      });
+                    }
+                  }}
+                  style={{
+                    padding: "10px 18px",
+                    minHeight: 44,
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                      : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.accent : t.textMuted,
+                    fontWeight: ativo ? 700 : 500,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  {TAB_LABELS_SPIN[key]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
+      {aba === "overview" && (
+      <>
       <div style={{ ...card, marginBottom: 14 }}>
           <SectionTitle
             icon={<LayoutGrid size={15} />}
@@ -4356,6 +4567,42 @@ export default function OverviewSpin() {
           )}
         </>
       )}
+      </>
+      )}
+      {aba === "posicionamento" && (
+        <Suspense
+          fallback={
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 48,
+                color: t.textMuted,
+                gap: 8,
+                fontFamily: FONT.body,
+                fontSize: 13,
+              }}
+            >
+              <Loader2
+                size={20}
+                className="app-lucide-spin"
+                color="var(--brand-action, #7c3aed)"
+                aria-hidden="true"
+              />
+              Carregando…
+            </div>
+          }
+        >
+          <DashboardPosicionamento
+            operadoraSlug={operadoraSlugPosicionamento}
+            visao={posVisao}
+            refDate={posRefDate}
+            mesAno={mesSelecionado}
+          />
+        </Suspense>
+      )}
+      </div>
     </div>
   );
 }
