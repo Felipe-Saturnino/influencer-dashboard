@@ -32,6 +32,10 @@ export interface LobbyExecucaoRow {
   operadora_slug: string;
   executado_em: string;
   status: string;
+  pior_mesa_nome?: string | null;
+  pior_mesa_identificacao?: string | null;
+  pior_mesa_posicao?: number | null;
+  jogos_a_frente_pior_mesa?: ConcorrenteLobby[];
 }
 
 export interface ConcorrenteLobby {

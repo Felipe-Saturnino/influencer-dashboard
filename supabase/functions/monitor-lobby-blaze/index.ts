@@ -152,14 +152,51 @@ function concorrentesAFrente(
 ): ConcorrenteJson[] {
   return lobby
     .filter((g) => g.posicao < posicao && isConcorrente(g, tipoAlvo))
-    .map((g) => ({
-      posicao: g.posicao,
-      game_id: g.game_id,
-      name: g.name,
-      slug: g.slug,
-      provider_name: g.provider_name,
-      provider_slug: g.provider_slug,
-    }));
+    .map((g) => toConcorrenteJson(g));
+}
+
+function toConcorrenteJson(g: LobbyGame): ConcorrenteJson {
+  return {
+    posicao: g.posicao,
+    game_id: g.game_id,
+    name: g.name,
+    slug: g.slug,
+    provider_name: g.provider_name,
+    provider_slug: g.provider_slug,
+  };
+}
+
+/** Todos os jogos não-Spin com P menor que a mesa Spin mais atrás (vitrine acima dela). */
+function jogosAFrentePiorMesaSpin(
+  lobby: LobbyGame[],
+  posicaoPiorMesa: number,
+): ConcorrenteJson[] {
+  return lobby
+    .filter((g) => g.posicao < posicaoPiorMesa && g.provider_slug !== "spin")
+    .sort((a, b) => a.posicao - b.posicao)
+    .map((g) => toConcorrenteJson(g));
+}
+
+function piorMesaSpinLinhas(
+  linhas: {
+    mesa_identificacao: string;
+    nome_mesa: string;
+    posicao: number | null;
+  }[],
+): { mesa_identificacao: string; nome_mesa: string; posicao: number } | null {
+  let worst: { mesa_identificacao: string; nome_mesa: string; posicao: number } | null =
+    null;
+  for (const l of linhas) {
+    if (l.posicao == null) continue;
+    if (!worst || l.posicao > worst.posicao) {
+      worst = {
+        mesa_identificacao: l.mesa_identificacao,
+        nome_mesa: l.nome_mesa,
+        posicao: l.posicao,
+      };
+    }
+  }
+  return worst;
 }
 
 async function fetchPagina(page: number): Promise<BlazeSearchResponse> {
@@ -345,6 +382,10 @@ serve(async (req) => {
     };
   });
 
+  const piorMesaDry = piorMesaSpinLinhas(linhasPosicao);
+  const jogosVitrineDry =
+    piorMesaDry != null ? jogosAFrentePiorMesaSpin(lobby, piorMesaDry.posicao) : [];
+
   if (dryRun) {
     return json({
       ok: !apiErro,
@@ -357,6 +398,8 @@ serve(async (req) => {
       mesas_encontradas: mesasEncontradas,
       duracao_ms: duracaoMs,
       erro: apiErro,
+      pior_mesa: piorMesaDry,
+      jogos_a_frente_pior_mesa: jogosVitrineDry,
       posicoes: linhasPosicao,
     }, req);
   }
@@ -385,6 +428,9 @@ serve(async (req) => {
     }, req, 200);
   }
 
+  const piorMesa = piorMesaDry;
+  const jogosVitrine = jogosVitrineDry;
+
   const { data: exec, error: execInsertErr } = await supabase
     .from("lobby_monitor_execucao")
     .insert({
@@ -395,6 +441,10 @@ serve(async (req) => {
       mesas_esperadas: mesasList.length,
       mesas_encontradas: mesasEncontradas,
       duracao_ms: duracaoMs,
+      pior_mesa_nome: piorMesa?.nome_mesa ?? null,
+      pior_mesa_identificacao: piorMesa?.mesa_identificacao ?? null,
+      pior_mesa_posicao: piorMesa?.posicao ?? null,
+      jogos_a_frente_pior_mesa: jogosVitrine,
       erro: status === "parcial"
         ? `Mesas não encontradas no lobby: ${
           mesasList

@@ -89,5 +89,7 @@ POST vazio na Edge → 451. Não usar para teste.
 
 ## Tabelas
 
-- `lobby_monitor_execucao`
+- `lobby_monitor_execucao` — inclui `pior_mesa_*` e `jogos_a_frente_pior_mesa` (todos os jogos não-Spin acima da mesa Spin com maior P na coleta)
 - `lobby_monitor_posicao` (inclui `mesa_identificacao` Spin + `mesa_identificacao_operadora`)
+
+Migration: `20260521120000_lobby_monitor_pior_mesa_vitrine.sql`. Preenchido na Edge ao processar `blaze_lobby` (script Telecom inalterado).

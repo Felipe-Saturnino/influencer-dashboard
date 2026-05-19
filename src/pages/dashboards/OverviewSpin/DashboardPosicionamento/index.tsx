@@ -29,6 +29,7 @@ import { BRAND } from "../../../../lib/dashboardConstants";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
+import VitrinePiorMesaCard from "./VitrinePiorMesaCard";
 import { SkeletonKpiCard } from "../../../../components/dashboard";
 import {
   type VisaoPosicionamento,
@@ -193,7 +194,9 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
       const execRows = await fetchAllPages(async (from, to) =>
         supabase
           .from("lobby_monitor_execucao")
-          .select("id, operadora_slug, executado_em, status")
+          .select(
+            "id, operadora_slug, executado_em, status, pior_mesa_nome, pior_mesa_identificacao, pior_mesa_posicao, jogos_a_frente_pior_mesa",
+          )
           .eq("operadora_slug", operadoraSlug)
           .gte("executado_em", fetchFrom)
           .lte("executado_em", range.fim)
@@ -219,7 +222,14 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
           .range(from, to),
       );
 
-      setExecucoesAll(execucoes);
+      setExecucoesAll(
+        execucoes.map((e) => ({
+          ...e,
+          jogos_a_frente_pior_mesa: Array.isArray(e.jogos_a_frente_pior_mesa)
+            ? e.jogos_a_frente_pior_mesa
+            : [],
+        })),
+      );
       setPosicoesAll(
         (posRows as LobbyPosicaoRow[]).map((p) => ({
           ...p,
@@ -297,6 +307,11 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
   );
 
   const concorrentesJogo = useMemo(() => concorrentesPorJogoSnapshot(snapshotAtual), [snapshotAtual]);
+
+  const jogosVitrinePiorMesa = useMemo(() => {
+    const raw = ultimaGlobal?.jogos_a_frente_pior_mesa ?? [];
+    return [...raw].sort((a, b) => a.posicao - b.posicao);
+  }, [ultimaGlobal]);
   const maxConc = useMemo(
     () => Math.max(1, ...concorrentesJogo.map((c) => c.qtd), 0),
     [concorrentesJogo],
@@ -446,6 +461,8 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
           positivo={false}
         />
       </div>
+
+      <VitrinePiorMesaCard card={card} ultimaGlobal={ultimaGlobal} jogos={jogosVitrinePiorMesa} />
 
       <div className="app-grid-2" style={{ marginBottom: 14 }}>
         <div style={card}>
