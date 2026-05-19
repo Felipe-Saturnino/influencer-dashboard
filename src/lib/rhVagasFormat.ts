@@ -26,9 +26,20 @@ export function inscricoesEncerradasPorDataFim(dataFimInscricoes: string | null 
   return fim <= ontemIsoDate();
 }
 
+/** Inscrições ainda abertas: data fim > ontem (hoje ou futuro). */
+export function inscricoesAbertasPorDataFim(dataFimInscricoes: string | null | undefined): boolean {
+  const fim = dataIsoDateOnly(dataFimInscricoes);
+  if (!fim) return false;
+  return fim > ontemIsoDate();
+}
+
 /** Status efetivo quando o banco ainda não sincronizou (ex.: antes do RPC na listagem). */
 export function statusVagaEfetivo(v: Pick<RhVagaRow, "status" | "data_fim_inscricoes">): RhVagaStatus {
-  if (v.status === "aberta" && inscricoesEncerradasPorDataFim(v.data_fim_inscricoes)) return "em_andamento";
+  if (inscricoesEncerradasPorDataFim(v.data_fim_inscricoes)) {
+    if (v.status === "aberta" || v.status === "em_andamento") return "em_andamento";
+  } else if (v.status === "em_andamento" && inscricoesAbertasPorDataFim(v.data_fim_inscricoes)) {
+    return "aberta";
+  }
   return v.status;
 }
 
@@ -99,7 +110,6 @@ export const RH_VAGA_CANDIDATURA_ETAPAS: { id: RhVagaCandidaturaEtapa; label: st
   { id: "aguardando_retorno", label: "Aguardando Retorno" },
   { id: "agendado", label: "Agendado" },
   { id: "em_avaliacao", label: "Em Avaliação" },
-  { id: "aprovado", label: "Aprovado" },
   { id: "stand_by", label: "Stand By" },
   { id: "contratado", label: "Contratado" },
   { id: "dispensado", label: "Dispensado" },

@@ -1,4 +1,4 @@
--- Vagas com data fim de inscrições <= ontem (America/Sao_Paulo) passam de aberta → em_andamento.
+-- Vagas: data fim <= ontem → em_andamento; data fim > ontem em em_andamento → aberta (ver 20260520170000).
 
 BEGIN;
 

@@ -21,3 +21,35 @@ export async function uploadCurriculoCandidaturaVaga(
   if (error) return { ok: false, message: error.message };
   return { ok: true, path, fileName: file.name };
 }
+
+export async function uploadAnexoCandidaturaVaga(
+  funcionarioId: string,
+  vagaId: string,
+  file: File,
+): Promise<{ ok: true; path: string; fileName: string } | { ok: false; message: string }> {
+  const safe = sanitizeStorageFileName(file.name);
+  const path = `${funcionarioId}/${vagaId}/anexos/${crypto.randomUUID()}_${safe}`;
+  const { error } = await supabase.storage.from(RH_VAGA_CANDIDATURAS_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type || undefined,
+  });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, path, fileName: file.name };
+}
+
+export async function urlAssinadaCurriculoCandidatura(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(RH_VAGA_CANDIDATURAS_BUCKET).createSignedUrl(storagePath, 3600);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
+export function downloadTextoComoArquivo(conteudo: string, nomeArquivo: string) {
+  const blob = new Blob([conteudo], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nomeArquivo;
+  a.click();
+  URL.revokeObjectURL(url);
+}

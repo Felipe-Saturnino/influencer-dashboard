@@ -7,7 +7,6 @@ export type RhVagaCandidaturaEtapa =
   | "aguardando_retorno"
   | "agendado"
   | "em_avaliacao"
-  | "aprovado"
   | "stand_by"
   | "contratado"
   | "dispensado";
@@ -16,6 +15,9 @@ export type RhVagaCandidaturaFuncionarioJoin = {
   id: string;
   email: string;
   email_spin?: string | null;
+  cargo?: string | null;
+  data_inicio?: string | null;
+  data_funcao?: string | null;
 } | null;
 
 export type RhVagaCandidaturaVagaJoin = Pick<RhVagaRow, "id" | "codigo_vaga" | "titulo" | "tipo_vaga" | "status"> | null;
@@ -30,6 +32,12 @@ export type RhVagaCandidaturaRow = {
   curriculo_nome_arquivo: string;
   carta_apresentacao: string;
   etapa: RhVagaCandidaturaEtapa;
+  etapa_entrada_em?: string | null;
+  data_agendamento?: string | null;
+  data_aprovacao?: string | null;
+  data_contratacao?: string | null;
+  data_dispensa?: string | null;
+  motivo_dispensa?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -22,6 +22,7 @@ import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar"
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
 import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarVaga";
+import { buscarVagaIdsComCandidaturaDoLogin } from "../../../lib/rhVagaCandidaturaInscricao";
 
 const RH_VAGAS_SELECT = `
   *,
@@ -81,7 +82,7 @@ function CampoVaga({ k, v, t }: { k: string; v: string; t: { textMuted: string; 
 }
 
 export default function RhVagasPage() {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_vagas");
 
@@ -98,6 +99,7 @@ export default function RhVagasPage() {
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
   const [vagaExcluirConfirm, setVagaExcluirConfirm] = useState<RhVagaRow | null>(null);
   const [excluindoVaga, setExcluindoVaga] = useState(false);
+  const [vagasInscritasIds, setVagasInscritasIds] = useState<Set<string>>(() => new Set());
 
   const podeCriarVaga = perm.canCriarOk;
   const mostrarAbaGerenciamento = perm.canCriarOk || perm.canExcluirOk;
@@ -118,10 +120,20 @@ export default function RhVagasPage() {
     if (!opts?.silent) setLoading(false);
   }, []);
 
+  const recarregarInscricoes = useCallback(async () => {
+    const ids = await buscarVagaIdsComCandidaturaDoLogin(user?.email);
+    setVagasInscritasIds(ids);
+  }, [user?.email]);
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     void carregar();
   }, [carregar, perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    void recarregarInscricoes();
+  }, [recarregarInscricoes, perm.loading, perm.canView]);
 
   useEffect(() => {
     if (!mostrarAbaGerenciamento && aba === "gerenciamento") setAba("abertas");
@@ -299,6 +311,30 @@ export default function RhVagasPage() {
     </button>
   );
 
+  const btnInscrito = () => (
+    <button
+      type="button"
+      disabled
+      aria-disabled="true"
+      style={{
+        padding: "8px 14px",
+        borderRadius: 10,
+        border: `1px solid ${t.cardBorder}`,
+        background: t.inputBg,
+        color: t.textMuted,
+        fontWeight: 600,
+        fontSize: 13,
+        fontFamily: FONT.body,
+        cursor: "not-allowed",
+        marginRight: 8,
+        marginTop: 12,
+        opacity: 0.92,
+      }}
+    >
+      Inscrito
+    </button>
+  );
+
   const btnPerigo = (label: string, onClick: () => void) => (
     <button
       type="button"
@@ -415,7 +451,9 @@ export default function RhVagasPage() {
                   v,
                   <div style={{ marginTop: 4 }}>
                     {tipoInterna(v.tipo_vaga as RhVagaTipo)
-                      ? btnPrim("Candidatura", () => setVagaCandidatura(v))
+                      ? vagasInscritasIds.has(v.id)
+                        ? btnInscrito()
+                        : btnPrim("Candidatura", () => setVagaCandidatura(v))
                       : null}
                     {tipoExterna(v.tipo_vaga as RhVagaTipo)
                       ? btnSec("Compartilhar", () => abrirModalStub("Compartilhar", v.titulo))
@@ -623,7 +661,10 @@ export default function RhVagasPage() {
         open={vagaCandidatura !== null}
         vaga={vagaCandidatura}
         onClose={() => setVagaCandidatura(null)}
-        onSalvo={() => setSucessoMsg("Candidatura enviada com sucesso.")}
+        onSalvo={() => {
+          void recarregarInscricoes();
+          setSucessoMsg("Candidatura enviada com sucesso.");
+        }}
         t={t}
       />
 

@@ -5,23 +5,16 @@ import { FONT, FONT_TITLE } from "../../../constants/theme";
 import {
   RH_VAGA_CANDIDATURA_ETAPAS,
   emailCandidaturaDeJoin,
-  labelEtapaCandidatura,
   labelVagaComCodigo,
   normalizarBuscaVaga,
   vagaPassaFiltroTipoCandidaturas,
 } from "../../../lib/rhVagasFormat";
+import { RH_CANDIDATURAS_SELECT } from "../../../lib/rhVagaCandidaturaQueries";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
-import type {
-  RhVagaCandidaturaEtapa,
-  RhVagaCandidaturaRow,
-  RhVagasCandidaturasFiltroTipo,
-} from "../../../types/rhVagaCandidatura";
-
-const RH_CANDIDATURAS_SELECT = `
-  *,
-  vaga:rh_vagas ( id, codigo_vaga, titulo, tipo_vaga, status ),
-  funcionario:rh_funcionarios ( id, email, email_spin )
-`.trim();
+import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow, RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
+import { CandidaturaKanbanCard } from "./CandidaturaKanbanCard";
+import { ModalCandidaturaHistorico } from "./ModalCandidaturaHistorico";
+import { ModalCandidaturaVer } from "./ModalCandidaturaVer";
 
 const STATUS_FILTRO: Array<RhVagaStatus | "todos"> = ["todos", "aberta", "em_andamento", "concluida", "cancelada"];
 
@@ -64,7 +57,8 @@ export function RhVagasCandidaturasPainel({
   const [filtroTipo, setFiltroTipo] = useState<RhVagasCandidaturasFiltroTipo>("todos");
   const [filtroStatusVaga, setFiltroStatusVaga] = useState<RhVagaStatus | "todos">("todos");
   const [vagaIdFiltro, setVagaIdFiltro] = useState<string>("todas");
-  const [atualizandoEtapaId, setAtualizandoEtapaId] = useState<string | null>(null);
+  const [candidaturaVerId, setCandidaturaVerId] = useState<string | null>(null);
+  const [candidaturaHistorico, setCandidaturaHistorico] = useState<RhVagaCandidaturaRow | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -125,24 +119,14 @@ export function RhVagasCandidaturasPainel({
     const m = new Map<RhVagaCandidaturaEtapa, RhVagaCandidaturaRow[]>();
     for (const e of RH_VAGA_CANDIDATURA_ETAPAS) m.set(e.id, []);
     for (const c of candidaturasKanban) {
-      const lista = m.get(c.etapa) ?? [];
+      const etapaRaw = c.etapa as string;
+      const etapa = etapaRaw === "aprovado" ? "stand_by" : c.etapa;
+      const lista = m.get(etapa as RhVagaCandidaturaEtapa) ?? [];
       lista.push(c);
-      m.set(c.etapa, lista);
+      m.set(etapa as RhVagaCandidaturaEtapa, lista);
     }
     return m;
   }, [candidaturasKanban]);
-
-  async function alterarEtapa(candidaturaId: string, etapa: RhVagaCandidaturaEtapa) {
-    if (!podeEditarEtapa) return;
-    setAtualizandoEtapaId(candidaturaId);
-    const { error } = await supabase.from("rh_vaga_candidaturas").update({ etapa }).eq("id", candidaturaId);
-    setAtualizandoEtapaId(null);
-    if (error) {
-      setErro(error.message);
-      return;
-    }
-    setCandidaturas((prev) => prev.map((c) => (c.id === candidaturaId ? { ...c, etapa } : c)));
-  }
 
   const inputStyle = {
     padding: "10px 12px",
@@ -314,47 +298,14 @@ export function RhVagasCandidaturasPainel({
                       <li style={{ fontSize: 12, color: t.textMuted, padding: 8, fontFamily: FONT.body, textAlign: "center" }}>—</li>
                     ) : (
                       itens.map((c) => (
-                        <li
+                        <CandidaturaKanbanCard
                           key={c.id}
-                          style={{
-                            borderRadius: 10,
-                            border: `1px solid ${t.cardBorder}`,
-                            padding: 10,
-                            background: t.inputBg,
-                          }}
-                        >
-                          <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 4, fontFamily: FONT.body }}>{c.nome_completo}</div>
-                          <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>{c.funcao_atual}</div>
-                          <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 8, wordBreak: "break-word", fontFamily: FONT.body }}>
-                            {emailCandidaturaDeJoin(c.funcionario)}
-                          </div>
-                          {podeEditarEtapa ? (
-                            <select
-                              value={c.etapa}
-                              disabled={atualizandoEtapaId === c.id}
-                              onChange={(e) => void alterarEtapa(c.id, e.target.value as RhVagaCandidaturaEtapa)}
-                              aria-label={`Etapa de ${c.nome_completo}`}
-                              style={{
-                                width: "100%",
-                                padding: "6px 8px",
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: t.cardBg ?? t.inputBg,
-                                color: t.text,
-                                fontSize: 11,
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              {RH_VAGA_CANDIDATURA_ETAPAS.map((e) => (
-                                <option key={e.id} value={e.id}>
-                                  {e.label}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{labelEtapaCandidatura(c.etapa)}</div>
-                          )}
-                        </li>
+                          c={c}
+                          etapaColuna={col.id}
+                          t={t}
+                          onVer={() => setCandidaturaVerId(c.id)}
+                          onHistorico={() => setCandidaturaHistorico(c)}
+                        />
                       ))
                     )}
                   </ul>
@@ -364,6 +315,22 @@ export function RhVagasCandidaturasPainel({
           </div>
         )}
       </section>
+
+      <ModalCandidaturaVer
+        open={candidaturaVerId !== null}
+        candidaturaId={candidaturaVerId}
+        onClose={() => setCandidaturaVerId(null)}
+        onAtualizado={() => void carregar()}
+        podeEditar={podeEditarEtapa}
+        t={t}
+      />
+
+      <ModalCandidaturaHistorico
+        open={candidaturaHistorico !== null}
+        candidatura={candidaturaHistorico}
+        onClose={() => setCandidaturaHistorico(null)}
+        t={t}
+      />
     </>
   );
 }

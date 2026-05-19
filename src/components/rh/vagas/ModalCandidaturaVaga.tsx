@@ -5,6 +5,7 @@ import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { supabase } from "../../../lib/supabase";
+import { prestadorJaInscritoNaVaga } from "../../../lib/rhVagaCandidaturaInscricao";
 import { uploadCurriculoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFiles";
 import type { RhVagaRow } from "../../../types/rhVaga";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
@@ -50,6 +51,7 @@ export function ModalCandidaturaVaga({
 
   const [prestador, setPrestador] = useState<RhFuncionario | null>(null);
   const [carregandoPrestador, setCarregandoPrestador] = useState(false);
+  const [jaInscrito, setJaInscrito] = useState(false);
   const [erroPrestador, setErroPrestador] = useState<string | null>(null);
 
   const [curriculoFile, setCurriculoFile] = useState<File | null>(null);
@@ -73,11 +75,13 @@ export function ModalCandidaturaVaga({
   useEffect(() => {
     if (!open) {
       setPrestador(null);
+      setJaInscrito(false);
       setErroPrestador(null);
       resetForm();
       return;
     }
     resetForm();
+    setJaInscrito(false);
     const email = user?.email?.trim();
     if (!email) {
       setPrestador(null);
@@ -108,11 +112,16 @@ export function ModalCandidaturaVaga({
         return;
       }
       setPrestador(row);
+      if (!vaga?.id) return;
+      void prestadorJaInscritoNaVaga(vaga.id, row.id).then((inscrito) => {
+        if (cancelled) return;
+        setJaInscrito(inscrito);
+      });
     });
     return () => {
       cancelled = true;
     };
-  }, [open, resetForm, user?.email]);
+  }, [open, resetForm, user?.email, vaga?.id]);
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -157,7 +166,7 @@ export function ModalCandidaturaVaga({
   }
 
   async function candidatar() {
-    if (!vaga || !prestador || !user?.id) return;
+    if (!vaga || !prestador || !user?.id || jaInscrito) return;
     setErroSalvar(null);
     if (!validar() || !curriculoFile) return;
 
@@ -200,7 +209,7 @@ export function ModalCandidaturaVaga({
 
   if (!open || !vaga) return null;
 
-  const podeEnviar = Boolean(prestador) && !carregandoPrestador;
+  const podeEnviar = Boolean(prestador) && !carregandoPrestador && !jaInscrito;
 
   return (
     <ModalBase maxWidth={560} onClose={fechar} zIndex={1100}>
@@ -214,6 +223,12 @@ export function ModalCandidaturaVaga({
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             <Loader2 size={16} className="app-lucide-spin" aria-hidden />
             Carregando seus dados…
+          </div>
+        ) : null}
+
+        {jaInscrito ? (
+          <div role="status" style={{ marginBottom: 14, fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
+            Você já está inscrito nesta vaga.
           </div>
         ) : null}
 
@@ -323,29 +338,31 @@ export function ModalCandidaturaVaga({
           >
             Cancelar
           </button>
-          <button
-            type="button"
-            onClick={() => void candidatar()}
-            disabled={salvando || !podeEnviar}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              background: ctaGradient(brand),
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              cursor: salvando || !podeEnviar ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              opacity: salvando || !podeEnviar ? 0.85 : 1,
-            }}
-          >
-            {salvando ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
-            Candidatar
-          </button>
+          {!jaInscrito ? (
+            <button
+              type="button"
+              onClick={() => void candidatar()}
+              disabled={salvando || !podeEnviar}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 10,
+                border: "none",
+                background: ctaGradient(brand),
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                cursor: salvando || !podeEnviar ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                opacity: salvando || !podeEnviar ? 0.85 : 1,
+              }}
+            >
+              {salvando ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+              Candidatar
+            </button>
+          ) : null}
         </div>
       </div>
     </ModalBase>
