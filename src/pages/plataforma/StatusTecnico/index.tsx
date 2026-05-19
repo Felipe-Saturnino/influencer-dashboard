@@ -1324,9 +1324,7 @@ export default function StatusTecnico() {
                       ? syncSocialExecutando
                       : isSpinRss
                         ? syncSpinRssExecutando
-                        : isLobbyBlaze
-                          ? syncLobbyBlazeExecutando
-                          : false;
+                        : false;
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
@@ -1358,12 +1356,15 @@ export default function StatusTecnico() {
                       </td>
                       {mostrarColunaAcao && (
                       <td style={tdStyle}>
-                        {(isCda || isSocial || isSpinRss || isLobbyBlaze) && (
+                        {isLobbyBlaze && (
+                          <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
+                        )}
+                        {(isCda || isSocial || isSpinRss) && (
                           <button
                             type="button"
                             onClick={() =>
                               setConfirmarSync(
-                                isCda ? "cda" : isSocial ? "social" : isSpinRss ? "spin_rss" : "lobby_blaze",
+                                isCda ? "cda" : isSocial ? "social" : "spin_rss",
                               )}
                             disabled={syncExecutandoRow || !perm.canEditarOk}
                             style={btnAcao(syncExecutandoRow)}
