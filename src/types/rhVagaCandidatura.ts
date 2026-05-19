@@ -1,6 +1,6 @@
 /** Linha de `public.rh_vaga_candidaturas` + joins usados na UI. */
 
-import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "./rhVaga";
+import type { RhVagaRow } from "./rhVaga";
 
 export type RhVagaCandidaturaEtapa =
   | "inscritos"

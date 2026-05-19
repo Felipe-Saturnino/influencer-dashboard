@@ -8,7 +8,6 @@ import {
   camposObrigatoriosParaEtapa,
   etapasAvancoDisponiveis,
   fmtDataHoraBR,
-  labelTipoCandidatura,
   mostrarAbaEtapasNoModal,
   patchCamposParaEtapa,
   type CamposEtapaCandidatura,
