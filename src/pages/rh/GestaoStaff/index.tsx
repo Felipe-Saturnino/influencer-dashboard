@@ -1184,7 +1184,6 @@ export default function RhGestaoStaffPage() {
       {modalVer ? (
         <ModalStaffVer
           row={modalVer}
-          nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           dadosFuncaoOcultarOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
             modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
@@ -1239,7 +1238,6 @@ export default function RhGestaoStaffPage() {
 
 function ModalStaffVer({
   row,
-  nomeTimeOrganograma,
   operadorasNome,
   dadosFuncaoOcultarOperadora = false,
   dadosFuncaoOcultarBioFotos = false,
@@ -1248,8 +1246,6 @@ function ModalStaffVer({
   brand,
 }: {
   row: RhFuncionario;
-  /** Nome do time no organograma (rh_org_times), mesma regra que na tabela. */
-  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   /** Times Service Manager, Customer Service, Shift Leader, Performance Coach. */
   dadosFuncaoOcultarOperadora?: boolean;
