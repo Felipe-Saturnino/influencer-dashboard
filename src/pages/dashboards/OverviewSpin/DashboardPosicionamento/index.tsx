@@ -8,76 +8,64 @@ import {
   MapPin,
   Minus,
   TrendingDown,
-  TrendingUp,
   Trophy,
   AlertTriangle,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
-import { BRAND } from "../../../../lib/dashboardConstants";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../../lib/tableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
-import VitrinePiorMesaCard from "./VitrinePiorMesaCard";
 import { SkeletonKpiCard } from "../../../../components/dashboard";
 import {
-  type VisaoPosicionamento,
+  type HeatmapHistoricoModo,
   type LobbyExecucaoRow,
   type LobbyPosicaoRow,
   fmtPosicao,
   posicaoBgColor,
   posicaoTextColor,
   periodoRange,
-  periodoAnteriorRange,
   execucoesNoPeriodo,
-  ultimaExecucaoOk,
-  penultimaExecucao,
   mapPosicoesPorExecucao,
-  calcVisibilidadeVitrine,
   mesasNoTop10Snapshot,
-  melhorPosicaoSnapshot,
-  maiorQuedaSnapshot,
   deltaPosicao,
-  bucketsHistorico,
-  assignExecucoesToBuckets,
   posicaoMediaMesaNoBucket,
-  heatmapColunas,
-  execucoesParaHeatCol,
-  rankingConcorrentes,
-  concorrentesPorJogoSnapshot,
-  visibilidadePorCategoriaCompleta,
+  ultimaExecucaoNoDia,
+  execucaoMesmoHorarioDiaAnterior,
+  calcVisibilidadeLeituras,
+  melhorPosicaoComCategoria,
+  maiorQuedaEntreSnapshots,
+  colunasHistoricoPosicionamento,
+  execIdsColunaHistorico,
+  visibilidadePorCategoriaDia,
+  concorrentesPorJogoDetalhe,
   fmtUltimaAtualizacao,
   gerarAlertas,
-  LINE_COLORS,
-  POS_CHART_MAX,
-  POS_MONITOR_DIA_MIN,
-  POS_MONITOR_MIN_ANO,
-  POS_MONITOR_MIN_MES,
   SEMANTIC,
   toDateKey,
+  addDays,
+  POS_MONITOR_DIA_MIN,
 } from "../../../../lib/lobbyMonitorHelpers";
 
 interface Props {
   operadoraSlug: string;
-  visao: VisaoPosicionamento;
   refDate: Date;
-  mesAno?: { ano: number; mes: number; label: string };
 }
+
+const VS_ONTEM = "vs ontem (mesmo horário)";
+
+const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
+  { id: "dia", label: "Dia" },
+  { id: "7d", label: "7 dias" },
+  { id: "30d", label: "30 dias" },
+];
 
 function KpiPosCard({
   label,
   value,
+  subValue,
   delta,
   deltaLabel,
   positivo,
@@ -85,6 +73,7 @@ function KpiPosCard({
 }: {
   label: string;
   value: string;
+  subValue?: string | null;
   delta?: string | null;
   deltaLabel?: string;
   positivo?: boolean | null;
@@ -146,12 +135,25 @@ function KpiPosCard({
             fontWeight: 800,
             color: t.text,
             fontFamily: FONT.body,
-            marginBottom: 6,
+            marginBottom: subValue ? 4 : 6,
             lineHeight: 1.1,
           }}
         >
           {value}
         </div>
+        {subValue ? (
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              marginBottom: 6,
+            }}
+          >
+            {subValue}
+          </div>
+        ) : null}
         {delta != null && delta !== "" && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
             <span style={{ color: corDelta, fontWeight: 700 }}>{delta}</span>
@@ -163,12 +165,81 @@ function KpiPosCard({
   );
 }
 
-export default function DashboardPosicionamento({ operadoraSlug, visao, refDate, mesAno }: Props) {
-  const { theme: t, isDark } = useApp();
+function ConcorrentesCountHover({
+  qtd,
+  jogos,
+}: {
+  qtd: number;
+  jogos: { name: string; provider_name: string; posicao: number }[];
+}) {
+  const { theme: t } = useApp();
+  const [open, setOpen] = useState(false);
+  if (qtd === 0) {
+    return <span style={{ color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>0</span>;
+  }
+  return (
+    <span
+      style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <span
+        style={{
+          color: "var(--brand-action, #7c3aed)",
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+          cursor: "default",
+          borderBottom: "1px dotted var(--brand-action, #7c3aed)",
+        }}
+      >
+        {qtd}
+      </span>
+      {open && jogos.length > 0 && (
+        <div
+          role="tooltip"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "100%",
+            marginTop: 6,
+            zIndex: 20,
+            minWidth: 200,
+            maxWidth: 280,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            fontFamily: FONT.body,
+            fontSize: 12,
+            textAlign: "left",
+          }}
+        >
+          {jogos.map((j) => (
+            <div
+              key={`${j.posicao}-${j.name}`}
+              style={{ marginBottom: 6, color: t.text, lineHeight: 1.35 }}
+            >
+              <span style={{ color: t.textMuted }}>{fmtPosicao(j.posicao)} · </span>
+              {j.name}
+              <span style={{ color: t.textMuted }}> — {j.provider_name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+export default function DashboardPosicionamento({ operadoraSlug, refDate }: Props) {
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [loading, setLoading] = useState(true);
   const [execucoesAll, setExecucoesAll] = useState<LobbyExecucaoRow[]>([]);
   const [posicoesAll, setPosicoesAll] = useState<LobbyPosicaoRow[]>([]);
+  const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
+
+  const dayKey = useMemo(() => toDateKey(refDate), [refDate]);
 
   const card: React.CSSProperties = {
     borderRadius: 14,
@@ -187,9 +258,12 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
     }
     setLoading(true);
     try {
-      const range = periodoRange(visao, refDate, mesAno);
-      const prev = periodoAnteriorRange(visao, refDate, mesAno);
-      const fetchFrom = prev.inicio < range.inicio ? prev.inicio : range.inicio;
+      const rangeDia = periodoRange("dia", refDate);
+      const fetchStart = addDays(refDate, -35);
+      const minKey = toDateKey(POS_MONITOR_DIA_MIN);
+      const fetchInicioKey =
+        toDateKey(fetchStart) < minKey ? minKey : toDateKey(fetchStart);
+      const fetchFrom = `${fetchInicioKey}T00:00:00.000Z`;
 
       const execRows = await fetchAllPages(async (from, to) =>
         supabase
@@ -199,7 +273,7 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
           )
           .eq("operadora_slug", operadoraSlug)
           .gte("executado_em", fetchFrom)
-          .lte("executado_em", range.fim)
+          .lte("executado_em", rangeDia.fim)
           .order("executado_em", { ascending: true })
           .range(from, to),
       );
@@ -241,7 +315,7 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
     } finally {
       setLoading(false);
     }
-  }, [operadoraSlug, visao, refDate, mesAno]);
+  }, [operadoraSlug, refDate]);
 
   useEffect(() => {
     void carregar();
@@ -249,48 +323,40 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
 
   const posByExec = useMemo(() => mapPosicoesPorExecucao(posicoesAll), [posicoesAll]);
 
-  const rangeAtual = useMemo(() => periodoRange(visao, refDate, mesAno), [visao, refDate, mesAno]);
-  const rangePrev = useMemo(() => periodoAnteriorRange(visao, refDate, mesAno), [visao, refDate, mesAno]);
-
-  const execPeriodo = useMemo(
-    () => execucoesNoPeriodo(execucoesAll, rangeAtual.inicio, rangeAtual.fim),
-    [execucoesAll, rangeAtual],
-  );
-  const execPeriodoPrev = useMemo(
-    () => execucoesNoPeriodo(execucoesAll, rangePrev.inicio, rangePrev.fim),
-    [execucoesAll, rangePrev],
+  const rangeDia = useMemo(() => periodoRange("dia", refDate), [refDate]);
+  const execDia = useMemo(
+    () => execucoesNoPeriodo(execucoesAll, rangeDia.inicio, rangeDia.fim),
+    [execucoesAll, rangeDia],
   );
 
-  const ultimaGlobal = useMemo(() => ultimaExecucaoOk(execucoesAll), [execucoesAll]);
+  const ultimaNoDia = useMemo(
+    () => ultimaExecucaoNoDia(execucoesAll, dayKey),
+    [execucoesAll, dayKey],
+  );
+  const execOntemMesmoHorario = useMemo(
+    () => (ultimaNoDia ? execucaoMesmoHorarioDiaAnterior(ultimaNoDia, execucoesAll) : null),
+    [ultimaNoDia, execucoesAll],
+  );
+
   const snapshotAtual = useMemo(
-    () => (ultimaGlobal ? posByExec.get(ultimaGlobal.id) ?? [] : []),
-    [ultimaGlobal, posByExec],
+    () => (ultimaNoDia ? posByExec.get(ultimaNoDia.id) ?? [] : []),
+    [ultimaNoDia, posByExec],
   );
-  const execAnteriorSnap = useMemo(
-    () => (ultimaGlobal ? penultimaExecucao(execucoesAll, ultimaGlobal.id) : null),
-    [ultimaGlobal, execucoesAll],
-  );
-  const snapshotAnterior = useMemo(
-    () => (execAnteriorSnap ? posByExec.get(execAnteriorSnap.id) ?? [] : []),
-    [execAnteriorSnap, posByExec],
+  const snapshotOntem = useMemo(
+    () => (execOntemMesmoHorario ? posByExec.get(execOntemMesmoHorario.id) ?? [] : []),
+    [execOntemMesmoHorario, posByExec],
   );
 
-  const visAtual = useMemo(() => calcVisibilidadeVitrine(execPeriodo, posByExec), [execPeriodo, posByExec]);
-  const visPrev = useMemo(
-    () => calcVisibilidadeVitrine(execPeriodoPrev, posByExec),
-    [execPeriodoPrev, posByExec],
-  );
+  const visAtual = useMemo(() => calcVisibilidadeLeituras(snapshotAtual), [snapshotAtual]);
+  const visOntem = useMemo(() => calcVisibilidadeLeituras(snapshotOntem), [snapshotOntem]);
 
   const top10Atual = useMemo(() => mesasNoTop10Snapshot(snapshotAtual), [snapshotAtual]);
-  const top10PrevSnap = useMemo(() => {
-    if (!execAnteriorSnap) return { noTop10: 0, total: 0 };
-    return mesasNoTop10Snapshot(posByExec.get(execAnteriorSnap.id) ?? []);
-  }, [execAnteriorSnap, posByExec]);
+  const top10Ontem = useMemo(() => mesasNoTop10Snapshot(snapshotOntem), [snapshotOntem]);
 
-  const melhor = useMemo(() => melhorPosicaoSnapshot(snapshotAtual), [snapshotAtual]);
+  const melhor = useMemo(() => melhorPosicaoComCategoria(snapshotAtual), [snapshotAtual]);
   const queda = useMemo(
-    () => maiorQuedaSnapshot(snapshotAtual, snapshotAnterior),
-    [snapshotAtual, snapshotAnterior],
+    () => maiorQuedaEntreSnapshots(snapshotAtual, snapshotOntem),
+    [snapshotAtual, snapshotOntem],
   );
 
   const mesasOrdenadas = useMemo(() => {
@@ -302,85 +368,38 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
   }, [snapshotAtual]);
 
   const prevMap = useMemo(
-    () => new Map(snapshotAnterior.map((p) => [p.mesa_identificacao, p.posicao])),
-    [snapshotAnterior],
+    () => new Map(snapshotOntem.map((p) => [p.mesa_identificacao, p.posicao])),
+    [snapshotOntem],
   );
 
-  const concorrentesJogo = useMemo(() => concorrentesPorJogoSnapshot(snapshotAtual), [snapshotAtual]);
+  const concorrentesJogo = useMemo(
+    () => concorrentesPorJogoDetalhe(snapshotAtual),
+    [snapshotAtual],
+  );
 
-  const jogosVitrinePiorMesa = useMemo(() => {
-    const raw = ultimaGlobal?.jogos_a_frente_pior_mesa ?? [];
+  const rankingJogos = useMemo(() => {
+    const raw = ultimaNoDia?.jogos_a_frente_pior_mesa ?? [];
     return [...raw].sort((a, b) => a.posicao - b.posicao);
-  }, [ultimaGlobal]);
-  const maxConc = useMemo(
-    () => Math.max(1, ...concorrentesJogo.map((c) => c.qtd), 0),
-    [concorrentesJogo],
+  }, [ultimaNoDia]);
+
+  const heatCols = useMemo(
+    () => colunasHistoricoPosicionamento(historicoModo, refDate),
+    [historicoModo, refDate],
   );
-
-  const tituloHistorico =
-    visao === "dia"
-      ? "Histórico de posicionamento — comparativo por hora"
-      : visao === "semana"
-        ? "Histórico de posicionamento — comparativo semanal"
-        : "Histórico de posicionamento — comparativo mensal";
-
-  const chartData = useMemo(() => {
-    let buckets = assignExecucoesToBuckets(
-      bucketsHistorico(visao, refDate, mesAno),
-      execPeriodo,
-      visao,
-    );
-    if (
-      visao === "mes" &&
-      mesAno?.ano === POS_MONITOR_MIN_ANO &&
-      mesAno.mes === POS_MONITOR_MIN_MES
-    ) {
-      const minKey = toDateKey(POS_MONITOR_DIA_MIN);
-      buckets = buckets.filter((b) => b.key >= minKey);
-    }
-    const mesas = [...new Set(snapshotAtual.map((m) => m.mesa_identificacao))];
-    return buckets.map((b) => {
-      const row: Record<string, string | number | null> = { label: b.label };
-      for (const mid of mesas) {
-        const nome =
-          snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
-        row[nome] = posicaoMediaMesaNoBucket(mid, b.execucaoIds, posByExec);
-      }
-      return row;
-    });
-  }, [visao, refDate, mesAno, execPeriodo, snapshotAtual, posByExec]);
-
-  const mesasChart = useMemo(() => {
-    const set = new Set<string>();
-    for (const row of chartData) {
-      for (const k of Object.keys(row)) {
-        if (k !== "label") set.add(k);
-      }
-    }
-    return [...set];
-  }, [chartData]);
-
-  const heatCols = useMemo(() => heatmapColunas(visao, refDate, mesAno), [visao, refDate, mesAno]);
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
 
-  const ranking = useMemo(
-    () => rankingConcorrentes(execPeriodo, posByExec),
-    [execPeriodo, posByExec],
-  );
-  const maxRank = ranking[0]?.count ?? 1;
-
   const cats = useMemo(
-    () => visibilidadePorCategoriaCompleta(execPeriodo, posByExec),
-    [execPeriodo, posByExec],
+    () => visibilidadePorCategoriaDia(execDia, posByExec),
+    [execDia, posByExec],
   );
 
   const alertas = useMemo(
-    () => gerarAlertas(snapshotAtual, snapshotAnterior, execPeriodo, posByExec),
-    [snapshotAtual, snapshotAnterior, execPeriodo, posByExec],
+    () => gerarAlertas(snapshotAtual, snapshotOntem, execDia, posByExec),
+    [snapshotAtual, snapshotOntem, execDia, posByExec],
   );
 
   const semDados =
-    operadoraSlug === "todas" || (!loading && execucoesAll.length === 0);
+    operadoraSlug === "todas" || (!loading && execDia.length === 0);
 
   if (operadoraSlug === "todas") {
     return (
@@ -425,8 +444,8 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
   }
 
   const deltaVisPp =
-    visAtual != null && visPrev != null ? visAtual - visPrev : null;
-  const deltaTop10 = top10Atual.noTop10 - top10PrevSnap.noTop10;
+    visAtual != null && visOntem != null ? visAtual - visOntem : null;
+  const deltaTop10 = top10Atual.noTop10 - top10Ontem.noTop10;
 
   return (
     <>
@@ -439,36 +458,38 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
               ? `${deltaVisPp >= 0 ? "+" : ""}${deltaVisPp.toFixed(0)}pp`
               : null
           }
+          deltaLabel={VS_ONTEM}
           positivo={deltaVisPp == null ? null : deltaVisPp >= 0}
           icon={<Eye size={16} aria-hidden />}
         />
         <KpiPosCard
           label="Mesas no top 10"
           value={`${top10Atual.noTop10} / ${top10Atual.total || "—"}`}
-          delta={deltaTop10 !== 0 ? `${deltaTop10 >= 0 ? "+" : ""}${deltaTop10}` : "—"}
+          delta={deltaTop10 !== 0 ? `${deltaTop10 >= 0 ? "+" : ""}${deltaTop10}` : null}
+          deltaLabel={VS_ONTEM}
           positivo={deltaTop10 >= 0}
           icon={<Trophy size={16} aria-hidden />}
         />
         <KpiPosCard
           label="Melhor posição"
-          value={melhor ? `${fmtPosicao(melhor.posicao)} — ${melhor.nome_mesa}` : "—"}
+          value={melhor ? fmtPosicao(melhor.posicao) : "—"}
+          subValue={melhor?.categoria ?? null}
           icon={<MapPin size={16} aria-hidden />}
         />
         <KpiPosCard
           label="Maior queda"
-          value={queda ? `−${queda.delta} · ${queda.nome_mesa}` : "—"}
+          value={queda ? `−${queda.delta}` : "—"}
+          subValue={queda?.nome_mesa ?? null}
           icon={<TrendingDown size={16} aria-hidden />}
           positivo={false}
         />
       </div>
 
-      <VitrinePiorMesaCard card={card} ultimaGlobal={ultimaGlobal} jogos={jogosVitrinePiorMesa} />
-
       <div className="app-grid-2" style={{ marginBottom: 14 }}>
         <div style={card}>
           <SectionTitle icon={<ListOrdered size={15} />}>Posição atual das mesas</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaGlobal?.executado_em)}
+            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {mesasOrdenadas.map((m) => {
@@ -520,238 +541,251 @@ export default function DashboardPosicionamento({ operadoraSlug, visao, refDate,
         </div>
 
         <div style={card}>
-          <SectionTitle icon={<LayoutList size={15} />}>Concorrentes à frente por jogo</SectionTitle>
+          <SectionTitle icon={<LayoutList size={15} />}>Concorrentes à frente</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaGlobal?.executado_em)}
+            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
           {concorrentesJogo.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
           ) : (
-            concorrentesJogo.map((c) => (
-              <div key={c.jogo} style={{ marginBottom: 14 }}>
-                <div
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {concorrentesJogo.map((c) => (
+                <li
+                  key={c.jogo}
                   style={{
                     display: "flex",
+                    alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: 6,
-                    fontSize: 13,
+                    gap: 10,
+                    padding: "8px 0",
+                    borderBottom: `1px solid ${t.cardBorder}`,
                     fontFamily: FONT.body,
-                    color: t.text,
+                    fontSize: 13,
                   }}
                 >
-                  <span>{c.jogo}</span>
-                  <span style={{ color: t.textMuted }}>
-                    {c.qtd} {c.qtd === 1 ? "concorrente" : "concorrentes"}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    height: 8,
-                    borderRadius: 4,
-                    background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.min(100, (c.qtd / maxConc) * 100)}%`,
-                      borderRadius: 4,
-                      background: "var(--brand-action, #7c3aed)",
-                    }}
-                  />
-                </div>
-              </div>
-            ))
+                  <span style={{ color: t.text, fontWeight: 600 }}>{c.jogo}</span>
+                  <ConcorrentesCountHover qtd={c.qtd} jogos={c.jogos} />
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<TrendingUp size={15} />}>{tituloHistorico}</SectionTitle>
-        <div style={{ width: "100%", height: 320 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: t.textMuted }} />
-              <YAxis
-                reversed
-                domain={[1, POS_CHART_MAX]}
-                tick={{ fontSize: 11, fill: t.textMuted }}
-                tickFormatter={(v) => `P${v}`}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: brand.blockBg,
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 10,
-                  fontFamily: FONT.body,
-                  fontSize: 12,
-                }}
-                formatter={(v: number) => (v != null ? fmtPosicao(v) : "—")}
-              />
-              <Legend wrapperStyle={{ fontFamily: FONT.body, fontSize: 11 }} />
-              {mesasChart.map((nome, i) => (
-                <Line
-                  key={nome}
-                  type="monotone"
-                  dataKey={nome}
-                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          <SectionTitle icon={<LayoutList size={15} />}>Histórico de posicionamento</SectionTitle>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {HISTORICO_MODOS.map((m) => {
+              const ativo = historicoModo === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={ativo}
+                  onClick={() => setHistoricoModo(m.id)}
+                  style={{
+                    padding: "6px 14px",
+                    minHeight: 36,
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                    fontSize: 12,
+                    fontWeight: ativo ? 700 : 500,
+                    border: `1px solid ${ativo ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
+                    background: ativo
+                      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
+                      : "transparent",
+                    color: ativo ? "var(--brand-action, #7c3aed)" : t.textMuted,
+                  }}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="app-table-wrap">
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              borderRadius: 14,
+              overflow: "hidden",
+              fontFamily: FONT.body,
+              fontSize: 12,
+            }}
+          >
+            <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
+            <thead>
+              <tr>
+                <th scope="col" style={getThStyle(t)}>
+                  Mesa
+                </th>
+                {heatCols.map((c) => (
+                  <th key={c.key} scope="col" style={{ ...getThStyle(t), textAlign: "center" }}>
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {heatMesas.map((mid, rowIdx) => {
+                const nome = snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
+                return (
+                  <tr key={mid} style={{ background: zebraStripe(rowIdx) }}>
+                    <td
+                      style={{
+                        ...getTdStyle(t),
+                        maxWidth: 160,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={nome}
+                    >
+                      {nome}
+                    </td>
+                    {heatCols.map((col) => {
+                      const execIds = execIdsColunaHistorico(historicoModo, col.key, refDate, execucoesAll);
+                      const pos = posicaoMediaMesaNoBucket(mid, execIds, posByExec);
+                      return (
+                        <td key={col.key} style={{ ...getTdStyle(t), textAlign: "center" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              minWidth: 36,
+                              padding: "4px 6px",
+                              borderRadius: 6,
+                              fontWeight: 700,
+                              fontSize: 11,
+                              background: posicaoBgColor(pos != null ? Math.round(pos) : null),
+                              color: posicaoTextColor(pos != null ? Math.round(pos) : null),
+                            }}
+                          >
+                            {pos != null ? fmtPosicao(Math.round(pos)) : "—"}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div className="app-grid-2" style={{ marginBottom: 14 }}>
         <div style={card}>
-          <SectionTitle icon={<LayoutList size={15} />} sub={visao === "dia" ? "por hora" : visao === "semana" ? "por dia" : "por semana"}>
-            Heatmap de posicionamento
-          </SectionTitle>
+          <SectionTitle icon={<Trophy size={15} />}>Ranking de concorrentes</SectionTitle>
+          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
+            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
+          </p>
+          {rankingJogos.length === 0 ? (
+            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+          ) : (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {rankingJogos.map((j) => (
+                <li
+                  key={j.game_id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 0",
+                    borderBottom: `1px solid ${t.cardBorder}`,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                  }}
+                >
+                  <span
+                    style={{
+                      minWidth: 40,
+                      padding: "4px 8px",
+                      borderRadius: 8,
+                      textAlign: "center",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      background: posicaoBgColor(j.posicao),
+                      color: posicaoTextColor(j.posicao),
+                    }}
+                  >
+                    {fmtPosicao(j.posicao)}
+                  </span>
+                  <span style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }} title={j.name}>
+                    {j.name}
+                  </span>
+                  <span
+                    style={{
+                      color: t.textMuted,
+                      fontSize: 12,
+                      maxWidth: 120,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={j.provider_name}
+                  >
+                    {j.provider_name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div style={card}>
+          <SectionTitle icon={<Eye size={15} />}>Visibilidade por categoria</SectionTitle>
           <div className="app-table-wrap">
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: FONT.body, fontSize: 12 }}>
-              <caption style={{ display: "none" }}>Heatmap de posicionamento das mesas</caption>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+                borderRadius: 14,
+                overflow: "hidden",
+                fontFamily: FONT.body,
+                fontSize: 12,
+              }}
+            >
+              <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={{ textAlign: "left", padding: 8, color: t.textMuted, fontWeight: 600 }}>
-                    Mesa
+                  <th scope="col" style={getThStyle(t)}>
+                    Jogo
                   </th>
-                  {heatCols.map((c) => (
-                    <th key={c.key} scope="col" style={{ textAlign: "center", padding: 6, color: t.textMuted, fontWeight: 600 }}>
-                      {c.label}
-                    </th>
-                  ))}
+                  <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                    Top 3
+                  </th>
+                  <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                    Top 10
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {heatMesas.map((mid) => {
-                  const nome = snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
-                  return (
-                    <tr key={mid}>
-                      <td style={{ padding: 8, color: t.text, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }} title={nome}>
-                        {nome}
-                      </td>
-                      {heatCols.map((col) => {
-                        const execIds = execucoesParaHeatCol(execPeriodo, col.key, visao, refDate, mesAno);
-                        const pos = posicaoMediaMesaNoBucket(mid, execIds, posByExec);
-                        return (
-                          <td key={col.key} style={{ padding: 4, textAlign: "center" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                minWidth: 36,
-                                padding: "4px 6px",
-                                borderRadius: 6,
-                                fontWeight: 700,
-                                fontSize: 11,
-                                background: posicaoBgColor(pos != null ? Math.round(pos) : null),
-                                color: posicaoTextColor(pos != null ? Math.round(pos) : null),
-                              }}
-                            >
-                              {pos != null ? fmtPosicao(Math.round(pos)) : "—"}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
+                {cats.map((c, i) => (
+                  <tr key={c.categoria} style={{ background: zebraStripe(i) }}>
+                    <td style={getTdStyle(t)}>{c.categoria}</td>
+                    <td style={getTdNumStyle(t)}>{c.pctTop3.toFixed(0)}%</td>
+                    <td style={getTdNumStyle(t)}>{c.pctTop10.toFixed(0)}%</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
-
-        <div style={card}>
-          <SectionTitle icon={<Trophy size={15} />}>Ranking de concorrentes frequentes</SectionTitle>
-          {ranking.length === 0 ? (
-            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
-          ) : (
-            ranking.slice(0, 10).map((r) => (
-              <div key={r.provider} style={{ marginBottom: 12 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <span style={{ color: t.text }}>{r.provider}</span>
-                  <span style={{ color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>{r.count}x</span>
-                </div>
-                <div
-                  style={{
-                    height: 8,
-                    borderRadius: 4,
-                    background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(r.count / maxRank) * 100}%`,
-                      background: "var(--brand-contrast, #1e36f8)",
-                      borderRadius: 4,
-                    }}
-                  />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       </div>
 
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Eye size={15} />}>Visibilidade por categoria</SectionTitle>
-        {cats.map((c) => {
-          const dominante = c.pctTop10 >= 60;
-          return (
-            <div key={c.categoria} style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                }}
-              >
-                <span style={{ color: t.text, fontWeight: 600 }}>{c.categoria}</span>
-                <span style={{ color: dominante ? SEMANTIC.verde : SEMANTIC.vermelho, fontSize: 12 }}>
-                  {c.melhorPos != null ? `${fmtPosicao(c.melhorPos)} · ` : ""}
-                  {c.pctTop3.toFixed(0)}% top 3 · {c.pctTop10.toFixed(0)}% top 10
-                </span>
-              </div>
-              <div
-                style={{
-                  height: 10,
-                  borderRadius: 5,
-                  background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, c.pctTop10)}%`,
-                    background: dominante ? SEMANTIC.verde : BRAND.amarelo,
-                    borderRadius: 5,
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={card}>
+<div style={card}>
         <SectionTitle icon={<AlertTriangle size={15} />}>Alertas do período</SectionTitle>
         {alertas.length === 0 ? (
           <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>

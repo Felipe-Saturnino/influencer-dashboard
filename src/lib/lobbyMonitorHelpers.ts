@@ -553,6 +553,188 @@ export function visibilidadePorCategoria(
     .sort((a, b) => a.categoria.localeCompare(b.categoria, "pt-BR"));
 }
 
+export type HeatmapHistoricoModo = "dia" | "7d" | "30d";
+
+const MESES_CURTOS_POS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+export function ultimaExecucaoNoDia(
+  execucoes: LobbyExecucaoRow[],
+  dayKey: string,
+): LobbyExecucaoRow | null {
+  const ok = execucoes.filter(
+    (e) =>
+      (e.status === "ok" || e.status === "parcial") &&
+      toDateKey(new Date(e.executado_em)) === dayKey,
+  );
+  if (ok.length === 0) return null;
+  return [...ok].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  )[0]!;
+}
+
+/** Execução do dia anterior mais próxima do mesmo horário (hora cheia). */
+export function execucaoMesmoHorarioDiaAnterior(
+  ref: LobbyExecucaoRow,
+  execucoes: LobbyExecucaoRow[],
+): LobbyExecucaoRow | null {
+  const dt = new Date(ref.executado_em);
+  const prevKey = toDateKey(addDays(dt, -1));
+  const hour = dt.getHours();
+  const candidates = execucoes.filter((e) => {
+    if (e.status !== "ok" && e.status !== "parcial") return false;
+    return toDateKey(new Date(e.executado_em)) === prevKey;
+  });
+  if (candidates.length === 0) return null;
+  let best: LobbyExecucaoRow | null = null;
+  let bestDiff = 999;
+  for (const e of candidates) {
+    const diff = Math.abs(new Date(e.executado_em).getHours() - hour);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = e;
+    }
+  }
+  return best;
+}
+
+export function calcVisibilidadeLeituras(posicoes: LobbyPosicaoRow[]): number | null {
+  let total = 0;
+  let top10 = 0;
+  for (const p of posicoes) {
+    if (p.posicao == null) continue;
+    total++;
+    if (p.posicao <= POS_TOP10_MAX) top10++;
+  }
+  if (total === 0) return null;
+  return (top10 / total) * 100;
+}
+
+export function melhorPosicaoComCategoria(
+  posicoes: LobbyPosicaoRow[],
+): { posicao: number; categoria: string } | null {
+  let best: { posicao: number; categoria: string } | null = null;
+  for (const p of posicoes) {
+    if (p.posicao == null) continue;
+    if (!best || p.posicao < best.posicao) {
+      best = { posicao: p.posicao, categoria: labelTipoJogo(p.tipo_jogo, p.nome_mesa) };
+    }
+  }
+  return best;
+}
+
+export function maiorQuedaEntreSnapshots(
+  atual: LobbyPosicaoRow[],
+  anterior: LobbyPosicaoRow[],
+): { delta: number; nome_mesa: string } | null {
+  const prev = new Map(anterior.map((p) => [p.mesa_identificacao, p.posicao]));
+  let worst: { delta: number; nome_mesa: string } | null = null;
+  for (const p of atual) {
+    const pa = prev.get(p.mesa_identificacao);
+    if (p.posicao == null || pa == null) continue;
+    const delta = p.posicao - pa;
+    if (delta > 0 && (!worst || delta > worst.delta)) {
+      worst = { delta, nome_mesa: p.nome_mesa };
+    }
+  }
+  return worst;
+}
+
+export function colunasHistoricoPosicionamento(
+  modo: HeatmapHistoricoModo,
+  refDate: Date,
+): { key: string; label: string }[] {
+  if (modo === "dia") {
+    return Array.from({ length: 24 }, (_, h) => ({
+      key: String(h),
+      label: `${String(h).padStart(2, "0")}h`,
+    }));
+  }
+  const dias = modo === "7d" ? 7 : 30;
+  return Array.from({ length: dias }, (_, i) => {
+    const d = addDays(refDate, i - (dias - 1));
+    const k = toDateKey(d);
+    return {
+      key: k,
+      label:
+        modo === "7d"
+          ? `${DIAS_SEM[d.getDay()]} ${d.getDate()}`
+          : `${d.getDate()}/${d.getMonth() + 1}`,
+    };
+  });
+}
+
+export function execIdsColunaHistorico(
+  modo: HeatmapHistoricoModo,
+  colKey: string,
+  refDate: Date,
+  execucoes: LobbyExecucaoRow[],
+): string[] {
+  if (modo === "dia") {
+    const h = Number(colKey);
+    const dayKey = toDateKey(refDate);
+    return execucoes
+      .filter((e) => {
+        const d = new Date(e.executado_em);
+        return toDateKey(d) === dayKey && d.getHours() === h;
+      })
+      .map((e) => e.id);
+  }
+  return execucoes.filter((e) => toDateKey(new Date(e.executado_em)) === colKey).map((e) => e.id);
+}
+
+export function visibilidadePorCategoriaDia(
+  execucoesDia: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+): { categoria: string; pctTop3: number; pctTop10: number }[] {
+  const byTipo = new Map<string, { total: number; top10: number; top3: number }>();
+  for (const ex of execucoesDia) {
+    for (const p of posByExec.get(ex.id) ?? []) {
+      const cat = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
+      if (!byTipo.has(cat)) byTipo.set(cat, { total: 0, top10: 0, top3: 0 });
+      const b = byTipo.get(cat)!;
+      if (p.posicao == null) continue;
+      b.total++;
+      if (p.posicao <= POS_TOP10_MAX) b.top10++;
+      if (p.posicao <= POS_TOP3_MAX) b.top3++;
+    }
+  }
+  return CATEGORIAS_LOBBY_EXIBICAO.map((categoria) => {
+    const v = byTipo.get(categoria);
+    return {
+      categoria,
+      pctTop3: v && v.total > 0 ? (v.top3 / v.total) * 100 : 0,
+      pctTop10: v && v.total > 0 ? (v.top10 / v.total) * 100 : 0,
+    };
+  });
+}
+
+export function concorrentesPorJogoDetalhe(posicoes: LobbyPosicaoRow[]): {
+  jogo: string;
+  qtd: number;
+  max: number;
+  jogos: ConcorrenteLobby[];
+}[] {
+  const byJogo = new Map<string, { qtdMax: number; jogos: Map<number, ConcorrenteLobby> }>();
+  for (const p of posicoes) {
+    const j = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
+    if (!byJogo.has(j)) byJogo.set(j, { qtdMax: 0, jogos: new Map() });
+    const b = byJogo.get(j)!;
+    b.qtdMax = Math.max(b.qtdMax, p.qtd_concorrentes_a_frente ?? 0);
+    for (const c of p.concorrentes_a_frente ?? []) {
+      b.jogos.set(c.game_id, c);
+    }
+  }
+  let maxQ = 1;
+  const rows = CATEGORIAS_LOBBY_EXIBICAO.map((jogo) => {
+    const b = byJogo.get(jogo);
+    const jogos = b ? [...b.jogos.values()].sort((a, c) => a.posicao - c.posicao) : [];
+    const qtd = b?.qtdMax ?? 0;
+    if (qtd > maxQ) maxQ = qtd;
+    return { jogo, qtd, max: 1, jogos };
+  });
+  return rows.map((r) => ({ ...r, max: maxQ }));
+}
+
 export function concorrentesPorJogoSnapshot(
   posicoes: LobbyPosicaoRow[],
 ): { jogo: string; qtd: number; max: number }[] {

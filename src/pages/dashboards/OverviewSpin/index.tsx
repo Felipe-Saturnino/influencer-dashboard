@@ -8,24 +8,7 @@ import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstant
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import {
-  addDays,
-  addWeeks,
-  labelCarrosselPos,
-  startOfWeekMonday,
-  endOfWeekSunday,
-  POS_MONITOR_DIA_MIN,
-  POS_MONITOR_MIN_ANO,
-  POS_MONITOR_MIN_MES,
-  POS_MONITOR_SEMANA_MIN,
-  type VisaoPosicionamento,
-} from "../../../lib/lobbyMonitorHelpers";
-
-const POS_VISAO_OPTIONS = [
-  { value: "mes", label: "Mês" },
-  { value: "semana", label: "Semana" },
-  { value: "dia", label: "Dia" },
-] as const;
+import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -40,7 +23,6 @@ import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   MarginBadge,
   SelectComIcone,
-  SingleDropdown,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
 import {
@@ -1296,10 +1278,6 @@ export default function OverviewSpin() {
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const idxMesMinPosicionamento = useMemo(
-    () => mesesDisponiveis.findIndex((m) => m.ano === POS_MONITOR_MIN_ANO && m.mes === POS_MONITOR_MIN_MES),
-    [mesesDisponiveis],
-  );
   const hoje = new Date();
   const idxInicial = mesesDisponiveis.findIndex(
     (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth(),
@@ -1340,8 +1318,6 @@ export default function OverviewSpin() {
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
   const [aba, setAba] = useState<OverviewSpinTab>("overview");
-  const [posVisao, setPosVisao] = useState<VisaoPosicionamento>("mes");
-  const [posRefDate, setPosRefDate] = useState(() => new Date());
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1553,13 +1529,7 @@ export default function OverviewSpin() {
     if (filtroOperadora === "todas") {
       setFiltroOperadora(forced ?? "blaze");
     }
-    const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
-    if (posVisao === "mes" && idxMes < minIdx) setIdxMes(minIdx);
-    const refDay = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
-    if (refDay.getTime() < POS_MONITOR_DIA_MIN.getTime()) {
-      setPosRefDate(new Date(POS_MONITOR_DIA_MIN));
-    }
-  }, [aba, filtroOperadora, operadoraSlugsForcado, idxMes, posVisao, idxMesMinPosicionamento, posRefDate]);
+  }, [aba, filtroOperadora, operadoraSlugsForcado]);
 
   useEffect(() => {
     setExpandedDetalhe(new Set());
@@ -2173,41 +2143,27 @@ export default function OverviewSpin() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
-  const hojeStart = useMemo(() => {
+  const refDatePosicionamento = useMemo(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  }, []);
+  }, [aba]);
 
   const carrosselAnteriorDisabled = useMemo(() => {
-    if (aba !== "posicionamento") return historico || isPrimeiro;
-    if (posVisao === "mes") {
-      const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
-      return idxMes <= minIdx;
-    }
-    if (posVisao === "semana") {
-      return startOfWeekMonday(posRefDate).getTime() <= POS_MONITOR_SEMANA_MIN.getTime();
-    }
-    const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
-    return ref.getTime() <= POS_MONITOR_DIA_MIN.getTime();
-  }, [aba, posVisao, posRefDate, historico, isPrimeiro, idxMes, idxMesMinPosicionamento]);
+    if (aba === "posicionamento") return true;
+    return historico || isPrimeiro;
+  }, [aba, historico, isPrimeiro]);
 
   const carrosselProximoDisabled = useMemo(() => {
-    if (aba !== "posicionamento") return historico || isUltimo;
-    if (posVisao === "mes") return isUltimo;
-    if (posVisao === "semana") {
-      const sun = endOfWeekSunday(startOfWeekMonday(posRefDate));
-      return sun.getTime() >= hojeStart.getTime();
-    }
-    const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
-    return ref.getTime() >= hojeStart.getTime();
-  }, [aba, posVisao, posRefDate, hojeStart, historico, isUltimo]);
+    if (aba === "posicionamento") return true;
+    return historico || isUltimo;
+  }, [aba, historico, isUltimo]);
 
   const labelCarrosselCentral =
     aba === "overview"
       ? historico
         ? "Todo o período"
         : (mesSelecionado?.label ?? "")
-      : labelCarrosselPos(posVisao, posRefDate, mesSelecionado);
+      : labelCarrosselPos("dia", refDatePosicionamento);
 
   const operadoraSlugPosicionamento =
     filtroOperadora !== "todas"
@@ -2215,33 +2171,18 @@ export default function OverviewSpin() {
       : (operadoraSlugsForcado?.[0] ?? "blaze");
 
   function irCarrosselAnterior() {
-    if (aba === "posicionamento" && posVisao !== "mes") {
-      if (posVisao === "semana") setPosRefDate((d) => addWeeks(d, -1));
-      else setPosRefDate((d) => addDays(d, -1));
-      return;
-    }
+    if (aba === "posicionamento") return;
     irMesAnterior();
   }
 
   function irCarrosselProximo() {
-    if (aba === "posicionamento" && posVisao !== "mes") {
-      if (posVisao === "semana") setPosRefDate((d) => addWeeks(d, 1));
-      else setPosRefDate((d) => addDays(d, 1));
-      return;
-    }
+    if (aba === "posicionamento") return;
     irMesProximo();
   }
 
-  function irHojePosicionamento() {
-    const agora = new Date();
-    setPosRefDate(agora);
-    setPosVisao("dia");
-    setHistorico(false);
-    const idx = mesesDisponiveis.findIndex(
-      (m) => m.ano === agora.getFullYear() && m.mes === agora.getMonth(),
-    );
-    const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
-    if (idx >= 0) setIdxMes(Math.max(idx, minIdx));
+  function selecionarAbaSpin(key: OverviewSpinTab) {
+    setAba(key);
+    if (key === "posicionamento") setHistorico(false);
   }
 
   const tabIdsSpin: OverviewSpinTab[] = ["overview", "posicionamento"];
@@ -3600,19 +3541,23 @@ export default function OverviewSpin() {
               marginBottom: 12,
             }}
           >
-            <button
-              type="button"
-              aria-label={aba === "posicionamento" && posVisao === "dia" ? "Dia anterior" : aba === "posicionamento" && posVisao === "semana" ? "Semana anterior" : "Mês anterior"}
-              style={{
-                ...btnNav,
-                opacity: carrosselAnteriorDisabled ? 0.35 : 1,
-                cursor: carrosselAnteriorDisabled ? "not-allowed" : "pointer",
-              }}
-              onClick={irCarrosselAnterior}
-              disabled={carrosselAnteriorDisabled}
-            >
-              <ChevronLeft size={14} aria-hidden />
-            </button>
+            {aba !== "posicionamento" ? (
+              <button
+                type="button"
+                aria-label="Mês anterior"
+                style={{
+                  ...btnNav,
+                  opacity: carrosselAnteriorDisabled ? 0.35 : 1,
+                  cursor: carrosselAnteriorDisabled ? "not-allowed" : "pointer",
+                }}
+                onClick={irCarrosselAnterior}
+                disabled={carrosselAnteriorDisabled}
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </button>
+            ) : (
+              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+            )}
             <span
               style={{
                 fontSize: 18,
@@ -3625,19 +3570,23 @@ export default function OverviewSpin() {
             >
               {labelCarrosselCentral}
             </span>
-            <button
-              type="button"
-              aria-label={aba === "posicionamento" && posVisao === "dia" ? "Próximo dia" : aba === "posicionamento" && posVisao === "semana" ? "Próxima semana" : "Próximo mês"}
-              style={{
-                ...btnNav,
-                opacity: carrosselProximoDisabled ? 0.35 : 1,
-                cursor: carrosselProximoDisabled ? "not-allowed" : "pointer",
-              }}
-              onClick={irCarrosselProximo}
-              disabled={carrosselProximoDisabled}
-            >
-              <ChevronRight size={14} aria-hidden />
-            </button>
+            {aba !== "posicionamento" ? (
+              <button
+                type="button"
+                aria-label="Próximo mês"
+                style={{
+                  ...btnNav,
+                  opacity: carrosselProximoDisabled ? 0.35 : 1,
+                  cursor: carrosselProximoDisabled ? "not-allowed" : "pointer",
+                }}
+                onClick={irCarrosselProximo}
+                disabled={carrosselProximoDisabled}
+              >
+                <ChevronRight size={14} aria-hidden />
+              </button>
+            ) : (
+              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+            )}
 
             {aba === "overview" ? (
             <button
@@ -3667,59 +3616,7 @@ export default function OverviewSpin() {
             >
               <Calendar size={15} aria-hidden /> Histórico
             </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  aria-label="Ir para hoje"
-                  onClick={irHojePosicionamento}
-                  style={{
-                    padding: "6px 14px",
-                    minHeight: 44,
-                    borderRadius: 999,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: "transparent",
-                    color: t.textMuted,
-                    fontWeight: 500,
-                    lineHeight: 1,
-                  }}
-                >
-                  Hoje
-                </button>
-                <SingleDropdown
-                  value={posVisao}
-                  options={[...POS_VISAO_OPTIONS]}
-                  onChange={(v) => {
-                    const next = v as VisaoPosicionamento;
-                    setPosVisao(next);
-                    if (next === "mes" && mesSelecionado) {
-                      setPosRefDate(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
-                      const minIdx = idxMesMinPosicionamento >= 0 ? idxMesMinPosicionamento : 0;
-                      if (idxMes < minIdx) setIdxMes(minIdx);
-                    }
-                    if (next === "semana") {
-                      const mon = startOfWeekMonday(posRefDate);
-                      if (mon.getTime() < POS_MONITOR_SEMANA_MIN.getTime()) {
-                        setPosRefDate(new Date(POS_MONITOR_SEMANA_MIN));
-                      }
-                    }
-                    if (next === "dia") {
-                      const ref = new Date(posRefDate.getFullYear(), posRefDate.getMonth(), posRefDate.getDate());
-                      if (ref.getTime() < POS_MONITOR_DIA_MIN.getTime()) {
-                        setPosRefDate(new Date(POS_MONITOR_DIA_MIN));
-                      }
-                    }
-                  }}
-                  icon={<CalendarDays size={13} aria-hidden="true" />}
-                  t={t}
-                  accent={brand.accent}
-                  ariaLabelPrefix="Período de visualização"
-                />
-              </>
-            )}
+            ) : null}
 
             {showFiltroOperadora && (
               <SelectComIcone
@@ -3773,13 +3670,13 @@ export default function OverviewSpin() {
                   tabIndex={ativo ? 0 : -1}
                   aria-selected={ativo}
                   aria-controls={`panel-overview-spin-${key}`}
-                  onClick={() => setAba(key)}
+                  onClick={() => selecionarAbaSpin(key)}
                   onKeyDown={(e) => {
                     const current = tabIdsSpin.indexOf(key);
                     if (e.key === "ArrowRight") {
                       e.preventDefault();
                       const next = tabIdsSpin[(current + 1) % tabIdsSpin.length];
-                      setAba(next);
+                      selecionarAbaSpin(next);
                       requestAnimationFrame(() => {
                         document.getElementById(`tab-overview-spin-${next}`)?.focus();
                       });
@@ -3787,7 +3684,7 @@ export default function OverviewSpin() {
                     if (e.key === "ArrowLeft") {
                       e.preventDefault();
                       const next = tabIdsSpin[(current - 1 + tabIdsSpin.length) % tabIdsSpin.length];
-                      setAba(next);
+                      selecionarAbaSpin(next);
                       requestAnimationFrame(() => {
                         document.getElementById(`tab-overview-spin-${next}`)?.focus();
                       });
@@ -4630,9 +4527,7 @@ export default function OverviewSpin() {
         >
           <DashboardPosicionamento
             operadoraSlug={operadoraSlugPosicionamento}
-            visao={posVisao}
-            refDate={posRefDate}
-            mesAno={mesSelecionado}
+            refDate={refDatePosicionamento}
           />
         </Suspense>
       )}
