@@ -35,6 +35,7 @@ coverage/
 
 # Ferramentas locais
 .turbo/
+.wrangler/
 *.pem
 .env.production
 .env.staging
