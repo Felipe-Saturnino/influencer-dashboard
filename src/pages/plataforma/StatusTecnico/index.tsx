@@ -116,6 +116,8 @@ interface FluxoDia {
   spinRss: number;
   /** Mesas localizadas no lobby (sync_logs lobby_blaze, campo registros_inseridos). */
   lobbyBlaze: number;
+  /** Mesas localizadas no lobby CDA (sync_logs lobby_cda). */
+  lobbyCda: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
@@ -240,7 +242,7 @@ export default function StatusTecnico() {
     dataInicio.setDate(dataInicio.getDate() - 14);
     const dataInicioStr = dataInicio.toISOString().split("T")[0];
 
-    const [resCda, resSocial, resEmails, resSpinSync, resLobbySync] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -255,6 +257,13 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_blaze")
+        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_cda")
         .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -275,8 +284,11 @@ export default function StatusTecnico() {
     const spinPorData = agregarSyncPorData(
       (resSpinSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; registros_atualizados: number | null }[],
     );
-    const lobbyPorData = agregarSyncPorData(
-      (resLobbySync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    const lobbyBlazePorData = agregarSyncPorData(
+      (resLobbyBlazeSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    );
+    const lobbyCdaPorData = agregarSyncPorData(
+      (resLobbyCdaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
     );
 
     const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
@@ -308,7 +320,8 @@ export default function StatusTecnico() {
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
       ...Object.keys(spinPorData),
-      ...Object.keys(lobbyPorData),
+      ...Object.keys(lobbyBlazePorData),
+      ...Object.keys(lobbyCdaPorData),
       ...Object.keys(emailsPorData),
       hoje,
     ]);
@@ -318,7 +331,8 @@ export default function StatusTecnico() {
         const cda = cdaPorData[data] ?? 0;
         const social = socialPorData[data] ?? 0;
         const spinRss = spinPorData[data] ?? 0;
-        const lobbyBlaze = lobbyPorData[data] ?? 0;
+        const lobbyBlaze = lobbyBlazePorData[data] ?? 0;
+        const lobbyCda = lobbyCdaPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
         return {
@@ -327,8 +341,9 @@ export default function StatusTecnico() {
           social,
           spinRss,
           lobbyBlaze,
+          lobbyCda,
           emails,
-          total: cda + social + spinRss + lobbyBlaze + emailTotal,
+          total: cda + social + spinRss + lobbyBlaze + lobbyCda + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -835,6 +850,9 @@ export default function StatusTecnico() {
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
   const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
 
+  const ultimoSyncLobbyCdaLog = syncLogs.find((l) => l.integracao_slug === "lobby_cda");
+  const lobbyCdaStatusOk = ultimoSyncLobbyCdaLog?.status === "ok";
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -865,10 +883,11 @@ export default function StatusTecnico() {
     socialStatusOk,
     spinNaRedeRssStatusOk,
     lobbyBlazeStatusOk,
+    lobbyCdaStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 6;
+  const totalIntegracoes = 7;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -876,6 +895,7 @@ export default function StatusTecnico() {
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (ultimoSyncSpinRssLog?.executado_em) timestamps.push({ ts: ultimoSyncSpinRssLog.executado_em, label: "Spin na Rede RSS" });
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
+  if (ultimoSyncLobbyCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyCdaLog.executado_em, label: "Lobby CDA" });
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
@@ -891,14 +911,16 @@ export default function StatusTecnico() {
   const spinRssFalhas = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss" && l.status === "falha").length;
   const lobbyBlazeTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze").length;
   const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
+  const lobbyCdaTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_cda").length;
+  const lobbyCdaFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_cda" && l.status === "falha").length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
     l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const totalTentativas = cdaTotal + spinRssTotal + lobbyBlazeTotal + socialTotal + Math.max(emailTotal, 1);
-  const totalFalhas = cdaFalhas + spinRssFalhas + lobbyBlazeFalhas + socialFalhas + emailFalhas;
+  const totalTentativas = cdaTotal + spinRssTotal + lobbyBlazeTotal + lobbyCdaTotal + socialTotal + Math.max(emailTotal, 1);
+  const totalFalhas = cdaFalhas + spinRssFalhas + lobbyBlazeFalhas + lobbyCdaFalhas + socialFalhas + emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -1042,6 +1064,27 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Lobby Blaze (${taxaErroLobbyBlaze}%)` });
   }
 
+  // ── Lobby CDA ──
+  const syncLogsLobbyCda = syncLogs.filter((l) => l.integracao_slug === "lobby_cda");
+  const ultimoSyncLobbyCdaOk = syncLogsLobbyCda.find((l) => l.status === "ok");
+  const ultimoSyncLobbyCdaFalha = syncLogsLobbyCda.find((l) => l.status === "falha");
+  const taxaErroLobbyCda =
+    syncLogsLobbyCda.length > 0
+      ? ((syncLogsLobbyCda.filter((l) => l.status === "falha").length / syncLogsLobbyCda.length) * 100).toFixed(1)
+      : "0";
+
+  if (syncLogsLobbyCda.length > 0 && !ultimoSyncLobbyCdaOk && ultimoSyncLobbyCdaFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby CDA com sucesso" });
+  } else if (ultimoSyncLobbyCdaOk) {
+    const exec = new Date(ultimoSyncLobbyCdaOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({ nivel: "aviso", msg: "Coleta Lobby CDA atrasada (> 24h sem execução OK)" });
+    }
+  }
+  if (parseFloat(taxaErroLobbyCda) > 5 && syncLogsLobbyCda.length > 0) {
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Lobby CDA (${taxaErroLobbyCda}%)` });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = integrations
     .map((int) => {
@@ -1062,7 +1105,9 @@ export default function StatusTecnico() {
           ? ("spin_rss" as const)
           : int.slug === "lobby_blaze"
             ? ("lobby_blaze" as const)
-            : ("none" as const);
+            : int.slug === "lobby_cda"
+              ? ("lobby_cda" as const)
+              : ("none" as const);
     return {
       ...int,
       ultimoSync: ultimo?.executado_em ?? null,
@@ -1114,6 +1159,7 @@ export default function StatusTecnico() {
       social: "Social Media",
       spin_rss: "Spin na Rede (RSS)",
       lobby_blaze: "Lobby Blaze",
+      lobby_cda: "Lobby CDA",
       relatorio_diretoria: "E-mail: Relatório Diretoria",
       email_agenda_diaria: "E-mail: Agenda do dia",
     }[k] ?? `E-mail: ${k}`);
@@ -1123,6 +1169,7 @@ export default function StatusTecnico() {
       social: BRAND.azul,
       spin_rss: "#a78bfa",
       lobby_blaze: "#f97316",
+      lobby_cda: "#0ea5e9",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
     }[k] ?? "#10b981");
@@ -1316,6 +1363,7 @@ export default function StatusTecnico() {
                   const isSocial = row.syncTipo === "social";
                   const isSpinRss = row.syncTipo === "spin_rss";
                   const isLobbyBlaze = row.syncTipo === "lobby_blaze";
+                  const isLobbyCda = row.syncTipo === "lobby_cda";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
                   const syncExecutandoRow = isCda
@@ -1356,7 +1404,7 @@ export default function StatusTecnico() {
                       </td>
                       {mostrarColunaAcao && (
                       <td style={tdStyle}>
-                        {isLobbyBlaze && (
+                        {(isLobbyBlaze || isLobbyCda) && (
                           <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
                         )}
                         {(isCda || isSocial || isSpinRss) && (
@@ -1415,6 +1463,7 @@ export default function StatusTecnico() {
             { key: "social", label: "Social Media" },
             { key: "spin_rss", label: "Spin RSS" },
             { key: "lobby_blaze", label: "Lobby Blaze" },
+            { key: "lobby_cda", label: "Lobby CDA" },
             { key: "relatorio_diretoria", label: "E-mail Diretoria" },
             { key: "email_agenda_diaria", label: "E-mail Agenda" },
           ].map((item) => (
@@ -1469,6 +1518,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyBlaze)}%`, minWidth: f.lobbyBlaze > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_blaze"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyCda > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_cda")}: ${f.lobbyCda.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyCda)}%`, minWidth: f.lobbyCda > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_cda"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                       <div
                         key={tipo}
@@ -1505,6 +1560,7 @@ export default function StatusTecnico() {
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
                       {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }}>●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
                       {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }}>●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }}>●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -1617,7 +1673,9 @@ export default function StatusTecnico() {
                             ? "Spin na Rede (RSS)"
                             : log.integracao_slug === "lobby_blaze"
                               ? "Lobby Blaze"
-                              : log.integracao_slug)
+                              : log.integracao_slug === "lobby_cda"
+                                ? "Lobby Casa de Apostas"
+                                : log.integracao_slug)
                         : {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
@@ -1626,6 +1684,7 @@ export default function StatusTecnico() {
                             resend: "E-mail (Resend)",
                             spin_na_rede_rss: "Spin na Rede (RSS)",
                             lobby_blaze: "Lobby Blaze",
+                            lobby_cda: "Lobby Casa de Apostas",
                           }[log.tipo] ?? log.tipo;
                     return (
                       <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
