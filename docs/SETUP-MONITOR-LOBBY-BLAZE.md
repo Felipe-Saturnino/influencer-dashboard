@@ -39,11 +39,11 @@ supabase functions deploy monitor-lobby-blaze
 
 **Secret opcional:** `MONITOR_LOBBY_BLAZE_INGEST_SECRET`
 
-## HTTP 451 — bloqueio de IP (Edge, GitHub-hosted)
+## HTTP 451 — bloqueio de IP (Edge, GitHub cloud)
 
-A Blaze responde **HTTP 451** para IPs de **datacenter** (Supabase Edge, runners `ubuntu-latest` no Azure). No seu PC (rede BR) o mesmo URL costuma responder **200**.
+A Blaze responde **HTTP 451** para IPs de **datacenter** (Supabase Edge, runners `ubuntu-latest` no Azure). **Não** usar workflow agendado na nuvem do GitHub — foi removido do repositório.
 
-O workflow **Monitor Lobby Blaze (hourly)** no GitHub **provavelmente falhará** com 451. Use uma das opções abaixo.
+**Produção:** job da **Telecom** (ou servidor BR) com `scripts/monitor-lobby-blaze-run.mjs`. Alternativas abaixo só para teste ou backup.
 
 ### A) Script no seu PC (recomendado)
 
@@ -83,9 +83,9 @@ POST vazio na Edge → 451. Não usar para teste.
 
 | Onde rodar | Como |
 |------------|------|
-| Seu PC | Agendador de Tarefas + `run-monitor-lobby-blaze.ps1` |
-| Runner self-hosted | Workflow `monitor-lobby-blaze-self-hosted.yml` |
-| GitHub cloud | `monitor-lobby-blaze-hourly.yml` — só se a Blaze passar a aceitar o IP |
+| **Telecom / infra BR** (recomendado) | Cron + `monitor-lobby-blaze-run.mjs` |
+| Runner self-hosted (opcional) | Workflow `monitor-lobby-blaze-self-hosted.yml` — só manual |
+| ~~GitHub cloud hourly~~ | **Removido** — 451 em `ubuntu-latest` |
 
 ## Tabelas
 

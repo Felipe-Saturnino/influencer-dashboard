@@ -618,7 +618,7 @@ export default function StatusTecnico() {
         let texto = erroApi || "Monitor Lobby Blaze concluído com erros.";
         if (erroApi.includes("451") || erroApi.toLowerCase().includes("bloqueio")) {
           texto +=
-            " A API da Blaze bloqueia IPs de datacenter (Edge). Use o job agendado (GitHub Actions ou script local scripts/monitor-lobby-blaze-run.mjs).";
+            " A API da Blaze bloqueia IPs de datacenter (Edge). Use o job da Telecom (scripts/monitor-lobby-blaze-run.mjs).";
         }
         setSyncLobbyBlazeMensagem({ tipo: "erro", texto });
         void carregar();
