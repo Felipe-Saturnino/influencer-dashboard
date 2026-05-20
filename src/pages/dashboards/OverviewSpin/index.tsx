@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback, Suspense, lazy, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -8,9 +8,23 @@ import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstant
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
+
+const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
+
+type OverviewSpinTab = "overview" | "posicionamento";
+
+const TAB_LABELS_SPIN: Record<OverviewSpinTab, string> = {
+  overview: "Overview",
+  posicionamento: "Posicionamento",
+};
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
-import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
+import {
+  MarginBadge,
+  SelectComIcone,
+  SkeletonKpiCard,
+} from "../../../components/dashboard";
 import {
   getThStyle,
   getThStyleBrandAction,
@@ -1302,6 +1316,7 @@ export default function OverviewSpin() {
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
+  const [aba, setAba] = useState<OverviewSpinTab>("overview");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1503,8 +1518,16 @@ export default function OverviewSpin() {
   ]);
 
   useEffect(() => {
+    if (aba !== "overview") return;
     void carregar();
-  }, [carregar]);
+  }, [carregar, aba]);
+
+  useEffect(() => {
+    if (!operadoraSlugsForcado?.length) return;
+    if (operadoraSlugsForcado.length === 1 && filtroOperadora === "todas") {
+      setFiltroOperadora(operadoraSlugsForcado[0]);
+    }
+  }, [operadoraSlugsForcado, filtroOperadora]);
 
   useEffect(() => {
     setExpandedDetalhe(new Set());
@@ -2117,6 +2140,60 @@ export default function OverviewSpin() {
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
+
+  const refDatePosicionamento = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }, []);
+
+  const carrosselAnteriorDisabled = useMemo(() => {
+    if (aba === "posicionamento") return true;
+    return historico || isPrimeiro;
+  }, [aba, historico, isPrimeiro]);
+
+  const carrosselProximoDisabled = useMemo(() => {
+    if (aba === "posicionamento") return true;
+    return historico || isUltimo;
+  }, [aba, historico, isUltimo]);
+
+  const labelCarrosselCentral =
+    aba === "overview"
+      ? historico
+        ? "Todo o período"
+        : (mesSelecionado?.label ?? "")
+      : labelCarrosselPos("dia", refDatePosicionamento);
+
+  const operadoraSlugPosicionamento = useMemo(() => {
+    if (filtroOperadora !== "todas") return filtroOperadora;
+    if (operadoraSlugsForcado?.length === 1) return operadoraSlugsForcado[0];
+    if (escoposVisiveis.operadorasVisiveis.length === 1) {
+      return escoposVisiveis.operadorasVisiveis[0];
+    }
+    if (showFiltroOperadora) return "todas";
+    return operadoraSlugsForcado?.[0] ?? escoposVisiveis.operadorasVisiveis[0] ?? "blaze";
+  }, [
+    filtroOperadora,
+    operadoraSlugsForcado,
+    escoposVisiveis.operadorasVisiveis,
+    showFiltroOperadora,
+  ]);
+
+  function irCarrosselAnterior() {
+    if (aba === "posicionamento") return;
+    irMesAnterior();
+  }
+
+  function irCarrosselProximo() {
+    if (aba === "posicionamento") return;
+    irMesProximo();
+  }
+
+  function selecionarAbaSpin(key: OverviewSpinTab) {
+    setAba(key);
+    if (key === "posicionamento") setHistorico(false);
+  }
+
+  const tabIdsSpin: OverviewSpinTab[] = ["overview", "posicionamento"];
 
   const btnNav: React.CSSProperties = {
     width: 30,
@@ -3447,7 +3524,7 @@ export default function OverviewSpin() {
               Overview Spin
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.
+              Resultados consolidados das mesas ao vivo.
             </p>
           </div>
         </div>
@@ -3467,23 +3544,28 @@ export default function OverviewSpin() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 10,
+              gap: 18,
               flexWrap: "wrap",
+              marginBottom: 12,
             }}
           >
-            <button
-              type="button"
-              aria-label="Mês anterior"
-              style={{
-                ...btnNav,
-                opacity: historico || isPrimeiro ? 0.35 : 1,
-                cursor: historico || isPrimeiro ? "not-allowed" : "pointer",
-              }}
-              onClick={irMesAnterior}
-              disabled={historico || isPrimeiro}
-            >
-              <ChevronLeft size={14} aria-hidden />
-            </button>
+            {aba !== "posicionamento" ? (
+              <button
+                type="button"
+                aria-label="Mês anterior"
+                style={{
+                  ...btnNav,
+                  opacity: carrosselAnteriorDisabled ? 0.35 : 1,
+                  cursor: carrosselAnteriorDisabled ? "not-allowed" : "pointer",
+                }}
+                onClick={irCarrosselAnterior}
+                disabled={carrosselAnteriorDisabled}
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </button>
+            ) : (
+              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+            )}
             <span
               style={{
                 fontSize: 18,
@@ -3494,22 +3576,27 @@ export default function OverviewSpin() {
                 textAlign: "center",
               }}
             >
-              {historico ? "Todo o período" : mesSelecionado?.label}
+              {labelCarrosselCentral}
             </span>
-            <button
-              type="button"
-              aria-label="Próximo mês"
-              style={{
-                ...btnNav,
-                opacity: historico || isUltimo ? 0.35 : 1,
-                cursor: historico || isUltimo ? "not-allowed" : "pointer",
-              }}
-              onClick={irMesProximo}
-              disabled={historico || isUltimo}
-            >
-              <ChevronRight size={14} aria-hidden />
-            </button>
+            {aba !== "posicionamento" ? (
+              <button
+                type="button"
+                aria-label="Próximo mês"
+                style={{
+                  ...btnNav,
+                  opacity: carrosselProximoDisabled ? 0.35 : 1,
+                  cursor: carrosselProximoDisabled ? "not-allowed" : "pointer",
+                }}
+                onClick={irCarrosselProximo}
+                disabled={carrosselProximoDisabled}
+              >
+                <ChevronRight size={14} aria-hidden />
+              </button>
+            ) : (
+              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+            )}
 
+            {aba === "overview" ? (
             <button
               type="button"
               aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
@@ -3537,6 +3624,7 @@ export default function OverviewSpin() {
             >
               <Calendar size={15} aria-hidden /> Histórico
             </button>
+            ) : null}
 
             {showFiltroOperadora && (
               <SelectComIcone
@@ -3545,7 +3633,9 @@ export default function OverviewSpin() {
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
               >
-                <option value="todas">Todas as operadoras</option>
+                {(aba === "overview" || aba === "posicionamento") && showFiltroOperadora && (
+                  <option value="todas">Todas as operadoras</option>
+                )}
                 {operadorasOcr
                   .filter((o) => podeVerOperadora(o.slug))
                   .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
@@ -3557,7 +3647,7 @@ export default function OverviewSpin() {
               </SelectComIcone>
             )}
 
-            {loading && (
+            {aba === "overview" && loading && (
               <span
                 style={{
                   fontSize: 12,
@@ -3573,9 +3663,71 @@ export default function OverviewSpin() {
               </span>
             )}
           </div>
+
+          <div
+            role="tablist"
+            aria-label="Seções Overview Spin"
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
+          >
+            {tabIdsSpin.map((key) => {
+              const ativo = aba === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  id={`tab-overview-spin-${key}`}
+                  tabIndex={ativo ? 0 : -1}
+                  aria-selected={ativo}
+                  aria-controls={`panel-overview-spin-${key}`}
+                  onClick={() => selecionarAbaSpin(key)}
+                  onKeyDown={(e) => {
+                    const current = tabIdsSpin.indexOf(key);
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      const next = tabIdsSpin[(current + 1) % tabIdsSpin.length];
+                      selecionarAbaSpin(next);
+                      requestAnimationFrame(() => {
+                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
+                      });
+                    }
+                    if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      const next = tabIdsSpin[(current - 1 + tabIdsSpin.length) % tabIdsSpin.length];
+                      selecionarAbaSpin(next);
+                      requestAnimationFrame(() => {
+                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
+                      });
+                    }
+                  }}
+                  style={{
+                    padding: "10px 18px",
+                    minHeight: 44,
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                      : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.accent : t.textMuted,
+                    fontWeight: ativo ? 700 : 500,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  {TAB_LABELS_SPIN[key]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
+      {aba === "overview" && (
+      <>
       <div style={{ ...card, marginBottom: 14 }}>
           <SectionTitle
             icon={<LayoutGrid size={15} />}
@@ -4356,6 +4508,41 @@ export default function OverviewSpin() {
           )}
         </>
       )}
+      </>
+      )}
+      {aba === "posicionamento" && (
+        <Suspense
+          fallback={
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 48,
+                color: t.textMuted,
+                gap: 8,
+                fontFamily: FONT.body,
+                fontSize: 13,
+              }}
+            >
+              <Loader2
+                size={20}
+                className="app-lucide-spin"
+                color="var(--brand-action, #7c3aed)"
+                aria-hidden="true"
+              />
+              Carregando…
+            </div>
+          }
+        >
+          <DashboardPosicionamento
+            operadoraSlug={operadoraSlugPosicionamento}
+            refDate={refDatePosicionamento}
+            slugToNome={slugToNome}
+          />
+        </Suspense>
+      )}
+      </div>
     </div>
   );
 }

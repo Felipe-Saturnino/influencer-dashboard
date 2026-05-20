@@ -515,7 +515,7 @@ function statusPresencaNoDia(
   if (!temHorarioProgramado) return "Sem horário";
   if (!checkIn && !checkOut) return "Pendente";
   if (checkIn && !checkOut) return "Em aberto";
-  if (checkIn && checkOut) return "Registado";
+  if (checkIn && checkOut) return "Registrado";
   return "—";
 }
 
