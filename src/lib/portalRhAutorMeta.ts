@@ -1,4 +1,9 @@
+import { filtraFuncionariosParaLoginEmail } from "./rhFuncionarioLoginMatch";
+import { carregarOpcoesTimesOrganograma } from "./rhOrganogramaFetch";
+import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "./rhOrganogramaTree";
 import { supabase } from "./supabase";
+import type { RhFuncionario } from "../types/rhFuncionario";
+import type { RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../types/rhOrganograma";
 
 export type PortalRhAutorInfo = {
   nome: string;
@@ -20,58 +25,60 @@ export function fmtDataHoraPortalRh(iso: string | null | undefined): string {
 
 export function linhaMetaAutorPortalRh(info: PortalRhAutorInfo | undefined, dataIso: string | null | undefined): string {
   const nome = (info?.nome ?? "").trim() || "Equipe";
-  const diretoria = (info?.diretoria ?? "").trim() || "RH";
+  const diretoria = (info?.diretoria ?? "").trim() || "—";
   return `${nome} - ${diretoria} - ${fmtDataHoraPortalRh(dataIso)}`;
+}
+
+/** Mesma resolução de diretoria que Gestão de Prestadores (`orgMetaLinha`). */
+function diretoriaNomeParaFuncionario(
+  row: Pick<RhFuncionario, "org_time_id" | "org_gerencia_id" | "org_diretoria_id">,
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+  opcoesTimes: RhOrgTimeOpcao[],
+): string {
+  const o = encontrarVinculoParaFuncionarioRow(row, vinculos);
+  if (o) return o.diretoriaNome;
+  if (row.org_time_id) {
+    const time = opcoesTimes.find((x) => x.timeId === row.org_time_id);
+    if (time) return time.diretoriaNome;
+  }
+  return "—";
 }
 
 export async function carregarMetaAutoresPortalRh(userIds: string[]): Promise<Record<string, PortalRhAutorInfo>> {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (ids.length === 0) return {};
 
-  const { data: profs } = await supabase.from("profiles").select("id, name, email").in("id", ids);
+  const [{ data: profs }, orgPack, { data: funcRows }] = await Promise.all([
+    supabase.from("profiles").select("id, name, email").in("id", ids),
+    carregarOpcoesTimesOrganograma(),
+    supabase
+      .from("rh_funcionarios")
+      .select("id, nome, email, email_spin, org_time_id, org_gerencia_id, org_diretoria_id")
+      .in("status", ["ativo", "indisponivel"]),
+  ]);
+
+  const vinculos = flattenVinculosDeGrupos(orgPack.grupos);
+  const opcoesTimes = orgPack.opcoes;
+  const prestadores = (funcRows ?? []) as RhFuncionario[];
+
   const out: Record<string, PortalRhAutorInfo> = {};
-  const emailsNorm: string[] = [];
-  const emailPorUser = new Map<string, string>();
 
   for (const p of profs ?? []) {
     const row = p as { id: string; name: string | null; email: string | null };
-    out[row.id] = { nome: (row.name ?? "").trim() || "Equipe", diretoria: "RH" };
-    const em = (row.email ?? "").trim().toLowerCase();
-    if (em) {
-      emailsNorm.push(em);
-      emailPorUser.set(row.id, em);
+    const emailLogin = (row.email ?? "").trim();
+    let diretoria = "—";
+    let nome = (row.name ?? "").trim() || "Equipe";
+
+    if (emailLogin) {
+      const matches = filtraFuncionariosParaLoginEmail(prestadores, emailLogin);
+      const func = matches[0];
+      if (func) {
+        diretoria = diretoriaNomeParaFuncionario(func, vinculos, opcoesTimes);
+        if ((func.nome ?? "").trim()) nome = func.nome.trim();
+      }
     }
-  }
 
-  if (emailsNorm.length === 0) return out;
-
-  const uniqEmails = [...new Set(emailsNorm)];
-  const orParts = uniqEmails.flatMap((e) => [`email_spin.ilike.${e}`, `email.ilike.${e}`]);
-  const { data: funcs } = await supabase
-    .from("rh_funcionarios")
-    .select("email, email_spin, org_diretoria:rh_org_diretorias(nome)")
-    .or(orParts.join(","));
-
-  const dirPorEmail = new Map<string, string>();
-  for (const f of funcs ?? []) {
-    const row = f as {
-      email: string | null;
-      email_spin: string | null;
-      org_diretoria: { nome: string } | { nome: string }[] | null;
-    };
-    const join = Array.isArray(row.org_diretoria) ? row.org_diretoria[0] : row.org_diretoria;
-    const dirNome = (join?.nome ?? "").trim();
-    if (!dirNome) continue;
-    for (const em of [(row.email_spin ?? "").trim().toLowerCase(), (row.email ?? "").trim().toLowerCase()]) {
-      if (em) dirPorEmail.set(em, dirNome);
-    }
-  }
-
-  for (const uid of ids) {
-    const em = emailPorUser.get(uid);
-    if (em && dirPorEmail.has(em)) {
-      out[uid] = { ...out[uid], diretoria: dirPorEmail.get(em)! };
-    }
+    out[row.id] = { nome, diretoria };
   }
 
   return out;

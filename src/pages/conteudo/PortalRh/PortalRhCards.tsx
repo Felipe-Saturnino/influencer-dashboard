@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { Lock } from "lucide-react";
+import { Lock, X } from "lucide-react";
+import { ModalBase } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
 import { truncPreviewHtml } from "../../../lib/portalRhWorkflow";
 import { urlAssinadaPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
@@ -103,6 +104,7 @@ export function ComunicadoCard({
   const brand = useDashboardBrand();
   const accent = categoria?.accent_hex ?? "#7c3aed";
   const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [imagemAmpliada, setImagemAmpliada] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,21 +161,66 @@ export function ComunicadoCard({
           </div>
         </div>
         {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt=""
-            aria-hidden
+          <button
+            type="button"
+            onClick={() => setImagemAmpliada(true)}
+            aria-label={`Ampliar imagem do comunicado ${titulo}`}
             style={{
-              width: 96,
-              height: 96,
-              objectFit: "cover",
-              borderRadius: 10,
-              flexShrink: 0,
+              padding: 0,
               border: `1px solid ${t.cardBorder}`,
+              borderRadius: 10,
+              background: "transparent",
+              cursor: "zoom-in",
+              flexShrink: 0,
+              overflow: "hidden",
             }}
-          />
+          >
+            <img
+              src={imgUrl}
+              alt=""
+              aria-hidden
+              style={{
+                width: 96,
+                height: 96,
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </button>
         ) : null}
       </div>
+
+      {imagemAmpliada && imgUrl ? (
+        <ModalBase onClose={() => setImagemAmpliada(false)} maxWidth={920} zIndex={1100}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => setImagemAmpliada(false)}
+              aria-label="Fechar imagem ampliada"
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: t.textMuted,
+                padding: 4,
+              }}
+            >
+              <X size={22} aria-hidden />
+            </button>
+          </div>
+          <img
+            src={imgUrl}
+            alt={titulo}
+            style={{
+              width: "100%",
+              maxHeight: "min(80vh, 720px)",
+              objectFit: "contain",
+              borderRadius: 10,
+              display: "block",
+            }}
+          />
+        </ModalBase>
+      ) : null}
     </div>
   );
 }
