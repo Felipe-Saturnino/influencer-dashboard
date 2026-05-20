@@ -22,7 +22,6 @@ import {
   labelPoliticaFromSlug,
   registrarHistoricoStatus,
   RH_POSTAGEM_STATUS_LABEL,
-  RH_POSTAGEM_TIPO_UI_LABEL,
   stripHtmlText,
   type RhPostagemContentType,
   type RhPostagemStatus,
