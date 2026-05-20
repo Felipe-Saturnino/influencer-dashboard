@@ -555,6 +555,34 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "afiliados",
+    label: "Afiliados",
+    accentColor: "#1e36f8",
+    termos: [
+      {
+        termo: "Afiliado",
+        definicao:
+          "Parceiro comercial que atua em canais de aquisição e tráfego. Diferente dos influencers (criadores de conteúdo), afiliados são empresas ou profissionais que promovem as operadoras por meio de estratégias digitais como retargeting, SEO, redes de tráfego e programas de afiliação.",
+        nota: "Gerenciados na seção Afiliados. Têm acesso à plataforma com perfil e dados financeiros obrigatórios.",
+        referencia: "Afiliados · Network",
+      },
+      {
+        termo: "Network (Afiliados)",
+        definicao:
+          "Funil de prospecção de novos afiliados. Registra candidatos em Visualizado, Contato, Negociação ou Fechado.",
+        nota:
+          "Ao salvar um registro sem usuário na plataforma, e-mail e operadora são obrigatórios e o sistema cria o acesso de afiliado — não é necessário estar em Fechado. Registros Fechados ficam ocultos na lista padrão; use o card Fechado no funil para filtrá-los.",
+        referencia: "Network",
+      },
+      {
+        termo: "Operação",
+        definicao:
+          "Campo de texto livre no perfil do afiliado que descreve o modelo de trabalho, os canais utilizados e as estratégias de aquisição do parceiro.",
+        referencia: "Afiliados · Network",
+      },
+    ],
+  },
+  {
     key: "periodos",
     label: "Conceitos de Período",
     accentColor: "#6b7280",

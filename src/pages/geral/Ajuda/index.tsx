@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle } from "lucide-react";
+import { ClipboardList, HelpCircle, Users, Network } from "lucide-react";
 import {
   GiTv,
   GiCalendar,
@@ -54,6 +54,13 @@ const MENU_AJUDA = [
     items: [
       { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
       { key: "banca_jogo" as PageKey, label: "Banca de Jogo", Icon: GiPokerHand },
+    ],
+  },
+  {
+    section: "Afiliados",
+    items: [
+      { key: "afiliados" as PageKey, label: "Afiliados", Icon: Users },
+      { key: "afiliados_network" as PageKey, label: "Network", Icon: Network },
     ],
   },
   {
@@ -514,6 +521,79 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Permissões",
         texto:
           "Quem pode criar, aprovar ou alterar status depende das permissões configuradas em Gestão de Usuários para a página Banca de Jogo.",
+      },
+    ],
+  },
+  afiliados: {
+    titulo: "Afiliados",
+    blocos: [
+      {
+        texto:
+          "Afiliados centraliza o cadastro de parceiros que atuam como afiliados na plataforma. Diferente dos influencers, os afiliados são parceiros comerciais que operam canais de aquisição e tráfego — não necessariamente criadores de conteúdo. A página oferece gestão completa de perfil, dados financeiros e vínculos com operadoras.",
+      },
+      {
+        subtitulo: "Quadros de Resumo",
+        texto:
+          "Dois quadros exibem o Total de Afiliados (com contagem por status: Ativo, Inativo, Cancelado) e a quantidade de Perfis Incompletos entre afiliados ativos. Clicar no nome de um perfil incompleto abre diretamente o modal de edição.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O bloco de filtros oferece:\n\n— Status: chips para Ativo, Inativo e Cancelado\n— Operadora: seletor para restringir à operadora escolhida\n— Busca por texto: nome artístico ou e-mail\n\nO botão Limpar filtros reseta todos os critérios de uma vez.",
+      },
+      {
+        subtitulo: "Visualizar e Editar Perfil",
+        texto:
+          "Cada card tem botões Ver (somente leitura) e Editar. O perfil é organizado em abas com navegação por teclado (← → entre abas; Esc fecha o modal):\n\n— Cadastral: nome artístico, nome completo, e-mail, telefone e CPF\n— Operação: descrição livre do modelo de trabalho do afiliado (textarea; exibida com quebras de linha no Ver)\n— Financeiro: chave PIX, banco, agência e conta (todos obrigatórios para salvar)\n— Operadoras: vínculos ativos com IDs específicos por operadora\n— Histórico: datas de criação, última atualização e última alteração de status (somente na aba Visualizar)\n\nDados sensíveis (CPF, dados bancários) ficam ocultos por padrão no Ver e requerem clique no ícone de olho para revelar por 10 segundos; no Editar ficam visíveis.",
+      },
+      {
+        subtitulo: "Campos Obrigatórios",
+        texto:
+          "Para salvar o perfil de um afiliado, todos os campos financeiros são obrigatórios: Chave PIX, Banco, Agência e Conta. Isso diferencia os afiliados dos influencers, onde os dados bancários são opcionais. Campos marcados com asterisco vermelho são obrigatórios.",
+      },
+      {
+        subtitulo: "Status e Permissões",
+        texto:
+          "Alteração de status (Ativo/Inativo/Cancelado) é restrita a Gestores e Admin. Afiliados visualizam e editam apenas seu próprio perfil. Operadores visualizam apenas os afiliados de sua operadora.",
+      },
+    ],
+  },
+  afiliados_network: {
+    titulo: "Network",
+    blocos: [
+      {
+        texto:
+          "Network é o funil de prospecção de novos afiliados. Registra candidatos em Visualizado, Contato, Negociação ou Fechado e, ao salvar um registro que ainda não tem usuário na plataforma, pode criar automaticamente o acesso de afiliado (e-mail e operadora obrigatórios) — isso não exige status Fechado.",
+      },
+      {
+        subtitulo: "Funil de Prospecção",
+        texto:
+          "Quatro cards no topo mostram a contagem por estágio: Visualizado → Contato → Negociação → Fechado. Clicar em um card filtra a lista para aquele estágio. Por padrão, registros com status Fechado não aparecem na listagem — clique no card Fechado para visualizá-los.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O bloco de filtros oferece busca por texto (nome ou e-mail) e o Limpar filtros reseta tudo, incluindo os filtros do funil. O filtro por status é feito diretamente nos cards do funil.",
+      },
+      {
+        subtitulo: "Lista de Prospectos",
+        texto:
+          "Cada card exibe nome, status do funil e uma prévia do campo Operação (truncado em 2 linhas). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
+      },
+      {
+        subtitulo: "Cadastro e Edição",
+        texto:
+          "O formulário é organizado em abas (Contato, Operação, Anotações), com navegação por teclado (← →) e Esc para fechar.\n\n— Contato: e-mail, telefone, tipo de contato (Direto, Agência, Site Spin), Live Cassino e operadora\n— Operação: descrição livre das atividades\n— Anotações: histórico (salvo com 'Adicionar Anotação', não no Salvar principal)\n\nEnquanto o registro não tiver usuário na plataforma, o modal exibe aviso de que e-mail e operadora serão obrigatórios ao salvar. Depois da criação, e-mail e operadora ficam bloqueados.",
+      },
+      {
+        subtitulo: "Criação de usuário na plataforma",
+        texto:
+          "Sempre que você salva um prospecto (novo ou existente) que ainda não tem usuário na plataforma, o sistema exige e-mail e operadora e aciona a criação automática do perfil Afiliado, do cadastro de perfil e do vínculo com a operadora — em qualquer status do funil, não só em Fechado.\n\nO botão exibe 'Salvando...' durante o processo. Se a criação falhar, o prospecto permanece salvo no Network e uma mensagem vermelha descreve o erro (ex.: e-mail já cadastrado). Após sucesso, o parceiro aparece em Afiliados e pode receber e-mail de boas-vindas quando o envio estiver configurado.",
+      },
+      {
+        subtitulo: "Anotações",
+        texto:
+          "Cada prospecto tem um histórico de anotações com autoria e data. Anotações são salvas individualmente ao clicar em 'Adicionar Anotação' — não fazem parte do botão Salvar principal. O histórico fica disponível tanto no modal de visualização quanto no de edição.",
       },
     ],
   },
@@ -1017,6 +1097,81 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "O valor não bate com o esperado?",
         texto:
           "Confirme regras vigentes do ciclo, escopo de operadora e se há solicitações duplicadas ou canceladas no histórico.",
+      },
+    ],
+  },
+  afiliados: {
+    titulo: "Afiliados — Problemas Comuns",
+    blocos: [
+      {
+        subtitulo: "Não consigo salvar o perfil do afiliado?",
+        texto:
+          "Todos os campos financeiros são obrigatórios: Chave PIX, Banco, Agência e Conta. Verifique a aba Financeiro e preencha todos os campos antes de salvar. A mensagem de erro em vermelho indica qual campo está faltando.",
+      },
+      {
+        subtitulo: "O afiliado está marcado como Perfil Incompleto mesmo após preencher?",
+        texto:
+          "Certifique-se de clicar em Salvar após preencher — campos preenchidos sem salvar não atualizam o indicador. Verifique todas as abas: a incompletude pode estar em Cadastral (nome, CPF, telefone) ou Financeiro (dados bancários). Ao salvar com sucesso, o nome deve sair do quadro de Incompletos automaticamente.",
+      },
+      {
+        subtitulo: "Não consigo alterar o status do afiliado?",
+        texto:
+          "Alteração de status é restrita a Gestores e Admin. Se o badge de status não abre o dropdown, seu perfil não tem essa permissão. Entre em contato com um Gestor ou Admin para alterar o status.",
+      },
+      {
+        subtitulo: "O afiliado não aparece na lista?",
+        texto:
+          "Verifique os filtros ativos: Status (chip colorido), Operadora e Busca por texto. O botão Limpar filtros remove todos de uma vez. Lembre que o filtro de status seleciona apenas o status clicado — afiliados de outros status ficam ocultos.",
+      },
+      {
+        subtitulo: "Dados sensíveis não aparecem?",
+        texto:
+          "CPF e dados bancários ficam ocultos por segurança. Clique no ícone de olho ao lado do campo para revelar por 10 segundos. No modo de edição, os campos ficam visíveis permanentemente enquanto o modal estiver aberto.",
+      },
+      {
+        subtitulo: "O vínculo com operadora não foi salvo?",
+        texto:
+          "Na aba Operadoras, ao marcar uma operadora como Ativa, o campo de ID é obrigatório. Se estiver vazio, o sistema exibe erro e não salva. Preencha o ID do afiliado naquela operadora antes de salvar.",
+      },
+    ],
+  },
+  afiliados_network: {
+    titulo: "Network — Problemas Comuns",
+    blocos: [
+      {
+        subtitulo: "Um prospecto não aparece na lista?",
+        texto:
+          "Por padrão, registros com status Fechado são ocultados. Para vê-los, clique no card 'Fechado' no funil — ele funciona como filtro. Verifique também se há texto na busca que esteja filtrando o nome.",
+      },
+      {
+        subtitulo: "Não consigo salvar um novo prospecto?",
+        texto:
+          "Ao salvar (+ Adicionar ou primeiro Salvar), o sistema sempre tenta criar o usuário afiliado na plataforma. Nesse momento são obrigatórios: Nome, E-mail e Operadora (aba Contato). Se faltar e-mail ou operadora, a mensagem em vermelho indica o campo. Para apenas rascunhar no funil sem criar usuário, ainda não há fluxo separado — qualquer Salvar com registro sem usuário dispara a criação.",
+      },
+      {
+        subtitulo: "O botão ficou em 'Salvando...' por muito tempo?",
+        texto:
+          "Ao salvar um prospecto sem usuário criado, a plataforma aciona uma função de servidor para criar o cadastro. Em caso de lentidão, aguarde até 30 segundos. Se aparecer mensagem de erro, verifique se o e-mail já não está cadastrado na plataforma — cada e-mail aceita apenas um usuário.",
+      },
+      {
+        subtitulo: "Os campos E-mail e Operadora estão bloqueados?",
+        texto:
+          "Quando o afiliado já foi criado na plataforma (o registro tem usuário vinculado), E-mail e Operadora ficam bloqueados para edição. Essas informações só podem ser alteradas pela administração do sistema, não pelo formulário de Network.",
+      },
+      {
+        subtitulo: "As anotações não aparecem depois de adicionar?",
+        texto:
+          "Anotações são salvas ao clicar em 'Adicionar Anotação' — não ao clicar em Salvar. Se o botão estava desabilitado (cinza), o campo de texto estava vazio. Escreva o texto e clique em 'Adicionar Anotação' antes de fechar o modal.",
+      },
+      {
+        subtitulo: "Salvei no Network mas o afiliado não aparece em Afiliados?",
+        texto:
+          "O usuário só é criado após um Salvar bem-sucedido com e-mail e operadora, quando o registro ainda não tinha acesso na plataforma. Status Fechado não é requisito. Se o Salvar falhou (e-mail duplicado, operadora ausente, timeout), o prospecto continua no Network sem usuário — corrija os dados e salve de novo. Confira também filtros de status e operadora na página Afiliados.",
+      },
+      {
+        subtitulo: "Preciso marcar Fechado antes de criar o acesso?",
+        texto:
+          "Não. A criação do usuário ocorre no primeiro Salvar válido (e-mail + operadora) para registros sem vínculo, em qualquer estágio do funil. Fechado é etapa comercial de prospecção; a lista oculta Fechados por padrão, mas não controla a criação do login.",
       },
     ],
   },
