@@ -43,7 +43,7 @@ export type PostagemGerenciamentoRow = {
   createdAt: string;
   status: RhPostagemStatus;
   approvedAt: string | null;
-  aprovadorNome: string | null;
+  aprovadorNome: string;
   publishedAt: string | null;
   textoBusca: string;
 };
@@ -381,7 +381,7 @@ export function GerenciamentoPostagens({
           cmp = compareDataIso(a.approvedAt, b.approvedAt, dir);
           break;
         case "aprovador":
-          cmp = compareTexto(a.aprovadorNome, b.aprovadorNome, dir);
+          cmp = compareTexto(a.aprovadorNome ?? "", b.aprovadorNome ?? "", dir);
           break;
         case "publishedAt":
           cmp = compareDataIso(a.publishedAt, b.publishedAt, dir);
