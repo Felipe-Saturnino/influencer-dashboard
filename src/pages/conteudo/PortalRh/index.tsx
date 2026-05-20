@@ -1,27 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Check,
-  FileText,
-  Loader2,
-  Lock,
-  Megaphone,
-  MessagesSquare,
-  Pin,
-  SlidersHorizontal,
-} from "lucide-react";
-import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
-import { stripHtmlText, truncPreviewHtml } from "../../../lib/portalRhWorkflow";
+import { FileText, Loader2, Megaphone, MessagesSquare, Pin, SlidersHorizontal } from "lucide-react";
+import { stripHtmlText } from "../../../lib/portalRhWorkflow";
+import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
+import { ComunicadoCard, PoliticaCard, RhTalkCard } from "./PortalRhCards";
+import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
 
@@ -49,6 +39,12 @@ type RhPortalComunicado = {
   requires_acknowledgment: boolean;
   published_at: string | null;
   published_by: string | null;
+  created_by?: string | null;
+  imagem_storage_path?: string | null;
+  anexo_storage_path?: string | null;
+  anexo_nome?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
   status?: RhPostagemStatus | null;
   categoria?: RhPortalCategoria | null;
 };
@@ -65,19 +61,29 @@ type RhPortalDocumento = {
   status?: RhPostagemStatus | null;
   published_at?: string | null;
   introducao?: string | null;
+  imagem_storage_path?: string | null;
+  anexo_storage_path?: string | null;
+  anexo_nome?: string | null;
+  created_by?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
   categoria?: RhPortalCategoria | null;
 };
 
 type RhPortalRhTalk = {
   id: string;
-  numero: number;
+  numero: number | null;
   titulo: string;
-  data_reuniao: string;
+  data_reuniao: string | null;
   duracao_min: number;
   resumo: string | null;
   corpo?: string | null;
   introducao?: string | null;
   storage_path: string | null;
+  imagem_storage_path?: string | null;
+  anexo_storage_path?: string | null;
+  anexo_nome?: string | null;
+  created_by?: string | null;
   status?: RhPostagemStatus | null;
   published_at?: string | null;
 };
@@ -88,8 +94,6 @@ type ReadReceiptRow = {
   read_at: string | null;
   acknowledged_at: string | null;
 };
-
-const PREVIEW_LEN = 200;
 
 type SubtabCategoriaConfig = {
   key: string;
@@ -130,36 +134,6 @@ function itemNaSubtabCategoria(
 ): boolean {
   if (!categoria) return false;
   return config.slugs.includes(categoria.slug);
-}
-
-function fmtDataPublicacao(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function isNovo(iso: string | null | undefined): boolean {
-  if (!iso) return false;
-  const d = new Date(iso).getTime();
-  return Date.now() - d < 7 * 24 * 60 * 60 * 1000;
-}
-
-function docAtualizadoNos30Dias(iso: string): boolean {
-  const d = new Date(iso).getTime();
-  return Date.now() - d < 30 * 24 * 60 * 60 * 1000;
-}
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
 function receiptKey(ct: string, id: string): string {
@@ -229,7 +203,6 @@ function FiltroSubtabPills({
 
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
   const perm = usePermission("rh_portal");
 
   const [aba, setAba] = useState<AbaPortal>("comunicados");
@@ -246,7 +219,7 @@ export default function PortalRhPage() {
   const [talkParticipantTalkIds, setTalkParticipantTalkIds] = useState<Set<string>>(new Set());
   const [talkCounts, setTalkCounts] = useState<Record<string, number>>({});
   const [receipts, setReceipts] = useState<Map<string, ReadReceiptRow>>(new Map());
-  const [nomeAutores, setNomeAutores] = useState<Record<string, string>>({});
+  const [metaAutores, setMetaAutores] = useState<Record<string, PortalRhAutorInfo>>({});
 
   const [filtroCatCom, setFiltroCatCom] = useState<string>("todos");
   const [filtroCatPol, setFiltroCatPol] = useState<string>("todos");
@@ -255,7 +228,6 @@ export default function PortalRhPage() {
   const [idxMesTalk, setIdxMesTalk] = useState(0);
   const [modoHistorico, setModoHistorico] = useState(false);
 
-  const [modalCom, setModalCom] = useState<RhPortalComunicado | null>(null);
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
 
@@ -334,18 +306,23 @@ export default function PortalRhPage() {
     }
     setReceipts(map);
 
-    const autorIds = [...new Set(comRows.map((c) => c.published_by).filter(Boolean))] as string[];
-    if (autorIds.length > 0) {
-      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", autorIds);
-      const nm: Record<string, string> = {};
-      for (const p of profs ?? []) {
-        const row = p as { id: string; name: string };
-        nm[row.id] = row.name ?? "";
-      }
-      setNomeAutores(nm);
-    } else {
-      setNomeAutores({});
+    const docRows = (docRes.data ?? []) as RhPortalDocumento[];
+    const userIds = new Set<string>();
+    for (const c of comRows) {
+      const aid = autorIdPostagem(c);
+      if (aid) userIds.add(aid);
+      if (c.approved_by) userIds.add(c.approved_by);
     }
+    for (const d of docRows) {
+      const aid = autorIdPostagem(d);
+      if (aid) userIds.add(aid);
+      if (d.approved_by) userIds.add(d.approved_by);
+    }
+    for (const tk of talkRows) {
+      const aid = autorIdPostagem(tk);
+      if (aid) userIds.add(aid);
+    }
+    setMetaAutores(await carregarMetaAutoresPortalRh([...userIds]));
 
     setLoading(false);
   }, [user?.id]);
@@ -507,29 +484,66 @@ export default function PortalRhPage() {
     return list;
   }, [talks, modoHistorico, mesesTalksDisponiveis, idxMesTalk, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
-  async function confirmarCiencia(contentType: "comunicado" | "documento" | "rh_talk", contentId: string) {
+  async function marcarLidoComunicado(contentId: string) {
     if (!user?.id) return;
-    const key = receiptKey(contentType, contentId);
+    const key = receiptKey("comunicado", contentId);
     const now = new Date().toISOString();
     const existing = receipts.get(key);
+    if (existing?.read_at) return;
     if (existing) {
       const { error } = await supabase
         .from("rh_portal_read_receipt")
-        .update({ acknowledged_at: now })
-        .eq("content_type", contentType)
+        .update({ read_at: now })
+        .eq("content_type", "comunicado")
         .eq("content_id", contentId)
         .eq("user_id", user.id);
       if (!error) {
         setReceipts((prev) => {
           const n = new Map(prev);
-          const cur = n.get(key);
-          n.set(key, { ...(cur ?? existing), acknowledged_at: now });
+          n.set(key, { ...existing, read_at: now });
           return n;
         });
       }
     } else {
       const { error } = await supabase.from("rh_portal_read_receipt").insert({
-        content_type: contentType,
+        content_type: "comunicado",
+        content_id: contentId,
+        user_id: user.id,
+        read_at: now,
+      });
+      if (!error) {
+        setReceipts((prev) => {
+          const n = new Map(prev);
+          n.set(key, { content_type: "comunicado", content_id: contentId, read_at: now, acknowledged_at: null });
+          return n;
+        });
+      }
+    }
+  }
+
+  async function marcarLidoECienteDocumento(contentId: string) {
+    if (!user?.id) return;
+    const key = receiptKey("documento", contentId);
+    const now = new Date().toISOString();
+    const existing = receipts.get(key);
+    if (existing?.acknowledged_at) return;
+    if (existing) {
+      const { error } = await supabase
+        .from("rh_portal_read_receipt")
+        .update({ read_at: existing.read_at ?? now, acknowledged_at: now })
+        .eq("content_type", "documento")
+        .eq("content_id", contentId)
+        .eq("user_id", user.id);
+      if (!error) {
+        setReceipts((prev) => {
+          const n = new Map(prev);
+          n.set(key, { ...existing, read_at: existing.read_at ?? now, acknowledged_at: now });
+          return n;
+        });
+      }
+    } else {
+      const { error } = await supabase.from("rh_portal_read_receipt").insert({
+        content_type: "documento",
         content_id: contentId,
         user_id: user.id,
         read_at: now,
@@ -538,11 +552,16 @@ export default function PortalRhPage() {
       if (!error) {
         setReceipts((prev) => {
           const n = new Map(prev);
-          n.set(key, { content_type: contentType, content_id: contentId, read_at: now, acknowledged_at: now });
+          n.set(key, { content_type: "documento", content_id: contentId, read_at: now, acknowledged_at: now });
           return n;
         });
       }
     }
+  }
+
+  function metaAutor(uid: string | null | undefined): PortalRhAutorInfo | undefined {
+    if (!uid) return undefined;
+    return metaAutores[uid];
   }
 
   function podeVerAta(tk: RhPortalRhTalk): boolean {
@@ -550,106 +569,6 @@ export default function PortalRhPage() {
     if (n === 0) return true;
     return talkParticipantTalkIds.has(tk.id);
   }
-
-  useEffect(() => {
-    if (!modalCom?.id || !user?.id) return;
-    let cancelled = false;
-    const id = modalCom.id;
-    void (async () => {
-      const { data: ex } = await supabase
-        .from("rh_portal_read_receipt")
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .eq("content_type", "comunicado")
-        .eq("content_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      const key = receiptKey("comunicado", id);
-      if (ex) {
-        setReceipts((prev) => new Map(prev).set(key, ex as ReadReceiptRow));
-        return;
-      }
-      const now = new Date().toISOString();
-      const { data: ins, error } = await supabase
-        .from("rh_portal_read_receipt")
-        .insert({ content_type: "comunicado", content_id: id, user_id: user.id, read_at: now })
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .single();
-      if (cancelled || error) return;
-      setReceipts((prev) => new Map(prev).set(key, ins as ReadReceiptRow));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [modalCom?.id, user?.id]);
-
-  useEffect(() => {
-    if (!modalDoc?.id || !user?.id) return;
-    let cancelled = false;
-    const id = modalDoc.id;
-    void (async () => {
-      const { data: ex } = await supabase
-        .from("rh_portal_read_receipt")
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .eq("content_type", "documento")
-        .eq("content_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      const key = receiptKey("documento", id);
-      if (ex) {
-        setReceipts((prev) => new Map(prev).set(key, ex as ReadReceiptRow));
-        return;
-      }
-      const now = new Date().toISOString();
-      const { data: ins, error } = await supabase
-        .from("rh_portal_read_receipt")
-        .insert({ content_type: "documento", content_id: id, user_id: user.id, read_at: now })
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .single();
-      if (cancelled || error) return;
-      setReceipts((prev) => new Map(prev).set(key, ins as ReadReceiptRow));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [modalDoc?.id, user?.id]);
-
-  useEffect(() => {
-    const tid = modalTalk?.id;
-    if (!tid || !user?.id) return;
-    const n = talkCounts[tid] ?? 0;
-    const pode = n === 0 || talkParticipantTalkIds.has(tid);
-    if (!pode) return;
-    let cancelled = false;
-    const id = tid;
-    void (async () => {
-      const { data: ex } = await supabase
-        .from("rh_portal_read_receipt")
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .eq("content_type", "rh_talk")
-        .eq("content_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      const key = receiptKey("rh_talk", id);
-      if (ex) {
-        setReceipts((prev) => new Map(prev).set(key, ex as ReadReceiptRow));
-        return;
-      }
-      const now = new Date().toISOString();
-      const { data: ins, error } = await supabase
-        .from("rh_portal_read_receipt")
-        .insert({ content_type: "rh_talk", content_id: id, user_id: user.id, read_at: now })
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .single();
-      if (cancelled || error) return;
-      setReceipts((prev) => new Map(prev).set(key, ins as ReadReceiptRow));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [modalTalk?.id, user?.id, talkCounts, talkParticipantTalkIds]);
 
   if (perm.loading) {
     return (
@@ -766,36 +685,24 @@ export default function PortalRhPage() {
                   }
                 />
                 {comunicadoPinned ? (
-                  <div
-                    style={{
-                      marginBottom: 20,
-                      padding: 16,
-                      borderRadius: 14,
-                      background: "rgba(245,158,11,0.12)",
-                      border: "1px solid rgba(245,158,11,0.35)",
-                      boxShadow: cardShadow,
-                    }}
-                  >
+                  <div style={{ marginBottom: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                       <Pin size={16} color="#b45309" aria-hidden />
                       <span style={{ fontSize: 11, fontWeight: 800, color: "#b45309", fontFamily: FONT.body }}>Fixado</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setModalCom(comunicadoPinned)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 0,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{comunicadoPinned.titulo}</div>
-                      <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreviewHtml(comunicadoPinned.corpo, PREVIEW_LEN)}</div>
-                    </button>
+                    <ComunicadoCard
+                      titulo={comunicadoPinned.titulo}
+                      corpo={comunicadoPinned.corpo}
+                      categoria={comunicadoPinned.categoria}
+                      imagemStoragePath={comunicadoPinned.imagem_storage_path}
+                      anexoStoragePath={comunicadoPinned.anexo_storage_path}
+                      anexoNome={comunicadoPinned.anexo_nome}
+                      autorInfo={metaAutor(autorIdPostagem(comunicadoPinned))}
+                      dataPublicacao={comunicadoPinned.published_at}
+                      isNovo={!receipts.get(receiptKey("comunicado", comunicadoPinned.id))?.read_at}
+                      onMarcarLido={() => void marcarLidoComunicado(comunicadoPinned.id)}
+                      cardShadow={cardShadow}
+                    />
                   </div>
                 ) : null}
 
@@ -814,71 +721,23 @@ export default function PortalRhPage() {
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {comunicadosLista.map((c) => {
-                      const cat = c.categoria;
-                      const accent = cat?.accent_hex ?? "#7c3aed";
                       const rec = user?.id ? receipts.get(receiptKey("comunicado", c.id)) : undefined;
-                      const lido = Boolean(rec?.read_at);
-                      const ackOk = Boolean(rec?.acknowledged_at);
-                      const pendAck = c.requires_acknowledgment && !ackOk;
-                      const bordaEsquerda = pendAck ? "3px solid #e84025" : !lido ? `3px solid ${accent}` : "none";
-
+                      const isNovoCard = !rec?.read_at;
                       return (
                         <li key={c.id}>
-                          <button
-                            type="button"
-                            onClick={() => setModalCom(c)}
-                            style={{
-                              width: "100%",
-                              textAlign: "left",
-                              padding: 16,
-                              borderRadius: 14,
-                              border: `1px solid ${t.cardBorder}`,
-                              borderLeft: bordaEsquerda,
-                              background: t.cardBg,
-                              boxShadow: cardShadow,
-                              cursor: "pointer",
-                              fontFamily: FONT.body,
-                            }}
-                          >
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                              {cat ? (
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 800,
-                                    padding: "3px 8px",
-                                    borderRadius: 6,
-                                    background: `${accent}22`,
-                                    color: accent,
-                                  }}
-                                >
-                                  {cat.label}
-                                </span>
-                              ) : null}
-                              {isNovo(c.published_at) ? (
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "#a78bfa33", color: "#a78bfa" }}>Novo</span>
-                              ) : null}
-                              {c.is_pinned ? (
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(245,158,11,0.2)", color: "#b45309" }}>Fixado</span>
-                              ) : null}
-                              {pendAck ? (
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(232,64,37,0.15)", color: "#e84025" }}>
-                                  Confirmação pendente
-                                </span>
-                              ) : null}
-                              {c.requires_acknowledgment && ackOk ? (
-                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Ciente</span>
-                              ) : null}
-                            </div>
-                            <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{c.titulo}</div>
-                            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreviewHtml(c.corpo, PREVIEW_LEN)}</div>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, flexWrap: "wrap", gap: 8 }}>
-                              <span style={{ fontSize: 12, color: t.textMuted }}>
-                                {(c.published_by && nomeAutores[c.published_by]) || "Equipe"} · RH · {fmtDataPublicacao(c.published_at)}
-                              </span>
-                              {lido ? <Check size={16} color={t.textMuted} aria-label="Lido" /> : null}
-                            </div>
-                          </button>
+                          <ComunicadoCard
+                            titulo={c.titulo}
+                            corpo={c.corpo}
+                            categoria={c.categoria}
+                            imagemStoragePath={c.imagem_storage_path}
+                            anexoStoragePath={c.anexo_storage_path}
+                            anexoNome={c.anexo_nome}
+                            autorInfo={metaAutor(autorIdPostagem(c))}
+                            dataPublicacao={c.published_at}
+                            isNovo={isNovoCard}
+                            onMarcarLido={() => void marcarLidoComunicado(c.id)}
+                            cardShadow={cardShadow}
+                          />
                         </li>
                       );
                     })}
@@ -918,80 +777,21 @@ export default function PortalRhPage() {
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {documentosFiltrados.map((d) => {
-                      const cat = d.categoria;
-                      const accent = cat?.accent_hex ?? "#7c3aed";
                       const rec = user?.id ? receipts.get(receiptKey("documento", d.id)) : undefined;
-                      const atualizado = docAtualizadoNos30Dias(d.updated_at);
-                      const ackOk = Boolean(rec?.acknowledged_at);
-                      const pendAck = d.requires_acknowledgment && !ackOk;
+                      const isNovoCard = !rec?.acknowledged_at;
+                      const dataPub = d.published_at ?? d.updated_at;
                       return (
                         <li key={d.id}>
-                          <div
-                            style={{
-                              padding: 16,
-                              borderRadius: 14,
-                              border: `1px solid ${t.cardBorder}`,
-                              borderLeft: pendAck ? "3px solid #e84025" : `3px solid ${accent}`,
-                              background: t.cardBg,
-                              boxShadow: cardShadow,
-                              fontFamily: FONT.body,
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                              <div
-                                style={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: 10,
-                                  background: `${accent}22`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <FileText size={20} color={accent} aria-hidden />
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{d.titulo}</div>
-                                <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
-                                  Atualizado em {fmtDataPublicacao(d.updated_at)}
-                                  {d.paginas != null ? ` · ${d.paginas} páginas` : ""}
-                                </div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                                  {atualizado ? (
-                                    <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Atualizado</span>
-                                  ) : null}
-                                  {pendAck ? (
-                                    <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(232,64,37,0.15)", color: "#e84025" }}>
-                                      Confirmação pendente
-                                    </span>
-                                  ) : null}
-                                  {d.requires_acknowledgment && ackOk ? (
-                                    <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Ciente</span>
-                                  ) : null}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setModalDoc(d)}
-                                  style={{
-                                    marginTop: 12,
-                                    padding: "8px 14px",
-                                    borderRadius: 10,
-                                    border: `1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)`,
-                                    background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-                                    color: t.text,
-                                    fontWeight: 700,
-                                    fontSize: 12,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
-                                >
-                                  Visualizar
-                                </button>
-                              </div>
-                            </div>
-                          </div>
+                          <PoliticaCard
+                            titulo={d.titulo}
+                            introducao={d.introducao}
+                            categoria={d.categoria}
+                            autorInfo={metaAutor(autorIdPostagem(d))}
+                            dataPublicacao={dataPub}
+                            isNovo={isNovoCard}
+                            onAbrirLeitura={() => setModalDoc(d)}
+                            cardShadow={cardShadow}
+                          />
                         </li>
                       );
                     })}
@@ -1024,64 +824,19 @@ export default function PortalRhPage() {
                     {talksFiltrados.map((tk) => {
                       const n = talkCounts[tk.id] ?? 0;
                       const restrito = n > 0 && !talkParticipantTalkIds.has(tk.id);
+                      const dataPub = tk.published_at ?? tk.data_reuniao;
                       return (
                         <li key={tk.id}>
-                          <div
-                            style={{
-                              padding: 16,
-                              borderRadius: 14,
-                              border: `1px solid ${t.cardBorder}`,
-                              borderLeft: "3px solid #a78bfa",
-                              background: t.cardBg,
-                              boxShadow: cardShadow,
-                              fontFamily: FONT.body,
-                            }}
-                          >
-                            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  padding: "4px 10px",
-                                  borderRadius: 8,
-                                  background: "color-mix(in srgb, #a78bfa 18%, transparent)",
-                                  color: "#a78bfa",
-                                }}
-                              >
-                                {new Date(tk.data_reuniao).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                              </span>
-                              {restrito ? (
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: t.textMuted }}>
-                                  <Lock size={14} aria-hidden />
-                                  Acesso restrito a participantes
-                                </span>
-                              ) : null}
-                            </div>
-                            <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>
-                              RH Talk #{tk.numero} — {tk.titulo}
-                            </div>
-                            <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
-                              {n > 0 ? `${n} participante${n === 1 ? "" : "s"}` : "Todos"} · {tk.duracao_min} min
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setModalTalk(tk)}
-                              style={{
-                                marginTop: 12,
-                                padding: "8px 14px",
-                                borderRadius: 10,
-                                border: `1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)`,
-                                background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-                                color: t.text,
-                                fontWeight: 700,
-                                fontSize: 12,
-                                cursor: "pointer",
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              Ver ata
-                            </button>
-                          </div>
+                          <RhTalkCard
+                            titulo={tk.titulo}
+                            introducao={tk.introducao ?? tk.resumo}
+                            numero={tk.numero}
+                            autorInfo={metaAutor(autorIdPostagem(tk))}
+                            dataPublicacao={dataPub}
+                            restrito={restrito}
+                            onAbrirAta={() => setModalTalk(tk)}
+                            cardShadow={cardShadow}
+                          />
                         </li>
                       );
                     })}
@@ -1093,33 +848,35 @@ export default function PortalRhPage() {
         </>
       )}
 
-      {modalCom ? (
-        <ModalComunicado
-          c={modalCom}
-          t={t}
-          brand={brand}
-          nomeAutor={(modalCom.published_by && nomeAutores[modalCom.published_by]) || "Equipe"}
-          receipt={user?.id ? receipts.get(receiptKey("comunicado", modalCom.id)) : undefined}
-          onClose={() => setModalCom(null)}
-          onAck={() => void confirmarCiencia("comunicado", modalCom.id)}
-        />
-      ) : null}
-
       {modalDoc ? (
-        <ModalDocumento
-          d={modalDoc}
-          t={t}
-          brand={brand}
-          receipt={user?.id ? receipts.get(receiptKey("documento", modalDoc.id)) : undefined}
+        <ModalLerPolitica
+          titulo={modalDoc.titulo}
+          introducao={modalDoc.introducao}
+          corpo={modalDoc.corpo}
+          imagemPath={modalDoc.imagem_storage_path}
+          anexoPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
+          anexoNome={modalDoc.anexo_nome}
+          autorInfo={metaAutor(autorIdPostagem(modalDoc))}
+          dataPublicacao={modalDoc.published_at ?? modalDoc.updated_at}
+          aprovadorInfo={metaAutor(modalDoc.approved_by)}
+          dataAprovacao={modalDoc.approved_at}
+          temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
+          jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
           onClose={() => setModalDoc(null)}
-          onAck={() => void confirmarCiencia("documento", modalDoc.id)}
+          onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
         />
       ) : null}
 
       {modalTalk ? (
-        <ModalRhTalk
-          tk={modalTalk}
-          t={t}
+        <ModalVerAta
+          titulo={modalTalk.numero != null ? `RH Talk #${modalTalk.numero} — ${modalTalk.titulo}` : modalTalk.titulo}
+          introducao={modalTalk.introducao ?? modalTalk.resumo}
+          corpo={modalTalk.corpo ?? modalTalk.resumo}
+          imagemPath={modalTalk.imagem_storage_path}
+          anexoPath={modalTalk.anexo_storage_path ?? modalTalk.storage_path}
+          anexoNome={modalTalk.anexo_nome}
+          autorInfo={metaAutor(autorIdPostagem(modalTalk))}
+          dataPublicacao={modalTalk.published_at ?? modalTalk.data_reuniao}
           podeVer={podeVerAta(modalTalk)}
           onClose={() => setModalTalk(null)}
         />
@@ -1139,182 +896,5 @@ export default function PortalRhPage() {
         }
       `}</style>
     </div>
-  );
-}
-
-function ModalComunicado({
-  c,
-  t,
-  brand,
-  nomeAutor,
-  receipt,
-  onClose,
-  onAck,
-}: {
-  c: RhPortalComunicado;
-  t: ReturnType<typeof useApp>["theme"];
-  brand: ReturnType<typeof useDashboardBrand>;
-  nomeAutor: string;
-  receipt: ReadReceiptRow | undefined;
-  onClose: () => void;
-  onAck: () => void;
-}) {
-  const ack = Boolean(receipt?.acknowledged_at);
-  const precisa = c.requires_acknowledgment;
-  return (
-    <ModalBase onClose={onClose} maxWidth={560}>
-      <ModalHeader title={c.titulo} onClose={onClose} />
-      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 16, fontFamily: FONT.body }}>
-        {nomeAutor} · RH · {fmtDataPublicacao(c.published_at)}
-      </div>
-      <CorpoHtmlPortalRh html={c.corpo} color={t.text} />
-      {precisa && !ack ? (
-        <div
-          style={{
-            marginTop: 22,
-            padding: 16,
-            borderRadius: 12,
-            border: "1px solid rgba(245,158,11,0.4)",
-            background: "rgba(245,158,11,0.1)",
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12 }}>
-            <AlertTriangle size={18} color="#f59e0b" aria-hidden />
-            <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body }}>
-              Este comunicado requer a sua confirmação de ciência. Ao confirmar, declara ter lido e compreendido o conteúdo acima.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onAck}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              background: ctaGradient(brand),
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-            }}
-          >
-            Li e estou ciente
-          </button>
-        </div>
-      ) : precisa && ack && receipt?.acknowledged_at ? (
-        <div style={{ marginTop: 18, fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body }}>
-          <Check size={18} aria-hidden />
-          Ciência confirmada em{" "}
-          {new Date(receipt.acknowledged_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-        </div>
-      ) : null}
-    </ModalBase>
-  );
-}
-
-function ModalDocumento({
-  d,
-  t,
-  brand,
-  receipt,
-  onClose,
-  onAck,
-}: {
-  d: RhPortalDocumento;
-  t: ReturnType<typeof useApp>["theme"];
-  brand: ReturnType<typeof useDashboardBrand>;
-  receipt: ReadReceiptRow | undefined;
-  onClose: () => void;
-  onAck: () => void;
-}) {
-  const ack = Boolean(receipt?.acknowledged_at);
-  const precisa = d.requires_acknowledgment;
-  const texto = (d.corpo ?? "").trim();
-  return (
-    <ModalBase onClose={onClose} maxWidth={560}>
-      <ModalHeader title={d.titulo} onClose={onClose} />
-      {texto ? (
-        <CorpoHtmlPortalRh html={texto} color={t.text} />
-      ) : (
-        <div style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>
-          Conteúdo disponível em breve. Não há ficheiro anexado para visualização neste registo.
-        </div>
-      )}
-      {d.storage_path ? (
-        <p style={{ fontSize: 12, color: t.textMuted, marginTop: 12, fontFamily: FONT.body }}>
-          Documento com anexo no armazenamento — a visualização integrada será ligada numa próxima etapa. Sem botão de download nesta interface.
-        </p>
-      ) : null}
-      {precisa && !ack ? (
-        <div style={{ marginTop: 22, padding: 16, borderRadius: 12, border: "1px solid rgba(245,158,11,0.4)", background: "rgba(245,158,11,0.1)" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12 }}>
-            <AlertTriangle size={18} color="#f59e0b" aria-hidden />
-            <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body }}>Esta política requer confirmação de ciência.</div>
-          </div>
-          <button
-            type="button"
-            onClick={onAck}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              background: ctaGradient(brand),
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-            }}
-          >
-            Li e estou ciente
-          </button>
-        </div>
-      ) : precisa && ack && receipt?.acknowledged_at ? (
-        <div style={{ marginTop: 18, fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body }}>
-          <Check size={18} aria-hidden />
-          Ciência confirmada em{" "}
-          {new Date(receipt.acknowledged_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-        </div>
-      ) : null}
-    </ModalBase>
-  );
-}
-
-function ModalRhTalk({
-  tk,
-  t,
-  podeVer,
-  onClose,
-}: {
-  tk: RhPortalRhTalk;
-  t: ReturnType<typeof useApp>["theme"];
-  podeVer: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <ModalBase onClose={onClose} maxWidth={520}>
-      <ModalHeader title={`RH Talk #${tk.numero} — ${tk.titulo}`} onClose={onClose} />
-      {!podeVer ? (
-        <div style={{ display: "flex", gap: 12, alignItems: "center", fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>
-          <Lock size={20} color={t.textMuted} aria-hidden />
-          Acesso restrito a participantes desta reunião.
-        </div>
-      ) : (
-        <>
-          {tk.introducao ? (
-            <p style={{ fontSize: 14, color: t.textMuted, lineHeight: 1.5, margin: "0 0 12px", fontFamily: FONT.body }}>{tk.introducao}</p>
-          ) : null}
-          {tk.corpo || tk.resumo ? (
-            <CorpoHtmlPortalRh html={tk.corpo ?? tk.resumo ?? ""} color={t.text} />
-          ) : (
-            <div style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Sem conteúdo registado para esta publicação.</div>
-          )}
-          {tk.storage_path ? (
-            <p style={{ fontSize: 12, color: t.textMuted, marginTop: 12, fontFamily: FONT.body }}>Anexo no armazenamento — sem download nesta interface.</p>
-          ) : null}
-        </>
-      )}
-    </ModalBase>
   );
 }
