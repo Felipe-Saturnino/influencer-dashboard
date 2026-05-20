@@ -13,6 +13,8 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
+import { truncPreviewHtml } from "../../../lib/portalRhWorkflow";
 import { GerenciamentoPostagens } from "./GerenciamentoPostagens";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -73,6 +75,8 @@ type RhPortalRhTalk = {
   data_reuniao: string;
   duracao_min: number;
   resumo: string | null;
+  corpo?: string | null;
+  introducao?: string | null;
   storage_path: string | null;
   status?: RhPostagemStatus | null;
   published_at?: string | null;
@@ -131,12 +135,6 @@ function itemNaSubtabCategoria(
 function fmtMesAnoCarrossel(ano: number, mes: number): string {
   const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-function truncPreview(s: string, max = PREVIEW_LEN): string {
-  const t = (s ?? "").trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max).trim()}…`;
 }
 
 function fmtDataPublicacao(iso: string | null | undefined): string {
@@ -452,7 +450,9 @@ export default function PortalRhPage() {
         hit(d.categoria?.label) ||
         hit(d.categoria?.slug),
     );
-    const tk = talks.filter((x) => hit(x.titulo) || hit(x.resumo) || String(x.numero).includes(buscaDeb));
+    const tk = talks.filter(
+      (x) => hit(x.titulo) || hit(x.resumo) || hit(x.corpo) || hit(x.introducao) || String(x.numero).includes(buscaDeb),
+    );
     return { com, doc, tk };
   }, [buscaAtiva, buscaDeb, comunicados, documentos, talks]);
 
@@ -775,7 +775,7 @@ export default function PortalRhPage() {
                         }}
                       >
                         <span style={{ fontWeight: 800, color: t.text }}>{c.titulo}</span>
-                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>{truncPreview(c.corpo)}</div>
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>{truncPreviewHtml(c.corpo, PREVIEW_LEN)}</div>
                       </button>
                     ))}
                   </div>
@@ -881,7 +881,7 @@ export default function PortalRhPage() {
                       }}
                     >
                       <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{comunicadoPinned.titulo}</div>
-                      <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreview(comunicadoPinned.corpo)}</div>
+                      <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreviewHtml(comunicadoPinned.corpo, PREVIEW_LEN)}</div>
                     </button>
                   </div>
                 ) : null}
@@ -961,7 +961,7 @@ export default function PortalRhPage() {
                               ) : null}
                             </div>
                             <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{c.titulo}</div>
-                            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreview(c.corpo)}</div>
+                            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>{truncPreviewHtml(c.corpo, PREVIEW_LEN)}</div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, flexWrap: "wrap", gap: 8 }}>
                               <span style={{ fontSize: 12, color: t.textMuted }}>
                                 {(c.published_by && nomeAutores[c.published_by]) || "Equipe"} · RH · {fmtDataPublicacao(c.published_at)}
@@ -1254,7 +1254,7 @@ function ModalComunicado({
       <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 16, fontFamily: FONT.body }}>
         {nomeAutor} · RH · {fmtDataPublicacao(c.published_at)}
       </div>
-      <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{c.corpo}</div>
+      <CorpoHtmlPortalRh html={c.corpo} color={t.text} />
       {precisa && !ack ? (
         <div
           style={{
@@ -1322,7 +1322,7 @@ function ModalDocumento({
     <ModalBase onClose={onClose} maxWidth={560}>
       <ModalHeader title={d.titulo} onClose={onClose} />
       {texto ? (
-        <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{texto}</div>
+        <CorpoHtmlPortalRh html={texto} color={t.text} />
       ) : (
         <div style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>
           Conteúdo disponível em breve. Não há ficheiro anexado para visualização neste registo.
@@ -1389,10 +1389,13 @@ function ModalRhTalk({
         </div>
       ) : (
         <>
-          {tk.resumo ? (
-            <div style={{ fontSize: 14, color: t.text, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{tk.resumo}</div>
+          {tk.introducao ? (
+            <p style={{ fontSize: 14, color: t.textMuted, lineHeight: 1.5, margin: "0 0 12px", fontFamily: FONT.body }}>{tk.introducao}</p>
+          ) : null}
+          {tk.corpo || tk.resumo ? (
+            <CorpoHtmlPortalRh html={tk.corpo ?? tk.resumo ?? ""} color={t.text} />
           ) : (
-            <div style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Sem resumo registado para esta ata.</div>
+            <div style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Sem conteúdo registado para esta publicação.</div>
           )}
           {tk.storage_path ? (
             <p style={{ fontSize: 12, color: t.textMuted, marginTop: 12, fontFamily: FONT.body }}>Anexo no armazenamento — sem download nesta interface.</p>

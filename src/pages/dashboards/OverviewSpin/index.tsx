@@ -1523,6 +1523,13 @@ export default function OverviewSpin() {
   }, [carregar, aba]);
 
   useEffect(() => {
+    if (!operadoraSlugsForcado?.length) return;
+    if (operadoraSlugsForcado.length === 1 && filtroOperadora === "todas") {
+      setFiltroOperadora(operadoraSlugsForcado[0]);
+    }
+  }, [operadoraSlugsForcado, filtroOperadora]);
+
+  useEffect(() => {
     setExpandedDetalhe(new Set());
   }, [historico, filtroOperadora, operadoraSlugsForcado, idxMes]);
 
@@ -2156,14 +2163,20 @@ export default function OverviewSpin() {
         : (mesSelecionado?.label ?? "")
       : labelCarrosselPos("dia", refDatePosicionamento);
 
-  const operadoraSlugPosicionamento =
-    filtroOperadora !== "todas"
-      ? filtroOperadora
-      : operadoraSlugsForcado?.length === 1
-        ? operadoraSlugsForcado[0]
-        : showFiltroOperadora
-          ? "todas"
-          : (operadoraSlugsForcado?.[0] ?? "blaze");
+  const operadoraSlugPosicionamento = useMemo(() => {
+    if (filtroOperadora !== "todas") return filtroOperadora;
+    if (operadoraSlugsForcado?.length === 1) return operadoraSlugsForcado[0];
+    if (escoposVisiveis.operadorasVisiveis.length === 1) {
+      return escoposVisiveis.operadorasVisiveis[0];
+    }
+    if (showFiltroOperadora) return "todas";
+    return operadoraSlugsForcado?.[0] ?? escoposVisiveis.operadorasVisiveis[0] ?? "blaze";
+  }, [
+    filtroOperadora,
+    operadoraSlugsForcado,
+    escoposVisiveis.operadorasVisiveis,
+    showFiltroOperadora,
+  ]);
 
   function irCarrosselAnterior() {
     if (aba === "posicionamento") return;

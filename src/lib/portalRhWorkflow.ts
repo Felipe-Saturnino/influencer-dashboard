@@ -125,13 +125,62 @@ export function fmtDataPt(iso: string | null | undefined): string {
   }
 }
 
+const PORTAL_RH_HTML_TAGS = new Set([
+  "B",
+  "STRONG",
+  "I",
+  "EM",
+  "U",
+  "UL",
+  "OL",
+  "LI",
+  "DIV",
+  "P",
+  "BR",
+]);
+
+/** Mantém apenas formatação básica do editor (negrito, itálico, sublinhado, listas). */
+export function sanitizePortalRhHtml(html: string): string {
+  const raw = (html ?? "").trim();
+  if (!raw) return "";
+  if (typeof document === "undefined") {
+    return raw.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "").replace(/on\w+="[^"]*"/gi, "");
+  }
+
+  const doc = new DOMParser().parseFromString(raw, "text/html");
+  const sanitizeNode = (parent: Node) => {
+    const children = [...parent.childNodes];
+    for (const child of children) {
+      if (child.nodeType !== Node.ELEMENT_NODE) continue;
+      const el = child as Element;
+      if (!PORTAL_RH_HTML_TAGS.has(el.tagName)) {
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        parent.removeChild(el);
+        continue;
+      }
+      for (const attr of [...el.attributes]) {
+        el.removeAttribute(attr.name);
+      }
+      sanitizeNode(el);
+    }
+  };
+  sanitizeNode(doc.body);
+  return doc.body.innerHTML;
+}
+
 export function stripHtmlText(html: string): string {
   if (typeof document !== "undefined") {
     const el = document.createElement("div");
-    el.innerHTML = html;
-    return (el.textContent ?? "").trim();
+    el.innerHTML = sanitizePortalRhHtml(html);
+    return (el.textContent ?? "").replace(/\u00a0/g, " ").trim();
   }
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function truncPreviewHtml(s: string, max = 200): string {
+  const t = stripHtmlText(s ?? "");
+  if (t.length <= max) return t;
+  return `${t.slice(0, max).trim()}…`;
 }
 
 export function isHtmlEmpty(html: string): boolean {
