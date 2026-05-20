@@ -10,12 +10,11 @@ import { SelectComIcone, SectionTitle, SortTableTh, type SortDir } from "../../.
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Shield, User } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Filter, Gauge, Shield, Trophy, User, X } from "lucide-react";
 import {
   GiTrophy, GiMedal, GiLaurelsTrophy,
-  GiConvergenceTarget, GiArcheryTarget,
+  GiArcheryTarget,
   GiCheckMark, GiShare, GiGamepad,
-  GiPodium, GiSpeedometer,
 } from "react-icons/gi";
 
 const COR_A = {
@@ -236,6 +235,42 @@ function PainelFunil({ row, isEmpty, cor }: {
   );
 }
 
+function ItemLista({
+  row,
+  pos,
+  maxFtdH,
+  t,
+}: {
+  row: ConversaoRow;
+  pos: number;
+  maxFtdH: number;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  const barPct = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
+      <div style={{ width: 22, fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textAlign: "right", flexShrink: 0 }}>#{pos}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 80, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+        {row.nome.split(" ")[0]}
+      </div>
+      <div style={{ flex: 1, height: 5, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
+        <div
+          style={{
+            width: `${barPct}%`,
+            height: "100%",
+            background: "var(--brand-action, #7c3aed)",
+            opacity: 0.65,
+            borderRadius: 999,
+          }}
+        />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 36, textAlign: "right" as const }}>
+        {row.ftdPorHora.toFixed(2)}
+      </div>
+    </div>
+  );
+}
+
 // ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
 const PODIO_H    = [130, 90, 70];
 const PODIO_ICONS = [
@@ -280,32 +315,6 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
   const totalPags = Math.ceil(pares.length / PARES_POR_PAG);
   const paresPag  = pares.slice(pagResto * PARES_POR_PAG, (pagResto + 1) * PARES_POR_PAG);
 
-  function ItemLista({ row, pos }: { row: ConversaoRow; pos: number }) {
-    const barPct = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
-        <div style={{ width: 22, fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textAlign: "right", flexShrink: 0 }}>#{pos}</div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 80, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-          {row.nome.split(" ")[0]}
-        </div>
-          <div style={{ flex: 1, height: 5, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
-          <div
-            style={{
-              width: `${barPct}%`,
-              height: "100%",
-              background: "var(--brand-action, #7c3aed)",
-              opacity: 0.65,
-              borderRadius: 999,
-            }}
-          />
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 36, textAlign: "right" as const }}>
-          {row.ftdPorHora.toFixed(2)}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div role="img" aria-label={ariaPodio} style={{ overflowX: "auto", marginBottom: 28 }}>
@@ -348,8 +357,8 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
               const posEsq = pagResto * PARES_POR_PAG * 2 + i * 2 + 4;
               return (
                 <div key={rowEsq.influencer_id} className="app-grid-2-tight" style={{ gap: 10 }}>
-                  <ItemLista row={rowEsq} pos={posEsq} />
-                  {rowDir ? <ItemLista row={rowDir} pos={posEsq + 1} /> : <div />}
+                  <ItemLista row={rowEsq} pos={posEsq} maxFtdH={maxFtdH} t={t} />
+                  {rowDir ? <ItemLista row={rowDir} pos={posEsq + 1} maxFtdH={maxFtdH} t={t} /> : <div />}
                 </div>
               );
             })}
@@ -396,7 +405,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
@@ -655,7 +664,7 @@ export default function DashboardConversao() {
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const thStyle = getThStyle(t);
@@ -701,8 +710,8 @@ export default function DashboardConversao() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -727,9 +736,7 @@ export default function DashboardConversao() {
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
               background: historico
-                ? (brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+                ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                 : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
@@ -781,7 +788,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
-          icon={<GiConvergenceTarget size={14} />}
+          icon={<Filter size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           Comparativo de Funil
@@ -855,7 +862,7 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 3: PÓDIO FTD/HORA ═════════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodium size={14} />}>
+        <SectionTitle icon={<Trophy size={14} aria-hidden />}>
           Ranking FTD/Hora — Eficiência por Influencer
         </SectionTitle>
         <p style={{ margin: "-8px 0 20px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
@@ -871,7 +878,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiSpeedometer size={14} />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle icon={<Gauge size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
             Comparativo de Taxas
           </SectionTitle>
 
@@ -909,7 +916,7 @@ export default function DashboardConversao() {
                 fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`,
                 background: "transparent", color: t.textMuted, fontSize: 11,
               }}>
-                ✕ Limpar
+                <X size={11} aria-hidden /> Limpar
               </button>
             )}
           </div>

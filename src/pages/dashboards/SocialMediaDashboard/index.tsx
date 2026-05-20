@@ -4,7 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import {
   getThStyle,
   getThStyleBrandAction,
@@ -23,6 +23,8 @@ import {
   BarChart2,
   Bookmark,
   Calendar,
+  CalendarDays,
+  Clock,
   Filter,
   Heart,
   Layers,
@@ -34,9 +36,8 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
-  Loader2,
   Share2,
+  TrendingDown,
   Target,
   Trophy,
   TrendingUp,
@@ -46,28 +47,9 @@ import {
 
 // ─── CONSTANTES DE MÊS ────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2026, mes: 0 }; // Janeiro 2026 — dados de mídias começam aqui
-const MESES_PT = [
-  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
-];
 
 /** Rótulo curto para período mensal (ex.: Abr/2026), alinhado ao modo histórico. */
 const MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"] as const;
-
-function getMesesDisponiveis() {
-  const hoje = new Date();
-  const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
-  while (
-    ano < hoje.getFullYear() ||
-    (ano === hoje.getFullYear() && mes <= hoje.getMonth())
-  ) {
-    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++;
-    if (mes > 11) { mes = 0; ano++; }
-  }
-  return lista;
-}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface KpiDaily {
@@ -471,11 +453,10 @@ function ordenarPostsRecentes(a: PostUnificado, b: PostUnificado): number {
 }
 
 /**
- * KpiCard especializado para Mídias Sociais.
+ * SocialKpiCard — KPI local de Mídias Sociais (não confundir com KpiCard compartilhado).
  * Usa resolveWhitelabelAccentCss para tokens CSS vars dinâmicos.
- * Interface difere do KpiCard compartilhado (components/dashboard/KpiCard).
  */
-function KpiCard({
+function SocialKpiCard({
   label,
   valor,
   momComparativo,
@@ -545,7 +526,12 @@ function KpiCard({
                 fontSize: 12,
                 lineHeight: 1,
               }}>
-                {momComparativo.up ? "↑" : "↓"} {momComparativo.pctLabel}
+                {momComparativo.up ? (
+                  <TrendingUp size={12} aria-hidden />
+                ) : (
+                  <TrendingDown size={12} aria-hidden />
+                )}{" "}
+                {momComparativo.pctLabel}
               </span>
             </div>
             <span style={{ color: t.textMuted, fontSize: 10 }}>{momComparativo.refLine}</span>
@@ -562,7 +548,7 @@ export default function SocialMediaDashboard() {
   const perm = usePermission("dash_midias_sociais");
 
   // ── Navegação por meses (padrão Overview) ─────────────────────────────────
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(MES_INICIO), []);
   const hoje = new Date();
   const idxInicial = mesesDisponiveis.findIndex(
     (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
@@ -1009,6 +995,7 @@ export default function SocialMediaDashboard() {
     borderRadius: 18,
     padding: 20,
     marginBottom: 14,
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const btnNavStyle = (disabled: boolean): React.CSSProperties => ({
@@ -1096,8 +1083,8 @@ export default function SocialMediaDashboard() {
         <div
           style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}
         >
@@ -1137,9 +1124,7 @@ export default function SocialMediaDashboard() {
                 fontSize: 13,
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -1151,7 +1136,7 @@ export default function SocialMediaDashboard() {
             </button>
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
@@ -1232,13 +1217,13 @@ export default function SocialMediaDashboard() {
             <>
               <div style={card}>
                 <SectionTitle
-                  icon={<LayoutDashboard size={14} aria-hidden />}
+                  icon={<BarChart2 size={14} aria-hidden />}
                   sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
                 >
                   KPIs consolidados
                 </SectionTitle>
                 <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-                  <KpiCard
+                  <SocialKpiCard
                     label="GGR"
                     valor={fmtBRL(consolidado.ggr)}
                     accentCor={BRAND.verde}
@@ -1253,7 +1238,7 @@ export default function SocialMediaDashboard() {
                         : null
                     }
                   />
-                  <KpiCard
+                  <SocialKpiCard
                     label="Registros"
                     valor={fmtNum(consolidado.registros)}
                     accentVar="--brand-contrast"
@@ -1269,7 +1254,7 @@ export default function SocialMediaDashboard() {
                         : null
                     }
                   />
-                  <KpiCard
+                  <SocialKpiCard
                     label="GGR por Jogador"
                     valor={ggrPorJogador != null ? fmtBRL(ggrPorJogador) : "—"}
                     accentVar="--brand-contrast"
@@ -1313,7 +1298,7 @@ export default function SocialMediaDashboard() {
 
               <div style={card}>
                 <SectionTitle
-                  icon={<Calendar size={14} aria-hidden />}
+                  icon={<CalendarDays size={14} aria-hidden />}
                   sub={historico ? "Mês a mês (Jan/2026 em diante)" : "dia a dia"}
                 >
                   Detalhamento {historico ? "mensal" : "diário"}
@@ -1486,7 +1471,7 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Share2 size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
                   Comparativo de funil
                 </SectionTitle>
                 <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
@@ -1697,7 +1682,7 @@ export default function SocialMediaDashboard() {
               KPIs de Mídias Sociais
             </SectionTitle>
             <div className="app-grid-kpi-4">
-              <KpiCard
+              <SocialKpiCard
                 label="Postagens"
                 valor={fmtNum(totais.postagens)}
                 accentVar="--brand-contrast"
@@ -1713,7 +1698,7 @@ export default function SocialMediaDashboard() {
                     : null
                 }
               />
-              <KpiCard
+              <SocialKpiCard
                 label="Seguidores totais"
                 valor={fmtNum(totais.seguidores)}
                 accentVar="--brand-contrast"
@@ -1729,7 +1714,7 @@ export default function SocialMediaDashboard() {
                     : null
                 }
               />
-              <KpiCard
+              <SocialKpiCard
                 label="Impressões totais"
                 valor={fmtNum(totais.impressoes)}
                 accentVar="--brand-contrast"
@@ -1745,7 +1730,7 @@ export default function SocialMediaDashboard() {
                     : null
                 }
               />
-              <KpiCard
+              <SocialKpiCard
                 label="Engajamento médio"
                 valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"}
                 accentVar="--brand-action"

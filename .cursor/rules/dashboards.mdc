@@ -94,6 +94,62 @@ Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçado
 | Mídias Sociais | `Mídias Sociais` | `Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.` |
 | Overview Influencer | `Overview Influencer` | `Visão executiva da performance do canal de influencers.` |
 
+**Exceção — Overview Spin:** cabeçalho com badge 28×28 à esquerda (ícone + h1 + subtítulo em linha), não o bloco centralizado acima. Motivo: página híbrida com abas Overview + Posicionamento operacional.
+
+---
+
+## Overview Spin — Padrões Específicos
+
+- **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
+- **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
+- **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
+- **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
+- **Heatmap de Posicionamento:** `zebraBgHistLinha` com `--brand-contrast` (nunca `--brand-secondary`). Nunca hardcodar hex de fundo na zebra.
+- **`renderMesaDiaTabela`:** `borderCollapse: "separate"`, `borderSpacing: 0`, `<caption style={{ display: "none" }}>`. Linha Total no topo do `<tbody>` por decisão de produto (exceção ao padrão de total no rodapé).
+
+---
+
+## Streamers — Arquitetura de 3 Abas
+
+- **Container:** `Streamers/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
+  Toda lógica de filtros vive em `StreamersFiltrosProvider` (`StreamersFiltrosContext.tsx`).
+- **Sub-páginas:** `DashboardOverview`, `DashboardConversao`, `DashboardFinanceiro`.
+  Cada uma recebe os filtros via `useStreamersFiltrosOptional()`.
+  Quando `embed === true` (dentro do container), a FilterBar NÃO é renderizada pela sub-página.
+  Quando `embed === false` (rota standalone legada), cada sub-página renderiza sua própria FilterBar.
+- **`sf.setIsLoading(loading)`**: cada sub-página sinaliza o loading ao contexto via `useEffect`.
+  O indicador de carregamento (`Clock size={12}`) fica no container, não nas sub-páginas.
+- **Ícone do header:** `Tv` (Lucide) — nunca `GiTv` (react-icons/gi).
+
+---
+
+## Mídias Sociais — Padrões Específicos
+
+- **3 abas:** Overview (KPIs + Detalhamento + Comparativo de campanha),
+  Conversão (Funil + Comparativo de funil + Comparativo de taxas), Alcance (KPIs sociais + Posts).
+- **KpiCard local (`SocialKpiCard`):** interface diferente do `KpiCard` compartilhado.
+  Aceita `valor` (string), `momComparativo` (objeto com `pctLabel`/`up`/`refLine`), `accentVar`, `accentCor`.
+  MoM usa `TrendingUp`/`TrendingDown` Lucide — NUNCA `↑`/`↓` Unicode.
+  Nomeado `SocialKpiCard` para evitar conflito com `KpiCard` compartilhado.
+- **`FunilSocialTresNiveis`:** funil de 3 níveis (Visitas → Registros → FTDs).
+  Declarado em escopo de módulo. Aceito como componente local desta página.
+- **GGR em Mídias Sociais:** calculado como `deposit_total - withdrawal_total` nas campanhas —
+  mesmo cálculo, canal diferente (UTMs mapeadas).
+- **`getMesesDisponiveis`:** importar de `lib/dashboardHelpers` com `MES_INICIO` local (Jan/2026) — não declarar cópia local da função.
+
+---
+
+## DashboardConversao (Streamers) — Exceções Documentadas
+
+- **`GiTrophy`, `GiMedal`, `GiLaurelsTrophy` no `PodioFTDHora`:** aceitos como ícones decorativos
+  puramente visuais (não em SectionTitle, KpiCard ou ação). Não estender o uso para outros contextos.
+- **`PODIO_CORES`:** paleta semântica fixa do pódio (ouro/ciano/roxo) — não substituir por brand tokens.
+- **`ItemLista`:** deve ser declarado em escopo de módulo (fora de `PodioFTDHora`).
+- **SectionTitles canônicos nesta aba:**
+  - "Comparativo de Funil" → `Filter`
+  - "Ranking FTD/Hora" → `Trophy`
+  - "Comparativo de Taxas" → `Gauge`
+
 ---
 
 ## Nomenclatura Canônica de Seções
@@ -147,7 +203,7 @@ const card: React.CSSProperties = {
   border: `1px solid ${t.cardBorder}`,
   borderRadius: 18,
   padding: 20,
-  boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+  boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
 };
 ```
 
@@ -181,9 +237,7 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
       ? `1px solid ${brand.useBrand ? "var(--brand-action)" : "var(--brand-action, #7c3aed)"}`
       : `1px solid ${t.cardBorder}`,
     background: historico
-      ? (brand.useBrand
-          ? "color-mix(in srgb, var(--brand-action) 15%, transparent)"
-          : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
       : "transparent",
     color: historico ? brand.primary : t.textMuted,
     fontWeight: historico ? 700 : 400,
@@ -208,7 +262,7 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
 )}
 ```
 
-`Clock` é **exclusivo da FilterBar** como indicador secundário. Para loading de seções de conteúdo, usar `Loader2` com `className="app-lucide-spin"` (ver secção de KPI Cards).
+`Clock` é **exclusivo da FilterBar** como indicador secundário — **proibido `Loader2` na FilterBar**. Para loading de seções de conteúdo, usar `Loader2` com `className="app-lucide-spin"` (ver secção de KPI Cards).
 
 ---
 
@@ -542,6 +596,8 @@ Envolver `ResponsiveContainer` num pai com `role="img"` e `aria-label` descritiv
 
 Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(--brand-action…) …)` — nunca `rgba(124,58,237,0.12)` ou `#7c3aed` hardcoded para estado ativo.
 
+**Comparativos duais A/B (Mesa, Funil):** com `brand.useBrand`, lado A usa `--brand-action` e lado B `--brand-contrast`. Nunca o mesmo token para A e B.
+
 ---
 
 ## O Que Nunca Fazer em Dashboards
@@ -561,8 +617,15 @@ Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(
 - Nunca listas enormes sem virtualização quando > 50 itens
 - Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
+- Nunca `--brand-contrast` no background ativo do botão Histórico — usar `--brand-action`
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
 - Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
-- Nunca `GiXxx` em KPI cards ou SectionTitle — exceto `GiCalendar` no Histórico (ou Lucide `Calendar`)
+- Nunca `GiXxx` no badge do header de página — apenas `Tv`, `Video`, `BarChart2` etc. de Lucide. GameIcons só no menu lateral.
+- Nunca `GiXxx` em KPI cards ou SectionTitle — exceto `GiCalendar` no Histórico (ou Lucide `Calendar`) e ícones decorativos do pódio FTD/Hora
+- Nunca `↑`/`↓` / `✕` / `✓` / `▲▼` Unicode em JSX — usar Lucide `ArrowUp`, `ArrowDown`, `X`, `Check`, `TrendingUp`, `TrendingDown`
+- Nunca `background: brand.blockBg` na FilterBar — usar `brand.primaryTransparentBg`
+- Nunca `size={14}` em ícones de `KpiCard` compartilhado — usar `size={16}`
 - Nunca `FONT_TITLE` no label do mês na FilterBar — usar `FONT.body`
 - Nunca `useEffect` de loading antes da declaração `useState(loading)` — ordem dos hooks
+- Nunca declarar `fmtBRL` ou `getMesesDisponiveis` localmente — importar de `lib/dashboardHelpers`
+- Nunca usar `--brand-secondary` em componentes dentro de `dashboards/` — usar `--brand-contrast` para cor de suporte

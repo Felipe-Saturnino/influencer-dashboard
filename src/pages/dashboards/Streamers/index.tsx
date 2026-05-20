@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, type CSSProperties } from "react";
-import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Shield, User } from "lucide-react";
+import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Shield, Tv, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,7 +7,6 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { SelectComIcone } from "../../../components/dashboard";
-import { GiTv } from "react-icons/gi";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -56,8 +55,8 @@ function StreamersFiltrosEUAbas({
       <div
         style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}
       >
@@ -133,9 +132,7 @@ function StreamersFiltrosEUAbas({
               fontSize: 13,
               border: sf.historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: sf.historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
               color: sf.historico ? brand.accent : t.textMuted,
               fontWeight: sf.historico ? 700 : 400,
@@ -192,7 +189,7 @@ function StreamersFiltrosEUAbas({
               }}
               aria-live="polite"
             >
-              <Clock size={14} aria-hidden />
+              <Clock size={12} aria-hidden />
               Carregando…
             </span>
           )}
@@ -287,7 +284,7 @@ function StreamersAutorizado() {
                   color: brand.primaryIconColor,
                 }}
               >
-                <GiTv size={14} aria-hidden="true" />
+                <Tv size={14} aria-hidden="true" />
               </div>
               <div>
                 <h1

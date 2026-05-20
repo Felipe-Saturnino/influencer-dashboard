@@ -48,7 +48,6 @@ import {
   Eye,
   Filter,
   Gauge,
-  Loader2,
   Shield,
   Table2,
   TrendingUp,
@@ -178,6 +177,121 @@ const KPIS_COMPARATIVO_INFLUENCER: KpiComparativoInflDef[] = [
   { key: "media_views", label: "Média Views", somavel: false, tipoGrafico: "linha" },
   { key: "max_views", label: "Máx Views", somavel: false, tipoGrafico: "linha" },
 ];
+
+type TooltipComparativoInflPayload = {
+  active?: boolean;
+  payload?: {
+    name?: string;
+    value?: unknown;
+    color?: string;
+    payload?: Record<string, unknown>;
+  }[];
+  label?: string;
+};
+
+function TooltipComparativoInflChart({
+  active,
+  payload,
+  label,
+  isBrlKpiComp,
+  kpiGraficoComparativo,
+  somavel,
+  t,
+}: TooltipComparativoInflPayload & {
+  isBrlKpiComp: boolean;
+  kpiGraficoComparativo: KpiComparativoInflKey;
+  somavel: boolean;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  if (!active || !payload?.length) return null;
+  const full = payload[0]?.payload as Record<string, unknown> | undefined;
+  const totalOficial =
+    full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
+  const totalSomavelFallback = payload.reduce((s, p) => {
+    const n = Number(p.value);
+    return s + (Number.isFinite(n) ? n : 0);
+  }, 0);
+  const totalSomavel =
+    totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
+  const formatar = (v: number) => {
+    if (isBrlKpiComp) return fmtBRL(v);
+    if (kpiGraficoComparativo === "duracao") return fmtHorasTotal(v);
+    return v.toLocaleString("pt-BR");
+  };
+  const mostrarRodapeTotal =
+    somavel ||
+    kpiGraficoComparativo === "media_views" ||
+    kpiGraficoComparativo === "max_views";
+  const valorRodape = totalOficial;
+  return (
+    <div
+      style={{
+        background: t.cardBg,
+        border: `1px solid ${t.cardBorder}`,
+        borderRadius: 10,
+        padding: "10px 14px",
+        fontSize: 12,
+        color: t.text,
+        fontFamily: FONT.body,
+        minWidth: 160,
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+      {payload.map((p) => (
+        <div
+          key={String(p.name)}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 4,
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: p.color,
+                flexShrink: 0,
+              }}
+            />
+            {p.name}
+          </span>
+          <span style={{ fontWeight: 600 }}>
+            {p.value != null && p.value !== ""
+              ? formatar(Number(p.value))
+              : "—"}
+          </span>
+        </div>
+      ))}
+      {mostrarRodapeTotal && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 16,
+            marginTop: 6,
+            paddingTop: 6,
+            borderTop: `1px solid ${t.cardBorder}`,
+          }}
+        >
+          <span style={{ fontWeight: 700, color: t.text }}>Total</span>
+          <span style={{ fontWeight: 700, color: t.text }}>
+            {somavel
+              ? formatar(totalSomavel)
+              : valorRodape != null
+                ? formatar(valorRodape)
+                : "—"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function emptyDiaData(dataIso: string): DiaData {
   return {
@@ -346,7 +460,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, isDark, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -804,111 +918,6 @@ export default function DashboardOverviewInfluencer() {
     return m;
   }, [idsSeriesComparativo]);
 
-  function TooltipComparativoInflChart({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: {
-      name?: string;
-      value?: unknown;
-      color?: string;
-      payload?: Record<string, unknown>;
-    }[];
-    label?: string;
-  }) {
-    if (!active || !payload?.length) return null;
-    const somavel = kpiGraficoCompConfig.somavel;
-    const full = payload[0]?.payload as Record<string, unknown> | undefined;
-    const totalOficial =
-      full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
-    const totalSomavelFallback = payload.reduce((s, p) => {
-      const n = Number(p.value);
-      return s + (Number.isFinite(n) ? n : 0);
-    }, 0);
-    const totalSomavel =
-      totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
-    const formatar = (v: number) => {
-      if (isBrlKpiComp) return fmtBRL(v);
-      if (kpiGraficoComparativo === "duracao") return fmtHorasTotal(v);
-      return v.toLocaleString("pt-BR");
-    };
-    const mostrarRodapeTotal =
-      somavel ||
-      kpiGraficoComparativo === "media_views" ||
-      kpiGraficoComparativo === "max_views";
-    const valorRodape = totalOficial;
-    return (
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 10,
-          padding: "10px 14px",
-          fontSize: 12,
-          color: t.text,
-          fontFamily: FONT.body,
-          minWidth: 160,
-        }}
-      >
-        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
-        {payload.map((p) => (
-          <div
-            key={String(p.name)}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginBottom: 4,
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: p.color,
-                  flexShrink: 0,
-                }}
-              />
-              {p.name}
-            </span>
-            <span style={{ fontWeight: 600 }}>
-              {p.value != null && p.value !== ""
-                ? formatar(Number(p.value))
-                : "—"}
-            </span>
-          </div>
-        ))}
-        {mostrarRodapeTotal && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginTop: 6,
-              paddingTop: 6,
-              borderTop: `1px solid ${t.cardBorder}`,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
-            <span style={{ fontWeight: 700, color: t.text }}>
-              {somavel
-                ? formatar(totalSomavel)
-                : valorRodape != null
-                  ? formatar(valorRodape)
-                  : "—"}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
   const pctAcessoReg = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
   const pctRegFTD = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
@@ -935,7 +944,13 @@ export default function DashboardOverviewInfluencer() {
     ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
-  const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
+  const card: React.CSSProperties = {
+    background: brand.blockBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+  };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
   const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
@@ -994,8 +1009,8 @@ export default function DashboardOverviewInfluencer() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1022,9 +1037,7 @@ export default function DashboardOverviewInfluencer() {
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -1072,7 +1085,7 @@ export default function DashboardOverviewInfluencer() {
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
@@ -1189,7 +1202,7 @@ export default function DashboardOverviewInfluencer() {
                 value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"}
                 icon={<Eye size={16} aria-hidden="true" />}
                 accentVar="--brand-icon-color"
-                accentColor={BRAND.azul}
+                accentColor={BRAND.ciano}
                 atual={totais.views}
                 anterior={totaisAnt.views}
                 isHistorico={historico}
@@ -1387,7 +1400,7 @@ export default function DashboardOverviewInfluencer() {
 
           {modoVisualizacaoComparativo === "tabela" ? (
             <div className="app-table-wrap">
-              <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", minWidth: 900, borderCollapse: "separate", borderSpacing: 0 }}>
                 <caption
                   style={{
                     position: "absolute",
@@ -1518,7 +1531,16 @@ export default function DashboardOverviewInfluencer() {
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<TooltipComparativoInflChart />} />
+                      <Tooltip
+                        content={
+                          <TooltipComparativoInflChart
+                            isBrlKpiComp={isBrlKpiComp}
+                            kpiGraficoComparativo={kpiGraficoComparativo}
+                            somavel={kpiGraficoCompConfig.somavel}
+                            t={t}
+                          />
+                        }
+                      />
                       <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                       {idsSeriesComparativo.map((id) => (
                         <Bar
@@ -1556,7 +1578,16 @@ export default function DashboardOverviewInfluencer() {
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<TooltipComparativoInflChart />} />
+                      <Tooltip
+                        content={
+                          <TooltipComparativoInflChart
+                            isBrlKpiComp={isBrlKpiComp}
+                            kpiGraficoComparativo={kpiGraficoComparativo}
+                            somavel={kpiGraficoCompConfig.somavel}
+                            t={t}
+                          />
+                        }
+                      />
                       <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                       {idsSeriesComparativo.map((id) => (
                         <Line

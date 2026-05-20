@@ -217,11 +217,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "FTD/Hora",
         definicao:
-          "FTDs gerados por hora de live transmitida. Indica a eficiência horária do influencer independentemente do tempo total transmitido — dois influencers com o mesmo número de FTDs mas durações diferentes de live têm eficiências distintas.",
-        formula: "FTDs ÷ Horas Realizadas",
+          "Quantidade de primeiros depósitos gerados por hora de live transmitida por um influencer.",
+        formula: "FTD/Hora = FTDs ÷ Horas Realizadas",
         nota:
-          "Influencers sem horas registradas são excluídos do Ranking FTD/Hora na aba Conversão. O ranking exibe os três primeiros em pódio e os demais em lista paginada.",
-        referencia: "Streamers → Conversão · Overview Influencer",
+          "Métrica de eficiência operacional. Influencers sem horas registradas não aparecem no Ranking FTD/Hora.",
+        referencia: "Streamers · Conversão",
       },
       {
         termo: "Ação de Conversão",
@@ -274,9 +274,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Ticket Médio FTD",
         definicao:
-          "Valor médio do primeiro depósito. Indica o perfil de investimento inicial dos jogadores captados.",
-        formula: "R$ FTD ÷ Quantidade de FTDs",
-        referencia: "Streamers → Financeiro · Overview Influencer",
+          "Valor médio do primeiro depósito dos jogadores captados por um influencer ou campanha.",
+        formula: "Ticket Médio FTD = Total R$ FTDs ÷ Quantidade de FTDs",
+        referencia: "Streamers · Financeiro · Overview Influencer",
       },
       {
         termo: "Depósitos",
@@ -310,11 +310,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "WD Ratio (Withdrawal/Deposit Ratio)",
         definicao:
-          "Relação entre saques e depósitos. Indica o percentual do volume depositado que foi sacado. Quanto menor, melhor para a casa.",
-        formula: "Saques ÷ Depósitos × 100",
+          "Razão entre o total de saques e o total de depósitos de uma base de jogadores, expressa em percentual.",
+        formula: "WD Ratio = (Total de Saques ÷ Total de Depósitos) × 100",
         nota:
-          "Abaixo de 60%: saudável · 60% a 80%: atenção · Acima de 80%: risco — jogadores retirando mais do que a média",
-        referencia: "Streamers → Financeiro",
+          "< 60%: saudável (verde); 60–80%: atenção (amarelo); > 80%: crítico (vermelho). Um WD Ratio alto indica que os jogadores estão retirando mais do que depositando.",
+        referencia: "Streamers · Overview Influencer",
       },
       {
         termo: "GGR por Jogador",
@@ -362,10 +362,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "PVI (Player Value Index)",
         definicao:
-          "Score sintético de 0 a 100 que mede a qualidade média dos jogadores captados pelo influencer. Não é um percentual — é um índice de 0 a 100 pontos.",
+          "Player Value Index — índice de qualidade da base de jogadores gerada por um influencer, em escala de 0 a 100 pontos.",
         formula:
-          "Ticket Médio Depósito (40%) + GGR por Jogador (40%) + WD Ratio invertido (20%)",
-        referencia: "Streamers → Financeiro",
+          "PVI = (Score Ticket Médio Depósito × 0,4) + (Score GGR por Jogador × 0,4) + (Score WD Ratio × 0,2)",
+        nota:
+          "Perfis: Whales (≥ 80 pts), Core (60–79 pts), Recreativos (15–59 pts), Caçadores de Bônus (< 15 pts). Sempre exibido como 'X pts', nunca como percentual.",
+        referencia: "Streamers · Overview Influencer",
       },
       {
         termo: "Perfil de Jogador",
@@ -455,6 +457,32 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta e Speed Baccarat lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente.",
         referencia: "Overview Spin",
       },
+      {
+        termo: "Visibilidade na Vitrine",
+        definicao:
+          "Percentual das mesas Spin Gaming que aparecem nas primeiras posições do lobby da plataforma parceira. Calculado com base no número de mesas ranqueadas dentro do top 20 em relação ao total de mesas ativas.",
+        nota: "Atualizado ao longo do dia conforme os snapshots automáticos do lobby. Compara com o mesmo horário do dia anterior.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Snapshot de Lobby",
+        definicao:
+          "Captura automática das posições de todos os jogos no lobby de uma plataforma parceira em um momento específico. Cada snapshot registra a posição absoluta de cada mesa Spin em relação aos concorrentes.",
+        nota: "Os snapshots são executados em intervalos regulares ao longo do dia. A aba Posicionamento exibe o snapshot mais recente do dia como 'posição atual'.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Heatmap de Posicionamento",
+        definicao:
+          "Tabela que exibe a posição histórica de cada mesa do lobby ao longo do tempo. As cores indicam a faixa de posição: verde para posições altas (P1–P3), azul para posições intermediárias e cinza para posições fora do top 10 ou sem dados.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Concorrentes à Frente",
+        definicao:
+          "Quantidade de jogos de outras plataformas que aparecem com posição melhor (número menor) que a mesa Spin no lobby, por tipo de jogo. Valor zero indica que a mesa Spin é a primeira do tipo naquele lobby.",
+        referencia: "Overview Spin · Posicionamento",
+      },
     ],
   },
   {
@@ -503,10 +531,10 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "UTM (Urchin Tracking Module)",
         definicao:
-          "Parâmetros adicionados às URLs de campanhas para rastrear a origem do tráfego. Permitem identificar qual campanha, canal e conteúdo gerou cada acesso, registro e FTD.",
+          "Parâmetro de rastreamento de URL (Urchin Tracking Module) usado para identificar a origem do tráfego de uma campanha ou influencer.",
         nota:
-          "Na plataforma, cada UTM é vinculada a uma campanha específica na Gestão de Links.",
-        referencia: "Links e Materiais · Gestão de Links",
+          "No contexto da plataforma, UTMs são mapeadas na Gestão de Links e vinculadas a campanhas. Apenas tráfego com UTMs mapeadas aparece nos dashboards de Mídias Sociais e Streamers.",
+        referencia: "Mídias Sociais · Streamers",
       },
     ],
   },

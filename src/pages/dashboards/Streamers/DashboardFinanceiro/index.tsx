@@ -6,12 +6,12 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { SelectComIcone, SectionTitle, KpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { SelectComIcone, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -20,10 +20,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  Clock,
   Coins,
   Gauge,
   ListOrdered,
-  Loader2,
   Scale,
   Shield,
   Trophy,
@@ -71,10 +71,6 @@ const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: str
     border: "rgba(232,64,37,0.35)",
   },
 };
-
-// ─── CONSTANTES ───────────────────────────────────────────────────────────────
-const MES_INICIO = { ano: 2025, mes: 11 };
-const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 interface InfluencerPerfil { id: string; nome_artistico: string; cache_hora: number; }
 
@@ -128,23 +124,6 @@ interface TotaisFinanceiros {
   depositos: number; deposit_count: number; deposito_ticket_medio: number;
   saques: number; saque_ticket_medio: number;
   ggr: number; ggr_por_jogador: number; wd_ratio: number; pvi: number; investimento: number;
-}
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-function getMesesDisponiveis() {
-  const hoje = new Date();
-  const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
-  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
-    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++; if (mes > 11) { mes = 0; ano++; }
-  }
-  return lista;
-}
-
-function fmtBRL(v: number) {
-  const sign = v < 0 ? "-" : "";
-  return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // ─── PVI ──────────────────────────────────────────────────────────────────────
@@ -213,7 +192,7 @@ function PieTooltip({ active, payload, total }: {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
@@ -607,7 +586,8 @@ export default function DashboardFinanceiro() {
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
     background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+    borderRadius: 18, padding: 20,
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const thStyle = getThStyle(t);
@@ -637,8 +617,8 @@ export default function DashboardFinanceiro() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -659,9 +639,7 @@ export default function DashboardFinanceiro() {
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
               background: historico
-                ? (brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+                ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                 : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
@@ -699,7 +677,7 @@ export default function DashboardFinanceiro() {
             )}
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
@@ -717,56 +695,66 @@ export default function DashboardFinanceiro() {
           KPIs Financeiros
         </SectionTitle>
 
-        {/* Linha 1: FTD / Depósitos / Saques */}
-        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard
-            label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
-            subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
-            icon={<Trophy size={14} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
-            atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
-            isHistorico={historico} isBRL
-          />
-          <KpiCard
-            label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
-            subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
-            icon={<ArrowDownToLine size={14} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
-            atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
-            isHistorico={historico} isBRL
-          />
-          <KpiCard
-            label="Saques" value={fmtBRL(totaisExibir.saques)}
-            subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
-            icon={<ArrowUpFromLine size={14} aria-hidden />} accentColor={BRAND.vermelho}
-            atual={totaisExibir.saques} anterior={totaisAnt.saques}
-            isHistorico={historico} isBRL isInverso
-          />
-        </div>
-
-        {/* Linha 2: WD Ratio / GGR por Jogador / PVI */}
-        <div className="app-grid-kpi-3">
-          <KpiCard
-            label="WD Ratio"
-            value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
-            icon={<Scale size={14} aria-hidden />} accentColor={BRAND.vermelho}
-            atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
-            isHistorico={historico} isInverso
-          />
-          <KpiCard
-            label="GGR por Jogador"
-            value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
-            icon={<CircleDollarSign size={14} aria-hidden />} accentColor={BRAND.roxo}
-            atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
-            isHistorico={historico} isBRL
-          />
-          <KpiCard
-            label="PVI"
-            value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi} pts` : "—"}
-            subValue={{ label: "Player Value Index (0–100)", value: "" }}
-            icon={<Gauge size={14} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.verde}
-            atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
-            isHistorico={historico}
-          />
-        </div>
+        {loading ? (
+          <>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              {[0, 1, 2].map((i) => <SkeletonKpiCard key={i} />)}
+            </div>
+            <div className="app-grid-kpi-3">
+              {[0, 1, 2].map((i) => <SkeletonKpiCard key={`r2-${i}`} />)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              <KpiCard
+                label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
+                subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
+                icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
+                atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
+                isHistorico={historico} isBRL
+              />
+              <KpiCard
+                label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
+                subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
+                icon={<ArrowDownToLine size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
+                atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
+                isHistorico={historico} isBRL
+              />
+              <KpiCard
+                label="Saques" value={fmtBRL(totaisExibir.saques)}
+                subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
+                icon={<ArrowUpFromLine size={16} aria-hidden />} accentColor={BRAND.vermelho}
+                atual={totaisExibir.saques} anterior={totaisAnt.saques}
+                isHistorico={historico} isBRL isInverso
+              />
+            </div>
+            <div className="app-grid-kpi-3">
+              <KpiCard
+                label="WD Ratio"
+                value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
+                icon={<Scale size={16} aria-hidden />} accentColor={BRAND.vermelho}
+                atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
+                isHistorico={historico} isInverso
+              />
+              <KpiCard
+                label="GGR por Jogador"
+                value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
+                icon={<CircleDollarSign size={16} aria-hidden />} accentColor={BRAND.roxo}
+                atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
+                isHistorico={historico} isBRL
+              />
+              <KpiCard
+                label="PVI"
+                value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi} pts` : "—"}
+                subValue={{ label: "Player Value Index (0–100)", value: "" }}
+                icon={<Gauge size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.verde}
+                atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
+                isHistorico={historico}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}

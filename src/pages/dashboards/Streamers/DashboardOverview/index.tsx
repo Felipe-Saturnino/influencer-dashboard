@@ -28,6 +28,7 @@ import {
   KpiCardDepositos,
   FunilVisual,
   SelectComIcone,
+  SkeletonKpiCard,
   SortTableTh,
   type SortDir,
 } from "../../../../components/dashboard";
@@ -39,7 +40,6 @@ import {
   ChevronRight,
   Clock,
   Coins,
-  Loader2,
   Receipt,
   Wallet,
   Filter,
@@ -50,6 +50,7 @@ import {
   UserPlus,
   Users,
   Video,
+  X,
 } from "lucide-react";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -227,7 +228,7 @@ function RankingThSort({
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
@@ -553,7 +554,7 @@ export default function DashboardOverview() {
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const thStyle = getThStyle(t);
@@ -592,8 +593,8 @@ export default function DashboardOverview() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -639,9 +640,7 @@ export default function DashboardOverview() {
                   ? `1px solid ${brand.accent}`
                   : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? (brand.useBrand
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -685,7 +684,7 @@ export default function DashboardOverview() {
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
@@ -703,68 +702,84 @@ export default function DashboardOverview() {
           KPIs Executivos
         </SectionTitle>
 
-        <div
-          style={{
-            fontSize: 10,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}
-        >
-          Financeiro
-        </div>
-        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="GGR" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<BarChart2 size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
-        </div>
+        {loading ? (
+          <>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              {[0, 1, 2].map((i) => <SkeletonKpiCard key={i} />)}
+            </div>
+            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+              {[0, 1, 2, 3].map((i) => <SkeletonKpiCard key={`op-${i}`} />)}
+            </div>
+            <div className="app-grid-kpi-4">
+              {[0, 1, 2, 3].map((i) => <SkeletonKpiCard key={`cv-${i}`} />)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                fontSize: 10,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              Financeiro
+            </div>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              <KpiCard label="GGR" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+              <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
+              <KpiCard label="ROI" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<BarChart2 size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
+            </div>
 
-        <div
-          style={{
-            borderTop: `1px solid ${t.cardBorder}`,
-            margin: "16px 0 12px",
-            paddingTop: 12,
-            fontSize: 10,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-          }}
-        >
-          Operação
-        </div>
-        <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
-          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
-          <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
-        </div>
+            <div
+              style={{
+                borderTop: `1px solid ${t.cardBorder}`,
+                margin: "16px 0 12px",
+                paddingTop: 12,
+                fontSize: 10,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Operação
+            </div>
+            <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+              <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
+              <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
+              <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
+              <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
+            </div>
 
-        <div
-          style={{
-            borderTop: `1px solid ${t.cardBorder}`,
-            margin: "16px 0 12px",
-            paddingTop: 12,
-            fontSize: 10,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-          }}
-        >
-          Conversão
-        </div>
-        <div className="app-grid-kpi-4">
-          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
-          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
-          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
-          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
-        </div>
+            <div
+              style={{
+                borderTop: `1px solid ${t.cardBorder}`,
+                margin: "16px 0 12px",
+                paddingTop: 12,
+                fontSize: 10,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Conversão
+            </div>
+            <div className="app-grid-kpi-4">
+              <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
+              <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+              <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
+              <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
@@ -818,7 +833,7 @@ export default function DashboardOverview() {
                 onClick={() => setStatusFiltro(null)}
                 style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}
               >
-                ✕ Limpar
+                <X size={11} aria-hidden /> Limpar
               </button>
             )}
           </div>
