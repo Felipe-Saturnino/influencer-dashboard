@@ -47,7 +47,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 // ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const DAYS   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
 function getWeekDays(date: Date): Date[] {
   const day = date.getDay();
