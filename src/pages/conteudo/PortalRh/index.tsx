@@ -11,7 +11,9 @@ import {
   MessagesSquare,
   Pin,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
+import { GerenciamentoPostagens } from "./GerenciamentoPostagens";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -20,7 +22,13 @@ import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
-type AbaPortal = "comunicados" | "politicas" | "rhtalks";
+type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
+
+type RhPostagemStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
+
+function isPostagemPublica(status: RhPostagemStatus | string | null | undefined): boolean {
+  return !status || status === "publicado";
+}
 
 type RhPortalCategoria = {
   id: string;
@@ -38,8 +46,9 @@ type RhPortalComunicado = {
   categoria_id: string;
   is_pinned: boolean;
   requires_acknowledgment: boolean;
-  published_at: string;
+  published_at: string | null;
   published_by: string | null;
+  status?: RhPostagemStatus | null;
   categoria?: RhPortalCategoria | null;
 };
 
@@ -52,6 +61,8 @@ type RhPortalDocumento = {
   requires_acknowledgment: boolean;
   storage_path: string | null;
   updated_at: string;
+  status?: RhPostagemStatus | null;
+  published_at?: string | null;
   categoria?: RhPortalCategoria | null;
 };
 
@@ -63,6 +74,8 @@ type RhPortalRhTalk = {
   duracao_min: number;
   resumo: string | null;
   storage_path: string | null;
+  status?: RhPostagemStatus | null;
+  published_at?: string | null;
 };
 
 type ReadReceiptRow = {
@@ -126,7 +139,8 @@ function truncPreview(s: string, max = PREVIEW_LEN): string {
   return `${t.slice(0, max).trim()}…`;
 }
 
-function fmtDataPublicacao(iso: string): string {
+function fmtDataPublicacao(iso: string | null | undefined): string {
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("pt-BR", {
       day: "numeric",
@@ -138,7 +152,8 @@ function fmtDataPublicacao(iso: string): string {
   }
 }
 
-function isNovo(iso: string): boolean {
+function isNovo(iso: string | null | undefined): boolean {
+  if (!iso) return false;
   const d = new Date(iso).getTime();
   return Date.now() - d < 7 * 24 * 60 * 60 * 1000;
 }
@@ -282,10 +297,10 @@ export default function PortalRhPage() {
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
     setCategoriasPol(cats.filter((c) => c.scope === "politica"));
 
-    const comRows = (comRes.data ?? []) as RhPortalComunicado[];
+    const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => isPostagemPublica(c.status));
     setComunicados(comRows);
-    setDocumentos((docRes.data ?? []) as RhPortalDocumento[]);
-    const talkRows = (talkRes.data ?? []) as RhPortalRhTalk[];
+    setDocumentos(((docRes.data ?? []) as RhPortalDocumento[]).filter((d) => isPostagemPublica(d.status)));
+    const talkRows = ((talkRes.data ?? []) as RhPortalRhTalk[]).filter((tk) => isPostagemPublica(tk.status));
     setTalks(talkRows);
 
     const talkIds = talkRows.map((x) => x.id);
@@ -341,6 +356,10 @@ export default function PortalRhPage() {
     void carregar();
   }, [carregar, perm.loading, perm.canView, user?.id]);
 
+  useEffect(() => {
+    if (!perm.canEditarOk && aba === "gerenciamento") setAba("comunicados");
+  }, [perm.canEditarOk, aba]);
+
   const comunicadoPinned = useMemo(
     () => comunicados.find((c) => c.is_pinned) ?? null,
     [comunicados],
@@ -364,7 +383,7 @@ export default function PortalRhPage() {
         uid &&
         !recMap.get(receiptKey("comunicado", b.id))?.acknowledged_at;
       if (pendA !== pendB) return pendA ? -1 : 1;
-      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+      return new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime();
     });
     return list;
   }, [comunicados, filtroCatCom, receipts, user?.id]);
@@ -621,6 +640,7 @@ export default function PortalRhPage() {
         subtitle="Comunicados oficiais, políticas internas e atas das RH Talks."
       />
 
+      {aba !== "gerenciamento" ? (
       <div style={{ marginBottom: 18 }}>
         <label htmlFor="rh-portal-busca" className="sr-only">
           Buscar no portal de RH
@@ -657,6 +677,7 @@ export default function PortalRhPage() {
           />
         </div>
       </div>
+      ) : null}
 
       <div role="tablist" aria-label="Seções do portal de RH" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
         {(
@@ -664,6 +685,9 @@ export default function PortalRhPage() {
             { key: "comunicados" as const, label: "Comunicados", Icon: Megaphone },
             { key: "politicas" as const, label: "Políticas e normativas", Icon: FileText },
             { key: "rhtalks" as const, label: "RH Talks", Icon: MessagesSquare },
+            ...(perm.canEditarOk
+              ? [{ key: "gerenciamento" as const, label: "Gerenciamento de Postagens", Icon: SlidersHorizontal }]
+              : []),
           ] as const
         ).map(({ key, label, Icon }) => {
           const ativa = aba === key && !buscaAtiva;
@@ -713,6 +737,12 @@ export default function PortalRhPage() {
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
+      ) : aba === "gerenciamento" && perm.canEditarOk ? (
+        <GerenciamentoPostagens
+          categoriasCom={categoriasCom}
+          categoriasPol={categoriasPol}
+          onDadosAlterados={() => void carregar()}
+        />
       ) : buscaAtiva ? (
         <div style={{ marginTop: 8 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, marginBottom: 14 }}>Resultados da busca</h2>

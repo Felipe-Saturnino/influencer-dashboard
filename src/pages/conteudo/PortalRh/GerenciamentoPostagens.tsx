@@ -1,0 +1,732 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Archive,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  History,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+} from "lucide-react";
+import { supabase } from "../../../lib/supabase";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { FONT } from "../../../constants/theme";
+import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
+import {
+  fmtDataPt,
+  labelComunicadoFromSlug,
+  labelPoliticaFromSlug,
+  registrarHistoricoStatus,
+  RH_POSTAGEM_STATUS_LABEL,
+  RH_POSTAGEM_TIPO_UI_LABEL,
+  stripHtmlText,
+  type RhPostagemContentType,
+  type RhPostagemStatus,
+  type RhPostagemTipoUi,
+} from "../../../lib/portalRhWorkflow";
+import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
+import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+
+type Categoria = { id: string; slug: string; label: string; scope: string };
+
+export type PostagemGerenciamentoRow = {
+  id: string;
+  contentType: RhPostagemContentType;
+  tipoUi: RhPostagemTipoUi;
+  assunto: string;
+  autorNome: string;
+  tipoPostagemLabel: string;
+  createdAt: string;
+  status: RhPostagemStatus;
+  approvedAt: string | null;
+  aprovadorNome: string | null;
+  publishedAt: string | null;
+  textoBusca: string;
+};
+
+function fmtMesAnoCarrossel(ano: number, mes: number): string {
+  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+}
+
+function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
+  switch (status) {
+    case "publicado":
+      return ["arquivar", "historico"];
+    case "rascunho":
+      return ["editar", "historico"];
+    case "aprovacao":
+      return ["editar", "aprovar", "historico"];
+    case "arquivado":
+      return ["historico"];
+    default:
+      return ["historico"];
+  }
+}
+
+export function GerenciamentoPostagens({
+  categoriasCom,
+  categoriasPol,
+  onDadosAlterados,
+}: {
+  categoriasCom: Categoria[];
+  categoriasPol: Categoria[];
+  onDadosAlterados: () => void;
+}) {
+  const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
+
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<PostagemGerenciamentoRow[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | RhPostagemTipoUi>("todos");
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | RhPostagemStatus>("todos");
+  const [busca, setBusca] = useState("");
+  const [buscaDeb, setBuscaDeb] = useState("");
+  const [idxMes, setIdxMes] = useState(0);
+
+  const [modalCriar, setModalCriar] = useState(false);
+  const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
+  const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
+  const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);
+    return () => window.clearTimeout(id);
+  }, [busca]);
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setErro(null);
+
+    const [comRes, docRes, talkRes] = await Promise.all([
+      supabase
+        .from("rh_portal_comunicado")
+        .select("id, titulo, corpo, status, created_at, published_at, approved_at, approved_by, created_by, published_by, categoria:rh_portal_categoria(slug)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("rh_portal_documento")
+        .select("id, titulo, corpo, introducao, status, created_at, published_at, approved_at, approved_by, created_by, categoria:rh_portal_categoria(slug)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("rh_portal_rh_talk")
+        .select("id, titulo, corpo, resumo, introducao, status, created_at, published_at, approved_at, approved_by, created_by")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (comRes.error) setErro(comRes.error.message);
+    else if (docRes.error) setErro(docRes.error.message);
+    else if (talkRes.error) setErro(talkRes.error.message);
+
+    const userIds = new Set<string>();
+    const built: PostagemGerenciamentoRow[] = [];
+
+    for (const c of comRes.data ?? []) {
+      const row = c as unknown as {
+        id: string;
+        titulo: string;
+        corpo: string;
+        status: RhPostagemStatus;
+        created_at: string;
+        published_at: string | null;
+        approved_at: string | null;
+        approved_by: string | null;
+        created_by: string | null;
+        published_by: string | null;
+        categoria?: { slug: string } | { slug: string }[] | null;
+      };
+      const catSlugCom = Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug;
+      const autorId = row.created_by ?? row.published_by;
+      if (autorId) userIds.add(autorId);
+      if (row.approved_by) userIds.add(row.approved_by);
+      built.push({
+        id: row.id,
+        contentType: "comunicado",
+        tipoUi: "comunicado",
+        assunto: row.titulo,
+        autorNome: "",
+        tipoPostagemLabel: labelComunicadoFromSlug(catSlugCom ?? ""),
+        createdAt: row.created_at,
+        status: row.status ?? "publicado",
+        approvedAt: row.approved_at,
+        aprovadorNome: "",
+        publishedAt: row.published_at,
+        textoBusca: `${row.titulo} ${stripHtmlText(row.corpo)}`.toLowerCase(),
+        _autorId: autorId,
+        _aprovadorId: row.approved_by,
+      } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });
+    }
+
+    for (const d of docRes.data ?? []) {
+      const row = d as unknown as {
+        id: string;
+        titulo: string;
+        corpo: string | null;
+        introducao: string | null;
+        status: RhPostagemStatus;
+        created_at: string;
+        published_at: string | null;
+        approved_at: string | null;
+        approved_by: string | null;
+        created_by: string | null;
+        categoria?: { slug: string } | { slug: string }[] | null;
+      };
+      const catSlug = Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug;
+      if (row.created_by) userIds.add(row.created_by);
+      if (row.approved_by) userIds.add(row.approved_by);
+      built.push({
+        id: row.id,
+        contentType: "documento",
+        tipoUi: "politica",
+        assunto: row.titulo,
+        autorNome: "",
+        tipoPostagemLabel: labelPoliticaFromSlug(catSlug ?? ""),
+        createdAt: row.created_at,
+        status: row.status ?? "publicado",
+        approvedAt: row.approved_at,
+        aprovadorNome: "",
+        publishedAt: row.published_at,
+        textoBusca: `${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? "")}`.toLowerCase(),
+        _autorId: row.created_by,
+        _aprovadorId: row.approved_by,
+      } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });
+    }
+
+    for (const tk of talkRes.data ?? []) {
+      const row = tk as {
+        id: string;
+        titulo: string;
+        corpo: string | null;
+        resumo: string | null;
+        introducao: string | null;
+        status: RhPostagemStatus;
+        created_at: string;
+        published_at: string | null;
+        approved_at: string | null;
+        approved_by: string | null;
+        created_by: string | null;
+      };
+      if (row.created_by) userIds.add(row.created_by);
+      if (row.approved_by) userIds.add(row.approved_by);
+      built.push({
+        id: row.id,
+        contentType: "rh_talk",
+        tipoUi: "rh_talk",
+        assunto: row.titulo,
+        autorNome: "",
+        tipoPostagemLabel: "RH Talks",
+        createdAt: row.created_at,
+        status: row.status ?? "publicado",
+        approvedAt: row.approved_at,
+        aprovadorNome: "",
+        publishedAt: row.published_at,
+        textoBusca: `${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? row.resumo ?? "")}`.toLowerCase(),
+        _autorId: row.created_by,
+        _aprovadorId: row.approved_by,
+      } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });
+    }
+
+    const nomes: Record<string, string> = {};
+    if (userIds.size > 0) {
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
+      for (const p of profs ?? []) {
+        const pr = p as { id: string; name: string | null };
+        nomes[pr.id] = pr.name ?? "";
+      }
+    }
+
+    setRows(
+      built.map((r) => {
+        const ext = r as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null };
+        return {
+          ...r,
+          autorNome: (ext._autorId && nomes[ext._autorId]) || "—",
+          aprovadorNome: (ext._aprovadorId && nomes[ext._aprovadorId]) || "—",
+        };
+      }),
+    );
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const mesesDisponiveis = useMemo(() => {
+    const keys = new Set<string>();
+    for (const r of rows) {
+      const d = new Date(r.createdAt);
+      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
+    }
+    const entries = [...keys].map((k) => {
+      const [ano, mes] = k.split("-").map(Number);
+      return { ano, mes, label: fmtMesAnoCarrossel(ano, mes) };
+    });
+    entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+    if (entries.length) return entries;
+    const hoje = new Date();
+    return [{ ano: hoje.getFullYear(), mes: hoje.getMonth(), label: fmtMesAnoCarrossel(hoje.getFullYear(), hoje.getMonth()) }];
+  }, [rows]);
+
+  useEffect(() => {
+    if (mesesDisponiveis.length === 0) return;
+    setIdxMes((i) => Math.min(i, mesesDisponiveis.length - 1));
+  }, [mesesDisponiveis]);
+
+  useEffect(() => {
+    if (rows.length > 0 && mesesDisponiveis.length > 0) {
+      setIdxMes(mesesDisponiveis.length - 1);
+    }
+  }, [rows.length, mesesDisponiveis.length]);
+
+  const rowsFiltradas = useMemo(() => {
+    const mesSel = mesesDisponiveis[idxMes];
+    let list = rows;
+    if (mesSel) {
+      list = list.filter((r) => {
+        const d = new Date(r.createdAt);
+        return d.getFullYear() === mesSel.ano && d.getMonth() === mesSel.mes;
+      });
+    }
+    if (filtroTipo !== "todos") {
+      list = list.filter((r) => r.tipoUi === filtroTipo);
+    }
+    if (filtroStatus !== "todos") {
+      list = list.filter((r) => r.status === filtroStatus);
+    }
+    if (buscaDeb) {
+      list = list.filter((r) => r.textoBusca.includes(buscaDeb));
+    }
+    return list;
+  }, [rows, mesesDisponiveis, idxMes, filtroTipo, filtroStatus, buscaDeb]);
+
+  const mesSel = mesesDisponiveis[idxMes];
+  const carouselPrimeiro = idxMes <= 0;
+  const carouselUltimo = idxMes >= mesesDisponiveis.length - 1;
+
+  const btnNav = {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  } as const;
+
+  const selectFiltroStyle = {
+    padding: "8px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontSize: 12,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    minWidth: 0,
+  } as const;
+
+  async function aprovarPostagem(row: PostagemGerenciamentoRow) {
+    if (!user?.id) return;
+    setAcaoLoading(row.id);
+    const now = new Date().toISOString();
+    const table =
+      row.contentType === "comunicado"
+        ? "rh_portal_comunicado"
+        : row.contentType === "documento"
+          ? "rh_portal_documento"
+          : "rh_portal_rh_talk";
+    const payload: Record<string, unknown> = {
+      status: "publicado",
+      approved_at: now,
+      approved_by: user.id,
+      published_at: now,
+    };
+    if (row.contentType === "comunicado") {
+      payload.published_by = user.id;
+    }
+    if (row.contentType === "documento") {
+      payload.updated_by = user.id;
+    }
+    if (row.contentType === "rh_talk") {
+      payload.data_reuniao = now.slice(0, 10);
+      const { data: cur } = await supabase.from("rh_portal_rh_talk").select("numero").eq("id", row.id).single();
+      if ((cur as { numero: number | null } | null)?.numero == null) {
+        const { data: maxRow } = await supabase.from("rh_portal_rh_talk").select("numero").order("numero", { ascending: false }).limit(1);
+        payload.numero = ((maxRow?.[0] as { numero: number } | undefined)?.numero ?? 0) + 1;
+      }
+    }
+    const { error } = await supabase.from(table).update(payload).eq("id", row.id);
+    if (!error) {
+      await registrarHistoricoStatus(supabase, row.contentType, row.id, "aprovacao", "publicado", user.id);
+      await carregar();
+      onDadosAlterados();
+    } else {
+      setErro(error.message);
+    }
+    setAcaoLoading(null);
+  }
+
+  async function arquivarPostagem(row: PostagemGerenciamentoRow) {
+    if (!user?.id) return;
+    setAcaoLoading(row.id);
+    const table =
+      row.contentType === "comunicado"
+        ? "rh_portal_comunicado"
+        : row.contentType === "documento"
+          ? "rh_portal_documento"
+          : "rh_portal_rh_talk";
+    const { error } = await supabase.from(table).update({ status: "arquivado" }).eq("id", row.id);
+    if (!error) {
+      await registrarHistoricoStatus(supabase, row.contentType, row.id, row.status, "arquivado", user.id);
+      await carregar();
+      onDadosAlterados();
+    } else {
+      setErro(error.message);
+    }
+    setAcaoLoading(null);
+  }
+
+  const filtroWrap = {
+    borderRadius: 14,
+    border: brand.primaryTransparentBorder,
+    background: brand.primaryTransparentBg,
+    padding: "14px 18px",
+    marginBottom: 16,
+  };
+
+  return (
+    <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento">
+      <div style={filtroWrap}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              disabled={carouselPrimeiro}
+              onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
+              style={{ ...btnNav, opacity: carouselPrimeiro ? 0.4 : 1, cursor: carouselPrimeiro ? "not-allowed" : "pointer" }}
+            >
+              <ChevronLeft size={16} aria-hidden />
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 140, textAlign: "center" }}>
+              {mesSel?.label ?? "—"}
+            </span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={carouselUltimo}
+              onClick={() => setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1))}
+              style={{ ...btnNav, opacity: carouselUltimo ? 0.4 : 1, cursor: carouselUltimo ? "not-allowed" : "pointer" }}
+            >
+              <ChevronRight size={16} aria-hidden />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFiltroStatus("arquivado")}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${filtroStatus === "arquivado" ? brand.primary : t.cardBorder}`,
+              background:
+                filtroStatus === "arquivado"
+                  ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                  : t.inputBg,
+              color: filtroStatus === "arquivado" ? brand.primary : t.textMuted,
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <History size={14} aria-hidden />
+            Histórico
+          </button>
+
+          <select
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
+            aria-label="Filtrar por tipo de postagem"
+            style={selectFiltroStyle}
+          >
+            <option value="todos">Todos</option>
+            <option value="comunicado">Comunicados</option>
+            <option value="politica">Políticas e Normativas</option>
+            <option value="rh_talk">RH Talks</option>
+          </select>
+
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
+            aria-label="Filtrar por status da postagem"
+            style={selectFiltroStyle}
+          >
+            <option value="todos">Todos</option>
+            <option value="publicado">Publicado</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="aprovacao">Aprovação</option>
+            <option value="arquivado">Arquivado</option>
+          </select>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <div
+            style={{
+              flex: "1 1 200px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              padding: "8px 12px",
+              minWidth: 200,
+            }}
+          >
+            <Search size={16} color={t.textMuted} aria-hidden />
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Palavras-chave no assunto ou descrição"
+              aria-label="Pesquisar postagens por assunto ou descrição"
+              style={{
+                flex: 1,
+                border: "none",
+                background: "transparent",
+                color: t.text,
+                fontSize: 13,
+                outline: "none",
+                fontFamily: FONT.body,
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditRef(null);
+              setModalCriar(true);
+            }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 16px",
+              borderRadius: 12,
+              border: "none",
+              cursor: "pointer",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 13,
+              fontFamily: FONT.body,
+              background: ctaGradient(brand),
+            }}
+          >
+            <Plus size={16} aria-hidden />
+            Criar
+          </button>
+        </div>
+      </div>
+
+      {erro ? (
+        <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
+          {erro}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40, color: t.textMuted }}>
+          <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
+          Carregando…
+        </div>
+      ) : rowsFiltradas.length === 0 ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Sem dados para o período selecionado.
+        </div>
+      ) : (
+        <div className="app-table-wrap">
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              borderRadius: 14,
+              overflow: "hidden",
+            }}
+          >
+            <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal de RH</caption>
+            <thead>
+              <tr>
+                {[
+                  "Assunto",
+                  "Autor",
+                  "Tipo de Postagem",
+                  "Data da Criação",
+                  "Status",
+                  "Data de Aprovação",
+                  "Aprovador",
+                  "Data de Postagem",
+                  "Ações",
+                ].map((h, i) => (
+                  <th key={h} scope="col" style={getThStyle(t, i >= 1 && i <= 7 ? { textAlign: i === 0 ? "left" : "right" } : undefined)}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rowsFiltradas.map((row, i) => {
+                const acoes = acoesPorStatus(row.status);
+                const busy = acaoLoading === row.id;
+                return (
+                  <tr key={`${row.contentType}-${row.id}`} style={{ background: zebraStripe(i) }}>
+                    <td
+                      style={{
+                        ...getTdStyle(t),
+                        textAlign: "left",
+                        maxWidth: 180,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={row.assunto}
+                    >
+                      {row.assunto}
+                    </td>
+                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.autorNome}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.tipoPostagemLabel}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.createdAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{RH_POSTAGEM_STATUS_LABEL[row.status]}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.approvedAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.aprovadorNome}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.publishedAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                        {acoes.includes("editar") ? (
+                          <button
+                            type="button"
+                            aria-label={`Editar ${row.assunto}`}
+                            disabled={busy}
+                            onClick={() => {
+                              setEditRef({ contentType: row.contentType, id: row.id });
+                              setModalCriar(true);
+                            }}
+                            style={btnAcao(t)}
+                          >
+                            <Pencil size={13} aria-hidden />
+                          </button>
+                        ) : null}
+                        {acoes.includes("aprovar") ? (
+                          <button
+                            type="button"
+                            aria-label={`Aprovar ${row.assunto}`}
+                            disabled={busy}
+                            onClick={() => void aprovarPostagem(row)}
+                            style={btnAcao(t)}
+                          >
+                            <Check size={13} aria-hidden />
+                          </button>
+                        ) : null}
+                        {acoes.includes("arquivar") ? (
+                          <button
+                            type="button"
+                            aria-label={`Arquivar ${row.assunto}`}
+                            disabled={busy}
+                            onClick={() => void arquivarPostagem(row)}
+                            style={btnAcao(t)}
+                          >
+                            <Archive size={13} aria-hidden />
+                          </button>
+                        ) : null}
+                        {acoes.includes("historico") ? (
+                          <button
+                            type="button"
+                            aria-label={`Histórico de ${row.assunto}`}
+                            disabled={busy}
+                            onClick={() =>
+                              setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
+                            }
+                            style={btnAcao(t)}
+                          >
+                            <Clock size={13} aria-hidden />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <ModalCriarPostagem
+        open={modalCriar}
+        modo={editRef ? "editar" : "criar"}
+        editRef={editRef}
+        categoriasCom={categoriasCom}
+        categoriasPol={categoriasPol}
+        onClose={() => {
+          setModalCriar(false);
+          setEditRef(null);
+        }}
+        onSalvo={() => {
+          void carregar();
+          onDadosAlterados();
+        }}
+      />
+
+      <ModalHistoricoPostagem
+        open={!!histRef}
+        assunto={histRef?.assunto ?? ""}
+        contentType={histRef?.contentType ?? null}
+        contentId={histRef?.id ?? null}
+        onClose={() => setHistRef(null)}
+        t={t}
+      />
+    </div>
+  );
+}
+
+function btnAcao(t: { cardBorder: string; inputBg?: string; textMuted: string }) {
+  return {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.textMuted,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  } as const;
+}
