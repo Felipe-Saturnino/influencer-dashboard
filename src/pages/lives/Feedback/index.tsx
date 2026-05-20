@@ -297,12 +297,12 @@ function LiveCard({
 
       {isRealizada && res && (
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <div style={statBox("var(--brand-action, #7c3aed)", isDark)}>
+          <div style={statBox("var(--brand-primary, #7c3aed)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-action, #7c3aed)",
+                color: "var(--brand-primary, #7c3aed)",
                 fontFamily: FONT.body,
               }}
             >
@@ -310,12 +310,12 @@ function LiveCard({
             </div>
             <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>Duração</div>
           </div>
-          <div style={statBox("var(--brand-contrast, #1e36f8)", isDark)}>
+          <div style={statBox("var(--brand-secondary, #1e36f8)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-contrast, #1e36f8)",
+                color: "var(--brand-secondary, #1e36f8)",
                 fontFamily: FONT.body,
               }}
             >
@@ -323,12 +323,12 @@ function LiveCard({
             </div>
             <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>Média Views</div>
           </div>
-          <div style={statBox("var(--brand-icon-color)", isDark)}>
+          <div style={statBox("var(--brand-accent, #7c3aed)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-icon-color)",
+                color: "var(--brand-accent, #7c3aed)",
                 fontFamily: FONT.body,
               }}
             >
@@ -473,7 +473,7 @@ export default function Feedback() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -493,8 +493,8 @@ export default function Feedback() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Carrossel de semanas, Histórico, Influencer e Operadora — alinhado ao Overview Influencer */}
@@ -536,9 +536,9 @@ export default function Feedback() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", minHeight: 44, borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
-                color: historico ? brand.accent : t.textMuted,
+                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
+                background: historico ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : "transparent",
+                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
                 lineHeight: 1,
@@ -565,9 +565,7 @@ export default function Feedback() {
                   border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
                   background:
                     filterOperadora !== "todas"
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : `${BRAND.roxoVivo}18`
+                      ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
                       : (t.inputBg ?? t.cardBg),
                   color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                   fontWeight: filterOperadora !== "todas" ? 700 : 400,
@@ -687,9 +685,12 @@ export default function Feedback() {
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
-          Carregando...
+        <div
+          role="status"
+          aria-label="Carregando feedback de lives"
+          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -758,6 +759,18 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
     return () => window.clearTimeout(id);
   }, []);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const ctaSalvarBg = brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+
   async function handleSave() {
     setError("");
     if (showResultFields) {
@@ -803,10 +816,8 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
 
-  const ctaSalvarBg = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
-
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "clamp(16px, 4vw, 28px)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "clamp(16px, 4vw, 28px)" }}>
       <div
         ref={containerRef}
         tabIndex={-1}

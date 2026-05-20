@@ -600,6 +600,12 @@ Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(
 
 ---
 
+## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
+
+Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`: `streamers`, `mesas_spin`, `dash_midias_sociais`, `dash_overview_influencer`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga.
+
+---
+
 ## O Que Nunca Fazer em Dashboards
 
 - Nunca declarar componentes funcionais (Tooltips, sub-tabs, `render*`) **dentro** do componente da página

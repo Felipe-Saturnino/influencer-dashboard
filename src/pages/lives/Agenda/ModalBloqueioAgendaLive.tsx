@@ -58,6 +58,15 @@ export default function ModalBloqueioAgendaLive({
     return () => window.cancelAnimationFrame(id);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const copy = TEXTO_POR_CONTEXTO[contexto];
@@ -68,7 +77,7 @@ export default function ModalBloqueioAgendaLive({
       style={{
         position: "fixed",
         inset: 0,
-        background: "#00000088",
+        background: "rgba(0,0,0,0.72)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -174,7 +183,9 @@ export default function ModalBloqueioAgendaLive({
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
-                background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
+                background: brand.useBrand
+                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                  : "linear-gradient(135deg, #4a2082, #1e36f8)",
                 color: "#fff",
                 fontSize: 13,
                 fontWeight: 700,
@@ -191,10 +202,10 @@ export default function ModalBloqueioAgendaLive({
               style={{
                 padding: "12px 16px",
                 borderRadius: 10,
-                border: "1px solid var(--brand-contrast, #1e36f8)",
+                border: "1px solid var(--brand-secondary, #1e36f8)",
                 cursor: "pointer",
-                background: "var(--brand-contrast-12)",
-                color: "var(--brand-contrast, #1e36f8)",
+                background: "color-mix(in srgb, var(--brand-secondary, #1e36f8) 12%, transparent)",
+                color: "var(--brand-secondary, #1e36f8)",
                 fontSize: 13,
                 fontWeight: 700,
                 fontFamily: FONT.body,

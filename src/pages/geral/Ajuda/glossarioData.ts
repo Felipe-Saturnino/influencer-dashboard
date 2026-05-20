@@ -40,6 +40,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Resultados",
       },
       {
+        termo: "Janela de Elegibilidade",
+        definicao:
+          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultado de Lives para validação.",
+        nota:
+          "A janela padrão é de 5 horas após o horário agendado (fuso local). Lives ainda dentro desse intervalo não entram na fila de validação — o sistema assume que a transmissão pode ainda estar em andamento.",
+        referencia: "Resultados",
+      },
+      {
+        termo: "Semana de Referência",
+        definicao:
+          "Período de sete dias usado como unidade de filtro na página Feedback de Lives para agrupar lives validadas e seus resultados.",
+        nota:
+          "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe todo o período com dados cadastrados.",
+        referencia: "Feedback",
+      },
+      {
         termo: "Influencers Ativos",
         definicao:
           "Número de influencers que realizaram ao menos uma live no período. Influencers cadastrados sem live no período não são contabilizados.",

@@ -87,6 +87,14 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   }, [live?.id, isEdit]);
 
   useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
     if (!isInfluencer) {
       supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
         if (data) setInfluencers(data.filter((i: { id: string }) => podeVerInfluencer(i.id)));
@@ -209,7 +217,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   return (
     <>
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
       <div
         ref={panelRef}
         tabIndex={-1}
@@ -223,7 +231,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           padding: "clamp(16px, 4vw, 28px)",
           width: "100%",
           maxWidth: 480,
-          maxHeight: "90vh",
+          maxHeight: "90dvh",
           overflowY: "auto",
           outline: "none",
         }}
@@ -456,7 +464,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               disabled={saving}
               style={{
                 flex: 2, padding: 12, borderRadius: 10, border: "none",
-                background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
+                background: brand.useBrand
+                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                  : "linear-gradient(135deg, #4a2082, #1e36f8)",
                 color: "#fff", fontSize: 13, fontWeight: 700,
                 cursor: saving ? "not-allowed" : "pointer",
                 opacity: saving ? 0.7 : 1, fontFamily: FONT.body,

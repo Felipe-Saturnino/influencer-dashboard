@@ -9,8 +9,14 @@ import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
   Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield,
-  Mic, Users, AlertCircle, CheckCircle, Coins, Building2,
+  Mic, Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
 } from "lucide-react";
+
+function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
+    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+}
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
@@ -377,9 +383,9 @@ export default function Influencers() {
   });
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const ctaGradient = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
-  const sliderTrackGradient = "linear-gradient(90deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
-  const sliderThumbGradient = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+  const ctaGradient = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
+  const sliderTrackGradient = "linear-gradient(90deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
+  const sliderThumbGradient = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 
   // ── Styles ──
   const cardStyle: CSSProperties = {
@@ -392,7 +398,7 @@ export default function Influencers() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -463,8 +469,8 @@ export default function Influencers() {
         <div style={{ marginBottom: 20 }}>
           <div style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
             {/* Linha 1: Status / Operadora */}
@@ -506,9 +512,7 @@ export default function Influencers() {
                       border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`,
                       background:
                         filterOp !== "todas"
-                          ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                            : `${BRAND.roxoVivo}18`
+                          ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
                           : (t.inputBg ?? t.cardBg),
                       color: filterOp !== "todas" ? brand.accent : t.textMuted,
                       fontWeight: filterOp !== "todas" ? 700 : 400,
@@ -672,9 +676,12 @@ export default function Influencers() {
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
-          Carregando...
+        <div
+          role="status"
+          aria-label="Carregando influencers"
+          style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, boxShadow: cardShadow }}>
@@ -727,7 +734,7 @@ export default function Influencers() {
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c], fontFamily: FONT.body, lineHeight: 1 }}>
                             <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} />
                             <span style={{ display: "inline-flex", alignItems: "center" }}>{c}</span>
-                            {link && <span style={{ fontSize: 10, opacity: 0.7, display: "inline-flex", alignItems: "center" }}>↗</span>}
+                            {link && <ExternalLink size={10} aria-hidden="true" style={{ opacity: 0.7 }} />}
                           </span>
                         );
                         return link ? (
@@ -857,15 +864,23 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
   const row: CSSProperties = { marginBottom: 14 };
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const tabActiveBg = livesTabActiveBg(brand);
   const val = (v?: string | number) => (
     <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>
       {v || "—"}
     </span>
   );
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
         ref={containerRef}
@@ -873,7 +888,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-visualizar-title"
-        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}
+        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "90dvh", overflowY: "auto" }}
       >
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
@@ -891,17 +906,20 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "var(--brand-action-12)" : `${BRAND.azul}0d`, border: `1px solid ${brand.useBrand ? "var(--brand-action-border)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? brand.primaryTransparentBg : `${BRAND.azul}0d`, border: brand.useBrand ? brand.primaryTransparentBorder : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
-        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+        <div role="tablist" aria-label="Seções do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {tabs.map((tb) => (
             <button
               key={tb.key}
               type="button"
-              aria-pressed={tab === tb.key}
+              role="tab"
+              id={`inf-viz-tab-${tb.key}`}
+              aria-selected={tab === tb.key}
+              aria-controls={`inf-viz-panel-${tb.key}`}
               onClick={() => setTab(tb.key)}
               style={{
                 padding: "7px 14px", borderRadius: 20, flexShrink: 0,
@@ -940,7 +958,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: 12, fontWeight: 700, fontFamily: FONT.body, lineHeight: 1 }}>
                       <PlatLogo plataforma={c} size={13} isDark={isDark ?? false} />
                       <span style={{ display: "inline-flex", alignItems: "center" }}>{c}</span>
-                      {link && <span style={{ fontSize: 10, opacity: 0.7, display: "inline-flex", alignItems: "center" }}>↗</span>}
+                      {link && <ExternalLink size={10} aria-hidden="true" style={{ opacity: 0.7 }} />}
                     </span>
                   );
                   return link ? (
@@ -986,7 +1004,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
-                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-primary, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1030,13 +1048,22 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
   const existing = influencer.perfil;
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
-  const ctaSalvar = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+  const tabActiveBg = livesTabActiveBg(brand);
+  const ctaSalvar = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 
   useEffect(() => {
     const id = window.setTimeout(() => containerRef.current?.focus(), 50);
     return () => window.clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   // Status e Cachê somente Gestores e Admin podem alterar
   const podeAlterarStatusCache =
     !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
@@ -1146,7 +1173,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   ];
 
   return (
-    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
         ref={containerRef}
@@ -1154,7 +1181,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-perfil-title"
-        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}
+        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "90dvh", overflowY: "auto" }}
       >
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
@@ -1172,12 +1199,15 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+        <div role="tablist" aria-label="Seções do perfil do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {tabs.map((tb) => (
             <button
               key={tb.key}
               type="button"
-              aria-pressed={tab === tb.key}
+              role="tab"
+              id={`inf-edit-tab-${tb.key}`}
+              aria-selected={tab === tb.key}
+              aria-controls={`inf-edit-panel-${tb.key}`}
               onClick={() => setTab(tb.key)}
               style={{
                 padding: "7px 14px", borderRadius: 20, flexShrink: 0,
@@ -1314,7 +1344,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               operadorasList.map((op) => {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
-                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-primary, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>

@@ -68,6 +68,8 @@ const MENU_AJUDA = [
 ];
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
+// Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
+// estendendo subtítulos existentes — evitar blocos duplicados; não descartar o handoff só porque Ajuda é antiga.
 const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: string; texto: string }[] }> = {
   streamers: {
     titulo: "Streamers",
@@ -79,7 +81,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período — nesse modo a navegação de mês fica desativada.\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período — nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando...\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
@@ -89,12 +91,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Conversão — Funil e Eficiência",
         texto:
-          "Apresenta três blocos:\n\n— Comparativo de Funil: escolha dois influencers nos seletores acima para comparar seus funis de conversão lado a lado (Views → Acessos → Registros → FTDs).\n\n— Ranking FTD/Hora: pódio dos três primeiros influencers em FTDs gerados por hora de live, seguido de lista paginada dos demais. Influencers sem horas registradas são omitidos.\n\n— Comparativo de Taxas: tabela com as taxas de conversão de cada etapa do funil por influencer. Use os badges de ação no canto superior direito para filtrar influencers por prioridade de melhoria (Divulgar o link, Converter visita, Ativar cadastro, Em dia).",
+          "Apresenta três blocos (com subtítulo \"acumulado\" no modo Histórico):\n\n— Comparativo de Funil: escolha dois influencers nos seletores acima para comparar seus funis de conversão lado a lado (Views → Acessos → Registros → FTDs). Os seletores listam apenas influencers com dados no período.\n\n— Ranking FTD/Hora: pódio dos três primeiros influencers em FTDs gerados por hora de live, seguido de lista paginada dos demais. Influencers sem horas registradas no período são omitidos.\n\n— Comparativo de Taxas: tabela com as taxas de conversão de cada etapa do funil por influencer. Use os badges de ação no canto superior direito para filtrar influencers por prioridade de melhoria (Divulgar o link, Converter visita, Ativar cadastro, Em dia).",
       },
       {
         subtitulo: "Aba Financeiro — PVI e Ranking",
         texto:
-          "Apresenta os KPIs financeiros detalhados: FTD (valor total e ticket médio), Depósitos, Saques, WD Ratio, GGR por Jogador e PVI (Player Value Index, escala 0–100 pts).\n\nO gráfico de Investimento por Influencer exibe a distribuição proporcional do investimento pago. Investimentos via agentes são agrupados em 'Outros' quando aplicável.\n\nO Ranking Financeiro lista todos os influencers com métricas financeiras e perfil de jogador (Whales, Core, Recreativos, Caçadores de Bônus). Clique nos cabeçalhos para ordenar por qualquer coluna.",
+          "Apresenta os KPIs financeiros detalhados: FTD (valor total e ticket médio), Depósitos, Saques, WD Ratio, GGR por Jogador e PVI (Player Value Index, escala 0–100 pts — exibido em pontos, não em percentual).\n\nO gráfico de Investimento por Influencer exibe a distribuição proporcional do investimento pago. Investimentos via agentes são agrupados em 'Outros' quando aplicável.\n\nO Ranking Financeiro lista todos os influencers com métricas financeiras e perfil de jogador (Whales, Core, Recreativos, Caçadores de Bônus). Clique nos cabeçalhos para ordenar por qualquer coluna. No modo Histórico, KPIs Financeiros, Investimento e Ranking usam o subtítulo \"acumulado\".",
       },
     ],
   },
@@ -113,17 +115,17 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs Consolidados",
         texto:
-          "Apresenta os principais indicadores do período: GGR (receita bruta), Turnover (volume apostado), Margem (GGR ÷ Turnover), Apostas (quantidade de rodadas), Aposta Média, UAP (jogadores ativos únicos) e ARPU (GGR ÷ UAP).\n\nO indicador de variação abaixo de cada KPI compara o período atual com o mesmo período do mês anterior (MTD vs MTD). No modo Histórico, a comparação MoM é ocultada.",
+          "Apresenta os principais indicadores do período: GGR (receita bruta), Turnover (volume apostado), Margem (GGR ÷ Turnover), Apostas (quantidade de rodadas), Aposta Média, UAP (jogadores ativos únicos) e ARPU (GGR ÷ UAP).\n\nO indicador de variação abaixo de cada KPI compara o período atual com o mesmo período do mês anterior (MTD vs MTD). No modo Histórico, a comparação MoM é ocultada e o subtítulo do bloco passa a \"acumulado\".",
       },
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com uma linha por dia (ou mês no Histórico). No modo 'Todas as operadoras', cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
+          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") ou por mês no modo Histórico (subtítulo \"mês a mês\"). No modo 'Todas as operadoras', cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
       },
       {
         subtitulo: "Comparativo de Jogo",
         texto:
-          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo) e Baccarat (ciano). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período.\n\nAlterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
+          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo) e Baccarat (ciano). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período.\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
@@ -138,7 +140,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Posicionamento",
         texto:
-          "Monitora a posição das mesas Spin no lobby das plataformas parceiras. Os dados refletem o dia atual e são atualizados automaticamente ao longo do dia.\n\nOs KPIs mostram: Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição vs o mesmo horário do dia anterior.\n\nA lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓) vs ontem no mesmo horário.\n\n'Concorrentes à frente' lista quantos jogos de outras plataformas aparecem antes de cada tipo de jogo Spin.\n\nO Histórico de Posicionamento exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período.",
+          "Monitora a posição das mesas Spin no lobby das plataformas parceiras. Os dados refletem o dia atual e são atualizados automaticamente ao longo do dia — a navegação por mês e o botão Histórico não se aplicam nesta aba.\n\nOs KPIs mostram: Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição vs o mesmo horário do dia anterior.\n\nA lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓) vs ontem no mesmo horário.\n\n'Concorrentes à frente' lista quantos jogos de outras plataformas aparecem antes de cada tipo de jogo Spin.\n\nO Histórico de Posicionamento exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período.",
+      },
+      {
+        subtitulo: "Navegação entre abas (Overview e Posicionamento)",
+        texto:
+          "As abas Overview e Posicionamento compartilham a FilterBar de mês/operadora na visão Overview. Com o foco em uma aba, use ← → do teclado para alternar entre elas (padrão tablist).",
       },
     ],
   },
@@ -152,22 +159,22 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nAs três abas compartilham o mesmo período selecionado.",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nAs três abas (Overview, Conversão, Alcance) compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
         texto:
-          "Apresenta três blocos:\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.",
+          "Apresenta três blocos (KPIs e comparativos com subtítulo \"acumulado\" no modo Histórico):\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior quando não está em Histórico.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.",
       },
       {
         subtitulo: "Aba Conversão — Funis de Campanha",
         texto:
-          "Apresenta o funil consolidado de todas as campanhas (Visitas → Registros → FTDs) e um comparativo lado a lado entre duas campanhas selecionadas nos menus acima.\n\nA tabela de Comparativo de Taxas lista a taxa de conversão Visita→Registro, Registro→FTD e Visita→FTD por campanha. Ordene pelas colunas para identificar as campanhas com melhor ou pior conversão em cada etapa.",
+          "Apresenta o funil consolidado de todas as campanhas (Visitas → Registros → FTDs) e um comparativo lado a lado entre duas campanhas selecionadas nos menus acima. Funil e blocos de campanhas usam subtítulo \"acumulado\" no Histórico.\n\nA tabela de Comparativo de Taxas lista a taxa de conversão Visita→Registro, Registro→FTD e Visita→FTD por campanha. Ordene pelas colunas para identificar as campanhas com melhor ou pior conversão em cada etapa.",
       },
       {
         subtitulo: "Aba Alcance — Orgânico por Canal",
         texto:
-          "Apresenta quatro KPIs de alcance orgânico (Postagens, Seguidores Totais, Impressões Totais, Engajamento Médio) com comparativo ao mês anterior.\n\nOs cards por canal (Instagram, Facebook, YouTube) detalham as métricas individuais de cada plataforma — seguidores, alcance, impressões, engajamento e taxa de engajamento.\n\nEngajamento por formato mostra a distribuição das postagens por tipo (Reels, Foto, Vídeo, Carrossel, etc.).\n\nPostagens recentes exibe o carrossel com as publicações do período. Use as setas ou os pontos de navegação para percorrer as postagens. Clique no título da postagem para abrir o link original na plataforma.",
+          "Apresenta quatro KPIs de alcance orgânico (Postagens, Seguidores Totais, Impressões Totais, Engajamento Médio) com comparativo ao mês anterior (ou subtítulo \"acumulado\" no Histórico).\n\nOs cards por canal (Instagram, Facebook, YouTube) detalham as métricas individuais de cada plataforma — seguidores, alcance, impressões, engajamento e taxa de engajamento.\n\nEngajamento por formato mostra a distribuição das postagens por tipo (Reels, Foto, Vídeo, Carrossel, etc.).\n\nPostagens recentes exibe o carrossel com até cinco publicações visíveis por vez no período — use as setas ou a paginação (ex.: \"1–5 / 12\") para percorrer o restante. Clique no título da postagem para abrir o link original na plataforma.",
       },
     ],
   },
@@ -186,22 +193,22 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs Executivos",
         texto:
-          "O bloco de KPIs está organizado em três linhas:\n\n— Linha 1 (Financeiro): GGR, Investimento e ROI — com comparativo ao mesmo período do mês anterior.\n\n— Linha 2 (Operação): Lives, Horas Realizadas e Média de Views — métricas de produção do canal.\n\n— Linha 3 (Conversão): Registros (com total de acessos e taxa de conversão), FTDs (com valor total), Depósitos e Saques — com comparativo MoM.\n\nNo modo Histórico, o comparativo MoM é ocultado.",
+          "O bloco de KPIs está organizado em três linhas:\n\n— Linha 1 (Financeiro): GGR, Investimento e ROI — com comparativo ao mesmo período do mês anterior (ou subtítulo \"acumulado\" no Histórico, sem MoM).\n\n— Linha 2 (Operação): Lives, Horas Realizadas e Média de Views — métricas de produção do canal.\n\n— Linha 3 (Conversão): Registros (com total de acessos e taxa de conversão), FTDs (com valor total), Depósitos e Saques — com comparativo MoM quando não está em Histórico.",
       },
       {
         subtitulo: "Funil de Conversão",
         texto:
-          "Exibe a taxa de conversão em cada etapa do funil: Views → Acessos → Registros → FTDs. As taxas laterais mostram as conversões intermediárias e a conversão direta View→FTD.",
+          "Exibe a taxa de conversão em cada etapa do funil: Views → Acessos → Registros → FTDs. As taxas laterais mostram as conversões intermediárias e a conversão direta View→FTD. No Histórico, o subtítulo da seção é \"acumulado\".",
       },
       {
         subtitulo: "Eficiência",
         texto:
-          "Apresenta cinco métricas de eficiência calculadas a partir dos totais do período: FTD/Hora (FTDs gerados por hora de live), Ticket Médio de FTD, Ticket Médio de Depósito, Ticket Médio de Saque e GGR por Jogador (GGR ÷ FTDs).",
+          "Apresenta cinco métricas de eficiência calculadas a partir dos totais do período: FTD/Hora (FTDs gerados por hora de live), Ticket Médio de FTD, Ticket Médio de Depósito, Ticket Médio de Saque e GGR por Jogador (GGR ÷ FTDs). No Histórico, o subtítulo é \"acumulado\".",
       },
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com os dados dia a dia (ou mês a mês no Histórico). As colunas incluem duração de live, métricas de audiência, acessos, registros, FTDs, depósitos, saques e GGR por período.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito. No modo gráfico, escolha o KPI a exibir pelos botões acima do gráfico.",
+          "Tabela com os dados dia a dia (subtítulo por mês corrente) ou mês a mês no Histórico. As colunas incluem duração de live, métricas de audiência, acessos, registros, FTDs, depósitos, saques e GGR por período.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito. No modo gráfico, escolha o KPI a exibir pelos botões acima do gráfico. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -225,7 +232,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Criando uma Nova Live",
         texto:
-          "Clique em Nova Live para abrir o formulário. Preencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores)\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.",
+          "Clique em Nova Live para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando...\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
       },
       {
         subtitulo: "Restrições de Data e Permissão",
@@ -235,7 +242,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Bloqueio de Agendamento",
         texto:
-          "Ao clicar em Nova Live, o sistema verifica automaticamente os pré-requisitos do influencer. Se algum estiver pendente, um modal de bloqueio é exibido com os itens faltantes e botões de ação direta:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. O botão 'Ir para Influencers' leva diretamente à página para completar o cadastro.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. O botão 'Ir para Playbook Influencers' leva aos termos.\n\nEnquanto o sistema verifica, o botão Nova Live exibe 'Verificando...' com um spinner. O modal só aparece se algum pré-requisito estiver pendente.",
+          "Ao clicar em Nova Live, o sistema verifica automaticamente os pré-requisitos do influencer. Se algum estiver pendente, um modal de bloqueio é exibido com os itens faltantes e botões de ação direta:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. O botão 'Ir para Influencers' leva diretamente à página para completar o cadastro.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. O botão 'Ir para Playbook Influencers' leva aos termos.\n\nSe todos os pré-requisitos estiverem ok, o formulário de Nova Live abre normalmente (sem o modal de bloqueio).",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -288,7 +295,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Navegação e Período",
         texto:
-          "Use as setas para navegar entre semanas ou ative Histórico para ver todo o período disponível de uma vez. No modo Histórico, as setas ficam desabilitadas e todos os dados acumulados são exibidos.\n\nOs filtros de Influencer e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos.",
+          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
       },
       {
         subtitulo: "Filtro de Status",
@@ -303,7 +310,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Lista de Lives",
         texto:
-          "Cada live é exibida em um card com borda lateral colorida — verde para realizadas, vermelho para não realizadas. O card mostra data, horário, nome do influencer e badge de plataforma.\n\nLives realizadas exibem três blocos de resultado abaixo: Duração, Média Views e Pico Views.\n\nQuando uma observação foi registrada na validação, ela aparece em um bloco destacado abaixo dos dados principais. Se não há observação, o bloco não aparece.\n\nUm contador acima da lista informa quantas lives foram encontradas com os filtros ativos.",
+          "Cada live é exibida em um card com borda lateral colorida — verde para realizadas, vermelho para não realizadas. O card mostra data, horário, nome do influencer e badge de plataforma.\n\nLives realizadas exibem três blocos de resultado abaixo: Duração, Média Views e Pico Views.\n\nQuando uma observação foi registrada na validação, ela aparece em um bloco destacado abaixo dos dados principais. Se não há observação, o bloco não aparece.\n\nUm contador acima da lista informa quantas lives foram encontradas com os filtros ativos. Se nenhuma live corresponder ao período e filtros, a mensagem exibida é: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Editando uma Live",
@@ -337,22 +344,22 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros",
         texto:
-          "O bloco de filtros inclui:\n\n— Status: chips Ativo, Inativo, Cancelado\n— Operadora: seletor disponível para perfis com acesso a múltiplas operadoras\n— Plataforma: chips para cada plataforma cadastrada\n— Cachê por Hora: slider de range de R$0 até o maior cachê cadastrado na base\n— Busca: campo de texto por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "O bloco de filtros está organizado em quatro linhas:\n\n— Linha 1 — Status e Operadora: chips Ativo, Inativo, Cancelado; seletor de operadora para perfis com acesso a múltiplas parceiras\n— Linha 2 — Plataforma: chips por canal cadastrado na base\n— Linha 3 — Cachê por Hora: slider de R$0 até o maior cachê cadastrado\n— Linha 4 — Busca: campo de texto por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
       },
       {
         subtitulo: "Card de Influencer",
         texto:
-          "Cada card exibe: avatar com a inicial em gradiente de marca, nome artístico, badge de status, cachê por hora, canais ativos com links clicáveis (identificados com ↗) e tags das operadoras vinculadas.\n\nO badge de status é um dropdown interativo — Admin e Gestor podem alterar o status diretamente no card sem abrir o modal. Para outros perfis, o badge é somente leitura.\n\nO badge 'Perfil incompleto' aparece em influencers ativos com dados obrigatórios faltando. As tags de operadoras não são exibidas para o perfil Operador.",
+          "Cada card exibe: avatar com a inicial em gradiente de marca, nome artístico, badge de status, cachê por hora, canais ativos com links clicáveis (ícone de link externo) e tags das operadoras vinculadas.\n\nO badge de status é um dropdown interativo — Admin e Gestor podem alterar o status diretamente no card sem abrir o modal. Para outros perfis, o badge é somente leitura.\n\nO badge 'Perfil incompleto' aparece em influencers ativos com dados obrigatórios faltando. As tags de operadoras não são exibidas para o perfil Operador.",
       },
       {
         subtitulo: "Visualizando um Perfil (Ver)",
         texto:
-          "O modal de visualização abre com um banner 'Modo visualização — somente leitura. Dados sensíveis protegidos.' e tem cinco abas:\n\n— Cadastral: nome completo, nome artístico, e-mail, telefone e CPF (com desfoque)\n— Canais: plataformas ativas com link clicável para abrir em nova aba\n— Financeiro: cachê por hora, Chave PIX, Banco, Agência e Conta (todos com desfoque)\n— Operadoras: status do vínculo (Ativo/Inativo) e ID em cada operadora\n— Histórico: data de criação do cadastro, data da última atualização e data da última alteração de status\n\nDados sensíveis (CPF, Chave PIX e dados bancários) ficam com desfoque e exigem clique no ícone de olho para revelar — ocultam-se automaticamente após 10 segundos.",
+          "O modal de visualização abre com um banner 'Modo visualização — somente leitura. Dados sensíveis protegidos.' e tem cinco abas com navegação acessível (tablist / role tab):\n\n— Cadastral: nome completo, nome artístico, e-mail, telefone e CPF (com desfoque)\n— Canais: plataformas ativas com link clicável para abrir em nova aba\n— Financeiro: cachê por hora, Chave PIX, Banco, Agência e Conta (todos com desfoque)\n— Operadoras: status do vínculo (Ativo/Inativo) e ID em cada operadora\n— Histórico: data de criação do cadastro, data da última atualização e data da última alteração de status\n\nDados sensíveis (CPF, Chave PIX e dados bancários) ficam com desfoque e exigem clique no ícone de olho para revelar — ocultam-se automaticamente após 10 segundos. Pressione Esc para fechar o modal.",
       },
       {
         subtitulo: "Editando um Perfil (Editar)",
         texto:
-          "O formulário de edição tem quatro abas — Cadastral, Canais, Financeiro e Operadoras — sem a aba Histórico. Salvar Perfil confirma todas as alterações de todas as abas de uma vez.\n\nO campo Cachê por Hora e o badge de Status são restritos a Admin e Gestor — para outros perfis, esses campos aparecem bloqueados. No modo de edição, CPF e dados bancários ficam visíveis para facilitar o preenchimento.\n\nNa aba Canais, cada plataforma ativa exige que o link correspondente esteja preenchido. Na aba Operadoras, cada operadora marcada como ativa exige o ID do influencer naquela operadora.",
+          "O formulário de edição tem quatro abas com navegação acessível (tablist) — Cadastral, Canais, Financeiro e Operadoras — sem a aba Histórico. Salvar Perfil confirma todas as alterações de uma vez. Pressione Esc para fechar o modal.\n\nO campo Cachê por Hora e o badge de Status são restritos a Admin e Gestor — para outros perfis, esses campos aparecem bloqueados. No modo de edição, CPF e dados bancários ficam visíveis para facilitar o preenchimento.\n\nNa aba Canais, cada plataforma ativa exige que o link correspondente esteja preenchido. Na aba Operadoras, cada operadora marcada como ativa exige o ID do influencer naquela operadora. O primeiro vínculo ativo em Operadoras é o usado pela Agenda ao definir a operadora automaticamente em novas lives.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -371,12 +378,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Funil de Prospecção e Cobertura de Plataformas",
         texto:
-          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma\n\nAbaixo do funil, a grade de Cobertura de Plataformas mostra quantos prospectos estão cadastrados em cada plataforma. Clique em uma plataforma para filtrar a lista; clique de novo para remover o filtro.\n\nAtenção: na vista padrão, prospectos com status Fechado não aparecem na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status.",
+          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma\n\nA grade Cobertura de Plataformas (logo abaixo) lista cada canal com a contagem de prospectos. Cada célula é um botão de filtro: clique para restringir a lista àquela plataforma; clique de novo para limpar. Esse filtro é independente dos chips de Status do bloco de filtros inferior.\n\nAtenção: na vista padrão, prospectos com status Fechado não aparecem na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Combine os filtros para localizar prospectos:\n\n— Status: chips Visualizado, Contato, Negociação, Fechado\n— Cachê por Hora — até: slider de range até o maior cachê cadastrado\n— Views — até: slider de range até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "No bloco inferior, combine:\n\n— Status: chips Visualizado, Contato, Negociação, Fechado\n— Cachê por Hora — até: slider até o maior cachê cadastrado\n— Views — até: slider até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo (inclui filtro de plataforma da Cobertura).",
       },
       {
         subtitulo: "Card de Prospecto",
@@ -386,7 +393,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Clique em + Adicionar para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas:\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação com botão 'Adicionar Anotação' e histórico de todas as anotações anteriores com usuário e data de registro",
+          "Clique em + Adicionar para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação com botão 'Adicionar Anotação' e histórico de todas as anotações anteriores com usuário e data de registro",
       },
       {
         subtitulo: "Fechando uma Parceria",
@@ -544,7 +551,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "Os dados mudaram ao trocar de aba, mas eu não alterei os filtros?",
         texto:
-          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando…' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento.",
+          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando...' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver na tablist.",
       },
       {
         subtitulo: "O Comparativo de Funil não mostra nenhum influencer nas opções?",
@@ -702,6 +709,11 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
           "Influencers e operadores só podem agendar lives a partir do dia seguinte — agendar para o mesmo dia não é permitido. Essa restrição não se aplica a Admin e Gestor, que podem criar e editar lives em qualquer data.",
       },
       {
+        subtitulo: "A live foi salva mas não aparece para minha operadora?",
+        texto:
+          "Novas lives recebem a operadora do primeiro vínculo ativo do influencer. Se a live não aparece no seu escopo, verifique em Influencers → Operadoras se o vínculo correto está ativo e em primeiro lugar, ou peça a um Gestor/Admin para ajustar a live.",
+      },
+      {
         subtitulo: "Não consigo criar ou editar uma live em data passada?",
         texto:
           "Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados. Se o sistema bloqueou a operação, verifique se a data preenchida não está no passado e se o seu perfil tem essa permissão.",
@@ -725,6 +737,11 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "A página está vazia mas sei que há lives pendentes?",
         texto:
           "Confirme se os filtros de influencer ou operadora não estão ocultando as lives. Se os filtros estiverem desativados, verifique se as lives em questão passaram da janela de 5 horas desde o horário agendado. Se as lives foram validadas por outro usuário enquanto a página estava aberta, recarregue para ver a lista atualizada.",
+      },
+      {
+        subtitulo: "A operadora na validação não bate com o que esperava?",
+        texto:
+          "Em lives novas agendadas pela Agenda, a operadora pode ter sido definida automaticamente pelo primeiro vínculo ativo do influencer (Influencers → Operadoras). Na validação você pode ajustar a operadora — ela continua obrigatória e alimenta o Financeiro. Se o vínculo em Influencers estiver incorreto, corrija o cadastro antes de validar em massa.",
       },
       {
         subtitulo: "Não consigo salvar a validação?",
