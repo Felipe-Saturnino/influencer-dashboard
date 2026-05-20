@@ -48,6 +48,99 @@ export function statusPosPublicar(requerAprovacao: boolean): RhPostagemStatus {
   return requerAprovacao ? "aprovacao" : "publicado";
 }
 
+export function requerAprovacaoEhSim(valor: string): boolean {
+  return valor.trim().toLowerCase() === "sim";
+}
+
+export function requerAprovacaoLabelFromDb(requer: boolean): "Sim" | "Não" {
+  return requer ? "Sim" : "Não";
+}
+
+/** Colunas da tabela de gerenciamento: DD/MM/AA - HH:MM */
+export function fmtDataColunaGerenciamento(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${p(d.getFullYear() % 100)} - ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch {
+    return "—";
+  }
+}
+
+export type SnapshotPostagemEdicao = {
+  tipoPostagem: RhPostagemTipoUi;
+  tipoComunicado: string;
+  tipoPolitica: string;
+  requerAprovacao: string;
+  assunto: string;
+  introducao: string;
+  descricao: string;
+  imagemPath: string | null;
+  anexoPath: string | null;
+  anexoNome: string | null;
+};
+
+function textoCorpoIgual(a: string, b: string): boolean {
+  return stripHtmlText(sanitizePortalRhHtml(a)) === stripHtmlText(sanitizePortalRhHtml(b));
+}
+
+export function diffEdicaoRascunho(antes: SnapshotPostagemEdicao, depois: SnapshotPostagemEdicao): string[] {
+  const alteracoes: string[] = [];
+  if (antes.tipoPostagem !== depois.tipoPostagem) {
+    alteracoes.push("Tipo de postagem alterado");
+  }
+  if (antes.tipoPostagem === "comunicado" && antes.tipoComunicado !== depois.tipoComunicado) {
+    alteracoes.push("Tipo de comunicado alterado");
+  }
+  if (antes.tipoPostagem === "politica" && antes.tipoPolitica !== depois.tipoPolitica) {
+    alteracoes.push("Tipo de política/normativa alterado");
+  }
+  if (antes.tipoPostagem === "politica" && antes.requerAprovacao !== depois.requerAprovacao) {
+    alteracoes.push(`É necessário aprovação? alterado de «${antes.requerAprovacao}» para «${depois.requerAprovacao}»`);
+  }
+  if (antes.assunto.trim() !== depois.assunto.trim()) {
+    alteracoes.push("Assunto alterado");
+  }
+  if (
+    (antes.tipoPostagem === "politica" || antes.tipoPostagem === "rh_talk") &&
+    antes.introducao.trim() !== depois.introducao.trim()
+  ) {
+    alteracoes.push("Introdução alterada");
+  }
+  if (!textoCorpoIgual(antes.descricao, depois.descricao)) {
+    alteracoes.push("Descrição alterada");
+  }
+  if (antes.imagemPath !== depois.imagemPath) {
+    alteracoes.push(depois.imagemPath ? "Imagem alterada" : "Imagem removida");
+  }
+  if (antes.anexoPath !== depois.anexoPath || antes.anexoNome !== depois.anexoNome) {
+    alteracoes.push(depois.anexoPath ? "Anexo alterado" : "Anexo removido");
+  }
+  return alteracoes;
+}
+
+export async function registrarHistoricoEdicoesRascunho(
+  supabase: SupabaseClient,
+  contentType: RhPostagemContentType,
+  contentId: string,
+  alteracoes: string[],
+  userId: string,
+): Promise<string | null> {
+  if (alteracoes.length === 0) return null;
+  const rows = alteracoes.map((alteracao) => ({
+    content_type: contentType,
+    content_id: contentId,
+    status_de: "rascunho",
+    status_para: "rascunho",
+    alteracao,
+    created_by: userId,
+  }));
+  const { error } = await supabase.from("rh_portal_postagem_status_historico").insert(rows);
+  return error?.message ?? null;
+}
+
 export function textoHistoricoStatus(de: RhPostagemStatus | null, para: RhPostagemStatus): string {
   if (!de) return `Status definido como ${RH_POSTAGEM_STATUS_LABEL[para]}`;
   return `Status alterado de ${RH_POSTAGEM_STATUS_LABEL[de]} para ${RH_POSTAGEM_STATUS_LABEL[para]}`;
@@ -98,18 +191,7 @@ export function labelPoliticaFromSlug(slug: string): string {
 }
 
 export function fmtDataHoraPt(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
+  return fmtDataColunaGerenciamento(iso);
 }
 
 export function fmtDataPt(iso: string | null | undefined): string {

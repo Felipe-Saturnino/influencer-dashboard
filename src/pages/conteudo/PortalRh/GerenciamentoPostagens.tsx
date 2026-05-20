@@ -15,9 +15,10 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
-  fmtDataPt,
+  fmtDataColunaGerenciamento,
   labelComunicadoFromSlug,
   labelPoliticaFromSlug,
   registrarHistoricoStatus,
@@ -46,6 +47,38 @@ export type PostagemGerenciamentoRow = {
   publishedAt: string | null;
   textoBusca: string;
 };
+
+type PostagemSortCol =
+  | "assunto"
+  | "autor"
+  | "tipo"
+  | "createdAt"
+  | "status"
+  | "approvedAt"
+  | "aprovador"
+  | "publishedAt";
+
+const STATUS_ORDEM: Record<RhPostagemStatus, number> = {
+  rascunho: 0,
+  aprovacao: 1,
+  publicado: 2,
+  arquivado: 3,
+};
+
+function compareTexto(a: string, b: string, dir: number): number {
+  return dir * a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+}
+
+function compareDataIso(a: string | null, b: string | null, dir: number): number {
+  const ta = a ? new Date(a).getTime() : Number.NaN;
+  const tb = b ? new Date(b).getTime() : Number.NaN;
+  const aVazio = Number.isNaN(ta);
+  const bVazio = Number.isNaN(tb);
+  if (aVazio && bVazio) return 0;
+  if (aVazio) return 1;
+  if (bVazio) return -1;
+  return dir * (ta - tb);
+}
 
 function fmtMesAnoCarrossel(ano: number, mes: number): string {
   const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -99,6 +132,19 @@ export function GerenciamentoPostagens({
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
   const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
+  const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const onSortColuna = useCallback((col: PostagemSortCol) => {
+    setSortCol((prev) => {
+      if (prev === col) {
+        setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+        return prev;
+      }
+      setSortDir("desc");
+      return col;
+    });
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);
@@ -309,6 +355,45 @@ export function GerenciamentoPostagens({
     }
     return list;
   }, [rows, mesesDisponiveis, idxMes, filtroTipo, filtroStatus, buscaDeb]);
+
+  const rowsOrdenadas = useMemo(() => {
+    const list = [...rowsFiltradas];
+    const dir = sortDir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      let cmp = 0;
+      switch (sortCol) {
+        case "assunto":
+          cmp = compareTexto(a.assunto, b.assunto, dir);
+          break;
+        case "autor":
+          cmp = compareTexto(a.autorNome, b.autorNome, dir);
+          break;
+        case "tipo":
+          cmp = compareTexto(a.tipoPostagemLabel, b.tipoPostagemLabel, dir);
+          break;
+        case "createdAt":
+          cmp = compareDataIso(a.createdAt, b.createdAt, dir);
+          break;
+        case "status":
+          cmp = dir * (STATUS_ORDEM[a.status] - STATUS_ORDEM[b.status]);
+          break;
+        case "approvedAt":
+          cmp = compareDataIso(a.approvedAt, b.approvedAt, dir);
+          break;
+        case "aprovador":
+          cmp = compareTexto(a.aprovadorNome, b.aprovadorNome, dir);
+          break;
+        case "publishedAt":
+          cmp = compareDataIso(a.publishedAt, b.publishedAt, dir);
+          break;
+        default:
+          cmp = 0;
+      }
+      if (cmp !== 0) return cmp;
+      return compareDataIso(a.createdAt, b.createdAt, -1);
+    });
+    return list;
+  }, [rowsFiltradas, sortCol, sortDir]);
 
   const mesSel = mesesDisponiveis[idxMes];
   const carouselPrimeiro = idxMes <= 0;
@@ -565,7 +650,7 @@ export function GerenciamentoPostagens({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
-      ) : rowsFiltradas.length === 0 ? (
+      ) : rowsOrdenadas.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Sem dados para o período selecionado.
         </div>
@@ -583,25 +668,85 @@ export function GerenciamentoPostagens({
             <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal de RH</caption>
             <thead>
               <tr>
-                {[
-                  "Assunto",
-                  "Autor",
-                  "Tipo de Postagem",
-                  "Data da Criação",
-                  "Status",
-                  "Data de Aprovação",
-                  "Aprovador",
-                  "Data de Postagem",
-                  "Ações",
-                ].map((h, i) => (
-                  <th key={h} scope="col" style={getThStyle(t, i >= 1 && i <= 7 ? { textAlign: i === 0 ? "left" : "right" } : undefined)}>
-                    {h}
-                  </th>
-                ))}
+                <SortTableTh
+                  label="Assunto"
+                  col="assunto"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="left"
+                />
+                <SortTableTh
+                  label="Autor"
+                  col="autor"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="left"
+                />
+                <SortTableTh
+                  label="Tipo de Postagem"
+                  col="tipo"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="left"
+                />
+                <SortTableTh
+                  label="Data da Criação"
+                  col="createdAt"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="right"
+                />
+                <SortTableTh
+                  label="Status"
+                  col="status"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="left"
+                />
+                <SortTableTh
+                  label="Data de Aprovação"
+                  col="approvedAt"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="right"
+                />
+                <SortTableTh
+                  label="Aprovador"
+                  col="aprovador"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="left"
+                />
+                <SortTableTh
+                  label="Data de Postagem"
+                  col="publishedAt"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={getThStyle(t)}
+                  align="right"
+                />
+                <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody>
-              {rowsFiltradas.map((row, i) => {
+              {rowsOrdenadas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status);
                 const busy = acaoLoading === row.id;
                 return (
@@ -621,11 +766,11 @@ export function GerenciamentoPostagens({
                     </td>
                     <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.autorNome}</td>
                     <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.tipoPostagemLabel}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.createdAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
                     <td style={{ ...getTdStyle(t), textAlign: "left" }}>{RH_POSTAGEM_STATUS_LABEL[row.status]}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.approvedAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
                     <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.aprovadorNome}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataPt(row.publishedAt)}</td>
+                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
                     <td style={{ ...getTdStyle(t), textAlign: "right" }}>
                       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {acoes.includes("editar") ? (

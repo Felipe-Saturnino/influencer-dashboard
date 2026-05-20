@@ -2,20 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Loader2,
   Lock,
   Megaphone,
   MessagesSquare,
   Pin,
-  Search,
   SlidersHorizontal,
 } from "lucide-react";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
-import { truncPreviewHtml } from "../../../lib/portalRhWorkflow";
+import { stripHtmlText, truncPreviewHtml } from "../../../lib/portalRhWorkflow";
 import { GerenciamentoPostagens } from "./GerenciamentoPostagens";
+import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
+import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -65,6 +64,7 @@ type RhPortalDocumento = {
   updated_at: string;
   status?: RhPostagemStatus | null;
   published_at?: string | null;
+  introducao?: string | null;
   categoria?: RhPortalCategoria | null;
 };
 
@@ -130,11 +130,6 @@ function itemNaSubtabCategoria(
 ): boolean {
   if (!categoria) return false;
   return config.slugs.includes(categoria.slug);
-}
-
-function fmtMesAnoCarrossel(ano: number, mes: number): string {
-  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 function fmtDataPublicacao(iso: string | null | undefined): string {
@@ -208,7 +203,7 @@ function FiltroSubtabPills({
     <div
       role="group"
       aria-label="Filtrar por categoria"
-      style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}
+      style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 0 }}
     >
       <button type="button" aria-pressed={filtroAtivo === "todos"} onClick={() => onFiltro("todos")} style={pillBase(filtroAtivo === "todos")}>
         Todos
@@ -255,7 +250,10 @@ export default function PortalRhPage() {
 
   const [filtroCatCom, setFiltroCatCom] = useState<string>("todos");
   const [filtroCatPol, setFiltroCatPol] = useState<string>("todos");
+  const [idxMesCom, setIdxMesCom] = useState(0);
+  const [idxMesPol, setIdxMesPol] = useState(0);
   const [idxMesTalk, setIdxMesTalk] = useState(0);
+  const [modoHistorico, setModoHistorico] = useState(false);
 
   const [modalCom, setModalCom] = useState<RhPortalComunicado | null>(null);
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
@@ -295,10 +293,13 @@ export default function PortalRhPage() {
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
     setCategoriasPol(cats.filter((c) => c.scope === "politica"));
 
-    const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => isPostagemPublica(c.status));
+    const visivelPortal = (status: RhPostagemStatus | null | undefined) =>
+      isPostagemPublica(status) || status === "arquivado";
+
+    const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => visivelPortal(c.status));
     setComunicados(comRows);
-    setDocumentos(((docRes.data ?? []) as RhPortalDocumento[]).filter((d) => isPostagemPublica(d.status)));
-    const talkRows = ((talkRes.data ?? []) as RhPortalRhTalk[]).filter((tk) => isPostagemPublica(tk.status));
+    setDocumentos(((docRes.data ?? []) as RhPortalDocumento[]).filter((d) => visivelPortal(d.status)));
+    const talkRows = ((talkRes.data ?? []) as RhPortalRhTalk[]).filter((tk) => visivelPortal(tk.status));
     setTalks(talkRows);
 
     const talkIds = talkRows.map((x) => x.id);
@@ -358,16 +359,83 @@ export default function PortalRhPage() {
     if (!perm.canEditarOk && aba === "gerenciamento") setAba("comunicados");
   }, [perm.canEditarOk, aba]);
 
-  const comunicadoPinned = useMemo(
-    () => comunicados.find((c) => c.is_pinned) ?? null,
+  useEffect(() => {
+    if (aba === "gerenciamento") return;
+    setModoHistorico(false);
+    setBusca("");
+    setBuscaDeb("");
+  }, [aba]);
+
+  const hitBuscaTexto = useCallback(
+    (s: string | null | undefined) => !buscaDeb || (s ?? "").toLowerCase().includes(buscaDeb),
+    [buscaDeb],
+  );
+
+  const hitBuscaCorpo = useCallback(
+    (html: string | null | undefined) => !buscaDeb || stripHtmlText(html ?? "").toLowerCase().includes(buscaDeb),
+    [buscaDeb],
+  );
+
+  const mesesCom = useMemo(
+    () => buildMesesCarrossel(comunicados.map((c) => ({ iso: c.published_at }))),
     [comunicados],
   );
+  const mesesPol = useMemo(
+    () => buildMesesCarrossel(documentos.map((d) => ({ iso: d.published_at ?? d.updated_at }))),
+    [documentos],
+  );
+  const mesesTalksDisponiveis = useMemo(
+    () => buildMesesCarrossel(talks.map((tk) => ({ iso: tk.data_reuniao }))),
+    [talks],
+  );
+
+  useEffect(() => {
+    setIdxMesCom((i) => Math.min(i, Math.max(0, mesesCom.length - 1)));
+  }, [mesesCom.length]);
+  useEffect(() => {
+    setIdxMesPol((i) => Math.min(i, Math.max(0, mesesPol.length - 1)));
+  }, [mesesPol.length]);
+  useEffect(() => {
+    setIdxMesTalk((i) => Math.min(i, Math.max(0, mesesTalksDisponiveis.length - 1)));
+  }, [mesesTalksDisponiveis.length]);
+
+  useEffect(() => {
+    if (comunicados.length > 0 && mesesCom.length > 0) setIdxMesCom(mesesCom.length - 1);
+  }, [comunicados.length, mesesCom.length]);
+  useEffect(() => {
+    if (documentos.length > 0 && mesesPol.length > 0) setIdxMesPol(mesesPol.length - 1);
+  }, [documentos.length, mesesPol.length]);
+  useEffect(() => {
+    if (talks.length > 0 && mesesTalksDisponiveis.length > 0) setIdxMesTalk(mesesTalksDisponiveis.length - 1);
+  }, [talks.length, mesesTalksDisponiveis.length]);
+
+  const comunicadoPinned = useMemo(() => {
+    if (modoHistorico || buscaDeb) return null;
+    const mesSel = mesesCom[idxMesCom];
+    const pin = comunicados.find((c) => c.is_pinned && isPostagemPublica(c.status));
+    if (!pin || !itemNoMesCarrossel(pin.published_at, mesSel)) return null;
+    return pin;
+  }, [comunicados, modoHistorico, buscaDeb, mesesCom, idxMesCom]);
 
   const comunicadosLista = useMemo(() => {
     let list = comunicados.filter((c) => !c.is_pinned);
+    list = list.filter((c) => (modoHistorico ? c.status === "arquivado" : isPostagemPublica(c.status)));
+    if (!modoHistorico) {
+      const mesSel = mesesCom[idxMesCom];
+      list = list.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+    }
     if (filtroCatCom !== "todos") {
       const cfg = SUBTABS_COMUNICADO.find((x) => x.key === filtroCatCom);
       if (cfg) list = list.filter((c) => itemNaSubtabCategoria(c.categoria, cfg));
+    }
+    if (buscaDeb) {
+      list = list.filter(
+        (c) =>
+          hitBuscaTexto(c.titulo) ||
+          hitBuscaCorpo(c.corpo) ||
+          hitBuscaTexto(c.categoria?.label) ||
+          hitBuscaTexto(c.categoria?.slug),
+      );
     }
     const recMap = receipts;
     const uid = user?.id;
@@ -384,77 +452,60 @@ export default function PortalRhPage() {
       return new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime();
     });
     return list;
-  }, [comunicados, filtroCatCom, receipts, user?.id]);
+  }, [
+    comunicados,
+    filtroCatCom,
+    receipts,
+    user?.id,
+    modoHistorico,
+    mesesCom,
+    idxMesCom,
+    buscaDeb,
+    hitBuscaTexto,
+    hitBuscaCorpo,
+  ]);
 
   const documentosFiltrados = useMemo(() => {
-    let list = documentos;
+    let list = documentos.filter((d) => (modoHistorico ? d.status === "arquivado" : isPostagemPublica(d.status)));
+    if (!modoHistorico) {
+      const mesSel = mesesPol[idxMesPol];
+      list = list.filter((d) => itemNoMesCarrossel(d.published_at ?? d.updated_at, mesSel));
+    }
     if (filtroCatPol !== "todos") {
       const cfg = SUBTABS_POLITICA.find((x) => x.key === filtroCatPol);
       if (cfg) list = list.filter((d) => itemNaSubtabCategoria(d.categoria, cfg));
     }
+    if (buscaDeb) {
+      list = list.filter(
+        (d) =>
+          hitBuscaTexto(d.titulo) ||
+          hitBuscaCorpo(d.corpo) ||
+          hitBuscaTexto(d.introducao) ||
+          hitBuscaTexto(d.categoria?.label) ||
+          hitBuscaTexto(d.categoria?.slug),
+      );
+    }
     return list;
-  }, [documentos, filtroCatPol]);
-
-  const mesesTalksDisponiveis = useMemo(() => {
-    const keys = new Set<string>();
-    for (const tk of talks) {
-      const d = new Date(tk.data_reuniao);
-      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
-    }
-    const entries = [...keys].map((k) => {
-      const [ano, mes] = k.split("-").map(Number);
-      return { ano, mes, label: fmtMesAnoCarrossel(ano, mes) };
-    });
-    entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
-    if (entries.length) return entries;
-    const hoje = new Date();
-    return [{ ano: hoje.getFullYear(), mes: hoje.getMonth(), label: fmtMesAnoCarrossel(hoje.getFullYear(), hoje.getMonth()) }];
-  }, [talks]);
-
-  useEffect(() => {
-    if (mesesTalksDisponiveis.length === 0) return;
-    setIdxMesTalk((i) => Math.min(i, mesesTalksDisponiveis.length - 1));
-  }, [mesesTalksDisponiveis]);
-
-  useEffect(() => {
-    if (talks.length > 0 && mesesTalksDisponiveis.length > 0) {
-      setIdxMesTalk(mesesTalksDisponiveis.length - 1);
-    }
-  }, [talks.length, mesesTalksDisponiveis.length]);
+  }, [documentos, filtroCatPol, modoHistorico, mesesPol, idxMesPol, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
   const talksFiltrados = useMemo(() => {
-    const mesSel = mesesTalksDisponiveis[idxMesTalk];
-    if (!mesSel) return [];
-    return talks.filter((tk) => {
-      const d = new Date(tk.data_reuniao);
-      return d.getFullYear() === mesSel.ano && d.getMonth() === mesSel.mes;
-    });
-  }, [talks, mesesTalksDisponiveis, idxMesTalk]);
-
-  const buscaAtiva = buscaDeb.length > 0;
-
-  const resultadosBusca = useMemo(() => {
-    if (!buscaAtiva) return { com: [] as RhPortalComunicado[], doc: [] as RhPortalDocumento[], tk: [] as RhPortalRhTalk[] };
-    const hit = (s: string | null | undefined) => (s ?? "").toLowerCase().includes(buscaDeb);
-    const com = comunicados.filter(
-      (c) =>
-        hit(c.titulo) ||
-        hit(c.corpo) ||
-        hit(c.categoria?.label) ||
-        hit(c.categoria?.slug),
-    );
-    const doc = documentos.filter(
-      (d) =>
-        hit(d.titulo) ||
-        hit(d.corpo) ||
-        hit(d.categoria?.label) ||
-        hit(d.categoria?.slug),
-    );
-    const tk = talks.filter(
-      (x) => hit(x.titulo) || hit(x.resumo) || hit(x.corpo) || hit(x.introducao) || String(x.numero).includes(buscaDeb),
-    );
-    return { com, doc, tk };
-  }, [buscaAtiva, buscaDeb, comunicados, documentos, talks]);
+    let list = talks.filter((tk) => (modoHistorico ? tk.status === "arquivado" : isPostagemPublica(tk.status)));
+    if (!modoHistorico) {
+      const mesSel = mesesTalksDisponiveis[idxMesTalk];
+      list = list.filter((tk) => itemNoMesCarrossel(tk.data_reuniao, mesSel));
+    }
+    if (buscaDeb) {
+      list = list.filter(
+        (x) =>
+          hitBuscaTexto(x.titulo) ||
+          hitBuscaTexto(x.resumo) ||
+          hitBuscaCorpo(x.corpo) ||
+          hitBuscaTexto(x.introducao) ||
+          String(x.numero).includes(buscaDeb),
+      );
+    }
+    return list;
+  }, [talks, modoHistorico, mesesTalksDisponiveis, idxMesTalk, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
   async function confirmarCiencia(contentType: "comunicado" | "documento" | "rh_talk", contentId: string) {
     if (!user?.id) return;
@@ -616,22 +667,6 @@ export default function PortalRhPage() {
     );
   }
 
-  const mesTalkSel = mesesTalksDisponiveis[idxMesTalk];
-  const talkCarouselPrimeiro = idxMesTalk <= 0;
-  const talkCarouselUltimo = idxMesTalk >= mesesTalksDisponiveis.length - 1;
-  const btnNavTalk = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
-
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
@@ -639,45 +674,6 @@ export default function PortalRhPage() {
         title="Portal de RH"
         subtitle="Comunicados oficiais, políticas internas e atas das RH Talks."
       />
-
-      {aba !== "gerenciamento" ? (
-      <div style={{ marginBottom: 18 }}>
-        <label htmlFor="rh-portal-busca" className="sr-only">
-          Buscar no portal de RH
-        </label>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            borderRadius: 12,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            padding: "10px 14px",
-            maxWidth: 480,
-          }}
-        >
-          <Search size={18} color={t.textMuted} aria-hidden />
-          <input
-            id="rh-portal-busca"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar comunicados, políticas, RH Talks…"
-            aria-label="Buscar comunicados, políticas e RH Talks"
-            style={{
-              flex: 1,
-              border: "none",
-              background: "transparent",
-              color: t.text,
-              fontSize: 14,
-              outline: "none",
-              fontFamily: FONT.body,
-            }}
-          />
-        </div>
-      </div>
-      ) : null}
 
       <div role="tablist" aria-label="Seções do portal de RH" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
         {(
@@ -690,7 +686,7 @@ export default function PortalRhPage() {
               : []),
           ] as const
         ).map(({ key, label, Icon }) => {
-          const ativa = aba === key && !buscaAtiva;
+          const ativa = aba === key;
           return (
             <button
               key={key}
@@ -699,11 +695,7 @@ export default function PortalRhPage() {
               id={`tab-rh-portal-${key}`}
               aria-selected={ativa}
               aria-controls={`panel-rh-portal-${key}`}
-              onClick={() => {
-                setAba(key);
-                setBusca("");
-                setBuscaDeb("");
-              }}
+              onClick={() => setAba(key)}
               style={{
                 padding: "10px 16px",
                 borderRadius: 12,
@@ -743,105 +735,6 @@ export default function PortalRhPage() {
           categoriasPol={categoriasPol}
           onDadosAlterados={() => void carregar()}
         />
-      ) : buscaAtiva ? (
-        <div style={{ marginTop: 8 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, marginBottom: 14 }}>Resultados da busca</h2>
-          {resultadosBusca.com.length === 0 && resultadosBusca.doc.length === 0 && resultadosBusca.tk.length === 0 ? (
-            <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
-              Nenhum resultado para os termos pesquisados.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {resultadosBusca.com.length > 0 ? (
-                <section aria-labelledby="rh-busca-com">
-                  <h3 id="rh-busca-com" style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-                    Comunicados
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {resultadosBusca.com.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setModalCom(c)}
-                        style={{
-                          textAlign: "left",
-                          padding: 14,
-                          borderRadius: 12,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.cardBg,
-                          boxShadow: cardShadow,
-                          cursor: "pointer",
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        <span style={{ fontWeight: 800, color: t.text }}>{c.titulo}</span>
-                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>{truncPreviewHtml(c.corpo, PREVIEW_LEN)}</div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-              {resultadosBusca.doc.length > 0 ? (
-                <section aria-labelledby="rh-busca-doc">
-                  <h3 id="rh-busca-doc" style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-                    Políticas e normativas
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {resultadosBusca.doc.map((d) => (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => setModalDoc(d)}
-                        style={{
-                          textAlign: "left",
-                          padding: 14,
-                          borderRadius: 12,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.cardBg,
-                          boxShadow: cardShadow,
-                          cursor: "pointer",
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        <span style={{ fontWeight: 800, color: t.text }}>{d.titulo}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-              {resultadosBusca.tk.length > 0 ? (
-                <section aria-labelledby="rh-busca-tk">
-                  <h3 id="rh-busca-tk" style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-                    RH Talks
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {resultadosBusca.tk.map((tk) => (
-                      <button
-                        key={tk.id}
-                        type="button"
-                        onClick={() => setModalTalk(tk)}
-                        style={{
-                          textAlign: "left",
-                          padding: 14,
-                          borderRadius: 12,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.cardBg,
-                          boxShadow: cardShadow,
-                          cursor: "pointer",
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        <span style={{ fontWeight: 800, color: t.text }}>
-                          RH Talk #{tk.numero} — {tk.titulo}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
-          )}
-        </div>
       ) : (
         <>
           <div
@@ -852,6 +745,26 @@ export default function PortalRhPage() {
           >
             {aba === "comunicados" ? (
               <div>
+                <PortalRhBlocoFiltros
+                  meses={mesesCom}
+                  idxMes={idxMesCom}
+                  onIdxMesChange={setIdxMesCom}
+                  modoHistorico={modoHistorico}
+                  onModoHistoricoChange={setModoHistorico}
+                  busca={busca}
+                  onBuscaChange={setBusca}
+                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaAriaLabel="Pesquisar comunicados por assunto ou descrição"
+                  linhaSubabas={
+                    <FiltroSubtabPills
+                      filtroAtivo={filtroCatCom}
+                      onFiltro={setFiltroCatCom}
+                      configs={SUBTABS_COMUNICADO}
+                      categorias={categoriasCom}
+                      t={t}
+                    />
+                  }
+                />
                 {comunicadoPinned ? (
                   <div
                     style={{
@@ -886,19 +799,16 @@ export default function PortalRhPage() {
                   </div>
                 ) : null}
 
-                <FiltroSubtabPills
-                  filtroAtivo={filtroCatCom}
-                  onFiltro={setFiltroCatCom}
-                  configs={SUBTABS_COMUNICADO}
-                  categorias={categoriasCom}
-                  t={t}
-                />
                 {comunicadosLista.length === 0 && !comunicadoPinned ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
-                    Sem comunicados publicados.
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    {modoHistorico
+                      ? "Sem comunicados arquivados."
+                      : buscaDeb
+                        ? "Nenhum resultado para os termos pesquisados."
+                        : "Sem dados para o período selecionado."}
                   </div>
                 ) : comunicadosLista.length === 0 ? (
-                  <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
+                  <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
                     Nenhum outro comunicado neste filtro.
                   </div>
                 ) : (
@@ -977,15 +887,34 @@ export default function PortalRhPage() {
               </div>
             ) : aba === "politicas" ? (
               <div>
-                <FiltroSubtabPills
-                  filtroAtivo={filtroCatPol}
-                  onFiltro={setFiltroCatPol}
-                  configs={SUBTABS_POLITICA}
-                  categorias={categoriasPol}
-                  t={t}
+                <PortalRhBlocoFiltros
+                  meses={mesesPol}
+                  idxMes={idxMesPol}
+                  onIdxMesChange={setIdxMesPol}
+                  modoHistorico={modoHistorico}
+                  onModoHistoricoChange={setModoHistorico}
+                  busca={busca}
+                  onBuscaChange={setBusca}
+                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaAriaLabel="Pesquisar políticas por assunto ou descrição"
+                  linhaSubabas={
+                    <FiltroSubtabPills
+                      filtroAtivo={filtroCatPol}
+                      onFiltro={setFiltroCatPol}
+                      configs={SUBTABS_POLITICA}
+                      categorias={categoriasPol}
+                      t={t}
+                    />
+                  }
                 />
                 {documentosFiltrados.length === 0 ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem políticas publicadas.</div>
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    {modoHistorico
+                      ? "Sem políticas arquivadas."
+                      : buscaDeb
+                        ? "Nenhum resultado para os termos pesquisados."
+                        : "Sem dados para o período selecionado."}
+                  </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {documentosFiltrados.map((d) => {
@@ -1071,41 +1000,25 @@ export default function PortalRhPage() {
               </div>
             ) : (
               <div>
-                <div
-                  style={{
-                    marginBottom: 16,
-                    borderRadius: 14,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.cardBg,
-                    padding: "12px 20px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      aria-label="Mês anterior"
-                      style={{ ...btnNavTalk, opacity: talkCarouselPrimeiro ? 0.35 : 1, cursor: talkCarouselPrimeiro ? "not-allowed" : "pointer" }}
-                      onClick={() => setIdxMesTalk((i) => Math.max(0, i - 1))}
-                      disabled={talkCarouselPrimeiro}
-                    >
-                      <ChevronLeft size={14} aria-hidden="true" />
-                    </button>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "min(100%, 180px)", textAlign: "center" }}>
-                      {mesTalkSel?.label ?? "—"}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label="Próximo mês"
-                      style={{ ...btnNavTalk, opacity: talkCarouselUltimo ? 0.35 : 1, cursor: talkCarouselUltimo ? "not-allowed" : "pointer" }}
-                      onClick={() => setIdxMesTalk((i) => Math.min(mesesTalksDisponiveis.length - 1, i + 1))}
-                      disabled={talkCarouselUltimo}
-                    >
-                      <ChevronRight size={14} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
+                <PortalRhBlocoFiltros
+                  meses={mesesTalksDisponiveis}
+                  idxMes={idxMesTalk}
+                  onIdxMesChange={setIdxMesTalk}
+                  modoHistorico={modoHistorico}
+                  onModoHistoricoChange={setModoHistorico}
+                  busca={busca}
+                  onBuscaChange={setBusca}
+                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaAriaLabel="Pesquisar RH Talks por assunto ou descrição"
+                />
                 {talksFiltrados.length === 0 ? (
-                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem atas neste período.</div>
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    {modoHistorico
+                      ? "Sem RH Talks arquivados."
+                      : buscaDeb
+                        ? "Nenhum resultado para os termos pesquisados."
+                        : "Sem dados para o período selecionado."}
+                  </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {talksFiltrados.map((tk) => {

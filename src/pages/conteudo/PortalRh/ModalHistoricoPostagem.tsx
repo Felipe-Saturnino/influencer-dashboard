@@ -94,7 +94,7 @@ export function ModalHistoricoPostagem({
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Nenhum registro de alteração de status.
+          Nenhum registro no histórico.
         </div>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "min(60dvh, 480px)", overflowY: "auto" }}>

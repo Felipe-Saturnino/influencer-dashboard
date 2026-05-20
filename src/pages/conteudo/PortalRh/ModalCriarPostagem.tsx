@@ -10,9 +10,13 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import {
   contentTypeFromTipoUi,
+  diffEdicaoRascunho,
   labelComunicadoFromSlug,
   labelPoliticaFromSlug,
+  registrarHistoricoEdicoesRascunho,
   registrarHistoricoStatus,
+  requerAprovacaoEhSim,
+  requerAprovacaoLabelFromDb,
   slugComunicadoFromLabel,
   slugPoliticaFromLabel,
   statusPosPublicar,
@@ -23,6 +27,7 @@ import {
   type RhPostagemContentType,
   type RhPostagemStatus,
   type RhPostagemTipoUi,
+  type SnapshotPostagemEdicao,
   TIPOS_COMUNICADO,
   TIPOS_POLITICA,
 } from "../../../lib/portalRhWorkflow";
@@ -79,6 +84,26 @@ export function ModalCriarPostagem({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+  const [snapshotEdicao, setSnapshotEdicao] = useState<SnapshotPostagemEdicao | null>(null);
+
+  const buildSnapshot = useCallback(
+    (paths: { imagem: string | null; anexo: string | null; anexoNome: string | null }): SnapshotPostagemEdicao | null => {
+      if (!tipoPostagem) return null;
+      return {
+        tipoPostagem,
+        tipoComunicado,
+        tipoPolitica,
+        requerAprovacao,
+        assunto,
+        introducao,
+        descricao,
+        imagemPath: paths.imagem,
+        anexoPath: paths.anexo,
+        anexoNome: paths.anexoNome,
+      };
+    },
+    [tipoPostagem, tipoComunicado, tipoPolitica, requerAprovacao, assunto, introducao, descricao],
+  );
 
   const resetForm = useCallback(() => {
     setTipoPostagem("");
@@ -96,7 +121,15 @@ export function ModalCriarPostagem({
     setStatusAtual("rascunho");
     setFieldErr({});
     setErro(null);
+    setSnapshotEdicao(null);
   }, []);
+
+  const aplicarSnapshotAposCarga = (
+    tipoUi: RhPostagemTipoUi,
+    snap: Omit<SnapshotPostagemEdicao, "tipoPostagem">,
+  ) => {
+    setSnapshotEdicao({ tipoPostagem: tipoUi, ...snap });
+  };
 
   const carregarEdicao = useCallback(async (ref: PostagemEditRef) => {
     setLoadingData(true);
@@ -130,7 +163,19 @@ export function ModalCriarPostagem({
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
-      setTipoComunicado(labelComunicadoFromSlug(row.categoria?.slug ?? ""));
+      const tipoCom = labelComunicadoFromSlug(row.categoria?.slug ?? "");
+      setTipoComunicado(tipoCom);
+      aplicarSnapshotAposCarga("comunicado", {
+        tipoComunicado: tipoCom,
+        tipoPolitica: "",
+        requerAprovacao: "",
+        assunto: row.titulo,
+        introducao: "",
+        descricao: row.corpo,
+        imagemPath: row.imagem_storage_path,
+        anexoPath: row.anexo_storage_path,
+        anexoNome: row.anexo_nome,
+      });
     } else if (ref.contentType === "documento") {
       const { data, error } = await supabase
         .from("rh_portal_documento")
@@ -157,11 +202,24 @@ export function ModalCriarPostagem({
       setDescricao(row.corpo ?? "");
       setIntroducao(row.introducao ?? "");
       setStatusAtual(row.status);
-      setRequerAprovacao(row.requer_aprovacao ? "SIM" : "NÃO");
+      const reqApr = requerAprovacaoLabelFromDb(row.requer_aprovacao);
+      setRequerAprovacao(reqApr);
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
-      setTipoPolitica(labelPoliticaFromSlug(row.categoria?.slug ?? ""));
+      const tipoPol = labelPoliticaFromSlug(row.categoria?.slug ?? "");
+      setTipoPolitica(tipoPol);
+      aplicarSnapshotAposCarga("politica", {
+        tipoComunicado: "",
+        tipoPolitica: tipoPol,
+        requerAprovacao: reqApr,
+        assunto: row.titulo,
+        introducao: row.introducao ?? "",
+        descricao: row.corpo ?? "",
+        imagemPath: row.imagem_storage_path,
+        anexoPath: row.anexo_storage_path,
+        anexoNome: row.anexo_nome,
+      });
     } else {
       const { data, error } = await supabase.from("rh_portal_rh_talk").select("*").eq("id", ref.id).single();
       setLoadingData(false);
@@ -186,6 +244,17 @@ export function ModalCriarPostagem({
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
+      aplicarSnapshotAposCarga("rh_talk", {
+        tipoComunicado: "",
+        tipoPolitica: "",
+        requerAprovacao: "",
+        assunto: row.titulo,
+        introducao: row.introducao ?? "",
+        descricao: row.corpo ?? row.resumo ?? "",
+        imagemPath: row.imagem_storage_path,
+        anexoPath: row.anexo_storage_path,
+        anexoNome: row.anexo_nome,
+      });
     }
   }, []);
 
@@ -245,7 +314,7 @@ export function ModalCriarPostagem({
       acao === "salvar"
         ? "rascunho"
         : tipoPostagem === "politica"
-          ? statusPosPublicar(requerAprovacao.trim().toUpperCase() === "SIM")
+          ? statusPosPublicar(requerAprovacaoEhSim(requerAprovacao))
           : "publicado";
 
     if (acao === "publicar") {
@@ -276,6 +345,14 @@ export function ModalCriarPostagem({
     const now = new Date().toISOString();
     const ct = contentTypeFromTipoUi(tipoPostagem);
     const statusAnterior = modo === "editar" ? statusAtual : null;
+    const registrarEdicoesRascunho = async (contentId: string) => {
+      if (modo !== "editar" || statusAnterior !== "rascunho" || !snapshotEdicao || !user?.id) return;
+      const depois = buildSnapshot({ imagem: up.imagem, anexo: up.anexo, anexoNome: up.anexoNomeOut });
+      if (!depois) return;
+      const alteracoes = diffEdicaoRascunho(snapshotEdicao, depois);
+      await registrarHistoricoEdicoesRascunho(supabase, ct, contentId, alteracoes, user.id);
+      setSnapshotEdicao(depois);
+    };
 
     try {
       if (tipoPostagem === "comunicado") {
@@ -300,6 +377,7 @@ export function ModalCriarPostagem({
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("rh_portal_comunicado").update(payload).eq("id", editRef.id);
           if (error) throw new Error(error.message);
+          await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
@@ -314,7 +392,7 @@ export function ModalCriarPostagem({
           setSalvando(false);
           return;
         }
-        const reqApr = requerAprovacao.trim().toUpperCase() === "SIM";
+        const reqApr = requerAprovacaoEhSim(requerAprovacao);
         const payload = {
           titulo: assunto.trim() || "Rascunho",
           corpo: descricao,
@@ -332,6 +410,7 @@ export function ModalCriarPostagem({
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
           if (error) throw new Error(error.message);
+          await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
@@ -366,6 +445,7 @@ export function ModalCriarPostagem({
             .update({ ...payload, ...numeroExtra })
             .eq("id", editRef.id);
           if (error) throw new Error(error.message);
+          await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
@@ -516,8 +596,8 @@ export function ModalCriarPostagem({
                   aria-label="É necessário aprovação"
                 >
                   <option value="">Selecione…</option>
-                  <option value="SIM">SIM</option>
-                  <option value="NÃO">NÃO</option>
+                  <option value="Sim">Sim</option>
+                  <option value="Não">Não</option>
                 </select>
               </div>
               <div>
