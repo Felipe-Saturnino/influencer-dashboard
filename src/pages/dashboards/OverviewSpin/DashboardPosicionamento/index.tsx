@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -14,44 +14,29 @@ import {
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
-import { supabase } from "../../../../lib/supabase";
-import { fetchAllPages } from "../../../../lib/supabasePaginate";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../../lib/tableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard } from "../../../../components/dashboard";
 import {
   type HeatmapHistoricoModo,
-  type LobbyExecucaoRow,
   type LobbyPosicaoRow,
+  type AlertaPos,
   fmtPosicao,
   posicaoBgColor,
   posicaoTextColor,
-  periodoRange,
-  execucoesNoPeriodo,
-  mapPosicoesPorExecucao,
-  mesasNoTop10Snapshot,
   deltaPosicao,
   posicaoMediaMesaNoBucket,
-  ultimaExecucaoNoDia,
-  execucaoMesmoHorarioDiaAnterior,
-  calcVisibilidadeLeituras,
-  melhorPosicaoComCategoria,
-  maiorQuedaEntreSnapshots,
   colunasHistoricoPosicionamento,
   execIdsColunaHistorico,
-  visibilidadePorCategoriaDia,
-  concorrentesPorJogoDetalhe,
   fmtUltimaAtualizacao,
-  gerarAlertas,
   SEMANTIC,
-  toDateKey,
-  addDays,
-  POS_MONITOR_DIA_MIN,
 } from "../../../../lib/lobbyMonitorHelpers";
+import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
 
 interface Props {
   operadoraSlug: string;
   refDate: Date;
+  slugToNome?: (slug: string) => string;
 }
 
 const VS_ONTEM = "vs ontem (mesmo horário)";
@@ -231,175 +216,239 @@ function ConcorrentesCountHover({
   );
 }
 
-export default function DashboardPosicionamento({ operadoraSlug, refDate }: Props) {
+function PosicaoAtualMesasBlock({
+  titulo,
+  loading,
+  semDados,
+  mesasOrdenadas,
+  prevMap,
+  ultimaExecutadoEm,
+  cardStyle,
+}: {
+  titulo: string;
+  loading: boolean;
+  semDados: boolean;
+  mesasOrdenadas: LobbyPosicaoRow[];
+  prevMap: Map<string, number | null>;
+  ultimaExecutadoEm: string | undefined;
+  cardStyle: CSSProperties;
+}) {
+  const { theme: t } = useApp();
+
+  if (loading) {
+    return (
+      <div style={cardStyle}>
+        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <div style={{ padding: "24px 0", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Carregando…
+        </div>
+      </div>
+    );
+  }
+
+  if (semDados) {
+    return (
+      <div style={cardStyle}>
+        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: "12px 0 0" }}>
+          Sem dados para o período selecionado.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={cardStyle}>
+      <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+      <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
+        {fmtUltimaAtualizacao(ultimaExecutadoEm)}
+      </p>
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        {mesasOrdenadas.map((m) => {
+          const pa = prevMap.get(m.mesa_identificacao) ?? null;
+          const d = deltaPosicao(m.posicao, pa);
+          return (
+            <li
+              key={m.mesa_identificacao}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 0",
+                borderBottom: `1px solid ${t.cardBorder}`,
+                fontFamily: FONT.body,
+                fontSize: 13,
+              }}
+            >
+              <span
+                style={{
+                  minWidth: 40,
+                  padding: "4px 8px",
+                  borderRadius: 8,
+                  textAlign: "center",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  background: posicaoBgColor(m.posicao),
+                  color: posicaoTextColor(m.posicao),
+                }}
+              >
+                {fmtPosicao(m.posicao)}
+              </span>
+              <span
+                style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
+                title={m.nome_mesa}
+              >
+                {m.nome_mesa}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
+                {d == null || d === 0 ? (
+                  <Minus size={14} color={SEMANTIC.cinza} aria-hidden="true" />
+                ) : d < 0 ? (
+                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label="Melhorou" />
+                ) : (
+                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label="Piorou" />
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function AlertasPeriodoBlock({
+  alertas,
+  cardStyle,
+}: {
+  alertas: AlertaPos[];
+  cardStyle: CSSProperties;
+}) {
+  const { theme: t } = useApp();
+
+  return (
+    <div style={cardStyle}>
+      <SectionTitle icon={<AlertTriangle size={15} aria-hidden="true" />}>Alertas do período</SectionTitle>
+      {alertas.length === 0 ? (
+        <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
+          Nenhum alerta automático para o período.
+        </p>
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {alertas.map((a, i) => (
+            <li
+              key={i}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                marginBottom: 8,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                background:
+                  a.tipo === "positivo"
+                    ? "color-mix(in srgb, #22c55e 14%, transparent)"
+                    : "color-mix(in srgb, #f59e0b 16%, transparent)",
+                color: t.text,
+                border: `1px solid ${a.tipo === "positivo" ? "color-mix(in srgb, #22c55e 30%, transparent)" : "color-mix(in srgb, #f59e0b 35%, transparent)"}`,
+              }}
+            >
+              {a.texto}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DashboardPosicionamentoTodas({
+  refDate,
+  slugToNome,
+  card,
+}: {
+  refDate: Date;
+  slugToNome: (slug: string) => string;
+  card: CSSProperties;
+}) {
+  const blaze = useLobbyPosicionamentoData("blaze", refDate);
+  const cda = useLobbyPosicionamentoData("casa_apostas", refDate);
+
+  const alertasConsolidados = useMemo(() => {
+    const prefix = (slug: string, lista: AlertaPos[]) =>
+      lista.map((a) => ({
+        ...a,
+        texto: `${slugToNome(slug)} — ${a.texto}`,
+      }));
+    return [...prefix("blaze", blaze.alertas), ...prefix("casa_apostas", cda.alertas)];
+  }, [blaze.alertas, cda.alertas, slugToNome]);
+
+  return (
+    <>
+      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+        <PosicaoAtualMesasBlock
+          titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
+          loading={blaze.loading}
+          semDados={blaze.semDados}
+          mesasOrdenadas={blaze.mesasOrdenadas}
+          prevMap={blaze.prevMap}
+          ultimaExecutadoEm={blaze.ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Posição atual das Mesas ${slugToNome("casa_apostas")}`}
+          loading={cda.loading}
+          semDados={cda.semDados}
+          mesasOrdenadas={cda.mesasOrdenadas}
+          prevMap={cda.prevMap}
+          ultimaExecutadoEm={cda.ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+      </div>
+      <AlertasPeriodoBlock alertas={alertasConsolidados} cardStyle={card} />
+    </>
+  );
+}
+
+function DashboardPosicionamentoOperadora({
+  operadoraSlug,
+  refDate,
+  card,
+}: {
+  operadoraSlug: string;
+  refDate: Date;
+  card: CSSProperties;
+}) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [loading, setLoading] = useState(true);
-  const [execucoesAll, setExecucoesAll] = useState<LobbyExecucaoRow[]>([]);
-  const [posicoesAll, setPosicoesAll] = useState<LobbyPosicaoRow[]>([]);
   const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
 
-  const dayKey = useMemo(() => toDateKey(refDate), [refDate]);
-
-  const card: React.CSSProperties = {
-    borderRadius: 14,
-    border: `1px solid ${t.cardBorder}`,
-    background: brand.blockBg,
-    padding: "16px 18px",
-    marginBottom: 14,
-  };
-
-  const carregar = useCallback(async () => {
-    if (!operadoraSlug || operadoraSlug === "todas") {
-      setExecucoesAll([]);
-      setPosicoesAll([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const rangeDia = periodoRange("dia", refDate);
-      const fetchStart = addDays(refDate, -35);
-      const minKey = toDateKey(POS_MONITOR_DIA_MIN);
-      const fetchInicioKey =
-        toDateKey(fetchStart) < minKey ? minKey : toDateKey(fetchStart);
-      const fetchFrom = `${fetchInicioKey}T00:00:00.000Z`;
-
-      const execRows = await fetchAllPages(async (from, to) =>
-        supabase
-          .from("lobby_monitor_execucao")
-          .select(
-            "id, operadora_slug, executado_em, status, pior_mesa_nome, pior_mesa_identificacao, pior_mesa_posicao, jogos_a_frente_pior_mesa",
-          )
-          .eq("operadora_slug", operadoraSlug)
-          .gte("executado_em", fetchFrom)
-          .lte("executado_em", rangeDia.fim)
-          .order("executado_em", { ascending: true })
-          .range(from, to),
-      );
-
-      const execucoes = execRows as LobbyExecucaoRow[];
-      if (execucoes.length === 0) {
-        setExecucoesAll([]);
-        setPosicoesAll([]);
-        return;
-      }
-
-      const ids = execucoes.map((e) => e.id);
-      const posRows = await fetchAllPages(async (from, to) =>
-        supabase
-          .from("lobby_monitor_posicao")
-          .select(
-            "execucao_id, mesa_identificacao, nome_mesa, tipo_jogo, posicao, qtd_concorrentes_a_frente, concorrentes_a_frente",
-          )
-          .in("execucao_id", ids)
-          .range(from, to),
-      );
-
-      setExecucoesAll(
-        execucoes.map((e) => ({
-          ...e,
-          jogos_a_frente_pior_mesa: Array.isArray(e.jogos_a_frente_pior_mesa)
-            ? e.jogos_a_frente_pior_mesa
-            : [],
-        })),
-      );
-      setPosicoesAll(
-        (posRows as LobbyPosicaoRow[]).map((p) => ({
-          ...p,
-          concorrentes_a_frente: Array.isArray(p.concorrentes_a_frente)
-            ? p.concorrentes_a_frente
-            : [],
-        })),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [operadoraSlug, refDate]);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
-
-  const posByExec = useMemo(() => mapPosicoesPorExecucao(posicoesAll), [posicoesAll]);
-
-  const rangeDia = useMemo(() => periodoRange("dia", refDate), [refDate]);
-  const execDia = useMemo(
-    () => execucoesNoPeriodo(execucoesAll, rangeDia.inicio, rangeDia.fim),
-    [execucoesAll, rangeDia],
-  );
-
-  const ultimaNoDia = useMemo(
-    () => ultimaExecucaoNoDia(execucoesAll, dayKey),
-    [execucoesAll, dayKey],
-  );
-  const execOntemMesmoHorario = useMemo(
-    () => (ultimaNoDia ? execucaoMesmoHorarioDiaAnterior(ultimaNoDia, execucoesAll) : null),
-    [ultimaNoDia, execucoesAll],
-  );
-
-  const snapshotAtual = useMemo(
-    () => (ultimaNoDia ? posByExec.get(ultimaNoDia.id) ?? [] : []),
-    [ultimaNoDia, posByExec],
-  );
-  const snapshotOntem = useMemo(
-    () => (execOntemMesmoHorario ? posByExec.get(execOntemMesmoHorario.id) ?? [] : []),
-    [execOntemMesmoHorario, posByExec],
-  );
-
-  const visAtual = useMemo(() => calcVisibilidadeLeituras(snapshotAtual), [snapshotAtual]);
-  const visOntem = useMemo(() => calcVisibilidadeLeituras(snapshotOntem), [snapshotOntem]);
-
-  const top10Atual = useMemo(() => mesasNoTop10Snapshot(snapshotAtual), [snapshotAtual]);
-  const top10Ontem = useMemo(() => mesasNoTop10Snapshot(snapshotOntem), [snapshotOntem]);
-
-  const melhor = useMemo(() => melhorPosicaoComCategoria(snapshotAtual), [snapshotAtual]);
-  const queda = useMemo(
-    () => maiorQuedaEntreSnapshots(snapshotAtual, snapshotOntem),
-    [snapshotAtual, snapshotOntem],
-  );
-
-  const mesasOrdenadas = useMemo(() => {
-    return [...snapshotAtual].sort((a, b) => {
-      const pa = a.posicao ?? 999;
-      const pb = b.posicao ?? 999;
-      return pa - pb;
-    });
-  }, [snapshotAtual]);
-
-  const prevMap = useMemo(
-    () => new Map(snapshotOntem.map((p) => [p.mesa_identificacao, p.posicao])),
-    [snapshotOntem],
-  );
-
-  const concorrentesJogo = useMemo(
-    () => concorrentesPorJogoDetalhe(snapshotAtual),
-    [snapshotAtual],
-  );
-
-  const rankingJogos = useMemo(() => {
-    const raw = ultimaNoDia?.jogos_a_frente_pior_mesa ?? [];
-    return [...raw].sort((a, b) => a.posicao - b.posicao);
-  }, [ultimaNoDia]);
+  const data = useLobbyPosicionamentoData(operadoraSlug, refDate);
+  const {
+    loading,
+    semDados,
+    execucoesAll,
+    posByExec,
+    ultimaNoDia,
+    mesasOrdenadas,
+    prevMap,
+    visAtual,
+    visOntem,
+    top10Atual,
+    top10Ontem,
+    melhor,
+    queda,
+    concorrentesJogo,
+    rankingJogos,
+    cats,
+    alertas,
+    snapshotAtual,
+  } = data;
 
   const heatCols = useMemo(
     () => colunasHistoricoPosicionamento(historicoModo, refDate),
     [historicoModo, refDate],
   );
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
-
-  const cats = useMemo(
-    () => visibilidadePorCategoriaDia(execDia, posByExec),
-    [execDia, posByExec],
-  );
-
-  const alertas = useMemo(
-    () => gerarAlertas(snapshotAtual, snapshotOntem, execDia, posByExec),
-    [snapshotAtual, snapshotOntem, execDia, posByExec],
-  );
-
-  const semDados =
-    operadoraSlug === "todas" || (!loading && execDia.length === 0);
 
   const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
@@ -437,22 +486,6 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
     textOverflow: "ellipsis",
   });
 
-  if (operadoraSlug === "todas") {
-    return (
-      <div
-        style={{
-          padding: "40px 0",
-          textAlign: "center",
-          color: t.textMuted,
-          fontSize: 13,
-          fontFamily: FONT.body,
-        }}
-      >
-        Selecione uma operadora para ver o posicionamento no lobby.
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="app-grid-kpi-4" style={{ marginBottom: 14 }}>
@@ -479,8 +512,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
     );
   }
 
-  const deltaVisPp =
-    visAtual != null && visOntem != null ? visAtual - visOntem : null;
+  const deltaVisPp = visAtual != null && visOntem != null ? visAtual - visOntem : null;
   const deltaTop10 = top10Atual.noTop10 - top10Ontem.noTop10;
 
   return (
@@ -496,7 +528,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
           }
           deltaLabel={VS_ONTEM}
           positivo={deltaVisPp == null ? null : deltaVisPp >= 0}
-          icon={<Eye size={16} aria-hidden />}
+          icon={<Eye size={16} aria-hidden="true" />}
         />
         <KpiPosCard
           label="Mesas no top 10"
@@ -504,85 +536,43 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
           delta={deltaTop10 !== 0 ? `${deltaTop10 >= 0 ? "+" : ""}${deltaTop10}` : null}
           deltaLabel={VS_ONTEM}
           positivo={deltaTop10 >= 0}
-          icon={<Trophy size={16} aria-hidden />}
+          icon={<Trophy size={16} aria-hidden="true" />}
         />
         <KpiPosCard
           label="Melhor posição"
           value={melhor ? fmtPosicao(melhor.posicao) : "—"}
           subValue={melhor?.categoria ?? null}
-          icon={<MapPin size={16} aria-hidden />}
+          icon={<MapPin size={16} aria-hidden="true" />}
         />
         <KpiPosCard
           label="Maior queda"
           value={queda ? `−${queda.delta}` : "—"}
           subValue={queda?.nome_mesa ?? null}
-          icon={<TrendingDown size={16} aria-hidden />}
+          icon={<TrendingDown size={16} aria-hidden="true" />}
           positivo={false}
         />
       </div>
 
       <div className="app-grid-2" style={{ marginBottom: 14 }}>
-        <div style={card}>
-          <SectionTitle icon={<ListOrdered size={15} />}>Posição atual das mesas</SectionTitle>
-          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
-          </p>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {mesasOrdenadas.map((m) => {
-              const pa = prevMap.get(m.mesa_identificacao) ?? null;
-              const d = deltaPosicao(m.posicao, pa);
-              return (
-                <li
-                  key={m.mesa_identificacao}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 0",
-                    borderBottom: `1px solid ${t.cardBorder}`,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                  }}
-                >
-                  <span
-                    style={{
-                      minWidth: 40,
-                      padding: "4px 8px",
-                      borderRadius: 8,
-                      textAlign: "center",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      background: posicaoBgColor(m.posicao),
-                      color: posicaoTextColor(m.posicao),
-                    }}
-                  >
-                    {fmtPosicao(m.posicao)}
-                  </span>
-                  <span style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }} title={m.nome_mesa}>
-                    {m.nome_mesa}
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
-                    {d == null || d === 0 ? (
-                      <Minus size={14} color={SEMANTIC.cinza} aria-hidden />
-                    ) : d < 0 ? (
-                      <ArrowUp size={14} color={SEMANTIC.verde} aria-label="Melhorou" />
-                    ) : (
-                      <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label="Piorou" />
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <PosicaoAtualMesasBlock
+          titulo="Posição atual das mesas"
+          loading={false}
+          semDados={false}
+          mesasOrdenadas={mesasOrdenadas}
+          prevMap={prevMap}
+          ultimaExecutadoEm={ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
 
-        <div style={card}>
-          <SectionTitle icon={<LayoutList size={15} />}>Concorrentes à frente</SectionTitle>
+        <div style={{ ...card, marginBottom: 0 }}>
+          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Concorrentes à frente</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
             {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
           {concorrentesJogo.length === 0 ? (
-            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Sem dados para o período selecionado.
+            </p>
           ) : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {concorrentesJogo.map((c) => (
@@ -619,7 +609,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
             marginBottom: 12,
           }}
         >
-          <SectionTitle icon={<LayoutList size={15} />}>Histórico de posicionamento</SectionTitle>
+          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Histórico de posicionamento</SectionTitle>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {HISTORICO_MODOS.map((m) => {
               const ativo = historicoModo === m.id;
@@ -713,13 +703,15 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
       </div>
 
       <div className="app-grid-2" style={{ marginBottom: 14 }}>
-        <div style={card}>
-          <SectionTitle icon={<Trophy size={15} />}>Ranking de concorrentes</SectionTitle>
+        <div style={{ ...card, marginBottom: 0 }}>
+          <SectionTitle icon={<Trophy size={15} aria-hidden="true" />}>Ranking de concorrentes</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
             {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
           {rankingJogos.length === 0 ? (
-            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+            <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Sem dados para o período selecionado.
+            </p>
           ) : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {rankingJogos.map((j) => (
@@ -749,7 +741,10 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
                   >
                     {fmtPosicao(j.posicao)}
                   </span>
-                  <span style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }} title={j.name}>
+                  <span
+                    style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
+                    title={j.name}
+                  >
                     {j.name}
                   </span>
                   <span
@@ -770,8 +765,8 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
           )}
         </div>
 
-        <div style={card}>
-          <SectionTitle icon={<Eye size={15} />}>Visibilidade por categoria</SectionTitle>
+        <div style={{ ...card, marginBottom: 0 }}>
+          <SectionTitle icon={<Eye size={15} aria-hidden="true" />}>Visibilidade por categoria</SectionTitle>
           <div className="app-table-wrap">
             <table
               style={{
@@ -812,37 +807,36 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate }: Prop
         </div>
       </div>
 
-<div style={card}>
-        <SectionTitle icon={<AlertTriangle size={15} />}>Alertas do período</SectionTitle>
-        {alertas.length === 0 ? (
-          <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
-            Nenhum alerta automático para o período.
-          </p>
-        ) : (
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {alertas.map((a, i) => (
-              <li
-                key={i}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  marginBottom: 8,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  background:
-                    a.tipo === "positivo"
-                      ? "color-mix(in srgb, #22c55e 14%, transparent)"
-                      : "color-mix(in srgb, #f59e0b 16%, transparent)",
-                  color: t.text,
-                  border: `1px solid ${a.tipo === "positivo" ? "color-mix(in srgb, #22c55e 30%, transparent)" : "color-mix(in srgb, #f59e0b 35%, transparent)"}`,
-                }}
-              >
-                {a.texto}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <AlertasPeriodoBlock alertas={alertas} cardStyle={card} />
     </>
+  );
+}
+
+export default function DashboardPosicionamento({ operadoraSlug, refDate, slugToNome }: Props) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+
+  const card: CSSProperties = {
+    borderRadius: 14,
+    border: `1px solid ${t.cardBorder}`,
+    background: brand.blockBg,
+    padding: "16px 18px",
+    marginBottom: 14,
+  };
+
+  const resolveNome = slugToNome ?? ((slug: string) => slug);
+
+  if (operadoraSlug === "todas") {
+    return (
+      <DashboardPosicionamentoTodas refDate={refDate} slugToNome={resolveNome} card={card} />
+    );
+  }
+
+  return (
+    <DashboardPosicionamentoOperadora
+      operadoraSlug={operadoraSlug}
+      refDate={refDate}
+      card={card}
+    />
   );
 }

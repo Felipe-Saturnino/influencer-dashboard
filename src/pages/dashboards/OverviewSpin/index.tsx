@@ -1523,14 +1523,6 @@ export default function OverviewSpin() {
   }, [carregar, aba]);
 
   useEffect(() => {
-    if (aba !== "posicionamento") return;
-    const forced = operadoraSlugsForcado?.[0];
-    if (filtroOperadora === "todas") {
-      setFiltroOperadora(forced ?? "blaze");
-    }
-  }, [aba, filtroOperadora, operadoraSlugsForcado]);
-
-  useEffect(() => {
     setExpandedDetalhe(new Set());
   }, [historico, filtroOperadora, operadoraSlugsForcado, idxMes]);
 
@@ -2167,7 +2159,11 @@ export default function OverviewSpin() {
   const operadoraSlugPosicionamento =
     filtroOperadora !== "todas"
       ? filtroOperadora
-      : (operadoraSlugsForcado?.[0] ?? "blaze");
+      : operadoraSlugsForcado?.length === 1
+        ? operadoraSlugsForcado[0]
+        : showFiltroOperadora
+          ? "todas"
+          : (operadoraSlugsForcado?.[0] ?? "blaze");
 
   function irCarrosselAnterior() {
     if (aba === "posicionamento") return;
@@ -3624,7 +3620,9 @@ export default function OverviewSpin() {
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
               >
-                {aba === "overview" && <option value="todas">Todas as operadoras</option>}
+                {(aba === "overview" || aba === "posicionamento") && showFiltroOperadora && (
+                  <option value="todas">Todas as operadoras</option>
+                )}
                 {operadorasOcr
                   .filter((o) => podeVerOperadora(o.slug))
                   .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
@@ -4527,6 +4525,7 @@ export default function OverviewSpin() {
           <DashboardPosicionamento
             operadoraSlug={operadoraSlugPosicionamento}
             refDate={refDatePosicionamento}
+            slugToNome={slugToNome}
           />
         </Suspense>
       )}
