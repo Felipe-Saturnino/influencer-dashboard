@@ -8,11 +8,11 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
-import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield, Users, AlertCircle, CheckCircle, Building2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Trash2 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 function SensitiveField({
@@ -312,11 +312,13 @@ export default function Afiliados() {
               {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
-                  <SelectComIcone pill icon={<Shield size={15} aria-hidden="true" />} label="Filtrar por operadora" value={filterOp} onChange={setFilterOp} minWidth={200} style={{ border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`, background: filterOp !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : (t.inputBg ?? t.cardBg), color: filterOp !== "todas" ? brand.accent : t.textMuted, fontWeight: filterOp !== "todas" ? 700 : 400 }}>
-                    <option value="todas">Todas as operadoras</option>
-                    {operadorasNoEscopo.map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                  </SelectComIcone>
+                  <FiltroOperadoraSelect
+                    pill
+                    minWidth={200}
+                    value={filterOp}
+                    onChange={setFilterOp}
+                    operadoras={operadorasNoEscopo}
+                  />
                 </>
               )}
             </div>

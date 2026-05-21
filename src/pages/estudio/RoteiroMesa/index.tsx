@@ -6,10 +6,11 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield, Loader2, NotebookPen } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2, NotebookPen } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -1151,26 +1152,14 @@ export default function RoteiroMesa() {
             </div>
             {/* Direita: Operadora (só quando showFiltroOperadora; não aparece para perfil Operador) */}
             {mostrarFiltroOp && opcoesFiltro.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 32px", borderRadius: 999,
-                    border: `1px solid ${filtroOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background: filtroOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`) : (t.inputBg ?? t.cardBg),
-                    color: filtroOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13, fontWeight: filtroOperadora !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
-                  {[...opcoesFiltro]
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={opcoesFiltro}
+                showTodasOption={!operadoraSlugsForcado?.length}
+              />
             )}
           </div>
           {narrowMobile ? (

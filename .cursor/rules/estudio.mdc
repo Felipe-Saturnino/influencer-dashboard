@@ -64,14 +64,14 @@ alwaysApply: false
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
 - Tabelas 4 abas: hover, tablist ARIA completo.
-- Select operadora: legado `GiShield` interior — migrar para Lucide `Shield` quando tocar.
+- Filtro operadora: **`FiltroOperadoraSelect`** na barra de filtros (Global + Brand); opção agregadora **Todas Operadoras**.
 - **Handoff:** barcode, condição da peça, abas.
 
 ---
 
 ## Roteiro de Mesa (`roteiro_mesa`)
 
-- Filtros: Jogo, Tipo, Operadora; conteúdo após operadora selecionada.
+- Filtros: Jogo, Tipo; **operadora** via `FiltroOperadoraSelect` (pill na direita da barra); conteúdo após operadora selecionada.
 - Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"`.
 - `BannerPendencias` + `ModalThreadSolicitacao`.
 - **Handoff:** CRUD campanhas de mesa, exclusão 2 cliques.
@@ -103,3 +103,4 @@ alwaysApply: false
 - Tabelas sem hover (Figurinos).
 - GameIcons no header (`PageHeader` + Lucide).
 - Query de observações sem `.limit()`.
+- Filtro de operadora com `GiShield`, markup manual ou agregadora “Todas as operadoras” / “Operadoras” só — usar `FiltroOperadoraSelect` (**Todas Operadoras**).

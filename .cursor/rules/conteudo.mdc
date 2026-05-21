@@ -77,6 +77,8 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
 
 **LinksMateriais:** manter `primaryTransparent*` em strips e secções conforme implementação atual.
 
+**RoteiroMesa:** filtro de lista de operadoras via **`FiltroOperadoraSelect`** (`pill` na direita da barra) — agregadora **Todas Operadoras**; ver Global § Filtro de operadora.
+
 ---
 
 ## Abas (Tab Panels) — ARIA Obrigatório
@@ -377,7 +379,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Modais** (`ModalCriarPostagem`, `ModalHistoricoPostagem`, leitura): `useApp()` + `useDashboardBrand()` internos — **nunca** props `t` ou `brand`.
 - **Tabs principais + Gerenciamento:** `onKeyDown` ArrowLeft/Right, `tabIndex` roving, `tabpanel` com `tabIndex={0}`.
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
-- **PortalRhBlocoFiltros:** `"Mês anterior"` / `"Próximo mês"`; Histórico com `aria-pressed`.
+- **PortalRhBlocoFiltros:** carrossel via `lib/carouselNavStyles.ts`; `"Mês anterior"` / `"Próximo mês"`; Histórico com `aria-pressed`.
 - **ComunicadoCard:** `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido.
 - **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 

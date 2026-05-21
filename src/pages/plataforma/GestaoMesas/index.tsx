@@ -8,7 +8,7 @@ import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { Pencil, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { GiRoundTable } from "react-icons/gi";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Role } from "../../../types";
@@ -182,31 +182,13 @@ export default function GestaoMesas() {
 
       <div style={{ ...card, marginBottom: 16 }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: t.textMuted }}>
-            <span style={{ fontWeight: 600 }}>Filtrar por operadora</span>
-            <select
-              aria-label="Filtrar por operadora"
-              value={filtroOperadora}
-              onChange={(e) => setFiltroOperadora(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                minWidth: 200,
-              }}
-            >
-              <option value="todas">Todas</option>
-              {operadorasOpcoes.map(([slug, nome]) => (
-                <option key={slug} value={slug}>
-                  {nome}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FiltroOperadoraSelect
+            value={filtroOperadora}
+            onChange={setFiltroOperadora}
+            operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
+            minWidth={200}
+            highlightWhenFiltered={false}
+          />
           {perm.canCriarOk && (
             <button
               type="button"

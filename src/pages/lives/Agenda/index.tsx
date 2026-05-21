@@ -5,6 +5,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
@@ -25,12 +26,11 @@ import {
   X,
   Loader2,
   Plus,
-  Shield,
 } from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -286,13 +286,6 @@ export default function Agenda() {
     return `${color}22`;
   }
 
-  const btnNav: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent", color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
   const chipBase = (active: boolean, color: string = DEFAULT_CHIP_COLOR): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: 999, fontSize: 13,
     cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
@@ -387,13 +380,21 @@ export default function Agenda() {
         }}>
           {/* Linha principal — centralizada */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" onClick={prev} style={btnNav} aria-label="Período anterior">
+            <button
+              type="button"
+              onClick={prev}
+              style={getCarouselBtnNavStyle(t, false)}
+              aria-label="Período anterior"
+            >
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
-              {headerTitle()}
-            </span>
-            <button type="button" onClick={next} style={btnNav} aria-label="Próximo período">
+            <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
+            <button
+              type="button"
+              onClick={next}
+              style={getCarouselBtnNavStyle(t, false)}
+              aria-label="Próximo período"
+            >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
@@ -418,29 +419,14 @@ export default function Agenda() {
             )}
 
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <SelectComIcone
+              <FiltroOperadoraSelect
                 pill
-                icon={<Shield size={13} aria-hidden="true" />}
-                label="Filtrar por operadora"
+                minWidth={200}
                 value={filterOperadora}
                 onChange={setFilterOperadora}
-                minWidth={200}
-                style={{
-                  border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                  background:
-                    filterOperadora !== "todas"
-                      ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                  fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </SelectComIcone>
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
           </div>
 

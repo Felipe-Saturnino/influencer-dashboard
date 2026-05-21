@@ -4,15 +4,16 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import {
-  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, Shield, MessageSquare,
+  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, MessageSquare,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -457,13 +458,6 @@ export default function Feedback() {
     ? Math.round(realizadasComRes.reduce((acc, l) => acc + (resultadosAll[l.id]?.media_views ?? 0), 0) / realizadasComRes.length)
     : 0;
 
-  // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
-  const btnNav: CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent", color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
   const isPrimeiro = idxSemana === 0;
   const isUltimo = idxSemana === semanasDisponiveis.length - 1;
 
@@ -501,19 +495,19 @@ export default function Feedback() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
-              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.max(0, i - 1)); }}
               disabled={historico || isPrimeiro}
               aria-label="Semana anterior"
             >
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(140px, 45vw, 200px)", textAlign: "center" }}>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(140px, 45vw, 200px)" })}>
               {historico ? "Todo o período" : semanaSelecionada?.label}
             </span>
             <button
               type="button"
-              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.min(semanasDisponiveis.length - 1, i + 1)); }}
               disabled={historico || isUltimo}
               aria-label="Próxima semana"
@@ -554,33 +548,16 @@ export default function Feedback() {
               <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />
             )}
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <SelectComIcone
+              <FiltroOperadoraSelect
                 pill
-                icon={<Shield size={15} aria-hidden="true" />}
-                label="Filtrar por operadora"
+                minWidth={200}
                 value={filterOperadora}
                 onChange={setFilterOperadora}
-                minWidth={200}
-                style={{
-                  border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                  background:
-                    filterOperadora !== "todas"
-                      ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                  fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-              </SelectComIcone>
+                operadoras={operadorasList}
+                podeVerOperadora={(slug) =>
+                  escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(slug)
+                }
+              />
             )}
           </div>
 

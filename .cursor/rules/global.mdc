@@ -87,7 +87,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, carouselNavStyles, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -146,9 +146,14 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
 
 **Outros:** `PageHeader`, `InfluencerMultiSelect`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`.
+
+```typescript
+import { FiltroOperadoraSelect, OPERADORA_FILTRO_TODAS_VALUE, OPERADORA_FILTRO_TODAS_LABEL, OPERADORA_FILTRO_ARIA_LABEL } from "../components/dashboard";
+// ou: from "../components/FiltroOperadoraSelect"
+```
 
 Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não copiar localmente.
 
@@ -193,13 +198,44 @@ if (perm.canView === "nao") {
 
 ## Filtros (comportamento global)
 
-Visual da barra (fundo transparente, ícones): **Brand MDC**. Aqui: regras de **dados e UX** do filtro.
+Visual da barra (fundo transparente, ícones, carrossel): **Brand MDC** + `lib/carouselNavStyles.ts` para setas/rótulo. Aqui: regras de **dados e UX** do filtro.
 
 ### Opção “Todos” por defeito
 
-- Filtro alimentado por base/cadastro (operadora, influencer, status, área, etc.) deve incluir opção agregadora **`Todos`** / **`Todas`** / **`Todas as operadoras`** (label conforme domínio).
-- **Estado inicial** do filtro: sempre essa opção agregadora (ex.: `useState("todos")`, `"todas"`).
+- Filtro alimentado por base/cadastro (influencer, status, área, etc.) deve incluir opção agregadora conforme domínio (`Todos`, `Todas`, …).
 - Só mudar do agregador quando o usuário escolher um valor específico.
+
+### Filtro de operadora (lista de parceiras) — obrigatório
+
+Sempre que a página exibir **seletor de operadora** na barra de filtros (ou strip equivalente), usar **`FiltroOperadoraSelect`** — ver também Brand MDC §6 (catálogo de ícones).
+
+| Regra | Valor |
+|--------|--------|
+| Componente | `FiltroOperadoraSelect` (`src/components/FiltroOperadoraSelect.tsx`) |
+| Ícone | **Shield** (Lucide, 15px, `aria-hidden`) **dentro** do campo — nunca `GiShield`, nunca ícone solto à esquerda com label lateral |
+| Opção agregadora — **valor** | `todas` (`OPERADORA_FILTRO_TODAS_VALUE`) ou constante de página equivalente |
+| Opção agregadora — **rótulo visível** | **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`) — **nunca** “Todas as operadoras”, “Operadoras” só (sem “Todas”), label lateral |
+| `aria-label` do `<select>` | **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL` — nome do controlo; distinto do rótulo da opção) |
+| Estado inicial | `useState("todas")` (ou `OPERADORA_FILTRO_TODAS_VALUE`) |
+| Posição | Dentro do wrapper de filtros (`primaryTransparentBg/Border` — Brand); **sem** texto “Operadora:” / “Filtrar por operadora” ao lado |
+
+**Proibido em código novo:** `SelectComIcone` + `Shield` montado à mão; `<select>` sem ícone; markup duplicado com `position: absolute` no ícone; rótulo lateral em uppercase antes do campo.
+
+**Props usuais:** `operadoras={lista}`, `podeVerOperadora`, `pill` (Lives/chips), `minWidth`, `disabled`, `showTodasOption={false}` quando escopo força uma slug; `extraOptions` para domínios com “Nenhuma” (Staff, Escala, Dealers) — **não** renomear a agregadora.
+
+```tsx
+{showFiltroOperadora && (
+  <FiltroOperadoraSelect
+    value={filtroOperadora}
+    onChange={setFiltroOperadora}
+    operadoras={operadorasList}
+    podeVerOperadora={podeVerOperadora}
+    pill
+  />
+)}
+```
+
+**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`.
 
 ### Pesquisa dentro do filtro (> 5 valores)
 
@@ -397,6 +433,7 @@ Quando não houver skeleton para o bloco principal:
 - Ignorar matriz de Gestão de Usuários (exceto admin).
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
+- Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
 - Lista >5 opções sem busca no painel do filtro.
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Strings de vazio ou sem permissão diferentes das fixas acima.

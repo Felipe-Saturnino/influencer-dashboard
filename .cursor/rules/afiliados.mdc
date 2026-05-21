@@ -47,6 +47,11 @@ const ctaGradient = brand.useBrand
 
 ---
 
+## Filtro de operadora (lista Afiliados)
+
+- Na barra de chips de status: **`FiltroOperadoraSelect`** após divisor — **sem** label lateral “Operadora”.
+- Opção agregadora: **Todas Operadoras** (`pill`, `minWidth={200}`).
+
 ## Estados ativos — tabs e filtros
 
 ```tsx

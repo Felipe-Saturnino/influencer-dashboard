@@ -168,17 +168,40 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 
 | Componente | Caminho | Quando usar |
 |------------|---------|-------------|
-| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (operadora, influencer, campanha, aba…) |
+| **`FiltroOperadoraSelect`** | `src/components/FiltroOperadoraSelect.tsx` | **Único** padrão para filtro de **lista de operadoras** na barra (ver tabela e snippet abaixo) |
+| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para filtro de operadoras — usar `FiltroOperadoraSelect`): influencer, campanha, aba, status… |
 | `InfluencerMultiSelect` | `src/components/InfluencerMultiSelect.tsx` | Multi-seleção de influencers (já inclui `User` no trigger) |
 | Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill={true}` em dashboards/Lives quando o visual for chip 999px; indicador ▾ embutido no componente.
 
+### Filtro de operadora — contrato visual (obrigatório)
+
+Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes `OPERADORA_FILTRO_TODAS_VALUE`, `OPERADORA_FILTRO_TODAS_LABEL`).
+
+- Ícone **Shield** Lucide 15px dentro do campo (via `SelectComIcone` interno).
+- Primeira opção do select: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
+- `aria-label` do controlo: **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`).
+- **Sem** rótulo de texto ao lado (“Operadora”, “Filtrar por operadora”).
+- Destaque quando slug específica selecionada: `highlightWhenFiltered` (default `true`) — `color-mix` com `--brand-action`.
+- `pill={true}` em barras estilo chip (Lives, Marketing, Aquisição); default `false` em dashboards analíticos.
+
+```tsx
+<FiltroOperadoraSelect
+  value={filtroOperadora}
+  onChange={setFiltroOperadora}
+  operadoras={operadorasList}
+  podeVerOperadora={podeVerOperadora}
+/>
+```
+
+Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operadora.
+
 ### Catálogo de ícones por tipo de filtro
 
 | Tipo de filtro | Ícone (Lucide) | Tamanho ref. | Componente / notas |
 |----------------|----------------|--------------|-------------------|
-| Operadora | `Shield` | 13–15 | `SelectComIcone` — **novo código**; legado `GiShield` aceito até migrar |
+| Operadora | `Shield` | 15 | **`FiltroOperadoraSelect`** (envolve `SelectComIcone`); opção agregadora **Todas Operadoras**; legado `GiShield` / markup duplicado proibido em código novo |
 | Influencer (único) | `User` | 13–15 | `SelectComIcone` |
 | Influencer (múltiplo) | `User` no trigger | 13 | `InfluencerMultiSelect` |
 | Campanha / UTM | `Megaphone` ou `Link2` | 13–15 | `SelectComIcone` conforme domínio |
@@ -190,61 +213,53 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 
 **Botões-padrão na barra (ex.: Histórico):** mesmo estilo chip do catálogo; **sempre** incluir ícone à esquerda (`History` ou `Calendar` onde o produto já usa `Calendar` em Streamers — preferir **`History`** em código novo).
 
-Estado ativo do select (valor ≠ “todas” / “todos”): borda `brand.accent`, fundo `color-mix(… 15%)`, `fontWeight: 700` — ver snippets em `SelectComIcone` + `style` no pai (Resultados, Afiliados).
+Estado ativo do select (valor ≠ agregador): em **operadoras**, preferir `FiltroOperadoraSelect` (já aplica destaque com `--brand-action`). Outros filtros (`SelectComIcone` manual): borda/fundo marca conforme chip ativo da página.
 
 ---
 
 ## 7. Carrossel de período
 
-Incluir quando a página filtra por **mês** ou **semana** navegável. Integrar **dentro** da barra de filtros (secção 5), salvo layout de escala que use `MesCarrosselPeriodo` isolado.
+Incluir quando a página filtra por período navegável (mês, semana, dia, turno, diretoria, time, etc.). Integrar **dentro** da barra de filtros (secção 5), salvo layout de escala que use `MesCarrosselPeriodo` isolado.
 
-### Padrão canónico (barra de filtros)
+**Implementação única:** `src/lib/carouselNavStyles.ts` — não duplicar estilos inline de setas/rótulo.
 
 ```tsx
-const btnNav: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: "50%",
-  border: `1px solid ${t.cardBorder}`,
-  background: "transparent",
-  color: t.text,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../lib/carouselNavStyles";
 
-// Navegação
-<button type="button" aria-label="Mês anterior" /* ou "Semana anterior" */ disabled={...} style={{ ...btnNav, opacity: desabilitado ? 0.35 : 1 }}>
+<button
+  type="button"
+  aria-label="Mês anterior" // adaptar: Semana anterior, Turno anterior, Diretoria anterior, Período anterior…
+  disabled={desabilitado}
+  style={getCarouselBtnNavStyle(t, desabilitado)}
+>
   <ChevronLeft size={14} aria-hidden="true" />
 </button>
 
-<span style={{
-  fontSize: 18,
-  fontWeight: 800,
-  color: t.text,
-  fontFamily: FONT.body,
-  minWidth: 180,
-  textAlign: "center",
-}}>
-  {modoHistorico ? "Total" : labelPeriodo}
+<span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 /* ou clamp se nome longo */ })}>
+  {labelPeriodo} {/* conteúdo do domínio — nunca hardcodar formato no helper */}
 </span>
 
-<button type="button" aria-label="Próximo mês" /* ou "Próxima semana" */ ...>
+<button type="button" aria-label="Próximo mês" disabled={desabilitado} style={getCarouselBtnNavStyle(t, desabilitado)}>
   <ChevronRight size={14} aria-hidden="true" />
 </button>
 ```
 
-| Variante | `aria-label` setas | Rótulo central (modo normal) | Rótulo em Histórico |
-|----------|-------------------|------------------------------|---------------------|
-| Mês | `Mês anterior` / `Próximo mês` | Label do mês (ex. “Maio 2026”) | `Total` ou “Todo o período” (produto) |
-| Semana | `Semana anterior` / `Próxima semana` | Label da semana | `Todo o período` (Feedback, Resultados) |
+| Dimensão | Valor |
+|----------|--------|
+| Botões seta | 32×32, `Chevron` 14px, opacidade **0.35** quando `disabled` |
+| Rótulo central | 18px / peso 800 / `FONT.body` / `minWidth` 180 (ajustar só se ellipsis necessário) |
 
-**Modo Histórico:** setas `disabled`, opacidade ~0.35; botão Histórico com `aria-pressed={true}`.
+| Contexto | `aria-label` setas | Rótulo central (exemplos) |
+|----------|-------------------|---------------------------|
+| Mês | `Mês anterior` / `Próximo mês` | Label do mês; Histórico → `Total` ou `Todo o período` |
+| Semana | `Semana anterior` / `Próxima semana` | Label da semana |
+| Período genérico (Agenda) | `Período anterior` / `Próximo período` | Título conforme vista (mês/semana/dia) |
+| Turno | `Turno anterior` / `Próximo turno` | Label do turno |
+| Diretoria / time | `Diretoria anterior` / `Próxima diretoria` (ou time) | Nome da diretoria/time ou agregador |
 
-**Variante compacta** (ex. Portal RH leitura): botões 30×30, rótulo `fontSize: 13`, `fontWeight: 700`, `minWidth: 140` — mesma lógica de acessibilidade.
+**Modo Histórico:** setas `disabled` + `getCarouselBtnNavStyle(t, true)`; botão Histórico com `aria-pressed={true}`.
 
-**Referências:** `PortalRhBlocoFiltros`, Streamers FilterBar, `MesCarrosselPeriodo` (escala — card próprio com `blockBg`, exceção).
+**Referências:** `PortalRhBlocoFiltros`, Streamers FilterBar, Financeiro, Agenda, Feedback, `MesCarrosselPeriodo` (escala — card com `blockBg`, exceção de wrapper).
 
 ---
 
@@ -312,6 +327,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - `GiShare` / GameIcons no header de página.
 - Gradiente fallback com `#7c3aed` no início.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
+- Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
 - Ação de **linha** só com texto, sem ícone (código novo).
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
 - Título diferente do menu ou página sem subtítulo.
@@ -324,6 +340,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 
 - [ ] `useDashboardBrand()` + header com título = `menu.ts` + subtítulo
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
+- [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico com ícone + `aria-pressed`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`

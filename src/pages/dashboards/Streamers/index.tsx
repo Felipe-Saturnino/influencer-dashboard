@@ -1,12 +1,13 @@
-import { useState, Suspense, lazy, type CSSProperties } from "react";
-import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Shield, Tv, User } from "lucide-react";
+import { useState, Suspense, lazy } from "react";
+import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Tv, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { SelectComIcone } from "../../../components/dashboard";
+import { FiltroOperadoraSelect, SelectComIcone } from "../../../components/dashboard";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -32,21 +33,6 @@ function StreamersFiltrosEUAbas({
   const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerOperadora } = useDashboardFiltros();
   const sf = useStreamersFiltros();
-
-  const btnNavStyle: CSSProperties = {
-    minWidth: 44,
-    minHeight: 44,
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   const tabIds: StreamersTab[] = ["overview", "conversao", "financeiro"];
 
@@ -74,42 +60,25 @@ function StreamersFiltrosEUAbas({
             <button
               type="button"
               aria-label="Mês anterior"
-              style={{
-                ...btnNavStyle,
-                opacity: sf.historico || sf.isPrimeiro ? 0.35 : 1,
-                cursor: sf.historico || sf.isPrimeiro ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, sf.historico || sf.isPrimeiro)}
               onClick={sf.irMesAnterior}
               disabled={sf.historico || sf.isPrimeiro}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
 
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: "clamp(120px, 40vw, 180px)",
-                textAlign: "center",
-              }}
-            >
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
               {sf.historico ? "Todo o período" : sf.mesSelecionado?.label}
             </span>
 
             <button
               type="button"
               aria-label="Próximo mês"
-              style={{
-                ...btnNavStyle,
-                opacity: sf.historico || sf.isUltimo ? 0.35 : 1,
-                cursor: sf.historico || sf.isUltimo ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, sf.historico || sf.isUltimo)}
               onClick={sf.irMesProximo}
               disabled={sf.historico || sf.isUltimo}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
@@ -160,22 +129,12 @@ function StreamersFiltrosEUAbas({
           )}
 
           {showFiltroOperadora && (
-            <SelectComIcone
-              icon={<Shield size={15} aria-hidden />}
-              label="Filtrar por operadora"
+            <FiltroOperadoraSelect
               value={sf.filtroOperadora}
               onChange={sf.setFiltroOperadora}
-            >
-              <option value="todas">Todas as operadoras</option>
-              {sf.operadorasList
-                .filter((o) => podeVerOperadora(o.slug))
-                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                .map((o) => (
-                  <option key={o.slug} value={o.slug}>
-                    {o.nome}
-                  </option>
-                ))}
-            </SelectComIcone>
+              operadoras={sf.operadorasList}
+              podeVerOperadora={podeVerOperadora}
+            />
           )}
           {sf.isLoading && (
             <span

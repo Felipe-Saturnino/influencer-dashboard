@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Archive,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  History,
-  Loader2,
-  Pencil,
-  Plus,
-  Search,
-} from "lucide-react";
+import { Archive, Check, Clock, Loader2, Pencil, Plus } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -31,6 +20,7 @@ import {
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -403,23 +393,6 @@ export function GerenciamentoPostagens({
     return list;
   }, [rowsFiltradas, sortCol, sortDir]);
 
-  const mesSel = mesesDisponiveis[idxMes];
-  const carouselPrimeiro = idxMes <= 0;
-  const carouselUltimo = idxMes >= mesesDisponiveis.length - 1;
-
-  const btnNav = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
-
   const selectFiltroStyle = {
     padding: "8px 12px",
     borderRadius: 10,
@@ -495,133 +468,52 @@ export function GerenciamentoPostagens({
     setAcaoLoading(null);
   }
 
-  const filtroWrap = {
-    borderRadius: 14,
-    border: brand.primaryTransparentBorder,
-    background: brand.primaryTransparentBg,
-    padding: "14px 18px",
-    marginBottom: 16,
-  };
-
   return (
     <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento" tabIndex={0}>
-      <div style={filtroWrap}>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              aria-label="Mês anterior"
-              disabled={carouselPrimeiro}
-              onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
-              style={{ ...btnNav, opacity: carouselPrimeiro ? 0.4 : 1, cursor: carouselPrimeiro ? "not-allowed" : "pointer" }}
+      <PortalRhBlocoFiltros
+        meses={mesesDisponiveis}
+        idxMes={idxMes}
+        onIdxMesChange={setIdxMes}
+        modoHistorico={false}
+        onModoHistoricoChange={() => {}}
+        busca={busca}
+        onBuscaChange={setBusca}
+        buscaPlaceholder="Palavras-chave no assunto ou descrição"
+        buscaAriaLabel="Pesquisar postagens por assunto ou descrição"
+        historicoCustom={{
+          ariaPressed: filtroStatus === "arquivado",
+          ariaLabel:
+            filtroStatus === "arquivado" ? "Remover filtro de arquivados" : "Filtrar postagens arquivadas",
+          onClick: () => setFiltroStatus((s) => (s === "arquivado" ? "todos" : "arquivado")),
+        }}
+        linhaSubabas={
+          <>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
+              aria-label="Filtrar por tipo de postagem"
+              style={selectFiltroStyle}
             >
-              <ChevronLeft size={16} aria-hidden />
-            </button>
-            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 140, textAlign: "center" }}>
-              {mesSel?.label ?? "—"}
-            </span>
-            <button
-              type="button"
-              aria-label="Próximo mês"
-              disabled={carouselUltimo}
-              onClick={() => setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1))}
-              style={{ ...btnNav, opacity: carouselUltimo ? 0.4 : 1, cursor: carouselUltimo ? "not-allowed" : "pointer" }}
+              <option value="todos">Todos</option>
+              <option value="comunicado">Comunicados</option>
+              <option value="politica">Políticas e Normativas</option>
+              <option value="rh_talk">RH Talks</option>
+            </select>
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
+              aria-label="Filtrar por status da postagem"
+              style={selectFiltroStyle}
             >
-              <ChevronRight size={16} aria-hidden />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setFiltroStatus("arquivado")}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: `1px solid ${filtroStatus === "arquivado" ? brand.primary : t.cardBorder}`,
-              background:
-                filtroStatus === "arquivado"
-                  ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                  : t.inputBg,
-              color: filtroStatus === "arquivado" ? brand.primary : t.textMuted,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <History size={14} aria-hidden />
-            Histórico
-          </button>
-
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
-            aria-label="Filtrar por tipo de postagem"
-            style={selectFiltroStyle}
-          >
-            <option value="todos">Todos</option>
-            <option value="comunicado">Comunicados</option>
-            <option value="politica">Políticas e Normativas</option>
-            <option value="rh_talk">RH Talks</option>
-          </select>
-
-          <select
-            value={filtroStatus}
-            onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-            aria-label="Filtrar por status da postagem"
-            style={selectFiltroStyle}
-          >
-            <option value="todos">Todos</option>
-            <option value="publicado">Publicado</option>
-            <option value="rascunho">Rascunho</option>
-            <option value="aprovacao">Aprovação</option>
-            <option value="arquivado">Arquivado</option>
-          </select>
-        </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-          <div
-            style={{
-              flex: "1 1 200px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              padding: "8px 12px",
-              minWidth: 200,
-            }}
-          >
-            <Search size={16} color={t.textMuted} aria-hidden />
-            <input
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Palavras-chave no assunto ou descrição"
-              aria-label="Pesquisar postagens por assunto ou descrição"
-              style={{
-                flex: 1,
-                border: "none",
-                background: "transparent",
-                color: t.text,
-                fontSize: 13,
-                outline: "none",
-                fontFamily: FONT.body,
-              }}
-            />
-          </div>
+              <option value="todos">Todos</option>
+              <option value="publicado">Publicado</option>
+              <option value="rascunho">Rascunho</option>
+              <option value="aprovacao">Aprovação</option>
+              <option value="arquivado">Arquivado</option>
+            </select>
+          </>
+        }
+        linhaAposSubabas={
           <button
             type="button"
             onClick={() => {
@@ -646,8 +538,8 @@ export function GerenciamentoPostagens({
             <Plus size={16} aria-hidden />
             Criar
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {erro ? (
         <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>

@@ -64,29 +64,19 @@ Todo bloco de filtros desta seção usa fundo transparente de marca.
 </div>
 ```
 
-### Botões de navegação de período / semana
+### Carrossel de período / semana
 
-```tsx
-const btnNav: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: "50%",
-  border: `1px solid ${t.cardBorder}`,
-  background: "transparent", color: t.text,
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.35 : 1,
-  display: "flex", alignItems: "center", justifyContent: "center",
-};
+Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselPeriodLabelStyle`) — ver Brand MDC §7. Não redeclarar `btnNav` local.
 
-// Sempre com aria-label:
-<button onClick={prev} style={btnNav} aria-label="Período anterior">
-  <ChevronLeft size={14} aria-hidden="true" />
-</button>
-<button onClick={next} style={btnNav} aria-label="Próximo período">
-  <ChevronRight size={14} aria-hidden="true" />
-</button>
+- **Agenda:** `aria-label` `Período anterior` / `Próximo período`; rótulo = título da vista (mês/semana/dia).
+- **Feedback:** `Semana anterior` / `Próxima semana`; rótulo da semana ou `Todo o período` em Histórico.
 
-// Para semanas (Feedback):
-aria-label="Semana anterior" / aria-label="Próxima semana"
-```
+### Filtro de operadora (Agenda, Resultados, Feedback, Influencers)
+
+- **`FiltroOperadoraSelect`** na mesma linha dos outros controles (Global + Brand).
+- Opção agregadora: **`Todas Operadoras`** — nunca “Todas as operadoras” nem “Operadoras” só.
+- **Sem** prefixo textual “Operadora” antes do select (remover padrão legado em Influencers).
+- `pill` + `minWidth={200}` quando o strip usar chips arredondados.
 
 ### Badges de filtro ativo
 
@@ -710,6 +700,7 @@ const STATUS_SCOUT_COLOR = {
 - Nunca usar `▼ ▲ ✕ ✓ ⚠ ℹ 🗑 🕐 ✨ 🔒` como ícones — usar Lucide equivalente
 - Nunca usar `"Average Viewers"`, `"Followers"` ou qualquer string em inglês na UI
 - Nunca usar fundo sólido no bloco de filtros — sempre `primaryTransparentBg/Border`
+- Nunca filtro de operadora com label lateral ou agregadora fora de **Todas Operadoras** — usar `FiltroOperadoraSelect`
 - Nunca fazer update optimista sem rollback visual em caso de erro
 - Nunca inicializar slider de range em `0` — usar valor de placeholder para evitar CLS
 - Nunca passar `brand` como prop para modais — usar `useDashboardBrand()` internamente

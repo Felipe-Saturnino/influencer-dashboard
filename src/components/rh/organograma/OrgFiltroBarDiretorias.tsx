@@ -1,6 +1,7 @@
-import { useMemo, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { Building2, ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
 
 const TODAS_KEY = "todas" as const;
@@ -51,21 +52,6 @@ export function OrgFiltroBarDiretorias({
   const idxValido = idxAtual >= 0;
   const isPrimeiro = !todas && idxValido && idxAtual === 0;
   const isUltimo = !todas && idxValido && sorted.length > 0 && idxAtual >= sorted.length - 1;
-
-  const btnNavStyle: CSSProperties = {
-    minWidth: 44,
-    minHeight: 44,
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   const irAnterior = () => {
     if (todas || !idxValido || sorted.length === 0) return;
@@ -130,29 +116,20 @@ export function OrgFiltroBarDiretorias({
               type="button"
               aria-label="Diretoria anterior"
               aria-disabled={navPrevDisabled}
-              style={{
-                ...btnNavStyle,
-                opacity: navPrevDisabled ? 0.35 : 1,
-                cursor: navPrevDisabled ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, navPrevDisabled)}
               onClick={irAnterior}
               disabled={navPrevDisabled}
             >
-              <ChevronLeft size={14} strokeWidth={2} aria-hidden />
+              <ChevronLeft size={14} strokeWidth={2} aria-hidden="true" />
             </button>
 
             <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
+              style={getCarouselPeriodLabelStyle(t, {
                 minWidth: "clamp(120px, 40vw, 220px)",
-                textAlign: "center",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-              }}
+              })}
               title={!todas && idxValido ? labelCentro : undefined}
             >
               {labelCentro}
@@ -162,15 +139,11 @@ export function OrgFiltroBarDiretorias({
               type="button"
               aria-label="Próxima diretoria"
               aria-disabled={navNextDisabled}
-              style={{
-                ...btnNavStyle,
-                opacity: navNextDisabled ? 0.35 : 1,
-                cursor: navNextDisabled ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, navNextDisabled)}
               onClick={irProximo}
               disabled={navNextDisabled}
             >
-              <ChevronRight size={14} strokeWidth={2} aria-hidden />
+              <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
 

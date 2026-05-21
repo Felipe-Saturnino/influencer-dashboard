@@ -8,7 +8,7 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
-  Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield,
+  Eye, EyeOff, Pencil, X, ChevronDown, Loader2,
   Mic, Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
 } from "lucide-react";
 
@@ -23,7 +23,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
@@ -500,29 +500,13 @@ export default function Influencers() {
               {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
-                  <SelectComIcone
+                  <FiltroOperadoraSelect
                     pill
-                    icon={<Shield size={15} aria-hidden="true" />}
-                    label="Filtrar por operadora"
+                    minWidth={200}
                     value={filterOp}
                     onChange={setFilterOp}
-                    minWidth={200}
-                    style={{
-                      border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`,
-                      background:
-                        filterOp !== "todas"
-                          ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg),
-                      color: filterOp !== "todas" ? brand.accent : t.textMuted,
-                      fontWeight: filterOp !== "todas" ? 700 : 400,
-                    }}
-                  >
-                    <option value="todas">Todas as operadoras</option>
-                    {operadorasNoEscopo.map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                  </SelectComIcone>
+                    operadoras={operadorasNoEscopo}
+                  />
                 </>
               )}
             </div>

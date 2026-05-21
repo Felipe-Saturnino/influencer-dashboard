@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Plus, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
-import { GiShield } from "react-icons/gi";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -13,7 +12,7 @@ import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -698,50 +697,13 @@ export default function FigurinosPage() {
             }}
           >
             {operadorasVisiveis.length > 0 ? (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    pointerEvents: "none",
-                    color: t.textMuted,
-                  }}
-                >
-                  <GiShield size={13} aria-hidden />
-                </span>
-                <select
-                  value={filtroOp}
-                  onChange={(e) => setFiltroOp(e.target.value)}
-                  aria-label="Filtrar por operadora"
-                  style={{
-                    padding: "6px 14px 6px 30px",
-                    borderRadius: 999,
-                    border: `1px solid ${filtroOp !== "todas" ? brand.accent : t.cardBorder}`,
-                    background:
-                      filtroOp !== "todas"
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                          : "#4a208222"
-                        : (t.inputBg ?? t.cardBg),
-                    color: filtroOp !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13,
-                    fontWeight: filtroOp !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    outline: "none",
-                    appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasVisiveis.map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOp}
+                onChange={setFiltroOp}
+                operadoras={operadorasVisiveis}
+              />
             ) : null}
             <select
               value={filtroCat}

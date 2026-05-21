@@ -47,6 +47,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Filtro status: chip ativo igual operadora (borda/fundo marca).
 - Vazio filtro: `Nenhuma solicitação em aberto neste filtro.`
 - Responsivo: &lt;768px ocultar CPF/Data; &lt;480px cards verticais.
+- FilterBar: influencer + **`FiltroOperadoraSelect`** (`pill`, Todas Operadoras) — Financeiro e Banca de Jogo.
 - **Handoff:** liberar banca, operadora, histórico.
 
 ---
@@ -64,6 +65,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ## Anti-patterns (Aquisição)
 
+- Filtro de operadora sem `FiltroOperadoraSelect`, com agregadora “Todas as operadoras” / “Operadoras” só, ou `aria-label` “Filtrar por operadora” no filtro de lista.
 - GameIcons no header; `Wallet` / `Coins` Lucide apenas.
 - Histórico com lógica só `brand.useBrand` inconsistente com Streamers (documentar padrão `--brand-action` se alinhar código).
 - KPI card com Loader2 de loading.

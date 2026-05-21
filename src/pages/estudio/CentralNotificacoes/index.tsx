@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type CSSProperties } from "react";
-import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Shield, Bell, Layers } from "lucide-react";
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Bell, Layers } from "lucide-react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -7,6 +7,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { usePendenciasCount } from "../../../hooks/usePendenciasCount";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
@@ -14,6 +15,7 @@ import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
@@ -621,32 +623,6 @@ export default function CentralNotificacoes() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 12px 6px 32px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
-
-  const btnNavStyle: React.CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   const cardShell: React.CSSProperties = {
     background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
@@ -1068,19 +1044,19 @@ export default function CentralNotificacoes() {
           >
             <button
               type="button"
-              style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
               onClick={irMesAnterior}
               disabled={historico || isPrimeiro}
               aria-label="Mês anterior"
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+            <span style={getCarouselPeriodLabelStyle(t)}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button
               type="button"
-              style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
               onClick={irMesProximo}
               disabled={historico || isUltimo}
               aria-label="Próximo mês"
@@ -1113,26 +1089,15 @@ export default function CentralNotificacoes() {
             </button>
 
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={selectStyle}
-                  disabled={!!operadoraSlugsForcado?.length}
-                  aria-label="Filtrar por operadora"
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+                disabled={!!operadoraSlugsForcado?.length}
+              />
             )}
 
             {loading && (

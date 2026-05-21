@@ -88,6 +88,7 @@ alwaysApply: false
 
 ## Overview Spin — Padrões Específicos
 
+- **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
 - **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
@@ -201,14 +202,16 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
 
 ## FilterBar — Navegação de Período
 
+Importar de `src/lib/carouselNavStyles.ts` — **único** padrão de setas e rótulo (Brand MDC §7).
+
 ```tsx
-{/* Botões de navegação */}
-<button type="button" aria-label="Mês anterior" /* ... */ disabled={historico || isPrimeiro}>
-  <ChevronLeft size={14} aria-hidden />
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+
+<button type="button" aria-label="Mês anterior" disabled={historico || isPrimeiro} style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}>
+  <ChevronLeft size={14} aria-hidden="true" />
 </button>
 
-{/* Label do período — FONT.body (não FONT_TITLE) */}
-<span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
+<span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
   {historico ? "Todo o período" : mesSelecionado?.label}
 </span>
 
@@ -238,7 +241,7 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
 
 `Calendar` (Lucide) é preferível; **`GiCalendar`** (`react-icons/gi`) permanece aceite **apenas** neste botão Histórico.
 
-**Selects na FilterBar:** sempre via `SelectComIcone` de `src/components/dashboard/`. Nunca `<div style="relative"> + <span>ícone + <select>` inline.
+**Selects na FilterBar:** influencer e outros domínios via `SelectComIcone`. **Operadora:** sempre `FiltroOperadoraSelect` (Global + Brand) — opção agregadora **`Todas Operadoras`**, ícone Shield no campo. Nunca `<div style="relative"> + <span>ícone + <select>` inline nem `SelectComIcone` manual para operadora.
 
 **Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 
@@ -620,6 +623,7 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca `background: brand.blockBg` na FilterBar — usar `brand.primaryTransparentBg`
 - Nunca `size={14}` em ícones de `KpiCard` compartilhado — usar `size={16}`
 - Nunca `FONT_TITLE` no label do mês na FilterBar — usar `FONT.body`
+- Nunca filtro de operadora com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) ou sem `FiltroOperadoraSelect`
 - Nunca `useEffect` de loading antes da declaração `useState(loading)` — ordem dos hooks
 - Nunca declarar `fmtBRL` ou `getMesesDisponiveis` localmente — importar de `lib/dashboardHelpers`
 - Nunca usar `--brand-secondary` em componentes dentro de `dashboards/` — usar `--brand-contrast` para cor de suporte

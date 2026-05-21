@@ -32,7 +32,7 @@ alwaysApply: false
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
 | `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
 
-Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` (exceção Brand: card com `blockBg` quando isolado).
+Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel via `lib/carouselNavStyles.ts`; exceção Brand: card com `blockBg` quando isolado (não strip transparente).
 
 ---
 
@@ -46,7 +46,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` (exceção Br
 
 ## Gestão de Escala (`rh_gestao_escala`)
 
-- Grade mensal por área (time): chips de área, operadora, carrossel de mês.
+- Grade mensal por área (time): chips de área, **`FiltroOperadoraSelect`** (opção **Todas Operadoras** + `extraOptions` “Nenhuma” se aplicável), carrossel de mês.
 - Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
 - Vínculo com Calendário: escala aprovada alimenta presença/agenda.
 - RPCs: `rh_gestao_escala_grade_*`.
@@ -57,7 +57,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` (exceção Br
 ## Gestão de Staff (`rh_staff`)
 
 - `PageHeader`; tabelas com ações em ícone (Global + Brand).
-- Turnos e vínculo operadora.
+- Turnos e vínculo operadora; filtro **`FiltroOperadoraSelect`** na barra de filtros (Todas Operadoras / Nenhuma).
 - **Handoff:** CRUD staff, organograma operacional.
 
 ---
@@ -88,5 +88,5 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` (exceção Br
 
 - Converter toolbar de escala para só ícone.
 - Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
-- Filtro operadora sem ícone interno / fora do strip de filtros (após refactor Brand).
+- Filtro de operadora sem `FiltroOperadoraSelect`, sem ícone Shield no campo, label lateral “Operadora” ou agregadora diferente de **Todas Operadoras**.
 - Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.

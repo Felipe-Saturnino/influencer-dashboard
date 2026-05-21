@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
@@ -22,6 +23,7 @@ import {
   SectionTitle,
   KpiCard,
   FunilVisual,
+  FiltroOperadoraSelect,
   SelectComIcone,
   RateCard,
   SkeletonKpiCard,
@@ -48,7 +50,6 @@ import {
   Eye,
   Filter,
   Gauge,
-  Shield,
   Table2,
   TrendingUp,
   Trophy,
@@ -951,7 +952,6 @@ export default function DashboardOverviewInfluencer() {
     padding: 20,
     boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
-  const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
   const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
   const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
@@ -1016,14 +1016,26 @@ export default function DashboardOverviewInfluencer() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
-            <button type="button" aria-label="Mês anterior" style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} aria-hidden />
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button type="button" aria-label="Próximo mês" style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} aria-hidden />
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
             {/* Botão Histórico — padrão Overview */}
@@ -1067,20 +1079,14 @@ export default function DashboardOverviewInfluencer() {
               </SelectComIcone>
             )}
 
-            {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
-              <SelectComIcone
-                icon={<Shield size={15} aria-hidden="true" />}
-                label="Filtrar por operadora"
+              <FiltroOperadoraSelect
                 pill
+                minWidth={200}
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-              </SelectComIcone>
+                operadoras={operadorasList}
+              />
             )}
 
             {loading && (

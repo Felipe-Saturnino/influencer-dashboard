@@ -13,6 +13,8 @@ export interface SelectComIconeProps {
   /** true: mesmo visual pill do Overview Influencer (border-radius 999). */
   pill?: boolean;
   style?: CSSProperties;
+  id?: string;
+  disabled?: boolean;
 }
 
 export function SelectComIcone({
@@ -24,6 +26,8 @@ export function SelectComIcone({
   minWidth = 160,
   pill = false,
   style,
+  id,
+  disabled = false,
 }: SelectComIconeProps) {
   const { theme: t } = useApp();
   const borderRadius = pill ? 999 : 10;
@@ -48,8 +52,10 @@ export function SelectComIcone({
         {icon}
       </span>
       <select
+        id={id}
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         style={{
           padding: `6px ${padRight}px 6px ${padLeft}px`,

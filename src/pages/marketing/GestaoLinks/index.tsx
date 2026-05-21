@@ -7,11 +7,11 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
-import { Link2, EyeOff, RotateCcw, AlertCircle, Shield, Loader2 } from "lucide-react";
+import { Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -500,37 +500,13 @@ export default function GestaoLinks() {
                 })}
               </div>
               {showFiltroOperadora && operadorasList.length > 0 && (
-                <div style={{ position: "relative", display: "flex", alignItems: "center", flexShrink: 0 }}>
-                  <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, color: t.textMuted, pointerEvents: "none" }} />
-                  <select
-                    aria-label="Filtrar por operadora"
-                    value={operadoraFiltro}
-                    onChange={(e) => setOperadoraFiltro(e.target.value)}
-                    style={{
-                      padding: "6px 14px 6px 32px",
-                      borderRadius: 999,
-                      border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : t.cardBorder}`,
-                      background:
-                        operadoraFiltro !== "todas"
-                          ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                            : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg),
-                      color: operadoraFiltro !== "todas" ? brand.accent : t.textMuted,
-                      fontSize: 13,
-                      fontWeight: operadoraFiltro !== "todas" ? 700 : 400,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      outline: "none",
-                      appearance: "none",
-                    }}
-                  >
-                    <option value="todas">Todas as operadoras</option>
-                    {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                      <option key={op.slug} value={op.slug}>{op.nome}</option>
-                    ))}
-                  </select>
-                </div>
+                <FiltroOperadoraSelect
+                  pill
+                  minWidth={200}
+                  value={operadoraFiltro}
+                  onChange={setOperadoraFiltro}
+                  operadoras={operadorasList}
+                />
               )}
             </div>
             {narrowMobile ? (

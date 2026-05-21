@@ -4,6 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
+import { CAROUSEL_NAV_BTN_PX, getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -23,7 +24,7 @@ import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   MarginBadge,
-  SelectComIcone,
+  FiltroOperadoraSelect,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
 import {
@@ -48,7 +49,6 @@ import {
   Dice6,
   Hash,
   Loader2,
-  Shield,
   Table2,
   Target,
   TrendingUp,
@@ -551,7 +551,7 @@ function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
     });
 }
 
-/** Filtro "Todas as operadoras": soma financeira por dia + soma de UAP entre operadoras; margem / aposta média; ARPU = GGR÷UAP. */
+/** Filtro Todas Operadoras (`todas`): soma financeira por dia + soma de UAP entre operadoras; margem / aposta média; ARPU = GGR÷UAP. */
 function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] {
   const by = new Map<string, DailyRawRow[]>();
   for (const r of rows) {
@@ -1285,7 +1285,7 @@ function mergeMonthlyHistoricoRows(rows: MonthlyRawRow[]): MonthlyRow[] {
     });
 }
 
-/** Filtro "Todas as operadoras": um registro por mês com UAP = soma entre operadoras (ARPU vem do daily agregado na UI). */
+/** Filtro Todas Operadoras (`todas`): um registro por mês com UAP = soma entre operadoras (ARPU vem do daily agregado na UI). */
 function mergeMonthlyHistoricoAgregadoTodas(rows: MonthlyRawRow[]): MonthlyRow[] {
   const by = new Map<string, MonthlyRawRow[]>();
   for (const r of rows) {
@@ -2359,19 +2359,6 @@ export default function OverviewSpin() {
   }
 
   const tabIdsSpin: OverviewSpinTab[] = ["overview", "posicionamento"];
-
-  const btnNav: React.CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   const selectStyle: React.CSSProperties = {
     padding: "6px 12px 6px 32px",
@@ -3527,47 +3514,30 @@ export default function OverviewSpin() {
               <button
                 type="button"
                 aria-label="Mês anterior"
-                style={{
-                  ...btnNav,
-                  opacity: carrosselAnteriorDisabled ? 0.35 : 1,
-                  cursor: carrosselAnteriorDisabled ? "not-allowed" : "pointer",
-                }}
+                style={getCarouselBtnNavStyle(t, carrosselAnteriorDisabled)}
                 onClick={irCarrosselAnterior}
                 disabled={carrosselAnteriorDisabled}
               >
-                <ChevronLeft size={14} aria-hidden />
+                <ChevronLeft size={14} aria-hidden="true" />
               </button>
             ) : (
-              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+              <span style={{ width: CAROUSEL_NAV_BTN_PX, flexShrink: 0 }} aria-hidden />
             )}
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: "min(100%, 180px)",
-                textAlign: "center",
-              }}
-            >
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
               {labelCarrosselCentral}
             </span>
             {aba !== "posicionamento" ? (
               <button
                 type="button"
                 aria-label="Próximo mês"
-                style={{
-                  ...btnNav,
-                  opacity: carrosselProximoDisabled ? 0.35 : 1,
-                  cursor: carrosselProximoDisabled ? "not-allowed" : "pointer",
-                }}
+                style={getCarouselBtnNavStyle(t, carrosselProximoDisabled)}
                 onClick={irCarrosselProximo}
                 disabled={carrosselProximoDisabled}
               >
-                <ChevronRight size={14} aria-hidden />
+                <ChevronRight size={14} aria-hidden="true" />
               </button>
             ) : (
-              <span style={{ width: 30, flexShrink: 0 }} aria-hidden />
+              <span style={{ width: CAROUSEL_NAV_BTN_PX, flexShrink: 0 }} aria-hidden />
             )}
 
             {aba === "overview" ? (
@@ -3599,24 +3569,12 @@ export default function OverviewSpin() {
             ) : null}
 
             {showFiltroOperadora && (
-              <SelectComIcone
-                icon={<Shield size={15} aria-hidden />}
-                label="Filtrar por operadora"
+              <FiltroOperadoraSelect
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
-              >
-                {(aba === "overview" || aba === "posicionamento") && showFiltroOperadora && (
-                  <option value="todas">Todas as operadoras</option>
-                )}
-                {operadorasOcr
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-              </SelectComIcone>
+                operadoras={operadorasOcr}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
 
             {aba === "overview" && loading && (

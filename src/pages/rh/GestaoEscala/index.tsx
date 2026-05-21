@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Building2, Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
+import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   escalaPrestadorTemTurnosOperacionais,
@@ -988,19 +989,6 @@ export default function RhGestaoEscalaPage() {
     [gerarPorFiltro, linhasPorFiltroGerar, dias],
   );
 
-  const btnNavStyle: CSSProperties = {
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   /** Mesmo bloco de conteúdo que `OverviewSpin` (Detalhamento Diário): `card` + `SectionTitle`. */
   const card: CSSProperties = {
     background: brand.blockBg,
@@ -1252,97 +1240,29 @@ export default function RhGestaoEscalaPage() {
                 onClick={mesAnterior}
                 disabled={!podeMesAnterior}
                 aria-label="Mês anterior"
-                style={{
-                  ...btnNavStyle,
-                  opacity: podeMesAnterior ? 1 : 0.35,
-                  cursor: podeMesAnterior ? "pointer" : "not-allowed",
-                }}
+                style={getCarouselBtnNavStyle(t, !podeMesAnterior)}
               >
-                <ChevronLeft size={14} aria-hidden />
+                <ChevronLeft size={14} aria-hidden="true" />
               </button>
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: t.text,
-                  fontFamily: FONT_TITLE,
-                  minWidth: 200,
-                  textAlign: "center",
-                }}
-              >
-                {tituloMes}
-              </span>
+              <span style={getCarouselPeriodLabelStyle(t, { minWidth: 200 })}>{tituloMes}</span>
               <button
                 type="button"
                 onClick={mesSeguinte}
                 disabled={!podeMesSeguinte}
                 aria-label="Próximo mês"
-                style={{
-                  ...btnNavStyle,
-                  opacity: podeMesSeguinte ? 1 : 0.35,
-                  cursor: podeMesSeguinte ? "pointer" : "not-allowed",
-                }}
+                style={getCarouselBtnNavStyle(t, !podeMesSeguinte)}
               >
-                <ChevronRight size={14} aria-hidden />
+                <ChevronRight size={14} aria-hidden="true" />
               </button>
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                minWidth: 0,
-              }}
-            >
-              <Building2 size={14} aria-hidden="true" style={{ color: t.textMuted, flexShrink: 0 }} />
-              <label
-                htmlFor="rh-gestao-escala-filtro-operadora"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Operadora
-              </label>
-              <select
-                id="rh-gestao-escala-filtro-operadora"
-                aria-label="Filtrar por operadora da Staff"
-                value={filtroOperadoraEscala}
-                onChange={(e) => setFiltroOperadoraEscala(e.target.value)}
-                style={{
-                  minWidth: 160,
-                  maxWidth: 280,
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${filtroOperadoraEscala !== "todas" ? brand.accent : t.cardBorder}`,
-                  background:
-                    filtroOperadoraEscala !== "todas"
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
-                        : "rgba(124,58,237,0.09)"
-                      : (t.inputBg ?? t.cardBg ?? "transparent"),
-                  color: filtroOperadoraEscala !== "todas" ? brand.accent : t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: filtroOperadoraEscala !== "todas" ? 700 : 500,
-                  cursor: "pointer",
-                }}
-              >
-                <option value="todas">Todas</option>
-                <option value="nenhuma">Nenhuma</option>
-                {[...operadorasAtivasEscala]
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            <FiltroOperadoraSelect
+              id="rh-gestao-escala-filtro-operadora"
+              value={filtroOperadoraEscala}
+              onChange={setFiltroOperadoraEscala}
+              operadoras={operadorasAtivasEscala}
+              extraOptions={[{ value: "nenhuma", label: "Nenhuma" }]}
+              minWidth={200}
+            />
           </div>
 
           {mostrarFiltroArea ? (

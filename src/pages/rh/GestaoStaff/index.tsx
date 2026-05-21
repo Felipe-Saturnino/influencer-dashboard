@@ -5,7 +5,8 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { BRAND } from "../../../lib/dashboardConstants";
 import {
   isGamePresenterTimeNome,
   readStaffDealerBioForUi,
@@ -30,6 +31,7 @@ import {
 } from "../../../lib/rhStaffHorarioTurno";
 import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
@@ -715,19 +717,6 @@ export default function RhGestaoStaffPage() {
   const podeTimeAnterior = !todosTimes && times.length > 0 && idxTime > 0;
   const podeTimeProximo = !todosTimes && times.length > 0 && idxTime < times.length - 1;
 
-  const btnNavStyle: CSSProperties = {
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   const btnIconTabela: CSSProperties = {
@@ -801,26 +790,17 @@ export default function RhGestaoStaffPage() {
               onClick={() => setIdxTime((i) => Math.max(0, i - 1))}
               disabled={!podeTimeAnterior}
               aria-label="Time anterior"
-              style={{
-                ...btnNavStyle,
-                opacity: podeTimeAnterior ? 1 : 0.35,
-                cursor: podeTimeAnterior ? "pointer" : "not-allowed",
-              }}
+              style={getCarouselBtnNavStyle(t, !podeTimeAnterior)}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
             <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT_TITLE,
+              style={getCarouselPeriodLabelStyle(t, {
                 minWidth: "clamp(140px, 36vw, 260px)",
-                textAlign: "center",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-              }}
+              })}
               title={!todosTimes && times[idxTime] ? `${times[idxTime]!.gerencia_nome} — ${times[idxTime]!.nome}` : undefined}
             >
               {todosTimes ? "Todos os times" : timeLabelCentro}
@@ -830,13 +810,9 @@ export default function RhGestaoStaffPage() {
               onClick={() => setIdxTime((i) => Math.min(times.length - 1, i + 1))}
               disabled={!podeTimeProximo}
               aria-label="Próximo time"
-              style={{
-                ...btnNavStyle,
-                opacity: podeTimeProximo ? 1 : 0.35,
-                cursor: podeTimeProximo ? "pointer" : "not-allowed",
-              }}
+              style={getCarouselBtnNavStyle(t, !podeTimeProximo)}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
             <button
@@ -938,30 +914,16 @@ export default function RhGestaoStaffPage() {
                   />
                 </div>
                 <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
-                  <select
+                  <FiltroOperadoraSelect
                     id="staff-filtro-operadora"
-                    aria-label="Filtrar por operadora"
                     value={filtroOperadoraStaff}
-                    onChange={(e) => setFiltroOperadoraStaff(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <option value={FILTRO_STAFF_OPERADORA_TODAS}>Todas</option>
-                    <option value={FILTRO_STAFF_OPERADORA_NENHUMA}>Nenhuma</option>
-                    {operadorasFiltroOpts.map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setFiltroOperadoraStaff}
+                    operadoras={operadorasFiltroOpts}
+                    todasValue={FILTRO_STAFF_OPERADORA_TODAS}
+                    extraOptions={[{ value: FILTRO_STAFF_OPERADORA_NENHUMA, label: "Nenhuma" }]}
+                    minWidth={160}
+                    highlightWhenFiltered={false}
+                  />
                 </div>
                 <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
                   <select

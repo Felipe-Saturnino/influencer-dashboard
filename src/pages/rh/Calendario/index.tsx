@@ -16,6 +16,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import {
@@ -1250,19 +1251,6 @@ export default function RhCalendarioPage() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const btnNav: React.CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
   function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
     if (turnoCalendarioEhCompraVendaTroca(comp.turno)) return undefined;
@@ -1734,11 +1722,7 @@ export default function RhCalendarioPage() {
                   type="button"
                   onClick={prev}
                   disabled={!podeRetrocederMes}
-                  style={{
-                    ...btnNav,
-                    opacity: podeRetrocederMes ? 1 : 0.38,
-                    cursor: podeRetrocederMes ? "pointer" : "not-allowed",
-                  }}
+                  style={getCarouselBtnNavStyle(t, !podeRetrocederMes)}
                   aria-label={
                     podeRetrocederMes
                       ? "Mês anterior"
@@ -1747,27 +1731,12 @@ export default function RhCalendarioPage() {
                 >
                   <ChevronLeft size={14} aria-hidden="true" />
                 </button>
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: t.text,
-                    fontFamily: FONT.body,
-                    minWidth: 180,
-                    textAlign: "center",
-                  }}
-                >
-                  {headerTitle()}
-                </span>
+                <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
                 <button
                   type="button"
                   onClick={next}
                   disabled={!podeAvancarMes}
-                  style={{
-                    ...btnNav,
-                    opacity: podeAvancarMes ? 1 : 0.38,
-                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
-                  }}
+                  style={getCarouselBtnNavStyle(t, !podeAvancarMes)}
                   aria-label={
                     podeAvancarMes
                       ? "Próximo mês"
@@ -2029,11 +1998,7 @@ export default function RhCalendarioPage() {
                   type="button"
                   onClick={prev}
                   disabled={!podeRetrocederMes}
-                  style={{
-                    ...btnNav,
-                    opacity: podeRetrocederMes ? 1 : 0.38,
-                    cursor: podeRetrocederMes ? "pointer" : "not-allowed",
-                  }}
+                  style={getCarouselBtnNavStyle(t, !podeRetrocederMes)}
                   aria-label={
                     podeRetrocederMes
                       ? "Mês anterior"
@@ -2042,27 +2007,12 @@ export default function RhCalendarioPage() {
                 >
                   <ChevronLeft size={14} aria-hidden="true" />
                 </button>
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: t.text,
-                    fontFamily: FONT.body,
-                    minWidth: 180,
-                    textAlign: "center",
-                  }}
-                >
-                  {headerTitle()}
-                </span>
+                <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
                 <button
                   type="button"
                   onClick={next}
                   disabled={!podeAvancarMes}
-                  style={{
-                    ...btnNav,
-                    opacity: podeAvancarMes ? 1 : 0.38,
-                    cursor: podeAvancarMes ? "pointer" : "not-allowed",
-                  }}
+                  style={getCarouselBtnNavStyle(t, !podeAvancarMes)}
                   aria-label={
                     podeAvancarMes
                       ? "Próximo mês"

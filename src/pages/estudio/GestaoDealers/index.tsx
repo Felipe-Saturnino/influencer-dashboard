@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
@@ -16,7 +17,6 @@ import {
   ChevronRight,
   Search,
   CircleDot,
-  Shield,
   Users,
   User,
   Spade,
@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
@@ -218,36 +219,6 @@ export default function GestaoDealers() {
     return operadoraSlugsForcado[0] ?? null;
   }, [user?.role, operadoraSlugsForcado, filtroOperadora]);
 
-  const selectOperadoraStyle: CSSProperties = {
-    padding: "6px 14px 6px 30px",
-    borderRadius: 999,
-    border: `1px solid ${filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.cardBorder}`,
-    background:
-      filtroOperadora !== "todas" && filtroOperadora !== "nenhuma"
-        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)")
-        : (t.inputBg ?? t.cardBg),
-    color: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.text,
-    fontSize: 13,
-    fontWeight: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? 700 : 400,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
-
-  const btnNavTurnoStyle: CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -273,37 +244,32 @@ export default function GestaoDealers() {
       <div style={{ marginBottom: 14 }}>
         <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" aria-label="Turno anterior" onClick={irTurnoAnterior} style={btnNavTurnoStyle}>
-              <ChevronLeft size={14} />
-            </button>
-            <span
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: 160,
-                textAlign: "center",
-              }}
+            <button
+              type="button"
+              aria-label="Turno anterior"
+              onClick={irTurnoAnterior}
+              style={getCarouselBtnNavStyle(t, false)}
             >
-              {labelTurnoCarrossel}
-            </span>
-            <button type="button" aria-label="Próximo turno" onClick={irTurnoProximo} style={btnNavTurnoStyle}>
-              <ChevronRight size={14} />
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t)}>{labelTurnoCarrossel}</span>
+            <button
+              type="button"
+              aria-label="Próximo turno"
+              onClick={irTurnoProximo}
+              style={getCarouselBtnNavStyle(t, false)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={13} aria-hidden />
-                </span>
-                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectOperadoraStyle}>
-                  <option value="todas">Todas as operadoras</option>
-                  <option value="nenhuma">Nenhuma operadora</option>
-                  {[...opcoesFiltroOperadora].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                    <option key={op.slug} value={op.slug}>{op.nome}</option>
-                  ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={opcoesFiltroOperadora}
+                extraOptions={[{ value: "nenhuma", label: "Nenhuma operadora" }]}
+              />
             )}
           </div>
         </div>

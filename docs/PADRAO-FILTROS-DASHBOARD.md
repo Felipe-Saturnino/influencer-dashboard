@@ -64,8 +64,21 @@ Opções: “Todos os influencers” + lista; respeitar `useDashboardFiltros()` 
 
 ## Filtro Operadora
 
-- **Select simples:** `SelectComIcone` com `icon={<Shield size={15} aria-hidden />}` **ou** um `<select>` com o ícone `Shield` posicionado à esquerda (`position: absolute`, `left: 10`, `pointerEvents: "none"`), padding esquerdo extra no select (`6px 14px 6px 30px`), mesmo padrão de estado ativo (borda/fundo com `brand.accent` quando não for “todas”).
-- Opções: “Todas as operadoras” + lista filtrada por `podeVerOperadora` quando existir permissão.
+- **Sempre** o componente **`FiltroOperadoraSelect`** (`src/components/FiltroOperadoraSelect.tsx`, reexport em `components/dashboard`) — encapsula `SelectComIcone` + ícone **Shield** 15px.
+- Opção agregadora: valor `todas`, rótulo visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`); `aria-label` do controlo **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`). **Nunca** “Todas as operadoras”, “Operadoras” só na agregadora, label lateral “Operadora”.
+- Lista filtrada por `podeVerOperadora` quando existir permissão; `extraOptions` (ex. “Nenhuma”) só em domínios que exigem — ver `global.mdc` § Filtro de operadora.
+
+```tsx
+import { FiltroOperadoraSelect } from "../../components/dashboard";
+
+<FiltroOperadoraSelect
+  value={filtroOperadora}
+  onChange={setFiltroOperadora}
+  operadoras={operadorasList}
+  podeVerOperadora={podeVerOperadora}
+  pill
+/>
+```
 
 ---
 
@@ -85,6 +98,7 @@ Se a página tiver carrossel mês/semana junto aos filtros:
 - [ ] Botão Histórico com `aria-pressed` e labels acessíveis.
 - [ ] Filtros condicionados a `showFiltroInfluencer` / `showFiltroOperadora` quando usar `useDashboardFiltros`.
 - [ ] Nenhum `GiCalendar` / `GiShield` / `GiStarMedal` nesta barra.
+- [ ] Operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral).
 
 ---
 
@@ -95,6 +109,7 @@ Se a página tiver carrossel mês/semana junto aos filtros:
 | Barra completa (Histórico + selects com ícones) | `src/pages/dashboards/Streamers/index.tsx` |
 | Dropdown multi-influencer (ícone User) | `src/components/InfluencerDropdown.tsx` |
 | Select com ícone à esquerda | `src/components/dashboard` (`SelectComIcone`) |
+| Filtro de operadora (canónico) | `src/components/FiltroOperadoraSelect.tsx` |
 | Marca / fundo do bloco | `useDashboardBrand` + regras em `.cursor/rules/global.mdc` |
 
 ---

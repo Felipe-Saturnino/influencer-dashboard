@@ -1,6 +1,5 @@
-import type { CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { Theme } from "../../../constants/theme";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 
@@ -20,19 +19,6 @@ export function MesCarrosselPeriodo({ mesesDisponiveis, idxMes, onIdxMesChange, 
   const mesSelecionado = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes >= mesesDisponiveis.length - 1;
-
-  const btnNav: CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   return (
     <div
@@ -57,36 +43,19 @@ export function MesCarrosselPeriodo({ mesesDisponiveis, idxMes, onIdxMesChange, 
         <button
           type="button"
           aria-label="Mês anterior"
-          style={{
-            ...btnNav,
-            opacity: isPrimeiro ? 0.35 : 1,
-            cursor: isPrimeiro ? "not-allowed" : "pointer",
-          }}
+          style={getCarouselBtnNavStyle(t, isPrimeiro)}
           onClick={() => onIdxMesChange(Math.max(0, idxMes - 1))}
           disabled={isPrimeiro}
         >
           <ChevronLeft size={14} aria-hidden="true" />
         </button>
-        <span
-          style={{
-            fontSize: 18,
-            fontWeight: 800,
-            color: t.text,
-            fontFamily: FONT.body,
-            minWidth: "min(100%, 180px)",
-            textAlign: "center",
-          }}
-        >
+        <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
           {mesSelecionado?.label ?? "—"}
         </span>
         <button
           type="button"
           aria-label="Próximo mês"
-          style={{
-            ...btnNav,
-            opacity: isUltimo ? 0.35 : 1,
-            cursor: isUltimo ? "not-allowed" : "pointer",
-          }}
+          style={getCarouselBtnNavStyle(t, isUltimo)}
           onClick={() => onIdxMesChange(Math.min(mesesDisponiveis.length - 1, idxMes + 1))}
           disabled={isUltimo}
         >

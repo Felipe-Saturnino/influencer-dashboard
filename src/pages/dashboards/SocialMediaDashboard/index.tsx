@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import {
@@ -998,16 +999,6 @@ export default function SocialMediaDashboard() {
     boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
-  const btnNavStyle = (disabled: boolean): React.CSSProperties => ({
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.3 : 1,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  });
-
   const thStyle = brand.useBrand ? getThStyleBrandAction(t) : getThStyle(t);
   const zebraTabelaMidias = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
   const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
@@ -1098,14 +1089,24 @@ export default function SocialMediaDashboard() {
               marginBottom: 12,
             }}
           >
-            <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} aria-hidden />
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 220, textAlign: "center" }}>
-              {label}
-            </span>
-            <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} aria-hidden />
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: 220 })}>{label}</span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
             <button
               type="button"
