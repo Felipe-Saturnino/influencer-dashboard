@@ -4,6 +4,7 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
+import { useRevisaoCadastralGate } from "./hooks/useRevisaoCadastralGate";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -150,6 +151,8 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const [retryKey, setRetryKey] = useState(0);
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { gateLoading: revisaoGateLoading, gateAtivo: revisaoGateAtivo, navegarComGate } =
+    useRevisaoCadastralGate(activePage);
 
   useEffect(() => {
     if (!navDrawer) setMenuOpen(false);
@@ -177,7 +180,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const PageComponent = PAGE_MAP[activePage] ?? Home;
 
   const go = (page: string) => {
-    setActivePage(page);
+    navegarComGate(page);
     setMenuOpen(false);
   };
 
@@ -215,9 +218,27 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
           onMenuClick={() => setMenuOpen((o) => !o)}
         />
         <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", background: t.bg }}>
+          {revisaoGateAtivo && activePage === "rh_dados_cadastro" ? (
+            <div
+              style={{
+                padding: "10px 16px",
+                fontSize: 12,
+                fontFamily: "Inter, sans-serif",
+                color: t.textMuted,
+                borderBottom: `1px solid ${t.cardBorder}`,
+                background: t.cardBg,
+              }}
+            >
+              Conclua a atualização cadastral obrigatória nesta página para voltar a usar o restante do sistema.
+            </div>
+          ) : null}
           <ErrorBoundary background={t.bg} onReset={() => setRetryKey((k) => k + 1)}>
             <Suspense fallback={<PageLoadingFallback background={t.bg} />}>
-              <PageComponent key={`${activePage}-${retryKey}`} />
+              {revisaoGateLoading && activePage !== "rh_dados_cadastro" ? (
+                <PageLoadingFallback background={t.bg} />
+              ) : (
+                <PageComponent key={`${activePage}-${retryKey}`} />
+              )}
             </Suspense>
           </ErrorBoundary>
         </div>

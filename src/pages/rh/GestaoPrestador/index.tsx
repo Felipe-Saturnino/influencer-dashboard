@@ -64,6 +64,11 @@ import {
 } from "../../../lib/rhPrestadorUsuarioSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
+import {
+  cadastroRevisaoJaRegistradaPeloPrestador,
+  revisaoCadastralPendenteParaFuncionario,
+  prestadorExigeRevisaoCadastral,
+} from "../../../lib/rhCadastroRevisao";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
@@ -1157,7 +1162,8 @@ export default function RhPrestadoresPage() {
       else encerrado += 1;
     }
     const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
-    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos };
+    const revisaoPendente = filtrada.filter((r) => revisaoCadastralPendenteParaFuncionario(r));
+    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente };
   }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
@@ -2404,7 +2410,7 @@ export default function RhPrestadoresPage() {
         </div>
       </div>
 
-      <div className="app-grid-2" style={{ gap: 16, marginBottom: 16 }}>
+      <div className="app-grid-3" style={{ gap: 16, marginBottom: 16 }}>
         <div
           style={{
             background: brand.useBrand ? brand.blockBg : t.cardBg,
@@ -2532,6 +2538,59 @@ export default function RhPrestadoresPage() {
                   </span>
                 ),
               )}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            border: "1px solid rgba(245, 158, 11, 0.35)",
+            borderRadius: 18,
+            padding: 20,
+            boxShadow: cardShadow,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#f59e0b",
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              fontFamily: FONT.body,
+              marginBottom: 6,
+            }}
+          >
+            <AlertCircle size={13} aria-hidden />
+            Revisão cadastral pendente
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#f59e0b", fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+            {resumoPrestadoresCards.revisaoPendente.length}
+          </div>
+          {resumoPrestadoresCards.revisaoPendente.length === 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#22c55e", fontFamily: FONT.body }}>
+              <CheckCircle2 size={14} aria-hidden />
+              Todos os cadastros filtrados estão em dia na revisão de 6 meses.
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                maxHeight: 220,
+                overflow: "auto",
+              }}
+            >
+              {resumoPrestadoresCards.revisaoPendente.map((row) => (
+                <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                  {row.nome}
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -2772,6 +2831,24 @@ export default function RhPrestadoresPage() {
                         title={row.nome}
                       >
                         {row.nome}
+                        {revisaoCadastralPendenteParaFuncionario(row) ? (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              marginLeft: 8,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#f59e0b",
+                              border: "1px solid rgba(245, 158, 11, 0.45)",
+                              background: "rgba(245, 158, 11, 0.12)",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            Revisão pendente
+                          </span>
+                        ) : null}
                       </td>
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={diretoria}>
                         {diretoria}
@@ -2997,6 +3074,38 @@ export default function RhPrestadoresPage() {
           >
             {abaModal === "pessoais" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                {leitura && snapshotEdicao && prestadorExigeRevisaoCadastral(snapshotEdicao.status) ? (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      marginBottom: 12,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${revisaoCadastralPendenteParaFuncionario(snapshotEdicao) ? "rgba(245, 158, 11, 0.45)" : t.cardBorder}`,
+                      background: revisaoCadastralPendenteParaFuncionario(snapshotEdicao)
+                        ? "rgba(245, 158, 11, 0.1)"
+                        : t.inputBg,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                      color: t.text,
+                    }}
+                  >
+                    <strong>Revisão cadastral (prestador):</strong>{" "}
+                    {cadastroRevisaoJaRegistradaPeloPrestador(snapshotEdicao.cadastro_revisado_em)
+                      ? `última em ${fmtDataIsoPtBr(String(snapshotEdicao.cadastro_revisado_em).slice(0, 10))}`
+                      : `primeira revisão pendente — prazo desde cadastro em ${fmtDataIsoPtBr(String(snapshotEdicao.created_at).slice(0, 10))}`}
+                    {snapshotEdicao.cadastro_revisao_tipo === "sem_alteracao"
+                      ? " — declarada sem alterações"
+                      : snapshotEdicao.cadastro_revisao_tipo === "alteracao"
+                        ? " — com atualização de dados/documentos"
+                        : ""}
+                    {revisaoCadastralPendenteParaFuncionario(snapshotEdicao) ? (
+                      <span style={{ color: "#f59e0b", fontWeight: 700 }}> · Pendente (ciclo 6 meses)</span>
+                    ) : (
+                      <span style={{ color: "#22c55e", fontWeight: 600 }}> · Em dia</span>
+                    )}
+                  </div>
+                ) : null}
                 <div style={{ marginBottom: 10 }}>
                   {lblReqCad("f-nome", "Nome completo")}
                   <input

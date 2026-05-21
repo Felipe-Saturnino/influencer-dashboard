@@ -30,6 +30,11 @@ import {
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
+import {
+  buscarFuncionarioRevisaoCadastralPorEmail,
+  revisaoCadastralPendenteParaFuncionario,
+  usuarioSujeitoGateRevisaoCadastral,
+} from "../../../lib/rhCadastroRevisao";
 
 const BRAND = {
   roxo: "#4a2082",
@@ -228,6 +233,42 @@ export default function Home() {
   const [livesFuturas, setLivesFuturas] = useState<Live[]>([]);
   const [livesRealizadasRecentes, setLivesRealizadasRecentes] = useState<Live[]>([]);
   const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
+  const [revisaoCadastralPendenteHome, setRevisaoCadastralPendenteHome] = useState(false);
+  const [revisaoCadastralHomeReady, setRevisaoCadastralHomeReady] = useState(false);
+
+  useEffect(() => {
+    if (!user?.email?.trim()) {
+      setRevisaoCadastralPendenteHome(false);
+      setRevisaoCadastralHomeReady(true);
+      return;
+    }
+    const permEdit = permissions.rh_dados_cadastro ?? null;
+    if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEdit)) {
+      setRevisaoCadastralPendenteHome(false);
+      setRevisaoCadastralHomeReady(true);
+      return;
+    }
+    let cancelled = false;
+    setRevisaoCadastralHomeReady(false);
+    void (async () => {
+      const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
+      if (!cancelled) {
+        setRevisaoCadastralPendenteHome(revisaoCadastralPendenteParaFuncionario(row));
+        setRevisaoCadastralHomeReady(true);
+      }
+    })();
+    const onAtualizado = () => {
+      void (async () => {
+        const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
+        if (!cancelled) setRevisaoCadastralPendenteHome(revisaoCadastralPendenteParaFuncionario(row));
+      })();
+    };
+    window.addEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
+    };
+  }, [user, permissions.rh_dados_cadastro]);
 
   useEffect(() => {
     if (!user || !roleParidadeInfluencer(user.role)) {
@@ -358,6 +399,9 @@ export default function Home() {
   const showPlaybookAlert =
     roleParidadeInfluencer(role) && influencerHomeReady && playbookPendente;
 
+  const showRevisaoCadastralAlert =
+    revisaoCadastralHomeReady && revisaoCadastralPendenteHome;
+
   const showProximasLives =
     roleParidadeInfluencer(role) && influencerHomeReady && livesFuturas.length > 0;
 
@@ -447,6 +491,47 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {showRevisaoCadastralAlert && (
+        <div style={alertBoxStyle}>
+          <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: isDark ? "#ff9980" : "#b02a14",
+                letterSpacing: "0.06em",
+                marginBottom: 8,
+                fontFamily: FONT_TITLE,
+              }}
+            >
+              AÇÃO NECESSÁRIA
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
+              Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos
+              ou confirme que nada mudou no período.
+            </p>
+            <button
+              type="button"
+              onClick={() => setActivePage("rh_dados_cadastro")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 10,
+                border: `1px solid ${BRAND.vermelho}`,
+                background: `${BRAND.vermelho}18`,
+                color: BRAND.vermelho,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+              }}
+            >
+              Ir para Dados de Cadastro
+            </button>
+          </div>
+        </div>
+      )}
 
       {showPerfilIncompleto && (
         <div style={alertBoxStyle}>
