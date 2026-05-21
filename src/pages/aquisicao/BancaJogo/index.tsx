@@ -131,7 +131,6 @@ interface BlocoFiltros {
   operadorasList: { slug: string; nome: string }[];
   mesFiltro: string;
   historico: boolean;
-  statusFiltro: "" | BancaStatus;
 }
 
 function Avatar({ name, size = 28 }: { name: string; size?: number }) {
@@ -145,16 +144,6 @@ function Avatar({ name, size = 28 }: { name: string; size?: number }) {
     }}>
       {letra}
     </div>
-  );
-}
-
-/** Filtro operadora: oculto para influencer, agência e operador (este último com escopo forçado). */
-function useBancaFiltroOperadoraUI(userRole: string | undefined) {
-  return (
-    !!userRole &&
-    !roleParidadeInfluencer(userRole as Role) &&
-    userRole !== "agencia" &&
-    userRole !== "operador"
   );
 }
 
@@ -638,7 +627,7 @@ function BlocoSolicitacoes({
   const tdNum = getTdNumStyle(t);
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
-    mesFiltro, historico, statusFiltro,
+    mesFiltro, historico,
   } = filtros;
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
@@ -695,10 +684,9 @@ function BlocoSolicitacoes({
       } else if (filterOperadora && filterOperadora !== "todas") {
         if (r.operadora_slug !== filterOperadora) return false;
       }
-      if (statusFiltro && r.status !== statusFiltro) return false;
       return rowNoMesSolicitacao(r, periodo, historico);
     });
-  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
+  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, periodo, historico]);
 
   const listaOrdenada = useMemo(() => {
     const arr = [...lista];
@@ -1272,7 +1260,7 @@ function BlocoConsolidadoBanca({
   const narrowTablet = useMediaQuery("(max-width: 639px)");
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
-    mesFiltro, historico, statusFiltro,
+    mesFiltro, historico,
   } = filtros;
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
@@ -1304,10 +1292,9 @@ function BlocoConsolidadoBanca({
       } else if (filterOperadora && filterOperadora !== "todas") {
         if (r.operadora_slug !== filterOperadora) return false;
       }
-      if (statusFiltro && r.status !== statusFiltro) return false;
       return rowInteressaConsolidado(r, periodo, historico);
     });
-  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
+  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, periodo, historico]);
 
   interface AgRow {
     influencer_id: string;
@@ -1404,20 +1391,22 @@ function BlocoConsolidadoBanca({
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+      <div style={{ marginBottom: 18 }}>
         <BlocoLabel label="Consolidado de bancas" />
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por nome ou e-mail..."
+          aria-label="Buscar influencer por nome ou e-mail"
           style={{
-            flex: 1, minWidth: 280, maxWidth: 420,
+            width: "100%",
+            marginTop: 12,
+            boxSizing: "border-box",
             padding: "8px 14px", borderRadius: 10,
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
             fontSize: 13, fontFamily: FONT.body, outline: "none",
           }}
         />
-        <span style={{ fontSize: 12, color: t.textMuted }}>{filtradaOrdenada.length} influencers</span>
       </div>
 
       <div className="app-table-wrap">
@@ -1719,12 +1708,12 @@ export default function BancaJogo() {
   const perm = usePermission("banca_jogo");
   const {
     showFiltroInfluencer,
+    showFiltroOperadora,
     podeVerInfluencer,
     podeVerOperadora,
     escoposVisiveis: ev,
     operadoraSlugsForcado,
   } = useDashboardFiltros();
-  const showFiltroOperadoraExtra = useBancaFiltroOperadoraUI(user?.role);
 
   const [ciclosRows, setCiclosRows] = useState<BancaRowDb[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1737,7 +1726,6 @@ export default function BancaJogo() {
   const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
   const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
   const [historico, setHistorico] = useState(false);
-  const [statusFiltro, setStatusFiltro] = useState<"" | BancaStatus>("");
 
   const influencerListVisiveis = useMemo(
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
@@ -1771,8 +1759,7 @@ export default function BancaJogo() {
     operadorasList,
     mesFiltro: historico ? "" : mesFiltro,
     historico,
-    statusFiltro: statusFiltro || ("" as const),
-  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico, statusFiltro]);
+  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico]);
 
   const idxMesAtual = MESES_OPCOES.findIndex((m) => m.value === mesFiltro);
   function prevMes() {
@@ -1910,38 +1897,38 @@ export default function BancaJogo() {
           border: brand.primaryTransparentBorder,
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
-        }}
-        >
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} aria-label="Mês anterior" title="Mês anterior">
+            <button type="button" aria-label="Mês anterior" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
               <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Total" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
-            <button type="button" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} aria-label="Próximo mês" title="Próximo mês">
+            <button type="button" aria-label="Próximo mês" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
               <ChevronRight size={14} aria-hidden />
             </button>
 
-            <button type="button" onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
+            <button type="button" aria-pressed={historico} onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
               Histórico
             </button>
 
-            {showFiltroInfluencer && influencerListVisiveis.length > 0 ? (
+            {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
                 t={t}
               />
-            ) : null}
+            )}
 
-            {showFiltroOperadoraExtra && operadorasList.length > 0 ? (
+            {showFiltroOperadora && operadorasList.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
                   <Shield size={13} aria-hidden />
                 </span>
                 <select
+                  aria-label="Filtrar por operadora"
                   value={filterOperadora}
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
@@ -1962,24 +1949,7 @@ export default function BancaJogo() {
                     ))}
                 </select>
               </div>
-            ) : null}
-
-            <select
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as "" | BancaStatus)}
-              style={{
-                padding: "6px 14px", borderRadius: 999,
-                border: `1px solid ${statusFiltro ? brand.accent : t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: statusFiltro ? brand.accent : t.textMuted,
-                fontSize: 13, fontFamily: FONT.body, cursor: "pointer", outline: "none",
-              }}
-            >
-              <option value="">Todos os status</option>
-              <option value="solicitado">Solicitado</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="liberado">Liberado</option>
-            </select>
+            )}
           </div>
         </div>
       </div>

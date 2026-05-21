@@ -2318,20 +2318,22 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
+      <div style={{ marginBottom: "18px" }}>
         <BlocoLabel label="Consolidado de influencers" />
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
           placeholder="Buscar por nome ou e-mail..."
+          aria-label="Buscar influencer por nome ou e-mail"
           style={{
-            flex: 1, minWidth: 280, maxWidth: 420,
+            width: "100%",
+            marginTop: 12,
+            boxSizing: "border-box",
             padding: "8px 14px", borderRadius: "10px",
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
             fontSize: "13px", fontFamily: FONT.body, outline: "none",
           }}
         />
-        {!loading && <span style={{ fontSize: "12px", color: t.textMuted, whiteSpace: "nowrap" }}>{ordenados.length} influencers</span>}
       </div>
 
       {loading ? (

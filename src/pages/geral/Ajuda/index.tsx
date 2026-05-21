@@ -520,7 +520,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida; o de status exibe apenas as solicitações em determinada etapa do fluxo.\n\nO filtro de operadora e o de status só aparecem para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
@@ -1116,7 +1116,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "A solicitação sumiu após ser criada?",
         texto:
-          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, verifique o filtro de status (selecione Todos os status) e confirme o mês — a solicitação pode ter sido criada em um mês diferente do exibido. Ative o Histórico para ver tudo sem restrição de período.",
+          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, confirme o mês selecionado no carrossel — a solicitação pode ter sido criada em outro período. Ative o Histórico para ver tudo sem restrição de data.",
       },
       {
         subtitulo: "Os botões Aprovar, Recusar e Liberar não aparecem?",
