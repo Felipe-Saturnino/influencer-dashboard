@@ -515,12 +515,22 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Fluxo de solicitação, aprovação e liberação de valores de banca de jogo por influencer e ciclo, alinhado às regras da operação e ao escopo do usuário. Acompanhe status (solicitado, em análise, aprovado, liberado) e histórico por período.",
+          "A página Banca de Jogo gerencia as solicitações de banca que os influencers fazem para cada operadora participante. O fluxo passa por três etapas: Solicitado (pedido do influencer ou agência), Aprovado (validado internamente) e Liberado (valor entregue). A página também exibe o consolidado de bancas por influencer com o status da conta em cada operadora.",
       },
       {
-        subtitulo: "Permissões",
+        subtitulo: "Filtros e Navegação",
         texto:
-          "Quem pode criar, aprovar ou alterar status depende das permissões configuradas em Gestão de Usuários para a página Banca de Jogo.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida; o de status exibe apenas as solicitações em determinada etapa do fluxo.\n\nO filtro de operadora e o de status só aparecem para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+      },
+      {
+        subtitulo: "Solicitações",
+        texto:
+          "A tabela de Solicitações lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão + Solicitar. Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
+      },
+      {
+        subtitulo: "Consolidado de Bancas",
+        texto:
+          "Lista todos os influencers com ao menos uma solicitação no período. Clique em qualquer linha para expandir o histórico de bancas daquele influencer com datas, valores e status de cada transação.\n\nA coluna Status da Conta indica se a conta do influencer na operadora está Liberada ou Bloqueada. Perfis de gestão podem alterar o status diretamente clicando no badge — o modal exibe uma recomendação de manter a conta Bloqueada durante ações ativas para evitar saques indevidos.",
       },
     ],
   },
@@ -602,22 +612,32 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Central de gestão de pagamentos dos influencers parceiros (menu Aquisição). Acompanhe ciclos semanais, aprove valores, registre pagamentos e consulte o histórico financeiro de cada parceiro.",
+          "A página Financeiro centraliza a gestão de pagamentos dos influencers, organizada em ciclos semanais que vão de quinta a quarta-feira. Aqui é possível acompanhar o status de cada pagamento — desde a análise até a confirmação —, visualizar estimativas do ciclo em aberto e consultar o histórico consolidado por influencer.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
         texto:
-          "Três indicadores consolidados no topo, com filtro próprio de período (Total ou por mês):\n\n— Total Pago: volume financeiro já realizado para influencers e agentes.\n— Pendente: valor ainda em aberto, em análise ou aguardando pagamento.\n— Total de Horas Realizadas: volume de horas que gerou base de cálculo para os pagamentos.",
+          "Três indicadores resumem o período selecionado:\n\n— Total pago: soma dos pagamentos com status Pago\n— Pendente: soma dos pagamentos Em análise ou Aguardando pagamento\n— Total de horas realizadas: horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",
         texto:
-          "Os pagamentos são organizados em ciclos semanais. Selecione o ciclo no seletor para visualizar o status financeiro daquele período.\n\nCiclo aberto (atual): exibe um preview em tempo real com as lives realizadas, horas e valores estimados. Nenhum pagamento definitivo é gerado enquanto o ciclo está em andamento.\n\nCiclo fechado: o sistema fecha automaticamente após a data final e gera os pagamentos com status Em análise. A partir daí, o fluxo segue três etapas:\n\n— Analisar: abre o detalhamento do pagamento — lives consideradas, horas e valor calculado. É possível ajustar o valor manualmente antes de aprovar.\n— A pagar: pagamento aprovado, aguardando quitação.\n— Pago: pagamento registrado. A plataforma salva automaticamente a data de pagamento.\n\nTambém é possível registrar Pagamentos de Agente de forma independente, sem vínculo com horas de live.",
+          "Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
+      },
+      {
+        subtitulo: "Pagamento de Agente",
+        texto:
+          "O botão Pagamento de Agente permite registrar valores para agências ou comissões externas dentro do ciclo selecionado. Visível apenas para perfis de operação interna (gestor, operador, shift leader e similares). Informar operadora, descrição e valor — o registro entra no ciclo como linha especial e segue o mesmo fluxo de análise e pagamento.",
       },
       {
         subtitulo: "Consolidado de Influencers",
         texto:
-          "Tabela histórica com o relacionamento financeiro de cada parceiro: total pago, total de horas, valor pendente, data do último pagamento e status. Cada linha pode ser expandida para ver o histórico detalhado por ciclo.\n\nQuando há pagamentos de agentes no período, uma linha de Agência aparece ao final da tabela — sem horas associadas e sem expansão.",
+          "Lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado. A busca por nome ou e-mail filtra a lista instantaneamente.",
       },
     ],
   },
@@ -1089,14 +1109,34 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Banca de Jogo",
     blocos: [
       {
-        subtitulo: "Não consigo solicitar ou aprovar banca?",
+        subtitulo: "Não consigo criar uma solicitação?",
         texto:
-          "Verifique permissões na Gestão de Usuários e o ciclo/período selecionado. Alguns status só permitem transições específicas (ex.: não é possível liberar sem aprovação prévia).",
+          "A solicitação pode estar bloqueada por dois motivos: (1) cadastro de perfil incompleto — acesse Lives → Influencers e complete todas as informações obrigatórias; (2) ciência do Playbook pendente — acesse Conteúdo → Playbook e registre sua concordância. O sistema indica qual das situações está bloqueando e oferece um botão de acesso direto para resolver.",
       },
       {
-        subtitulo: "O valor não bate com o esperado?",
+        subtitulo: "A solicitação sumiu após ser criada?",
         texto:
-          "Confirme regras vigentes do ciclo, escopo de operadora e se há solicitações duplicadas ou canceladas no histórico.",
+          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, verifique o filtro de status (selecione Todos os status) e confirme o mês — a solicitação pode ter sido criada em um mês diferente do exibido. Ative o Histórico para ver tudo sem restrição de período.",
+      },
+      {
+        subtitulo: "Os botões Aprovar, Recusar e Liberar não aparecem?",
+        texto:
+          "Esses botões são exclusivos para perfis de gestão interna com permissão de edição. Aprovar e Recusar aparecem para solicitações com status Solicitado. Liberar aparece apenas para solicitações Aprovadas. Se você tem o perfil correto e os botões não aparecem, verifique se o filtro de período está correto — solicitações de outro mês não são exibidas na visualização atual.",
+      },
+      {
+        subtitulo: "O Status da Conta no Consolidado não está correto?",
+        texto:
+          "O status Liberada/Bloqueada reflete o registro manual feito pela equipe de gestão. Se você acredita que o status está desatualizado, contate o gestor responsável para que ele altere diretamente pelo badge da linha no Consolidado de Bancas.",
+      },
+      {
+        subtitulo: "O CPF aparece sempre mascarado — como revelar?",
+        texto:
+          "Clique no ícone de olho ao lado do CPF mascarado (***.***.***-**) para revelar o número completo temporariamente. A revelação é individual por linha e não persiste após navegar para outra página. Essa funcionalidade está disponível apenas para perfis com acesso aos dados do influencer.",
+      },
+      {
+        subtitulo: "O Histórico do Consolidado não expande?",
+        texto:
+          "Clique na linha do influencer para expandir o histórico. Se o histórico aparecer vazio após expandir, significa que não há solicitações registradas para aquele influencer no período selecionado. Ative o Histórico (filtro) para ver todas as transações sem restrição de data.",
       },
     ],
   },
@@ -1179,29 +1219,34 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Financeiro",
     blocos: [
       {
-        subtitulo: "Os pagamentos do ciclo não foram gerados?",
+        subtitulo: "Nenhum ciclo aparece na página?",
         texto:
-          "O ciclo precisa estar fechado para que os pagamentos sejam criados. Ciclos com data final no futuro ainda estão em andamento e exibem apenas uma prévia estimada.",
+          "Os ciclos são gerados automaticamente a cada semana. Se a página estiver vazia, clique em Tentar novamente. Caso o problema persista, verifique se há lives realizadas e validadas no período — sem lives registradas, não há ciclo visível para influencers e agências. Gestores podem verificar as permissões de criação de ciclos com o time técnico.",
       },
       {
-        subtitulo: "O valor calculado está incorreto?",
+        subtitulo: "O ciclo que quero não aparece no dropdown?",
         texto:
-          "Verifique se todas as lives do período foram validadas em Resultados e se o cachê por hora está preenchido no cadastro do influencer em Influencers. Esses dois dados são a base do cálculo.",
+          "O dropdown exibe apenas ciclos do mês selecionado no carrossel. Navegue para o mês correto ou ative o modo Histórico para ver todos os ciclos. Se uma live foi realizada em determinada semana e o ciclo não aparece, verifique se a live foi validada com status Realizada e se tem resultado registrado (duração e operadora).",
       },
       {
-        subtitulo: "Quero ajustar o valor antes de aprovar. Como faço?",
+        subtitulo: "Os valores estimados diferem do que era esperado?",
         texto:
-          "Clique em Analisar no ciclo fechado. O modal exibe o valor calculado e permite editá-lo manualmente antes de mover o pagamento para A pagar.",
+          "A prévia do ciclo aberto calcula estimativa com base nas lives realizadas e no cachê/hora cadastrado no perfil do influencer. Se o valor parece errado: (1) confirme que o cachê/hora está cadastrado corretamente em Lives → Influencers; (2) verifique se todas as lives do período foram validadas com duração registrada; (3) veja se o filtro de operadora está em Todas — filtrar por operadora específica mostra apenas as lives daquela plataforma.",
       },
       {
-        subtitulo: "O KPI de Pendente está alto mas não encontro pagamentos em aberto?",
+        subtitulo: "O botão Analisar ou Pagar não aparece?",
         texto:
-          "Verifique os filtros de influencer e operadora — podem estar ocultando parte dos ciclos. Também confira se há ciclos fechados com pagamentos ainda em Em análise.",
+          "Esses botões dependem do seu perfil e da permissão de edição. O botão Analisar aparece para pagamentos Em análise; Pagar aparece para pagamentos Aguardando pagamento. Se você tem permissão e os botões não aparecem, confirme que o ciclo está fechado — no ciclo aberto (prévia), nenhuma ação está disponível.",
       },
       {
-        subtitulo: "A linha de Agência não aparece no Consolidado?",
+        subtitulo: "Minhas lives estão realizadas mas não aparecem no financeiro?",
         texto:
-          "A linha de Agência só é exibida quando há pagamentos de agente registrados no período filtrado. Ajuste o filtro de mês para verificar outros períodos.",
+          "Para que uma live gere pagamento ela precisa: (1) ter status Realizada; (2) ter resultado registrado com duração em horas e minutos; (3) ter operadora atribuída. Se os três pontos estão corretos e a live ainda não aparece, verifique se o mês selecionado corresponde à data da live e se o cachê/hora está cadastrado — lives com cachê zero ficam com estimativa R$ 0,00 e podem parecer ausentes.",
+      },
+      {
+        subtitulo: "O Consolidado de Influencers não mostra um influencer?",
+        texto:
+          "O consolidado exibe apenas influencers com ao menos um ciclo de pagamento no período. Se um influencer não aparece, certifique-se de que ele tem pagamentos registrados no mês selecionado — pode ser necessário navegar para outro mês ou ativar o Histórico. A busca por nome/e-mail funciona sobre os resultados já carregados.",
       },
     ],
   },

@@ -583,6 +583,53 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "financeiro_operacional",
+    label: "Financeiro Operacional",
+    accentColor: "#22c55e",
+    termos: [
+      {
+        termo: "Ciclo de Pagamento",
+        definicao:
+          "Período semanal de quinta-feira a quarta-feira que agrupa as lives realizadas e define a janela de cálculo de cachê dos influencers. Cada ciclo gera um conjunto de pagamentos ao ser encerrado.",
+        nota: "Ciclos em aberto (semana atual) exibem prévia em tempo real. Pagamentos definitivos são gerados apenas ao fechar o ciclo.",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Cachê/hora",
+        definicao:
+          "Valor em reais pago ao influencer por hora de live realizada. Cadastrado no perfil do influencer e usado como base para calcular o total de cada ciclo.",
+        formula: "Total do ciclo = Horas realizadas × Cachê/hora",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Prévia",
+        definicao:
+          "Estimativa de pagamento calculada em tempo real durante o ciclo em aberto, com base nas lives já realizadas e no cachê cadastrado. Não é um valor definitivo — pode mudar até o fechamento do ciclo.",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Banca de Jogo",
+        definicao:
+          "Valor disponibilizado ao influencer pela operadora para uso durante a live. Funciona como capital de giro para demonstrações de jogo — deve ser mantido na conta do influencer apenas durante a ação e ser reposto ou devolvido ao final.",
+        nota: "Diferente do cachê: a banca não é remuneração — é um recurso operacional temporário.",
+        referencia: "Banca de Jogo",
+      },
+      {
+        termo: "Status da Conta (Banca)",
+        definicao:
+          "Indica se a conta do influencer na operadora está Liberada (disponível para operação) ou Bloqueada (restrita para evitar saques durante ações). Gerenciado manualmente pela equipe de gestão.",
+        referencia: "Banca de Jogo",
+      },
+      {
+        termo: "Pagamento de Agente",
+        definicao:
+          "Linha especial de pagamento para agências ou terceiros que prestam serviços vinculados a um ciclo. Segue o mesmo fluxo de análise e pagamento dos influencers, mas não está associado a horas de live.",
+        nota: "Visível apenas para perfis de operação interna.",
+        referencia: "Financeiro",
+      },
+    ],
+  },
+  {
     key: "periodos",
     label: "Conceitos de Período",
     accentColor: "#6b7280",
