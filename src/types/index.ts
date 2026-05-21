@@ -219,7 +219,7 @@ export interface UserScope {
 // ─── DEALER ──────────────────────────────────────────────────────────────────
 export type DealerGenero = "feminino" | "masculino";
 export type DealerTurno = "manha" | "tarde" | "noite";
-export type DealerJogo = "blackjack" | "roleta" | "baccarat" | "mesa_vip";
+export type DealerJogo = "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro" | "mesa_vip";
 
 export interface Dealer {
   id:               string;

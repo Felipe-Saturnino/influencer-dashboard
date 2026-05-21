@@ -119,7 +119,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo — Baccarat, Roleta e Blackjack. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das plataformas parceiras.",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das plataformas parceiras.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -139,7 +139,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Comparativo de Jogo",
         texto:
-          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo) e Baccarat (ciano). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período.\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
+          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo), Baccarat (ciano) e Futebol Brasileiro (laranja). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
@@ -147,9 +147,9 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Disponível apenas quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.",
       },
       {
-        subtitulo: "Dados por Mesa (Baccarat e Roleta)",
+        subtitulo: "Dados por Mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos.",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos. Na Casa de Apostas, uma segunda linha mostra Futebol Brasileiro em largura total.",
       },
       {
         subtitulo: "Aba Posicionamento",
@@ -431,7 +431,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
       },
       {
         subtitulo: "Cards de Dealers",
@@ -543,7 +543,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e operadora",
         texto:
-          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
       },
       {
         subtitulo: "Campanhas",

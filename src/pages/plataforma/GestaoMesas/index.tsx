@@ -14,7 +14,7 @@ import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
-const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Poker", "Game Show", "Outro"] as const;
+const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Futebol Brasileiro", "Poker", "Outro"] as const;
 
 type MesaSpinCadastroRow = {
   id: string;

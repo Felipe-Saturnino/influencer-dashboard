@@ -438,7 +438,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Percentual de retenção da casa sobre o volume apostado. Representa o 'edge' natural do jogo — quanto, em média, a casa retém de cada real apostado.",
         formula: "GGR ÷ Turnover × 100",
         nota:
-          "Para jogos de mesa ao vivo, valores entre 3% e 10% são típicos. Acima de 10%: período excepcionalmente favorável para a casa. Abaixo de 0%: período negativo — saques superaram depósitos.\n\nA Margem varia por tipo de jogo. O Comparativo de Jogo na Overview Spin permite visualizar a margem individual de Blackjack, Roleta e Speed Baccarat.",
+          "Para jogos de mesa ao vivo, valores entre 3% e 10% são típicos. Acima de 10%: período excepcionalmente favorável para a casa. Abaixo de 0%: período negativo — saques superaram depósitos.\n\nA Margem varia por tipo de jogo. O Comparativo de Jogo na Overview Spin permite visualizar a margem individual de Blackjack, Roleta, Speed Baccarat e Futebol Brasileiro.",
         referencia: "Overview Spin",
       },
       {
@@ -468,9 +468,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogos Spin",
         definicao:
-          "Os três tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.",
+          "Os tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.\n— Futebol Brasileiro: jogo ao vivo com mesas configuráveis por operadora (inicialmente na Casa de Apostas).",
         nota:
-          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta e Speed Baccarat lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente.",
+          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta, Speed Baccarat e Futebol Brasileiro lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente. Em Dados por Mesa, a Casa de Apostas também exibe Futebol Brasileiro abaixo de Baccarat e Roleta.",
         referencia: "Overview Spin",
       },
       {
@@ -637,7 +637,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Dealer",
         definicao:
-          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat), turno, gênero, fotos e operadora vinculada.",
+          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
         referencia: "Gestão de Dealers",
       },
       {

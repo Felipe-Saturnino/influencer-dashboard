@@ -173,6 +173,8 @@ function getMesesDisponiveis() {
 
 const OPERADORA_CASA_APOSTAS = "casa_apostas";
 const OPERADORA_OUTRAS = "outras_mesas";
+/** Nome canónico da mesa/jogo no PLS e no comparativo (`relatorio_por_tabela.mesa`, `relatorio_uap_por_jogo.jogo`). */
+const LABEL_FUTEBOL_BRASILEIRO = "Futebol Brasileiro";
 
 function slugFromRelatorioOperadora(operadoraRaw: string): string {
   const t = operadoraRaw.trim().toLowerCase();
@@ -231,6 +233,7 @@ function canonicalMesaCasaAposta(nomeTabela: string): string | null {
     [/^casa de apostas?\s+speed\s+baccarat\s*$/i, "Speed Baccarat"],
     [/^casa de apostas?\s+roulette\s*$/i, "Roleta"],
     [/^casa de apostas?\s+r(o|ou)leta\s*$/i, "Roleta"],
+    [/^casa de apostas?\s+futebol\s+brasileiro\s*$/i, LABEL_FUTEBOL_BRASILEIRO],
   ];
   for (const [re, mesa] of pares) {
     if (re.test(t)) return mesa;
@@ -291,7 +294,15 @@ function canonicalMesasSpinFromMesaColumn(mesa: string): string | null {
   if (ml === "blackjack vip") return "Blackjack VIP";
   if (ml === "roleta" || ml === "roulette") return "Roleta";
   if (ml === "speed baccarat") return "Speed Baccarat";
+  if (ml === "futebol brasileiro") return LABEL_FUTEBOL_BRASILEIRO;
   return null;
+}
+
+function isMesaFutebolBrasileiro(
+  row: PorTabelaRow,
+  operadorasList: { slug: string; nome: string }[],
+): boolean {
+  return labelMesaCda(row, operadorasList) === LABEL_FUTEBOL_BRASILEIRO;
 }
 
 function labelMesaCda(
@@ -351,7 +362,12 @@ function addCalendarDaysIso(ymd: string, deltaDays: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
-type PorTabelaGameBucket = { bj: PorTabelaRow[]; roleta: PorTabelaRow[]; baccarat: PorTabelaRow[] };
+type PorTabelaGameBucket = {
+  bj: PorTabelaRow[];
+  roleta: PorTabelaRow[];
+  baccarat: PorTabelaRow[];
+  futebolBrasileiro: PorTabelaRow[];
+};
 
 /** Agrupa `relatorio_por_tabela` pela data operacional do resumo diário: `operacional = dia_na_linha + shiftDays`. */
 function buildPorTabelaGameBuckets(
@@ -364,11 +380,14 @@ function buildPorTabelaGameBuckets(
     const diaLinha = normalizeMesasYmd(r.data_relatorio);
     const operational = addCalendarDaysIso(diaLinha, shiftDays);
     const label = labelMesaCda(r, operadorasListFmt);
-    if (!byDate.has(operational)) byDate.set(operational, { bj: [], roleta: [], baccarat: [] });
+    if (!byDate.has(operational)) {
+      byDate.set(operational, { bj: [], roleta: [], baccarat: [], futebolBrasileiro: [] });
+    }
     const bucket = byDate.get(operational)!;
     if (isMesaBlackjackComparativo(r, operadorasListFmt)) bucket.bj.push(r);
     else if (label === "Roleta") bucket.roleta.push(r);
     else if (label === "Speed Baccarat") bucket.baccarat.push(r);
+    else if (label === LABEL_FUTEBOL_BRASILEIRO) bucket.futebolBrasileiro.push(r);
   }
   return byDate;
 }
@@ -377,12 +396,13 @@ function sumComparableGameBets(bucket: PorTabelaGameBucket): number {
   const bj = aggregateCellFromPorTabelaRows(bucket.bj).bets;
   const rl = aggregateCellFromPorTabelaRows(bucket.roleta).bets;
   const bc = aggregateCellFromPorTabelaRows(bucket.baccarat).bets;
-  return (bj ?? 0) + (rl ?? 0) + (bc ?? 0);
+  const fb = aggregateCellFromPorTabelaRows(bucket.futebolBrasileiro).bets;
+  return (bj ?? 0) + (rl ?? 0) + (bc ?? 0) + (fb ?? 0);
 }
 
 /**
  * Alguns lotes gravam `relatorio_por_tabela.dia` com calendário deslocado em ±1 dia em relação a
- * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc) ao total de apostas.
+ * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc+FB) ao total de apostas.
  */
 /**
  * Penalidade quando há apostas no resumo diário mas nenhuma mesa comparável no bucket.
@@ -408,7 +428,7 @@ function pickPorTabelaOperDayShift(
     let n = 0;
     for (const dr of dailyRows) {
       const key = normalizeMesasYmd(dr.data);
-      const b = byDate.get(key) ?? { bj: [], roleta: [], baccarat: [] };
+      const b = byDate.get(key) ?? { bj: [], roleta: [], baccarat: [], futebolBrasileiro: [] };
       const sumG = sumComparableGameBets(b);
       const off = dr.bets != null ? Number(dr.bets) : null;
       if (off == null || off <= 0) continue;
@@ -452,10 +472,11 @@ function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: s
   return uap;
 }
 
-const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
+const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro"> = {
   Blackjack: "blackjack",
   Roleta: "roleta",
   "Speed Baccarat": "baccarat",
+  [LABEL_FUTEBOL_BRASILEIRO]: "futebol_brasileiro",
 };
 
 /**
@@ -928,7 +949,7 @@ function linhasMesaAgregadasPorMes(
     });
 }
 
-/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam só mesas BJ/Roleta/Speed Baccarat em `por_tabela` (alinhadas ao `data` do daily com deslocamento automático de ±1 dia quando necessário). */
+/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam mesas BJ/Roleta/Speed Baccarat/Futebol Brasileiro em `por_tabela` (alinhadas ao `data` do daily com deslocamento automático de ±1 dia quando necessário). */
 type TotaisOficiaisComparativo = {
   ggr: number | null;
   turnover: number | null;
@@ -982,6 +1003,7 @@ type LinhaComparativoJogoTab = {
   blackjack: CelulaJogoMetricas;
   roleta: CelulaJogoMetricas;
   baccarat: CelulaJogoMetricas;
+  futebol_brasileiro: CelulaJogoMetricas;
   totaisOficiais: TotaisOficiaisComparativo;
 };
 
@@ -995,18 +1017,22 @@ function linhaComparativoJogoAgregadaMes(
   const bj: PorTabelaRow[] = [];
   const rl: PorTabelaRow[] = [];
   const bc: PorTabelaRow[] = [];
+  const fb: PorTabelaRow[] = [];
   for (const r of rowsMonth) {
     const lbl = labelMesaCda(r, operadorasListFmt);
     if (isMesaBlackjackComparativo(r, operadorasListFmt)) bj.push(r);
     else if (lbl === "Roleta") rl.push(r);
     else if (lbl === "Speed Baccarat") bc.push(r);
+    else if (lbl === LABEL_FUTEBOL_BRASILEIRO) fb.push(r);
   }
   const bjAgg = aggregateCellFromPorTabelaRows(bj);
   const rlAgg = aggregateCellFromPorTabelaRows(rl);
   const bcAgg = aggregateCellFromPorTabelaRows(bc);
+  const fbAgg = aggregateCellFromPorTabelaRows(fb);
   const uapBj = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null;
   const uapRl = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null;
   const uapBc = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null;
+  const uapFb = uapUltimoDiaDoMesPorJogo(uapRows, ym, LABEL_FUTEBOL_BRASILEIRO) ?? null;
   return {
     dataIso: `${ym}-01`,
     labelData: fmtMesAnoCurtoFromYm(ym),
@@ -1024,6 +1050,11 @@ function linhaComparativoJogoAgregadaMes(
       ...bcAgg,
       uap: uapBc,
       arpu: arpuComparativoFromGgrUap(bcAgg.ggr, uapBc),
+    },
+    futebol_brasileiro: {
+      ...fbAgg,
+      uap: uapFb,
+      arpu: arpuComparativoFromGgrUap(fbAgg.ggr, uapFb),
     },
     totaisOficiais,
   };
@@ -1088,6 +1119,7 @@ function agregarLinhasComparativoJogo(linhas: LinhaComparativoJogoTab[]): LinhaC
     blackjack: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.blackjack)),
     roleta: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.roleta)),
     baccarat: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.baccarat)),
+    futebol_brasileiro: agregarCelulasJogoMetricasParaLinha(linhas.map((r) => r.futebol_brasileiro)),
   };
 }
 
@@ -1095,6 +1127,7 @@ function agregarLinhasComparativoJogo(linhas: LinhaComparativoJogoTab[]): LinhaC
 const COR_BLACKJACK = "#22c55e";
 const COR_ROLETA = "#a78bfa";
 const COR_BACCARAT = "#70cae4";
+const COR_FUTEBOL_BRASILEIRO = "#f97316";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
@@ -1147,6 +1180,7 @@ const JOGOS_COMPARATIVO = [
   { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
   { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
   { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
+  { key: "futebol_brasileiro" as const, label: LABEL_FUTEBOL_BRASILEIRO, cor: COR_FUTEBOL_BRASILEIRO },
 ] as const;
 
 function calcularPctComparativoOficial(
@@ -1771,6 +1805,25 @@ export default function OverviewSpin() {
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
+  const linhasFutebolBrasileiro = useMemo(() => {
+    const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
+    if (historico) {
+      return linhasMesaAgregadasPorMes(src, (r) => isMesaFutebolBrasileiro(r, operadorasListFmt));
+    }
+    return src
+      .filter((r) => isMesaFutebolBrasileiro(r, operadorasListFmt))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
+      .map(linhaMesaPorDiaFromRow);
+  }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
+
+  const escopoIncluiCasaApostas = useMemo(() => {
+    if (operadoraSlugsForcado?.length) {
+      return operadoraSlugsForcado.includes(OPERADORA_CASA_APOSTAS);
+    }
+    if (filtroOperadora !== "todas") return filtroOperadora === OPERADORA_CASA_APOSTAS;
+    return false;
+  }, [operadoraSlugsForcado, filtroOperadora]);
+
   /** Dia a dia (mês selecionado) ou mês a mês (histórico). */
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
     if (historico) {
@@ -1803,7 +1856,10 @@ export default function OverviewSpin() {
     const shiftOper = pickPorTabelaOperDayShift(dailyData, porTabelaFiltradas, operadorasListFmt);
     const byDate = buildPorTabelaGameBuckets(porTabelaFiltradas, operadorasListFmt, shiftOper);
 
-    const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
+    const uapByDateJogo = new Map<
+      string,
+      Partial<Record<"blackjack" | "roleta" | "baccarat" | "futebol_brasileiro", number>>
+    >();
     for (const r of uapPorJogoRows) {
       if (r.uap == null) continue;
       const dk = normalizeMesasYmd(r.data);
@@ -1816,14 +1872,16 @@ export default function OverviewSpin() {
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((dr) => {
         const dataIso = normalizeMesasYmd(dr.data);
-        const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+        const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [], futebolBrasileiro: [] };
         const uapDia = uapByDateJogo.get(dataIso) ?? {};
         const bjCell = aggregateCellFromPorTabelaRows(b.bj);
         const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
         const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
+        const fbCell = aggregateCellFromPorTabelaRows(b.futebolBrasileiro);
         const uapBj = uapDia.blackjack ?? null;
         const uapRl = uapDia.roleta ?? null;
         const uapBc = uapDia.baccarat ?? null;
+        const uapFb = uapDia.futebol_brasileiro ?? null;
         return {
           dataIso,
           labelData: fmtDiaMesPtBr(dataIso),
@@ -1841,6 +1899,11 @@ export default function OverviewSpin() {
             ...bcCell,
             uap: uapBc,
             arpu: arpuComparativoFromGgrUap(bcCell.ggr, uapBc),
+          },
+          futebol_brasileiro: {
+            ...fbCell,
+            uap: uapFb,
+            arpu: arpuComparativoFromGgrUap(fbCell.ggr, uapFb),
           },
           totaisOficiais: totaisOficiaisFromDailyRow(dr),
         };
@@ -1874,7 +1937,7 @@ export default function OverviewSpin() {
   const dadosGraficoComparativoJogo = useMemo(() => {
     // Gráfico: ordem cronológica (antigo → novo); tabela usa `linhasComparativoJogo` mais recente primeiro.
     return [...linhasComparativoJogo].reverse().map((row) => {
-      const val = (jogoKey: "blackjack" | "roleta" | "baccarat") => {
+      const val = (jogoKey: "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro") => {
         const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
         return v != null ? Number(v) : null;
       };
@@ -1886,6 +1949,7 @@ export default function OverviewSpin() {
         Blackjack: val("blackjack"),
         Roleta: val("roleta"),
         Baccarat: val("baccarat"),
+        [LABEL_FUTEBOL_BRASILEIRO]: val("futebol_brasileiro"),
         Total: totalOficial != null ? Number(totalOficial) : null,
       };
     });
@@ -1975,7 +2039,7 @@ export default function OverviewSpin() {
   }, [slugsGraficoDetalhe]);
 
   const minWidthTabelaComparativoJogo =
-    120 + kpisAtivosComparativo.length * (100 + 3 * 90);
+    120 + kpisAtivosComparativo.length * (100 + 4 * 90);
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -2121,6 +2185,19 @@ export default function OverviewSpin() {
         color: "var(--brand-action, #7c3aed)",
         fontFamily: FONT.body,
       };
+  const tituloMesaFutebolBrasileiro: React.CSSProperties = {
+    marginBottom: 10,
+    marginTop: 14,
+    padding: "6px 10px",
+    borderRadius: 10,
+    background: `color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 12%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 35%, transparent)`,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700,
+    color: COR_FUTEBOL_BRASILEIRO,
+    fontFamily: FONT.body,
+  };
 
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
@@ -2921,7 +2998,7 @@ export default function OverviewSpin() {
                   {kpisAtivosComparativo.map((kpi) => (
                     <th
                       key={kpi.key}
-                      colSpan={4}
+                      colSpan={5}
                       scope="colgroup"
                       style={{
                         ...thStyle,
@@ -3215,6 +3292,12 @@ export default function OverviewSpin() {
                   />
                   <Bar dataKey="Roleta" fill={COR_ROLETA} radius={[4, 4, 0, 0]} maxBarSize={32} />
                   <Bar dataKey="Baccarat" fill={COR_BACCARAT} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  <Bar
+                    dataKey={LABEL_FUTEBOL_BRASILEIRO}
+                    fill={COR_FUTEBOL_BRASILEIRO}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
                 </BarChart>
               ) : (
                 <LineChart
@@ -3279,6 +3362,15 @@ export default function OverviewSpin() {
                     dot={{ r: 2 }}
                     connectNulls
                   />
+                  <Line
+                    type="monotone"
+                    name={LABEL_FUTEBOL_BRASILEIRO}
+                    dataKey={LABEL_FUTEBOL_BRASILEIRO}
+                    stroke={COR_FUTEBOL_BRASILEIRO}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
                 </LineChart>
               )}
             </ResponsiveContainer>
@@ -3334,7 +3426,7 @@ export default function OverviewSpin() {
               Overview Spin
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resultados consolidados das mesas ao vivo.
+              Resultados consolidados das mesas ao vivo — Baccarat, Roleta, Blackjack e Futebol Brasileiro.
             </p>
           </div>
         </div>
@@ -3812,7 +3904,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -3856,7 +3948,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -4011,7 +4103,7 @@ export default function OverviewSpin() {
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                   Dados por mesa
                 </SectionTitle>
 
@@ -4033,6 +4125,17 @@ export default function OverviewSpin() {
                     {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Roleta")}
                   </div>
                 </div>
+                {escopoIncluiCasaApostas && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
+                    {renderMesaDiaTabela(
+                      linhasFutebolBrasileiro,
+                      stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY,
+                      "Data",
+                      LABEL_FUTEBOL_BRASILEIRO,
+                    )}
+                  </div>
+                )}
               </div>
                 </>
               )}
@@ -4086,7 +4189,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -4130,7 +4233,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -4287,7 +4390,7 @@ export default function OverviewSpin() {
                   </div>
 
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
 
@@ -4309,6 +4412,17 @@ export default function OverviewSpin() {
                         {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Roleta")}
                       </div>
                     </div>
+                    {escopoIncluiCasaApostas && (
+                      <div style={{ marginTop: 4 }}>
+                        <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
+                        {renderMesaDiaTabela(
+                          linhasFutebolBrasileiro,
+                          stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY,
+                          "Mês",
+                          LABEL_FUTEBOL_BRASILEIRO,
+                        )}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

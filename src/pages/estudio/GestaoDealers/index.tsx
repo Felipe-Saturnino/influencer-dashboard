@@ -11,6 +11,7 @@ import {
   Eye,
   History,
   Send,
+  Flag,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -50,6 +51,7 @@ const JOGOS_OPTS: { value: DealerJogoCadastro; label: string }[] = [
   { value: "blackjack", label: "Blackjack" },
   { value: "roleta", label: "Roleta" },
   { value: "baccarat", label: "Baccarat" },
+  { value: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
@@ -71,6 +73,7 @@ const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
   blackjack: <Spade size={13} aria-hidden />,
   roleta: <CircleDot size={13} aria-hidden />,
   baccarat: <Crown size={13} aria-hidden />,
+  futebol_brasileiro: <Flag size={13} aria-hidden />,
 };
 
 const CARD_SHADOW = (isDark: boolean) =>
@@ -171,7 +174,7 @@ export default function GestaoDealers() {
 
   /** Contagens por jogo com turno + gênero + operadora (sem o filtro de jogo). */
   const porJogo = useMemo(() => {
-    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0 };
+    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, futebol_brasileiro: 0 };
     dealersPorOperadora.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return;

@@ -37,7 +37,7 @@ import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
-type StaffSkillKey = "baccarat" | "blackjack" | "vip" | "roleta" | "futebol_studio";
+type StaffSkillKey = "baccarat" | "blackjack" | "vip" | "roleta" | "futebol_brasileiro";
 type StaffSkillStatus = "ativo" | "treinamento" | "inativo";
 
 const STAFF_SKILL_KEYS: { key: StaffSkillKey; label: string }[] = [
@@ -45,7 +45,7 @@ const STAFF_SKILL_KEYS: { key: StaffSkillKey; label: string }[] = [
   { key: "blackjack", label: "Blackjack" },
   { key: "vip", label: "VIP" },
   { key: "roleta", label: "Roleta" },
-  { key: "futebol_studio", label: "Futebol Studio" },
+  { key: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 const SKILL_STATUS_OPTS: { value: StaffSkillStatus; label: string }[] = [
@@ -118,9 +118,14 @@ function textoHorarioTurnoStaffEmTabela(row: RhFuncionario, opBySlug: Record<str
 }
 
 function normalizarSkills(raw: Record<string, unknown> | null | undefined): Record<StaffSkillKey, StaffSkillStatus> {
+  const legacy = raw ?? {};
+  const merged: Record<string, unknown> = { ...legacy };
+  if (merged.futebol_brasileiro == null && legacy.futebol_studio != null) {
+    merged.futebol_brasileiro = legacy.futebol_studio;
+  }
   const out: Record<string, StaffSkillStatus> = {};
   for (const { key } of STAFF_SKILL_KEYS) {
-    const v = String(raw?.[key] ?? "inativo").toLowerCase();
+    const v = String(merged[key] ?? "inativo").toLowerCase();
     out[key] =
       v === "ativo" || v === "treinamento" || v === "inativo" ? (v as StaffSkillStatus) : "inativo";
   }

@@ -100,7 +100,7 @@ export interface RhFuncionario {
   staff_turno?: string | null;
   /** Intervalo do turno (chave, ex. 07-15) para escalas 3x3 e 5x2; 4x2/5x1 usam operadoras. */
   staff_horario_turno?: string | null;
-  /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
+  /** JSON: baccarat | blackjack | vip | roleta | futebol_brasileiro → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
   /** Data da live no estúdio (Gestão de Staff > Dados de skills). */
   staff_live_no_estudio?: string | null;

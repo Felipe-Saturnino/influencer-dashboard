@@ -22,7 +22,7 @@ function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
 }
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
 export type TipoSugestao = "script" | "orientacao" | "alerta";
-export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat";
+export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro";
 
 export interface RoteiroSugestao {
   id: string;
@@ -59,10 +59,11 @@ const BLOCOS: { key: BlocoRoteiro; label: string }[] = [
 ];
 
 const JOGOS: { key: JogoTag; label: string }[] = [
-  { key: "todos",     label: "Todos os Jogos" },
-  { key: "blackjack", label: "BlackJack"      },
-  { key: "roleta",    label: "Roleta"         },
-  { key: "baccarat",  label: "Baccarat"       },
+  { key: "todos",              label: "Todos os Jogos" },
+  { key: "blackjack",          label: "BlackJack" },
+  { key: "roleta",             label: "Roleta" },
+  { key: "baccarat",           label: "Baccarat" },
+  { key: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 const TIPOS: { key: TipoSugestao; label: string }[] = [
@@ -175,6 +176,7 @@ const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => stri
   blackjack: { bg: "rgba(30,54,248,0.12)",   color: (d) => d ? "#7b95ff" : "#1631c4", border: "rgba(30,54,248,0.28)"   },
   roleta:    { bg: "rgba(232,64,37,0.12)",   color: (d) => d ? "#ff8570" : "#b02a14", border: "rgba(232,64,37,0.28)"   },
   baccarat:  { bg: "rgba(112,202,228,0.12)", color: (d) => d ? "#70cae4" : "#0f6a8a", border: "rgba(112,202,228,0.28)" },
+  futebol_brasileiro: { bg: "rgba(249,115,22,0.12)", color: (d) => d ? "#fb923c" : "#c2410c", border: "rgba(249,115,22,0.28)" },
 };
 
 // ─── TAG CHIP ─────────────────────────────────────────────────────────────────
