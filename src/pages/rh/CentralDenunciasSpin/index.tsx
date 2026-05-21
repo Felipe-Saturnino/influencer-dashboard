@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Eye, History, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, History, ListFilter, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import {
   STATUS_OPTIONS,
   STORAGE_BUCKET,
@@ -25,22 +26,33 @@ function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
     : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
-/** Primeiro mês com denúncias no canal: maio/2026 — não listar meses anteriores. */
-function monthKeys(): { value: string; label: string }[] {
-  const out: { value: string; label: string }[] = [{ value: "historico", label: "Histórico" }];
+type MesDenunciaEntry = { value: string; label: string };
+
+/** Primeiro mês do canal: maio/2026 — carrossel do mês atual para trás. */
+function buildMesesDenuncias(): MesDenunciaEntry[] {
   const minStart = new Date(2026, 4, 1);
   const now = new Date();
+  const out: MesDenunciaEntry[] = [];
   let d = new Date(now.getFullYear(), now.getMonth(), 1);
   while (d >= minStart) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const value = `${y}-${m}`;
-    const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-    out.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    const raw = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    out.push({ value, label: raw.charAt(0).toUpperCase() + raw.slice(1) });
     d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   }
   return out;
 }
+
+const LINHA_FILTRO: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  width: "100%",
+};
 
 function rangeForMonth(ym: string): { start: string; end: string } {
   const [y, m] = ym.split("-").map(Number);
@@ -55,7 +67,8 @@ export default function CentralDenunciasSpin() {
   const perm = usePermission("rh_central_denuncias");
 
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [filtroPeriodoLista, setFiltroPeriodoLista] = useState("historico");
+  const [idxMes, setIdxMes] = useState(0);
+  const [modoHistorico, setModoHistorico] = useState(false);
   const [filtroTipos, setFiltroTipos] = useState<TipoDenunciaKey[]>([]);
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<DenunciaListRow[]>([]);
@@ -74,7 +87,23 @@ export default function CentralDenunciasSpin() {
   const [delRow, setDelRow] = useState<DenunciaListRow | null>(null);
   const [delLoading, setDelLoading] = useState(false);
 
-  const meses = useMemo(() => monthKeys(), []);
+  const meses = useMemo(() => buildMesesDenuncias(), []);
+  const filtroPeriodoLista = modoHistorico ? "historico" : (meses[idxMes]?.value ?? meses[0]?.value ?? "historico");
+  const carouselPrimeiro = idxMes <= 0;
+  const carouselUltimo = idxMes >= meses.length - 1;
+  const labelCarrossel = modoHistorico ? "Todo o período" : (meses[idxMes]?.label ?? "—");
+
+  const selectFiltroStyle: CSSProperties = {
+    padding: "8px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontSize: 12,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    minWidth: 0,
+  };
 
   const fetchKpis = useCallback(async () => {
     const stats: DenunciaStatusDb[] = ["relatado", "em_avaliacao", "procedente", "nao_procedente"];
@@ -210,76 +239,136 @@ export default function CentralDenunciasSpin() {
       />
 
       {/* Bloco 1 — Filtros */}
-      <section style={{ marginBottom: 22 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12, alignItems: "flex-end" }}>
-          <FiltroSelect
-            label="Status"
-            value={filtroStatus}
-            onChange={setFiltroStatus}
-            t={t}
-            options={[
-              { v: "todos", l: "Todos" },
-              ...STATUS_OPTIONS.map((s) => ({ v: s.value, l: s.label })),
-            ]}
-          />
-          <FiltroSelect
-            label="Período"
-            value={filtroPeriodoLista}
-            onChange={setFiltroPeriodoLista}
-            t={t}
-            options={meses.map((m) => ({ v: m.value, l: m.label }))}
-          />
+      <section
+        style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "14px 18px",
+          marginBottom: 22,
+        }}
+      >
+        <div style={{ ...LINHA_FILTRO, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              disabled={carouselPrimeiro || modoHistorico}
+              onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
+              style={getCarouselBtnNavStyle(t, carouselPrimeiro || modoHistorico)}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={carouselUltimo || modoHistorico}
+              onClick={() => setIdxMes((i) => Math.min(meses.length - 1, i + 1))}
+              style={getCarouselBtnNavStyle(t, carouselUltimo || modoHistorico)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            aria-pressed={modoHistorico}
+            aria-label={modoHistorico ? "Desativar modo histórico" : "Ver todo o período"}
+            onClick={() => setModoHistorico((h) => !h)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${modoHistorico ? brand.primary : t.cardBorder}`,
+              background: modoHistorico
+                ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                : t.inputBg,
+              color: modoHistorico ? brand.primary : t.textMuted,
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            <History size={14} aria-hidden />
+            Histórico
+          </button>
+
           <FiltroTipoMultiSelect
             t={t}
             filtroTipos={filtroTipos}
             onLimpar={() => setFiltroTipos([])}
             onToggle={toggleTipoFiltro}
+            inline
           />
+
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <ListFilter
+              size={14}
+              color={t.textMuted}
+              aria-hidden
+              style={{ position: "absolute", left: 10, pointerEvents: "none", zIndex: 1 }}
+            />
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+              aria-label="Filtrar por status da denúncia"
+              style={{ ...selectFiltroStyle, paddingLeft: 30, minWidth: 168 }}
+            >
+              <option value="todos">Todos</option>
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-            <label htmlFor="busca-relato" style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>
-              Busca no relato
-            </label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              <input
-                id="busca-relato"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void fetchLista()}
-                placeholder="Palavras-chave…"
-                style={{
-                  flex: 1,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 14,
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => void fetchLista()}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradient(brand),
-                  color: "#fff",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontFamily: FONT.body,
-                  fontWeight: 600,
-                }}
-              >
-                <Search size={16} aria-hidden />
-                Filtrar
-              </button>
-            </div>
+
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 560,
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg,
+              padding: "8px 12px",
+              width: "100%",
+            }}
+          >
+            <Search size={16} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
+            <input
+              id="busca-relato"
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Pesquisar por palavras-chave no relato"
+              aria-label="Pesquisar denúncias por palavras-chave no relato"
+              style={{
+                flex: 1,
+                border: "none",
+                background: "transparent",
+                color: t.text,
+                fontSize: 13,
+                outline: "none",
+                fontFamily: FONT.body,
+                minWidth: 0,
+                width: "100%",
+              }}
+            />
           </div>
         </div>
       </section>
@@ -429,11 +518,14 @@ function FiltroTipoMultiSelect({
   filtroTipos,
   onLimpar,
   onToggle,
+  inline = false,
 }: {
   t: ReturnType<typeof useApp>["theme"];
   filtroTipos: TipoDenunciaKey[];
   onLimpar: () => void;
   onToggle: (k: TipoDenunciaKey) => void;
+  /** Barra de filtros centralizada (sem label superior). */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -479,8 +571,18 @@ function FiltroTipoMultiSelect({
   }, [open]);
 
   return (
-    <div ref={wrapRef} style={{ flex: "1 1 260px", minWidth: 0, alignSelf: "flex-end", position: "relative" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo</div>
+    <div
+      ref={wrapRef}
+      style={{
+        flex: inline ? "0 1 auto" : "1 1 260px",
+        minWidth: inline ? 0 : 0,
+        alignSelf: inline ? "center" : "flex-end",
+        position: "relative",
+      }}
+    >
+      {!inline ? (
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo</div>
+      ) : null}
       <button
         type="button"
         aria-expanded={open}
@@ -566,47 +668,6 @@ function FiltroTipoMultiSelect({
           })}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function FiltroSelect({
-  label,
-  value,
-  onChange,
-  options,
-  t,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { v: string; l: string }[];
-  t: ReturnType<typeof useApp>["theme"];
-}) {
-  return (
-    <div>
-      <label style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg,
-          color: t.text,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          minWidth: 180,
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.v} value={o.v}>
-            {o.l}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

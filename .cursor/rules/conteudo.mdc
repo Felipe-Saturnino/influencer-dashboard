@@ -379,7 +379,9 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Modais** (`ModalCriarPostagem`, `ModalHistoricoPostagem`, leitura): `useApp()` + `useDashboardBrand()` internos — **nunca** props `t` ou `brand`.
 - **Tabs principais + Gerenciamento:** `onKeyDown` ArrowLeft/Right, `tabIndex` roving, `tabpanel` com `tabIndex={0}`.
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
-- **PortalRhBlocoFiltros:** carrossel via `lib/carouselNavStyles.ts`; `"Mês anterior"` / `"Próximo mês"`; Histórico com `aria-pressed`.
+- **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** (sem filtro de mês).
+- **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
+- **Gerenciamento:** todas as postagens (incl. arquivadas); filtro **Status da postagem**; carrossel e Histórico também em `published_at`.
 - **ComunicadoCard:** `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido.
 - **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 

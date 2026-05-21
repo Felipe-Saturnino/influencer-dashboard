@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type CSSProperties } from "react";
-import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Bell, Layers } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Bell, Layers } from "lucide-react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,7 +15,7 @@ import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
-import { FiltroOperadoraSelect } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
@@ -1063,30 +1063,7 @@ export default function CentralNotificacoes() {
             >
               <ChevronRight size={14} aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={toggleHistorico}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              <Calendar size={15} aria-hidden />
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {showFiltroOperadora && (
               <FiltroOperadoraSelect

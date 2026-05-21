@@ -20,6 +20,7 @@ import {
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
@@ -71,11 +72,6 @@ function compareDataIso(a: string | null, b: string | null, dir: number): number
   return dir * (ta - tb);
 }
 
-function fmtMesAnoCarrossel(ano: number, mes: number): string {
-  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
 const ERRO_CARREGAR_GERENCIAMENTO =
   "Não foi possível carregar as postagens. Se o problema persistir, contate o suporte.";
 const ERRO_APROVAR =
@@ -119,6 +115,7 @@ export function GerenciamentoPostagens({
   const [busca, setBusca] = useState("");
   const [buscaDeb, setBuscaDeb] = useState("");
   const [idxMes, setIdxMes] = useState(0);
+  const [modoHistorico, setModoHistorico] = useState(false);
 
   const [modalCriar, setModalCriar] = useState(false);
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
@@ -306,21 +303,10 @@ export function GerenciamentoPostagens({
     void carregar();
   }, [carregar]);
 
-  const mesesDisponiveis = useMemo(() => {
-    const keys = new Set<string>();
-    for (const r of rows) {
-      const d = new Date(r.createdAt);
-      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
-    }
-    const entries = [...keys].map((k) => {
-      const [ano, mes] = k.split("-").map(Number);
-      return { ano, mes, label: fmtMesAnoCarrossel(ano, mes) };
-    });
-    entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
-    if (entries.length) return entries;
-    const hoje = new Date();
-    return [{ ano: hoje.getFullYear(), mes: hoje.getMonth(), label: fmtMesAnoCarrossel(hoje.getFullYear(), hoje.getMonth()) }];
-  }, [rows]);
+  const mesesDisponiveis = useMemo(
+    () => buildMesesCarrossel(rows.map((r) => ({ iso: r.publishedAt }))),
+    [rows],
+  );
 
   useEffect(() => {
     if (mesesDisponiveis.length === 0) return;
@@ -334,13 +320,10 @@ export function GerenciamentoPostagens({
   }, [rows.length, mesesDisponiveis.length]);
 
   const rowsFiltradas = useMemo(() => {
-    const mesSel = mesesDisponiveis[idxMes];
     let list = rows;
-    if (mesSel) {
-      list = list.filter((r) => {
-        const d = new Date(r.createdAt);
-        return d.getFullYear() === mesSel.ano && d.getMonth() === mesSel.mes;
-      });
+    if (!modoHistorico) {
+      const mesSel = mesesDisponiveis[idxMes];
+      list = list.filter((r) => itemNoMesCarrossel(r.publishedAt, mesSel));
     }
     if (filtroTipo !== "todos") {
       list = list.filter((r) => r.tipoUi === filtroTipo);
@@ -352,7 +335,7 @@ export function GerenciamentoPostagens({
       list = list.filter((r) => r.textoBusca.includes(buscaDeb));
     }
     return list;
-  }, [rows, mesesDisponiveis, idxMes, filtroTipo, filtroStatus, buscaDeb]);
+  }, [rows, mesesDisponiveis, idxMes, modoHistorico, filtroTipo, filtroStatus, buscaDeb]);
 
   const rowsOrdenadas = useMemo(() => {
     const list = [...rowsFiltradas];
@@ -474,18 +457,12 @@ export function GerenciamentoPostagens({
         meses={mesesDisponiveis}
         idxMes={idxMes}
         onIdxMesChange={setIdxMes}
-        modoHistorico={false}
-        onModoHistoricoChange={() => {}}
+        modoHistorico={modoHistorico}
+        onModoHistoricoChange={setModoHistorico}
         busca={busca}
         onBuscaChange={setBusca}
         buscaPlaceholder="Palavras-chave no assunto ou descrição"
         buscaAriaLabel="Pesquisar postagens por assunto ou descrição"
-        historicoCustom={{
-          ariaPressed: filtroStatus === "arquivado",
-          ariaLabel:
-            filtroStatus === "arquivado" ? "Remover filtro de arquivados" : "Filtrar postagens arquivadas",
-          onClick: () => setFiltroStatus((s) => (s === "arquivado" ? "todos" : "arquivado")),
-        }}
         linhaSubabas={
           <>
             <select

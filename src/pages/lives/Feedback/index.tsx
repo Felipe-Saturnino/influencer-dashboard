@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -514,10 +514,8 @@ export default function Feedback() {
             >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-pressed={historico}
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+            <FiltroHistoricoButton
+              active={historico}
               onClick={() => {
                 if (historico) {
                   setHistorico(false);
@@ -526,23 +524,7 @@ export default function Feedback() {
                   setHistorico(true);
                 }
               }}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", minHeight: 44, borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-                background: historico ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : "transparent",
-                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-                lineHeight: 1,
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>
-                <Calendar size={15} aria-hidden="true" />
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center" }}>Histórico</span>
-            </button>
+            />
 
             {showFiltroInfluencer && influencers.length > 0 && (
               <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />

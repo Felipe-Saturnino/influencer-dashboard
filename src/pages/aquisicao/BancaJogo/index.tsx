@@ -12,7 +12,7 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import {
   compareAtivoBoolean,
@@ -1770,15 +1770,6 @@ export default function BancaJogo() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
 
-  const chipBase = (active: boolean) => ({
-    padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
-    background: active ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : (t.inputBg ?? t.cardBg),
-    color: active ? "var(--brand-action, #7c3aed)" : t.textMuted,
-    fontSize: 13, fontWeight: active ? 700 : 400,
-    fontFamily: FONT.body, cursor: "pointer", outline: "none",
-  } as React.CSSProperties);
-
   async function carregarDados() {
     setLoading(true);
     const { data } = await supabase.from("banca_jogo_solicitacoes").select("*").order("solicitado_em", { ascending: false });
@@ -1905,7 +1896,7 @@ export default function BancaJogo() {
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
             <span style={getCarouselPeriodLabelStyle(t)}>
-              {historico ? "Total" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
+              {historico ? "Todo o período" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
             <button
               type="button"
@@ -1918,9 +1909,7 @@ export default function BancaJogo() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button type="button" aria-pressed={historico} onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={() => setHistorico((h) => !h)} />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
               <InfluencerMultiSelect

@@ -215,31 +215,12 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
   {historico ? "Todo o período" : mesSelecionado?.label}
 </span>
 
-{/* Botão Histórico — fundo ativo com token de ação, nunca rgba(124,58,237,0.15) fixo */}
-<button
-  type="button"
-  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
-  aria-pressed={historico}
-  style={{
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-    fontFamily: FONT.body, fontSize: 13,
-    border: historico
-      ? `1px solid ${brand.useBrand ? "var(--brand-action)" : "var(--brand-action, #7c3aed)"}`
-      : `1px solid ${t.cardBorder}`,
-    background: historico
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "transparent",
-    color: historico ? brand.primary : t.textMuted,
-    fontWeight: historico ? 700 : 400,
-    transition: "all 0.15s",
-  }}
->
-  <GiCalendar size={15} aria-hidden /> Histórico
-</button>
+import { FiltroHistoricoButton } from "../../../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 ```
 
-`Calendar` (Lucide) é preferível; **`GiCalendar`** (`react-icons/gi`) permanece aceite **apenas** neste botão Histórico.
+Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, borda/texto ativo `brand.accent`, fundo ativo `color-mix` com `--brand-action` 15%. **Proibido** markup inline duplicado ou `GiCalendar`.
 
 **Selects na FilterBar:** influencer e outros domínios via `SelectComIcone`. **Operadora:** sempre `FiltroOperadoraSelect` (Global + Brand) — opção agregadora **`Todas Operadoras`**, ícone Shield no campo. Nunca `<div style="relative"> + <span>ícone + <select>` inline nem `SelectComIcone` manual para operadora.
 
@@ -346,7 +327,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | **Impressões Totais** | `Sparkles` | `import { Sparkles }` |
 | **Engajamento Médio** | `Percent` | — |
 
-**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`). A única exceção de GameIcons na seção Dashboards é **`GiCalendar`** no botão Histórico da FilterBar (ou equivalente Lucide `Calendar`).
+**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`), incluindo `GiCalendar` no botão Histórico — usar **`FiltroHistoricoButton`** (Lucide `Calendar`).
 
 **Ícones de SectionTitle:**
 
@@ -614,11 +595,11 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca listas enormes sem virtualização quando > 50 itens
 - Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
-- Nunca `--brand-contrast` no background ativo do botão Histórico — usar `--brand-action`
+- Nunca botão Histórico na FilterBar sem **`FiltroHistoricoButton`** (markup inline / `GiCalendar`)
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
 - Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
 - Nunca `GiXxx` no badge do header de página — apenas `Tv`, `Video`, `BarChart2` etc. de Lucide. GameIcons só no menu lateral.
-- Nunca `GiXxx` em KPI cards ou SectionTitle — exceto `GiCalendar` no Histórico (ou Lucide `Calendar`) e ícones decorativos do pódio FTD/Hora
+- Nunca `GiXxx` em KPI cards, SectionTitle ou botão Histórico — usar `FiltroHistoricoButton`; exceção decorativa: pódio FTD/Hora
 - Nunca `↑`/`↓` / `✕` / `✓` / `▲▼` Unicode em JSX — usar Lucide `ArrowUp`, `ArrowDown`, `X`, `Check`, `TrendingUp`, `TrendingDown`
 - Nunca `background: brand.blockBg` na FilterBar — usar `brand.primaryTransparentBg`
 - Nunca `size={14}` em ícones de `KpiCard` compartilhado — usar `size={16}`

@@ -146,7 +146,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
 
 **Outros:** `PageHeader`, `InfluencerMultiSelect`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`.
 
@@ -236,6 +236,30 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 ```
 
 **Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`.
+
+### Botão Histórico (modo período / acumulado na barra) — obrigatório
+
+Sempre que a página tiver **toggle Histórico** na barra de filtros (junto ao carrossel de período), usar **`FiltroHistoricoButton`** — referência visual: **Overview Influencer** (`DashboardOverviewInfluencer`).
+
+| Regra | Valor |
+|--------|--------|
+| Componente | `FiltroHistoricoButton` (`src/components/dashboard/FiltroHistoricoButton.tsx`) |
+| Ícone | **Calendar** (Lucide, 15px, `aria-hidden`) + texto visível **Histórico** |
+| Estilo | Pill `borderRadius: 999`; ativo: borda/texto `brand.accent`, fundo `color-mix(..., var(--brand-action) 15%, transparent)` |
+| `aria-pressed` | Ligado ao estado do modo histórico |
+| `aria-label` (analítico) | Inativo: `HISTORICO_FILTRO_ARIA_LABEL_INACTIVE` — “Ativar modo histórico — ver todo o período”; ativo: `HISTORICO_FILTRO_ARIA_LABEL_ACTIVE` |
+| Rótulo do carrossel (modo on) | **`Todo o período`** (nunca “Total” só) |
+| Carrossel | Setas desabilitadas com `getCarouselBtnNavStyle(t, true)` quando histórico ativo |
+
+```tsx
+import { FiltroHistoricoButton } from "../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+```
+
+**Portal RH:** nas abas Comunicados, Políticas e RH Talks o Histórico segue o modo período (`Todo o período`, filtro por **data de publicação**); postagens **arquivadas nunca** aparecem nessas abas. Na aba **Gerenciamento**, o mesmo botão + carrossel usam data de publicação; arquivadas entram na lista e o filtro **Status da postagem** define o que ver.
+
+**Proibido em código novo:** botão Histórico só com texto; markup pill duplicado inline; `GiCalendar` / `History` montado à mão na barra.
 
 ### Pesquisa dentro do filtro (> 5 valores)
 
@@ -434,6 +458,7 @@ Quando não houver skeleton para o bloco principal:
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Strings de vazio ou sem permissão diferentes das fixas acima.

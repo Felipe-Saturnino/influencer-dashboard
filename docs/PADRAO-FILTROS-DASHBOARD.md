@@ -45,11 +45,18 @@ Referência de implementação: `src/pages/dashboards/Streamers/index.tsx` (wrap
 
 ## Botão Histórico
 
-- `type="button"`
-- Estado ativo: `aria-pressed={true}` quando o modo histórico estiver ligado.
-- `aria-label` descritivo (ex.: ativar/desativar modo histórico).
-- Estilo pill: borda com `brand.accent` quando ativo; fundo com `color-mix` em whitelabel ou `rgba(124,58,237,0.15)` no fallback Spin; texto em `brand.accent` quando ativo.
-- Ícone: `<Calendar size={15} aria-hidden />` imediatamente antes do texto “Histórico”.
+**Componente obrigatório:** `FiltroHistoricoButton` (`src/components/dashboard/FiltroHistoricoButton.tsx`). Referência visual: **Overview Influencer**.
+
+- Pill `borderRadius: 999`, ícone **`Calendar` 15px** + texto “Histórico”.
+- Ativo: `aria-pressed={true}`; borda/texto `brand.accent`; fundo `color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)`.
+- `aria-label` padrão (modo acumulado): `HISTORICO_FILTRO_ARIA_LABEL_INACTIVE` / `HISTORICO_FILTRO_ARIA_LABEL_ACTIVE` — customizar só em domínios especiais (ex.: arquivados no Portal RH) via props `ariaLabelInactive` / `ariaLabelActive`.
+- Carrossel com histórico ligado: rótulo central **`Todo o período`**.
+
+```tsx
+import { FiltroHistoricoButton } from "../../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+```
 
 ---
 
@@ -95,7 +102,7 @@ Se a página tiver carrossel mês/semana junto aos filtros:
 
 - [ ] `Calendar` + `User` + `Shield` só do **lucide-react** nestes três controlos.
 - [ ] Barra dentro do wrapper `primaryTransparentBorder` / `primaryTransparentBg`.
-- [ ] Botão Histórico com `aria-pressed` e labels acessíveis.
+- [ ] Botão Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo `Todo o período` no carrossel.
 - [ ] Filtros condicionados a `showFiltroInfluencer` / `showFiltroOperadora` quando usar `useDashboardFiltros`.
 - [ ] Nenhum `GiCalendar` / `GiShield` / `GiStarMedal` nesta barra.
 - [ ] Operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral).
@@ -106,7 +113,9 @@ Se a página tiver carrossel mês/semana junto aos filtros:
 
 | Descrição | Caminho |
 |-----------|---------|
-| Barra completa (Histórico + selects com ícones) | `src/pages/dashboards/Streamers/index.tsx` |
+| Barra completa (referência) | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Botão Histórico (componente) | `src/components/dashboard/FiltroHistoricoButton.tsx` |
+| Streamers (filtros partilhados) | `src/pages/dashboards/Streamers/index.tsx` |
 | Dropdown multi-influencer (ícone User) | `src/components/InfluencerDropdown.tsx` |
 | Select com ícone à esquerda | `src/components/dashboard` (`SelectComIcone`) |
 | Filtro de operadora (canónico) | `src/components/FiltroOperadoraSelect.tsx` |

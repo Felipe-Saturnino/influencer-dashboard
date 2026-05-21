@@ -678,7 +678,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação de Comunicados",
         texto:
-          "Use o carrossel de meses para navegar entre períodos. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe comunicados arquivados. No modo histórico, o carrossel de meses fica desabilitado — todos os arquivados são exibidos de uma vez.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
+          "Use o carrossel de meses para navegar por período com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe todas as postagens publicadas de todos os meses (Todo o período) — o carrossel de mês fica desabilitado nesse modo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
       },
       {
         subtitulo: "Políticas e Normativas",
@@ -693,7 +693,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (dois cliques para confirmar)\n— Qualquer status: ver Histórico de alterações\n\nUse os filtros de mês, tipo e status para localizar postagens. A busca por palavras-chave funciona sobre o assunto e a descrição. Clique em Criar para redigir uma nova postagem.",
+          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (dois cliques para confirmar)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra todas as postagens de todos os meses; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Criar para redigir uma nova postagem.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",

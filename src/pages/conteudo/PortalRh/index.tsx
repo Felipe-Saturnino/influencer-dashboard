@@ -301,8 +301,8 @@ export default function PortalRhPage() {
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
     setCategoriasPol(cats.filter((c) => c.scope === "politica"));
 
-    const visivelPortal = (status: RhPostagemStatus | null | undefined) =>
-      isPostagemPublica(status) || status === "arquivado";
+    /** Abas de leitura: nunca exibir arquivados — só conteúdo publicado. */
+    const visivelPortal = (status: RhPostagemStatus | null | undefined) => isPostagemPublica(status);
 
     const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => visivelPortal(c.status));
     setComunicados(comRows);
@@ -394,11 +394,11 @@ export default function PortalRhPage() {
     [comunicados],
   );
   const mesesPol = useMemo(
-    () => buildMesesCarrossel(documentos.map((d) => ({ iso: d.published_at ?? d.updated_at }))),
+    () => buildMesesCarrossel(documentos.map((d) => ({ iso: d.published_at }))),
     [documentos],
   );
   const mesesTalksDisponiveis = useMemo(
-    () => buildMesesCarrossel(talks.map((tk) => ({ iso: tk.data_reuniao }))),
+    () => buildMesesCarrossel(talks.map((tk) => ({ iso: tk.published_at }))),
     [talks],
   );
 
@@ -432,7 +432,7 @@ export default function PortalRhPage() {
 
   const comunicadosLista = useMemo(() => {
     let list = comunicados.filter((c) => !c.is_pinned);
-    list = list.filter((c) => (modoHistorico ? c.status === "arquivado" : isPostagemPublica(c.status)));
+    list = list.filter((c) => isPostagemPublica(c.status));
     if (!modoHistorico) {
       const mesSel = mesesCom[idxMesCom];
       list = list.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
@@ -479,10 +479,10 @@ export default function PortalRhPage() {
   ]);
 
   const documentosFiltrados = useMemo(() => {
-    let list = documentos.filter((d) => (modoHistorico ? d.status === "arquivado" : isPostagemPublica(d.status)));
+    let list = documentos.filter((d) => isPostagemPublica(d.status));
     if (!modoHistorico) {
       const mesSel = mesesPol[idxMesPol];
-      list = list.filter((d) => itemNoMesCarrossel(d.published_at ?? d.updated_at, mesSel));
+      list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
     }
     if (filtroCatPol !== "todos") {
       const cfg = SUBTABS_POLITICA.find((x) => x.key === filtroCatPol);
@@ -502,10 +502,10 @@ export default function PortalRhPage() {
   }, [documentos, filtroCatPol, modoHistorico, mesesPol, idxMesPol, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
   const talksFiltrados = useMemo(() => {
-    let list = talks.filter((tk) => (modoHistorico ? tk.status === "arquivado" : isPostagemPublica(tk.status)));
+    let list = talks.filter((tk) => isPostagemPublica(tk.status));
     if (!modoHistorico) {
       const mesSel = mesesTalksDisponiveis[idxMesTalk];
-      list = list.filter((tk) => itemNoMesCarrossel(tk.data_reuniao, mesSel));
+      list = list.filter((tk) => itemNoMesCarrossel(tk.published_at, mesSel));
     }
     if (buscaDeb) {
       list = list.filter(
@@ -751,11 +751,9 @@ export default function PortalRhPage() {
 
                 {comunicadosLista.length === 0 && !comunicadoPinned ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem comunicados arquivados."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : comunicadosLista.length === 0 ? (
                   <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -811,11 +809,9 @@ export default function PortalRhPage() {
                 />
                 {documentosFiltrados.length === 0 ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem políticas arquivadas."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -856,18 +852,16 @@ export default function PortalRhPage() {
                 />
                 {talksFiltrados.length === 0 ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem RH Talks arquivados."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {talksFiltrados.map((tk) => {
                       const n = talkCounts[tk.id] ?? 0;
                       const restrito = n > 0 && !talkParticipantTalkIds.has(tk.id);
-                      const dataPub = tk.published_at ?? tk.data_reuniao;
+                      const dataPub = tk.published_at;
                       return (
                         <li key={tk.id}>
                           <RhTalkCard

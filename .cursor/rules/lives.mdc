@@ -98,28 +98,12 @@ import { X } from "lucide-react";
 
 ### Botão Histórico (páginas com carrossel de semanas)
 
-**Exceção global:** o botão Histórico em Feedback usa `--brand-action` (não `--brand-accent`), alinhado à Regra Global 10 dos dashboards — ver snippet abaixo.
+Usar **`FiltroHistoricoButton`** (`components/dashboard`) — mesmo padrão visual que **Overview Influencer** (Global § Botão Histórico). Em **Feedback:** carrossel de semana; rótulo central **`Todo o período`** quando histórico ativo.
 
 ```tsx
-<button
-  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
-  aria-pressed={historico}
-  onClick={toggleHistorico}
-  style={{
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-    fontFamily: FONT.body, fontSize: 13,
-    border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-    background: historico
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "transparent",
-    color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-    fontWeight: historico ? 700 : 400,
-    transition: "all 0.15s",
-  }}
->
-  <GiCalendar size={15} aria-hidden="true" /> Histórico
-</button>
+import { FiltroHistoricoButton } from "../../../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 ```
 
 ---

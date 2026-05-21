@@ -23,6 +23,7 @@ import {
   SectionTitle,
   KpiCard,
   FunilVisual,
+  FiltroHistoricoButton,
   FiltroOperadoraSelect,
   SelectComIcone,
   RateCard,
@@ -40,7 +41,6 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
-  Calendar,
   CalendarDays,
   ChartColumnBig,
   ChevronLeft,
@@ -1038,27 +1038,7 @@ export default function DashboardOverviewInfluencer() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            {/* Botão Histórico — padrão Overview */}
-            <button
-              type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-              onClick={toggleHistorico}
-            >
-              <Calendar size={15} aria-hidden="true" /> Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (

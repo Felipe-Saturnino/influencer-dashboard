@@ -18,3 +18,9 @@ export { MarginBadge } from "./MarginBadge";
 export { RateCard } from "./RateCard";
 export { SortTableTh, type SortDir } from "./SortTableTh";
 export { DashboardPageHeader } from "./DashboardPageHeader";
+export {
+  FiltroHistoricoButton,
+  HISTORICO_FILTRO_ARIA_LABEL_ACTIVE,
+  HISTORICO_FILTRO_ARIA_LABEL_INACTIVE,
+  type FiltroHistoricoButtonProps,
+} from "./FiltroHistoricoButton";

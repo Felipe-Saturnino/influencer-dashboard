@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, History, Search } from "lucide-react";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useApp } from "../../../context/AppContext";
-import { FONT } from "../../../constants/theme";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { FiltroHistoricoButton } from "../../../components/dashboard";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { FONT } from "../../../constants/theme";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { MesCarrosselEntry } from "./portalRhCarrossel";
 
 const LINHA_FILTRO: React.CSSProperties = {
@@ -13,12 +14,6 @@ const LINHA_FILTRO: React.CSSProperties = {
   justifyContent: "center",
   gap: 10,
   width: "100%",
-};
-
-type HistoricoCustom = {
-  ariaPressed: boolean;
-  onClick: () => void;
-  ariaLabel?: string;
 };
 
 export function PortalRhBlocoFiltros({
@@ -33,7 +28,6 @@ export function PortalRhBlocoFiltros({
   buscaAriaLabel = "Pesquisar por assunto ou descrição",
   linhaSubabas,
   linhaAposSubabas,
-  historicoCustom,
 }: {
   meses: MesCarrosselEntry[];
   idxMes: number;
@@ -47,16 +41,14 @@ export function PortalRhBlocoFiltros({
   linhaSubabas?: ReactNode;
   /** Ex.: botão Criar no Gerenciamento — centralizado após a linha de filtros. */
   linhaAposSubabas?: ReactNode;
-  /** Gerenciamento: atalho para status arquivado (sem desativar o carrossel de mês). */
-  historicoCustom?: HistoricoCustom;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const mesSel = meses[idxMes];
   const carouselPrimeiro = idxMes <= 0;
   const carouselUltimo = idxMes >= meses.length - 1;
-  const carrosselBloqueado = historicoCustom ? false : modoHistorico;
-  const labelCarrossel = historicoCustom ? (mesSel?.label ?? "—") : modoHistorico ? "Arquivados" : (mesSel?.label ?? "—");
+  const carrosselBloqueado = modoHistorico;
+  const labelCarrossel = modoHistorico ? "Todo o período" : (mesSel?.label ?? "—");
 
   return (
     <div
@@ -68,7 +60,7 @@ export function PortalRhBlocoFiltros({
         marginBottom: 16,
       }}
     >
-      {/* Linha 1 — carrossel de mês + Histórico */}
+      {/* Linha 1 — carrossel de mês + Histórico (data de publicação) */}
       <div style={{ ...LINHA_FILTRO, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <button
@@ -92,61 +84,10 @@ export function PortalRhBlocoFiltros({
           </button>
         </div>
 
-        {historicoCustom ? (
-          <button
-            type="button"
-            aria-pressed={historicoCustom.ariaPressed}
-            aria-label={historicoCustom.ariaLabel ?? "Filtrar postagens arquivadas"}
-            onClick={historicoCustom.onClick}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: `1px solid ${historicoCustom.ariaPressed ? brand.primary : t.cardBorder}`,
-              background: historicoCustom.ariaPressed
-                ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                : t.inputBg,
-              color: historicoCustom.ariaPressed ? brand.primary : t.textMuted,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              flexShrink: 0,
-            }}
-          >
-            <History size={14} aria-hidden />
-            Histórico
-          </button>
-        ) : (
-          <button
-            type="button"
-            aria-pressed={modoHistorico}
-            aria-label={modoHistorico ? "Desativar modo histórico" : "Ver arquivados"}
-            onClick={() => onModoHistoricoChange(!modoHistorico)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: `1px solid ${modoHistorico ? brand.primary : t.cardBorder}`,
-              background: modoHistorico
-                ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                : t.inputBg,
-              color: modoHistorico ? brand.primary : t.textMuted,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              flexShrink: 0,
-            }}
-          >
-            <History size={14} aria-hidden />
-            Histórico
-          </button>
-        )}
+        <FiltroHistoricoButton
+          active={modoHistorico}
+          onClick={() => onModoHistoricoChange(!modoHistorico)}
+        />
       </div>
 
       {/* Linha 2 — pesquisa */}

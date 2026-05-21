@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy } from "react";
-import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Tv, User } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Clock, Tv, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { FiltroOperadoraSelect, SelectComIcone } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, SelectComIcone } from "../../../components/dashboard";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -82,35 +82,7 @@ function StreamersFiltrosEUAbas({
             </button>
           </div>
 
-          <button
-            type="button"
-            aria-label={
-              sf.historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"
-            }
-            aria-pressed={sf.historico}
-            onClick={sf.toggleHistorico}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              minHeight: 44,
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: sf.historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: sf.historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-              color: sf.historico ? brand.accent : t.textMuted,
-              fontWeight: sf.historico ? 700 : 400,
-              transition: "all 0.15s",
-            }}
-          >
-            <Calendar size={15} aria-hidden />
-            Histórico
-          </button>
+          <FiltroHistoricoButton active={sf.historico} onClick={sf.toggleHistorico} />
 
           {showFiltroInfluencer && (
             <SelectComIcone

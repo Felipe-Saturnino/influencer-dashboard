@@ -24,6 +24,7 @@ import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   MarginBadge,
+  FiltroHistoricoButton,
   FiltroOperadoraSelect,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
@@ -39,7 +40,6 @@ import {
 import {
   ArrowUpDown,
   BarChart2,
-  Calendar,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -3541,31 +3541,7 @@ export default function OverviewSpin() {
             )}
 
             {aba === "overview" ? (
-            <button
-              type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              onClick={toggleHistorico}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              <Calendar size={15} aria-hidden /> Histórico
-            </button>
+              <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             ) : null}
 
             {showFiltroOperadora && (

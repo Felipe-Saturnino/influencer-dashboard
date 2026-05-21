@@ -169,6 +169,7 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 | Componente | Caminho | Quando usar |
 |------------|---------|-------------|
 | **`FiltroOperadoraSelect`** | `src/components/FiltroOperadoraSelect.tsx` | **Único** padrão para filtro de **lista de operadoras** na barra (ver tabela e snippet abaixo) |
+| **`FiltroHistoricoButton`** | `src/components/dashboard/FiltroHistoricoButton.tsx` | **Único** padrão para botão **Histórico** na barra (Overview Influencer) |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para filtro de operadoras — usar `FiltroOperadoraSelect`): influencer, campanha, aba, status… |
 | `InfluencerMultiSelect` | `src/components/InfluencerMultiSelect.tsx` | Multi-seleção de influencers (já inclui `User` no trigger) |
 | Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
@@ -208,10 +209,10 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Perfil / role (plataforma) | `UserCog` ou `Shield` | 13–14 | Preferir Lucide; legado `GiPerson` / `GiShield` em Gestão de Usuários |
 | Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
 | Busca textual | `Search` | 14–16 | À esquerda do `<input type="search">`, `aria-label` no input |
-| Modo Histórico (toggle) | `History` | 14–15 | Ver secção 7 — ícone + texto permitido na barra; alvo: só ícone com `title` |
+| Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
 | Carregando (secundário) | `Clock` | 12 | Texto “Carregando…” — não é filtro |
 
-**Botões-padrão na barra (ex.: Histórico):** mesmo estilo chip do catálogo; **sempre** incluir ícone à esquerda (`History` ou `Calendar` onde o produto já usa `Calendar` em Streamers — preferir **`History`** em código novo).
+**Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.
 
 Estado ativo do select (valor ≠ agregador): em **operadoras**, preferir `FiltroOperadoraSelect` (já aplica destaque com `--brand-action`). Outros filtros (`SelectComIcone` manual): borda/fundo marca conforme chip ativo da página.
 
@@ -251,7 +252,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../lib/caro
 
 | Contexto | `aria-label` setas | Rótulo central (exemplos) |
 |----------|-------------------|---------------------------|
-| Mês | `Mês anterior` / `Próximo mês` | Label do mês; Histórico → `Total` ou `Todo o período` |
+| Mês | `Mês anterior` / `Próximo mês` | Label do mês; modo Histórico → **`Todo o período`** |
 | Semana | `Semana anterior` / `Próxima semana` | Label da semana |
 | Período genérico (Agenda) | `Período anterior` / `Próximo período` | Título conforme vista (mês/semana/dia) |
 | Turno | `Turno anterior` / `Próximo turno` | Label do turno |
@@ -328,6 +329,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Gradiente fallback com `#7c3aed` no início.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
+- Botão Histórico na barra sem `FiltroHistoricoButton` (markup inline, `History` 14, pill retangular).
 - Ação de **linha** só com texto, sem ícone (código novo).
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
 - Título diferente do menu ou página sem subtítulo.
@@ -342,7 +344,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
 - [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
-- [ ] Histórico com ícone + `aria-pressed`
+- [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
 - [ ] Semântica de dado intacta (Global)

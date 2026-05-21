@@ -14,7 +14,7 @@ import {
   zebraStripe,
   zebraStripeBrandContrast,
 } from "../../../lib/tableStyles";
-import { SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -23,7 +23,6 @@ import {
   ArrowUpFromLine,
   BarChart2,
   Bookmark,
-  Calendar,
   CalendarDays,
   Clock,
   Filter,
@@ -1108,33 +1107,7 @@ export default function SocialMediaDashboard() {
             >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              onClick={toggleHistorico}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                minHeight: 44,
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              <Calendar size={15} aria-hidden />
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />

@@ -7,7 +7,7 @@ import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { FiltroOperadoraSelect, SelectComIcone, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, SelectComIcone, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
@@ -17,7 +17,6 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -636,19 +635,7 @@ export default function DashboardFinanceiro() {
             >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
-            <button type="button" aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"} aria-pressed={historico} onClick={toggleHistorico} style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-              fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico
-                ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                : "transparent",
-              color: historico ? brand.accent : t.textMuted,
-              fontWeight: historico ? 700 : 400, transition: "all 0.15s",
-            }}>
-              <Calendar size={14} aria-hidden /> Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             {showFiltroInfluencer && (
               <SelectComIcone
                 icon={<User size={14} aria-hidden />}
