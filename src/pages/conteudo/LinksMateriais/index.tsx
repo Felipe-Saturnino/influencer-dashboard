@@ -14,10 +14,26 @@ import {
   type SpinQrFrameVariant,
 } from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
-import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
+import { Link2, Copy, Check, AlertCircle, QrCode, Download, Share2, Loader2 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { GiShare } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
+import type { ReactNode } from "react";
+
+function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+}
+
+function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
+  if (!loading) return idle;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+      {busy}
+    </span>
+  );
+}
 
 const LINK_SECTION_TITLE_ID = "link-rastreamento-title";
 
@@ -68,10 +84,10 @@ interface InfluencerOpcao {
 }
 
 export default function LinksMateriais() {
-  const { theme: t, user, isDark, podeVerInfluencer, setActivePage } = useApp();
+  const { theme: t, user, podeVerInfluencer, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
-  const dark = isDark ?? false;
+  const dark = t.isDark ?? false;
   const narrowMobile = useMediaQuery("(max-width: 479px)");
 
   const precisaSelecionarInfluencer = !!user && !roleParidadeInfluencer(user.role);
@@ -280,13 +296,15 @@ export default function LinksMateriais() {
           : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {
-        setErro(error.message || "Não foi possível registrar o UTM.");
+        console.error("[LinksMateriais] emitir:", error);
+        setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
         setSalvando(false);
         return;
       }
       const res = data as RpcResult | null;
       if (!res?.ok) {
-        setErro(res?.error ?? "Não foi possível registrar o UTM.");
+        console.error("[LinksMateriais] emitir RPC:", res?.error);
+        setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
         setSalvando(false);
         return;
       }
@@ -294,7 +312,8 @@ export default function LinksMateriais() {
       setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(finalSource)}`);
       setEmitido(true);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro inesperado.");
+      console.error("[LinksMateriais] emitir inesperado:", e);
+      setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
     }
     setSalvando(false);
   }
@@ -353,7 +372,8 @@ export default function LinksMateriais() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível gerar o PNG com o quadro Spin.");
+      console.error("[LinksMateriais] gerar PNG quadro:", e);
+      setErro("Não foi possível gerar o PNG com o quadro Spin. Tente novamente.");
     } finally {
       setBaixandoQr(null);
     }
@@ -362,7 +382,7 @@ export default function LinksMateriais() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar Links e Materiais.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -416,10 +436,10 @@ export default function LinksMateriais() {
             display: "flex", alignItems: "center", justifyContent: "center",
             color: brand.primaryIconColor, flexShrink: 0,
           }}>
-            <GiShare size={16} />
+            <Share2 size={16} aria-hidden />
           </span>
           <h1 style={{
-            fontSize: 22, fontWeight: 800, color: brand.primary,
+            fontSize: 18, fontWeight: 800, color: brand.primary,
             fontFamily: FONT_TITLE, margin: 0,
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
@@ -461,7 +481,7 @@ export default function LinksMateriais() {
             display: "flex", alignItems: "center", justifyContent: "center",
             color: brand.primaryIconColor, flexShrink: 0,
           }}>
-            <Link2 size={14} />
+            <Link2 size={14} aria-hidden />
           </span>
           <h2
             id={LINK_SECTION_TITLE_ID}
@@ -493,7 +513,7 @@ export default function LinksMateriais() {
             fontFamily: FONT.body,
             marginBottom: 16,
           }}>
-            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
+            <AlertCircle size={18} aria-hidden style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
             <span>
               Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Editar</strong> em Links e Materiais na Gestão de Usuários.
             </span>
@@ -514,35 +534,40 @@ export default function LinksMateriais() {
             fontFamily: FONT.body,
             marginBottom: 16,
           }}>
-            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
+            <AlertCircle size={18} aria-hidden style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
             <span>Nenhum influencer disponível no seu escopo para emitir o link.</span>
           </div>
         )}
 
         {erro && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "rgba(232,64,37,0.12)",
-            border: "1px solid rgba(232,64,37,0.35)",
-            color: t.text,
-            fontSize: 13,
-            fontFamily: FONT.body,
-            marginBottom: 14,
-          }}>
-            <AlertCircle size={16} color="#e84025" />
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "rgba(232,64,37,0.12)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: t.text,
+              fontSize: 13,
+              fontFamily: FONT.body,
+              marginBottom: 14,
+            }}
+          >
+            <AlertCircle size={16} color="#e84025" aria-hidden />
             {erro}
           </div>
         )}
 
         {(roleParidadeInfluencer(user?.role) && loadingPerfil) ||
         (!roleParidadeInfluencer(user?.role) && !!influencerSelecionado && loadingAliasInfluencer) ? (
-          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: 0, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+            <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando link salvo…
-          </p>
+          </div>
         ) : !emitido ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {precisaSelecionarInfluencer && podeEmitir && influenciadores.length > 0 && (
@@ -663,11 +688,15 @@ export default function LinksMateriais() {
                   fontWeight: 700,
                   fontSize: 14,
                   fontFamily: FONT.body,
-                  background: brand.useBrand ? "var(--brand-primary)" : "linear-gradient(135deg, #7c3aed, #1e36f8)",
+                  background: ctaGradient(brand),
                   color: "#fff",
                 }}
               >
-                {salvando ? "Emitindo…" : verificandoGateEmissao ? "Verificando…" : "Emitir"}
+                {ctaButtonContent(
+                  salvando || verificandoGateEmissao,
+                  "Emitir",
+                  salvando ? "Emitindo…" : "Verificando…",
+                )}
               </button>
             </div>
           </div>
@@ -712,7 +741,7 @@ export default function LinksMateriais() {
                   cursor: "pointer",
                 }}
               >
-                {copiado ? <Check size={18} color="#22c55e" /> : <Copy size={18} />}
+                {copiado ? <Check size={18} color="#22c55e" aria-hidden /> : <Copy size={18} aria-hidden />}
                 {copiado ? "Copiado" : "Copiar"}
               </button>
             </div>
@@ -737,7 +766,7 @@ export default function LinksMateriais() {
                   color: brand.primaryIconColor,
                   flexShrink: 0,
                 }}>
-                  <QrCode size={14} />
+                  <QrCode size={14} aria-hidden />
                 </span>
                 <h3 style={{
                   margin: 0,
@@ -835,8 +864,15 @@ export default function LinksMateriais() {
                       opacity: baixandoQr !== null && baixandoQr !== "plain" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={16} />
-                    {baixandoQr === "plain" ? "Gerando…" : "Baixar PNG"}
+                    <Download size={16} aria-hidden />
+                    {baixandoQr === "plain" ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                        Gerando…
+                      </span>
+                    ) : (
+                      "Baixar PNG"
+                    )}
                   </button>
                 </div>
 
@@ -919,8 +955,15 @@ export default function LinksMateriais() {
                       opacity: baixandoQr !== null && baixandoQr !== "dark" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={16} strokeWidth={2.25} />
-                    {baixandoQr === "dark" ? "Gerando…" : "Baixar PNG"}
+                    <Download size={16} aria-hidden />
+                    {baixandoQr === "dark" ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                        Gerando…
+                      </span>
+                    ) : (
+                      "Baixar PNG"
+                    )}
                   </button>
                 </div>
 
@@ -1003,8 +1046,15 @@ export default function LinksMateriais() {
                       opacity: baixandoQr !== null && baixandoQr !== "light" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={16} />
-                    {baixandoQr === "light" ? "Gerando…" : "Baixar PNG"}
+                    <Download size={16} aria-hidden />
+                    {baixandoQr === "light" ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                        Gerando…
+                      </span>
+                    ) : (
+                      "Baixar PNG"
+                    )}
                   </button>
                 </div>
               </div>

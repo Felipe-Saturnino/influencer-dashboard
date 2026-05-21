@@ -150,9 +150,12 @@ export interface UtmAlias {
   campanha_id:      string | null;
   influencer_name?: string;
   campanha_nome?:   string;
+  campanha_ativo?:  boolean;
   status:           UtmAliasStatus;
   primeiro_visto:   string;
   ultimo_visto:     string;
+  total_visits?:    number;
+  total_registrations?: number;
   total_ftds:       number;
   total_deposit:    number;
   total_withdrawal?: number;

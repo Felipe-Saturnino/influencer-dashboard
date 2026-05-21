@@ -69,7 +69,7 @@ export function PortalRhBlocoFiltros({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
             type="button"
-            aria-label="Período anterior"
+            aria-label="Mês anterior"
             disabled={carouselPrimeiro || modoHistorico}
             onClick={() => onIdxMesChange((i) => Math.max(0, i - 1))}
             style={{
@@ -94,7 +94,7 @@ export function PortalRhBlocoFiltros({
           </span>
           <button
             type="button"
-            aria-label="Próximo período"
+            aria-label="Próximo mês"
             disabled={carouselUltimo || modoHistorico}
             onClick={() => onIdxMesChange((i) => Math.min(meses.length - 1, i + 1))}
             style={{

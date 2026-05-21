@@ -730,6 +730,34 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "rh_portal",
+    label: "Portal de RH",
+    accentColor: "#a78bfa",
+    termos: [
+      {
+        termo: "RH Talk",
+        definicao:
+          "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de colaboradores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
+        nota: "A ata fica disponível no Portal de RH apenas para participantes registrados da reunião.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Lido e Ciente",
+        definicao:
+          "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento oficial no Portal de RH (política ou normativa), com registro de data e hora.",
+        nota:
+          "Diferente de apenas marcar um comunicado como Lido. O registro de Lido e Ciente implica responsabilidade sobre o conteúdo do documento. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Read Receipt",
+        definicao:
+          "Registro de leitura de um comunicado ou documento pelo usuário, com data e hora. Usado para rastrear quais colaboradores já visualizaram comunicados obrigatórios.",
+        referencia: "Portal de RH",
+      },
+    ],
+  },
+  {
     key: "periodos",
     label: "Conceitos de Período",
     accentColor: "#6b7280",

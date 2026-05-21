@@ -3,14 +3,9 @@ import { linhaMetaAutorPortalRh, type PortalRhAutorInfo } from "../../../lib/por
 import { PortalRhAssetLink } from "./PortalRhAssetLink";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 function ModalLinha({ label, children }: { label?: string; children: React.ReactNode }) {
   const { theme: t } = useApp();
@@ -132,7 +127,7 @@ export function ModalLerPolitica({
             padding: "10px 18px",
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: ctaGradientPortalRh(brand),
             color: "#fff",
             fontWeight: 800,
             fontSize: 13,

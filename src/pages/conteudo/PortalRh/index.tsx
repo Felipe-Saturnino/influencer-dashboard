@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { FileText, Loader2, Megaphone, MessagesSquare, Pin, SlidersHorizontal } from "lucide-react";
 import { stripHtmlText } from "../../../lib/portalRhWorkflow";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
@@ -9,6 +9,7 @@ import { ComunicadoCard, PoliticaCard, RhTalkCard } from "./PortalRhCards";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
@@ -140,6 +141,37 @@ function receiptKey(ct: string, id: string): string {
   return `${ct}:${id}`;
 }
 
+const ERRO_CARREGAR_PORTAL =
+  "Não foi possível carregar o portal. Se o problema persistir, contate o suporte.";
+
+function tabsPortalRhKeys(canEditarOk: boolean): AbaPortal[] {
+  const keys: AbaPortal[] = ["comunicados", "politicas", "rhtalks"];
+  if (canEditarOk) keys.push("gerenciamento");
+  return keys;
+}
+
+function onPortalRhTabsKeyDown(
+  e: KeyboardEvent,
+  abaAtiva: AbaPortal,
+  setAba: (key: AbaPortal) => void,
+  canEditarOk: boolean,
+) {
+  const tabs = tabsPortalRhKeys(canEditarOk);
+  const idx = tabs.indexOf(abaAtiva);
+  if (idx < 0) return;
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    const next = tabs[(idx + 1) % tabs.length];
+    setAba(next);
+    document.getElementById(`tab-rh-portal-${next}`)?.focus();
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+    setAba(prev);
+    document.getElementById(`tab-rh-portal-${prev}`)?.focus();
+  }
+}
+
 function FiltroSubtabPills({
   filtroAtivo,
   onFiltro,
@@ -203,6 +235,7 @@ function FiltroSubtabPills({
 
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("rh_portal");
 
   const [aba, setAba] = useState<AbaPortal>("comunicados");
@@ -256,10 +289,13 @@ export default function PortalRhPage() {
       supabase.from("rh_portal_rh_talk").select("*").order("data_reuniao", { ascending: false }),
     ]);
 
-    if (catRes.error) setErro(catRes.error.message);
-    else if (comRes.error) setErro(comRes.error.message);
-    else if (docRes.error) setErro(docRes.error.message);
-    else if (talkRes.error) setErro(talkRes.error.message);
+    if (catRes.error || comRes.error || docRes.error || talkRes.error) {
+      const err = catRes.error ?? comRes.error ?? docRes.error ?? talkRes.error;
+      console.error("[PortalRh] carregar:", err);
+      setErro(ERRO_CARREGAR_PORTAL);
+      setLoading(false);
+      return;
+    }
 
     const cats = (catRes.data ?? []) as RhPortalCategoria[];
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
@@ -581,7 +617,7 @@ export default function PortalRhPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, background: t.bg }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -594,7 +630,12 @@ export default function PortalRhPage() {
         subtitle="Comunicados oficiais, políticas internas e atas das RH Talks."
       />
 
-      <div role="tablist" aria-label="Seções do portal de RH" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+      <div
+        role="tablist"
+        aria-label="Seções do portal de RH"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
+        onKeyDown={(e) => onPortalRhTabsKeyDown(e, aba, setAba, perm.canEditarOk)}
+      >
         {(
           [
             { key: "comunicados" as const, label: "Comunicados", Icon: Megaphone },
@@ -614,12 +655,13 @@ export default function PortalRhPage() {
               id={`tab-rh-portal-${key}`}
               aria-selected={ativa}
               aria-controls={`panel-rh-portal-${key}`}
+              tabIndex={ativa ? 0 : -1}
               onClick={() => setAba(key)}
               style={{
                 padding: "10px 16px",
                 borderRadius: 12,
-                border: ativa ? `1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 45%, transparent)` : `1px solid ${t.cardBorder}`,
-                background: ativa ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : t.cardBg,
+                border: ativa ? brand.primaryTransparentBorder : `1px solid ${t.cardBorder}`,
+                background: ativa ? brand.primaryTransparentBg : t.cardBg,
                 color: ativa ? t.text : t.textMuted,
                 fontWeight: 700,
                 fontSize: 13,
@@ -660,6 +702,7 @@ export default function PortalRhPage() {
             role="tabpanel"
             id={`panel-rh-portal-${aba}`}
             aria-labelledby={`tab-rh-portal-${aba}`}
+            tabIndex={0}
             style={{ marginTop: 4 }}
           >
             {aba === "comunicados" ? (
@@ -882,19 +925,6 @@ export default function PortalRhPage() {
         />
       ) : null}
 
-      <style>{`
-        .sr-only {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          padding: 0;
-          margin: -1px;
-          overflow: hidden;
-          clip: rect(0, 0, 0, 0);
-          white-space: nowrap;
-          border: 0;
-        }
-      `}</style>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
+import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 
@@ -85,11 +86,12 @@ function fmtMesAnoCarrossel(ano: number, mes: number): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
+const ERRO_CARREGAR_GERENCIAMENTO =
+  "Não foi possível carregar as postagens. Se o problema persistir, contate o suporte.";
+const ERRO_APROVAR =
+  "Não foi possível aprovar a postagem. Se o problema persistir, contate o suporte.";
+const ERRO_ARQUIVAR =
+  "Não foi possível arquivar a postagem. Se o problema persistir, contate o suporte.";
 
 function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
   switch (status) {
@@ -132,6 +134,7 @@ export function GerenciamentoPostagens({
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
   const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
+  const [confirmandoArquivarId, setConfirmandoArquivarId] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -170,9 +173,14 @@ export function GerenciamentoPostagens({
         .order("created_at", { ascending: false }),
     ]);
 
-    if (comRes.error) setErro(comRes.error.message);
-    else if (docRes.error) setErro(docRes.error.message);
-    else if (talkRes.error) setErro(talkRes.error.message);
+    if (comRes.error || docRes.error || talkRes.error) {
+      const err = comRes.error ?? docRes.error ?? talkRes.error;
+      console.error("[GerenciamentoPostagens] carregar:", err);
+      setErro(ERRO_CARREGAR_GERENCIAMENTO);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
 
     const userIds = new Set<string>();
     const built: PostagemGerenciamentoRow[] = [];
@@ -460,7 +468,8 @@ export function GerenciamentoPostagens({
       await carregar();
       onDadosAlterados();
     } else {
-      setErro(error.message);
+      console.error("[GerenciamentoPostagens] aprovar:", error);
+      setErro(ERRO_APROVAR);
     }
     setAcaoLoading(null);
   }
@@ -480,7 +489,8 @@ export function GerenciamentoPostagens({
       await carregar();
       onDadosAlterados();
     } else {
-      setErro(error.message);
+      console.error("[GerenciamentoPostagens] arquivar:", error);
+      setErro(ERRO_ARQUIVAR);
     }
     setAcaoLoading(null);
   }
@@ -494,7 +504,7 @@ export function GerenciamentoPostagens({
   };
 
   return (
-    <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento">
+    <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento" tabIndex={0}>
       <div style={filtroWrap}>
         <div
           style={{
@@ -630,7 +640,7 @@ export function GerenciamentoPostagens({
               fontWeight: 700,
               fontSize: 13,
               fontFamily: FONT.body,
-              background: ctaGradient(brand),
+              background: ctaGradientPortalRh(brand),
             }}
           >
             <Plus size={16} aria-hidden />
@@ -749,8 +759,18 @@ export function GerenciamentoPostagens({
               {rowsOrdenadas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status);
                 const busy = acaoLoading === row.id;
+                const zebraBg = zebraStripe(i);
                 return (
-                  <tr key={`${row.contentType}-${row.id}`} style={{ background: zebraStripe(i) }}>
+                  <tr
+                    key={`${row.contentType}-${row.id}`}
+                    style={{ background: zebraBg }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = zebraBg;
+                    }}
+                  >
                     <td
                       style={{
                         ...getTdStyle(t),
@@ -801,12 +821,32 @@ export function GerenciamentoPostagens({
                         {acoes.includes("arquivar") ? (
                           <button
                             type="button"
-                            aria-label={`Arquivar ${row.assunto}`}
+                            aria-label={`${confirmandoArquivarId === row.id ? "Confirmar arquivamento:" : "Arquivar:"} ${row.assunto}`}
                             disabled={busy}
-                            onClick={() => void arquivarPostagem(row)}
-                            style={btnAcao(t)}
+                            onClick={() => {
+                              if (confirmandoArquivarId !== row.id) {
+                                setConfirmandoArquivarId(row.id);
+                                return;
+                              }
+                              void arquivarPostagem(row);
+                              setConfirmandoArquivarId(null);
+                            }}
+                            onBlur={() => setConfirmandoArquivarId(null)}
+                            style={{
+                              ...btnAcao(t),
+                              ...(confirmandoArquivarId === row.id
+                                ? {
+                                    border: "1px solid rgba(232,64,37,0.6)",
+                                    background: "rgba(232,64,37,0.15)",
+                                    color: "#e84025",
+                                  }
+                                : {}),
+                            }}
                           >
                             <Archive size={13} aria-hidden />
+                            {confirmandoArquivarId === row.id ? (
+                              <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
+                            ) : null}
                           </button>
                         ) : null}
                         {acoes.includes("historico") ? (
@@ -854,7 +894,6 @@ export function GerenciamentoPostagens({
         contentType={histRef?.contentType ?? null}
         contentId={histRef?.id ?? null}
         onClose={() => setHistRef(null)}
-        t={t}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, type CSSProperties, type KeyboardEvent } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -9,7 +9,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   Check, ChevronRight, AlertTriangle, Info,
   BookOpen, Users, Calendar, Gamepad2,
-  Zap, Wrench, Star, MonitorPlay, ShieldCheck,
+  Zap, Wrench, Star, MonitorPlay, ShieldCheck, Loader2,
 } from "lucide-react";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
@@ -290,17 +290,17 @@ const ConteudoFunFacts: React.FC<{ dark: boolean }> = ({ dark }) => {
     { label: "Investimento em estrutura", value: "R$ 30M+" },
     { label: "Cabeamento interno", value: "5+ km" },
     { label: "Autonomia do gerador próprio", value: "72 horas" },
-    { label: "Equipamentos de áudio e vídeo de última geração", value: "✓" },
+    { label: "Equipamentos de áudio e vídeo de última geração", value: "Sim" },
   ];
   const operacao = [
     { label: "Baralhos em operação", value: "18.000+" },
     { label: "Dealers treinados internamente", value: "210+" },
-    { label: "Academia própria de dealers", value: "✓" },
-    { label: "Treinadores com certificação internacional", value: "✓" },
+    { label: "Academia própria de dealers", value: "Sim" },
+    { label: "Treinadores com certificação internacional", value: "Sim" },
   ];
   const suporte = [
     { label: "Tempo médio de resposta do suporte", value: "3 segundos" },
-    { label: "Suporte 24h", value: "✓" },
+    { label: "Suporte 24h", value: "Sim" },
   ];
   return (
     <div>
@@ -380,17 +380,41 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
 );
 
 const ABAS: AbaConfig[] = [
-  { key: "posicionamento", label: "Posicionamento", icon: <Star size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
-  { key: "dealers", label: "Dealers", icon: <Users size={14} />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
-  { key: "agendamento", label: "Agendamento", icon: <Calendar size={14} />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
-  { key: "jogos", label: "Jogos", icon: <Gamepad2 size={14} />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
-  { key: "blackjack", label: "Side Bets", icon: <Zap size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },
-  { key: "tecnico", label: "Situações Técnicas", icon: <Wrench size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoTecnico },
-  { key: "funfacts", label: "Fun Facts", icon: <Info size={14} />, obrigatoria: false, accentColor: BRAND.ciano, content: ConteudoFunFacts },
-  { key: "acesso", label: "Acesso aos Jogos", icon: <MonitorPlay size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoAcesso },
+  { key: "posicionamento", label: "Posicionamento", icon: <Star size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
+  { key: "dealers", label: "Dealers", icon: <Users size={14} aria-hidden />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
+  { key: "agendamento", label: "Agendamento", icon: <Calendar size={14} aria-hidden />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
+  { key: "jogos", label: "Jogos", icon: <Gamepad2 size={14} aria-hidden />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
+  { key: "blackjack", label: "Side Bets", icon: <Zap size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },
+  { key: "tecnico", label: "Situações Técnicas", icon: <Wrench size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoTecnico },
+  { key: "funfacts", label: "Fun Facts", icon: <Info size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.ciano, content: ConteudoFunFacts },
+  { key: "acesso", label: "Acesso aos Jogos", icon: <MonitorPlay size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoAcesso },
 ];
 
 const ITENS_OBRIGATORIOS = ABAS.filter((a) => a.obrigatoria && a.itemKey);
+
+function focusTabButton(id: string) {
+  document.getElementById(id)?.focus();
+}
+
+function onPlaybookTabsKeyDown(
+  e: KeyboardEvent,
+  abaAtiva: string,
+  setAbaAtiva: (key: string) => void,
+) {
+  const idx = ABAS.findIndex((a) => a.key === abaAtiva);
+  if (idx < 0) return;
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    const next = ABAS[(idx + 1) % ABAS.length];
+    setAbaAtiva(next.key);
+    focusTabButton(`tab-${next.key}`);
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    const prev = ABAS[(idx - 1 + ABAS.length) % ABAS.length];
+    setAbaAtiva(prev.key);
+    focusTabButton(`tab-${prev.key}`);
+  }
+}
 
 // ─── PAINEL DE AUDITORIA ──────────────────────────────────────────────────────
 function PainelAuditoria({
@@ -434,7 +458,9 @@ function PainelAuditoria({
         )
         .map((c) => ({
           ...c,
-          influencer_nome: influs.find((i) => i.id === c.influencer_id)?.name ?? c.influencer_id,
+          influencer_nome:
+            influs.find((i) => i.id === c.influencer_id)?.name ??
+            `Influencer (${c.influencer_id.slice(0, 8)}…)`,
         }));
 
       setConfirmacoes(confComNome);
@@ -445,7 +471,12 @@ function PainelAuditoria({
   }, [itemKey, podeVerInfluencer]);
 
   if (loading) {
-    return <div style={{ padding: "16px 0", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>Carregando...</div>;
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+        <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+        Carregando…
+      </div>
+    );
   }
 
   return (
@@ -455,7 +486,7 @@ function PainelAuditoria({
       border: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <ShieldCheck size={16} color={dark ? "#7b95ff" : BRAND.azul} />
+        <ShieldCheck size={16} color={dark ? "#7b95ff" : BRAND.azul} aria-hidden />
         <span style={{ fontSize: 11, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>
           Auditoria de Ciência
         </span>
@@ -527,12 +558,14 @@ function BlocoCiencia({
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingCheck, setLoadingCheck] = useState(true);
+  const [erroUpsert, setErroUpsert] = useState<string | null>(null);
 
   useEffect(() => {
     setLoadingCheck(true);
     setConfirmado(false);
     setConfirmedAt(null);
     setChecked(false);
+    setErroUpsert(null);
 
     let cancelled = false;
     void (async () => {
@@ -563,12 +596,16 @@ function BlocoCiencia({
   const handleConfirmar = async () => {
     if (!checked || saving || confirmado || !podeConfirmar) return;
     setSaving(true);
+    setErroUpsert(null);
     const now = new Date().toISOString();
     const { error } = await supabase.from("guia_confirmacoes").upsert(
       { influencer_id: influencerId, item_key: itemKey, confirmed_at: now },
       { onConflict: "influencer_id,item_key" },
     );
-    if (!error) {
+    if (error) {
+      console.error("[PlaybookInfluencers] Erro ao confirmar ciência:", error);
+      setErroUpsert("Não foi possível registrar a confirmação. Tente novamente.");
+    } else {
       setConfirmado(true);
       setConfirmedAt(now);
       onConfirmado();
@@ -576,7 +613,20 @@ function BlocoCiencia({
     setSaving(false);
   };
 
-  if (loadingCheck) return null;
+  if (loadingCheck) {
+    return (
+      <div
+        aria-hidden
+        style={{
+          marginTop: 28,
+          minHeight: 88,
+          borderRadius: 12,
+          border: `1px solid ${t.cardBorder}`,
+          background: dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+        }}
+      />
+    );
+  }
 
   if (!podeConfirmar && !confirmado) {
     return (
@@ -601,7 +651,7 @@ function BlocoCiencia({
         {confirmado ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${BRAND.verde}20`, border: `2px solid ${BRAND.verde}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Check size={16} color={BRAND.verde} />
+              <Check size={16} color={BRAND.verde} aria-hidden />
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
@@ -646,10 +696,15 @@ function BlocoCiencia({
                 Li e compreendi as regras de <strong>{label}</strong> e me comprometo a segui-las durante toda a campanha.
               </span>
             </div>
+            {erroUpsert ? (
+              <div role="alert" aria-live="polite" style={{ marginTop: 12, fontSize: 12, color: "#e84025", fontFamily: FONT.body }}>
+                {erroUpsert}
+              </div>
+            ) : null}
             <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={handleConfirmar}
+                onClick={() => void handleConfirmar()}
                 disabled={!checked || saving}
                 style={{
                   padding: "9px 20px", borderRadius: 10, border: "none",
@@ -659,9 +714,19 @@ function BlocoCiencia({
                   cursor: checked && !saving ? "pointer" : "not-allowed",
                   opacity: checked && !saving ? 1 : 0.65,
                   transition: "all 0.2s",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {saving ? "Confirmando..." : "Confirmar Ciência"}
+                {saving ? (
+                  <>
+                    <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+                    Confirmando…
+                  </>
+                ) : (
+                  "Confirmar Ciência"
+                )}
               </button>
             </div>
           </div>
@@ -673,10 +738,10 @@ function BlocoCiencia({
 
 // ─── PRINCIPAL ────────────────────────────────────────────────────────────────
 export default function PlaybookInfluencers() {
-  const { theme: t, user, isDark, podeVerInfluencer } = useApp();
+  const { theme: t, user, podeVerInfluencer } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("playbook_influencers");
-  const dark = isDark ?? false;
+  const dark = t.isDark ?? false;
 
   const [abaAtiva, setAbaAtiva] = useState(ABAS[0].key);
   const [confirmacoes, setConfirmacoes] = useState<Set<string>>(new Set());
@@ -741,7 +806,7 @@ export default function PlaybookInfluencers() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar o Playbook Influencers.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -764,10 +829,10 @@ export default function PlaybookInfluencers() {
               display: "flex", alignItems: "center", justifyContent: "center",
               color: brand.primaryIconColor, flexShrink: 0,
             }}>
-              <BookOpen size={16} />
+              <BookOpen size={16} aria-hidden />
             </span>
             <h1 style={{
-              fontSize: 22, fontWeight: 800, color: brand.primary,
+              fontSize: 18, fontWeight: 800, color: brand.primary,
               fontFamily: FONT_TITLE, margin: 0,
               letterSpacing: "0.05em", textTransform: "uppercase",
             }}>
@@ -784,7 +849,7 @@ export default function PlaybookInfluencers() {
                 border: "1px solid rgba(30,54,248,0.25)",
                 flexShrink: 0,
               }}>
-                <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} />
+                <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} aria-hidden />
                 <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT.body }}>
                   {totalConfAll} de {totalInflu} influencers confirmaram tudo
                 </span>
@@ -798,7 +863,7 @@ export default function PlaybookInfluencers() {
                   border: "1px solid rgba(34,197,94,0.25)",
                   flexShrink: 0,
                 }}>
-                  <Check size={14} color={BRAND.verde} />
+                  <Check size={14} color={BRAND.verde} aria-hidden />
                   <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
                     Playbook concluído
                   </span>
@@ -811,7 +876,7 @@ export default function PlaybookInfluencers() {
                   border: "1px solid rgba(232,64,37,0.25)",
                   flexShrink: 0,
                 }}>
-                  <AlertTriangle size={14} color={BRAND.vermelho} />
+                  <AlertTriangle size={14} color={BRAND.vermelho} aria-hidden />
                   <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#ff9980" : BRAND.vermelho, fontFamily: FONT.body }}>
                     {confirmadosOb} de {totalOb} itens obrigatórios confirmados
                   </span>
@@ -848,7 +913,7 @@ export default function PlaybookInfluencers() {
           display: "flex", alignItems: "center", gap: 12,
         }}>
           <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${BRAND.verde}20`, border: `2px solid ${BRAND.verde}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Check size={18} color={BRAND.verde} />
+            <Check size={18} color={BRAND.verde} aria-hidden />
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
@@ -890,6 +955,7 @@ export default function PlaybookInfluencers() {
             role="tablist"
             aria-label="Seções do Playbook"
             style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 0, scrollbarWidth: "none" }}
+            onKeyDown={(e) => onPlaybookTabsKeyDown(e, abaAtiva, setAbaAtiva)}
           >
           {ABAS.map((aba) => {
             const isAtiva = abaAtiva === aba.key;
@@ -902,6 +968,7 @@ export default function PlaybookInfluencers() {
                 id={`tab-${aba.key}`}
                 aria-selected={isAtiva}
                 aria-controls={`panel-${aba.key}`}
+                tabIndex={isAtiva ? 0 : -1}
                 onClick={() => setAbaAtiva(aba.key)}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
@@ -922,11 +989,17 @@ export default function PlaybookInfluencers() {
                 <span style={{ color: isAtiva ? aba.accentColor : t.textMuted, display: "flex" }}>{aba.icon}</span>
                 {aba.label}
                 {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou && (
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.vermelho, flexShrink: 0 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.vermelho, flexShrink: 0 }} aria-hidden />
                 )}
+                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou ? (
+                  <span className="sr-only">item obrigatório pendente</span>
+                ) : null}
                 {aba.obrigatoria && roleParidadeInfluencer(user?.role) && jaConfirmou && (
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.verde, flexShrink: 0 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.verde, flexShrink: 0 }} aria-hidden />
                 )}
+                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && jaConfirmou ? (
+                  <span className="sr-only">item obrigatório confirmado</span>
+                ) : null}
                 {aba.obrigatoria && exibirAuditoria && (
                   <span style={{
                     padding: "1px 6px", borderRadius: 4,
@@ -959,12 +1032,13 @@ export default function PlaybookInfluencers() {
         role="tabpanel"
         id={`panel-${abaConfig.key}`}
         aria-labelledby={`tab-${abaConfig.key}`}
+        tabIndex={0}
         style={{
         background: brand.blockBg ?? t.cardBg,
         border: `1px solid ${t.cardBorder}`,
         borderTop: "none",
         borderRadius: "0 0 14px 14px",
-        padding: "24px 28px 28px",
+        padding: "clamp(14px, 4vw, 28px)",
         boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
       }}
       >

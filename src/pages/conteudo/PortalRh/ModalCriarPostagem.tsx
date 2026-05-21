@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
@@ -41,11 +42,10 @@ export type PostagemEditRef = {
 
 type AcaoModal = "salvar" | "publicar";
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
+const ERRO_CARREGAR_EDICAO = "Não foi possível carregar a postagem para edição.";
+const ERRO_SALVAR =
+  "Não foi possível salvar a postagem. Se o problema persistir, contate o suporte.";
+const ERRO_UPLOAD = "Não foi possível enviar o arquivo. Tente novamente.";
 
 export function ModalCriarPostagem({
   open,
@@ -145,7 +145,8 @@ export function ModalCriarPostagem({
         .single();
       setLoadingData(false);
       if (error || !data) {
-        setErro(error?.message ?? "Postagem não encontrada.");
+        console.error("[ModalCriarPostagem] carregar comunicado:", error);
+        setErro(ERRO_CARREGAR_EDICAO);
         return;
       }
       const row = data as {
@@ -184,7 +185,8 @@ export function ModalCriarPostagem({
         .single();
       setLoadingData(false);
       if (error || !data) {
-        setErro(error?.message ?? "Postagem não encontrada.");
+        console.error("[ModalCriarPostagem] carregar documento:", error);
+        setErro(ERRO_CARREGAR_EDICAO);
         return;
       }
       const row = data as {
@@ -224,7 +226,8 @@ export function ModalCriarPostagem({
       const { data, error } = await supabase.from("rh_portal_rh_talk").select("*").eq("id", ref.id).single();
       setLoadingData(false);
       if (error || !data) {
-        setErro(error?.message ?? "Postagem não encontrada.");
+        console.error("[ModalCriarPostagem] carregar rh_talk:", error);
+        setErro(ERRO_CARREGAR_EDICAO);
         return;
       }
       const row = data as {
@@ -337,8 +340,9 @@ export function ModalCriarPostagem({
 
     const up = await uploadArquivos();
     if (up.err) {
+      console.error("[ModalCriarPostagem] upload:", up.err);
       setSalvando(false);
-      setErro(up.err);
+      setErro(ERRO_UPLOAD);
       return;
     }
 
@@ -376,14 +380,24 @@ export function ModalCriarPostagem({
         };
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("rh_portal_comunicado").update(payload).eq("id", editRef.id);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] salvar comunicado:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
           await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
         } else {
           const { error } = await supabase.from("rh_portal_comunicado").insert(payload);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] inserir comunicado:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
         }
       } else if (tipoPostagem === "politica") {
         const catId = resolveCategoriaId("politica", slugPoliticaFromLabel(tipoPolitica));
@@ -409,14 +423,24 @@ export function ModalCriarPostagem({
         };
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] salvar documento:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
           await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
         } else {
           const { error } = await supabase.from("rh_portal_documento").insert(payload);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] inserir documento:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
         }
       } else {
         const payload = {
@@ -444,7 +468,12 @@ export function ModalCriarPostagem({
             .from("rh_portal_rh_talk")
             .update({ ...payload, ...numeroExtra })
             .eq("id", editRef.id);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] salvar rh_talk:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
           await registrarEdicoesRascunho(editRef.id);
           if (statusAnterior !== novoStatus) {
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
@@ -455,7 +484,12 @@ export function ModalCriarPostagem({
             numero: novoStatus === "publicado" ? await proximoNumeroTalk() : null,
           };
           const { error } = await supabase.from("rh_portal_rh_talk").insert(insertPayload);
-          if (error) throw new Error(error.message);
+          if (error) {
+            console.error("[ModalCriarPostagem] inserir rh_talk:", error);
+            setSalvando(false);
+            setErro(ERRO_SALVAR);
+            return;
+          }
         }
       }
 
@@ -463,8 +497,9 @@ export function ModalCriarPostagem({
       onSalvo();
       onClose();
     } catch (e) {
+      console.error("[ModalCriarPostagem] persistir inesperado:", e);
       setSalvando(false);
-      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+      setErro(ERRO_SALVAR);
     }
   };
 
@@ -742,8 +777,12 @@ export function ModalCriarPostagem({
             fontWeight: 600,
             cursor: salvando ? "not-allowed" : "pointer",
             opacity: salvando ? 0.6 : 1,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
+          {salvando ? <Loader2 className="app-lucide-spin" size={14} color={t.text} aria-hidden /> : null}
           {salvando ? "Salvando…" : "Salvar"}
         </button>
         <button
@@ -754,7 +793,7 @@ export function ModalCriarPostagem({
             padding: "10px 18px",
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: ctaGradientPortalRh(brand),
             color: "#fff",
             fontFamily: FONT.body,
             fontSize: 13,

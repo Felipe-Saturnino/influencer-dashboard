@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2 } from "lucide-react";
+import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2, BookOpen, Share2, Radio } from "lucide-react";
 import {
   GiTv,
   GiCalendar,
@@ -77,6 +77,15 @@ const MENU_AJUDA = [
       { key: "central_notificacoes" as PageKey, label: "Central de Notificações", Icon: GiRingingBell },
       { key: "rh_figurinos" as PageKey, label: "Figurinos", Icon: GiShirt },
       { key: "roteiro_mesa" as PageKey, label: "Roteiro de Mesa", Icon: GiNotebook },
+    ],
+  },
+  {
+    section: "Conteúdo",
+    items: [
+      { key: "playbook_influencers" as PageKey, label: "Playbook Influencers", Icon: BookOpen },
+      { key: "links_materiais" as PageKey, label: "Links e Materiais", Icon: Share2 },
+      { key: "spin_na_rede" as PageKey, label: "Spin na Rede", Icon: Radio },
+      { key: "rh_portal" as PageKey, label: "Portal de RH", Icon: Megaphone },
     ],
   },
 ];
@@ -559,6 +568,137 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Permissões",
         texto:
           "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem de can_criar, can_editar e can_excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
+      },
+    ],
+  },
+  playbook_influencers: {
+    titulo: "Playbook — Influencers",
+    blocos: [
+      {
+        texto:
+          "O Playbook reúne todas as diretrizes que orientam o criador durante suas transmissões ao vivo com a Spin Gaming. O objetivo é garantir alinhamento com a operação, posicionamento correto de marca e a melhor experiência para o público.\n\nAs seções são divididas entre leitura livre e itens obrigatórios, que exigem confirmação formal de ciência antes de transmitir.",
+      },
+      {
+        subtitulo: "Navegação por Abas",
+        texto:
+          "O conteúdo está organizado em oito abas: Posicionamento, Dealers, Agendamento, Jogos, Side Bets, Situações Técnicas, Fun Facts e Acesso aos Jogos.\n\nAs abas marcadas como OBRIGATÓRIO exigem confirmação de leitura. As abas sem marcação são de leitura livre e não bloqueiam nenhuma funcionalidade.\n\nCom o foco na lista de abas, use as setas ← → do teclado para alternar entre as seções.",
+      },
+      {
+        subtitulo: "Itens Obrigatórios e Confirmação de Ciência",
+        texto:
+          "Dealers, Agendamento e Jogos são os três itens obrigatórios. Cada um apresenta um bloco de confirmação ao final do conteúdo.\n\nPara confirmar: marque a caixa declarando que leu e compreendeu as regras, depois clique em Confirmar Ciência. A confirmação é registrada com data e hora e não pode ser desfeita.\n\nUma barra de progresso no topo da página indica quantos dos três itens foram confirmados. Quando todos forem concluídos, a página exibe um banner de conclusão e o status muda para Playbook concluído.",
+      },
+      {
+        subtitulo: "Barra de Progresso",
+        texto:
+          "A barra abaixo do cabeçalho mostra o avanço nas confirmações obrigatórias. Ela só aparece para influencers com confirmações pendentes. Quando todos os itens estiverem confirmados, a barra é substituída pelo banner de conclusão.",
+      },
+      {
+        subtitulo: "Dots de Status nas Abas",
+        texto:
+          "Abas obrigatórias exibem um pequeno círculo colorido ao lado do label:\n— Vermelho: item ainda não confirmado\n— Verde: confirmação já registrada\n\nEsses indicadores somem quando todos os itens obrigatórios estão confirmados.",
+      },
+      {
+        subtitulo: "Painel de Auditoria (Gestores)",
+        texto:
+          "Gestores, administradores e executivos visualizam um painel adicional em cada aba obrigatória, logo abaixo do conteúdo.\n\nO painel lista quais influencers já confirmaram a ciência daquele item e quais ainda estão pendentes, com data e hora de cada confirmação. Apenas influencers ativos com perfil cadastrado aparecem na listagem.",
+      },
+      {
+        subtitulo: "Badge de Status no Cabeçalho",
+        texto:
+          "No canto superior direito do cabeçalho:\n— Para gestores: exibe quantos influencers confirmaram todos os itens obrigatórios (ex: 31 de 34 influencers confirmaram tudo).\n— Para influencers: exibe o progresso próprio (ex: 2 de 3 itens obrigatórios confirmados) ou o badge verde Playbook concluído quando tudo estiver confirmado.",
+      },
+    ],
+  },
+  links_materiais: {
+    titulo: "Links e Materiais",
+    blocos: [
+      {
+        texto:
+          "A página Links e Materiais é onde o influencer gera o seu link de rastreamento exclusivo para a Casa de Apostas. O link é único por influencer e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+      },
+      {
+        subtitulo: "Link de Rastreamento",
+        texto:
+          "O link é formado por uma URL base fixa seguida de um parâmetro UTM personalizado com o nome artístico do influencer.\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o nome artístico cadastrado no perfil.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
+      },
+      {
+        subtitulo: "QR Code do Link",
+        texto:
+          "Após emitir o link, três formatos de QR Code ficam disponíveis para download:\n— Apenas o QR Code: imagem limpa do código, fundo branco.\n— Gradiente escuro: QR Code no quadro Spin Gaming com fundo escuro em gradiente azul/roxo.\n— Gradiente claro: QR Code no quadro Spin Gaming com fundo claro em gradiente roxo/vermelho.\n\nTodos os formatos são exportados em PNG de alta resolução, prontos para uso em redes sociais, stream e materiais impressos.",
+      },
+      {
+        subtitulo: "Emissão por Gestores",
+        texto:
+          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer. Para isso, selecione o influencer no campo que aparece acima do UTM antes de clicar em Emitir.\n\nSe o influencer já tiver um link emitido, ele será exibido automaticamente ao selecionar o nome na lista.",
+      },
+      {
+        subtitulo: "Requisitos para Emissão",
+        texto:
+          "O influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
+      },
+    ],
+  },
+  spin_na_rede: {
+    titulo: "Spin na Rede",
+    blocos: [
+      {
+        texto:
+          "A página Spin na Rede reúne citações e menções públicas à Spin Gaming em notícias, portais e feeds indexados automaticamente. É uma vitrine das aparições da marca na mídia, atualizada pelo agregador de RSS configurado pela equipe.",
+      },
+      {
+        subtitulo: "Como funciona",
+        texto:
+          "Os itens aparecem automaticamente quando o agregador RSS capta uma publicação que menciona a Spin Gaming e ela passa pelo filtro de relevância. Cada cartão exibe o título da matéria, um trecho do conteúdo, a data de publicação, a fonte e um link direto para o artigo original.\n\nAs miniaturas são carregadas a partir da imagem da própria matéria quando disponível — se a imagem não carregar, o cartão aparece sem ela.",
+      },
+      {
+        subtitulo: "Navegação",
+        texto:
+          "Os itens são exibidos do mais recente ao mais antigo. Não há filtros por período — toda a listagem disponível é mostrada de uma vez.\n\nPara acessar a matéria completa, clique em Ir para a matéria, que abre o artigo original em uma nova aba.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "A visualização da Spin na Rede está disponível para todos os perfis que têm acesso à seção Conteúdo. Não há ações de escrita nesta página — é exclusivamente de leitura.",
+      },
+    ],
+  },
+  rh_portal: {
+    titulo: "Portal de RH",
+    blocos: [
+      {
+        texto:
+          "O Portal de RH centraliza os comunicados oficiais, as políticas e normativas internas e as atas das RH Talks. É o canal oficial da equipe de RH para comunicação com todos os colaboradores da Spin Gaming.",
+      },
+      {
+        subtitulo: "Comunicados",
+        texto:
+          "Reúne avisos oficiais publicados pelo RH, organizados por categoria: Urgente, Geral, Pagamento e Eventos.\n\nComunicados marcados como Novo indicam que ainda não foram lidos. Clique em Lido para registrar a leitura — o badge desaparece após o clique.\n\nUm comunicado pode ser fixado no topo da lista para maior visibilidade. Quando fixado, aparece antes dos demais com o indicador Fixado.",
+      },
+      {
+        subtitulo: "Filtros e Navegação de Comunicados",
+        texto:
+          "Use o carrossel de meses para navegar entre períodos. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe comunicados arquivados. No modo histórico, o carrossel de meses fica desabilitado — todos os arquivados são exibidos de uma vez.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
+      },
+      {
+        subtitulo: "Políticas e Normativas",
+        texto:
+          "Lista documentos oficiais como códigos de conduta, políticas de segurança, normas de bonificação e folha de pagamento.\n\nClique em Ler Política/Normativa para abrir o documento completo. No modal, você pode ler a introdução, a descrição completa e acessar anexos. Ao clicar em Lido e Ciente, a plataforma registra a sua confirmação de leitura. O badge Novo some após isso.",
+      },
+      {
+        subtitulo: "RH Talks",
+        texto:
+          "Reúne as atas das reuniões periódicas do RH com colaboradores.\n\nCada RH Talk tem um número sequencial, título e uma introdução. Clique em Ver Ata para abrir o conteúdo completo. Algumas atas são restritas a participantes: se você não estava na reunião, o botão Ver Ata estará desabilitado e um aviso informará a restrição.",
+      },
+      {
+        subtitulo: "Gerenciamento de Postagens (Gestores)",
+        texto:
+          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (dois cliques para confirmar)\n— Qualquer status: ver Histórico de alterações\n\nUse os filtros de mês, tipo e status para localizar postagens. A busca por palavras-chave funciona sobre o assunto e a descrição. Clique em Criar para redigir uma nova postagem.",
+      },
+      {
+        subtitulo: "Criar e Publicar Postagens",
+        texto:
+          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).\n\nÉ possível anexar uma imagem e um arquivo a qualquer tipo de postagem.",
       },
     ],
   },
@@ -1242,6 +1382,151 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
           "A exclusão exige permissão can_excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+      },
+    ],
+  },
+  playbook_influencers: {
+    titulo: "Playbook — Influencers",
+    blocos: [
+      {
+        subtitulo: "O bloco de confirmação não aparece na aba?",
+        texto:
+          "O bloco de ciência só aparece para usuários com perfil de influencer ativo. Verifique se o seu usuário está cadastrado com o papel correto na plataforma. Se o perfil estiver correto e o bloco ainda não aparecer, recarregue a página. Caso persista, contate o administrador para verificar as permissões da sua conta.",
+      },
+      {
+        subtitulo: "Cliquei em Confirmar Ciência mas nada aconteceu?",
+        texto:
+          "Verifique se a caixa de confirmação foi marcada antes de clicar no botão — o botão fica inativo enquanto a caixa não estiver selecionada. Se a caixa estava marcada e o botão não respondeu, pode ter ocorrido uma falha temporária de conexão. Aguarde alguns segundos e tente novamente. Se o erro persistir, recarregue a página.",
+      },
+      {
+        subtitulo: "A barra de progresso não avança mesmo após confirmar?",
+        texto:
+          "Após confirmar, a barra deve atualizar imediatamente. Se não atualizar, recarregue a página para sincronizar o estado. Verifique também se a aba que você confirmou é realmente uma das três obrigatórias (Dealers, Agendamento e Jogos).",
+      },
+      {
+        subtitulo: "O Painel de Auditoria não aparece para mim?",
+        texto:
+          "O painel de auditoria é visível apenas para gestores, administradores, executivos e demais papéis com permissão de editar. Influencers não visualizam o painel de outros — apenas o próprio bloco de confirmação. Se você tem papel de gestor e o painel não aparece, verifique se a sua permissão de Editar no Playbook Influencers está ativa em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Um influencer aparece como pendente mas já me disse que confirmou?",
+        texto:
+          "A listagem do painel exibe apenas influencers ativos com perfil cadastrado. Se o influencer foi marcado como inativo após confirmar, pode não aparecer na contagem de confirmados. Verifique o status do influencer em Gestão de Influencers. Se o status estiver ativo e o nome ainda aparecer como pendente, a confirmação pode não ter sido gravada — peça ao influencer que repita o processo.",
+      },
+      {
+        subtitulo: "A página não carrega ou aparece em branco?",
+        texto:
+          "Verifique a sua conexão com a internet. Se o problema persistir, recarregue a página ou faça logout e login novamente. Se o acesso ao Playbook Influencers sumir completamente do menu, o seu perfil pode ter tido a permissão de visualização removida — contate o administrador.",
+      },
+    ],
+  },
+  links_materiais: {
+    titulo: "Links e Materiais",
+    blocos: [
+      {
+        subtitulo: "O botão Emitir está desabilitado?",
+        texto:
+          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer na lista.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, contate o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
+        texto:
+          "O link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
+      },
+      {
+        subtitulo: "O UTM foi preenchido automaticamente com um nome errado?",
+        texto:
+          "O UTM é gerado a partir do nome artístico cadastrado no perfil do influencer. Se o nome artístico estiver desatualizado, atualize-o em Influencers (área de perfil) e volte para emitir. Você também pode editar o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
+      },
+      {
+        subtitulo: "O link já foi emitido mas não aparece na tela?",
+        texto:
+          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar o influencer na lista.",
+      },
+      {
+        subtitulo: "O QR Code não aparece após emitir?",
+        texto:
+          "As prévias dos QR Codes são geradas automaticamente após a emissão do link. Se o quadro de prévia mostrar apenas o placeholder por mais de 10 segundos, pode ter havido uma falha na geração da imagem. Recarregue a página — o link já estará salvo e as prévias serão geradas novamente.",
+      },
+      {
+        subtitulo: "Não consigo baixar o PNG do QR Code?",
+        texto:
+          "Verifique se o seu navegador está bloqueando downloads automáticos. Na maioria dos navegadores, um ícone aparece na barra de endereço quando um download é bloqueado — clique nele e permita o download desta página. Se o botão mostrar Gerando… por mais de 15 segundos sem baixar, recarregue a página e tente novamente.",
+      },
+      {
+        subtitulo: "Como gestor, não vejo nenhum influencer na lista?",
+        texto:
+          "A lista exibe apenas influencers dentro do seu escopo de visibilidade configurado na Gestão de Usuários. Se a lista estiver vazia, o seu escopo pode não incluir nenhum influencer ativo. Contate o administrador para revisar o seu escopo de acesso.",
+      },
+    ],
+  },
+  spin_na_rede: {
+    titulo: "Spin na Rede",
+    blocos: [
+      {
+        subtitulo: "A página não carrega ou fica em branco?",
+        texto:
+          "Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, faça logout e login novamente. Caso a Spin na Rede não apareça mais no menu, seu acesso à seção Conteúdo pode ter sido removido — contate o administrador.",
+      },
+      {
+        subtitulo: "Não aparece nenhuma menção mesmo com o agregador ativo?",
+        texto:
+          "A ausência de itens pode significar que nenhuma publicação passou pelo filtro de relevância ainda, ou que o agregador RSS ainda não foi configurado para o ambiente de produção. A mensagem na tela indica exatamente isso. Se você espera ver publicações recentes e elas não aparecem, informe o time técnico para verificar o status do agregador.",
+      },
+      {
+        subtitulo: "As miniaturas das matérias não aparecem?",
+        texto:
+          "Miniaturas são carregadas diretamente do site de origem e dependem da disponibilidade do servidor externo. Se a imagem não aparecer, o cartão continua funcional com título, texto e link — a miniatura é apenas visual e não afeta o acesso à matéria.",
+      },
+      {
+        subtitulo: "O link 'Ir para a matéria' não abre nada?",
+        texto:
+          "Verifique se o seu navegador está bloqueando popups ou novas abas desta página. Procure um ícone na barra de endereço indicando popup bloqueado e permita para este site. Se o link continuar sem resposta, a matéria original pode ter sido removida ou o URL alterado.",
+      },
+    ],
+  },
+  rh_portal: {
+    titulo: "Portal de RH",
+    blocos: [
+      {
+        subtitulo: "O portal não carrega os comunicados ou aparece em branco?",
+        texto:
+          "Verifique a conexão com a internet e recarregue a página. Se o erro persistir, faça logout e login novamente. Se a mensagem de erro aparecer em português indicando que não foi possível carregar, aguarde alguns minutos e tente novamente — pode ser uma instabilidade temporária do banco de dados.",
+      },
+      {
+        subtitulo: "Não consigo ver a aba Gerenciamento de Postagens?",
+        texto:
+          "A aba de Gerenciamento aparece apenas para usuários com permissão de Editar no Portal de RH. Se você precisa dessa permissão, contate o administrador para ativá-la em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "O botão 'Ver Ata' está desabilitado numa RH Talk?",
+        texto:
+          "Essa ata tem acesso restrito a participantes da reunião. Se você esteve presente na reunião mas não consegue ver, pode ser que o registro de participação não tenha sido feito. Informe ao RH para que adicionem seu usuário como participante.",
+      },
+      {
+        subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",
+        texto:
+          "O badge Novo desaparece após o clique quando a operação é registrada com sucesso. Se voltou após recarregar a página, pode ter ocorrido uma falha no registro. Tente clicar em Lido novamente. Se o problema persistir, contate o suporte.",
+      },
+      {
+        subtitulo: "Tentei publicar uma postagem mas deu erro?",
+        texto:
+          "Verifique se todos os campos obrigatórios (marcados com asterisco vermelho) estão preenchidos. Se todos estão preenchidos e o erro persiste, pode ser uma instabilidade temporária. Aguarde alguns segundos e tente novamente. Rascunhos são salvos mesmo que a publicação falhe — verifique na aba Gerenciamento se o rascunho foi salvo.",
+      },
+      {
+        subtitulo: "Uma postagem que aprovar não aparece na lista de publicados?",
+        texto:
+          "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, verifique o filtro de mês ativo — ela pode ter sido publicada em um mês diferente do selecionado. Mude o carrossel para o mês de publicação ou use a aba Gerenciamento com filtro Status: Publicado.",
+      },
+      {
+        subtitulo: "Não consigo arquivar uma postagem publicada?",
+        texto:
+          "O botão Arquivar exige dois cliques: o primeiro destaca o botão e exibe Confirmar?; o segundo executa a ação. Se você clicou fora do botão antes de confirmar, repita o processo.",
+      },
+      {
+        subtitulo: "O anexo ou imagem não abre ao clicar?",
+        texto:
+          "Os arquivos são abertos em uma nova aba. Verifique se o navegador está bloqueando novas abas desta página e permita o popup. Se o link mostrar 'Carregando…' por mais de 10 segundos, pode ser que o arquivo tenha sido removido do armazenamento. Informe ao responsável pela postagem.",
       },
     ],
   },
