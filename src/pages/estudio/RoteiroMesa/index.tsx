@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -6,11 +6,12 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield } from "lucide-react";
-import { GiNotebook } from "react-icons/gi";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield, Loader2, NotebookPen } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
@@ -152,6 +153,22 @@ const TIPO_ICON: Record<TipoSugestao, typeof FileText> = {
 const ROTEIRO_IDENT_COL = "min(108px, 30vw)";
 const ROTEIRO_TIPO_ICON_SIZE = 20;
 
+const CARD_SHADOW = (isDark: boolean) =>
+  isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+const MSG_ERRO_SALVAR_ROTEIRO =
+  "Não foi possível salvar o roteiro. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_SALVAR_CAMPANHA =
+  "Não foi possível salvar a campanha. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_CONVERSA_ROTEIRO =
+  "Não foi possível salvar o roteiro: falha ao abrir a conversa com o estúdio. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_MSG_ROTEIRO =
+  "Não foi possível salvar o roteiro: falha ao registrar a primeira mensagem. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_CONVERSA_CAMPANHA =
+  "Não foi possível salvar a campanha: falha ao abrir a conversa com o estúdio. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_MSG_CAMPANHA =
+  "Não foi possível salvar a campanha: falha ao registrar a primeira mensagem. Se o problema persistir, contate o suporte.";
+
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
 const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => string; border: string }> = {
   todos:     { bg: "rgba(74,32,130,0.12)",   color: (d) => d ? "#b08aee" : "#3a1868", border: "rgba(74,32,130,0.28)"   },
@@ -184,9 +201,11 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   onSalvo: () => void;
   podeVerOperadora: (slug: string) => boolean;
 }) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const dark = isDark ?? false;
+  const dark = t.isDark;
+  const labelTipoId = useId();
+  const labelJogosId = useId();
   const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
   const [tipo, setTipo] = useState<TipoSugestao>("script");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
@@ -218,8 +237,8 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
       .select("id")
       .single();
     if (error || !sugRow?.id) {
-      console.error("[RoteiroMesa] insert roteiro:", error?.message);
-      setErroSalvar(error?.message ?? "Não foi possível salvar o roteiro.");
+      console.error("[RoteiroMesa] Erro ao salvar roteiro:", error);
+      setErroSalvar(MSG_ERRO_SALVAR_ROTEIRO);
       setSaving(false);
       return;
     }
@@ -256,9 +275,9 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
         .single();
 
       if (errSol || !solRow?.id) {
-        console.error("[RoteiroMesa] insert solicitação roteiro mesa:", errSol?.message);
+        console.error("[RoteiroMesa] Erro ao abrir conversa do roteiro:", errSol);
         await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
-        setErroSalvar(errSol?.message ?? "Roteiro não foi salvo: falha ao abrir a conversa com o estúdio.");
+        setErroSalvar(MSG_ERRO_CONVERSA_ROTEIRO);
         setSaving(false);
         return;
       }
@@ -271,10 +290,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
       });
 
       if (errMsg) {
-        console.error("[RoteiroMesa] insert mensagem roteiro mesa:", errMsg.message);
+        console.error("[RoteiroMesa] Erro ao registrar mensagem do roteiro:", errMsg);
         await supabase.from("roteiro_mesa_solicitacoes").delete().eq("id", solRow.id);
         await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
-        setErroSalvar(errMsg.message ?? "Roteiro não foi salvo: falha ao registrar a primeira mensagem.");
+        setErroSalvar(MSG_ERRO_MSG_ROTEIRO);
         setSaving(false);
         return;
       }
@@ -311,30 +330,30 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
           </>
         )}
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+        <p id={labelTipoId} style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
           Tipo
           <CampoObrigatorioMark />
         </p>
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <div role="group" aria-labelledby={labelTipoId} style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {TIPOS.map(({ key, label }) => {
             const tcfg = TIPO_CONFIG[key];
             const isActive = tipo === key;
             return (
-              <button key={key} onClick={() => setTipo(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? tcfg.tagBorder : t.cardBorder}`, background: isActive ? tcfg.tagBg : "transparent", color: isActive ? tcfg.tagColor(dark) : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>{label}</button>
+              <button key={key} type="button" aria-pressed={isActive} onClick={() => setTipo(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? tcfg.tagBorder : t.cardBorder}`, background: isActive ? tcfg.tagBg : "transparent", color: isActive ? tcfg.tagColor(dark) : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>{label}</button>
             );
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+        <p id={labelJogosId} style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
           Jogos
           <CampoObrigatorioMark />
         </p>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+        <div role="group" aria-labelledby={labelJogosId} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
             const jcfg = JOGO_TAG_CONFIG[key];
             const isActive = jogos.includes(key);
             return (
-              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} />}{label}</button>
+              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
             );
           })}
         </div>
@@ -346,7 +365,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
 
         {erroSalvar ? (
-          <div role="alert" style={{ color: "#ef4444", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
+          <div role="alert" aria-live="polite" style={{ color: "#ef4444", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
             {erroSalvar}
           </div>
         ) : null}
@@ -355,9 +374,12 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
           <button
             type="button"
-            onClick={handleSalvar}
+            onClick={() => void handleSalvar()}
             disabled={!podeSalvar || saving}
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               padding: "8px 20px",
               borderRadius: 10,
               border: "none",
@@ -370,7 +392,14 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
               opacity: podeSalvar && !saving ? 1 : 0.55,
             }}
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? (
+              <>
+                <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+                Salvando...
+              </>
+            ) : (
+              "Salvar"
+            )}
           </button>
         </div>
     </ModalBase>
@@ -386,9 +415,10 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   onSalvo: (opts?: { solicitacaoId: string }) => void;
   podeVerOperadora: (slug: string) => boolean;
 }) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const dark = isDark ?? false;
+  const dark = t.isDark;
+  const labelJogosId = useId();
   const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
   const [titulo, setTitulo] = useState("");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
@@ -427,8 +457,8 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
       .select("id")
       .single();
     if (error || !campRow?.id) {
-      console.error("[RoteiroMesa] insert campanha:", error?.message);
-      setErroSalvar(error?.message ?? "Não foi possível salvar a campanha.");
+      console.error("[RoteiroMesa] Erro ao salvar campanha:", error);
+      setErroSalvar(MSG_ERRO_SALVAR_CAMPANHA);
       setSaving(false);
       return;
     }
@@ -463,9 +493,9 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
       .single();
 
     if (errSol || !solRow?.id) {
-      console.error("[RoteiroMesa] insert solicitação campanha:", errSol?.message);
+      console.error("[RoteiroMesa] Erro ao abrir conversa da campanha:", errSol);
       await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
-      setErroSalvar(errSol?.message ?? "Campanha não foi salva: falha ao abrir a conversa com o estúdio.");
+      setErroSalvar(MSG_ERRO_CONVERSA_CAMPANHA);
       setSaving(false);
       return;
     }
@@ -478,10 +508,10 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
     });
 
     if (errMsg) {
-      console.error("[RoteiroMesa] insert mensagem campanha:", errMsg.message);
+      console.error("[RoteiroMesa] Erro ao registrar mensagem da campanha:", errMsg);
       await supabase.from("roteiro_campanha_solicitacoes").delete().eq("id", solRow.id);
       await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
-      setErroSalvar(errMsg.message ?? "Campanha não foi salva: falha ao registrar a primeira mensagem.");
+      setErroSalvar(MSG_ERRO_MSG_CAMPANHA);
       setSaving(false);
       return;
     }
@@ -524,16 +554,16 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
         </label>
         <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder='Ex: "Cashback na Mesa X — Blaze"' style={{ ...inp, marginBottom: 18 }} />
 
-        <p style={lbl}>
+        <p id={labelJogosId} style={lbl}>
           Jogos
           <CampoObrigatorioMark />
         </p>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+        <div role="group" aria-labelledby={labelJogosId} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
             const jcfg = JOGO_TAG_CONFIG[key];
             const isActive = jogos.includes(key);
             return (
-              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} />}{label}</button>
+              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
             );
           })}
         </div>
@@ -557,7 +587,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
 
         {erroSalvar ? (
-          <p role="alert" style={{ margin: "0 0 14px", fontSize: 12, color: BRAND.vermelho, fontFamily: FONT.body }}>
+          <p role="alert" aria-live="polite" style={{ margin: "0 0 14px", fontSize: 12, color: BRAND.vermelho, fontFamily: FONT.body }}>
             {erroSalvar}
           </p>
         ) : null}
@@ -566,9 +596,12 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
           <button
             type="button"
-            onClick={handleSalvar}
+            onClick={() => void handleSalvar()}
             disabled={!podeSalvar || saving}
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
               padding: "8px 20px",
               borderRadius: 10,
               border: "none",
@@ -581,7 +614,14 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
               opacity: podeSalvar && !saving ? 1 : 0.55,
             }}
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? (
+              <>
+                <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+                Salvando...
+              </>
+            ) : (
+              "Salvar"
+            )}
           </button>
         </div>
     </ModalBase>
@@ -842,7 +882,7 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 
   return (
     <>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: CARD_SHADOW(dark) }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
@@ -852,8 +892,8 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
             </span>
           </div>
           {podeCriar && (
-            <button onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
-              <Plus size={12} /> Roteiro
+            <button type="button" onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+              <Plus size={12} aria-hidden /> Roteiro
             </button>
           )}
         </div>
@@ -905,7 +945,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
 
   return (
     <>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: CARD_SHADOW(dark) }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
@@ -965,13 +1005,14 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
-  const { theme: t, podeVerOperadora, isDark, user } = useApp();
+  const { theme: t, podeVerOperadora, user } = useApp();
   const brand = useDashboardBrand();
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("roteiro_mesa");
   /** Responder solicitações a partir do banner (mesma matriz da Central). */
   const permCentral = usePermission("central_notificacoes");
-  const dark = isDark ?? false;
+  const dark = t.isDark;
 
   const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; brand_action?: string | null }[]>([]);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
@@ -1027,7 +1068,7 @@ export default function RoteiroMesa() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar Roteiro de Mesa.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -1062,35 +1103,29 @@ export default function RoteiroMesa() {
         />
       ) : null}
 
-      {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <GiNotebook size={16} />
-          </span>
-          <h1 style={{
-            fontSize: 22, fontWeight: 800, color: brand.primary,
-            fontFamily: FONT_TITLE, margin: 0,
-            letterSpacing: "0.05em", textTransform: "uppercase",
-          }}>
-            Roteiro de Mesa
-          </h1>
-        </div>
-
-      </div>
+      <PageHeader
+        icon={<NotebookPen size={14} aria-hidden />}
+        title="Roteiro de Mesa"
+        subtitle="Scripts, orientações e campanhas por bloco e operadora."
+      />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            {/* Centro: Jogo + Tipo centralizados; Operadora à direita */}
-            <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap", flex: 1, justifyContent: "center" }}>
+          <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: narrowMobile ? "nowrap" : "wrap",
+              overflowX: narrowMobile ? "auto" : undefined,
+              paddingBottom: narrowMobile ? 4 : 0,
+              scrollbarWidth: "none",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: narrowMobile ? "nowrap" : "wrap", flex: 1, justifyContent: "center", minWidth: narrowMobile ? "max-content" : undefined }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogo</span>
                 {JOGOS.map(({ key, label }) => {
@@ -1115,9 +1150,7 @@ export default function RoteiroMesa() {
             {/* Direita: Operadora (só quando showFiltroOperadora; não aparece para perfil Operador) */}
             {mostrarFiltroOp && opcoesFiltro.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={15} aria-hidden />
-                </span>
+                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
                 <select
                   value={filtroOperadora}
                   onChange={(e) => setFiltroOperadora(e.target.value)}
@@ -1138,6 +1171,21 @@ export default function RoteiroMesa() {
               </div>
             )}
           </div>
+          {narrowMobile ? (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 4,
+                width: 28,
+                pointerEvents: "none",
+                background: `linear-gradient(to left, ${t.bg}, transparent)`,
+              }}
+            />
+          ) : null}
+          </div>
         </div>
       </div>
 
@@ -1156,7 +1204,10 @@ export default function RoteiroMesa() {
       {/* ── BLOCOS DE CONTEÚDO ── */}
       {operadoraSlugSelecionada && (
         loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>Carregando...</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+            <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+            Carregando roteiros...
+          </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <BlocoCampanhas

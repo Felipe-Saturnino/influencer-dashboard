@@ -332,7 +332,8 @@ export function ModalThreadSolicitacao({
         texto: tx,
       });
       if (e1) {
-        setErr(e1.message ?? "Erro ao enviar.");
+        console.error("[ModalThreadSolicitacao] Erro ao enviar mensagem:", e1);
+        setErr("Não foi possível enviar a mensagem. Se o problema persistir, contate o suporte.");
         return;
       }
       const { error: e2 } = await supabase
@@ -342,7 +343,10 @@ export function ModalThreadSolicitacao({
           aguarda_resposta_de: proximoAguarda,
         })
         .eq("id", solicitacaoId);
-      if (e2) setErr(e2.message ?? "Mensagem enviada, mas falhou ao atualizar status.");
+      if (e2) {
+        console.error("[ModalThreadSolicitacao] Erro ao atualizar status:", e2);
+        setErr("A mensagem foi enviada, mas não foi possível atualizar o status. Se o problema persistir, contate o suporte.");
+      }
       setTexto("");
       await carregar();
     } finally {
@@ -364,7 +368,8 @@ export function ModalThreadSolicitacao({
         })
         .eq("id", solicitacaoId);
       if (error) {
-        setErr(error.message ?? "Erro ao resolver.");
+        console.error("[ModalThreadSolicitacao] Erro ao resolver:", error);
+        setErr("Não foi possível marcar como resolvido. Se o problema persistir, contate o suporte.");
         return;
       }
       onResolvido?.();

@@ -21,6 +21,7 @@ import {
   Spade,
   Crown,
   Loader2,
+  Star,
 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
@@ -62,20 +63,23 @@ function normalizarBuscaTexto(s: string): string {
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
-  feminino: <User size={13} aria-hidden strokeWidth={2.2} />,
-  masculino: <Users size={13} aria-hidden strokeWidth={2.2} />,
+  feminino: <User size={13} aria-hidden />,
+  masculino: <Users size={13} aria-hidden />,
 };
 
 const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
-  blackjack: <Spade size={13} aria-hidden strokeWidth={2.2} />,
-  roleta: <CircleDot size={13} aria-hidden strokeWidth={2.2} />,
-  baccarat: <Crown size={13} aria-hidden strokeWidth={2.2} />,
+  blackjack: <Spade size={13} aria-hidden />,
+  roleta: <CircleDot size={13} aria-hidden />,
+  baccarat: <Crown size={13} aria-hidden />,
 };
+
+const CARD_SHADOW = (isDark: boolean) =>
+  isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GestaoDealers() {
-  const { theme: t, user, podeVerOperadora, isDark } = useApp();
+  const { theme: t, user, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
@@ -244,7 +248,7 @@ export default function GestaoDealers() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -253,7 +257,7 @@ export default function GestaoDealers() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <PageHeader
-        icon={<Users size={14} aria-hidden strokeWidth={2.2} />}
+        icon={<Users size={14} aria-hidden />}
         title="Gestão de Dealers"
         subtitle="Elenco sincronizado a partir da Gestão de Staff quando o time é Game Presenter."
       />
@@ -283,34 +287,6 @@ export default function GestaoDealers() {
             </span>
             <button type="button" aria-label="Próximo turno" onClick={irTurnoProximo} style={btnNavTurnoStyle}>
               <ChevronRight size={14} />
-            </button>
-            <button
-              type="button"
-              aria-pressed={filtroTurno === "todos"}
-              onClick={() => setFiltroTurno("todos")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 12px",
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 12,
-                border:
-                  filtroTurno === "todos"
-                    ? `1px solid ${brand.accent}`
-                    : `1px solid ${t.cardBorder}`,
-                background:
-                  filtroTurno === "todos"
-                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
-                    : "transparent",
-                color: filtroTurno === "todos" ? brand.accent : t.textMuted,
-                fontWeight: filtroTurno === "todos" ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              Todos os turnos
             </button>
             {showFiltroOperadora && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -342,14 +318,14 @@ export default function GestaoDealers() {
             borderRadius: 16,
             padding: "14px 18px",
             marginBottom: 24,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            boxShadow: CARD_SHADOW(t.isDark),
           }}
         >
-          <div style={{ flex: "1 1 220px", minHeight: 118, borderRadius: 12, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }} />
+          <div style={{ flex: "1 1 220px", minHeight: 118, borderRadius: 12, background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }} />
           <div style={{ flex: "2 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10, justifyContent: "center" }}>
-            <div style={{ height: 14, width: "55%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
-            <div style={{ height: 14, width: "80%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
-            <div style={{ height: 36, width: "100%", borderRadius: 999, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+            <div style={{ height: 14, width: "55%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+            <div style={{ height: 14, width: "80%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+            <div style={{ height: 36, width: "100%", borderRadius: 999, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
           </div>
         </div>
       ) : null}
@@ -364,7 +340,7 @@ export default function GestaoDealers() {
           borderRadius: 16,
           padding: "14px 18px",
           marginBottom: 24,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          boxShadow: CARD_SHADOW(t.isDark),
         }}>
           <div style={{
             flex: "1 1 220px",
@@ -510,10 +486,10 @@ export default function GestaoDealers() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
-              <div style={{ aspectRatio: "16/10", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+              <div style={{ aspectRatio: "16/10", background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
               <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ height: 18, width: "60%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
-                <div style={{ height: 12, width: "40%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+                <div style={{ height: 18, width: "60%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+                <div style={{ height: 12, width: "40%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
               </div>
             </div>
           ))}
@@ -534,7 +510,6 @@ export default function GestaoDealers() {
               key={d.id}
               dealer={d}
               operadoras={operadoras}
-              brand={brand}
               onVer={() => setModalVer(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               onHistoricoSolicitacoes={
@@ -617,8 +592,8 @@ function DealerFotoCarrossel({
     top: "50%",
     transform: "translateY(-50%)",
     zIndex: 4,
-    width: 32,
-    height: 32,
+    width: "min(40px, 10vw)",
+    height: "min(40px, 10vw)",
     borderRadius: "50%",
     border: "none",
     background: "rgba(0,0,0,0.45)",
@@ -648,7 +623,7 @@ function DealerFotoCarrossel({
             }}
             style={{ ...navBtn, left: 6 }}
           >
-            <ChevronLeft size={18} strokeWidth={2.2} aria-hidden />
+            <ChevronLeft size={18} aria-hidden />
           </button>
           <button
             type="button"
@@ -659,7 +634,7 @@ function DealerFotoCarrossel({
             }}
             style={{ ...navBtn, right: 6 }}
           >
-            <ChevronRight size={18} strokeWidth={2.2} aria-hidden />
+            <ChevronRight size={18} aria-hidden />
           </button>
           <div
             style={{
@@ -691,21 +666,20 @@ function DealerFotoCarrossel({
 function DealerCard({
   dealer,
   operadoras,
-  brand,
   onVer,
   onSolicitar,
   onHistoricoSolicitacoes,
 }: {
   dealer: Dealer;
   operadoras: Operadora[];
-  brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
   /** Lista de solicitações do dealer (Central); ver permissão na página pai. */
   onHistoricoSolicitacoes?: () => void;
 }) {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
@@ -717,7 +691,7 @@ function DealerCard({
       border: `1px solid ${t.cardBorder}`,
       borderRadius: 18,
       overflow: "hidden",
-      boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+      boxShadow: CARD_SHADOW(t.isDark),
       display: "flex",
       flexDirection: "column",
       height: "100%",
@@ -750,7 +724,9 @@ function DealerCard({
             <span style={{ background: "#f59e0b", color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>PENDENTE</span>
           )}
           {dealer.vip && (
-            <span style={{ background: BRAND.amarelo, color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>★ VIP</span>
+            <span style={{ background: BRAND.amarelo, color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Star size={10} aria-hidden /> VIP
+            </span>
           )}
         </div>
         <div style={{ position: "absolute", bottom: 10, left: 10 }}>
@@ -922,7 +898,7 @@ function ModalHistoricoSolicitacoesDealer({
       </p>
       {solLoading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
-          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
       ) : solicitacoes.length === 0 ? (
         <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>

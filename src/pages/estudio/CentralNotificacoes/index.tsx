@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, type CSSProperties } from "react";
-import { Calendar, CheckCircle, ChevronLeft, ChevronRight, FileText, Megaphone, Inbox, Shield, Bell, Layers, Loader2 } from "lucide-react";
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Shield, Bell, Layers } from "lucide-react";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -168,7 +169,7 @@ const ABAS_STAFF: AbaStaff[] = ["troca", "feedback", "campanha_roteiro", "roteir
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
 }
 
 function listaSolicSkeleton(cardShell: CSSProperties, t: ReturnType<typeof useApp>["theme"]) {
@@ -251,6 +252,7 @@ function mergeRoteiroMesaSolicLista(
 export default function CentralNotificacoes() {
   const { theme: t, podeVerOperadora, user } = useApp();
   const brand = useDashboardBrand();
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("central_notificacoes");
   const pendentesGestor = usePendenciasCount("gestor");
@@ -1016,7 +1018,7 @@ export default function CentralNotificacoes() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -1024,7 +1026,7 @@ export default function CentralNotificacoes() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
-        icon={<Bell size={14} aria-hidden strokeWidth={2.2} />}
+        icon={<Bell size={14} aria-hidden />}
         title="Central de Notificações"
         subtitle={
           verInboxEstudio && pendentesGestor > 0
@@ -1076,13 +1078,11 @@ export default function CentralNotificacoes() {
                 cursor: "pointer",
                 fontFamily: FONT.body,
                 fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
-                color: historico ? brand.accent : t.textMuted,
+                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -1093,9 +1093,7 @@ export default function CentralNotificacoes() {
 
             {showFiltroOperadora && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={15} aria-hidden />
-                </span>
+                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
                 <select
                   value={filtroOperadora}
                   onChange={(e) => setFiltroOperadora(e.target.value)}
@@ -1117,9 +1115,9 @@ export default function CentralNotificacoes() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
-                <Loader2 size={14} className="app-lucide-spin" aria-hidden />
-                Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }}>
+                <Clock size={12} aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -1129,9 +1127,27 @@ export default function CentralNotificacoes() {
       {verInboxEstudio ? (
         <>
           <div
+            style={{
+              position: "relative",
+              marginBottom: 20,
+              ...(narrowMobile
+                ? {
+                    overflow: "hidden",
+                  }
+                : {}),
+            }}
+          >
+          <div
             role="tablist"
             aria-label="Inbox da Central"
-            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: narrowMobile ? "nowrap" : "wrap",
+              overflowX: narrowMobile ? "auto" : undefined,
+              paddingBottom: narrowMobile ? 4 : 0,
+              scrollbarWidth: "none",
+            }}
             onKeyDown={(e) => {
               const idx = ABAS_STAFF.indexOf(abaStaff);
               if (e.key === "ArrowRight") {
@@ -1151,6 +1167,7 @@ export default function CentralNotificacoes() {
               id="tab-central-troca"
               aria-controls="panel-central-troca"
               tabIndex={abaStaff === "troca" ? 0 : -1}
+              aria-label={badgeTroca > 0 ? `Troca de dealer, ${badgeTroca} solicitações pendentes` : "Troca de dealer"}
               onClick={() => setAbaStaff("troca")}
               style={chipTab(abaStaff === "troca")}
             >
@@ -1179,6 +1196,7 @@ export default function CentralNotificacoes() {
               id="tab-central-feedback"
               aria-controls="panel-central-feedback"
               tabIndex={abaStaff === "feedback" ? 0 : -1}
+              aria-label={badgeFb > 0 ? `Feedbacks, ${badgeFb} solicitações pendentes` : "Feedbacks"}
               onClick={() => setAbaStaff("feedback")}
               style={chipTab(abaStaff === "feedback")}
             >
@@ -1206,6 +1224,7 @@ export default function CentralNotificacoes() {
               id="tab-central-campanha-roteiro"
               aria-controls="panel-central-campanha-roteiro"
               tabIndex={abaStaff === "campanha_roteiro" ? 0 : -1}
+              aria-label={badgeCampRoteiro > 0 ? `Campanhas, ${badgeCampRoteiro} solicitações pendentes` : "Campanhas"}
               onClick={() => setAbaStaff("campanha_roteiro")}
               style={chipTab(abaStaff === "campanha_roteiro")}
             >
@@ -1234,6 +1253,7 @@ export default function CentralNotificacoes() {
               id="tab-central-roteiro-mesa"
               aria-controls="panel-central-roteiro-mesa"
               tabIndex={abaStaff === "roteiro_mesa" ? 0 : -1}
+              aria-label={badgeMesaRoteiro > 0 ? `Roteiros, ${badgeMesaRoteiro} solicitações pendentes` : "Roteiros"}
               onClick={() => setAbaStaff("roteiro_mesa")}
               style={chipTab(abaStaff === "roteiro_mesa")}
             >
@@ -1255,6 +1275,21 @@ export default function CentralNotificacoes() {
                 </span>
               ) : null}
             </button>
+          </div>
+          {narrowMobile ? (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 4,
+                width: 28,
+                pointerEvents: "none",
+                background: `linear-gradient(to left, ${t.bg}, transparent)`,
+              }}
+            />
+          ) : null}
           </div>
 
           {abaStaff === "troca" ? (
@@ -1339,7 +1374,7 @@ export default function CentralNotificacoes() {
                               fontWeight: 600,
                             }}
                           >
-                            <Layers size={12} aria-hidden strokeWidth={2.2} />
+                            <Layers size={12} aria-hidden />
                             {labelJogosRoteiro(c.jogos as string[] | undefined)}
                           </span>
                         </div>

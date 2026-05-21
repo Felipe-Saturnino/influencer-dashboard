@@ -630,6 +630,73 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "estudio",
+    label: "Estúdio",
+    accentColor: "#a78bfa",
+    termos: [
+      {
+        termo: "Dealer",
+        definicao:
+          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat), turno, gênero, fotos e operadora vinculada.",
+        referencia: "Gestão de Dealers",
+      },
+      {
+        termo: "Bloco de Roteiro",
+        definicao:
+          "Segmento fixo do Roteiro de Mesa — Abertura, Durante o jogo ou Fechamento — onde ficam scripts, orientações e alertas aplicáveis àquela fase da live.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Script",
+        definicao:
+          "Tipo de sugestão de roteiro com texto falado ou roteirizado para o dealer seguir na mesa. Identificado visualmente no card do bloco.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Orientação",
+        definicao:
+          "Tipo de sugestão com instruções de conduta ou foco para o dealer durante a sessão, sem necessariamente ser texto literal a ser lido.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Alerta",
+        definicao:
+          "Tipo de sugestão de destaque ou aviso pontual no roteiro (compliance, promoção, mudança de regra) exibido no bloco correspondente.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Troca de Dealer",
+        definicao:
+          "Solicitação enviada pela operadora ao estúdio para substituir ou revisar o dealer de uma mesa. Fluxo tratado na Central de Notificações e iniciado na Gestão de Dealers.",
+        referencia: "Gestão de Dealers · Central de Notificações",
+      },
+      {
+        termo: "Peça de Figurino",
+        definicao:
+          "Item de vestuário ou acessório cadastrado no acervo da plataforma, identificado por um código único (ex: FIG-000003) e código de barras para rastreamento físico.",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Retirada (Figurino)",
+        definicao:
+          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestar (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida).",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Condição da Peça",
+        definicao:
+          "Estado físico de uma peça de figurino. Valores possíveis: Boa (pronta para uso), Avariada (danos visíveis) e Limpeza (necessita lavagem).",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Etiqueta de Figurino",
+        definicao:
+          "PDF com código de barras e informações da peça gerado no cadastro ou nos detalhes. Serve para identificação física e bipagem com câmera ou leitor externo.",
+        referencia: "Figurinos",
+      },
+    ],
+  },
+  {
     key: "marketing_digital",
     label: "Marketing Digital",
     accentColor: "#70cae4",

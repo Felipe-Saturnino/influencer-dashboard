@@ -431,7 +431,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas para navegar entre os turnos ou clique em 'Todos os turnos' para limpar o filtro.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
       },
       {
         subtitulo: "Cards de Dealers",
@@ -465,7 +465,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre meses ou ative Histórico para ver todas as solicitações desde o início da operação. No modo Histórico, as setas ficam desabilitadas.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando...' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
+          "Use as setas para navegar entre meses ou ative Histórico para ver todas as solicitações desde o início da operação. No modo Histórico, as setas ficam desabilitadas.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando…' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
       },
       {
         subtitulo: "Inbox do Estúdio — perfil Gestor",
@@ -494,7 +494,37 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Gestão do acervo de figurinos do estúdio: cadastro de peças por categoria e cor, vinculação a operadoras, controle de estoque por status (disponível, em uso, manutenção, descartado) e rastreio de movimentações — entrega, devolução, descarte e ajustes.\n\nUse filtros por categoria, status e operadora, e a busca por nome ou código interno. Conforme permissão, é possível registrar movimentações em lote, anexar fotos e gerar etiquetas para identificação física das peças.",
+          "A página de Figurinos gerencia o estoque de peças de roupa e acessórios utilizados pelos dealers nas transmissões. Permite cadastrar peças, registrar retiradas e devoluções, controlar manutenções e gerar etiquetas com código de barras para identificação física.",
+      },
+      {
+        subtitulo: "Filtros e Consolidado",
+        texto:
+          "Use os filtros de operadora, categoria e tamanho para restringir o inventário visualizado. O painel Consolidado exibe em tempo real a contagem de peças por status: disponíveis (verde), emprestadas (amarelo), fixas (azul) e em manutenção (roxo). Esses números refletem os filtros ativos.",
+      },
+      {
+        subtitulo: "Abas de Inventário",
+        texto:
+          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, categoria, operadora ou nome de quem realizou a retirada.",
+      },
+      {
+        subtitulo: "Bipar Código",
+        texto:
+          "O botão Bipar código abre um leitor de câmera para escanear o código de barras impresso na etiqueta da peça. Também é possível digitar o código manualmente. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
+      },
+      {
+        subtitulo: "Cadastrar Peça",
+        texto:
+          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema. Selecione as operadoras vinculadas à peça (pode ser mais de uma), a categoria, o tamanho e a data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
+      },
+      {
+        subtitulo: "Retirada e Devolução",
+        texto:
+          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestar (temporário) ou Fixo (uso contínuo).\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
+      },
+      {
+        subtitulo: "Manutenção e Descarte",
+        texto:
+          "Peças disponíveis podem ser enviadas para manutenção diretamente, sem passar por retirada. Tipos disponíveis: Costura, Lavagem, Perda e Descarte. Costura e Lavagem mantêm o status de manutenção; Perda e Descarte movem a peça para Descartada.\n\nPeças em manutenção podem ser Disponibilizadas (voltam ao estoque) ou Descartadas.",
       },
       {
         subtitulo: "Permissões",
@@ -508,12 +538,27 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Cadastro de blocos de roteiro ao vivo, materiais por operadora e campanhas com período de vigência. As campanhas vinculadas aparecem para operadores na Central de Notificações; dúvidas e ajustes seguem pelo fluxo de solicitações e threads entre operadora e estúdio.",
+          "Repositório de materiais ao vivo por operadora: campanhas com vigência e blocos de roteiro (Abertura, Durante o jogo e Fechamento) com scripts, orientações e alertas. O conteúdo alimenta a Central de Notificações — operadores veem campanhas vigentes e podem abrir conversas com o estúdio quando há solicitação vinculada.",
+      },
+      {
+        subtitulo: "Filtros e operadora",
+        texto:
+          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+      },
+      {
+        subtitulo: "Campanhas",
+        texto:
+          "O bloco Campanhas no topo reúne ações promocionais com título, texto, jogos aplicáveis e período de início/fim. Campanhas ativas no período aparecem para operadores na Central (badge VIGENTE). Gestores com permissão de criação usam '+ Campanha' para cadastrar; exclusão exige permissão de exclusão.\n\nAo criar ou editar, é possível abrir uma thread de solicitação com o estúdio — o fluxo segue o mesmo padrão da Central de Notificações.",
+      },
+      {
+        subtitulo: "Blocos de roteiro",
+        texto:
+          "Três blocos fixos organizam o material:\n\n— Abertura: scripts e orientações de boas-vindas e aquecimento da mesa.\n— Durante o jogo: conteúdo para o miolo da sessão (tendências, foco no jogo, dicas).\n— Fechamento: encerramento, ultimato e mensagens de despedida.\n\nEm cada bloco, '+ Roteiro' abre o formulário de nova sugestão. Tipos Script, Orientação e Alerta definem o estilo visual do card. Tags de jogo indicam em quais mesas o material se aplica.\n\nOperadores com pendências de campanha podem ver o banner amarelo (quando aplicável) e abrir a conversa diretamente.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários para a página Roteiro de Mesa. Sem permissão de edição, use a navegação em modo consulta quando disponível.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem de can_criar, can_editar e can_excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
       },
     ],
   },
@@ -1134,19 +1179,39 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Figurinos",
     blocos: [
       {
-        subtitulo: "Não encontro uma peça na listagem?",
+        subtitulo: "A câmera não abre ao clicar em Bipar código?",
         texto:
-          "Verifique filtros ativos (categoria, status, operadora) e o texto de busca — eles se combinam. Limpe os filtros ou amplie a busca. Peças descartadas podem estar ocultas conforme o filtro de status.",
+          "O navegador precisa de permissão para acessar a câmera. Verifique se a permissão foi concedida — na barra do navegador deve aparecer um ícone de câmera. Se negado, recarregue a página e permita o acesso quando solicitado. Em dispositivos sem câmera, use o campo de texto manual abaixo do leitor para digitar o código.",
+      },
+      {
+        subtitulo: "O código bipado retornou 'não reconhecido'?",
+        texto:
+          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. Certifique-se de que o código começa com 'FIG-' (ex: FIG-000003). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
+      },
+      {
+        subtitulo: "O prestador não aparece na lista de retirada?",
+        texto:
+          "A lista de prestadores vem da página Gestão de Prestadores e exibe apenas funcionários com status Ativo ou Indisponível. Se o prestador não aparece, verifique se ele está cadastrado e ativo na Gestão de Prestadores. Funcionários com status Inativo ou Desligado não são exibidos.",
+      },
+      {
+        subtitulo: "Os botões Retirada e Manutenção não aparecem na tabela?",
+        texto:
+          "Esses botões exigem permissão de edição na página Figurinos. Se você não os vê, sua conta está configurada apenas para visualização. Solicite ao administrador a liberação de permissão de edição.",
+      },
+      {
+        subtitulo: "A peça está na aba errada ou não aparece?",
+        texto:
+          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em 'Todas as operadoras', 'Todas as categorias' e 'Todos os tamanhos' para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
+      },
+      {
+        subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
+        texto:
+          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex: FIG-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
       },
       {
         subtitulo: "Não consigo registrar uma movimentação?",
         texto:
-          "Confirme permissão de edição para Figurinos em Gestão de Usuários. Alguns status de peça bloqueiam certas ações (por exemplo, descarte definitivo). Se aparecer mensagem de erro do servidor, verifique se todos os campos obrigatórios do formulário foram preenchidos.",
-      },
-      {
-        subtitulo: "A etiqueta PDF não gera ou fica em branco?",
-        texto:
-          "Verifique bloqueador de pop-ups no navegador. Confirme que a peça tem dados mínimos (nome/código) para o layout da etiqueta. Tente outro navegador ou recarregue a página.",
+          "Confirme permissão de edição para Figurinos em Gestão de Usuários. Alguns status de peça bloqueiam certas ações (por exemplo, descarte definitivo). Verifique campos obrigatórios do formulário. A interface exibe mensagens genéricas em português — detalhes técnicos ficam no console do navegador para suporte.",
       },
     ],
   },
@@ -1154,14 +1219,29 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Roteiro de Mesa",
     blocos: [
       {
+        subtitulo: "Não vejo nenhum bloco de conteúdo?",
+        texto:
+          "É necessário selecionar uma operadora na barra de filtros (perfis com múltiplas operadoras). Sem seleção, a página exibe apenas a orientação para escolher a operadora.\n\nSe a operadora já está selecionada e os blocos continuam vazios, confirme permissão de visualização e se há campanhas ou sugestões cadastradas para aquela operadora.",
+      },
+      {
         subtitulo: "A campanha não aparece na Central de Notificações?",
         texto:
-          "Confirme operadora, datas de início/fim e permissões. A Central filtra por escopo; campanhas fora do período podem exigir modo Histórico na Central.",
+          "Confirme operadora, datas de início/fim e permissões. A Central filtra por escopo; campanhas fora do período podem exigir modo Histórico na Central.\n\nA campanha precisa estar ativa no intervalo selecionado na Central e vinculada à operadora do escopo do operador.",
+      },
+      {
+        subtitulo: "Filtros de jogo ou tipo escondem itens?",
+        texto:
+          "Os filtros Jogo e Tipo aplicam-se às sugestões dos blocos Abertura, Durante o jogo e Fechamento — não ao bloco Campanhas. Volte Jogo e Tipo para 'Todos' para ver o conjunto completo de roteiros do bloco.",
       },
       {
         subtitulo: "Erro ao salvar bloco ou campanha?",
         texto:
-          "Verifique campos obrigatórios e conexão. Se o erro persistir, copie a mensagem exibida e valide no Supabase (RLS, policies e RPC) com o administrador.",
+          "Verifique campos obrigatórios (título, texto, operadora, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
+      },
+      {
+        subtitulo: "Não consigo excluir uma sugestão ou campanha?",
+        texto:
+          "A exclusão exige permissão can_excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
       },
     ],
   },

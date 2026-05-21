@@ -13,7 +13,7 @@ export function filtraFuncionariosParaLoginEmail(rows: RhFuncionario[], loginEma
 
 /**
  * IDs em `rh_funcionarios` ligados ao login atual — mesmo critério que Dados de Cadastro / sync prestador.
- * Usado p.ex. em Figurinos (permissão «Próprios») para casar `borrower_ref` da retirada.
+ * Usado p.ex. em Figurinos (`src/pages/estudio/Figurinos`, permissão «Próprios») para casar `borrower_ref` da retirada.
  */
 export async function buscarRhFuncionarioIdsPorEmailLogin(emailRaw: string | null | undefined): Promise<string[]> {
   const emailNorm = emailRaw?.trim();
