@@ -7,32 +7,33 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
-import { Link2, EyeOff, RotateCcw, AlertCircle, Shield } from "lucide-react";
-import { GiLinkedRings } from "react-icons/gi";
+import { Link2, EyeOff, RotateCcw, AlertCircle, Shield, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
+import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
+const COR = {
   vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
+  ciano: "#70cae4",
+  verde: "#22c55e",
 } as const;
+
+function ctaGradient(useBrand: boolean): string {
+  return useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+}
+
+const MSG_ERRO_MAPEAR =
+  "Não foi possível mapear o link. Se o problema persistir, contate o suporte.";
 
 function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
   if (alias.ggr != null) return alias.ggr;
   return (alias.total_deposit ?? 0) - (alias.total_withdrawal ?? 0);
-}
-
-function fmt(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function fmtData(iso: string): string {
@@ -46,8 +47,10 @@ interface CampanhaOpcao { id: string; nome: string; ativo: boolean; }
 type Aba = "pendentes" | "mapeados" | "ignorados";
 type TipoMapeamento = "influencer" | "campanha";
 
+const ABAS_LIST: Aba[] = ["pendentes", "mapeados", "ignorados"];
+
 export default function GestaoLinks() {
-  const { theme, user, podeVerInfluencer, isDark } = useApp();
+  const { theme: t, user, podeVerInfluencer } = useApp();
   const brand = useDashboardBrand();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const hideDepGgr = narrowMobile;
@@ -88,7 +91,7 @@ export default function GestaoLinks() {
     | "map";
   const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
-  const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   function fecharModalLimpo() {
     setModalAberto(false);
@@ -172,7 +175,12 @@ export default function GestaoLinks() {
       : { campanha_id: idSelecionado, influencer_id: null, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
 
     const { error } = await supabase.from("utm_aliases").update(updatePayload).eq("id", aliasSelecionado.id);
-    if (error) { setSalvando(false); setErroModal(`Erro ao salvar: ${error.message}`); return; }
+    if (error) {
+      console.error("[GestaoLinks] Erro ao salvar mapeamento:", error);
+      setSalvando(false);
+      setErroModal(MSG_ERRO_MAPEAR);
+      return;
+    }
 
     // RPC: copia utm_metricas_diarias → influencer_metricas (apenas para mapeamento influencer)
     let linhasCopiadas = 0;
@@ -224,21 +232,9 @@ export default function GestaoLinks() {
     if (!error) carregar();
   }
 
-  // ─── Estilos ──────────────────────────────────────────────────────────────
-  // th e td sem whiteSpace nowrap — cada coluna controla individualmente
-  const th: React.CSSProperties = {
-    textAlign: "left", padding: "10px 14px", color: theme.textMuted,
-    fontWeight: 700, fontSize: 11, textTransform: "uppercase",
-    letterSpacing: "0.08em", fontFamily: FONT.body,
-    background: brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 12%, transparent)" : "rgba(74,32,130,0.10)", borderBottom: `1px solid ${theme.cardBorder}`,
-  };
-  const td: React.CSSProperties = {
-    padding: "12px 14px", color: theme.text, fontFamily: FONT.body,
-    fontSize: 13, verticalAlign: "middle",
-    borderBottom: `1px solid ${theme.cardBorder}`,
-    whiteSpace: "nowrap", // colunas numéricas e de data não quebram
-  };
-  const tdMuted: React.CSSProperties = { ...td, color: theme.textMuted, fontSize: 12 };
+  const th = getThStyle(t);
+  const td = getTdStyle(t);
+  const tdMuted: React.CSSProperties = { ...td, color: t.textMuted, fontSize: 12, whiteSpace: "nowrap" };
   // coluna UTM Source: permite quebra, tem maxWidth
   const tdUtm: React.CSSProperties = {
     ...td,
@@ -324,26 +320,30 @@ export default function GestaoLinks() {
     1;
 
   if (perm.canView === "nao") {
-    return <div style={{ padding: 24, textAlign: "center", color: theme.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a Gestão de Links.</div>;
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar esta página.
+      </div>
+    );
   }
 
   return (
     <div className="app-page-shell">
 
       <PageHeader
-        icon={<GiLinkedRings size={14} aria-hidden />}
+        icon={<Link2 size={14} aria-hidden />}
         title="Gestão de Links"
         subtitle="Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer."
         actions={
           totalPendentes > 0 ? (
-            <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+            <span style={{ background: COR.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
               {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
             </span>
           ) : undefined
         }
       />
 
-      <div style={{ marginTop: 12, marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: `${BRAND.ciano}15`, border: `1px solid ${BRAND.ciano}40`, fontSize: 12, color: theme.text, fontFamily: FONT.body }}>
+      <div style={{ marginTop: 12, marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: `${COR.ciano}15`, border: `1px solid ${COR.ciano}40`, fontSize: 12, color: t.text, fontFamily: FONT.body }}>
         Ao mapear um link, os dados históricos são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.
       </div>
 
@@ -351,17 +351,23 @@ export default function GestaoLinks() {
         <div style={{ marginBottom: 18 }}>
           <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={13} aria-hidden style={{ position: "absolute", left: 10, color: theme.textMuted, pointerEvents: "none" }} />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <Shield size={13} aria-hidden style={{ position: "absolute", left: 10, color: t.textMuted, pointerEvents: "none" }} />
                 <select
+                  aria-label="Filtrar por operadora"
                   value={operadoraFiltro}
                   onChange={(e) => setOperadoraFiltro(e.target.value)}
                   style={{
                     padding: "6px 14px 6px 30px",
                     borderRadius: 999,
-                    border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : theme.cardBorder}`,
-                    background: theme.inputBg ?? theme.cardBg,
-                    color: operadoraFiltro !== "todas" ? brand.accent : theme.textMuted,
+                    border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : t.cardBorder}`,
+                    background:
+                      operadoraFiltro !== "todas"
+                        ? brand.useBrand
+                          ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                          : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
+                        : (t.inputBg ?? t.cardBg),
+                    color: operadoraFiltro !== "todas" ? brand.accent : t.textMuted,
                     fontSize: 13,
                     fontWeight: operadoraFiltro !== "todas" ? 700 : 400,
                     fontFamily: FONT.body,
@@ -375,46 +381,134 @@ export default function GestaoLinks() {
                     <option key={op.slug} value={op.slug}>{op.nome}</option>
                   ))}
                 </select>
-              </span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <div role="tablist" aria-label="Status dos links" style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
-        {(["pendentes", "mapeados", "ignorados"] as Aba[]).map((a) => {
+      <div
+        role="tablist"
+        aria-label="Status dos links"
+        style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}
+        onKeyDown={(e) => {
+          const idx = ABAS_LIST.indexOf(aba);
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            const next = ABAS_LIST[(idx + 1) % ABAS_LIST.length];
+            setAba(next);
+            (e.currentTarget.querySelector(`[data-aba="${next}"]`) as HTMLElement)?.focus();
+          }
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            const prev = ABAS_LIST[(idx - 1 + ABAS_LIST.length) % ABAS_LIST.length];
+            setAba(prev);
+            (e.currentTarget.querySelector(`[data-aba="${prev}"]`) as HTMLElement)?.focus();
+          }
+        }}
+      >
+        {ABAS_LIST.map((a) => {
           const ativa = aba === a;
+          const tabBgAtiva = brand.useBrand
+            ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+            : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
           return (
-            <button key={a} type="button" role="tab" aria-selected={ativa} onClick={() => setAba(a)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, cursor: "pointer", border: `1px solid ${ativa ? brand.accent : theme.cardBorder}`, background: ativa ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (theme.inputBg ?? theme.cardBg), color: ativa ? brand.accent : theme.textMuted, fontSize: 13, fontWeight: ativa ? 700 : 400, fontFamily: FONT.body, transition: "all 0.15s" }}>
+            <button
+              key={a}
+              id={`tab-${a}`}
+              type="button"
+              data-aba={a}
+              role="tab"
+              aria-selected={ativa}
+              aria-controls={`painel-${a}`}
+              tabIndex={ativa ? 0 : -1}
+              onClick={() => setAba(a)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 16px",
+                borderRadius: 20,
+                cursor: "pointer",
+                border: `1px solid ${ativa ? brand.accent : t.cardBorder}`,
+                background: ativa ? tabBgAtiva : (t.inputBg ?? t.cardBg),
+                color: ativa ? brand.accent : t.textMuted,
+                fontSize: 13,
+                fontWeight: ativa ? 700 : 400,
+                fontFamily: FONT.body,
+                transition: "all 0.15s",
+              }}
+            >
               {a.charAt(0).toUpperCase() + a.slice(1)}
               {a === "pendentes" && totalPendentes > 0 && (
-                <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "0px 6px", fontSize: 10, fontWeight: 700 }}>{totalPendentes}</span>
+                <span
+                  style={{
+                    background: COR.vermelho,
+                    color: "#fff",
+                    borderRadius: 10,
+                    padding: "0px 6px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {totalPendentes}
+                </span>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* ─── Tabela ──────────────────────────────────────────────────────────── */}
+      <div
+        role="tabpanel"
+        id={`painel-${aba}`}
+        aria-labelledby={`tab-${aba}`}
+        tabIndex={0}
+      >
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: theme.textMuted, fontFamily: FONT.body }}>
-          Carregando...
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            padding: "60px 0",
+            color: t.textMuted,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando links...
         </div>
       ) : aliases.length === 0 ? (
         <div style={{
-          background: brand.blockBg, border: `1px solid ${theme.cardBorder}`,
+          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
           borderRadius: 18, padding: 60,
-          textAlign: "center", color: theme.textMuted,
+          textAlign: "center", color: t.textMuted,
           fontFamily: FONT.body, fontSize: 14,
           boxShadow: cardShadow,
         }}>
           {emptyMessages[aba]}
         </div>
       ) : (
-        // sem overflow:hidden no wrapper externo para não forçar scroll
-        <div style={{ background: brand.blockBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: cardShadow, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, boxShadow: cardShadow, overflow: "hidden" }}>
+          <div className="app-table-wrap">
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13, tableLayout: "fixed" }}>
+            <caption
+              style={{
+                position: "absolute",
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: "hidden",
+                clip: "rect(0,0,0,0)",
+                whiteSpace: "nowrap",
+                border: 0,
+              }}
+            >
+              Links por status
+            </caption>
             <colgroup>
               {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
               <col style={{ width: "20%" }} />
@@ -567,7 +661,7 @@ export default function GestaoLinks() {
             <tbody>
               {aliasesOrdenados.length === 0 ? (
                 <tr>
-                  <td colSpan={colunasTabela} style={{ ...td, textAlign: "center", color: theme.textMuted, padding: 40, whiteSpace: "normal" }}>
+                  <td colSpan={colunasTabela} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
                     {emptyMessages[aba]}
                   </td>
                 </tr>
@@ -577,30 +671,31 @@ export default function GestaoLinks() {
                 const sk = (st ?? "ativo").toLowerCase();
                 const slInf =
                   st == null
-                    ? { label: "—", color: theme.textMuted }
+                    ? { label: "—", color: t.textMuted }
                     : sk === "inativo"
                       ? { label: "Inativo", color: "#94a3b8" }
                       : sk === "cancelado"
                         ? { label: "Cancelado", color: "#ef4444" }
                         : { label: "Ativo", color: "#10b981" };
-                const zebraBg = idx % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
+                const zebraBg = zebraStripe(idx);
+                const utmAccent = brand.accent;
                 return (
                   <tr
                     key={alias.id}
                     style={{ background: zebraBg }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = zebraBg;
                     }}
                   >
-                    {/* UTM Source: chip com quebra de linha e maxWidth */}
                     <td style={tdUtm}>
                       <span style={{
                         display: "inline-flex", alignItems: "flex-start", gap: 5,
-                        background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo,
-                        border: `1px solid ${BRAND.roxoVivo}44`,
+                        background: `color-mix(in srgb, ${utmAccent} 15%, transparent)`,
+                        color: utmAccent,
+                        border: `1px solid color-mix(in srgb, ${utmAccent} 30%, transparent)`,
                         borderRadius: 6, padding: "3px 9px",
                         fontSize: 12, fontWeight: 600, fontFamily: "monospace",
                         wordBreak: "break-all", maxWidth: "100%",
@@ -611,7 +706,7 @@ export default function GestaoLinks() {
                     </td>
                     <td style={td}>
                       {st == null ? (
-                        <span style={{ color: theme.textMuted, fontSize: 12 }}>—</span>
+                        <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
                       ) : (
                         <span
                           style={{
@@ -636,9 +731,9 @@ export default function GestaoLinks() {
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                     <td style={tdMuted}>{fmtData(alias.ultimo_visto)}</td>
                     <td style={{ ...td, textAlign: "right" }}>{alias.total_ftds}</td>
-                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>{fmt(alias.total_deposit)}</td>
+                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>{fmtBRL(alias.total_deposit ?? 0)}</td>
                     <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>
-                      <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
+                      <span style={ggr >= 0 ? { color: COR.verde, fontWeight: 600 } : { color: COR.vermelho, fontWeight: 600 }}>{fmtBRL(ggr)}</span>
                     </td>
                     {aba === "mapeados" && (
                       <td style={td}>
@@ -649,20 +744,20 @@ export default function GestaoLinks() {
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
-                            <button onClick={() => abrirModal(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              <Link2 size={12} /> Mapear
+                            <button type="button" onClick={() => abrirModal(alias)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: ctaGradient(brand.useBrand), color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              <Link2 size={12} aria-hidden /> Mapear
                             </button>
-                            <button onClick={() => ignorar(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              <EyeOff size={12} /> Ignorar
+                            <button type="button" onClick={() => ignorar(alias)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              <EyeOff size={12} aria-hidden /> Ignorar
                             </button>
                           </>
                         )}
                         {(aba === "mapeados" || aba === "ignorados") && podeReativarAlias(alias) && (
-                          <button onClick={() => reativar(alias)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
-                            <RotateCcw size={12} /> Reabrir
+                          <button type="button" onClick={() => reativar(alias)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            <RotateCcw size={12} aria-hidden /> Reabrir
                           </button>
                         )}
                       </div>
@@ -672,26 +767,28 @@ export default function GestaoLinks() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
+      </div>
 
       {/* ─── Modal ───────────────────────────────────────────────────────────── */}
       {modalAberto && aliasSelecionado && (
         <ModalBase onClose={solicitarFecharModal} maxWidth={440}>
           <ModalHeader title="Mapear link órfão" onClose={solicitarFecharModal} />
-            <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
-              Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
+            <p style={{ fontSize: 12, color: t.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
+              Associe o UTM <strong style={{ color: brand.accent }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
             </p>
 
-            <div className="app-grid-3" style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
+            <div className="app-grid-3" style={{ background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
               {[
                 { label: "FTDs",      value: String(aliasSelecionado.total_ftds) },
-                { label: "Depósitos", value: fmt(aliasSelecionado.total_deposit) },
-                { label: "GGR",       value: fmt(calcGgr(aliasSelecionado)) },
+                { label: "Depósitos", value: fmtBRL(aliasSelecionado.total_deposit ?? 0) },
+                { label: "GGR",       value: fmtBRL(calcGgr(aliasSelecionado)) },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <div style={{ fontSize: 10, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: FONT.body }}>{label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, fontFamily: FONT.body }}>{value}</div>
+                  <div style={{ fontSize: 10, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: FONT.body }}>{label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: t.text, fontFamily: FONT.body }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -702,9 +799,9 @@ export default function GestaoLinks() {
                 aria-pressed={tipoMapeamento === "influencer"}
                 onClick={() => { setTipoMapeamento("influencer"); setCampanhaSelecionada(""); }}
                 style={{
-                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.cardBorder}`,
-                  background: tipoMapeamento === "influencer" ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.textMuted,
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "influencer" ? brand.accent : t.cardBorder}`,
+                  background: tipoMapeamento === "influencer" ? `color-mix(in srgb, ${brand.accent} 15%, transparent)` : "transparent",
+                  color: tipoMapeamento === "influencer" ? brand.accent : t.textMuted,
                   fontSize: 13, fontWeight: tipoMapeamento === "influencer" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
                 }}
               >
@@ -715,9 +812,9 @@ export default function GestaoLinks() {
                 aria-pressed={tipoMapeamento === "campanha"}
                 onClick={() => { setTipoMapeamento("campanha"); setInfluencerSelecionado(""); }}
                 style={{
-                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.cardBorder}`,
-                  background: tipoMapeamento === "campanha" ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.textMuted,
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "campanha" ? brand.accent : t.cardBorder}`,
+                  background: tipoMapeamento === "campanha" ? `color-mix(in srgb, ${brand.accent} 15%, transparent)` : "transparent",
+                  color: tipoMapeamento === "campanha" ? brand.accent : t.textMuted,
                   fontSize: 13, fontWeight: tipoMapeamento === "campanha" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
                 }}
               >
@@ -727,12 +824,12 @@ export default function GestaoLinks() {
 
             {tipoMapeamento === "influencer" ? (
               <>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
                   Influencer
                   <CampoObrigatorioMark />
                 </label>
                 <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione o influencer...</option>
                   {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)
                     .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
@@ -743,12 +840,12 @@ export default function GestaoLinks() {
               </>
             ) : (
               <>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
                   Campanha
                   <CampoObrigatorioMark />
                 </label>
                 <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione a campanha...</option>
                   {[...campanhas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
@@ -757,21 +854,37 @@ export default function GestaoLinks() {
               </>
             )}
 
-            {erroModal && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
-                <AlertCircle size={14} /> {erroModal}
+            {erroModal ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: `${COR.vermelho}18`,
+                  border: `1px solid ${COR.vermelho}44`,
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 12,
+                  color: COR.vermelho,
+                  marginBottom: 16,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <AlertCircle size={14} aria-hidden /> {erroModal}
               </div>
-            )}
+            ) : null}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button type="button" onClick={solicitarFecharModal}
-                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: salvando ? "not-allowed" : "pointer" }}>
+                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: salvando ? "not-allowed" : "pointer" }}>
                 Cancelar
               </button>
               <button type="button" onClick={() => void confirmarMapeamento()} disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
                 aria-disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? "pointer" : "not-allowed", opacity: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? 1 : 0.5 }}>
-                <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: ctaGradient(brand.useBrand), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? "pointer" : "not-allowed", opacity: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? 1 : 0.5 }}>
+                <Link2 size={13} aria-hidden />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>
         </ModalBase>

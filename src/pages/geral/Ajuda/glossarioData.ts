@@ -630,6 +630,39 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "marketing_digital",
+    label: "Marketing Digital",
+    accentColor: "#70cae4",
+    termos: [
+      {
+        termo: "UTM Source",
+        definicao:
+          "Identificador único de rastreio adicionado a links de captação que indica a origem do tráfego. Na plataforma, cada UTM Source detectado nas operadoras pode ser associado a um influencer ou campanha para atribuição de FTDs e GGR.",
+        nota: "Links detectados mas ainda não associados são chamados de 'links órfãos' ou 'pendentes'.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Link Mapeado",
+        definicao:
+          "UTM Source que foi associado a um influencer ou campanha. Após o mapeamento, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards de performance.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Link Órfão / Pendente",
+        definicao:
+          "UTM Source detectado em uma operadora que ainda não possui associação com influencer ou campanha. Aparece na aba Pendentes da Gestão de Links aguardando mapeamento.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Campanha",
+        definicao:
+          "Agrupamento de ações de marketing vinculado a uma ou mais operadoras. Campanhas são criadas na página Campanhas e podem ser usadas como destino no mapeamento de links na Gestão de Links.",
+        nota: "Campanhas inativas não aparecem como opção ao mapear novos links, mas mantêm os vínculos existentes.",
+        referencia: "Campanhas · Gestão de Links",
+      },
+    ],
+  },
+  {
     key: "periodos",
     label: "Conceitos de Período",
     accentColor: "#6b7280",

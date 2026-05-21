@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle, Users, Network } from "lucide-react";
+import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2 } from "lucide-react";
 import {
   GiTv,
   GiCalendar,
@@ -61,6 +61,13 @@ const MENU_AJUDA = [
     items: [
       { key: "afiliados" as PageKey, label: "Afiliados", Icon: Users },
       { key: "afiliados_network" as PageKey, label: "Network", Icon: Network },
+    ],
+  },
+  {
+    section: "Marketing",
+    items: [
+      { key: "campanhas" as PageKey, label: "Campanhas", Icon: Megaphone },
+      { key: "gestao_links" as PageKey, label: "Gestão de Links", Icon: Link2 },
     ],
   },
   {
@@ -638,6 +645,59 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Consolidado de Influencers",
         texto:
           "Lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado. A busca por nome ou e-mail filtra a lista instantaneamente.",
+      },
+    ],
+  },
+  campanhas: {
+    titulo: "Campanhas",
+    blocos: [
+      {
+        texto:
+          "A página Campanhas permite cadastrar as campanhas de mídia social utilizadas nas ações de marketing da plataforma. Cada campanha pode ser vinculada a uma operadora específica ou permanecer genérica. Os UTMs mapeados na Gestão de Links que são associados a uma campanha alimentam automaticamente o Dashboard de Mídias com dados de funil e performance.",
+      },
+      {
+        subtitulo: "Indicadores de Resumo",
+        texto:
+          "Os três cards no topo mostram o total de campanhas cadastradas, quantas estão ativas e quantas estão inativas. Os valores se atualizam imediatamente após qualquer criação, edição ou exclusão.",
+      },
+      {
+        subtitulo: "Tabela de Campanhas",
+        texto:
+          "Lista todas as campanhas ordenadas pelo campo selecionado. Colunas disponíveis: Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\nO botão Editar abre o formulário preenchido com os dados atuais da campanha, permitindo alterar o nome, a operadora e o status. O botão Excluir remove a campanha permanentemente — os vínculos com UTMs mapeados na Gestão de Links são desfeitos automaticamente, mas os dados históricos de performance permanecem nos dashboards.",
+      },
+      {
+        subtitulo: "Criando uma Campanha",
+        texto:
+          "Clique em + Nova Campanha para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+      },
+    ],
+  },
+  gestao_links: {
+    titulo: "Gestão de Links",
+    blocos: [
+      {
+        texto:
+          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas operadoras que ainda não estão associados a nenhum influencer ou campanha. Ao mapear um link, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.",
+      },
+      {
+        subtitulo: "Abas de Status",
+        texto:
+          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
+      },
+      {
+        subtitulo: "Filtro de Operadora",
+        texto:
+          "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione Todas as operadoras para ver tudo junto.",
+      },
+      {
+        subtitulo: "Tabela de Links",
+        texto:
+          "Cada linha mostra o UTM Source detectado, o status do influencer associado (quando aplicável), a operadora de origem, as datas de primeiro e último registro, FTDs, depósitos e GGR acumulados.\n\nNa aba Pendentes, as ações disponíveis são Mapear (abre o modal de associação) e Ignorar (descarta o link sem mapeamento). Nas demais abas, a ação Reabrir devolve o link para Pendentes, permitindo remapeamento.",
+      },
+      {
+        subtitulo: "Mapeando um Link",
+        texto:
+          "Clique em Mapear para abrir o modal com os dados do UTM Source. Escolha o tipo de associação:\n— Influencer: vincula o link ao perfil do influencer nos dashboards\n— Campanha: vincula a uma campanha de marketing\n\nApós confirmar, os dados históricos são sincronizados automaticamente. O processo pode levar alguns segundos dependendo do volume de dados.",
       },
     ],
   },
@@ -1247,6 +1307,61 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "O Consolidado de Influencers não mostra um influencer?",
         texto:
           "O consolidado exibe apenas influencers com ao menos um ciclo de pagamento no período. Se um influencer não aparece, certifique-se de que ele tem pagamentos registrados no mês selecionado — pode ser necessário navegar para outro mês ou ativar o Histórico. A busca por nome/e-mail funciona sobre os resultados já carregados.",
+      },
+    ],
+  },
+  campanhas: {
+    titulo: "Campanhas",
+    blocos: [
+      {
+        subtitulo: "Não consigo criar ou editar campanhas?",
+        texto:
+          "Os botões + Nova Campanha e Editar dependem de permissão de criação e edição, respectivamente. Se os botões não aparecem, seu perfil não tem acesso a essas ações. Entre em contato com o gestor responsável para solicitar a permissão adequada.",
+      },
+      {
+        subtitulo: "Excluí uma campanha mas os dados nos dashboards sumiram?",
+        texto:
+          "A exclusão de uma campanha desfaz os vínculos com os UTMs na Gestão de Links, mas não apaga dados históricos dos dashboards. Se dados desapareceram, verifique se os UTMs que estavam associados à campanha foram remapeados — eles voltam para Pendentes e precisam de nova associação para alimentar os relatórios.",
+      },
+      {
+        subtitulo: "A campanha inativa ainda aparece no modal de Gestão de Links?",
+        texto:
+          "Campanhas inativas não aparecem como opção ao mapear novos links. Se você precisa associar um link a uma campanha que ficou inativa, edite a campanha, altere o status para Ativa, mapeie o link e, se necessário, volte a inativar.",
+      },
+      {
+        subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
+        texto:
+          "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  gestao_links: {
+    titulo: "Gestão de Links",
+    blocos: [
+      {
+        subtitulo: "Um link mapeado não aparece nos dashboards?",
+        texto:
+          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer correto? Na aba Mapeados, a coluna Influencer / Campanha confirma a associação. (2) O influencer tem perfil ativo e está presente no dashboard? Perfis Cancelados podem não aparecer nos relatórios.",
+      },
+      {
+        subtitulo: "O botão Mapear não aparece na aba Pendentes?",
+        texto:
+          "O botão Mapear requer permissão de edição na Gestão de Links. Se não aparece, seu perfil não tem essa permissão. Entre em contato com o gestor para solicitar acesso.",
+      },
+      {
+        subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
+        texto:
+          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer ou campanha corretos.",
+      },
+      {
+        subtitulo: "Um UTM Source tem dados históricos mas mostra R$ 0,00 em GGR?",
+        texto:
+          "O GGR mostrado é calculado como Depósitos menos Saques. Se ambos são zero, pode significar que: (1) a operadora ainda não sincronizou os dados para esse UTM — aguarde a rotina diária das 4h; (2) o UTM foi detectado recentemente e não há transações registradas ainda.",
+      },
+      {
+        subtitulo: "Há links que não quero mapear mas também não quero que apareçam como pendentes?",
+        texto:
+          "Use o botão Ignorar na aba Pendentes. O link vai para a aba Ignorados e não conta no indicador de pendentes. Se mudar de ideia, use Reabrir na aba Ignorados para devolvê-lo aos Pendentes.",
       },
     ],
   },
