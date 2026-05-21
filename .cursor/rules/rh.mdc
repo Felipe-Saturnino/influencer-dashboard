@@ -1,0 +1,83 @@
+---
+description: Regras para a secção RH (menu). Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/rh/GestaoPrestador/**/*.tsx
+  - src/pages/rh/GestaoPrestador/**/*.ts
+  - src/pages/rh/DadosCadastro/**/*.tsx
+  - src/pages/rh/DadosCadastro/**/*.ts
+  - src/pages/rh/Organograma/**/*.tsx
+  - src/pages/rh/Organograma/**/*.ts
+  - src/pages/rh/Vagas/**/*.tsx
+  - src/pages/rh/Vagas/**/*.ts
+  - src/pages/rh/CentralDenunciasSpin/**/*.tsx
+  - src/pages/rh/CentralDenunciasSpin/**/*.ts
+alwaysApply: false
+---
+
+# Seção RH
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC (`PageHeader` 28/22 nas páginas de gestão).
+
+**Nota:** páginas de **Escala** (`GestaoEscala`, `GestaoStaff`, `Calendario`) estão em `escala.mdc` — não duplicar aqui.
+
+---
+
+## Identificação
+
+| PageKey | Label menu | Caminho |
+|---------|------------|---------|
+| `rh_funcionarios` | Gestão de Prestadores | `rh/GestaoPrestador/` |
+| `rh_dados_cadastro` | Dados de Cadastro | `rh/DadosCadastro/` |
+| `rh_organograma` | Organograma | `rh/Organograma/` |
+| `rh_vagas` | Vagas | `rh/Vagas/` |
+| `rh_central_denuncias` | Central de Denúncias | `rh/CentralDenunciasSpin/` |
+
+Canal público de denúncia (formulário externo): `geral.mdc` → `public/CanalDenunciasSpinPage.tsx`.
+
+---
+
+## Gestão de Prestadores (`rh_funcionarios`)
+
+- `PageHeader`; multi-aba (cadastral, headcount, ações RH, etc.).
+- Tabelas: ações em ícone (`btnIconTabela`); `SortTableTh` onde houver colunas ordenáveis (Global).
+- CTA gradiente em ações primárias de linha quando aplicável.
+- **Handoff:** abas, headcount, fluxos de aprovação RH.
+
+---
+
+## Dados de Cadastro (`rh_dados_cadastro`)
+
+- Documentos e metadados de cadastro.
+- **Handoff:** upload, exclusão, permissões.
+
+---
+
+## Organograma (`rh_organograma`)
+
+- Árvore de times/cargos; componentes de organograma em `lib/`.
+- **Handoff:** edição, filtros, export.
+
+---
+
+## Vagas (`rh_vagas`)
+
+- CRUD de vagas abertas.
+- **Handoff:** estados, publicação, candidatos.
+
+---
+
+## Central de Denúncias (`rh_central_denuncias`)
+
+- Gestão interna de protocolos (distinto do canal público).
+- Modais: `ModalsVerHist`, `ModalsAtender` — a11y Global.
+- **Handoff:** SLA, status, atendimento, histórico.
+
+---
+
+## Anti-patterns (RH)
+
+- Documentar Gestão de Escala/Staff/Calendario neste ficheiro — usar `escala.mdc`.
+- Ações de linha só com texto (sem ícone + `aria-label` + `title`).
+- Confundir Central interna com página pública do Canal.

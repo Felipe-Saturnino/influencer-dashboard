@@ -1,0 +1,92 @@
+---
+description: Regras para a secção Escala (menu). Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/escala/**/*.tsx
+  - src/pages/escala/**/*.ts
+  - src/pages/rh/GestaoEscala/**/*.tsx
+  - src/pages/rh/GestaoEscala/**/*.ts
+  - src/pages/rh/GestaoStaff/**/*.tsx
+  - src/pages/rh/GestaoStaff/**/*.ts
+  - src/pages/rh/Calendario/**/*.tsx
+  - src/pages/rh/Calendario/**/*.ts
+alwaysApply: false
+---
+
+# Seção Escala
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC. **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
+
+**Nota de repo:** pastas `rh/GestaoEscala`, `rh/GestaoStaff`, `rh/Calendario` serão renomeadas para `escala/` num refactor futuro (incl. GestaoStaff). `PageKey` pode manter prefixo `rh_`.
+
+---
+
+## Identificação
+
+| PageKey | Label menu | Caminho atual |
+|---------|------------|---------------|
+| `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
+| `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
+| `rh_calendario` | Calendário | `rh/Calendario/` |
+| `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
+| `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
+
+Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` (exceção Brand: card com `blockBg` quando isolado).
+
+---
+
+## Exceções globais nesta secção
+
+- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha; ordenação não se aplica.
+- **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
+- Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
+
+---
+
+## Gestão de Escala (`rh_gestao_escala`)
+
+- Grade mensal por área (time): chips de área, operadora, carrossel de mês.
+- Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
+- Vínculo com Calendário: escala aprovada alimenta presença/agenda.
+- RPCs: `rh_gestao_escala_grade_*`.
+- **Handoff:** regras de sugestão CS, aprovação, áreas (customer_service, shift_leader, etc.).
+
+---
+
+## Gestão de Staff (`rh_staff`)
+
+- `PageHeader`; tabelas com ações em ícone (Global + Brand).
+- Turnos e vínculo operadora.
+- **Handoff:** CRUD staff, organograma operacional.
+
+---
+
+## Calendário (`rh_calendario`)
+
+- Compromissos, presença, reuniões; modais dedicados.
+- Depende de escala aprovada para mensagens de “sem escala hoje”.
+- **Handoff:** chips por dia, filtros de time, integração escala.
+
+---
+
+## Marketplace (`escala_marketplace_turnos`)
+
+- Turnos disponíveis / candidaturas.
+- **Handoff:** fluxo marketplace, permissões prestador.
+
+---
+
+## Solicitações (`escala_solicitacoes`)
+
+- Pedidos de escala/troca.
+- **Handoff:** estados, aprovação, thread se aplicável.
+
+---
+
+## Anti-patterns (Escala)
+
+- Converter toolbar de escala para só ícone.
+- Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
+- Filtro operadora sem ícone interno / fora do strip de filtros (após refactor Brand).
+- Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.

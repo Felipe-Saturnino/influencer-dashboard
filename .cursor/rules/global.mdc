@@ -1,5 +1,5 @@
 ---
-description: Regras globais de UI/UX para toda a plataforma Data Intelligence Spin Gaming. Aplicar em qualquer arquivo dentro de src/.
+description: Regras globais de UI/UX, dados, permissões e fluxo de desenvolvimento — toda a plataforma Spin Gaming. Complementa brand-css-variables.mdc e MDCs de secção.
 globs:
   - src/**/*.tsx
   - src/**/*.ts
@@ -7,138 +7,177 @@ alwaysApply: true
 ---
 
 # Plataforma Data Intelligence — Spin Gaming
-Stack: React + TypeScript + Vite + Supabase + Cloudflare Pages
 
-## Identidade Visual
+Stack: React + TypeScript + Vite + Supabase + Cloudflare Pages
 
 A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, nunca genérica.
 
-## Marca da operadora vs semântica de dado
+---
 
-- **Whitelabel, tokens, cabeçalhos (título = menu + subtítulo), filtros com ícone, carrossel de período, ações em ícone e CTAs:** **`brand-css-variables.mdc`** (MDC Brand) — não duplicar neste ficheiro.
-- **`src/pages/dashboards/**`:** além do Brand, regras analíticas em `.cursor/rules/dashboards.mdc`.
-- **Semântica de dado** (Rentável / Não rentável, WD Ratio, badges de ROI, vermelho/verde de GGR): manter hex da **Paleta semântica** abaixo; **não** substituir por tokens de marca só por estética.
-- Superfícies neutras: `t.*` via `useApp()`; destaque de marca: Brand MDC + `useDashboardBrand()`.
+## Ordem de leitura antes de implementar
 
-## Estrutura de Arquivos
+Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
+
+1. **Este MDC (Global)** — tema, semântica, tabelas, filtros, permissões, estados, formatos.
+2. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
+3. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
+
+**Não** duplicar regras de marca no Global nem regras de secção no Brand. Secções **não** citam outras secções para padrões transversais — citam Global + Brand.
+
+| MDC | Conteúdo |
+|-----|----------|
+| **Global** | Semântica de dados, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos |
+| **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha |
+| **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
+
+### Manutenção dos MDCs de secção
+
+Sempre que criar ou alterar de forma relevante uma página em `src/pages/**`:
+
+1. Atualizar o **MDC da secção** correspondente (nova subsecção por `PageKey`, personas, fluxos, exceções, strings de vazio específicas).
+2. Se a secção ainda não tiver MDC, **criar** o ficheiro `.cursor/rules/<secao>.mdc` com `globs` das pastas reais antes de considerar a feature fechada.
+3. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários) e `App.tsx` — ver Permissões.
+
+### Ajuda e glossário (qualquer secção)
+
+Em **todo** desenvolvimento novo ou mudança de UX/fluxo/regra de negócio visível ao usuário:
+
+- Revisar `src/pages/geral/Ajuda/` (`index.tsx`, `glossarioData.ts` e entradas por `pageKey`).
+- **Incluir**, **alterar** ou **remover** textos de ajuda e termos do glossário conforme a mudança — não só quando a página fica em `geral/`.
+- Detalhes de estrutura: `geral.mdc`.
+
+---
+
+## Marca vs semântica (ponte)
+
+- **Marca / whitelabel / UI de identidade:** `brand-css-variables.mdc` — não duplicar aqui.
+- **`src/pages/dashboards/**`:** regras analíticas em `dashboards.mdc` (KpiCard, funil, MoM, FilterBar).
+- **Superfícies neutras:** `const { theme: t } = useApp()` — `t.bg`, `t.text`, `t.cardBorder`, `t.textMuted`, `t.cardBg`, `t.inputBg`.
+- Evitar hex solto em fundos e textos de UI neutra; usar `t.*`.
+
+---
+
+## Paleta semântica de dados (imutável)
+
+Não substituir por `--brand-primary` ou cor de operadora só por estética.
 
 ```
-src/
-├── components/         # Componentes compartilhados — usar antes de criar local
-│   └── dashboard/      # KpiCard, SectionTitle, FunilVisual, KpiCardDepositos
-├── constants/          # theme.ts (FONT), menu.ts, authScreen.ts, platforms.ts
-├── context/            # AppContext — fonte de theme, permissions, operadoraBrand
-├── hooks/              # useDashboardBrand, useDashboardFiltros, usePermission, useMediaQuery
-├── lib/                # dashboardConstants, dashboardHelpers, tableStyles, supabase, investimentoPago
-├── pages/              # Páginas por seção
-│   ├── dashboards/     # Streamers (abas), OverviewSpin, Mídias, Overview Influencer
-│   ├── conteudo/       # Playbook, Links e Materiais (menu Conteúdo)
-│   ├── geral/
-│   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout
-│   ├── estudio/        # Dealers, Central, Figurinos, Roteiro de Mesa, solicitações (menu Estúdio)
-│   ├── aquisicao/      # Financeiro, Banca de Jogo (menu Aquisição)
-│   ├── marketing/      # Campanhas, Gestão de Links
-│   ├── rh/             # Prestadores, Organograma, Escala, Vagas (Figurinos em estudio/)
-│   └── plataforma/
-├── styles/
-│   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*
-│   └── responsive.css  # app-page-shell, app-grid-*, app-table-wrap, app-conversao-*
-└── types/
-```
-
-## Regras de Tema e Cores
-
-- Sempre usar `const { theme: t } = useApp()` para tokens de tema (t.bg, t.text, t.cardBorder, t.textMuted, t.cardBg, t.inputBg).
-- Evitar hex solto para **superfícies de UI** (fundo de página, texto principal, borda de card): preferir `t.*` ou, em dashboards com operador, `useDashboardBrand()`.
-- Para páginas de operadora nos dashboards: sempre `useDashboardBrand()` → `brand.blockBg`, `brand.primary`, `brand.accent`, `brand.useBrand`.
-- Quando `brand.useBrand` for true, usar `color-mix(in srgb, var(--brand-action) X%, transparent)` ou `var(--brand-contrast)` conforme o bloco (ver `dashboards.mdc`) em vez de hex RGBA fixo da Spin.
-
-**Paleta semântica de dados (imutável — não sobrescrever com cor de marca):**
-
-```
-Verde   #22c55e → positivo, sucesso, GGR+, ROI+, Rentável
+Verde    #22c55e → positivo, sucesso, GGR+, ROI+, Rentável
 Vermelho #e84025 → negativo, perigo, GGR-, ROI-, saques altos
-Amarelo #f59e0b → atenção, aviso
-Roxo    #a78bfa → especial, Bônus, FTD/Hora
-Cinza   #6b7280 → neutro, sem dados
+Amarelo  #f59e0b → atenção, aviso
+Roxo     #a78bfa → especial, Bônus, FTD/Hora
+Cinza    #6b7280 → neutro, sem dados
 ```
 
-**Regra absoluta:** Verde = bom, Vermelho = ruim. A única exceção é via prop `isInverso` no KpiCard — nunca inverter manualmente.
+**Regra absoluta:** verde = bom, vermelho = ruim. Exceção única: prop `isInverso` no `KpiCard` — nunca inverter manualmente.
 
-## Fontes
+`CampoObrigatorioMark` usa `#e84025` (alinhado ao vermelho semântico).
+
+---
+
+## Estrutura de arquivos (`src/`)
+
+```
+components/     # Compartilhados — usar antes de criar local
+  dashboard/    # KpiCard, SectionTitle, SortTableTh, SelectComIcone, FunilVisual, DashboardPageHeader, …
+  PageHeader.tsx
+  InfluencerMultiSelect.tsx
+  OperacoesModal.tsx (ModalBase, ModalHeader)
+  CampoObrigatorioMark.tsx
+constants/      # theme.ts (FONT), menu.ts, platforms.ts
+context/        # AppContext — theme, permissions, operadoraBrand
+hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
+lib/            # tableStyles, dashboardHelpers, classificacaoSort, supabase, …
+pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
+.cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
+styles/         # global.css, responsive.css
+types/          # PageKey, Role, PermissaoValor, …
+```
+
+Ao criar página nova: alinhar `types` (`PageKey`), `constants/menu.ts`, `App.tsx`, `GestaoUsuarios/constants.ts` (`PAGES`) — ver secção Permissões.
+
+---
+
+## Tipografia
 
 ```typescript
 import { FONT } from "../constants/theme";
-// FONT.body  → corpo, dados, labels, cells
-// FONT_TITLE → section titles, nomes de canal, cabeçalhos de card
 import { FONT_TITLE } from "../lib/dashboardConstants";
+// FONT.body   → corpo, dados, labels, células
+// FONT_TITLE  → títulos de seção e cabeçalhos de card (não substitui regras de h1 no Brand)
 ```
 
-Nunca hardcodar string de fonte. Sempre `fontFamily: FONT.body` ou `fontFamily: FONT_TITLE`.
+Nunca hardcodar família de fonte.
 
-## Formulários — obrigatório vs opcional (labels)
+---
 
-Padrão único para formulários, modais e blocos com inputs:
+## Formulários — obrigatório vs opcional
 
-1. **Campo obrigatório:** ao lado do texto do label, renderizar o asterisco vermelho com o componente compartilhado `CampoObrigatorioMark` (`src/components/CampoObrigatorioMark.tsx` — cor `#e84025`, alinhado à paleta semântica negativa). Importar e usar `<CampoObrigatorioMark />` após o texto do label; não reinventar `*` ou cor inline para o mesmo fim.
+1. **Obrigatório:** `<CampoObrigatorioMark />` após o label (`src/components/CampoObrigatorioMark.tsx`).
+2. **Opcional:** sem `(opcional)`, sem badge, sem texto explicativo — inferir pela ausência do asterisco.
+3. Não misturar os dois sistemas na mesma tela.
 
-2. **Campo opcional:** **não** exibir nenhuma marcação extra no layout: **proibido** texto `(opcional)`, a palavra “opcional”, sufixos entre parênteses, badges ou `textMuted` explicando que é opcional. Opcional = apenas o label, sem complemento visual ou textual.
+---
 
-3. **Consistência:** se o campo não for obrigatório, o usuário infere pela ausência do asterisco; não misturar os dois sistemas na mesma tela.
+## Classes CSS (`responsive.css`)
 
-4. **Import:** `import { CampoObrigatorioMark } from "../components/CampoObrigatorioMark"` (ajustar níveis de `../` conforme o arquivo).
-
-## CSS Classes — Nunca Recriar Inline
-
-Estas classes existem em `responsive.css` — usar sempre via `className`:
+Usar via `className` — não recriar inline:
 
 ```
-app-page-shell          → wrapper de toda página logada (padding fluido)
-app-page-shell--pb64    → variante com padding-bottom maior
-app-grid-kpi-3          → grid 3 colunas colapsável
-app-grid-kpi-4          → grid 4 colunas colapsável
-app-grid-kpi-5          → grid 5 colunas colapsável
-app-grid-kpi-6          → grid 6 colunas colapsável
-app-grid-2              → grid 2 colunas colapsável (min 280px)
-app-grid-2-tight        → grid 2 colunas colapsável (min 240px)
-app-grid-3              → grid 3 colunas colapsável (min 200px)
-app-table-wrap          → wrapper de tabela com scroll horizontal
-app-conversao-vs-row    → layout A vs B (grid 1fr auto 1fr)
-app-conversao-funil-duo → dois painéis lado a lado com colapso mobile
+app-page-shell, app-page-shell--pb64
+app-grid-kpi-3 … app-grid-kpi-6, app-grid-2, app-grid-2-tight, app-grid-3
+app-table-wrap
+app-conversao-vs-row, app-conversao-funil-duo
 ```
 
-## Componentes Compartilhados — Importar, Nunca Redeclarar
+Nunca `@media` inline em componentes.
+
+**Breakpoints** (`global.css`): `<480px` zoom 0.80 · `480–900px` 0.84 + drawer · `>900px` 0.90 + sidebar 240px.
+
+---
+
+## Componentes — importar, não redeclarar
 
 ```typescript
-// Tabelas — SEMPRE importar de lib/tableStyles
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../lib/tableStyles";
-
-// Constantes de marca e status
 import { BRAND, FONT_TITLE, STATUS_ORDEM } from "../lib/dashboardConstants";
-
-// Helpers de formatação
 import { fmtBRL, fmtHorasTotal, getMesesDisponiveis, getPeriodoComparativoMoM } from "../lib/dashboardHelpers";
+import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../lib/classificacaoSort";
+// Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-Se `tableStyles.ts` não tiver uma função necessária, adicionar lá — nunca declarar localmente.
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
 
-## Componentes Proibidos de Redeclarar Localmente
+**Outros:** `PageHeader`, `InfluencerMultiSelect`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`.
 
-Se um componente existe em `src/components/dashboard/`, importar — nunca redeclarar:
+Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não copiar localmente.
 
-- `KpiCard` — card de métrica com MoM
-- `KpiCardDepositos` — card de depósitos com qtd + valor
-- `SectionTitle` — título de seção com ícone
-- `FunilVisual` — funil de conversão SVG responsivo
-- `SelectComIcone` — select com ícone interno e indicador ▾ (quando existir)
-- `SkeletonCard` — placeholder de loading (quando existir)
+---
 
-## Permissões e Acesso
+## Permissões
 
-Toda página começa com verificação de permissão:
+### Fonte da verdade
+
+- Matriz por **perfil (role)** e **página (`PageKey`)** configurada em **Gestão de Usuários** (`src/pages/plataforma/GestaoUsuarios/`, tabela `role_permissions`, lista `PAGES` em `constants.ts`).
+- Na página: `usePermission("page_key")` — respeitar `canView`, `canCriar`, `canEditar`, `canExcluir`, `canCriarOk`, `canEditarOk`, `canExcluirOk`.
+- Valores: `"sim"` | `"proprios"` | `"nao"` | `null` (ação não aplicável à página).
+
+### Administrador
+
+- Perfil **`admin`**: acesso **irrestrito** em todas as páginas — `usePermission` devolve `sim` em Ver/Criar/Editar/Excluir sem consultar a matriz (implementado em `usePermission.ts`).
+- Demais perfis: **somente** o que estiver liberado em Gestão de Usuários (e escopo operadora/influencer quando aplicável).
+
+### Página nova — checklist obrigatório
+
+1. Adicionar `PageKey` em `src/types/index.ts`.
+2. Registrar em `PAGES` (`GestaoUsuarios/constants.ts`) com `hasCriar` / `hasEditar` / `hasExcluir` corretos.
+3. Item no menu (`constants/menu.ts`) e rota em `App.tsx`.
+4. **Permissões iniciais:** em Gestão de Usuários, para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir devem ficar **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (ou abas Gestores / Prestadores / Operadora, conforme o perfil).
+5. **Não** pré-conceder `sim` em seeds ou defaults de código para roles não-admin.
+6. Implementar gate no início da página:
 
 ```typescript
-const perm = usePermission("nome_da_permissao");
+const perm = usePermission("page_key");
 if (perm.canView === "nao") {
   return (
     <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -148,25 +187,72 @@ if (perm.canView === "nao") {
 }
 ```
 
-## Estados de Interface
+(String fixa acima — inclusive para páginas que não são dashboard.)
 
-**Loading:** Usar skeleton (`SkeletonCard`) para conteúdo principal. Manter `<Clock size={12} /> Carregando...` apenas como indicador secundário na FilterBar.
+---
 
-**Vazio:** Sempre usar exatamente esta string:
+## Filtros (comportamento global)
+
+Visual da barra (fundo transparente, ícones): **Brand MDC**. Aqui: regras de **dados e UX** do filtro.
+
+### Opção “Todos” por defeito
+
+- Filtro alimentado por base/cadastro (operadora, influencer, status, área, etc.) deve incluir opção agregadora **`Todos`** / **`Todas`** / **`Todas as operadoras`** (label conforme domínio).
+- **Estado inicial** do filtro: sempre essa opção agregadora (ex.: `useState("todos")`, `"todas"`).
+- Só mudar do agregador quando o usuário escolher um valor específico.
+
+### Pesquisa dentro do filtro (> 5 valores)
+
+- Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
+- **Multi:** `InfluencerMultiSelect` com `enableSearch={true}` quando `influencers.length > 5` (ou equivalente).
+- **Único:** preferir componente com busca embutida; `<select>` nativo com >5 opções é **legado** — migrar para dropdown pesquisável quando tocar na página.
+- Placeholder de busca curto (ex.: “Pesquisar…”); filtrar por correspondência parcial no nome.
+
+---
+
+## Tabelas
+
+### Estrutura e estilo
+
+1. `getThStyle(t)` / `getTdStyle(t)` de `lib/tableStyles`.
+2. Wrapper `<div className="app-table-wrap">`.
+3. `borderCollapse: "separate"`, `borderSpacing: 0`, `borderRadius: 14`, `overflow: "hidden"` quando aplicável.
+4. Zebra: `zebraStripe(i)` — não inline.
+5. Texto: `textAlign: left`; valores: `right` + `fontVariantNumeric: "tabular-nums"`.
+6. Nome longo: `maxWidth: 160`, `overflow: hidden`, `textOverflow: ellipsis`, `title={valor}`.
+
+### Ordenação por coluna (obrigatória quando aplicável)
+
+Usar `SortTableTh` (`components/dashboard/SortTableTh.tsx`) + comparadores de `lib/classificacaoSort.ts`.
+
+| Tipo de tabela | Regra |
+|----------------|--------|
+| **Sem coluna de data/período** | Colunas de dados ordenáveis devem usar `SortTableTh` (ícone ▾▴ neutro + ativo). Definir coluna e direção iniciais sensatas (ex.: nome, status, valor principal). |
+| **Com coluna de data/período** | Ordenação inicial **`desc`** nessa coluna (**mais novo → mais antigo**). Demais colunas também via `SortTableTh` quando fizer sentido. |
+
+- Estado típico: `useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" })` para tabelas com data; `dir: "desc"` ou `"asc"` conforme métrica principal em tabelas sem data.
+- Clicar no cabeçalho alterna direção; `aria-sort` já vem do componente.
+- Tabelas **somente leitura** sem necessidade de reordenar (ex.: grade calendário dia a dia) ficam **fora** desta regra — documentar exceção no MDC da secção.
+
+---
+
+## Estados de interface
+
+**Loading (conteúdo principal):** skeleton (`SkeletonCard`) quando existir para o bloco.
+
+**Loading (secundário):** `<Clock size={12} aria-hidden />` + “Carregando…” na FilterBar — ver Brand para cor do spinner.
+
+**Vazio (string exata):**
 
 ```
-"Sem dados para o período selecionado."
+Sem dados para o período selecionado.
 ```
 
-Nunca usar: "Sem dados", "Nenhum dado encontrado", "Nenhum dado para o período/filtro selecionado."
-
-**Sem permissão:** Usar string exata:
+**Sem permissão (string exata):**
 
 ```
-"Você não tem permissão para visualizar este dashboard."
+Você não tem permissão para visualizar este dashboard.
 ```
-
-**Estrutura do estado vazio:**
 
 ```tsx
 <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -174,58 +260,153 @@ Nunca usar: "Sem dados", "Nenhum dado encontrado", "Nenhum dado para o período/
 </div>
 ```
 
-## Tabelas
+---
 
-Toda tabela deve:
+## Dados ausentes e formatos
 
-1. Usar `getThStyle(t)` e `getTdStyle(t)` de `lib/tableStyles`
-2. Estar dentro de `<div className="app-table-wrap">`
-3. Ter `borderCollapse: "separate"`, `borderSpacing: 0`, `borderRadius: 14`, `overflow: "hidden"`
-4. Zebra stripe via `zebraStripe(i)` — nunca inline
-5. Coluna de nome/texto: `textAlign: left`
-6. Coluna de valor: `textAlign: right`, `fontVariantNumeric: "tabular-nums"`
-7. Coluna de nome longo: `maxWidth: 160, overflow: hidden, textOverflow: ellipsis, title={valor}`
-
-## Acessibilidade — Mínimo Obrigatório
-
-```tsx
-// Botões de navegação de período
-<button aria-label="Mês anterior" ...><ChevronLeft aria-hidden="true" /></button>
-<button aria-label="Próximo mês" ...><ChevronRight aria-hidden="true" /></button>
-
-// Selects com filtro
-<select aria-label="Filtrar por influencer" ...>
-
-// Ícones decorativos (dentro de células, badges, sem texto)
-<GiTrophy aria-hidden="true" />
-
-// Tabelas
-<caption style={{ display: "none" }}>Descrição da tabela</caption>
-<th scope="col" ...>
-```
-
-## Breakpoints (via global.css)
-
-```
-< 480px  → --app-ui-zoom: 0.80 | 1 coluna
-480–900px → --app-ui-zoom: 0.84 | drawer sidebar
-> 900px  → --app-ui-zoom: 0.90 | sidebar fixa 240px
-```
-
-Nunca usar `@media` inline em componentes. Usar classes do `responsive.css`.
-
-## Dados Ausentes
-
-- Usar `"—"` (travessão Unicode U+2014) quando o cálculo é impossível (denominador zero)
-- Usar `"0"` quando o dado existe e é genuinamente zero
-- Nunca usar `null`, `undefined`, `"N/A"`, `"0%"` para dado impossível de calcular
-
-## Formatos de Valor
+| Situação | Exibir |
+|----------|--------|
+| Cálculo impossível (ex.: denominador zero) | `—` (U+2014) |
+| Valor existente e zero | `0` |
+| Proibido | `null`, `undefined`, `N/A`, `0%` para “impossível” |
 
 ```typescript
-fmtBRL(v)                    // R$ 12.450,00
-v.toLocaleString("pt-BR")    // 1.234
-fmtHorasTotal(h)             // 24:30
-`${v} pts`                   // scores/índices (PVI, etc.) — nunca "%"
-`${v.toFixed(1)}%`           // percentuais reais
+fmtBRL(v)                 // R$ 12.450,00
+v.toLocaleString("pt-BR") // 1.234
+fmtHorasTotal(h)          // 24:30
+`${v} pts`                // PVI etc. — nunca %
+`${v.toFixed(1)}%`        // percentuais reais
 ```
+
+---
+
+## Acessibilidade — mínimo obrigatório
+
+```tsx
+<button aria-label="Mês anterior" type="button">…<ChevronLeft aria-hidden="true" /></button>
+<select aria-label="Filtrar por influencer" …>
+<caption style={{ display: "none" }}>Descrição da tabela</caption>
+<th scope="col" …>
+```
+
+- Ícones **decorativos** em células/badges: `aria-hidden="true"`.
+- Botões só ícone (linha de tabela): `aria-label` + `title` — ver Brand sec. 8.
+- Preferir **Lucide** em UI de página; GameIcons restritos ao menu lateral (`menu.ts`).
+
+Lista estendida (modais, tabelas clicáveis, abas):
+
+```
+role="dialog" + aria-modal="true" + aria-labelledby em modais
+Escape + foco no primeiro elemento ao abrir modal
+<th scope="col"> em todas as tabelas
+aria-pressed em botões pill (status, filtros binários)
+aria-label em botões só ícone
+role="tablist" + role="tab" + aria-selected nas abas
+inputMode="decimal" em valores monetários
+tabIndex={0} + onKeyDown (Enter/Space) em <tr> clicáveis
+role="alert" + aria-live="polite" em erros inline
+```
+
+---
+
+## Modais
+
+Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — já incluem `role="dialog"`, `aria-modal`, Escape, foco inicial e `aria-labelledby` via `useId()` interno.
+
+- **Nunca** `window.confirm()` — confirmação de exclusão: modal dedicado ou fluxo em 2 cliques (ver Brand para toolbar vs linha).
+- **Nunca** `alert()` — erros com estado local + bloco inline:
+
+```tsx
+{err && (
+  <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}>
+    {err}
+  </div>
+)}
+```
+
+- Overlay: `maxHeight: "90dvh"` no painel (não `90vh`); padding no overlay para telas estreitas.
+- Botão fechar: `<X>` Lucide com `aria-label="Fechar modal"` — nunca `✕` unicode.
+- Mensagens ao usuário: PT fixo + `console.error` — **nunca** `error.message`, nomes de tabela/RPC/função no DOM.
+- `autoFocus` em input de modal: `ref` + `setTimeout(..., 100)` — evitar `autoFocus` direto (iOS).
+- Modais com `useApp()` + `useDashboardBrand()` **internamente** — não passar props `t` / `brand` salvo exceção documentada na secção.
+
+---
+
+## Tabelas — interação e layout
+
+- **Expand/collapse:** `<ChevronRight>` com rotação CSS — nunca `▶` textual.
+- **Hover** obrigatório em linhas de dados (`onMouseEnter` / `onMouseLeave`, restaurar zebra).
+- **Linha clicável:** `tabIndex={0}`, `onKeyDown` (Enter/Space), `aria-expanded` quando expandir.
+- **Seleção binária:** botões pill com `aria-pressed` — evitar `<input type="radio">` nativo sem estilo.
+- **Zebra:** `zebraStripe(i)` ou equivalente tema — não `rgba(124,58,237,…)` fixo.
+- Listas de conteúdo gerado pelo usuário: queries com **`.limit()`** — ver regra na secção se o volume for alto.
+
+### Sombra de cards
+
+```typescript
+const cardShadow = t.isDark
+  ? "0 4px 20px rgba(0,0,0,0.25)"
+  : "0 2px 8px rgba(0,0,0,0.07)";
+```
+
+Não usar sombra única em light e dark.
+
+### Badges de status (workflow)
+
+Pills semânticos — cor de negócio, não `--brand-primary`:
+
+```tsx
+<span style={{
+  display: "inline-flex", alignItems: "center",
+  fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+  background: `${cor}22`, color: cor, border: `1px solid ${cor}44`,
+  whiteSpace: "nowrap",
+}}>{label}</span>
+```
+
+Paleta de workflow por domínio (banca, pagamento, dealer, etc.) documentada no MDC da secção.
+
+### BlocoLabel e títulos internos
+
+- `BlocoLabel`: só texto — **sem** emoji no label.
+- Ícone opcional **fora** do componente, ao lado.
+
+### Loading de página inteira (boot)
+
+Quando não houver skeleton para o bloco principal:
+
+```tsx
+<div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+  <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+    <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" style={{ marginBottom: 12 }} />
+    <div style={{ fontSize: 13 }}>Carregando...</div>
+  </div>
+</div>
+```
+
+### Vazio — global vs secção
+
+- KPIs / dados analíticos por período: string fixa **`Sem dados para o período selecionado.`**
+- Listas filtradas vazias, estados de domínio: mensagem **específica** no MDC da secção (ex.: “Nenhum dealer encontrado.”).
+
+---
+
+## Anti-patterns (global)
+
+- Implementar página sem ler Brand + MDC da secção.
+- Ignorar matriz de Gestão de Usuários (exceto admin).
+- Pré-liberar permissão `sim` para roles em página nova.
+- Filtro sem opção agregadora ou sem ela selecionada por defeito.
+- Lista >5 opções sem busca no painel do filtro.
+- Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
+- Strings de vazio ou sem permissão diferentes das fixas acima.
+- Semântica de KPI invertida manualmente (fora de `isInverso`).
+- Página nova sem atualizar MDC da secção (e Ajuda quando aplicável).
+- `window.confirm()` / `alert()` para fluxos de modal.
+- `90vh` em modais — usar `90dvh`.
+- `▶` para expandir linha — usar `ChevronRight`.
+- Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.
+- Query de lista UGC sem `.limit()`.
+- CPF ou dado sensível sem máscara em tabela pública.
+- Expor infraestrutura (tabela, RPC, stack) na UI.
+- Emoji no `h1` ou em `BlocoLabel`.

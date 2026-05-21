@@ -1,14 +1,16 @@
 ---
-description: Regras específicas para todas as páginas da seção de Dashboards. Complementa global.mdc.
+description: Regras específicas para todas as páginas da seção Dashboards. Complementa global.mdc e brand-css-variables.mdc.
 globs:
   - src/pages/dashboards/**/*.tsx
   - src/pages/dashboards/**/*.ts
 alwaysApply: false
 ---
 
-# Seção Dashboards — Regras Específicas
+# Seção Dashboards
 
-**Escopo (Cursor):** não é preciso listar cada página à mão — o frontmatter usa **globs**. Qualquer arquivo novo em `src/pages/dashboards/` (incluindo subpastas) entra no escopo ao você editar esse caminho; vale para **todas** as páginas atuais e futuras da seção Dashboards.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Escopo (Cursor):** globs em `src/pages/dashboards/**` — páginas atuais e futuras da secção.
 
 **Páginas (referência de pastas):**
 
@@ -19,27 +21,13 @@ alwaysApply: false
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` (rota `mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
-**Marca:** estrutura e FilterBar usam `useDashboardBrand()`. **`BRAND`** (hex de leitura analítica e fallbacks) vem de `src/lib/dashboardConstants.ts` — import centralizado; **não** duplicar objeto `BRAND` local nas páginas.
+**Marca / FilterBar:** `useDashboardBrand()` + tokens canónicos `--brand-action` / `--brand-contrast` / `--brand-icon-color` — detalhes em **Brand MDC** e tabela abaixo só onde for **analítico**.
 
-**Tokens CSS de marca (nomes canônicos em código novo de dashboard — com fallback):**
+**`BRAND`:** import de `lib/dashboardConstants.ts` — não duplicar objeto local.
 
-| Token | Papel |
-|---|---|
-| `var(--brand-action, #7c3aed)` | Cor de ação principal: CTAs, títulos de seção, item ativo no menu, bordas de destaque |
-| `var(--brand-contrast, #1e36f8)` | Cor de suporte: comparativos A/B, badges secundários |
-| `var(--brand-bg, #ffffff)` | Fundo da aplicação (tema claro padrão; dark ajusta via brandguide) |
-| `var(--brand-text, #18181b)` | Texto e ícones principais |
-| `var(--brand-icon-color, #70cae4)` | Ícones estruturais |
-| `var(--brand-action-12)` / `var(--brand-action-20)` / `var(--brand-action-30)` | Transparências derivadas de ação |
-| `var(--brand-action-border)` | Borda de destaque |
-| `var(--brand-contrast-12)` / `var(--brand-contrast-30)` | Transparências derivadas de contraste |
-| `var(--brand-surface)` / `var(--brand-surface-hi)` | Superfícies de card e hover |
+**`KpiCard` (`accentVar`):** apenas `"--brand-action"` | `"--brand-contrast"` | `"--brand-icon-color"`. Proibido `--brand-primary`, `--brand-accent`, `--brand-extra*` em código novo de dashboard.
 
-**Tokens legados (`:root` ainda expõe):** `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, `--brand-extra1`… — **fora dos dashboards** continuam válidos (login, shell). **Dentro de `src/pages/dashboards/**`**, em KPIs, funil, comparativos A/B e pills ativas, **preferir sempre** `action` / `contrast` / `icon-color` com fallback em vez de `primary`/`accent` soltos, para alinhar ao `useDashboardBrand()` e ao whitelabel operador.
-
-**Em `KpiCard` (`accentVar`):** usar apenas `"--brand-action"` | `"--brand-contrast"` | `"--brand-icon-color"` quando precisar de token whitelabel. **Proibido:** `--brand-extra*`, `--brand-primary`, `--brand-accent`, `--brand-icon` (sem `-color`), `--brand-secondary`, `--brand-success` — inconsistentes ou inexistentes no resolver de accent.
-
-Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçadores de Bônus) usam hex fixos definidos em `BRAND` ou na tabela deste ficheiro — não substituir por `--brand-*` só por consistência visual.
+**Semântica de dados** (Rentável, GGR, ROI, funil): hex em `BRAND` / Global — **não** substituir por `--brand-*` por estética.
 
 ---
 

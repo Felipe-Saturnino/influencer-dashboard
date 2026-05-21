@@ -1,28 +1,22 @@
 ---
-description: Regras específicas para todas as páginas da seção Conteúdo. Complementa global.mdc, brand-css-variables.mdc, operacoes.mdc e lives.mdc.
+description: Regras específicas para todas as páginas da seção Conteúdo. Complementa global.mdc e brand-css-variables.mdc.
 globs:
   - src/pages/conteudo/**/*.tsx
   - src/pages/conteudo/**/*.ts
 alwaysApply: false
 ---
 
-# Seção Conteúdo — Regras Específicas
+# Seção Conteúdo
 
-**Escopo (Cursor):** globs cobrem tudo em `src/pages/conteudo/`. Páginas: **LinksMateriais** · **PlaybookInfluencers** · **SpinNaRede** · **PortalRh** (`PortalRh/`). **Roteiro de Mesa** está em `src/pages/estudio/RoteiroMesa/` (menu Estúdio) — regras em `estudio.mdc` / `operacoes.mdc`.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-**Perfil de uso:** fluxos críticos — emissão de link de rastreamento (gate de aquisição), confirmação de ciência do Playbook (gate de transmissão), e gestão de roteiros de mesa por bloco e operadora.
+**Escopo:** `src/pages/conteudo/` — LinksMateriais, PlaybookInfluencers, SpinNaRede, PortalRh. **Roteiro de Mesa** está em `estudio/` → `estudio.mdc`.
 
-**Marca / operadora (whitelabel):** alinhado a `operacoes.mdc` e `lives.mdc`.
+**Marca / filtros / headers:** Brand MDC. Portal RH usa **Família B** (`PageHeader` 28/22). Playbook/Links: Família A (32/18) até decisão de produto.
 
-- Chamar `useDashboardBrand()` em cada página (e em modais com bloco de marca).
-- Usar `brand.primary`, `brand.accent`, `brand.blockBg`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, e `brand.secondary` quando fizer sentido.
-- Com `brand.useBrand === true` (operador + `operadoraBrand`), o hook resolve para `var(--brand-*)` via `aplicarBrandguide()` — ver `global.mdc` e `brand-css-variables.mdc`.
-- **Gradientes de CTA** (“Salvar”, “Emitir”, primários): `brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : linear-gradient Spin` e texto **`#fff`**.
-- **Estado ativo / chip:** `color-mix(in srgb, var(--brand-accent) 15%, transparent)` quando `useBrand`; senão equivalente roxo Spin do código.
-- **Semântica** (estado de produto, erro, alerta, progresso com faixa vermelho→azul legada): não trocar por `--brand-primary` só por whitelabel quando o significado for universal — ver secções por página e barra de progresso brand-aware abaixo.
-- **Spinners (`Loader2`):** fora de botão, fundo neutro → `color="var(--brand-primary, #7c3aed)"` / `app-lucide-spin`. **Dentro de CTA com gradiente** → spinner **`#fff`** (`brand-css-variables.mdc`).
+**Semântica:** barra de progresso Playbook (vermelho→azul legado), estados de ciência — não trocar por `--brand-primary` só por whitelabel.
 
-**Paleta semântica local:** não declarar `const BRAND = { ... }` com hex duplicados — importar **`BRAND_SEMANTIC as BRAND`** de `constants/theme` **ou** `BRAND` de `lib/dashboardConstants`, conforme o módulo já usa na página.
+**`BRAND`:** importar `BRAND_SEMANTIC` ou `dashboardConstants` — não objeto local duplicado.
 
 ---
 
@@ -176,7 +170,7 @@ Não usar `<input type="checkbox">` sem estilização completa.
 
 ## Exclusão em Lista — Nunca `window.confirm()`
 
-Dois cliques + `onBlur` cancel (como `operacoes.mdc` / `lives.mdc`).
+Dois cliques + `onBlur` cancel — padrão Global (confirmação sem `window.confirm`).
 
 ```tsx
 const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
@@ -399,7 +393,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ## Referência cruzada
 
-- Tabelas alinhadas a dashboards → `dashboards.mdc` e `lib/tableStyles`.
+- Tabelas: Global (`tableStyles`, `SortTableTh` quando aplicável).
 - Acessibilidade geral → `global.mdc`.
 
 ---

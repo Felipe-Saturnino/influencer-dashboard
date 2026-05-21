@@ -6,85 +6,48 @@ globs:
 alwaysApply: false
 ---
 
-# Seção: Aquisição — Padrões de UI/UX
+# Seção Aquisição
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC — não duplicar aqui.
+
+---
 
 ## Identificação
 
-- Caminho: `src/pages/aquisicao/`
-- Páginas: `Financeiro/index.tsx`, `BancaJogo/index.tsx`
-- Token set: **Legado** (`--brand-primary`, `--brand-secondary`, `--brand-accent`)
-- Perfis: Gestor, Operador, Influencer, Agência — escopo de dados e ações por perfil
+| PageKey | Página | Caminho |
+|---------|--------|---------|
+| `financeiro` | Financeiro | `aquisicao/Financeiro/` |
+| `banca_jogo` | Banca de Jogo | `aquisicao/BancaJogo/` |
+
+Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ---
 
-## Header de página
+## Financeiro (`financeiro`)
 
-- Badge: **28×28**, `borderRadius: 8`, `brand.primaryIconBg/Border/Color`
-- `h1`: `fontSize: 22`, `fontWeight: 800`, uppercase, `FONT_TITLE`, `brand.primary`
-- Subtítulo: `fontSize: 13`, `t.textMuted`, `FONT.body`
-- Componente: `PageHeader` (`src/components/PageHeader.tsx`)
-- Ícone: **exclusivamente Lucide** — `Wallet` (Financeiro), `Coins` (Banca de Jogo)
-- **Proibido:** `GiXxx` de `react-icons/gi` no badge do header
-
----
-
-## Bloco de filtros
-
-- Fundo: `brand.primaryTransparentBg` + `brand.primaryTransparentBorder` — nunca sólido (`brand.blockBg`, `t.cardBg`, hex)
-- Carrossel de mês: `ChevronLeft`/`ChevronRight` size={14} + **`aria-label`** ("Mês anterior", "Próximo mês") + `title` + `disabled` no extremo
-- Label de período: `fontSize: 18`, `fontWeight: 800`, `minWidth: 180`, `textAlign: center`
-
-### Botão Histórico (Regra 10 global)
-
-```tsx
-background: historico
-  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-  : "transparent",
-border: historico
-  ? `1px solid var(--brand-action, #7c3aed)`
-  : `1px solid ${t.cardBorder}`,
-color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-```
-
-Sem condicional `brand.useBrand` no chip Histórico.
+- Carrossel de mês + Histórico na FilterBar; KPIs com skeleton inline (sem “Carregando...” dentro do card).
+- **Datas de ciclo** no select: formato legível (`dd/mm – dd/mm/aa`) — nunca ISO cru no label.
+- Empty ciclos: copy para influencer vs gestor; detalhes técnicos só em `<details>` para gestor.
+- Alertas: `AlertTriangle` Lucide — nunca emoji ⚠️ sozinho.
+- Ciclo aberto: banner amarelo “Prévia em tempo real…” com `role="status"`.
+- Tabela: expand com `aria-expanded`; coluna **Perfil** para classificação de influencer.
+- Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
+- **Handoff:** aprovação pagamento, edição manual, consolidado.
 
 ---
 
-## Loading / skeletons
+## Banca de Jogo (`banca_jogo`)
 
-| Contexto | Padrão |
-|----------|--------|
-| Página inteira | `Loader2 size={22}` + `app-lucide-spin` + `var(--brand-primary, #7c3aed)` + texto |
-| KPI cards (Financeiro) | Skeleton inline `height: 32`, `width: 65%` — **sem** Loader2/texto "Carregando..." dentro do card |
-| Listas/tabelas | `Loader2 size={18}` centralizado |
-| CTA em ação | `Loader2 size={13}` + `color="#fff"` |
-
----
-
-## Tabelas operacionais
-
-```tsx
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
-```
-
-- Wrapper: `app-table-wrap` + `borderRadius: 14` + `borderCollapse: "separate"`
-- `<caption>` oculto (clip/absolute), `<th scope="col">`
-- Zebra: `zebraStripe(i)`; hover restaura zebra no `onMouseLeave`
-- Linhas expandíveis: `tabIndex={0}`, `aria-expanded`, `aria-controls` → `id` no painel (`role="region"`)
-- Classificação de influencer: label **"Perfil"** quando há outra coluna "Status" de workflow
-
----
-
-## Modais
-
-`ModalBase` + `ModalHeader` de `OperacoesModal` — `aria-labelledby` via `useId()` interno no `ModalBase`.
-
----
-
-## Elementos interativos
-
-- Badges clicáveis: `<button type="button">` + `aria-label` contextual
-- **Proibido:** `<span role="button">`, `<td role="button">`
+- Workflow: Solicitado → Aprovado → Liberado (cores semânticas Global).
+- **CPF** mascarado na tabela (`***.***.***-**`) com `title` no hover para autorizado.
+- Exclusão: modal de confirmação com texto contextual — não `window.confirm`.
+- Status conta: pills Liberada/Bloqueada com `aria-pressed` — não radio nativo.
+- Filtro status: chip ativo igual operadora (borda/fundo marca).
+- Vazio filtro: `Nenhuma solicitação em aberto neste filtro.`
+- Responsivo: &lt;768px ocultar CPF/Data; &lt;480px cards verticais.
+- **Handoff:** liberar banca, operadora, histórico.
 
 ---
 
@@ -92,28 +55,17 @@ import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib
 
 | Estado | Mensagem |
 |--------|----------|
-| Sem dados (filtro período) | `Sem dados para o período selecionado.` |
-| Sem solicitações abertas | `Nenhuma solicitação em aberto neste filtro.` |
-| Sem influencers consolidado | `Nenhum influencer encontrado.` |
-| Sem permissão | `Você não tem permissão para visualizar esta página.` |
-| Erro técnico (usuário) | Mensagem genérica + `console.error` — sem SQL/RPC/caminhos |
+| Sem dados período (KPIs) | `Sem dados para o período selecionado.` |
+| Banca sem solicitações | `Nenhuma solicitação em aberto neste filtro.` |
+| Sem influencers | `Nenhum influencer encontrado.` |
+| Sem permissão | String Global |
 
 ---
 
-## Consistência
+## Anti-patterns (Aquisição)
 
-- `t.isDark` — nunca desestruturar `isDark` de `useApp()`
-- `fmtBRL`, `fmtHorasTotal` de `lib/dashboardHelpers`
-- CTA gradiente: `var(--brand-primary)` + `var(--brand-secondary)` quando `brand.useBrand`; senão `#4a2082` → `#1e36f8`; texto `#fff`
-
----
-
-## Anti-patterns
-
-- GameIcons no header
-- `Carregando...` dentro de KPI card
-- Nav de mês só com `title` (sem `aria-label`)
-- Tabela com `borderCollapse: "collapse"` sem `app-table-wrap`
-- Duas colunas "Status" na mesma tabela
-- Histórico com `--brand-accent`
-- Erros visíveis com detalhe de infraestrutura
+- GameIcons no header; `Wallet` / `Coins` Lucide apenas.
+- Histórico com lógica só `brand.useBrand` inconsistente com Streamers (documentar padrão `--brand-action` se alinhar código).
+- KPI card com Loader2 de loading.
+- Duas colunas “Status” na mesma tabela.
+- Erro com `error.message` na UI.

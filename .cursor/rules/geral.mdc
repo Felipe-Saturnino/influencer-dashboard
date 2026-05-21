@@ -1,0 +1,99 @@
+---
+description: Regras para páginas Geral (shell, auth, ajuda) e Canal de Denúncias público. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/geral/**/*.tsx
+  - src/pages/geral/**/*.ts
+  - src/pages/public/CanalDenunciasSpinPage.tsx
+alwaysApply: false
+---
+
+# Seção Geral
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers de páginas logadas:** Brand MDC — não duplicar aqui.
+
+---
+
+## Identificação
+
+| PageKey / rota | Caminho | Notas |
+|----------------|---------|--------|
+| Home | `geral/Home/` | Hub pós-login |
+| Login | `geral/Login/` | Auth; brandguide no contexto |
+| Configurações | `geral/Configurações/` | Conta, tema, perfil |
+| Ajuda | `geral/Ajuda/` | Textos por página + glossário |
+| Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
+| Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
+
+Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou URL pública.
+
+---
+
+## Ajuda e glossário
+
+**Ficheiros:** `geral/Ajuda/index.tsx`, `geral/Ajuda/glossarioData.ts`, painéis por `pageKey`.
+
+**Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
+
+### Ao adicionar página no menu
+
+1. Entrada em `glossarioData.ts` (e bloco em `index.tsx` se houver tour textual).
+2. Termos novos de domínio no glossário.
+3. Handoff Claude pode completar textos — estrutura fica neste MDC.
+
+### Handoff pendente
+
+- Revisão contínua de cobertura: todas as `PageKey` do `menu.ts` com texto de ajuda adequado.
+
+---
+
+## Home (`geral/Home/`)
+
+- Ponto de entrada após login; cards/links para módulos conforme permissões.
+- **Handoff:** detalhar KPIs/cards e permissões por perfil.
+
+---
+
+## Login (`geral/Login/`)
+
+- Fora do `app-page-shell` logado.
+- CTA com gradiente Brand; spinner `#fff` dentro do botão.
+- **Handoff:** fluxos whitelabel, recuperação de senha, erros inline.
+
+---
+
+## Configurações (`geral/Configuracoes/`)
+
+- Preferências de conta/tema; CTAs de marca quando aplicável.
+- **Handoff:** abas e campos por perfil.
+
+---
+
+## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
+
+- Fluxo bloqueante; mesmo padrão de CTA/spinner do Login.
+- **Handoff:** validações e mensagens de erro.
+
+---
+
+## Canal de denúncias — público (`public/CanalDenunciasSpinPage.tsx`)
+
+**Exceções ao padrão de página logada:**
+
+- **Sem** `usePermission` / menu lateral / `PageHeader` Spin logado.
+- **Sem** matriz Gestão de Usuários — acesso por URL pública (`isCanalDenunciasPublicPath`).
+- Tema: pode usar tokens neutros e identidade Spin fixa; whitelabel operador **não** se aplica como nas páginas internas salvo decisão de produto.
+- Formulários: `CampoObrigatorioMark` e semântica de erro do Global.
+- Privacidade: não expor detalhes técnicos em mensagens de erro.
+
+**Handoff:** campos do formulário, anonimato, confirmação pós-envio, a11y embed.
+
+---
+
+## Anti-patterns (Geral)
+
+- Duplicar regras de dashboard/operacional neste MDC.
+- Canal público com `usePermission` ou copy de página interna sem adaptar.
+- Alterar página de produto sem rever `glossarioData.ts` / Ajuda.
+- GameIcons no conteúdo de ajuda quando Lucide bastar.

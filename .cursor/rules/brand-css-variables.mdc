@@ -11,9 +11,11 @@ alwaysApply: true
 
 | Origem | Pode citar |
 |--------|------------|
-| **Global** | Este MDC (marca, filtros, headers, ações) + paleta semântica de dados no Global |
+| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca >5) |
 | **Brand (este)** | Global (limite semântica vs marca); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
 | **Secções** (`dashboards`, `lives`, `estudio`, …) | **Global** + **Brand** — sem citar outras secções para marca |
+
+**Antes de codar:** ler Global → Brand → MDC da secção (ordem detalhada no Global).
 
 ---
 
@@ -242,7 +244,7 @@ const btnNav: React.CSSProperties = {
 
 **Variante compacta** (ex. Portal RH leitura): botões 30×30, rótulo `fontSize: 13`, `fontWeight: 700`, `minWidth: 140` — mesma lógica de acessibilidade.
 
-**Referências:** `PortalRhBlocoFiltros`, Streamers FilterBar, `operacoes.mdc` (snippet legado), `MesCarrosselPeriodo` (escala — card próprio com `blockBg`, exceção).
+**Referências:** `PortalRhBlocoFiltros`, Streamers FilterBar, `MesCarrosselPeriodo` (escala — card próprio com `blockBg`, exceção).
 
 ---
 
@@ -298,8 +300,8 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 
 - Paleta semântica de dados (verde = bom, vermelho = ruim, amarelo, roxo FTD/Hora).
 - `useApp()` / `t.*` para superfícies neutras.
-- `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, permissões, strings de vazio/loading.
-- Requisito estrutural: **toda página tem título alinhado ao menu + subtítulo** — detalhe visual neste MDC (secção 4).
+- `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, `SortTableTh`, ordenação default, permissões (Gestão de Usuários / admin irrestrito), filtros (`Todos` default, busca se >5 opções), strings de vazio/loading.
+- Título alinhado ao menu + subtítulo: regra de conteúdo no Global; implementação visual neste MDC (secção 4).
 
 ---
 

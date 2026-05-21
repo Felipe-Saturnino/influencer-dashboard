@@ -6,15 +6,15 @@ globs:
 alwaysApply: false
 ---
 
-# Seção Lives — Regras Específicas
+# Seção Lives
 
-**Escopo (Cursor):** globs cobrem **tudo** em `src/pages/lives/` (Agenda com modais, Resultados, Feedback, Influencers, Scout). Influencers e Scout estão em `lives/` (não em `estudio/`).
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-Páginas: Agenda · Resultados · Feedback · Influencers · Scout
+**Escopo:** `src/pages/lives/` — Agenda, Resultados, Feedback, Influencers, Scout.
 
-**Marca / operadora:** usar `useDashboardBrand()` como nas dashboards — `primaryTransparentBg`, `primaryTransparentBorder`, `accent`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, `blockBg` onde aplicável. Com `brand.useBrand`, o hook já resolve para `var(--brand-*)`. Destaques institucionais: `color-mix(in srgb, var(--brand-accent) X%, transparent)` em vez de RGBA fixo da Spin. **Não** substituir cores **semânticas** de status (live realizada/agendada, erro, alerta de produto) por cor de marca só por whitelabel — manter `BRAND.*` ou tons acordados. Spinners: fora de botão CTA, preferir cor da marca com `var(--brand-primary, #7c3aed)` (ver `brand-css-variables.mdc`); dentro de CTA com gradiente, spinner branco.
+**Marca / filtros / headers:** Brand MDC. **Status de live** (agendada, realizada, etc.): semântica fixa — não trocar por whitelabel.
 
-**Tokens:** `t.*` via `useApp()` para fundo de página, texto, bordas neutras e cards quando não for bloco “da operadora”.
+**Ajuda:** textos em `geral/Ajuda` — ver `geral.mdc`; não documentar glossário neste ficheiro.
 
 ---
 
@@ -698,10 +698,6 @@ const STATUS_SCOUT_COLOR = {
 ```
 
 ---
-
-## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
-
-Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga. Glossário: `glossarioData.ts`.
 
 ---
 

@@ -1,27 +1,27 @@
 ---
-description: Regras específicas para todas as páginas da seção Plataforma. Complementa global.mdc, brand-css-variables.mdc, operacoes.mdc e conteudo.mdc.
+description: Regras específicas para todas as páginas da seção Plataforma. Complementa global.mdc e brand-css-variables.mdc.
 globs:
   - src/pages/plataforma/**/*.tsx
   - src/pages/plataforma/**/*.ts
 alwaysApply: false
 ---
 
-# Seção Plataforma — Regras Específicas
+# Seção Plataforma
 
-**Escopo (Cursor):** `src/pages/plataforma/` — **GestaoOperadoras**, **StatusTecnico**, **GestaoUsuarios** (rotas, abas e componentes associados).
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-**Perfil de uso:** administração e infraestrutura. **GestaoUsuarios** é essencialmente **admin**; **GestaoOperadoras** e **StatusTecnico** devem respeitar **whitelabel** quando o utilizador/contexto for operador (via `useDashboardBrand`).
+**Escopo:** `src/pages/plataforma/` — GestaoOperadoras, StatusTecnico, GestaoUsuarios (+ abas e modais).
 
-**Evitar em toda a secção:** `window.confirm()`, `window.alert()`, emojis como ícone de estado, objeto `const BRAND = { ... }` **solto** fora do barrel acordado, saves N:M em loop sequencial sem batch, `backdropFilter: blur()` em modais, **`maxHeight: "90vh"`** (usar **`90dvh`**).
+**Marca:** Brand MDC. **GestaoUsuarios:** admin-centric; hook no header por consistência, não preview whitelabel completo.
+
+**Evitar:** `window.confirm()`, `window.alert()`, emojis como ícone de estado, `BRAND` solto local, saves N:M em loop, `backdropFilter: blur()` em modais — modais: Global (`90dvh`).
 
 ---
 
 ## `useDashboardBrand()` — Onde é obrigatório
 
-- **GestaoOperadoras** e **StatusTecnico:** **obrigatório** para header, ícone 28×28, `h1`, CTAs e ramos `brand.useBrand` / `dashBrand`.
-- **GestaoUsuarios:** o layout principal também chama o hook para **consistência do cabeçalho**; não assumir preview whitelabel completo só por isso (fluxos são admin-centric).
-
-**Whitelabel (alinhado a `operacoes.mdc` / `global.mdc`):**
+- **GestaoOperadoras** e **StatusTecnico:** header, CTAs, whitelabel operador.
+- **GestaoUsuarios:** cabeçalho; matriz de permissões é fonte da verdade (Global).
 
 ```tsx
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -241,7 +241,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 
 ## Referência cruzada
 
-- Padrões de confirmação de exclusão (dois cliques): `lives.mdc` / `operacoes.mdc`.
+- Padrões de confirmação de exclusão (dois cliques): Global.
 - Tabelas alinhadas a dashboards: `dashboards.mdc`, `lib/tableStyles`.
 
 ---
