@@ -31,17 +31,36 @@ const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
   "rh",
 ];
 
-/** Mapa id → status em `influencer_perfil` (ausência de linha = tratado como ativo, igual Lives → Influencers). */
-function mapaStatusPerfil(rows: { id: string; status: string | null }[] | null | undefined): Map<string, string | null> {
-  const m = new Map<string, string | null>();
-  (rows ?? []).forEach((r) => m.set(r.id, r.status));
+interface PerfilAuditoriaRow {
+  id: string;
+  status: string | null;
+  nome_artistico: string | null;
+}
+
+function mapaPerfilAuditoria(rows: PerfilAuditoriaRow[] | null | undefined): Map<string, PerfilAuditoriaRow> {
+  const m = new Map<string, PerfilAuditoriaRow>();
+  (rows ?? []).forEach((r) => m.set(r.id, r));
   return m;
 }
 
-function influencerPerfilEstaAtivo(influencerId: string, statusMap: Map<string, string | null>): boolean {
-  const raw = statusMap.get(influencerId);
-  const s = raw === undefined ? "ativo" : (raw ?? "ativo");
+/** Auditoria: só influencers com cadastro em `influencer_perfil` e status operacional ativo. */
+function influencerElegivelAuditoria(influencerId: string, perfilMap: Map<string, PerfilAuditoriaRow>): boolean {
+  const perfil = perfilMap.get(influencerId);
+  if (!perfil) return false;
+  const s = (perfil.status ?? "ativo").toLowerCase();
   return s !== "inativo" && s !== "cancelado";
+}
+
+function nomeExibicaoAuditoria(
+  influencerId: string,
+  perfilMap: Map<string, PerfilAuditoriaRow>,
+  profileName?: string | null,
+): string {
+  const art = perfilMap.get(influencerId)?.nome_artistico?.trim();
+  if (art) return art;
+  const nome = profileName?.trim();
+  if (nome && !/^sec-prober-/i.test(nome)) return nome;
+  return `Influencer (${influencerId.slice(0, 8)}…)`;
 }
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -436,34 +455,32 @@ function PainelAuditoria({
       setLoading(true);
       const [confRes, influRes, perfilRes] = await Promise.all([
         supabase.from("guia_confirmacoes").select("id, influencer_id, item_key, confirmed_at").eq("item_key", itemKey),
-        supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-        supabase.from("influencer_perfil").select("id, status"),
+        supabase.from("profiles").select("id, name, ativo").in("role", [...ROLES_PARIDADE_INFLUENCER]).eq("ativo", true),
+        supabase.from("influencer_perfil").select("id, status, nome_artistico"),
       ]);
-      const statusMap = mapaStatusPerfil((perfilRes.data ?? []) as { id: string; status: string | null }[]);
+      const perfilMap = mapaPerfilAuditoria((perfilRes.data ?? []) as PerfilAuditoriaRow[]);
       const confs = (confRes.data ?? []) as Confirmacao[];
-      const influs = ((influRes.data ?? []) as { id: string; name: string }[]).filter(
-        (i) => podeVerInfluencer(i.id) && influencerPerfilEstaAtivo(i.id, statusMap),
-      );
+      const influs = ((influRes.data ?? []) as { id: string; name: string | null }[])
+        .filter(
+          (i) =>
+            podeVerInfluencer(i.id) &&
+            influencerElegivelAuditoria(i.id, perfilMap),
+        )
+        .map((i) => ({
+          id: i.id,
+          name: nomeExibicaoAuditoria(i.id, perfilMap, i.name),
+        }));
       const confIds = new Set(
         confs
-          .filter((c) => podeVerInfluencer(c.influencer_id) && influencerPerfilEstaAtivo(c.influencer_id, statusMap))
+          .filter((c) => podeVerInfluencer(c.influencer_id) && influencerElegivelAuditoria(c.influencer_id, perfilMap))
           .map((c) => c.influencer_id),
       );
 
-      const confComNome = confs
-        .filter(
-          (c) =>
-            podeVerInfluencer(c.influencer_id) &&
-            influencerPerfilEstaAtivo(c.influencer_id, statusMap),
-        )
-        .map((c) => ({
-          ...c,
-          influencer_nome:
-            influs.find((i) => i.id === c.influencer_id)?.name ??
-            `Influencer (${c.influencer_id.slice(0, 8)}…)`,
-        }));
-
-      setConfirmacoes(confComNome);
+      setConfirmacoes(
+        confs.filter(
+          (c) => podeVerInfluencer(c.influencer_id) && influencerElegivelAuditoria(c.influencer_id, perfilMap),
+        ),
+      );
       setPendentes(influs.filter((i) => !confIds.has(i.id)));
       setLoading(false);
     }
@@ -495,42 +512,21 @@ function PainelAuditoria({
         </span>
       </div>
 
-      <div className="app-grid-2" style={{ gap: 16 }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: BRAND.verde, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 8 }}>
-            Confirmaram ({confirmacoes.length})
-          </div>
-          {confirmacoes.length === 0 ? (
-            <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Nenhum ainda.</span>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {confirmacoes.map((c) => (
-                <div key={c.id} style={{ padding: "8px 10px", borderRadius: 8, background: dark ? "rgba(34,197,94,0.07)" : "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.20)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>{c.influencer_nome}</div>
-                  <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>
-                    {new Date(c.confirmed_at).toLocaleString("pt-BR")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: BRAND.vermelho, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 8 }}>
+          Pendentes ({pendentes.length})
         </div>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: BRAND.vermelho, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 8 }}>
-            Pendentes ({pendentes.length})
+        {pendentes.length === 0 ? (
+          <span style={{ fontSize: 12, color: BRAND.verde, fontFamily: FONT.body, fontWeight: 600 }}>Todos confirmaram.</span>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {pendentes.map((p) => (
+              <div key={p.id} style={{ padding: "8px 10px", borderRadius: 8, background: dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)", border: "1px solid rgba(232,64,37,0.18)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: dark ? "#ff9980" : "#b02a14", fontFamily: FONT.body }}>{p.name}</div>
+              </div>
+            ))}
           </div>
-          {pendentes.length === 0 ? (
-            <span style={{ fontSize: 12, color: BRAND.verde, fontFamily: FONT.body, fontWeight: 600 }}>Todos confirmaram.</span>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {pendentes.map((p) => (
-                <div key={p.id} style={{ padding: "8px 10px", borderRadius: 8, background: dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)", border: "1px solid rgba(232,64,37,0.18)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: dark ? "#ff9980" : "#b02a14", fontFamily: FONT.body }}>{p.name}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
@@ -766,13 +762,13 @@ export default function PlaybookInfluencers() {
 
     if (exibirAuditoria) {
       const [{ data: influsRaw }, { data: perfilRows }] = await Promise.all([
-        supabase.from("profiles").select("id").in("role", [...ROLES_PARIDADE_INFLUENCER]),
-        supabase.from("influencer_perfil").select("id, status"),
+        supabase.from("profiles").select("id").in("role", [...ROLES_PARIDADE_INFLUENCER]).eq("ativo", true),
+        supabase.from("influencer_perfil").select("id, status, nome_artistico"),
       ]);
-      const statusMap = mapaStatusPerfil((perfilRows ?? []) as { id: string; status: string | null }[]);
+      const perfilMap = mapaPerfilAuditoria((perfilRows ?? []) as PerfilAuditoriaRow[]);
       const influsVis = (influsRaw ?? []).filter(
         (row: { id: string }) =>
-          podeVerInfluencer(row.id) && influencerPerfilEstaAtivo(row.id, statusMap),
+          podeVerInfluencer(row.id) && influencerElegivelAuditoria(row.id, perfilMap),
       );
       setTotalInflu(influsVis.length);
 
@@ -780,7 +776,7 @@ export default function PlaybookInfluencers() {
       const porInflu: Record<string, Set<string>> = {};
       (confRows ?? []).forEach((c: { influencer_id: string; item_key: string }) => {
         if (!podeVerInfluencer(c.influencer_id)) return;
-        if (!influencerPerfilEstaAtivo(c.influencer_id, statusMap)) return;
+        if (!influencerElegivelAuditoria(c.influencer_id, perfilMap)) return;
         if (!porInflu[c.influencer_id]) porInflu[c.influencer_id] = new Set();
         porInflu[c.influencer_id].add(c.item_key);
       });
