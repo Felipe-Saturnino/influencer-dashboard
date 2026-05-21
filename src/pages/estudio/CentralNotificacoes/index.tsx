@@ -166,6 +166,13 @@ type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "roteiro_mesa";
 
 const ABAS_STAFF: AbaStaff[] = ["troca", "feedback", "campanha_roteiro", "roteiro_mesa"];
 
+const TAB_STAFF_DOM_ID: Record<AbaStaff, string> = {
+  troca: "tab-central-troca",
+  feedback: "tab-central-feedback",
+  campanha_roteiro: "tab-central-campanha-roteiro",
+  roteiro_mesa: "tab-central-roteiro-mesa",
+};
+
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
@@ -668,20 +675,25 @@ export default function CentralNotificacoes() {
     (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
   ).length;
 
-  const chipTab = (ativo: boolean) => ({
-    padding: "8px 14px",
-    borderRadius: 999,
+  const chipTab = (ativo: boolean): React.CSSProperties => ({
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "10px 18px",
+    minHeight: 44,
+    borderRadius: 10,
     border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
     background: ativo
       ? brand.useBrand
-        ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-        : "rgba(124,58,237,0.15)"
-      : "transparent",
+        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+      : (t.inputBg ?? t.cardBg),
     color: ativo ? brand.accent : t.textMuted,
     fontWeight: ativo ? 700 : 500,
     fontSize: 13,
     fontFamily: FONT.body,
     cursor: "pointer",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
   });
 
   function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[], opts?: { staffMesclado?: boolean }) {
@@ -1035,7 +1047,7 @@ export default function CentralNotificacoes() {
         }
       />
 
-      <div style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 14 }}>
         <div
           style={{
             borderRadius: 14,
@@ -1044,7 +1056,16 @@ export default function CentralNotificacoes() {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: verInboxEstudio ? 12 : 0,
+            }}
+          >
             <button
               type="button"
               style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
@@ -1115,51 +1136,47 @@ export default function CentralNotificacoes() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }}>
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }} aria-live="polite">
                 <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
           </div>
-        </div>
-      </div>
 
-      {verInboxEstudio ? (
-        <>
-          <div
-            style={{
-              position: "relative",
-              marginBottom: 20,
-              ...(narrowMobile
-                ? {
-                    overflow: "hidden",
+          {verInboxEstudio ? (
+            <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
+              <div
+                role="tablist"
+                aria-label="Inbox da Central"
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: narrowMobile ? "nowrap" : "wrap",
+                  justifyContent: "center",
+                  overflowX: narrowMobile ? "auto" : undefined,
+                  paddingBottom: narrowMobile ? 4 : 0,
+                  scrollbarWidth: "none",
+                }}
+                onKeyDown={(e) => {
+                  const idx = ABAS_STAFF.indexOf(abaStaff);
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const next = ABAS_STAFF[(idx + 1) % ABAS_STAFF.length];
+                    setAbaStaff(next);
+                    requestAnimationFrame(() => {
+                      document.getElementById(TAB_STAFF_DOM_ID[next])?.focus();
+                    });
                   }
-                : {}),
-            }}
-          >
-          <div
-            role="tablist"
-            aria-label="Inbox da Central"
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: narrowMobile ? "nowrap" : "wrap",
-              overflowX: narrowMobile ? "auto" : undefined,
-              paddingBottom: narrowMobile ? 4 : 0,
-              scrollbarWidth: "none",
-            }}
-            onKeyDown={(e) => {
-              const idx = ABAS_STAFF.indexOf(abaStaff);
-              if (e.key === "ArrowRight") {
-                e.preventDefault();
-                setAbaStaff(ABAS_STAFF[(idx + 1) % ABAS_STAFF.length]);
-              }
-              if (e.key === "ArrowLeft") {
-                e.preventDefault();
-                setAbaStaff(ABAS_STAFF[(idx - 1 + ABAS_STAFF.length) % ABAS_STAFF.length]);
-              }
-            }}
-          >
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const prev = ABAS_STAFF[(idx - 1 + ABAS_STAFF.length) % ABAS_STAFF.length];
+                    setAbaStaff(prev);
+                    requestAnimationFrame(() => {
+                      document.getElementById(TAB_STAFF_DOM_ID[prev])?.focus();
+                    });
+                  }
+                }}
+              >
             <button
               type="button"
               role="tab"
@@ -1290,8 +1307,13 @@ export default function CentralNotificacoes() {
               }}
             />
           ) : null}
-          </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
+      {verInboxEstudio ? (
+        <>
           {abaStaff === "troca" ? (
             <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca" tabIndex={0}>
               {renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })}

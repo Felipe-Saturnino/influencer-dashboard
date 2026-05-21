@@ -14,7 +14,7 @@ import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -36,10 +36,20 @@ function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr
   return (alias.total_deposit ?? 0) - (alias.total_withdrawal ?? 0);
 }
 
-function fmtData(iso: string): string {
+function fmtData(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
+  const [y, m, d] = iso.split("T")[0].split("-");
+  if (!y || !m || !d) return "—";
   return `${d}/${m}/${y}`;
+}
+
+function dataAcaoIso(aba: Aba, alias: UtmAlias): string | null | undefined {
+  return aba === "mapeados" ? alias.mapeado_em : alias.atualizado_em;
+}
+
+function colunasPorAba(aba: Aba): number {
+  if (aba === "pendentes") return 4;
+  return 7;
 }
 
 interface InfluencerOpcao { id: string; nome_artistico: string; status: string; }
@@ -52,9 +62,8 @@ const ABAS_LIST: Aba[] = ["pendentes", "mapeados", "ignorados"];
 export default function GestaoLinks() {
   const { theme: t, user, podeVerInfluencer } = useApp();
   const brand = useDashboardBrand();
-  const narrowMobile = useMediaQuery("(max-width: 479px)");
-  const hideDepGgr = narrowMobile;
   const perm = usePermission("gestao_links");
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora } = useDashboardFiltros();
 
   const podeMapearAlias   = () => perm.canEditarOk;
@@ -81,15 +90,14 @@ export default function GestaoLinks() {
   const [confirmFechar, setConfirmFechar] = useState(false);
   type LinkSortCol =
     | "utm"
-    | "classificacao"
     | "operadora"
     | "primeiro"
-    | "ultimo"
-    | "ftds"
-    | "depositos"
-    | "ggr"
-    | "map";
-  const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
+    | "acao"
+    | "proprietario"
+    | "status"
+    | "visitas"
+    | "registros";
+  const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "primeiro", dir: "desc" });
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -126,16 +134,22 @@ export default function GestaoLinks() {
         infNomeMap = new Map((infData ?? []).map((i: { id: string; nome_artistico: string | null }) => [i.id, i.nome_artistico ?? ""]));
       }
       const campanhaIds = aliasData.map((r: UtmAlias) => r.campanha_id).filter(Boolean) as string[];
+      let campanhaAtivoMap = new Map<string, boolean>();
       if (campanhaIds.length > 0) {
-        const { data: campData } = await supabase.from("campanhas").select("id, nome").in("id", campanhaIds);
+        const { data: campData } = await supabase.from("campanhas").select("id, nome, ativo").in("id", campanhaIds);
         campanhaNomeMap = new Map((campData ?? []).map((c: { id: string; nome: string }) => [c.id, c.nome]));
+        campanhaAtivoMap = new Map((campData ?? []).map((c: { id: string; ativo: boolean }) => [c.id, c.ativo]));
       }
+      setAliases(aliasData.map((r: UtmAlias) => ({
+        ...r,
+        influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) || "—") : undefined,
+        campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) || "—") : undefined,
+        campanha_ativo: r.campanha_id ? campanhaAtivoMap.get(r.campanha_id) : undefined,
+      })));
+      setLoading(false);
+      return;
     }
-    setAliases(aliasData.map((r: UtmAlias) => ({
-      ...r,
-      influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) || "—") : undefined,
-      campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) || "—") : undefined,
-    })));
+    setAliases(aliasData.map((r: UtmAlias) => ({ ...r })));
     setLoading(false);
   }, [aba, operadoraFiltro]);
 
@@ -256,8 +270,11 @@ export default function GestaoLinks() {
   }, [influencers]);
 
   const statusDoLink = useCallback(
-    (a: UtmAlias): string | null =>
-      a.influencer_id ? (statusInfluencerPorId.get(a.influencer_id) ?? "ativo") : null,
+    (a: UtmAlias): string | null => {
+      if (a.influencer_id) return statusInfluencerPorId.get(a.influencer_id) ?? "ativo";
+      if (a.campanha_id) return a.campanha_ativo === false ? "inativo" : "ativo";
+      return null;
+    },
     [statusInfluencerPorId],
   );
 
@@ -266,15 +283,13 @@ export default function GestaoLinks() {
     const { col, dir } = sortLinks;
     const nomeOp = (a: UtmAlias) =>
       (operadorasList.find((o) => o.slug === a.operadora_slug)?.nome ?? a.operadora_slug ?? "").toLowerCase();
-    const mapLabel = (a: UtmAlias) => `${a.influencer_name ?? ""} ${a.campanha_nome ?? ""}`.trim().toLowerCase();
+    const proprietarioLabel = (a: UtmAlias) =>
+      (a.influencer_id ? (a.influencer_name ?? "") : (a.campanha_nome ?? "")).trim().toLowerCase();
     arr.sort((a, b) => {
       let c = 0;
       switch (col) {
         case "utm":
           c = compareLocaleTexto(a.utm_source, b.utm_source, dir);
-          break;
-        case "classificacao":
-          c = comparePerfilStatusNullable(statusDoLink(a), statusDoLink(b), dir);
           break;
         case "operadora":
           c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
@@ -282,42 +297,79 @@ export default function GestaoLinks() {
         case "primeiro":
           c = compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, dir);
           break;
-        case "ultimo":
-          c = compareLocaleTexto(a.ultimo_visto, b.ultimo_visto, dir);
+        case "acao":
+          c = compareLocaleTexto(dataAcaoIso(aba, a) ?? "", dataAcaoIso(aba, b) ?? "", dir);
           break;
-        case "ftds":
-          c = compareNumber(a.total_ftds ?? 0, b.total_ftds ?? 0, dir);
+        case "proprietario":
+          c = compareLocaleTexto(proprietarioLabel(a), proprietarioLabel(b), dir);
           break;
-        case "depositos":
-          c = compareNumber(a.total_deposit ?? 0, b.total_deposit ?? 0, dir);
+        case "status":
+          c = comparePerfilStatusNullable(statusDoLink(a), statusDoLink(b), dir);
           break;
-        case "ggr":
-          c = compareNumber(calcGgr(a), calcGgr(b), dir);
+        case "visitas":
+          c = compareNumber(a.total_visits ?? 0, b.total_visits ?? 0, dir);
           break;
-        case "map":
-          c = compareLocaleTexto(mapLabel(a), mapLabel(b), dir);
+        case "registros":
+          c = compareNumber(a.total_registrations ?? 0, b.total_registrations ?? 0, dir);
           break;
         default:
           c = 0;
       }
       if (c !== 0) return c;
-      return compareNumber(b.total_ftds ?? 0, a.total_ftds ?? 0, "desc");
+      return compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, "desc");
     });
     return arr;
-  }, [aliases, sortLinks, statusDoLink, operadorasList]);
+  }, [aliases, sortLinks, statusDoLink, operadorasList, aba]);
 
   useEffect(() => {
-    setSortLinks((s) => (s.col === "map" && aba !== "mapeados" ? { col: "classificacao", dir: "asc" } : s));
+    const defaults: Record<Aba, { col: LinkSortCol; dir: SortDir }> = {
+      pendentes: { col: "primeiro", dir: "desc" },
+      mapeados: { col: "acao", dir: "desc" },
+      ignorados: { col: "visitas", dir: "desc" },
+    };
+    setSortLinks(defaults[aba]);
   }, [aba]);
 
-  const colunasTabela =
-    1 +
-    1 +
-    (operadoraFiltro === "todas" && operadorasList.length > 1 ? 1 : 0) +
-    4 +
-    (hideDepGgr ? 0 : 2) +
-    (aba === "mapeados" ? 1 : 0) +
-    1;
+  const thNum = { ...th, textAlign: "right" as const };
+  const tdNum = getTdNumStyle(t);
+
+  const onSortLinks = (c: LinkSortCol) =>
+    setSortLinks((s) => ({
+      col: c,
+      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+    }));
+
+  function renderStatusBadge(alias: UtmAlias) {
+    const st = statusDoLink(alias);
+    if (st == null) {
+      return <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>;
+    }
+    const sk = st.toLowerCase();
+    const isCampanha = Boolean(alias.campanha_id && !alias.influencer_id);
+    const sl =
+      sk === "inativo"
+        ? { label: isCampanha ? "Inativa" : "Inativo", color: "#94a3b8" }
+        : sk === "cancelado"
+          ? { label: "Cancelado", color: "#ef4444" }
+          : { label: isCampanha ? "Ativa" : "Ativo", color: "#10b981" };
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          fontSize: 10,
+          fontWeight: 700,
+          padding: "3px 9px",
+          borderRadius: 20,
+          background: `${sl.color}22`,
+          color: sl.color,
+          border: `1px solid ${String(sl.color)}44`,
+        }}
+      >
+        {sl.label}
+      </span>
+    );
+  }
 
   if (perm.canView === "nao") {
     return (
@@ -347,116 +399,156 @@ export default function GestaoLinks() {
         Ao mapear um link, os dados históricos são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.
       </div>
 
-      {showFiltroOperadora && operadorasList.length > 0 && (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={13} aria-hidden style={{ position: "absolute", left: 10, color: t.textMuted, pointerEvents: "none" }} />
-                <select
-                  aria-label="Filtrar por operadora"
-                  value={operadoraFiltro}
-                  onChange={(e) => setOperadoraFiltro(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 30px",
-                    borderRadius: 999,
-                    border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : t.cardBorder}`,
-                    background:
-                      operadoraFiltro !== "todas"
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                          : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
-                        : (t.inputBg ?? t.cardBg),
-                    color: operadoraFiltro !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13,
-                    fontWeight: operadoraFiltro !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    outline: "none",
-                    appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                    <option key={op.slug} value={op.slug}>{op.nome}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
-        role="tablist"
-        aria-label="Status dos links"
-        style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}
-        onKeyDown={(e) => {
-          const idx = ABAS_LIST.indexOf(aba);
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            const next = ABAS_LIST[(idx + 1) % ABAS_LIST.length];
-            setAba(next);
-            (e.currentTarget.querySelector(`[data-aba="${next}"]`) as HTMLElement)?.focus();
-          }
-          if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            const prev = ABAS_LIST[(idx - 1 + ABAS_LIST.length) % ABAS_LIST.length];
-            setAba(prev);
-            (e.currentTarget.querySelector(`[data-aba="${prev}"]`) as HTMLElement)?.focus();
-          }
-        }}
-      >
-        {ABAS_LIST.map((a) => {
-          const ativa = aba === a;
-          const tabBgAtiva = brand.useBrand
-            ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-            : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-          return (
-            <button
-              key={a}
-              id={`tab-${a}`}
-              type="button"
-              data-aba={a}
-              role="tab"
-              aria-selected={ativa}
-              aria-controls={`painel-${a}`}
-              tabIndex={ativa ? 0 : -1}
-              onClick={() => setAba(a)}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+          <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
+            <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "7px 16px",
-                borderRadius: 20,
-                cursor: "pointer",
-                border: `1px solid ${ativa ? brand.accent : t.cardBorder}`,
-                background: ativa ? tabBgAtiva : (t.inputBg ?? t.cardBg),
-                color: ativa ? brand.accent : t.textMuted,
-                fontSize: 13,
-                fontWeight: ativa ? 700 : 400,
-                fontFamily: FONT.body,
-                transition: "all 0.15s",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: narrowMobile ? "nowrap" : "wrap",
+                overflowX: narrowMobile ? "auto" : undefined,
+                paddingBottom: narrowMobile ? 4 : 0,
+                scrollbarWidth: "none",
               }}
             >
-              {a.charAt(0).toUpperCase() + a.slice(1)}
-              {a === "pendentes" && totalPendentes > 0 && (
-                <span
-                  style={{
-                    background: COR.vermelho,
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0px 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {totalPendentes}
+              <div
+                role="tablist"
+                aria-label="Status dos links"
+                onKeyDown={(e) => {
+                  const idx = ABAS_LIST.indexOf(aba);
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const next = ABAS_LIST[(idx + 1) % ABAS_LIST.length];
+                    setAba(next);
+                    (e.currentTarget.querySelector(`[data-aba="${next}"]`) as HTMLElement)?.focus();
+                  }
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const prev = ABAS_LIST[(idx - 1 + ABAS_LIST.length) % ABAS_LIST.length];
+                    setAba(prev);
+                    (e.currentTarget.querySelector(`[data-aba="${prev}"]`) as HTMLElement)?.focus();
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: narrowMobile ? "nowrap" : "wrap",
+                  flex: 1,
+                  justifyContent: "center",
+                  minWidth: narrowMobile ? "max-content" : undefined,
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, flexShrink: 0 }}>
+                  Status
                 </span>
+                {ABAS_LIST.map((a) => {
+                  const ativa = aba === a;
+                  const tabBgAtiva = brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+                  return (
+                    <button
+                      key={a}
+                      id={`tab-${a}`}
+                      type="button"
+                      data-aba={a}
+                      role="tab"
+                      aria-selected={ativa}
+                      aria-controls={`painel-${a}`}
+                      tabIndex={ativa ? 0 : -1}
+                      onClick={() => setAba(a)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 14px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        border: `1px solid ${ativa ? brand.accent : t.cardBorder}`,
+                        background: ativa ? tabBgAtiva : (t.inputBg ?? t.cardBg),
+                        color: ativa ? brand.accent : t.textMuted,
+                        fontSize: 13,
+                        fontWeight: ativa ? 700 : 400,
+                        fontFamily: FONT.body,
+                        transition: "all 0.15s",
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {a.charAt(0).toUpperCase() + a.slice(1)}
+                      {a === "pendentes" && totalPendentes > 0 && (
+                        <span
+                          aria-label={`${totalPendentes} pendente${totalPendentes !== 1 ? "s" : ""}`}
+                          style={{
+                            background: COR.vermelho,
+                            color: "#fff",
+                            borderRadius: 10,
+                            padding: "0px 6px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {totalPendentes}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {showFiltroOperadora && operadorasList.length > 0 && (
+                <div style={{ position: "relative", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                  <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, color: t.textMuted, pointerEvents: "none" }} />
+                  <select
+                    aria-label="Filtrar por operadora"
+                    value={operadoraFiltro}
+                    onChange={(e) => setOperadoraFiltro(e.target.value)}
+                    style={{
+                      padding: "6px 14px 6px 32px",
+                      borderRadius: 999,
+                      border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : t.cardBorder}`,
+                      background:
+                        operadoraFiltro !== "todas"
+                          ? brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                            : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
+                          : (t.inputBg ?? t.cardBg),
+                      color: operadoraFiltro !== "todas" ? brand.accent : t.textMuted,
+                      fontSize: 13,
+                      fontWeight: operadoraFiltro !== "todas" ? 700 : 400,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      outline: "none",
+                      appearance: "none",
+                    }}
+                  >
+                    <option value="todas">Todas as operadoras</option>
+                    {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                      <option key={op.slug} value={op.slug}>{op.nome}</option>
+                    ))}
+                  </select>
+                </div>
               )}
-            </button>
-          );
-        })}
+            </div>
+            {narrowMobile ? (
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  bottom: 4,
+                  width: 28,
+                  pointerEvents: "none",
+                  background: `linear-gradient(to left, ${t.bg}, transparent)`,
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div
@@ -510,17 +602,22 @@ export default function GestaoLinks() {
               Links por status
             </caption>
             <colgroup>
-              {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "10%" }} />
-              {operadoraFiltro === "todas" && operadorasList.length > 1 && <col style={{ width: "11%" }} />}
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "6%" }} />
-              {!hideDepGgr && <col style={{ width: "11%" }} />}
-              {!hideDepGgr && <col style={{ width: "11%" }} />}
-              {aba === "mapeados" && <col style={{ width: "12%" }} />}
-              {/* Ações: espaço restante */}
+              <col style={{ width: aba === "pendentes" ? "32%" : "22%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "11%" }} />
+              {aba !== "pendentes" && <col style={{ width: "11%" }} />}
+              {aba === "mapeados" && (
+                <>
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "10%" }} />
+                </>
+              )}
+              {aba === "ignorados" && (
+                <>
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "8%" }} />
+                </>
+              )}
               <col />
             </colgroup>
             <thead>
@@ -532,128 +629,80 @@ export default function GestaoLinks() {
                   sortDir={sortLinks.dir}
                   thStyle={th}
                   align="left"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
+                  onSort={onSortLinks}
                 />
                 <SortTableTh<LinkSortCol>
-                  label="Status"
-                  col="classificacao"
+                  label="Operadora"
+                  col="operadora"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
                   thStyle={th}
                   align="left"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
+                  onSort={onSortLinks}
                 />
-                {operadoraFiltro === "todas" && operadorasList.length > 1 && (
-                  <SortTableTh<LinkSortCol>
-                    label="Operadora"
-                    col="operadora"
-                    sortCol={sortLinks.col}
-                    sortDir={sortLinks.dir}
-                    thStyle={th}
-                    align="left"
-                    onSort={(c) =>
-                      setSortLinks((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                )}
                 <SortTableTh<LinkSortCol>
-                  label="1º visto"
+                  label="1 Visto"
                   col="primeiro"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
                   thStyle={th}
                   align="left"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
+                  onSort={onSortLinks}
                 />
-                <SortTableTh<LinkSortCol>
-                  label="Último"
-                  col="ultimo"
-                  sortCol={sortLinks.col}
-                  sortDir={sortLinks.dir}
-                  thStyle={th}
-                  align="left"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
-                />
-                <SortTableTh<LinkSortCol>
-                  label="FTDs"
-                  col="ftds"
-                  sortCol={sortLinks.col}
-                  sortDir={sortLinks.dir}
-                  thStyle={{ ...th, textAlign: "right" } as React.CSSProperties}
-                  align="right"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
-                />
-                <SortTableTh<LinkSortCol>
-                  label="Depósitos"
-                  col="depositos"
-                  sortCol={sortLinks.col}
-                  sortDir={sortLinks.dir}
-                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
-                  align="right"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
-                />
-                <SortTableTh<LinkSortCol>
-                  label="GGR"
-                  col="ggr"
-                  sortCol={sortLinks.col}
-                  sortDir={sortLinks.dir}
-                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
-                  align="right"
-                  onSort={(c) =>
-                    setSortLinks((s) => ({
-                      col: c,
-                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                    }))
-                  }
-                />
-                {aba === "mapeados" && (
+                {aba !== "pendentes" && (
                   <SortTableTh<LinkSortCol>
-                    label="Influencer / Campanha"
-                    col="map"
+                    label="Data da Ação"
+                    col="acao"
                     sortCol={sortLinks.col}
                     sortDir={sortLinks.dir}
                     thStyle={th}
                     align="left"
-                    onSort={(c) =>
-                      setSortLinks((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
+                    onSort={onSortLinks}
                   />
+                )}
+                {aba === "mapeados" && (
+                  <>
+                    <SortTableTh<LinkSortCol>
+                      label="Proprietário"
+                      col="proprietario"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={onSortLinks}
+                    />
+                    <SortTableTh<LinkSortCol>
+                      label="Status"
+                      col="status"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={onSortLinks}
+                    />
+                  </>
+                )}
+                {aba === "ignorados" && (
+                  <>
+                    <SortTableTh<LinkSortCol>
+                      label="Visitas"
+                      col="visitas"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={thNum}
+                      align="right"
+                      onSort={onSortLinks}
+                    />
+                    <SortTableTh<LinkSortCol>
+                      label="Registros"
+                      col="registros"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={thNum}
+                      align="right"
+                      onSort={onSortLinks}
+                    />
+                  </>
                 )}
                 <th scope="col" style={th}>Ações</th>
               </tr>
@@ -661,24 +710,17 @@ export default function GestaoLinks() {
             <tbody>
               {aliasesOrdenados.length === 0 ? (
                 <tr>
-                  <td colSpan={colunasTabela} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
+                  <td colSpan={colunasPorAba(aba)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
                     {emptyMessages[aba]}
                   </td>
                 </tr>
               ) : aliasesOrdenados.map((alias, idx) => {
-                const ggr = calcGgr(alias);
-                const st = statusDoLink(alias);
-                const sk = (st ?? "ativo").toLowerCase();
-                const slInf =
-                  st == null
-                    ? { label: "—", color: t.textMuted }
-                    : sk === "inativo"
-                      ? { label: "Inativo", color: "#94a3b8" }
-                      : sk === "cancelado"
-                        ? { label: "Cancelado", color: "#ef4444" }
-                        : { label: "Ativo", color: "#10b981" };
                 const zebraBg = zebraStripe(idx);
                 const utmAccent = brand.accent;
+                const nomeOperadora =
+                  operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—";
+                const proprietario =
+                  alias.influencer_id ? (alias.influencer_name ?? "—") : (alias.campanha_nome ?? "—");
                 return (
                   <tr
                     key={alias.id}
@@ -700,45 +742,28 @@ export default function GestaoLinks() {
                         fontSize: 12, fontWeight: 600, fontFamily: "monospace",
                         wordBreak: "break-all", maxWidth: "100%",
                       }}>
-                        <Link2 size={11} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <Link2 size={11} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
                         <span>{alias.utm_source}</span>
                       </span>
                     </td>
-                    <td style={td}>
-                      {st == null ? (
-                        <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
-                      ) : (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            padding: "3px 9px",
-                            borderRadius: 20,
-                            background: `${slInf.color}22`,
-                            color: slInf.color,
-                            border: `1px solid ${String(slInf.color)}44`,
-                          }}
-                        >
-                          {slInf.label}
-                        </span>
-                      )}
-                    </td>
-                    {operadoraFiltro === "todas" && operadorasList.length > 1 && (
-                      <td style={td}>{operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—"}</td>
-                    )}
+                    <td style={td} title={nomeOperadora}>{nomeOperadora}</td>
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
-                    <td style={tdMuted}>{fmtData(alias.ultimo_visto)}</td>
-                    <td style={{ ...td, textAlign: "right" }}>{alias.total_ftds}</td>
-                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>{fmtBRL(alias.total_deposit ?? 0)}</td>
-                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>
-                      <span style={ggr >= 0 ? { color: COR.verde, fontWeight: 600 } : { color: COR.vermelho, fontWeight: 600 }}>{fmtBRL(ggr)}</span>
-                    </td>
+                    {aba !== "pendentes" && (
+                      <td style={tdMuted}>{fmtData(dataAcaoIso(aba, alias))}</td>
+                    )}
                     {aba === "mapeados" && (
-                      <td style={td}>
-                        {alias.influencer_id ? (alias.influencer_name ?? "—") : (alias.campanha_nome ?? "—")}
-                      </td>
+                      <>
+                        <td style={{ ...td, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={proprietario}>
+                          {proprietario}
+                        </td>
+                        <td style={td}>{renderStatusBadge(alias)}</td>
+                      </>
+                    )}
+                    {aba === "ignorados" && (
+                      <>
+                        <td style={tdNum}>{(alias.total_visits ?? 0).toLocaleString("pt-BR")}</td>
+                        <td style={tdNum}>{(alias.total_registrations ?? 0).toLocaleString("pt-BR")}</td>
+                      </>
                     )}
                     <td style={td}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
