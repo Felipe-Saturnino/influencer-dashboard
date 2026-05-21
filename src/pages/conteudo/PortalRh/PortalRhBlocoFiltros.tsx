@@ -5,6 +5,15 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import type { MesCarrosselEntry } from "./portalRhCarrossel";
 
+const LINHA_FILTRO: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  width: "100%",
+};
+
 export function PortalRhBlocoFiltros({
   meses,
   idxMes,
@@ -45,6 +54,7 @@ export function PortalRhBlocoFiltros({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   } as const;
 
   return (
@@ -57,16 +67,9 @@ export function PortalRhBlocoFiltros({
         marginBottom: 16,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 10,
-          alignItems: "center",
-          marginBottom: linhaSubabas ? 12 : 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {/* Linha 1 — carrossel de mês + Histórico */}
+      <div style={{ ...LINHA_FILTRO, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <button
             type="button"
             aria-label="Mês anterior"
@@ -86,7 +89,7 @@ export function PortalRhBlocoFiltros({
               fontWeight: 700,
               color: t.text,
               fontFamily: FONT.body,
-              minWidth: 140,
+              minWidth: "clamp(120px, 36vw, 180px)",
               textAlign: "center",
             }}
           >
@@ -110,6 +113,7 @@ export function PortalRhBlocoFiltros({
         <button
           type="button"
           aria-pressed={modoHistorico}
+          aria-label={modoHistorico ? "Desativar modo histórico" : "Ver arquivados"}
           onClick={() => onModoHistoricoChange(!modoHistorico)}
           style={{
             padding: "8px 14px",
@@ -126,6 +130,7 @@ export function PortalRhBlocoFiltros({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
+            flexShrink: 0,
           }}
         >
           <History size={14} aria-hidden />
@@ -133,38 +138,52 @@ export function PortalRhBlocoFiltros({
         </button>
       </div>
 
-      {linhaSubabas ? <div style={{ marginBottom: 12 }}>{linhaSubabas}</div> : null}
-
+      {/* Linha 2 — pesquisa */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg ?? t.cardBg,
-          padding: "8px 12px",
+          width: "100%",
+          maxWidth: 560,
+          marginLeft: "auto",
+          marginRight: "auto",
+          marginBottom: linhaSubabas ? 12 : 0,
         }}
       >
-        <Search size={16} color={t.textMuted} aria-hidden />
-        <input
-          type="search"
-          value={busca}
-          onChange={(e) => onBuscaChange(e.target.value)}
-          placeholder={buscaPlaceholder}
-          aria-label={buscaAriaLabel}
+        <div
           style={{
-            flex: 1,
-            border: "none",
-            background: "transparent",
-            color: t.text,
-            fontSize: 13,
-            outline: "none",
-            fontFamily: FONT.body,
-            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg,
+            padding: "8px 12px",
+            width: "100%",
           }}
-        />
+        >
+          <Search size={16} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => onBuscaChange(e.target.value)}
+            placeholder={buscaPlaceholder}
+            aria-label={buscaAriaLabel}
+            style={{
+              flex: 1,
+              border: "none",
+              background: "transparent",
+              color: t.text,
+              fontSize: 13,
+              outline: "none",
+              fontFamily: FONT.body,
+              minWidth: 0,
+              width: "100%",
+            }}
+          />
+        </div>
       </div>
+
+      {/* Linha 3 — sub-abas (Comunicados / Políticas) */}
+      {linhaSubabas ? <div style={LINHA_FILTRO}>{linhaSubabas}</div> : null}
     </div>
   );
 }

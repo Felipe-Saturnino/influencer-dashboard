@@ -209,7 +209,7 @@ function FiltroSubtabPills({
     <div
       role="group"
       aria-label="Filtrar por categoria"
-      style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 0 }}
+      style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", width: "100%" }}
     >
       <button type="button" aria-pressed={filtroAtivo === "todos"} onClick={() => onFiltro("todos")} style={pillBase(filtroAtivo === "todos")}>
         Todos

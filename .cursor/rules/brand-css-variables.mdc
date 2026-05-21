@@ -5,7 +5,7 @@ alwaysApply: true
 
 # MDC Brand — Whitelabel e padrões de UI de marca
 
-**Escopo:** identidade visual da operadora, componentes de filtro com ícone, navegação de período, cabeçalhos de página, botões de ação em tabela/lista e CTAs primários. **Não** cobre regras de negócio por página (ver MDCs de secção) nem **semântica de dados** (ver `global.mdc`).
+**Escopo:** identidade visual da operadora, componentes de filtro com ícone, navegação de período, cabeçalhos de página, **toolbars com botões em texto**, ações em ícone em tabela/lista e CTAs primários. **Não** cobre regras de negócio por página (ver MDCs de secção) nem **semântica de dados** (ver `global.mdc`).
 
 **Relação com outros MDCs**
 
@@ -246,17 +246,32 @@ const btnNav: React.CSSProperties = {
 
 ---
 
-## 8. Ações em tabela, cards e listas
+## 8. Ações — toolbar vs linha
 
-### Padrão obrigatório (código novo e refactors)
+Dois contextos distintos; **não** misturar o padrão de um no outro.
 
-- Ações de linha (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
+### Toolbar de página ou de bloco (ex.: barra acima da grade, canto do `SectionTitle`)
+
+Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sugestão de Escala**, **Aprovar**, **Gerar**, **Exportar**, **+ Criar**): botão **com texto visível** — **não** converter para somente ícone.
+
+- Labels curtas e verbosas no botão (ex.: “Salvar Alterações”, não só “Salvar” se o contexto exigir clareza).
+- **`aria-label`** pode repetir ou detalhar o texto visível quando o rótulo for ambíguo.
+- **`title`** opcional; não substitui o texto do botão.
+- CTAs primários de criação: preferir **gradiente** canónico (secção 3) + texto branco; secundários: borda `t.cardBorder` ou tint `color-mix` com `brand.accent` / `brand.primary`.
+- Spinner em toolbar: dentro de CTA com gradiente → `#fff`; em botão tintado/neutro → cor do texto do botão ou `var(--brand-primary, #7c3aed)` no `Loader2` fora de gradiente.
+
+**Referência:** toolbar da Escala Diária em `GestaoEscala` (Nova Escala, Salvar, Aprovar, Sugestão).
+
+### Linha de tabela, card ou lista densa
+
+Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
+
 - **`aria-label` descritivo** obrigatório (ex.: `` `Editar ${nome}` ``).
 - **`title`** com o mesmo texto (ou rótulo curto) para tooltip no hover.
 - Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px**.
 - Estilo base: quadrado ~28–32px, `borderRadius: 8`, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `btnIconTabela` em RH.
 
-### Catálogo de ações comuns (Lucide)
+### Catálogo de ações comuns (Lucide) — uso em **linha**
 
 | Ação | Ícone | `aria-label` (padrão) |
 |------|-------|------------------------|
@@ -269,9 +284,11 @@ const btnNav: React.CSSProperties = {
 | Link externo | `ExternalLink` | `Abrir {destino} em nova aba` |
 | Expandir linha | `ChevronRight` rotacionado | Nunca `▶` textual |
 
-**Exceções (só com pedido explícito de produto):** CTA primário de criação (“+ Criar”) mantém **texto**; ações destrutivas com confirmação em 2 cliques podem mostrar microtexto “Confirmar?” ao lado do ícone (Portal RH Arquivar).
+**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques pode mostrar microtexto “Confirmar?” ao lado do ícone (Portal RH Arquivar).
 
-**Legado a migrar:** botões com texto “Ver”, “Editar”, “Aprovar” em pills largos (ex. Afiliados) → ícone + `title`.
+**Legado a migrar (linha):** botões com texto “Ver”, “Editar”, “Aprovar” em células de tabela (ex. Afiliados) → ícone + `aria-label` + `title`. **Não** migrar toolbars de fluxo para ícone.
+
+**Legado a migrar (toolbar):** ícone sem texto em ações de fluxo (Nova Escala, Aprovar bloco, etc.) → restaurar **texto visível**.
 
 **Ações semânticas de negócio** (Pago, Recusado, Liberar banca): podem manter cor semântica (`#22c55e`, `#e84025`) — não confundir com token de marca; ver Global.
 
@@ -293,7 +310,8 @@ const btnNav: React.CSSProperties = {
 - `GiShare` / GameIcons no header de página.
 - Gradiente fallback com `#7c3aed` no início.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
-- Ação de tabela só com texto, sem ícone (código novo).
+- Ação de **linha** só com texto, sem ícone (código novo).
+- Ação de **toolbar** só com ícone, sem texto (fluxo da página).
 - Título diferente do menu ou página sem subtítulo.
 - `blockBg` na barra de filtros.
 - Substituir verde/vermelho de GGR/ROI por `--brand-primary` por estética.
@@ -306,6 +324,6 @@ const btnNav: React.CSSProperties = {
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico com ícone + `aria-pressed`
-- [ ] Ações em ícone + `aria-label` + `title`
+- [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
 - [ ] Semântica de dado intacta (Global)

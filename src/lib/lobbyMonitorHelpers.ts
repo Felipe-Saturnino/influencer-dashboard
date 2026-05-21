@@ -233,7 +233,7 @@ export function labelCarrosselPos(
 ): string {
   if (visao === "mes" && mesAno) return mesAno.label;
   if (visao === "dia") {
-    return ref.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    return ref.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
   }
   const mon = startOfWeekMonday(ref);
   const sun = endOfWeekSunday(mon);
