@@ -1183,6 +1183,45 @@ const JOGOS_COMPARATIVO = [
   { key: "futebol_brasileiro" as const, label: LABEL_FUTEBOL_BRASILEIRO, cor: COR_FUTEBOL_BRASILEIRO },
 ] as const;
 
+type JogoComparativoKey = (typeof JOGOS_COMPARATIVO)[number]["key"];
+
+type MesaCadastroComparativoRow = {
+  operadora_slug: string;
+  tipo_jogo: string;
+  nome_mesa: string;
+};
+
+/** Mapeia linha do catálogo (`mesas_spin_cadastro`) para chaves do Comparativo de Jogo. */
+function jogoComparativoKeysFromCadastroMesa(tipoJogo: string, nomeMesa: string): JogoComparativoKey[] {
+  const t = tipoJogo.trim().toLowerCase();
+  const n = nomeMesa.trim().toLowerCase();
+  const keys = new Set<JogoComparativoKey>();
+  if (t.includes("futebol brasileiro") || (n.includes("futebol") && n.includes("brasileiro"))) {
+    keys.add("futebol_brasileiro");
+  }
+  if (t.includes("blackjack") || /\bblackjack\b/.test(n)) keys.add("blackjack");
+  if (t.includes("roleta") || n === "roleta" || n.includes("roulette")) keys.add("roleta");
+  if (t.includes("baccarat") || n.includes("baccarat") || n.includes("speed baccarat")) {
+    keys.add("baccarat");
+  }
+  return [...keys];
+}
+
+function inferJogosComparativoFromPorTabela(
+  rows: PorTabelaRow[],
+  operadorasListFmt: { slug: string; nome: string }[],
+): Set<JogoComparativoKey> {
+  const keys = new Set<JogoComparativoKey>();
+  for (const r of rows) {
+    if (isMesaBlackjackComparativo(r, operadorasListFmt)) keys.add("blackjack");
+    const lbl = labelMesaCda(r, operadorasListFmt);
+    if (lbl === "Roleta") keys.add("roleta");
+    if (lbl === "Speed Baccarat") keys.add("baccarat");
+    if (lbl === LABEL_FUTEBOL_BRASILEIRO) keys.add("futebol_brasileiro");
+  }
+  return keys;
+}
+
 function calcularPctComparativoOficial(
   valorJogo: number | null,
   row: LinhaComparativoJogoTab,
@@ -1324,6 +1363,7 @@ export default function OverviewSpin() {
   /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
   const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
+  const [mesasCadastro, setMesasCadastro] = useState<MesaCadastroComparativoRow[]>([]);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
@@ -1368,6 +1408,20 @@ export default function OverviewSpin() {
       .order("nome")
       .then(({ data }) => {
         if (alive) setOperadorasOcr(data ?? []);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase
+      .from("mesas_spin_cadastro")
+      .select("operadora_slug, tipo_jogo, nome_mesa")
+      .then(({ data }) => {
+        if (!alive) return;
+        setMesasCadastro((data ?? []) as MesaCadastroComparativoRow[]);
       });
     return () => {
       alive = false;
@@ -1816,13 +1870,60 @@ export default function OverviewSpin() {
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
-  const escopoIncluiCasaApostas = useMemo(() => {
-    if (operadoraSlugsForcado?.length) {
-      return operadoraSlugsForcado.includes(OPERADORA_CASA_APOSTAS);
+  const slugListEscopoComparativo = useMemo(
+    () =>
+      buildSlugListForMesasQueries({
+        operadoraSlugsForcado,
+        filtroOperadora,
+        semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo === true,
+        operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+      }),
+    [
+      operadoraSlugsForcado,
+      filtroOperadora,
+      escoposVisiveis.semRestricaoEscopo,
+      escoposVisiveis.operadorasVisiveis,
+    ],
+  );
+
+  /** Jogos exibidos no Comparativo de Jogo conforme catálogo de mesas das operadoras no escopo do filtro. */
+  const jogosComparativoAtivos = useMemo(() => {
+    const keys = new Set<JogoComparativoKey>();
+    const rowsCadastro =
+      slugListEscopoComparativo != null && slugListEscopoComparativo.length > 0
+        ? mesasCadastro.filter((m) => slugListEscopoComparativo.includes(m.operadora_slug))
+        : mesasCadastro.filter((m) => podeVerOperadora(m.operadora_slug));
+
+    for (const m of rowsCadastro) {
+      for (const k of jogoComparativoKeysFromCadastroMesa(m.tipo_jogo, m.nome_mesa)) {
+        keys.add(k);
+      }
     }
-    if (filtroOperadora !== "todas") return filtroOperadora === OPERADORA_CASA_APOSTAS;
-    return false;
-  }, [operadoraSlugsForcado, filtroOperadora]);
+
+    if (keys.size === 0) {
+      const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
+      for (const k of inferJogosComparativoFromPorTabela(src, operadorasListFmt)) {
+        keys.add(k);
+      }
+    }
+
+    return JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
+  }, [
+    mesasCadastro,
+    slugListEscopoComparativo,
+    historico,
+    porTabelaFiltradas,
+    porTabelaFiltradasHist,
+    operadorasListFmt,
+    podeVerOperadora,
+  ]);
+
+  const exibirBlocoDadosPorMesaFutebol = useMemo(() => {
+    if (modoAgregadoTodasOperadoras) return false;
+    return jogosComparativoAtivos.some((j) => j.key === "futebol_brasileiro");
+  }, [modoAgregadoTodasOperadoras, jogosComparativoAtivos]);
+
+  const qtdColunasJogoComparativo = 1 + jogosComparativoAtivos.length;
 
   /** Dia a dia (mês selecionado) ou mês a mês (histórico). */
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
@@ -2039,7 +2140,7 @@ export default function OverviewSpin() {
   }, [slugsGraficoDetalhe]);
 
   const minWidthTabelaComparativoJogo =
-    120 + kpisAtivosComparativo.length * (100 + 4 * 90);
+    120 + kpisAtivosComparativo.length * (100 + jogosComparativoAtivos.length * 90);
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -2998,7 +3099,7 @@ export default function OverviewSpin() {
                   {kpisAtivosComparativo.map((kpi) => (
                     <th
                       key={kpi.key}
-                      colSpan={5}
+                      colSpan={qtdColunasJogoComparativo}
                       scope="colgroup"
                       style={{
                         ...thStyle,
@@ -3026,7 +3127,7 @@ export default function OverviewSpin() {
                       >
                         Total
                       </th>
-                      {JOGOS_COMPARATIVO.map((jogo) => (
+                      {jogosComparativoAtivos.map((jogo) => (
                         <th
                           key={jogo.key}
                           scope="col"
@@ -3090,7 +3191,7 @@ export default function OverviewSpin() {
                           >
                             {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
                           </td>
-                          {JOGOS_COMPARATIVO.map((jogo) => {
+                          {jogosComparativoAtivos.map((jogo) => {
                             const cel = row[jogo.key];
                             const valorJogo = cel[kpi.key] as number | null;
                             const pct = calcularPctComparativoOficial(valorJogo, row, kpi);
@@ -3166,7 +3267,7 @@ export default function OverviewSpin() {
                           >
                             {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
                           </td>
-                          {JOGOS_COMPARATIVO.map((jogo) => {
+                          {jogosComparativoAtivos.map((jogo) => {
                             const cel = row[jogo.key];
                             const valorJogo = cel[kpi.key] as number | null;
                             const pct = calcularPctComparativoOficial(valorJogo, row, kpi);
@@ -3284,20 +3385,15 @@ export default function OverviewSpin() {
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                  <Bar
-                    dataKey="Blackjack"
-                    fill={COR_BLACKJACK}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
-                  <Bar dataKey="Roleta" fill={COR_ROLETA} radius={[4, 4, 0, 0]} maxBarSize={32} />
-                  <Bar dataKey="Baccarat" fill={COR_BACCARAT} radius={[4, 4, 0, 0]} maxBarSize={32} />
-                  <Bar
-                    dataKey={LABEL_FUTEBOL_BRASILEIRO}
-                    fill={COR_FUTEBOL_BRASILEIRO}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
+                  {jogosComparativoAtivos.map((jogo) => (
+                    <Bar
+                      key={jogo.key}
+                      dataKey={jogo.label}
+                      fill={jogo.cor}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={32}
+                    />
+                  ))}
                 </BarChart>
               ) : (
                 <LineChart
@@ -3335,42 +3431,18 @@ export default function OverviewSpin() {
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                  <Line
-                    type="monotone"
-                    name="Blackjack"
-                    dataKey="Blackjack"
-                    stroke={COR_BLACKJACK}
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    name="Roleta"
-                    dataKey="Roleta"
-                    stroke={COR_ROLETA}
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    name="Baccarat"
-                    dataKey="Baccarat"
-                    stroke={COR_BACCARAT}
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    name={LABEL_FUTEBOL_BRASILEIRO}
-                    dataKey={LABEL_FUTEBOL_BRASILEIRO}
-                    stroke={COR_FUTEBOL_BRASILEIRO}
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    connectNulls
-                  />
+                  {jogosComparativoAtivos.map((jogo) => (
+                    <Line
+                      key={jogo.key}
+                      type="monotone"
+                      name={jogo.label}
+                      dataKey={jogo.label}
+                      stroke={jogo.cor}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      connectNulls
+                    />
+                  ))}
                 </LineChart>
               )}
             </ResponsiveContainer>
@@ -4125,7 +4197,7 @@ export default function OverviewSpin() {
                     {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Roleta")}
                   </div>
                 </div>
-                {escopoIncluiCasaApostas && (
+                {exibirBlocoDadosPorMesaFutebol && (
                   <div style={{ marginTop: 4 }}>
                     <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
                     {renderMesaDiaTabela(
@@ -4412,7 +4484,7 @@ export default function OverviewSpin() {
                         {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Roleta")}
                       </div>
                     </div>
-                    {escopoIncluiCasaApostas && (
+                    {exibirBlocoDadosPorMesaFutebol && (
                       <div style={{ marginTop: 4 }}>
                         <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
                         {renderMesaDiaTabela(
