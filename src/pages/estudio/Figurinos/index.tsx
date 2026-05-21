@@ -682,9 +682,21 @@ export default function FigurinosPage() {
             border: brand.primaryTransparentBorder,
             background: brand.primaryTransparentBg,
             padding: "12px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
+            }}
+          >
             {operadorasVisiveis.length > 0 ? (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span
@@ -776,6 +788,24 @@ export default function FigurinosPage() {
               ))}
             </select>
           </div>
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
+            aria-label="Buscar peças na aba atual"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              boxSizing: "border-box",
+            }}
+          />
         </div>
       </div>
 
@@ -790,13 +820,7 @@ export default function FigurinosPage() {
         >
           CONSOLIDADO
         </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
-            gap: 14,
-          }}
-        >
+        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
           {[
             { label: "Total de peças", value: kpis.tot, cor: t.text },
             { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
@@ -821,46 +845,6 @@ export default function FigurinosPage() {
               <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
             </div>
           ))}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          PESQUISA
-        </h2>
-        <div
-          style={{
-            borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            padding: "12px 16px",
-          }}
-        >
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
-            aria-label="Buscar peças na aba atual"
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.cardBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
-          />
         </div>
       </div>
 
