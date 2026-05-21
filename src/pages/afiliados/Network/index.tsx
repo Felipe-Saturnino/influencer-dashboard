@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useModalEscape } from "../../../hooks/useModalEscape";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
@@ -37,8 +38,6 @@ const LIVE_CASSINO_OPTS = [
   { value: "sim" as const, label: "Sim" },
   { value: "nao" as const, label: "Não" },
 ];
-
-const CTA_GRADIENT = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
 
 export interface AfiliadoNetworkRow {
   id: string;
@@ -110,20 +109,13 @@ function StatusAfiliadoBadge({ value }: { value: StatusAfiliado }) {
   );
 }
 
-function useModalEscape(onClose: () => void, open: boolean) {
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [open, onClose]);
-}
-
 export default function AfiliadosNetwork() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const ctaGradient = brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+  const funnelCardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const perm = usePermission("afiliados_network");
   const [list, setList] = useState<AfiliadoNetworkRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +172,7 @@ export default function AfiliadosNetwork() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -205,7 +197,7 @@ export default function AfiliadosNetwork() {
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
-                background: CTA_GRADIENT,
+                background: ctaGradient,
                 color: "#fff",
                 fontSize: 13,
                 fontWeight: 700,
@@ -243,7 +235,7 @@ export default function AfiliadosNetwork() {
                     borderLeft: `3px solid ${cor}`,
                     borderRadius: 18,
                     padding: "16px 20px",
-                    boxShadow: active ? `0 0 0 2px ${cor}33` : "0 4px 20px rgba(0,0,0,0.18)",
+                    boxShadow: active ? `0 0 0 2px ${cor}33` : funnelCardShadow,
                     minWidth: 0,
                   }}
                 >
@@ -332,8 +324,7 @@ export default function AfiliadosNetwork() {
             gap: 8,
           }}
         >
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
-          Carregando...
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando..." />
         </div>
       ) : filtered.length === 0 ? (
         <div
@@ -374,7 +365,7 @@ export default function AfiliadosNetwork() {
                   height: 44,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  background: CTA_GRADIENT,
+                  background: ctaGradient,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -444,7 +435,7 @@ export default function AfiliadosNetwork() {
                     borderRadius: 10,
                     border: "none",
                     cursor: "pointer",
-                    background: CTA_GRADIENT,
+                    background: ctaGradient,
                     color: "#fff",
                     fontSize: 12,
                     fontWeight: 700,
@@ -501,7 +492,9 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : `${BRAND.roxoVivo}22`;
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+    : "rgba(124,58,237,0.15)";
 
   useEffect(() => {
     containerRef.current?.focus();
@@ -536,7 +529,7 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -576,8 +569,8 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
             gap: 8,
             padding: "8px 14px",
             borderRadius: 10,
-            background: brand.useBrand ? "var(--brand-action-12)" : `${BRAND.azul}0d`,
-            border: brand.useBrand ? `1px solid var(--brand-action-border)` : `1px solid ${BRAND.azul}30`,
+            background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`,
+            border: brand.useBrand ? `1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)` : `1px solid ${BRAND.azul}30`,
             fontSize: 12,
             color: t.textMuted,
             fontFamily: FONT.body,
@@ -596,7 +589,17 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
               id={`tab-af-viz-${tb}`}
               aria-selected={tab === tb}
               aria-controls={`panel-af-viz-${tb}`}
+              tabIndex={tab === tb ? 0 : -1}
               onClick={() => setTab(tb)}
+              onKeyDown={(e) => {
+                const keys = ["contato", "operacao", "anotacoes"] as const;
+                const idx = keys.indexOf(tb);
+                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
+                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
+                }
+              }}
               style={{
                 padding: "7px 14px",
                 borderRadius: 20,
@@ -684,7 +687,12 @@ function ModalEditar({
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : `${BRAND.roxoVivo}22`;
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+    : "rgba(124,58,237,0.15)";
+  const ctaGradient = brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
   const [nome, setNome] = useState(row?.nome ?? "");
   const [status, setStatus] = useState<StatusAfiliado>(row?.status ?? "visualizado");
@@ -870,7 +878,7 @@ function ModalEditar({
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -905,7 +913,11 @@ function ModalEditar({
           <p style={{ fontSize: 12, color: t.textMuted, margin: "0 0 16px", fontFamily: FONT.body }}>
             Cadastro de afiliado já criado na plataforma; e-mail e operadora não podem ser alterados aqui.
           </p>
-        ) : null}
+        ) : (
+          <p style={{ fontSize: 12, color: t.textMuted, margin: "0 0 16px", fontFamily: FONT.body, lineHeight: 1.45 }}>
+            Ao salvar, e-mail e operadora são obrigatórios. O sistema cria o usuário afiliado na plataforma neste momento — independentemente do status do funil (não é preciso marcar Fechado antes).
+          </p>
+        )}
 
         <div style={rowS}>
           <label style={labelStyle}>
@@ -934,7 +946,17 @@ function ModalEditar({
               id={`tab-af-ed-${tb}`}
               aria-selected={tab === tb}
               aria-controls={`panel-af-ed-${tb}`}
+              tabIndex={tab === tb ? 0 : -1}
               onClick={() => setTab(tb)}
+              onKeyDown={(e) => {
+                const keys = ["contato", "operacao", "anotacoes"] as const;
+                const idx = keys.indexOf(tb);
+                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
+                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
+                }
+              }}
               style={{
                 padding: "7px 14px",
                 borderRadius: 20,
@@ -1056,7 +1078,7 @@ function ModalEditar({
                   borderRadius: 10,
                   border: "none",
                   cursor: novoTextoAnotacao.trim() ? "pointer" : "not-allowed",
-                  background: "var(--brand-contrast, #1e36f8)",
+                  background: brand.useBrand ? "var(--brand-secondary)" : "#1e36f8",
                   color: "#fff",
                   fontSize: 12,
                   fontWeight: 600,
@@ -1134,7 +1156,7 @@ function ModalEditar({
               border: "none",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
-              background: CTA_GRADIENT,
+              background: ctaGradient,
               color: "#fff",
               fontSize: 13,
               fontWeight: 700,

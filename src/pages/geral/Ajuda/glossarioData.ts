@@ -40,6 +40,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Resultados",
       },
       {
+        termo: "Janela de Elegibilidade",
+        definicao:
+          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultado de Lives para validação.",
+        nota:
+          "A janela padrão é de 5 horas após o horário agendado (fuso local). Lives ainda dentro desse intervalo não entram na fila de validação — o sistema assume que a transmissão pode ainda estar em andamento.",
+        referencia: "Resultados",
+      },
+      {
+        termo: "Semana de Referência",
+        definicao:
+          "Período de sete dias usado como unidade de filtro na página Feedback de Lives para agrupar lives validadas e seus resultados.",
+        nota:
+          "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe todo o período com dados cadastrados.",
+        referencia: "Feedback",
+      },
+      {
         termo: "Influencers Ativos",
         definicao:
           "Número de influencers que realizaram ao menos uma live no período. Influencers cadastrados sem live no período não são contabilizados.",
@@ -217,11 +233,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "FTD/Hora",
         definicao:
-          "FTDs gerados por hora de live transmitida. Indica a eficiência horária do influencer independentemente do tempo total transmitido — dois influencers com o mesmo número de FTDs mas durações diferentes de live têm eficiências distintas.",
-        formula: "FTDs ÷ Horas Realizadas",
+          "Quantidade de primeiros depósitos gerados por hora de live transmitida por um influencer.",
+        formula: "FTD/Hora = FTDs ÷ Horas Realizadas",
         nota:
-          "Influencers sem horas registradas são excluídos do Ranking FTD/Hora na aba Conversão. O ranking exibe os três primeiros em pódio e os demais em lista paginada.",
-        referencia: "Streamers → Conversão · Overview Influencer",
+          "Métrica de eficiência operacional. Influencers sem horas registradas não aparecem no Ranking FTD/Hora.",
+        referencia: "Streamers · Conversão",
       },
       {
         termo: "Ação de Conversão",
@@ -274,9 +290,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Ticket Médio FTD",
         definicao:
-          "Valor médio do primeiro depósito. Indica o perfil de investimento inicial dos jogadores captados.",
-        formula: "R$ FTD ÷ Quantidade de FTDs",
-        referencia: "Streamers → Financeiro · Overview Influencer",
+          "Valor médio do primeiro depósito dos jogadores captados por um influencer ou campanha.",
+        formula: "Ticket Médio FTD = Total R$ FTDs ÷ Quantidade de FTDs",
+        referencia: "Streamers · Financeiro · Overview Influencer",
       },
       {
         termo: "Depósitos",
@@ -310,11 +326,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "WD Ratio (Withdrawal/Deposit Ratio)",
         definicao:
-          "Relação entre saques e depósitos. Indica o percentual do volume depositado que foi sacado. Quanto menor, melhor para a casa.",
-        formula: "Saques ÷ Depósitos × 100",
+          "Razão entre o total de saques e o total de depósitos de uma base de jogadores, expressa em percentual.",
+        formula: "WD Ratio = (Total de Saques ÷ Total de Depósitos) × 100",
         nota:
-          "Abaixo de 60%: saudável · 60% a 80%: atenção · Acima de 80%: risco — jogadores retirando mais do que a média",
-        referencia: "Streamers → Financeiro",
+          "< 60%: saudável (verde); 60–80%: atenção (amarelo); > 80%: crítico (vermelho). Um WD Ratio alto indica que os jogadores estão retirando mais do que depositando.",
+        referencia: "Streamers · Overview Influencer",
       },
       {
         termo: "GGR por Jogador",
@@ -362,10 +378,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "PVI (Player Value Index)",
         definicao:
-          "Score sintético de 0 a 100 que mede a qualidade média dos jogadores captados pelo influencer. Não é um percentual — é um índice de 0 a 100 pontos.",
+          "Player Value Index — índice de qualidade da base de jogadores gerada por um influencer, em escala de 0 a 100 pontos.",
         formula:
-          "Ticket Médio Depósito (40%) + GGR por Jogador (40%) + WD Ratio invertido (20%)",
-        referencia: "Streamers → Financeiro",
+          "PVI = (Score Ticket Médio Depósito × 0,4) + (Score GGR por Jogador × 0,4) + (Score WD Ratio × 0,2)",
+        nota:
+          "Perfis: Whales (≥ 80 pts), Core (60–79 pts), Recreativos (15–59 pts), Caçadores de Bônus (< 15 pts). Sempre exibido como 'X pts', nunca como percentual.",
+        referencia: "Streamers · Overview Influencer",
       },
       {
         termo: "Perfil de Jogador",
@@ -455,6 +473,32 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta e Speed Baccarat lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente.",
         referencia: "Overview Spin",
       },
+      {
+        termo: "Visibilidade na Vitrine",
+        definicao:
+          "Percentual das mesas Spin Gaming que aparecem nas primeiras posições do lobby da plataforma parceira. Calculado com base no número de mesas ranqueadas dentro do top 20 em relação ao total de mesas ativas.",
+        nota: "Atualizado ao longo do dia conforme os snapshots automáticos do lobby. Compara com o mesmo horário do dia anterior.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Snapshot de Lobby",
+        definicao:
+          "Captura automática das posições de todos os jogos no lobby de uma plataforma parceira em um momento específico. Cada snapshot registra a posição absoluta de cada mesa Spin em relação aos concorrentes.",
+        nota: "Os snapshots são executados em intervalos regulares ao longo do dia. A aba Posicionamento exibe o snapshot mais recente do dia como 'posição atual'.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Heatmap de Posicionamento",
+        definicao:
+          "Tabela que exibe a posição histórica de cada mesa do lobby ao longo do tempo. As cores indicam a faixa de posição: verde para posições altas (P1–P3), azul para posições intermediárias e cinza para posições fora do top 10 ou sem dados.",
+        referencia: "Overview Spin · Posicionamento",
+      },
+      {
+        termo: "Concorrentes à Frente",
+        definicao:
+          "Quantidade de jogos de outras plataformas que aparecem com posição melhor (número menor) que a mesa Spin no lobby, por tipo de jogo. Valor zero indica que a mesa Spin é a primeira do tipo naquele lobby.",
+        referencia: "Overview Spin · Posicionamento",
+      },
     ],
   },
   {
@@ -503,10 +547,185 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "UTM (Urchin Tracking Module)",
         definicao:
-          "Parâmetros adicionados às URLs de campanhas para rastrear a origem do tráfego. Permitem identificar qual campanha, canal e conteúdo gerou cada acesso, registro e FTD.",
+          "Parâmetro de rastreamento de URL (Urchin Tracking Module) usado para identificar a origem do tráfego de uma campanha ou influencer.",
         nota:
-          "Na plataforma, cada UTM é vinculada a uma campanha específica na Gestão de Links.",
-        referencia: "Links e Materiais · Gestão de Links",
+          "No contexto da plataforma, UTMs são mapeadas na Gestão de Links e vinculadas a campanhas. Apenas tráfego com UTMs mapeadas aparece nos dashboards de Mídias Sociais e Streamers.",
+        referencia: "Mídias Sociais · Streamers",
+      },
+    ],
+  },
+  {
+    key: "afiliados",
+    label: "Afiliados",
+    accentColor: "#1e36f8",
+    termos: [
+      {
+        termo: "Afiliado",
+        definicao:
+          "Parceiro comercial que atua em canais de aquisição e tráfego. Diferente dos influencers (criadores de conteúdo), afiliados são empresas ou profissionais que promovem as operadoras por meio de estratégias digitais como retargeting, SEO, redes de tráfego e programas de afiliação.",
+        nota: "Gerenciados na seção Afiliados. Têm acesso à plataforma com perfil e dados financeiros obrigatórios.",
+        referencia: "Afiliados · Network",
+      },
+      {
+        termo: "Network (Afiliados)",
+        definicao:
+          "Funil de prospecção de novos afiliados. Registra candidatos em Visualizado, Contato, Negociação ou Fechado.",
+        nota:
+          "Ao salvar um registro sem usuário na plataforma, e-mail e operadora são obrigatórios e o sistema cria o acesso de afiliado — não é necessário estar em Fechado. Registros Fechados ficam ocultos na lista padrão; use o card Fechado no funil para filtrá-los.",
+        referencia: "Network",
+      },
+      {
+        termo: "Operação",
+        definicao:
+          "Campo de texto livre no perfil do afiliado que descreve o modelo de trabalho, os canais utilizados e as estratégias de aquisição do parceiro.",
+        referencia: "Afiliados · Network",
+      },
+    ],
+  },
+  {
+    key: "financeiro_operacional",
+    label: "Financeiro Operacional",
+    accentColor: "#22c55e",
+    termos: [
+      {
+        termo: "Ciclo de Pagamento",
+        definicao:
+          "Período semanal de quinta-feira a quarta-feira que agrupa as lives realizadas e define a janela de cálculo de cachê dos influencers. Cada ciclo gera um conjunto de pagamentos ao ser encerrado.",
+        nota: "Ciclos em aberto (semana atual) exibem prévia em tempo real. Pagamentos definitivos são gerados apenas ao fechar o ciclo.",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Cachê/hora",
+        definicao:
+          "Valor em reais pago ao influencer por hora de live realizada. Cadastrado no perfil do influencer e usado como base para calcular o total de cada ciclo.",
+        formula: "Total do ciclo = Horas realizadas × Cachê/hora",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Prévia",
+        definicao:
+          "Estimativa de pagamento calculada em tempo real durante o ciclo em aberto, com base nas lives já realizadas e no cachê cadastrado. Não é um valor definitivo — pode mudar até o fechamento do ciclo.",
+        referencia: "Financeiro",
+      },
+      {
+        termo: "Banca de Jogo",
+        definicao:
+          "Valor disponibilizado ao influencer pela operadora para uso durante a live. Funciona como capital de giro para demonstrações de jogo — deve ser mantido na conta do influencer apenas durante a ação e ser reposto ou devolvido ao final.",
+        nota: "Diferente do cachê: a banca não é remuneração — é um recurso operacional temporário.",
+        referencia: "Banca de Jogo",
+      },
+      {
+        termo: "Status da Conta (Banca)",
+        definicao:
+          "Indica se a conta do influencer na operadora está Liberada (disponível para operação) ou Bloqueada (restrita para evitar saques durante ações). Gerenciado manualmente pela equipe de gestão.",
+        referencia: "Banca de Jogo",
+      },
+      {
+        termo: "Pagamento de Agente",
+        definicao:
+          "Linha especial de pagamento para agências ou terceiros que prestam serviços vinculados a um ciclo. Segue o mesmo fluxo de análise e pagamento dos influencers, mas não está associado a horas de live.",
+        nota: "Visível apenas para perfis de operação interna.",
+        referencia: "Financeiro",
+      },
+    ],
+  },
+  {
+    key: "estudio",
+    label: "Estúdio",
+    accentColor: "#a78bfa",
+    termos: [
+      {
+        termo: "Dealer",
+        definicao:
+          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat), turno, gênero, fotos e operadora vinculada.",
+        referencia: "Gestão de Dealers",
+      },
+      {
+        termo: "Bloco de Roteiro",
+        definicao:
+          "Segmento fixo do Roteiro de Mesa — Abertura, Durante o jogo ou Fechamento — onde ficam scripts, orientações e alertas aplicáveis àquela fase da live.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Script",
+        definicao:
+          "Tipo de sugestão de roteiro com texto falado ou roteirizado para o dealer seguir na mesa. Identificado visualmente no card do bloco.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Orientação",
+        definicao:
+          "Tipo de sugestão com instruções de conduta ou foco para o dealer durante a sessão, sem necessariamente ser texto literal a ser lido.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Alerta",
+        definicao:
+          "Tipo de sugestão de destaque ou aviso pontual no roteiro (compliance, promoção, mudança de regra) exibido no bloco correspondente.",
+        referencia: "Roteiro de Mesa",
+      },
+      {
+        termo: "Troca de Dealer",
+        definicao:
+          "Solicitação enviada pela operadora ao estúdio para substituir ou revisar o dealer de uma mesa. Fluxo tratado na Central de Notificações e iniciado na Gestão de Dealers.",
+        referencia: "Gestão de Dealers · Central de Notificações",
+      },
+      {
+        termo: "Peça de Figurino",
+        definicao:
+          "Item de vestuário ou acessório cadastrado no acervo da plataforma, identificado por um código único (ex: FIG-000003) e código de barras para rastreamento físico.",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Retirada (Figurino)",
+        definicao:
+          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestar (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida).",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Condição da Peça",
+        definicao:
+          "Estado físico de uma peça de figurino. Valores possíveis: Boa (pronta para uso), Avariada (danos visíveis) e Limpeza (necessita lavagem).",
+        referencia: "Figurinos",
+      },
+      {
+        termo: "Etiqueta de Figurino",
+        definicao:
+          "PDF com código de barras e informações da peça gerado no cadastro ou nos detalhes. Serve para identificação física e bipagem com câmera ou leitor externo.",
+        referencia: "Figurinos",
+      },
+    ],
+  },
+  {
+    key: "marketing_digital",
+    label: "Marketing Digital",
+    accentColor: "#70cae4",
+    termos: [
+      {
+        termo: "UTM Source",
+        definicao:
+          "Identificador único de rastreio adicionado a links de captação que indica a origem do tráfego. Na plataforma, cada UTM Source detectado nas operadoras pode ser associado a um influencer ou campanha para atribuição de FTDs e GGR.",
+        nota: "Links detectados mas ainda não associados são chamados de 'links órfãos' ou 'pendentes'.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Link Mapeado",
+        definicao:
+          "UTM Source que foi associado a um influencer ou campanha. Após o mapeamento, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards de performance.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Link Órfão / Pendente",
+        definicao:
+          "UTM Source detectado em uma operadora que ainda não possui associação com influencer ou campanha. Aparece na aba Pendentes da Gestão de Links aguardando mapeamento.",
+        referencia: "Gestão de Links",
+      },
+      {
+        termo: "Campanha",
+        definicao:
+          "Agrupamento de ações de marketing vinculado a uma ou mais operadoras. Campanhas são criadas na página Campanhas e podem ser usadas como destino no mapeamento de links na Gestão de Links.",
+        nota: "Campanhas inativas não aparecem como opção ao mapear novos links, mas mantêm os vínculos existentes.",
+        referencia: "Campanhas · Gestão de Links",
       },
     ],
   },

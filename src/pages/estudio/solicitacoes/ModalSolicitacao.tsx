@@ -56,7 +56,8 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
         .single();
 
       if (e1 || !sol?.id) {
-        setErr(e1?.message ?? "Não foi possível criar a solicitação.");
+        console.error("[ModalSolicitacao] Erro ao criar solicitação:", e1);
+        setErr("Não foi possível criar a solicitação. Se o problema persistir, contate o suporte.");
         return;
       }
 
@@ -68,7 +69,8 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
       });
 
       if (e2) {
-        setErr(e2.message ?? "Erro ao registrar a mensagem.");
+        console.error("[ModalSolicitacao] Erro ao registrar mensagem:", e2);
+        setErr("Não foi possível registrar a mensagem. Se o problema persistir, contate o suporte.");
         return;
       }
 
@@ -183,7 +185,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
             border: "none",
             background: brand.useBrand
               ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-              : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))",
+              : "linear-gradient(135deg, #4a2082, #1e36f8)",
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,

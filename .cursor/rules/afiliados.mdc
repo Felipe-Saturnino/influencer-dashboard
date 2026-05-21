@@ -1,0 +1,78 @@
+---
+description: Regras específicas para as páginas da seção Afiliados. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/afiliados/**/*.tsx
+  - src/pages/afiliados/**/*.ts
+alwaysApply: false
+---
+
+# Seção: Afiliados — Padrões de UI/UX
+
+## Identificação
+
+- Caminho: `src/pages/afiliados/Afiliados/index.tsx` · `src/pages/afiliados/Network/index.tsx`
+- Token set: **legado** (`--brand-primary`, `--brand-secondary`, `--brand-accent`)
+- Páginas: Afiliados · Network
+- Banco: `profiles` (role = `afiliado`); `influencer_perfil`; prospecção em `afiliados_network`
+- Edge: `criar-afiliado-network` — disparada no **Salvar** de prospecto **sem** usuário na plataforma (e-mail + operadora obrigatórios; **qualquer** status do funil)
+
+> Fora de `src/pages/dashboards/`. Tokens `--brand-action`, `--brand-contrast`, `--brand-action-12`, `--brand-action-border` são **proibidos** como acento de UI. Cor por operadora: hex de `operadoras.brand_action` ou fallback `var(--brand-primary, #7c3aed)` — nunca `--brand-action` como fallback CSS.
+
+---
+
+## Cabeçalho de página
+
+Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do componente:
+
+- Badge do ícone: **28×28**, `borderRadius: 8`
+- `h1`: `fontSize: 22`, uppercase, `FONT_TITLE`, cor `brand.primary`
+- Subtítulo: `FONT.body`, 13px, `t.textMuted`
+- Ícone: **Lucide** no JSX da página (ex.: `Users`, `Network`)
+
+---
+
+## CTA — Gradiente (dentro do componente)
+
+```tsx
+const ctaGradient = brand.useBrand
+  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+  : "linear-gradient(135deg, #4a2082, #1e36f8)";
+```
+
+---
+
+## Estados ativos — tabs e filtros
+
+```tsx
+const tabActiveBg = brand.useBrand
+  ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+  : "rgba(124,58,237,0.15)";
+```
+
+Botão **Adicionar Anotação** (Network): `var(--brand-secondary)` com `brand.useBrand`, senão `#1e36f8`.
+
+---
+
+## Modais
+
+- Overlay: `rgba(0,0,0,0.72)`
+- `useModalEscape(onClose, true)` — `src/hooks/useModalEscape.ts`
+- Tabs: `tablist`, `id`, `aria-controls`, `tabIndex`, `ArrowLeft`/`ArrowRight` com `preventDefault`, `role="tabpanel"`
+- Prospecto sem usuário: microcopy no modal de edição explicando e-mail/operadora obrigatórios ao salvar
+
+---
+
+## Ajuda
+
+Fundir legado + código real em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` (`afiliados`, `afiliados_network`). **Não** documentar criação de usuário apenas em status Fechado — alinhar ao `handleSave` em Network.
+
+---
+
+## O Que Nunca Fazer
+
+- Nunca `CTA_GRADIENT` de módulo com tokens de dashboard
+- Nunca `--brand-action-12` / `--brand-action-border` em tabs ou banner de visualização
+- Nunca `"este dashboard"` na permissão negada
+- Nunca texto visível `Carregando...` no loading principal (só `aria-label` no spinner)
+- Nunca `role="alert"` sem `aria-live="polite"` em erros
+- Nunca tabs sem ARIA completo e teclado

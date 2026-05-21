@@ -1,0 +1,149 @@
+---
+description: Regras para páginas da seção Estúdio. Pasta estudio/. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/estudio/**/*.tsx
+  - src/pages/estudio/**/*.ts
+alwaysApply: false
+---
+
+# Seção: Estúdio — Padrões de UI/UX
+
+## Identificação
+
+- Caminho: `src/pages/estudio/`
+- Páginas: `GestaoDealers/`, `CentralNotificacoes/`, `Figurinos/` (código em `estudio/`, permissão `rh_figurinos`), `RoteiroMesa/`, `solicitacoes/` (modais compartilhados)
+- Token set: **Legado** (`--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-action` no Histórico)
+- Complementa `operacoes.mdc` até migração completa — preferir **este ficheiro** em código novo em `estudio/`
+
+---
+
+## Header de página
+
+- Componente: `PageHeader` (`src/components/PageHeader.tsx`)
+- Ícone: **exclusivamente Lucide** — `Users` (Dealers), `Bell` ou `Layers` (Central), `Shirt` (Figurinos), `NotebookPen` (Roteiro)
+- `PageHeader` aceita prop `actions` (botões à direita — padrão Figurinos)
+- **Proibido:** `GiXxx` no badge do header; `strokeWidth` custom em ícones Lucide
+- Subtítulo descritivo em `PageHeader` (não repetir só o título)
+
+---
+
+## Tema e sombras
+
+- **Nunca** `const { isDark } = useApp()` — usar `t.isDark` (ou `const dark = t.isDark` em subcomponentes com `useApp()`)
+- Cards/blocos: `CARD_SHADOW(t.isDark)` — `0 4px 20px rgba(0,0,0,0.25)` (dark) / `0 2px 8px rgba(0,0,0,0.07)` (light)
+- **Proibido:** `boxShadow: "0 4px 20px rgba(0,0,0,0.18)"` fixo
+
+---
+
+## Permissão
+
+```text
+Você não tem permissão para visualizar esta página.
+```
+
+Nunca incluir o nome da página na mensagem.
+
+---
+
+## Bloco de filtros
+
+- Wrapper: `brand.primaryTransparentBg` + `brand.primaryTransparentBorder`
+- Select com ícone `Shield`: container **`<div position: relative>`** + `Shield` com `position: absolute` — não `<span>` como wrapper
+- `aria-label` em selects de operadora
+- Mobile (`max-width: 479px`): fila de chips com `overflowX: auto`, `scrollbarWidth: none`, fade à direita com `linear-gradient(to left, t.bg, transparent)`
+
+### Gestão de Dealers — carrossel de turnos
+
+- Navegação por setas; rótulo central mostra turno ativo ou **"Todos os turnos"** quando `filtroTurno === "todos"`
+- **Sem** pill/botão separado "Todos os turnos" — reset via estado do carrossel
+
+### Central — Histórico (Regra 10)
+
+```tsx
+background: historico
+  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+  : "transparent",
+```
+
+Sem condicional `brand.useBrand` no chip Histórico.
+
+### Central — FilterBar loading secundário
+
+`Clock size={12}` + texto **`Carregando…`** (reticências Unicode U+2026) — não `Loader2` na barra de filtros.
+
+---
+
+## Loading
+
+| Contexto | Padrão |
+|----------|--------|
+| Lista / página principal | `Loader2 size={22}` + `app-lucide-spin` + `var(--brand-primary, #7c3aed)` + texto descritivo |
+| CTA em modal | `Loader2 size={13}` + `color="#fff"` |
+| FilterBar (Central) | `Clock size={12}` + `Carregando…` |
+
+---
+
+## Gradientes de CTA
+
+```tsx
+background: brand.useBrand
+  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+  : "linear-gradient(135deg, #4a2082, #1e36f8)",
+color: "#fff",
+```
+
+---
+
+## Modais (`OperacoesModal` + solicitações)
+
+- `useApp()` + `useDashboardBrand()` **internamente** — nunca props `t` / `brand` em modais
+- `ModalBase` já expõe `role="dialog"`, `aria-modal`, foco inicial e Escape — **não** duplicar `titleId` manual salvo necessidade explícita
+- Erros: `role="alert"` + `aria-live="polite"`; mensagem fixa PT ao usuário + `console.error` — **nunca** `error.message` no DOM
+- Botões de toggle (jogos, tipos): `type="button"`, `role="group"` + `aria-labelledby` via `useId()`
+- VIP no card: ícone Lucide `Star` + texto **" VIP"** — não caractere `★`
+
+---
+
+## Badges e abas (Central)
+
+- Badge de contagem em abas staff: `aria-label` descritivo quando `count > 0` (ex.: "3 trocas de dealer pendentes")
+- Fade horizontal em tablist no mobile estreito (`useMediaQuery`)
+
+---
+
+## Figurinos (`src/pages/estudio/Figurinos/`)
+
+- Labels de seção (FILTROS, CONSOLIDADO, etc.): `<h2>` com estilo visual idêntico ao label anterior
+- KPI cards: `aria-label={`${label}: ${value}`}` no container
+- `ScannerPanel`: erro de câmera com `role="alert"` — nunca `role="status"`
+- Tabelas das 4 abas: hover obrigatório em `<tr>`; abas com ARIA completo (tablist + `onKeyDown`, `tabIndex` nas tabs, `tabIndex={0}` no painel)
+- `abrirDetalhe`: tratar falha do histórico com mensagem fixa (estado `histErro`)
+- Select operadora: `GiShield` no interior do select (exceção documentada)
+- Modais: `ModalBase` + `useId()` interno — não exige prop `titleId` manual
+
+---
+
+## Roteiro de Mesa
+
+- Filtros: Jogo, Tipo (script / orientação / alerta), Operadora (quando `showFiltroOperadora`)
+- Conteúdo só após operadora selecionada; vazio global: **"Sem dados para o período selecionado."** quando aplicável
+- Blocos: Campanhas + Abertura / Durante o jogo / Fechamento
+- Botão `+ Roteiro`: `type="button"`
+- Banner `BannerPendencias` + `ModalThreadSolicitacao` para threads de campanha
+
+---
+
+## Anti-patterns
+
+- `isDark` desestruturado de `useApp()`
+- `brand` passado como prop a `DealerCard` ou modais
+- Histórico condicionado a `brand.useBrand`
+- `strokeWidth` fixo em ícones decorativos
+- `error.message` / `e?.message` visível ao usuário
+- Header inline 32×32 com GameIcons
+- Permissão com nome da página no texto
+- Pill "Todos os turnos" redundante no Dealers (carrossel já cobre)
+- `Loader2` na FilterBar da Central
+- Tabelas operacionais sem hover (Figurinos e demais)
+- Abas sem os 5 elementos ARIA
+- `role="status"` em erros que bloqueiam fluxo

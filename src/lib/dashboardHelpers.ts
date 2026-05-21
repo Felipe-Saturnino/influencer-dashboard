@@ -29,10 +29,14 @@ export function fmtDia(iso: string): string {
   return `${d}/${m}`;
 }
 
-export function getMesesDisponiveis(): { ano: number; mes: number; label: string }[] {
+export type MesInicioRef = { ano: number; mes: number };
+
+export function getMesesDisponiveis(
+  inicio: MesInicioRef = MES_INICIO,
+): { ano: number; mes: number; label: string }[] {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
+  let { ano, mes } = inicio;
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
     lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
     mes++;

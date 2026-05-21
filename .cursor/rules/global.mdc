@@ -37,10 +37,10 @@ src/
 │   ├── conteudo/       # Playbook, Links e Materiais (menu Conteúdo)
 │   ├── geral/
 │   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout
-│   ├── estudio/        # Dealers, Central, solicitações, Roteiro de Mesa (menu Estúdio)
+│   ├── estudio/        # Dealers, Central, Figurinos, Roteiro de Mesa, solicitações (menu Estúdio)
 │   ├── aquisicao/      # Financeiro, Banca de Jogo (menu Aquisição)
 │   ├── marketing/      # Campanhas, Gestão de Links
-│   ├── rh/             # Figurinos (também no menu Estúdio), Prestadores, Organograma
+│   ├── rh/             # Prestadores, Organograma, Escala, Vagas (Figurinos em estudio/)
 │   └── plataforma/
 ├── styles/
 │   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*

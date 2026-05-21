@@ -113,7 +113,8 @@ export function ScannerPanel({ onDetect, cooldownMs = 1800 }: Props) {
       </div>
       {erroCam ? (
         <div
-          role="status"
+          role="alert"
+          aria-live="polite"
           style={{
             fontSize: 12,
             color: "#f59e0b",

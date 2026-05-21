@@ -5,6 +5,7 @@ import {
   Eye,
   LayoutList,
   ListOrdered,
+  Loader2,
   MapPin,
   Minus,
   TrendingDown,
@@ -163,22 +164,31 @@ function ConcorrentesCountHover({
     return <span style={{ color: t.textMuted, fontVariantNumeric: "tabular-nums" }}>0</span>;
   }
   return (
-    <span
-      style={{ position: "relative", display: "inline-block" }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <span
+    <span style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        aria-label={`Ver ${qtd} concorrentes à frente`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
         style={{
+          background: "none",
+          border: "none",
+          cursor: "default",
+          padding: 0,
           color: "var(--brand-action, #7c3aed)",
           fontWeight: 700,
           fontVariantNumeric: "tabular-nums",
-          cursor: "default",
           borderBottom: "1px dotted var(--brand-action, #7c3aed)",
+          fontFamily: FONT.body,
+          fontSize: "inherit",
         }}
       >
         {qtd}
-      </span>
+      </button>
       {open && jogos.length > 0 && (
         <div
           role="tooltip"
@@ -239,8 +249,19 @@ function PosicaoAtualMesasBlock({
     return (
       <div style={cardStyle}>
         <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
-        <div style={{ padding: "24px 0", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Carregando…
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "24px 0",
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+          <span>Carregando posicionamento…</span>
         </div>
       </div>
     );
@@ -302,11 +323,11 @@ function PosicaoAtualMesasBlock({
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
                 {d == null || d === 0 ? (
-                  <Minus size={14} color={SEMANTIC.cinza} aria-hidden="true" />
+                  <Minus size={14} color={SEMANTIC.cinza} aria-label="Sem variação de posição" />
                 ) : d < 0 ? (
-                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label="Melhorou" />
+                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${m.nome_mesa} melhorou posição`} />
                 ) : (
-                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label="Piorou" />
+                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${m.nome_mesa} piorou posição`} />
                 )}
               </span>
             </li>
@@ -456,8 +477,8 @@ function DashboardPosicionamentoOperadora({
     const base = brand.blockBg ?? t.cardBg;
     if (i % 2 === 0) return base;
     return t.isDark
-      ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 16%, #141118)"
-      : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
+      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)"
+      : "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
   };
 
   const thHistMesa: CSSProperties = {
@@ -817,11 +838,12 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate, slugTo
   const brand = useDashboardBrand();
 
   const card: CSSProperties = {
-    borderRadius: 14,
+    borderRadius: 18,
     border: `1px solid ${t.cardBorder}`,
     background: brand.blockBg,
-    padding: "16px 18px",
+    padding: 20,
     marginBottom: 14,
+    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const resolveNome = slugToNome ?? ((slug: string) => slug);

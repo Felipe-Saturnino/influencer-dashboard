@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import type { RhFigurinoPeca } from "../pages/rh/Figurinos/types";
+import type { RhFigurinoPeca } from "../pages/estudio/Figurinos/types";
 
 /** Etiqueta ~10×5 cm (mm), geração 100% no cliente. */
 export async function baixarEtiquetaFigurinoPdf(peca: RhFigurinoPeca, operadorasTexto: string): Promise<void> {

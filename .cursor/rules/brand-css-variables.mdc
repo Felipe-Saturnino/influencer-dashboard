@@ -35,3 +35,15 @@ A cor **não** é única globalmente: depende do fundo.
 ## Contexto sem operador logado
 
 Fora do perfil operador, as variáveis permanecem nos defaults do `:root` — o fallback garante a identidade Spin sem lógica extra no componente.
+
+## color-mix — estados ativos e transparências
+
+Em `dashboards/`: usar `color-mix(in srgb, var(--brand-action, #7c3aed) X%, transparent)`.
+
+Fora de dashboards: `color-mix(in srgb, var(--brand-accent) X%, transparent)` quando `brand.useBrand`; `rgba(124,58,237,0.15)` como fallback quando `!brand.useBrand`.
+
+Nunca `rgba(124,58,237,0.15)` fixo dentro de `src/pages/dashboards/**`.
+
+## --brand-secondary em dashboards/
+
+`--brand-secondary` é token legado válido fora de `dashboards/`. Dentro de `dashboards/`, usar `--brand-contrast` para o papel de cor de suporte (zebras, lado B em comparativos, etc.).

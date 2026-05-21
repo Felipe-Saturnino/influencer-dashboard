@@ -4,10 +4,11 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
@@ -36,19 +37,21 @@ import {
 } from "../../../lib/tableStyles";
 import {
   ArrowUpDown,
+  BarChart2,
   Calendar,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  Clock,
   Dice6,
-  LayoutGrid,
+  Hash,
   Loader2,
   Shield,
   Table2,
   Target,
   TrendingUp,
-  ListOrdered,
   Percent,
   ChartColumnBig,
   Users,
@@ -67,17 +70,6 @@ import {
 } from "recharts";
 
 /** ─── relatorio_* com operadora_slug (FK operadoras.slug) — migração 20260430140000. Texto `operadora` em por_tabela permanece como rótulo de origem. */
-
-const BRAND = {
-  roxo: "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul: "#1e36f8",
-  vermelho: "#e84025",
-  verde: "#22c55e",
-  ciano: "#70cae4",
-  amarelo: "#f59e0b",
-  rosa: "#ec4899",
-} as const;
 
 /** Legenda MoM do card UAP: referência é o mês anterior fechado (mensal), não o recorte MTD. */
 const KPI_UAP_VS_LEGENDA = "período completo do mês ant.";
@@ -730,11 +722,6 @@ function buildUapPorJogoQuery(
     q = q.gte("data", inicio).lte("data", fim);
   }
   return q;
-}
-
-function fmtBRL(v: number) {
-  const sign = v < 0 ? "-" : "";
-  return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function fmtPct(v: number | null) {
@@ -2042,9 +2029,9 @@ export default function OverviewSpin() {
     () =>
       brand.useBrand
         ? {
-            accent: "var(--brand-contrast)",
-            bg: "color-mix(in srgb, var(--brand-contrast) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-contrast) 35%, transparent)",
+            accent: "var(--brand-action, #7c3aed)",
+            bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
           }
         : COR_MESA_A,
     [brand.useBrand],
@@ -2072,7 +2059,7 @@ export default function OverviewSpin() {
       : "rgba(74,32,130,0.10)",
     fontSize: 12,
     fontWeight: 800,
-    color: brand.useBrand ? "var(--brand-action, #7c3aed)" : t.textMuted,
+    color: "var(--brand-action, #7c3aed)",
     fontFamily: FONT.body,
     letterSpacing: "0.05em",
     textAlign: "center",
@@ -2083,7 +2070,7 @@ export default function OverviewSpin() {
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
-    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
+    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
   const thStyle = brand.useBrand
@@ -2229,13 +2216,22 @@ export default function OverviewSpin() {
   const labelMesaComparativoA = mesasOpcoesBlackjack.find((m) => m.key === compMesaA)?.label ?? "—";
   const labelMesaComparativoB = mesasOpcoesBlackjack.find((m) => m.key === compMesaB)?.label ?? "—";
 
+  const chartTooltipTheme = useMemo(
+    () => ({ cardBg: t.cardBg, cardBorder: t.cardBorder, text: t.text }),
+    [t.cardBg, t.cardBorder, t.text],
+  );
+
   const renderMesaDiaTabela = (
     linhas: LinhaMesaPorDia[],
     rowStripe: string,
     colTempo: "Data" | "Mês" = "Data",
+    tituloTabela = "Mesa",
   ) => (
     <div className="app-table-wrap">
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+      <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 560 }}>
+        <caption style={{ display: "none" }}>
+          {`Resultados de ${tituloTabela} — ${colTempo === "Mês" ? "histórico" : mesSelecionado?.label ?? ""}`}
+        </caption>
         <thead>
           <tr>
             <th style={thStyle}>{colTempo}</th>
@@ -2357,229 +2353,6 @@ export default function OverviewSpin() {
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   });
 
-  function TooltipComparativoJogo({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: {
-      name?: string;
-      value?: unknown;
-      color?: string;
-      payload?: { Total?: number | null };
-    }[];
-    label?: string;
-  }) {
-    if (!active || !payload?.length) return null;
-    const somavel = kpiGraficoConfig.somavel;
-    const full = payload[0]?.payload;
-    const totalOficial = full?.Total;
-    const totalSomavelFallback = payload.reduce((s, p) => {
-      const n = Number(p.value);
-      return s + (Number.isFinite(n) ? n : 0);
-    }, 0);
-    const totalSomavel =
-      totalOficial != null && Number.isFinite(Number(totalOficial))
-        ? Number(totalOficial)
-        : totalSomavelFallback;
-    const formatar = (v: number) =>
-      isBRLKpiGrafico
-        ? fmtBRL(v)
-        : kpiGrafico === "margin_pct"
-          ? `${v.toFixed(1)}%`
-          : v.toLocaleString("pt-BR");
-
-    const mostrarRodapeTotal =
-      somavel ||
-      kpiGrafico === "margin_pct" ||
-      kpiGrafico === "bet_size" ||
-      kpiGrafico === "arpu";
-
-    const valorRodape =
-      totalOficial != null && Number.isFinite(Number(totalOficial))
-        ? Number(totalOficial)
-        : null;
-
-    return (
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 10,
-          padding: "10px 14px",
-          fontSize: 12,
-          color: t.text,
-          fontFamily: FONT.body,
-          minWidth: 160,
-        }}
-      >
-        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
-        {payload.map((p) => (
-          <div
-            key={String(p.name)}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginBottom: 4,
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: p.color,
-                  flexShrink: 0,
-                }}
-              />
-              {p.name}
-            </span>
-            <span style={{ fontWeight: 600 }}>
-              {p.value != null && p.value !== ""
-                ? formatar(Number(p.value))
-                : "—"}
-            </span>
-          </div>
-        ))}
-        {mostrarRodapeTotal && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginTop: 6,
-              paddingTop: 6,
-              borderTop: `1px solid ${t.cardBorder}`,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
-            <span style={{ fontWeight: 700, color: t.text }}>
-              {somavel
-                ? formatar(totalSomavel)
-                : valorRodape != null
-                  ? formatar(valorRodape)
-                  : "—"}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function TooltipDetalheOperadoras({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: {
-      name?: string;
-      value?: unknown;
-      color?: string;
-      payload?: Record<string, unknown>;
-    }[];
-    label?: string;
-  }) {
-    if (!active || !payload?.length) return null;
-    const somavel = kpiGraficoDetalheConfig.somavel;
-    const full = payload[0]?.payload as Record<string, unknown> | undefined;
-    const totalOficial = full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
-    const totalSomavelFallback = payload.reduce((s, p) => {
-      const n = Number(p.value);
-      return s + (Number.isFinite(n) ? n : 0);
-    }, 0);
-    const totalSomavel =
-      totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
-    const formatar = (v: number) =>
-      isBRLKpiGraficoDetalhe
-        ? fmtBRL(v)
-        : kpiGraficoDetalhe === "margin_pct"
-          ? `${v.toFixed(1)}%`
-          : v.toLocaleString("pt-BR");
-
-    const mostrarRodapeTotal =
-      somavel ||
-      kpiGraficoDetalhe === "margin_pct" ||
-      kpiGraficoDetalhe === "bet_size" ||
-      kpiGraficoDetalhe === "arpu";
-
-    const valorRodape = totalOficial;
-
-    return (
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 10,
-          padding: "10px 14px",
-          fontSize: 12,
-          color: t.text,
-          fontFamily: FONT.body,
-          minWidth: 160,
-        }}
-      >
-        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
-        {payload.map((p) => (
-          <div
-            key={String(p.name)}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginBottom: 4,
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: p.color,
-                  flexShrink: 0,
-                }}
-              />
-              {p.name}
-            </span>
-            <span style={{ fontWeight: 600 }}>
-              {p.value != null && p.value !== ""
-                ? formatar(Number(p.value))
-                : "—"}
-            </span>
-          </div>
-        ))}
-        {mostrarRodapeTotal && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              marginTop: 6,
-              paddingTop: 6,
-              borderTop: `1px solid ${t.cardBorder}`,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
-            <span style={{ fontWeight: 700, color: t.text }}>
-              {somavel
-                ? formatar(totalSomavel)
-                : valorRodape != null
-                  ? formatar(valorRodape)
-                  : "—"}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   const renderDetalhamentoInterativo = (colTempoLabel: "Data" | "Mês") => (
     <>
       <div
@@ -2692,7 +2465,7 @@ export default function OverviewSpin() {
 
       {modoVisualizacaoDetalhe === "tabela" ? (
         <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 720 }}>
             <caption style={{ display: "none" }}>
               {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
             </caption>
@@ -2905,7 +2678,16 @@ export default function OverviewSpin() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Tooltip
+                    content={
+                      <TooltipDetalheOperadoras
+                        theme={chartTooltipTheme}
+                        kpiGraficoDetalhe={kpiGraficoDetalhe}
+                        somavel={kpiGraficoDetalheConfig.somavel}
+                        isBRL={isBRLKpiGraficoDetalhe}
+                      />
+                    }
+                  />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                   {slugsGraficoDetalhe.map((slug) => (
                     <Bar
@@ -2943,7 +2725,16 @@ export default function OverviewSpin() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Tooltip
+                    content={
+                      <TooltipDetalheOperadoras
+                        theme={chartTooltipTheme}
+                        kpiGraficoDetalhe={kpiGraficoDetalhe}
+                        somavel={kpiGraficoDetalheConfig.somavel}
+                        isBRL={isBRLKpiGraficoDetalhe}
+                      />
+                    }
+                  />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                   {slugsGraficoDetalhe.map((slug) => (
                     <Line
@@ -3114,7 +2905,8 @@ export default function OverviewSpin() {
             <table
               style={{
                 width: "100%",
-                borderCollapse: "collapse",
+                borderCollapse: "separate",
+                borderSpacing: 0,
                 minWidth: minWidthTabelaComparativoJogo,
               }}
             >
@@ -3404,7 +3196,16 @@ export default function OverviewSpin() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Tooltip
+                    content={
+                      <TooltipComparativoJogo
+                        theme={chartTooltipTheme}
+                        kpiGrafico={kpiGrafico}
+                        somavel={kpiGraficoConfig.somavel}
+                        isBRL={isBRLKpiGrafico}
+                      />
+                    }
+                  />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                   <Bar
                     dataKey="Blackjack"
@@ -3440,7 +3241,16 @@ export default function OverviewSpin() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Tooltip
+                    content={
+                      <TooltipComparativoJogo
+                        theme={chartTooltipTheme}
+                        kpiGrafico={kpiGrafico}
+                        somavel={kpiGraficoConfig.somavel}
+                        isBRL={isBRLKpiGrafico}
+                      />
+                    }
+                  />
                   <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
                   <Line
                     type="monotone"
@@ -3507,7 +3317,7 @@ export default function OverviewSpin() {
               color: brand.primaryIconColor,
             }}
           >
-            <LayoutGrid size={14} aria-hidden />
+            <BarChart2 size={14} aria-hidden />
           </div>
           <div>
             <h1
@@ -3534,8 +3344,8 @@ export default function OverviewSpin() {
         <div
           style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}
         >
@@ -3613,9 +3423,7 @@ export default function OverviewSpin() {
                 fontSize: 13,
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -3658,7 +3466,7 @@ export default function OverviewSpin() {
                   gap: 6,
                 }}
               >
-                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
@@ -3730,7 +3538,7 @@ export default function OverviewSpin() {
       <>
       <div style={{ ...card, marginBottom: 14 }}>
           <SectionTitle
-            icon={<LayoutGrid size={15} />}
+            icon={<BarChart2 size={15} aria-hidden />}
             sub={
               historico
                 ? "acumulado"
@@ -3805,7 +3613,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Apostas"
                   value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-                  icon={<ListOrdered size={16} />}
+                  icon={<Hash size={16} aria-hidden />}
                   accentVar="--brand-action"
                   accentColor={BRAND.azul}
                   atual={nKpi(kpiExibir?.bets)}
@@ -3824,7 +3632,7 @@ export default function OverviewSpin() {
                   isHistorico={isHistoricoKpi}
                 />
                 <KpiCard
-                  label={historico ? "Média UAP" : "UAP"}
+                  label="UAP"
                   value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
                   icon={<Users size={16} />}
                   accentVar="--brand-icon-color"
@@ -3874,7 +3682,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Apostas"
                   value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-                  icon={<ListOrdered size={16} />}
+                  icon={<Hash size={16} aria-hidden />}
                   accentVar="--brand-action"
                   accentColor={BRAND.azul}
                   atual={nKpi(kpiExibir?.bets)}
@@ -3904,7 +3712,7 @@ export default function OverviewSpin() {
                   isHistorico={isHistoricoKpi}
                 />
                 <KpiCard
-                  label={historico ? "Média UAP" : "UAP"}
+                  label="UAP"
                   value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
                   icon={<Users size={16} />}
                   accentVar="--brand-icon-color"
@@ -3931,7 +3739,7 @@ export default function OverviewSpin() {
         </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Calendar size={15} />} sub={historico ? "mês a mês" : "dia a dia"}>
+        <SectionTitle icon={<CalendarDays size={15} aria-hidden />} sub={historico ? "mês a mês" : "dia a dia"}>
           {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
         </SectionTitle>
 
@@ -4188,14 +3996,14 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY)}
+                        {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Data", labelMesaComparativoA)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT)}
+                        {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Data", labelMesaComparativoB)}
                       </div>
                     </div>
                   </>
@@ -4212,7 +4020,7 @@ export default function OverviewSpin() {
                     <div style={tituloMesaSpeedBaccarat}>
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Speed Baccarat")}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
@@ -4222,7 +4030,7 @@ export default function OverviewSpin() {
                     <div style={tituloMesaRoleta}>
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Roleta")}
                   </div>
                 </div>
               </div>
@@ -4464,14 +4272,14 @@ export default function OverviewSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Mês", labelMesaComparativoA)}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Mês", labelMesaComparativoB)}
                           </div>
                         </div>
                       </>
@@ -4488,7 +4296,7 @@ export default function OverviewSpin() {
                         <div style={tituloMesaSpeedBaccarat}>
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Speed Baccarat")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
@@ -4498,7 +4306,7 @@ export default function OverviewSpin() {
                         <div style={tituloMesaRoleta}>
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Roleta")}
                       </div>
                     </div>
                   </div>

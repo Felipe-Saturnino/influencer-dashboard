@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type KeyboardEvent } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useModalEscape } from "../../../hooks/useModalEscape";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
@@ -104,11 +105,27 @@ function StatusBadge({ value, onChange, readonly }: { value: StatusAfiliado; onC
   );
 }
 
-const CTA_GRADIENT = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+function handleTabArrowKey<T extends string>(
+  tabs: { key: T }[],
+  current: T,
+  setTab: (k: T) => void,
+  e: KeyboardEvent,
+) {
+  const idx = tabs.findIndex((tb) => tb.key === current);
+  if (idx < 0) return;
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    e.preventDefault();
+    if (e.key === "ArrowRight") setTab(tabs[(idx + 1) % tabs.length].key);
+    else setTab(tabs[(idx - 1 + tabs.length) % tabs.length].key);
+  }
+}
 
 export default function Afiliados() {
   const { theme: t, user, podeVerInfluencer, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
+  const ctaGradient = brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("afiliados");
   const showManagementUI = user?.role !== "afiliado";
@@ -226,7 +243,7 @@ export default function Afiliados() {
   };
 
   if (perm.canView === "nao") {
-    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar este dashboard.</div>;
+    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar esta página.</div>;
   }
 
   return (
@@ -296,7 +313,7 @@ export default function Afiliados() {
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
-                  <SelectComIcone pill icon={<Shield size={15} aria-hidden="true" />} label="Filtrar por operadora" value={filterOp} onChange={setFilterOp} minWidth={200} style={{ border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`, background: filterOp !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg), color: filterOp !== "todas" ? brand.accent : t.textMuted, fontWeight: filterOp !== "todas" ? 700 : 400 }}>
+                  <SelectComIcone pill icon={<Shield size={15} aria-hidden="true" />} label="Filtrar por operadora" value={filterOp} onChange={setFilterOp} minWidth={200} style={{ border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`, background: filterOp !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : (t.inputBg ?? t.cardBg), color: filterOp !== "todas" ? brand.accent : t.textMuted, fontWeight: filterOp !== "todas" ? 700 : 400 }}>
                     <option value="todas">Todas as operadoras</option>
                     {operadorasNoEscopo.map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                   </SelectComIcone>
@@ -324,15 +341,15 @@ export default function Afiliados() {
       )}
 
       {statusError && (
-        <div role="alert" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div role="alert" aria-live="polite" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {statusError}
           <button type="button" onClick={() => setStatusError("")} aria-label="Fechar erro" style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho }}><X size={14} aria-hidden="true" /></button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" /> Carregando...
+        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando..." />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ ...cardStyle, justifyContent: "center", padding: 48 }}>Nenhum afiliado encontrado.</div>
@@ -345,7 +362,7 @@ export default function Afiliados() {
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: CTA_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: ctaGradient, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
                   {((p?.nome_artistico || inf.name) || inf.email)[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -374,7 +391,7 @@ export default function Afiliados() {
                   <Eye size={13} aria-hidden="true" /> Ver
                 </button>
                 {podeEditarAf(inf.id) && (
-                  <button type="button" onClick={() => setModal({ mode: "editar", row: inf })} aria-label={`Editar ${p?.nome_artistico || inf.name}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: CTA_GRADIENT, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                  <button type="button" onClick={() => setModal({ mode: "editar", row: inf })} aria-label={`Editar ${p?.nome_artistico || inf.name}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: ctaGradient, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
                     <Pencil size={13} aria-hidden="true" /> Editar
                   </button>
                 )}
@@ -410,7 +427,10 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v || "—"}</span>;
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+    : "rgba(124,58,237,0.15)";
+  useModalEscape(onClose, true);
   useEffect(() => { const id = window.setTimeout(() => ref.current?.focus(), 50); return () => window.clearTimeout(id); }, []);
   const tabs = [
     { key: "cadastral" as const, label: "Cadastral" },
@@ -420,7 +440,7 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
     { key: "historico" as const, label: "Histórico" },
   ];
   return (
-    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="af-mod-v-t" style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, maxHeight: "min(92vh, 90dvh)", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
@@ -432,40 +452,56 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "var(--brand-action-12)" : `${BRAND.azul}0d`, border: `1px solid ${brand.useBrand ? "var(--brand-action-border)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: brand.useBrand ? `1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)` : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary }} /> Modo visualização — somente leitura. Dados sensíveis protegidos.
         </div>
         <div role="tablist" aria-label="Secções" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
-            <button key={tb.key} type="button" role="tab" aria-selected={tab === tb.key} onClick={() => setTab(tb.key)} style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+            <button
+              key={tb.key}
+              type="button"
+              role="tab"
+              id={`tab-af-ver-${tb.key}`}
+              aria-selected={tab === tb.key}
+              aria-controls={`panel-af-ver-${tb.key}`}
+              tabIndex={tab === tb.key ? 0 : -1}
+              onClick={() => setTab(tb.key)}
+              onKeyDown={(e) => handleTabArrowKey(tabs, tab, setTab, e)}
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
+            >
               {tb.label}
             </button>
           ))}
         </div>
         {tab === "cadastral" && (
-          <>
+          <div role="tabpanel" id="panel-af-ver-cadastral" aria-labelledby="tab-af-ver-cadastral">
             <div style={rowS}><label style={labelStyle}>E-mail</label>{val(row.email)}</div>
             <div style={rowS}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
             <div style={rowS}><SensitiveField value={p?.cpf ?? undefined} label="CPF" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} /></div>
-          </>
+          </div>
         )}
-        {tab === "operacao" && <div style={rowS}><label style={labelStyle}>Operação</label><div style={{ fontSize: 13, color: (p?.operacao ?? "").trim() ? t.text : t.textMuted, fontFamily: FONT.body, whiteSpace: "pre-wrap" }}>{(p?.operacao ?? "").trim() || "—"}</div></div>}
+        {tab === "operacao" && (
+          <div role="tabpanel" id="panel-af-ver-operacao" aria-labelledby="tab-af-ver-operacao">
+            <div style={rowS}><label style={labelStyle}>Operação</label><div style={{ fontSize: 13, color: (p?.operacao ?? "").trim() ? t.text : t.textMuted, fontFamily: FONT.body, whiteSpace: "pre-wrap" }}>{(p?.operacao ?? "").trim() || "—"}</div></div>
+          </div>
+        )}
         {tab === "financeiro" && (
-          <>
+          <div role="tabpanel" id="panel-af-ver-financeiro" aria-labelledby="tab-af-ver-financeiro">
             <div style={rowS}><SensitiveField value={p?.chave_pix ?? undefined} label="Chave PIX" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} /></div>
             <div style={rowS}><SensitiveField value={p?.banco ?? undefined} label="Banco" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} /></div>
             <div className="app-grid-2-tight" style={{ ...rowS, gap: 12 }}>
               <SensitiveField value={p?.agencia ?? undefined} label="Agência" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
               <SensitiveField value={p?.conta ?? undefined} label="Conta" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
-          </>
+          </div>
         )}
         {tab === "operadoras" && (
-          operadorasList.length === 0 ? <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada na plataforma.</p> : operadorasList.map((op) => {
+          <div role="tabpanel" id="panel-af-ver-operadoras" aria-labelledby="tab-af-ver-operadoras">
+          {operadorasList.length === 0 ? <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada na plataforma.</p> : operadorasList.map((op) => {
             const v = row.operadoras?.find((o) => o.operadora_slug === op.slug);
             const ativo = !!v?.ativo;
             const id = v?.id_operadora;
-            const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
+            const opColor = op.brand_action?.trim() || "var(--brand-primary, #7c3aed)";
             return (
               <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -475,15 +511,16 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
                 {ativo && id && <div style={{ marginTop: 8, fontSize: 13, color: t.text, fontFamily: FONT.body }}>ID: {id}</div>}
               </div>
             );
-          })
+          })}
+          </div>
         )}
         {tab === "historico" && (
-          <>
+          <div role="tabpanel" id="panel-af-ver-historico" aria-labelledby="tab-af-ver-historico">
             <div style={rowS}><label style={labelStyle}>Data de criação (cadastro)</label>{val(fmtTs(p?.created_at))}</div>
             <div style={rowS}><label style={labelStyle}>Data da última atualização</label>{val(fmtTs(p?.updated_at))}</div>
             <div style={rowS}><label style={labelStyle}>Data da última alteração de status</label>{val(fmtTs(p?.status_alterado_em))}</div>
             <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: 0, lineHeight: 1.45 }}>As datas vêm do cadastro do afiliado. A alteração de status é registrada a partir desta versão do sistema.</p>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -505,8 +542,13 @@ function ModalEditar({
   const brand = useDashboardBrand();
   const ref = useRef<HTMLDivElement>(null);
   const existing = row.perfil;
-  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
-  const ctaSalvar = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+    : "rgba(124,58,237,0.15)";
+  const ctaSalvar = brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+  useModalEscape(onClose, true);
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(existing?.nome_completo ?? "");
   const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(row.id));
@@ -612,7 +654,7 @@ function ModalEditar({
   ];
 
   return (
-    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="af-mod-e-t" style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, maxHeight: "min(92vh, 90dvh)", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
@@ -627,21 +669,32 @@ function ModalEditar({
 
         <div role="tablist" aria-label="Secções do cadastro" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
-            <button key={tb.key} type="button" role="tab" aria-selected={tab === tb.key} onClick={() => setTab(tb.key)} style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+            <button
+              key={tb.key}
+              type="button"
+              role="tab"
+              id={`tab-af-ed-${tb.key}`}
+              aria-selected={tab === tb.key}
+              aria-controls={`panel-af-ed-${tb.key}`}
+              tabIndex={tab === tb.key ? 0 : -1}
+              onClick={() => setTab(tb.key)}
+              onKeyDown={(e) => handleTabArrowKey(tabs, tab, setTab, e)}
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
+            >
               {tb.label}
             </button>
           ))}
         </div>
 
         {error && (
-          <div role="alert" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <div role="alert" aria-live="polite" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", justifyContent: "space-between", gap: 8 }}>
             <span>{error}</span>
             <button type="button" onClick={() => setError("")} aria-label="Fechar erro" style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho }}><X size={14} aria-hidden="true" /></button>
           </div>
         )}
 
         {tab === "cadastral" && (
-          <>
+          <div role="tabpanel" id="panel-af-ed-cadastral" aria-labelledby="tab-af-ed-cadastral">
             <div style={rowS}>
               <label style={labelStyle}>Nome Artístico <CampoObrigatorioMark /></label>
               <input value={form.nome_artistico ?? ""} onChange={(e) => set("nome_artistico", e.target.value)} style={inputStyle} />
@@ -653,16 +706,18 @@ function ModalEditar({
             <div style={rowS}><label style={labelStyle}>E-mail</label><input value={row.email} disabled style={{ ...inputStyle, opacity: 0.6, cursor: "not-allowed" }} /></div>
             <div style={rowS}><label style={labelStyle}>Telefone <CampoObrigatorioMark /></label><input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} style={inputStyle} /></div>
             <div style={rowS}><label style={labelStyle}>CPF <CampoObrigatorioMark /> <span style={{ fontSize: 9, color: BRAND.vermelho, fontWeight: 400 }}>(dado sensível)</span></label><input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={{ ...inputStyle, fontFamily: "monospace", letterSpacing: "0.1em" }} /></div>
-          </>
+          </div>
         )}
         {tab === "operacao" && (
+          <div role="tabpanel" id="panel-af-ed-operacao" aria-labelledby="tab-af-ed-operacao">
           <div style={rowS}>
             <label style={labelStyle}>Operação</label>
             <textarea value={form.operacao ?? ""} onChange={(e) => set("operacao", e.target.value)} style={{ ...inputStyle, minHeight: 160, resize: "vertical" }} />
           </div>
+          </div>
         )}
         {tab === "financeiro" && (
-          <>
+          <div role="tabpanel" id="panel-af-ed-financeiro" aria-labelledby="tab-af-ed-financeiro">
             {([
               { key: "chave_pix" as const, label: "Chave PIX", ph: "CPF, e-mail, telefone ou chave aleatória" },
               { key: "banco" as const, label: "Banco", ph: "Ex: Nubank, Itaú" },
@@ -682,12 +737,13 @@ function ModalEditar({
                 <input value={form.conta ?? ""} onChange={(e) => set("conta", e.target.value)} style={inputStyle} />
               </div>
             </div>
-          </>
+          </div>
         )}
         {tab === "operadoras" && (
-          operadorasList.length === 0 ? <p style={{ fontSize: 13, color: t.textMuted }}>Nenhuma operadora cadastrada.</p> : operadorasList.map((op) => {
+          <div role="tabpanel" id="panel-af-ed-operadoras" aria-labelledby="tab-af-ed-operadoras">
+          {operadorasList.length === 0 ? <p style={{ fontSize: 13, color: t.textMuted }}>Nenhuma operadora cadastrada.</p> : operadorasList.map((op) => {
             const st = opForm[op.slug] ?? { ativo: false, id_operadora: "" };
-            const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
+            const opColor = op.brand_action?.trim() || "var(--brand-primary, #7c3aed)";
             return (
               <div key={op.slug} style={{ ...rowS, padding: 14, borderRadius: 12, border: `1px solid ${st.ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: st.ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: st.ativo ? 12 : 0 }}>
@@ -702,7 +758,8 @@ function ModalEditar({
                 )}
               </div>
             );
-          })
+          })}
+          </div>
         )}
 
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>

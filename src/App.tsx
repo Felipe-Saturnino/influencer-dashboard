@@ -62,7 +62,7 @@ const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsua
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
 const GestaoMesas = lazyWithRetry(() => import("./pages/plataforma/GestaoMesas"));
 const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
-const Figurinos = lazyWithRetry(() => import("./pages/rh/Figurinos"));
+const Figurinos = lazyWithRetry(() => import("./pages/estudio/Figurinos"));
 const RhPrestadores = lazyWithRetry(() => import("./pages/rh/GestaoPrestador"));
 const RhDadosCadastro = lazyWithRetry(() => import("./pages/rh/DadosCadastro"));
 const RhOrganograma = lazyWithRetry(() => import("./pages/rh/Organograma"));

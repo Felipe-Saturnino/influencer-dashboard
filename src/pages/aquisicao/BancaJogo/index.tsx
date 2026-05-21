@@ -19,8 +19,8 @@ import {
   compareLocaleTexto,
   compareNumber,
 } from "../../../lib/classificacaoSort";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Shield } from "lucide-react";
-import { GiChipsBag } from "react-icons/gi";
+import { ChevronLeft, ChevronRight, Coins, Eye, EyeOff, Loader2, Shield } from "lucide-react";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { Role } from "../../../types";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
@@ -131,7 +131,6 @@ interface BlocoFiltros {
   operadorasList: { slug: string; nome: string }[];
   mesFiltro: string;
   historico: boolean;
-  statusFiltro: "" | BancaStatus;
 }
 
 function Avatar({ name, size = 28 }: { name: string; size?: number }) {
@@ -145,16 +144,6 @@ function Avatar({ name, size = 28 }: { name: string; size?: number }) {
     }}>
       {letra}
     </div>
-  );
-}
-
-/** Filtro operadora: oculto para influencer, agência e operador (este último com escopo forçado). */
-function useBancaFiltroOperadoraUI(userRole: string | undefined) {
-  return (
-    !!userRole &&
-    !roleParidadeInfluencer(userRole as Role) &&
-    userRole !== "agencia" &&
-    userRole !== "operador"
   );
 }
 
@@ -630,12 +619,15 @@ function BlocoSolicitacoes({
   influencerListAgencia: { id: string; name: string }[];
   nomeUsuario: string;
 }) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
+  const th = getThStyle(t);
+  const td = getTdStyle(t);
+  const tdNum = getTdNumStyle(t);
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
-    mesFiltro, historico, statusFiltro,
+    mesFiltro, historico,
   } = filtros;
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
@@ -692,10 +684,9 @@ function BlocoSolicitacoes({
       } else if (filterOperadora && filterOperadora !== "todas") {
         if (r.operadora_slug !== filterOperadora) return false;
       }
-      if (statusFiltro && r.status !== statusFiltro) return false;
       return rowNoMesSolicitacao(r, periodo, historico);
     });
-  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
+  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, periodo, historico]);
 
   const listaOrdenada = useMemo(() => {
     const arr = [...lista];
@@ -781,16 +772,6 @@ function BlocoSolicitacoes({
     onPerfisAtualizados();
   }
 
-  const th: React.CSSProperties = {
-    padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
-    letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
-    background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
-  const td: React.CSSProperties = {
-    padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
-  };
-
   const podeSolicitar = user && (roleParidadeInfluencer(user.role) || user.role === "agencia");
 
   return (
@@ -812,8 +793,12 @@ function BlocoSolicitacoes({
         ) : null}
       </div>
 
-      <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="app-table-wrap">
+        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+          <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+            Solicitações de banca em aberto
+          </caption>
           <thead>
             <tr>
               <SortTableTh<SolicSortCol>
@@ -831,7 +816,7 @@ function BlocoSolicitacoes({
                 }
               />
               <SortTableTh<SolicSortCol>
-                label="Status"
+                label="Perfil"
                 col="classificacao"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
@@ -849,7 +834,7 @@ function BlocoSolicitacoes({
                 col="id_op"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
+                thStyle={{ ...th, ...(narrowMobile ? { display: "none" } : {}) }}
                 align="left"
                 onSort={(c) =>
                   setSortSolic((s) => ({
@@ -878,7 +863,7 @@ function BlocoSolicitacoes({
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
                 thStyle={th}
-                align="left"
+                align="right"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -925,7 +910,7 @@ function BlocoSolicitacoes({
                 </td>
               </tr>
             ) : (
-              listaOrdenada.map((r) => {
+              listaOrdenada.map((r, i) => {
                 const perf = perfilMap[r.influencer_id];
                 const st = STATUS_BANCA[r.status];
                 const sk = (perf?.perfil_status ?? "ativo").toLowerCase();
@@ -943,17 +928,18 @@ function BlocoSolicitacoes({
                 const cpfDigits = (perf?.cpf ?? "").replace(/\D/g, "");
                 const cpfMascaravel = cpfDigits.length >= 11;
                 const cpfVisivel = cpfRevelados.has(r.id);
-                const rowHover = {
-                  borderBottom: `1px solid ${t.cardBorder}` as const,
-                  onMouseEnter: (e: MouseEvent<HTMLTableRowElement>) => {
-                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
-                  },
-                  onMouseLeave: (e: MouseEvent<HTMLTableRowElement>) => {
-                    e.currentTarget.style.background = "transparent";
-                  },
-                };
+                const zebraBg = zebraStripe(i);
                 return (
-                  <tr key={r.id} {...rowHover}>
+                  <tr
+                    key={r.id}
+                    style={{ borderBottom: `1px solid ${t.cardBorder}`, background: zebraBg }}
+                    onMouseEnter={(e: MouseEvent<HTMLTableRowElement>) => {
+                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                    }}
+                    onMouseLeave={(e: MouseEvent<HTMLTableRowElement>) => {
+                      e.currentTarget.style.background = zebraBg;
+                    }}
+                  >
                     <td style={td}>{perf?.nome ?? r.influencer_id}</td>
                     <td style={td}>
                       <span
@@ -972,7 +958,7 @@ function BlocoSolicitacoes({
                         {slInf.label}
                       </span>
                     </td>
-                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
+                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
                     <td style={{ ...td, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span>
@@ -1006,7 +992,7 @@ function BlocoSolicitacoes({
                         ) : null}
                       </div>
                     </td>
-                    <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
                     <td style={td}>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: `${st.color}22`, color: st.color, border: `1px solid ${st.color}44` }}>
                         {st.label}
@@ -1067,6 +1053,7 @@ function BlocoSolicitacoes({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {bloqueioSolicitacao ? (
@@ -1268,15 +1255,19 @@ function BlocoConsolidadoBanca({
   podeEditarStatusConta: boolean;
   onPerfisAtualizados: () => void;
 }) {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const narrowTablet = useMediaQuery("(max-width: 639px)");
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
-    mesFiltro, historico, statusFiltro,
+    mesFiltro, historico,
   } = filtros;
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [busca, setBusca] = useState("");
+  const th = getThStyle(t);
+  const td = getTdStyle(t);
+  const tdNum = getTdNumStyle(t);
   type BancaConsSortCol =
     | "influencer"
     | "classificacao"
@@ -1301,10 +1292,9 @@ function BlocoConsolidadoBanca({
       } else if (filterOperadora && filterOperadora !== "todas") {
         if (r.operadora_slug !== filterOperadora) return false;
       }
-      if (statusFiltro && r.status !== statusFiltro) return false;
       return rowInteressaConsolidado(r, periodo, historico);
     });
-  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
+  }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, periodo, historico]);
 
   interface AgRow {
     influencer_id: string;
@@ -1394,16 +1384,6 @@ function BlocoConsolidadoBanca({
     return arr;
   }, [filtradaBusca, sortBancaCons]);
 
-  const th: React.CSSProperties = {
-    padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
-    letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
-    background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
-  const td: React.CSSProperties = {
-    padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
-  };
-
   const contaLabel = (st: BancaStatusConta) => {
     if (st === "liberada") return { label: "Liberada", color: "#10b981" };
     return { label: "Bloqueada", color: "#ef4444" };
@@ -1411,24 +1391,30 @@ function BlocoConsolidadoBanca({
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+      <div style={{ marginBottom: 18 }}>
         <BlocoLabel label="Consolidado de bancas" />
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por nome ou e-mail..."
+          aria-label="Buscar influencer por nome ou e-mail"
           style={{
-            flex: 1, minWidth: 280, maxWidth: 420,
+            width: "100%",
+            marginTop: 12,
+            boxSizing: "border-box",
             padding: "8px 14px", borderRadius: 10,
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
             fontSize: 13, fontFamily: FONT.body, outline: "none",
           }}
         />
-        <span style={{ fontSize: 12, color: t.textMuted }}>{filtradaOrdenada.length} influencers</span>
       </div>
 
-      <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="app-table-wrap">
+        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+          <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+            Consolidado de bancas por influencer
+          </caption>
           <thead>
             <tr>
               <th style={{ ...th, width: 32 }} scope="col" aria-label="Expandir" />
@@ -1447,7 +1433,7 @@ function BlocoConsolidadoBanca({
                 }
               />
               <SortTableTh<BancaConsSortCol>
-                label="Status"
+                label="Perfil"
                 col="classificacao"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
@@ -1466,7 +1452,7 @@ function BlocoConsolidadoBanca({
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
                 thStyle={th}
-                align="left"
+                align="right"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1480,7 +1466,7 @@ function BlocoConsolidadoBanca({
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
                 thStyle={th}
-                align="left"
+                align="right"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1493,7 +1479,7 @@ function BlocoConsolidadoBanca({
                 col="bloq"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
+                thStyle={{ ...th, ...(narrowTablet ? { display: "none" } : {}) }}
                 align="left"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
@@ -1507,7 +1493,7 @@ function BlocoConsolidadoBanca({
                 col="desbloq"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
+                thStyle={{ ...th, ...(narrowTablet ? { display: "none" } : {}) }}
                 align="left"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
@@ -1540,8 +1526,9 @@ function BlocoConsolidadoBanca({
                 </td>
               </tr>
             ) : (
-              filtradaOrdenada.map((row) => {
+              filtradaOrdenada.map((row, i) => {
                 const open = expandido === row.influencer_id;
+                const histPanelId = `banca-hist-${row.influencer_id}`;
                 const sl = contaLabel(row.statusContaBanca);
                 const sk = (row.perfil_status ?? "ativo").toLowerCase();
                 const slInf =
@@ -1551,17 +1538,20 @@ function BlocoConsolidadoBanca({
                       ? { label: "Cancelado", color: "#ef4444" }
                       : { label: "Ativo", color: "#10b981" };
                 const itens = rowsFiltradas.filter((r) => r.influencer_id === row.influencer_id).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
+                const zebraBg = zebraStripe(i);
                 return (
                   <Fragment key={row.influencer_id}>
                     <tr
-                      style={{ borderBottom: `1px solid ${t.cardBorder}`, cursor: "pointer" }}
+                      style={{ borderBottom: `1px solid ${t.cardBorder}`, cursor: "pointer", background: zebraBg }}
                       tabIndex={0}
                       role="row"
+                      aria-expanded={open}
+                      aria-controls={histPanelId}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.background = zebraBg;
                       }}
                       onClick={() => setExpandido(open ? null : row.influencer_id)}
                       onKeyDown={(e) => {
@@ -1605,30 +1595,43 @@ function BlocoConsolidadoBanca({
                           {slInf.label}
                         </span>
                       </td>
-                      <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
-                      <td style={{ ...td, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 600 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
-                      <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{fmtData(row.dataBloqueio)}</td>
-                      <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{fmtData(row.dataDesbloqueio)}</td>
-                      <td style={td}>
-                        <span
-                          role={podeEditarStatusConta ? "button" : undefined}
-                          title={podeEditarStatusConta ? "Clique para alterar" : undefined}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (podeEditarStatusConta) setModalStatus({ id: row.influencer_id, nome: row.nome, statusConta: row.statusContaBanca });
-                          }}
-                          style={{
-                            fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
-                            background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44`,
-                            cursor: podeEditarStatusConta ? "pointer" : "default",
-                          }}
-                        >
-                          {sl.label}
-                        </span>
+                      <td style={{ ...tdNum, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
+                      <td style={{ ...tdNum, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 600 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
+                      <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataBloqueio)}</td>
+                      <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataDesbloqueio)}</td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        {podeEditarStatusConta ? (
+                          <button
+                            type="button"
+                            onClick={() => setModalStatus({ id: row.influencer_id, nome: row.nome, statusConta: row.statusContaBanca })}
+                            aria-label={`Alterar status da conta de ${row.nome}`}
+                            style={{
+                              fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+                              background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44`,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {sl.label}
+                          </button>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+                              background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44`,
+                            }}
+                          >
+                            {sl.label}
+                          </span>
+                        )}
                       </td>
                     </tr>
                     {open ? (
-                      <tr style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
+                      <tr
+                        id={histPanelId}
+                        role="region"
+                        aria-label={`Histórico de bancas de ${row.nome}`}
+                        style={{ background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}
+                      >
                         <td colSpan={8} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: t.textMuted, marginBottom: 10, fontFamily: FONT.body }}>
                             Bancas solicitadas — {row.nome}
@@ -1636,37 +1639,42 @@ function BlocoConsolidadoBanca({
                           {itens.length === 0 ? (
                             <div style={{ color: t.textMuted, fontSize: 12 }}>Nenhum registro.</div>
                           ) : (
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+                              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                                Histórico de solicitações de banca do influencer
+                              </caption>
                               <thead>
                                 <tr>
                                   {["Data", "Operadora", "ID operadora", "Valor", "Status"].map((h) => (
-                                    <th key={h} scope="col" style={{ ...th, background: "transparent", fontSize: 10, padding: "6px 10px" }}>{h}</th>
+                                    <th key={h} scope="col" style={{ ...getThStyle(t, { background: "transparent", fontSize: 10, padding: "6px 10px" }) }}>{h}</th>
                                   ))}
                                 </tr>
                               </thead>
                               <tbody>
-                                {itens.map((h) => (
+                                {itens.map((h, hi) => {
+                                  const innerZebra = zebraStripe(hi);
+                                  return (
                                   <tr
                                     key={h.id}
-                                    style={{ borderBottom: `1px solid ${t.divider}` }}
+                                    style={{ borderBottom: `1px solid ${t.divider}`, background: innerZebra }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = "transparent";
+                                      e.currentTarget.style.background = innerZebra;
                                     }}
                                   >
-                                    <td style={{ ...td, fontSize: 12, padding: "8px 10px" }}>
+                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>
                                       {new Date(h.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                                     </td>
-                                    <td style={{ ...td, fontSize: 12, padding: "8px 10px" }}>{h.operadora_slug}</td>
-                                    <td style={{ ...td, fontSize: 12, padding: "8px 10px", fontFamily: "monospace" }}>{(h.id_operadora_exibicao ?? "").trim() || "—"}</td>
-                                    <td style={{ ...td, fontSize: 12, padding: "8px 10px" }}>{fmtMoeda(Number(h.valor))}</td>
-                                    <td style={{ ...td, fontSize: 12, padding: "8px 10px" }}>
+                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>{h.operadora_slug}</td>
+                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px", fontFamily: "monospace" }) }}>{(h.id_operadora_exibicao ?? "").trim() || "—"}</td>
+                                    <td style={{ ...getTdNumStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>{fmtMoeda(Number(h.valor))}</td>
+                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>
                                       <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_BANCA[h.status].color }}>{STATUS_BANCA[h.status].label}</span>
                                     </td>
                                   </tr>
-                                ))}
+                                );})}
                               </tbody>
                             </table>
                           )}
@@ -1679,6 +1687,7 @@ function BlocoConsolidadoBanca({
             )}
           </tbody>
         </table>
+        </div>
       </div>
       {modalStatus ? (
         <ModalAlterarStatusConta
@@ -1699,12 +1708,12 @@ export default function BancaJogo() {
   const perm = usePermission("banca_jogo");
   const {
     showFiltroInfluencer,
+    showFiltroOperadora,
     podeVerInfluencer,
     podeVerOperadora,
     escoposVisiveis: ev,
     operadoraSlugsForcado,
   } = useDashboardFiltros();
-  const showFiltroOperadoraExtra = useBancaFiltroOperadoraUI(user?.role);
 
   const [ciclosRows, setCiclosRows] = useState<BancaRowDb[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1717,7 +1726,6 @@ export default function BancaJogo() {
   const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
   const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
   const [historico, setHistorico] = useState(false);
-  const [statusFiltro, setStatusFiltro] = useState<"" | BancaStatus>("");
 
   const influencerListVisiveis = useMemo(
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
@@ -1751,8 +1759,7 @@ export default function BancaJogo() {
     operadorasList,
     mesFiltro: historico ? "" : mesFiltro,
     historico,
-    statusFiltro: statusFiltro || ("" as const),
-  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico, statusFiltro]);
+  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico]);
 
   const idxMesAtual = MESES_OPCOES.findIndex((m) => m.value === mesFiltro);
   function prevMes() {
@@ -1770,9 +1777,9 @@ export default function BancaJogo() {
   };
   const chipBase = (active: boolean) => ({
     padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? brand.accent : t.cardBorder}`,
-    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
-    color: active ? brand.accent : t.textMuted,
+    border: `1px solid ${active ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
+    background: active ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : (t.inputBg ?? t.cardBg),
+    color: active ? "var(--brand-action, #7c3aed)" : t.textMuted,
     fontSize: 13, fontWeight: active ? 700 : 400,
     fontFamily: FONT.body, cursor: "pointer", outline: "none",
   } as React.CSSProperties);
@@ -1850,8 +1857,9 @@ export default function BancaJogo() {
 
   if (perm.loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, color: t.textMuted, fontFamily: FONT.body }}>
-        Carregando permissões...
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
+        <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+        Carregando...
       </div>
     );
   }
@@ -1859,15 +1867,16 @@ export default function BancaJogo() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a Banca de Jogo.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, color: t.textMuted, fontFamily: FONT.body }}>
-        Carregando banca de jogo...
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
+        <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+        Carregando...
       </div>
     );
   }
@@ -1877,7 +1886,7 @@ export default function BancaJogo() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<GiChipsBag size={14} aria-hidden />}
+        icon={<Coins size={14} aria-hidden />}
         title="Banca de Jogo"
         subtitle="Solicitações de pagamento de banca por influencer e operadora."
       />
@@ -1888,38 +1897,38 @@ export default function BancaJogo() {
           border: brand.primaryTransparentBorder,
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
-        }}
-        >
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
-              <ChevronLeft size={14} />
+            <button type="button" aria-label="Mês anterior" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Total" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
-            <button type="button" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
-              <ChevronRight size={14} />
+            <button type="button" aria-label="Próximo mês" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
+              <ChevronRight size={14} aria-hidden />
             </button>
 
-            <button type="button" onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
+            <button type="button" aria-pressed={historico} onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
               Histórico
             </button>
 
-            {showFiltroInfluencer && influencerListVisiveis.length > 0 ? (
+            {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
                 t={t}
               />
-            ) : null}
+            )}
 
-            {showFiltroOperadoraExtra && operadorasList.length > 0 ? (
+            {showFiltroOperadora && operadorasList.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
                   <Shield size={13} aria-hidden />
                 </span>
                 <select
+                  aria-label="Filtrar por operadora"
                   value={filterOperadora}
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
@@ -1940,24 +1949,7 @@ export default function BancaJogo() {
                     ))}
                 </select>
               </div>
-            ) : null}
-
-            <select
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as "" | BancaStatus)}
-              style={{
-                padding: "6px 14px", borderRadius: 999,
-                border: `1px solid ${statusFiltro ? brand.accent : t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: statusFiltro ? brand.accent : t.textMuted,
-                fontSize: 13, fontFamily: FONT.body, cursor: "pointer", outline: "none",
-              }}
-            >
-              <option value="">Todos os status</option>
-              <option value="solicitado">Solicitado</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="liberado">Liberado</option>
-            </select>
+            )}
           </div>
         </div>
       </div>

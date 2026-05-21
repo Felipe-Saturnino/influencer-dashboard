@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Plus, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 import { supabase } from "../../../lib/supabase";
@@ -43,6 +43,57 @@ import {
 
 type Aba = RhFigurinoStatus;
 
+const FIGURINOS_ABAS: Aba[] = ["available", "borrowed", "maintenance", "discarded"];
+
+const SECTION_LABEL_STYLE: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  margin: 0,
+};
+
+function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+}
+
+function focusTabButton(id: string) {
+  document.getElementById(id)?.focus();
+}
+
+function onTabsKeyDown<A extends string>(
+  e: KeyboardEvent,
+  tabs: readonly A[],
+  active: A,
+  setActive: (v: A) => void,
+  tabId: (a: A) => string,
+) {
+  const idx = tabs.indexOf(active);
+  if (idx < 0) return;
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    const next = tabs[(idx + 1) % tabs.length];
+    setActive(next);
+    focusTabButton(tabId(next));
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+    setActive(prev);
+    focusTabButton(tabId(prev));
+  }
+}
+
+function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
+  if (!loading) return idle;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+      {busy}
+    </span>
+  );
+}
+
 /** Alinha nome do perfil com o texto gravado em «Emprestado para» / retirada (borrower_name). */
 function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
   return (s ?? "")
@@ -63,12 +114,6 @@ function emprestimoFigurinoEhDoProprioLogin(
   if (ref.length > 0 && rhPrestadorIds.has(ref)) return true;
   const nb = normNomeParaFiltroPrestadorFig(emp.borrower_name);
   return nb.length > 0 && nomePerfilNorm.length > 0 && nb === nomePerfilNorm;
-}
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
 function fmtDataHora(iso: string | null | undefined): string {
@@ -202,8 +247,10 @@ export default function FigurinosPage() {
   const [manutPeca, setManutPeca] = useState<RhFigurinoPeca | null>(null);
   const [descPeca, setDescPeca] = useState<RhFigurinoPeca | null>(null);
   const [concluirManutPeca, setConcluirManutPeca] = useState<RhFigurinoPeca | null>(null);
+  const [concluindoManut, setConcluindoManut] = useState(false);
 
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
+  const [histErro, setHistErro] = useState<string | null>(null);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -226,7 +273,10 @@ export default function FigurinosPage() {
       supabase.from("rh_figurino_emprestimos").select("*").eq("status", "active").limit(500),
       supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
-    if (pr.error) setErroGlobal(pr.error.message);
+    if (pr.error) {
+      console.error("[Figurinos] Erro ao carregar inventário:", pr.error);
+      setErroGlobal("Não foi possível carregar o inventário. Se o problema persistir, contate o suporte.");
+    }
     setPecas((pr.data ?? []) as RhFigurinoPeca[]);
     const emps = (er.data ?? []) as RhFigurinoEmprestimo[];
     const map: Record<string, RhFigurinoEmprestimo> = {};
@@ -438,6 +488,7 @@ export default function FigurinosPage() {
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
     setDetalhe(p);
+    setHistErro(null);
     setLoadingHist(true);
     const e2 = await supabase
       .from("rh_figurino_status_history")
@@ -445,7 +496,13 @@ export default function FigurinosPage() {
       .eq("item_id", p.id)
       .order("changed_at", { ascending: false })
       .limit(80);
-    setHistStatus((e2.data ?? []) as RhFigurinoStatusHist[]);
+    if (e2.error) {
+      console.error("[Figurinos] Erro ao carregar histórico da peça:", e2.error);
+      setHistStatus([]);
+      setHistErro("Não foi possível carregar o histórico desta peça. Se o problema persistir, contate o suporte.");
+    } else {
+      setHistStatus((e2.data ?? []) as RhFigurinoStatusHist[]);
+    }
     setLoadingHist(false);
   };
 
@@ -609,27 +666,37 @@ export default function FigurinosPage() {
       ) : null}
 
       <div style={{ marginBottom: 20 }}>
-        <div
+        <h2
           style={{
-            fontSize: 11,
-            fontWeight: 700,
+            ...SECTION_LABEL_STYLE,
             color: t.textMuted,
             fontFamily: FONT.body,
-            letterSpacing: "0.08em",
             marginBottom: 8,
           }}
         >
           FILTROS
-        </div>
+        </h2>
         <div
           style={{
             borderRadius: 14,
             border: brand.primaryTransparentBorder,
             background: brand.primaryTransparentBg,
             padding: "12px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
+            }}
+          >
             {operadorasVisiveis.length > 0 ? (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span
@@ -721,29 +788,39 @@ export default function FigurinosPage() {
               ))}
             </select>
           </div>
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
+            aria-label="Buscar peças na aba atual"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              boxSizing: "border-box",
+            }}
+          />
         </div>
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <div
+        <h2
           style={{
-            fontSize: 11,
-            fontWeight: 700,
+            ...SECTION_LABEL_STYLE,
             color: t.textMuted,
             fontFamily: FONT.body,
-            letterSpacing: "0.08em",
             marginBottom: 8,
           }}
         >
           CONSOLIDADO
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
-            gap: 14,
-          }}
-        >
+        </h2>
+        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
           {[
             { label: "Total de peças", value: kpis.tot, cor: t.text },
             { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
@@ -753,6 +830,7 @@ export default function FigurinosPage() {
           ].map((k) => (
             <div
               key={k.label}
+              aria-label={`${k.label}: ${k.value}`}
               style={{
                 borderRadius: 14,
                 border: `1px solid ${t.cardBorder}`,
@@ -770,65 +848,26 @@ export default function FigurinosPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            letterSpacing: "0.08em",
-            marginBottom: 8,
-          }}
-        >
-          PESQUISA
-        </div>
-        <div
-          style={{
-            borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            padding: "12px 16px",
-          }}
-        >
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
-            aria-label="Buscar peças na aba atual"
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.cardBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
-          />
-        </div>
-      </div>
-
       <div style={{ marginBottom: 8 }}>
-        <div
+        <h2
           style={{
-            fontSize: 11,
-            fontWeight: 700,
+            ...SECTION_LABEL_STYLE,
             color: t.textMuted,
             fontFamily: FONT.body,
-            letterSpacing: "0.08em",
             marginBottom: 10,
           }}
         >
           INVENTÁRIO
-        </div>
+        </h2>
       </div>
 
-      <div role="tablist" aria-label="Status do inventário" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {(["available", "borrowed", "maintenance", "discarded"] as Aba[]).map((a) => (
+      <div
+        role="tablist"
+        aria-label="Status do inventário"
+        style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
+        onKeyDown={(e) => onTabsKeyDown(e, FIGURINOS_ABAS, aba, setAba, (a) => `tab-fig-${a}`)}
+      >
+        {FIGURINOS_ABAS.map((a) => (
           <button
             key={a}
             type="button"
@@ -836,6 +875,7 @@ export default function FigurinosPage() {
             aria-selected={aba === a}
             id={`tab-fig-${a}`}
             aria-controls={`panel-fig-${a}`}
+            tabIndex={aba === a ? 0 : -1}
             onClick={() => setAba(a)}
             style={{
               padding: "8px 14px",
@@ -859,7 +899,7 @@ export default function FigurinosPage() {
         ))}
       </div>
 
-      <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`}>
+      <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`} tabIndex={0}>
         {loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, color: t.textMuted }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -951,7 +991,16 @@ export default function FigurinosPage() {
                       ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
                       : "—";
                   return (
-                    <tr key={p.id} style={{ borderBottom: `1px solid ${t.cardBorder}`, ...zebra }}>
+                    <tr
+                      key={p.id}
+                      style={{ borderBottom: `1px solid ${t.cardBorder}`, ...zebra }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebra.background ?? "transparent";
+                      }}
+                    >
                       {aba === "available" ? (
                         <>
                           <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
@@ -1272,13 +1321,19 @@ export default function FigurinosPage() {
             </button>
             <button
               type="button"
+              disabled={concluindoManut}
               onClick={async () => {
+                setConcluindoManut(true);
+                setErroGlobal(null);
                 const { error } = await supabase.rpc("rh_figurino_concluir_manutencao", {
                   p_item_id: concluirManutPeca.id,
                   p_actor: actorLabel(user),
                 });
-                if (error) setErroGlobal(error.message);
-                else {
+                setConcluindoManut(false);
+                if (error) {
+                  console.error("[Figurinos] Erro ao concluir manutenção:", error);
+                  setErroGlobal("Não foi possível disponibilizar a peça. Se o problema persistir, contate o suporte.");
+                } else {
                   setConcluirManutPeca(null);
                   await carregar();
                 }
@@ -1292,10 +1347,11 @@ export default function FigurinosPage() {
                 color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,
-                cursor: "pointer",
+                cursor: concluindoManut ? "not-allowed" : "pointer",
+                opacity: concluindoManut ? 0.75 : 1,
               }}
             >
-              Confirmar
+              {ctaButtonContent(concluindoManut, "Confirmar", "Salvando…")}
             </button>
           </div>
         </ModalBase>
@@ -1306,6 +1362,7 @@ export default function FigurinosPage() {
           peca={detalhe}
           operadorasTexto={labelOperadorasPeca(detalhe, operadoraNome)}
           histStatus={histStatus}
+          histErro={histErro}
           loadingHist={loadingHist}
           empAtivo={empPorItem[detalhe.id]}
           podeEditar={podeEditar}
@@ -1406,7 +1463,8 @@ function ModalCadastroPeca({
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      console.error("[Figurinos] Erro ao cadastrar peça:", error);
+      setErr("Não foi possível cadastrar a peça. Se o problema persistir, contate o suporte.");
       return;
     }
     await onCreated(data as RhFigurinoPeca);
@@ -1582,7 +1640,7 @@ function ModalCadastroPeca({
           />
         </label>
         {err ? (
-          <div role="alert" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
+          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
             {err}
           </div>
         ) : null}
@@ -1621,7 +1679,7 @@ function ModalCadastroPeca({
               opacity: loading ? 0.75 : 1,
             }}
           >
-            {loading ? "Salvando…" : "Salvar"}
+            {ctaButtonContent(loading, "Salvar", "Salvando…")}
           </button>
         </div>
       </div>
@@ -1685,7 +1743,7 @@ function ModalSucessoCadastro({
               cursor: pdfLoading ? "not-allowed" : "pointer",
             }}
           >
-            {pdfLoading ? "Gerando PDF…" : "Baixar etiqueta (PDF)"}
+            {ctaButtonContent(pdfLoading, "Baixar etiqueta (PDF)", "Gerando PDF…")}
           </button>
           <button
             type="button"
@@ -1808,7 +1866,8 @@ function ModalRetirada({
         .limit(5000);
       if (cancelado) return;
       if (error) {
-        setErroCargaPrestadores(error.message);
+        console.error("[Figurinos] Erro ao carregar prestadores:", error);
+        setErroCargaPrestadores("Não foi possível carregar a lista de prestadores. Tente novamente ou contate o suporte.");
         setPrestadores([]);
       } else {
         setPrestadores((data ?? []) as PrestadorRetiradaRow[]);
@@ -1857,7 +1916,8 @@ function ModalRetirada({
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      console.error("[Figurinos] Erro ao registrar retirada:", error);
+      setErr("Não foi possível registrar a retirada. Se o problema persistir, contate o suporte.");
       return;
     }
     await onOk();
@@ -1885,8 +1945,8 @@ function ModalRetirada({
           Mesma base da página Gestão de Prestadores (ativos e indisponíveis). Pesquise por nome ou setor e escolha na lista.
         </p>
         {erroCargaPrestadores ? (
-          <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 8 }}>
-            Não foi possível carregar prestadores: {erroCargaPrestadores}
+          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 8 }}>
+            {erroCargaPrestadores}
           </div>
         ) : null}
         {!loadingPrestadores && !erroCargaPrestadores && prestadores.length === 0 ? (
@@ -2088,7 +2148,7 @@ function ModalRetirada({
             opacity: confirmarDesabilitado ? 0.55 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar Retirada"}
+          {ctaButtonContent(loading, "Confirmar Retirada", "Salvando…")}
         </button>
       </div>
     </ModalBase>
@@ -2150,7 +2210,8 @@ function ModalDevolucao({
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      console.error("[Figurinos] Erro ao registrar devolução:", error);
+      setErr("Não foi possível registrar a devolução. Se o problema persistir, contate o suporte.");
       return;
     }
     await onOk();
@@ -2330,7 +2391,7 @@ function ModalDevolucao({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar devolução"}
+          {ctaButtonContent(loading, "Confirmar devolução", "Salvando…")}
         </button>
       </div>
     </ModalBase>
@@ -2377,7 +2438,8 @@ function ModalManutencaoPeca({
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      console.error("[Figurinos] Erro ao enviar para manutenção:", error);
+      setErr("Não foi possível enviar a peça para manutenção. Se o problema persistir, contate o suporte.");
       return;
     }
     await onOk();
@@ -2492,7 +2554,7 @@ function ModalManutencaoPeca({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar"}
+          {ctaButtonContent(loading, "Confirmar", "Salvando…")}
         </button>
       </div>
     </ModalBase>
@@ -2532,7 +2594,8 @@ function ModalDescartarPeca({
     });
     setLoading(false);
     if (error) {
-      setErr(error.message);
+      console.error("[Figurinos] Erro ao descartar peça:", error);
+      setErr("Não foi possível descartar a peça. Se o problema persistir, contate o suporte.");
       return;
     }
     await onOk();
@@ -2618,7 +2681,7 @@ function ModalDescartarPeca({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar descarte"}
+          {ctaButtonContent(loading, "Confirmar descarte", "Salvando…")}
         </button>
       </div>
     </ModalBase>
@@ -2627,10 +2690,13 @@ function ModalDescartarPeca({
 
 type AbaDetalheFig = "detalhes" | "historico";
 
+const DETALHE_ABAS: AbaDetalheFig[] = ["detalhes", "historico"];
+
 function ModalDetalhe({
   peca,
   operadorasTexto,
   histStatus,
+  histErro,
   loadingHist,
   empAtivo,
   podeEditar,
@@ -2644,6 +2710,7 @@ function ModalDetalhe({
   peca: RhFigurinoPeca;
   operadorasTexto: string;
   histStatus: RhFigurinoStatusHist[];
+  histErro: string | null;
   loadingHist: boolean;
   empAtivo: RhFigurinoEmprestimo | undefined;
   podeEditar: boolean;
@@ -2675,8 +2742,13 @@ function ModalDetalhe({
   return (
     <ModalBase onClose={onClose} maxWidth={640}>
       <ModalHeader title={peca.code} onClose={onClose} />
-      <div role="tablist" aria-label="Seções do detalhe" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {(["detalhes", "historico"] as const).map((a) => (
+      <div
+        role="tablist"
+        aria-label="Seções do detalhe"
+        style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
+        onKeyDown={(e) => onTabsKeyDown(e, DETALHE_ABAS, abaDet, setAbaDet, (a) => `tab-fig-detalhe-${a}`)}
+      >
+        {DETALHE_ABAS.map((a) => (
           <button
             key={a}
             type="button"
@@ -2684,6 +2756,7 @@ function ModalDetalhe({
             aria-selected={abaDet === a}
             id={`tab-fig-detalhe-${a}`}
             aria-controls={`panel-fig-detalhe-${a}`}
+            tabIndex={abaDet === a ? 0 : -1}
             onClick={() => setAbaDet(a)}
             style={{
               padding: "8px 14px",
@@ -2708,7 +2781,7 @@ function ModalDetalhe({
       </div>
 
       {abaDet === "detalhes" ? (
-        <div role="tabpanel" id="panel-fig-detalhe-detalhes" aria-labelledby="tab-fig-detalhe-detalhes">
+        <div role="tabpanel" id="panel-fig-detalhe-detalhes" aria-labelledby="tab-fig-detalhe-detalhes" tabIndex={0}>
           <div style={{ marginBottom: 16 }}>
             {linhaLeitura("Operadora", operadorasTexto)}
             {linhaLeitura("Categoria", peca.category)}
@@ -2747,7 +2820,7 @@ function ModalDetalhe({
                 cursor: pdfLoading ? "not-allowed" : "pointer",
               }}
             >
-              {pdfLoading ? "Gerando…" : "Baixar etiqueta"}
+              {ctaButtonContent(pdfLoading, "Baixar etiqueta", "Gerando…")}
             </button>
           </div>
           <div
@@ -2859,11 +2932,15 @@ function ModalDetalhe({
           ) : null}
         </div>
       ) : (
-        <div role="tabpanel" id="panel-fig-detalhe-historico" aria-labelledby="tab-fig-detalhe-historico">
+        <div role="tabpanel" id="panel-fig-detalhe-historico" aria-labelledby="tab-fig-detalhe-historico" tabIndex={0}>
           {loadingHist ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "24px 0", color: t.textMuted }}>
               <Loader2 className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" size={18} aria-hidden />
               <span style={{ fontFamily: FONT.body, fontSize: 13 }}>Carregando histórico…</span>
+            </div>
+          ) : histErro ? (
+            <div role="alert" aria-live="polite" style={{ padding: "24px 0", textAlign: "center", color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
+              {histErro}
             </div>
           ) : histStatus.length === 0 ? (
             <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>

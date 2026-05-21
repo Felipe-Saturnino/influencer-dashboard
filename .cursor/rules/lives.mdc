@@ -108,6 +108,8 @@ import { X } from "lucide-react";
 
 ### Botão Histórico (páginas com carrossel de semanas)
 
+**Exceção global:** o botão Histórico em Feedback usa `--brand-action` (não `--brand-accent`), alinhado à Regra Global 10 dos dashboards — ver snippet abaixo.
+
 ```tsx
 <button
   aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
@@ -117,11 +119,11 @@ import { X } from "lucide-react";
     display: "flex", alignItems: "center", gap: 6,
     padding: "6px 14px", borderRadius: 999, cursor: "pointer",
     fontFamily: FONT.body, fontSize: 13,
-    border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+    border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
     background: historico
-      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
       : "transparent",
-    color: historico ? brand.accent : t.textMuted,
+    color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
     fontWeight: historico ? 700 : 400,
     transition: "all 0.15s",
   }}
@@ -694,6 +696,12 @@ const STATUS_SCOUT_COLOR = {
   fechado:     "#22c55e",
 };
 ```
+
+---
+
+## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
+
+Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga. Glossário: `glossarioData.ts`.
 
 ---
 

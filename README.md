@@ -69,7 +69,7 @@ src/
 │   ├── conteudo/   # Playbook, Links (menu Conteúdo)
 │   ├── geral/
 │   ├── lives/      # Agenda, Resultados, Feedback, Influencers, Scout (menu Lives)
-│   ├── estudio/    # Dealers, Central, Roteiro de Mesa, solicitações (menu Estúdio; Figurinos em rh/)
+│   ├── estudio/    # Dealers, Central, Figurinos, Roteiro de Mesa, solicitações
 │   ├── aquisicao/  # Financeiro, Banca de Jogo (menu Aquisição)
 │   ├── marketing/
 │   ├── rh/

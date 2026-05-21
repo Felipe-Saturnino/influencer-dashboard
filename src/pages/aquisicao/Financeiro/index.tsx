@@ -24,6 +24,7 @@ import {
   comparePagamentoStatus,
 } from "../../../lib/classificacaoSort";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import {
   AlertTriangle,
   Banknote,
@@ -1077,6 +1078,14 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     void carregar();
   }, [carregar]);
 
+  const kpiSkeletonStyle: React.CSSProperties = {
+    height: 32,
+    width: "65%",
+    borderRadius: 8,
+    background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+    marginBottom: 6,
+  };
+
   const innerCard = (accent: string): React.CSSProperties => ({
     background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)",
     border: `1px solid ${t.cardBorder}`,
@@ -1115,14 +1124,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
               minHeight: 32,
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
-              </>
-            ) : (
-              fmtBRL(totalPago)
-            )}
+            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtBRL(totalPago)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total pago</div>
         </div>
@@ -1142,14 +1144,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
               minHeight: 32,
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
-              </>
-            ) : (
-              fmtBRL(pendente)
-            )}
+            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtBRL(pendente)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Pendente</div>
         </div>
@@ -1169,14 +1164,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
               minHeight: 32,
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-                <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>Carregando...</span>
-              </>
-            ) : (
-              fmtHorasTotal(horas)
-            )}
+            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtHorasTotal(horas)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
         </div>
@@ -1192,8 +1180,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   onRecarregar: () => void;
   filtros: BlocoFiltros;
 }) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
   const perm = usePermission("financeiro");
   const { podeVerInfluencer, podeVerOperadora: _podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap: _operadoraInfMap, operadorasList } = filtros;
 
@@ -1533,6 +1522,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (ciclo) void carregarDados(ciclo);
   }, [ciclo, carregarDados, refreshTrigger]);
 
+  const MSG_ERRO_APROVAR = "Não foi possível aprovar o pagamento. Se o problema persistir, contate o suporte.";
+  const MSG_ERRO_PAGAR = "Não foi possível registrar o pagamento. Se o problema persistir, contate o suporte.";
+
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
     if (String(id).startsWith("preview_")) {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
@@ -1546,12 +1538,16 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       p_is_agente: isAgente ?? false,
     });
     if (rpcError) {
-      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
+      console.error("aprovar_pagamento RPC:", rpcError);
+      throw new Error(MSG_ERRO_APROVAR);
     }
     if (rpcData && typeof rpcData === "object") {
       const res = rpcData as { ok?: boolean; error?: string };
       if (res.ok === true) ok = true;
-      else if (res.ok === false) throw new Error(res.error ?? "Erro ao aprovar.");
+      else if (res.ok === false) {
+        console.error("aprovar_pagamento response:", res);
+        throw new Error(MSG_ERRO_APROVAR);
+      }
     }
 
     if (!ok) {
@@ -1561,20 +1557,25 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
         ok = true;
       } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
-        throw new Error((fnData as { error?: string }).error ?? "Erro ao aprovar.");
+        console.error("aprovar-pagamento edge:", fnData, fnError);
+        throw new Error(MSG_ERRO_APROVAR);
       }
     }
 
     if (!ok) {
       const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("aprovar pagamento fallback:", error);
+        throw new Error(MSG_ERRO_APROVAR);
+      }
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/archive/fix-financeiro-rpc-aprovar.sql (se ainda aplicável ao estado da base). (2) Edge Function: supabase functions deploy aprovar-pagamento");
+        console.error("aprovar pagamento: nenhuma linha atualizada", { id, tb });
+        throw new Error(MSG_ERRO_APROVAR);
       }
     }
 
     setModalAnalisar(null);
-    setRefreshTrigger(t => t + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
@@ -1589,12 +1590,16 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       p_is_agente: isAgente ?? false,
     });
     if (rpcError) {
-      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
+      console.error("registrar_pagamento RPC:", rpcError);
+      throw new Error(MSG_ERRO_PAGAR);
     }
     if (rpcData && typeof rpcData === "object") {
       const res = rpcData as { ok?: boolean; error?: string };
       if (res.ok === true) ok = true;
-      else if (res.ok === false) throw new Error(res.error ?? "Erro ao registrar pagamento.");
+      else if (res.ok === false) {
+        console.error("registrar_pagamento response:", res);
+        throw new Error(MSG_ERRO_PAGAR);
+      }
     }
 
     if (!ok) {
@@ -1604,20 +1609,25 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
         ok = true;
       } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
-        throw new Error((fnData as { error?: string }).error ?? "Erro ao registrar pagamento.");
+        console.error("registrar-pagamento edge:", fnData, fnError);
+        throw new Error(MSG_ERRO_PAGAR);
       }
     }
 
     if (!ok) {
       const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("registrar pagamento fallback:", error);
+        throw new Error(MSG_ERRO_PAGAR);
+      }
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível registrar pagamento. Execute docs/archive/fix-financeiro-rpc-aprovar.sql no Supabase (se ainda aplicável ao estado da base).");
+        console.error("registrar pagamento: nenhuma linha atualizada", { id, tb });
+        throw new Error(MSG_ERRO_PAGAR);
       }
     }
 
     setModalPagar(null);
-    setRefreshTrigger(t => t + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }
 
   async function handleRetornar(id: string, isAgente: boolean) {
@@ -1626,9 +1636,12 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
     const { error } = await supabase.from(tb).update({ status: "em_analise", pago_em: null }).eq("id", id).select("id");
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("retornar pagamento:", error);
+      throw new Error(MSG_ERRO_APROVAR);
+    }
     setModalPagar(null);
-    setRefreshTrigger(t => t + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }
 
   const rowsOrdenados = useMemo(() => {
@@ -1731,6 +1744,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             value={cicloId}
             onChange={v => setCicloId(v)}
             options={opcioesCiclo}
+            style={{ maxWidth: "100%" }}
           />
         </div>
 
@@ -1770,7 +1784,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             { value: kpi.em,             label: "Em análise",   color: "#f59e0b" },
             { value: kpi.ap,             label: "A pagar",      color: "#a78bfa" },
             { value: kpi.pg,             label: "Pago",         color: "#22c55e" },
-            { value: fmtBRL(kpi.total), label: "Total do ciclo", color: t.text },
+            { value: fmtBRL(kpi.total), label: "Total do ciclo", color: "var(--brand-primary, #7c3aed)" },
           ].map((item, i) => (
             <div key={i} style={{ background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: `1px solid ${t.cardBorder}`, borderRadius: "10px", padding: "12px 14px", textAlign: "center" }}>
               <div style={{ fontFamily: FONT_TITLE, fontSize: "20px", fontWeight: 900, color: item.color, marginBottom: "3px" }}>{item.value}</div>
@@ -1865,7 +1879,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="horas"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={thCiclo}
+                  thStyle={{ ...thCiclo, ...(isAberto && narrowMobile ? { display: "none" } : {}) }}
                   align="left"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
@@ -1881,7 +1895,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="cache"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={thCiclo}
+                      thStyle={{ ...thCiclo, ...(narrowMobile ? { display: "none" } : {}) }}
                       align="left"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
@@ -1961,7 +1975,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   key={row.id}
                   style={{ borderBottom: i < rowsOrdenados.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebraBg }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                    e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = zebraBg;
@@ -2010,8 +2024,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   {isAberto ? (
                     <>
                       <td style={{ ...tdCiclo, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
-                      <td style={tdNumCiclo}>{fmtHorasTotal(row.horas_realizadas)}</td>
-                      <td style={{ ...tdNumCiclo, color: t.textMuted }}>
+                      <td style={{ ...tdNumCiclo, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(row.horas_realizadas)}</td>
+                      <td style={{ ...tdNumCiclo, color: t.textMuted, ...(narrowMobile ? { display: "none" } : {}) }}>
                         {row.cache_hora > 0
                           ? fmtBRL(row.cache_hora)
                           : <span style={{ color: "#e84025", fontSize: "11px" }}>Não cadastrado</span>}
@@ -2063,8 +2077,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   {isAberto ? (
                     <>
                       <td style={tdCiclo}></td>
-                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtHorasTotal(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={tdCiclo}></td>
+                      <td style={{ ...tdNumCiclo, fontWeight: 700, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...tdCiclo, ...(narrowMobile ? { display: "none" } : {}) }}></td>
                       <td style={{ ...tdNumCiclo, fontSize: "15px", color: "var(--brand-primary, #7c3aed)", fontWeight: 700 }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                     </>
                   ) : (
@@ -2107,7 +2121,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 // ── BLOCO 3: CONSOLIDADO ───────────────────────────────────────────────────────
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
@@ -2304,20 +2318,22 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
+      <div style={{ marginBottom: "18px" }}>
         <BlocoLabel label="Consolidado de influencers" />
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
           placeholder="Buscar por nome ou e-mail..."
+          aria-label="Buscar influencer por nome ou e-mail"
           style={{
-            flex: 1, minWidth: 280, maxWidth: 420,
+            width: "100%",
+            marginTop: 12,
+            boxSizing: "border-box",
             padding: "8px 14px", borderRadius: "10px",
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
             fontSize: "13px", fontFamily: FONT.body, outline: "none",
           }}
         />
-        {!loading && <span style={{ fontSize: "12px", color: t.textMuted, whiteSpace: "nowrap" }}>{ordenados.length} influencers</span>}
       </div>
 
       {loading ? (
@@ -2433,6 +2449,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                 const hist = historicoPagamentos[row.influencer_id] ?? [];
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
 
+                const histPanelId = `hist-${row.influencer_id}`;
                 return (
                   <Fragment key={row.influencer_id}>
                     <tr
@@ -2440,8 +2457,9 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                       tabIndex={0}
                       role="row"
                       aria-expanded={isOpen}
+                      aria-controls={histPanelId}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = "transparent";
@@ -2487,7 +2505,13 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                     </tr>
 
                     {isOpen && (
-                      <tr key={`exp-${row.influencer_id}`} style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
+                      <tr
+                        key={`exp-${row.influencer_id}`}
+                        id={histPanelId}
+                        role="region"
+                        aria-label={`Histórico de ${row.nome_artistico}`}
+                        style={{ background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}
+                      >
                         <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted, marginBottom: "10px", fontFamily: FONT.body }}>
                             Histórico — {row.nome_artistico}
@@ -2518,7 +2542,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                                     key={h.id}
                                     style={{ borderBottom: `1px solid ${t.divider}` }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.background = "transparent";
@@ -2553,7 +2577,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                 <tr
                   style={{ borderBottom: `1px solid ${t.cardBorder}`, background: t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)" }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = isDark ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.06)";
+                    e.currentTarget.style.background = t.isDark ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.06)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)";
@@ -2667,9 +2691,9 @@ export default function Financeiro() {
   };
   const chipBase = (active: boolean) => ({
     padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? brand.accent : t.cardBorder}`,
-    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : (t.inputBg ?? t.cardBg),
-    color: active ? brand.accent : t.textMuted,
+    border: `1px solid ${active ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
+    background: active ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : (t.inputBg ?? t.cardBg),
+    color: active ? "var(--brand-action, #7c3aed)" : t.textMuted,
     fontSize: 13, fontWeight: active ? 700 : 400,
     fontFamily: FONT.body, cursor: "pointer", outline: "none",
   });

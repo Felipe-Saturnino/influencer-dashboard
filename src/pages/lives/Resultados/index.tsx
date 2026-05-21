@@ -66,8 +66,11 @@ type DashboardBrand = ReturnType<typeof useDashboardBrand>;
 type PermResultados = ReturnType<typeof usePermission>;
 type EscoposVisiveis = ReturnType<typeof useDashboardFiltros>["escoposVisiveis"];
 
-const ctaGradient = (_brand: DashboardBrand) =>
-  "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+function ctaGradient(brand: DashboardBrand): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+}
 
 interface LiveCardProps {
   live: Live;
@@ -103,6 +106,7 @@ function LiveCard({
   const platColor = PLAT_COLOR[live.plataforma];
   const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
   const isExcluindo = excluindo?.id === live.id;
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   async function handleExcluirConfirmado() {
     if (!perm.canExcluirOk) return;
@@ -121,7 +125,7 @@ function LiveCard({
       borderRadius: 18,
       padding: 20,
       marginBottom: 12,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+      boxShadow: cardShadow,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
@@ -216,8 +220,6 @@ function LiveCard({
 
 interface ModalValidacaoProps {
   live: Live;
-  brand: DashboardBrand;
-  t: ThemeTokens;
   resultados: Record<string, LiveResultado>;
   operadorasList: { slug: string; nome: string }[];
   escoposVisiveis: EscoposVisiveis;
@@ -227,14 +229,14 @@ interface ModalValidacaoProps {
 
 function ModalValidacao({
   live,
-  brand,
-  t,
   resultados,
   operadorasList,
   escoposVisiveis,
   onClose,
   onSaved,
 }: ModalValidacaoProps) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const existing = resultados[live.id];
   const [status, setStatus] = useState<LiveStatus>("realizada");
   const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
@@ -254,6 +256,14 @@ function ModalValidacao({
     });
     return () => window.cancelAnimationFrame(id);
   }, [live.id]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const showResultFields = status === "realizada";
 
@@ -305,7 +315,7 @@ function ModalValidacao({
   const row: React.CSSProperties = { marginBottom: 14 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
       <div
         ref={containerRef}
         tabIndex={-1}
@@ -313,13 +323,13 @@ function ModalValidacao({
         aria-modal="true"
         aria-labelledby="modal-validacao-title"
         style={{
-          background: t.cardBg,
+          background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 20,
           padding: "clamp(16px, 4vw, 28px)",
           width: "100%",
           maxWidth: 480,
-          maxHeight: "90vh",
+          maxHeight: "90dvh",
           overflowY: "auto",
           outline: "none",
         }}
@@ -649,7 +659,7 @@ export default function Resultados() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -670,8 +680,8 @@ export default function Resultados() {
         <div style={{ marginBottom: 14 }}>
           <div style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
@@ -695,7 +705,7 @@ export default function Resultados() {
                     border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
                     background:
                       filterOperadora !== "todas"
-                        ? "var(--brand-action-12)"
+                        ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
                         : (t.inputBg ?? t.cardBg),
                     color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                     fontWeight: filterOperadora !== "todas" ? 700 : 400,
@@ -715,9 +725,12 @@ export default function Resultados() {
 
       {/* ── CONTEÚDO ── */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
-          Carregando...
+        <div
+          role="status"
+          aria-label="Carregando resultados de lives"
+          style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{
@@ -763,8 +776,6 @@ export default function Resultados() {
         <ModalValidacao
           key={modal.id}
           live={modal}
-          brand={brand}
-          t={t}
           resultados={resultados}
           operadorasList={operadorasList}
           escoposVisiveis={escoposVisiveis}
