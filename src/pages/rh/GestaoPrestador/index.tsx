@@ -57,7 +57,7 @@ import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgT
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
+import { primeiroUltimoNome, syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
   mensagemFeedbackSyncPrestador,
   syncUsuarioPrestadorAposSalvarRh,
@@ -124,13 +124,37 @@ function remuneracaoHoraCentavosDeRow(f: RhFuncionario): string {
   return String(Math.round(Number(v)));
 }
 
-/** Coluna «Remuneração»: mensal quando preenchida; senão valor por hora (centavos → reais). */
+/** ISO YYYY-MM-DD: Data da Função se preenchida; senão Data de início. */
+function dataFuncaoOuInicioIso(row: RhFuncionario): string {
+  const df = String(row.data_funcao ?? "").trim();
+  if (df) return df.slice(0, 10);
+  return String(row.data_inicio ?? "").trim().slice(0, 10);
+}
+
+function textoDataFuncaoColunaTabela(row: RhFuncionario): string {
+  return fmtDataIsoPtBr(dataFuncaoOuInicioIso(row));
+}
+
+function areaAtuacaoTabela(row: RhFuncionario): RhAreaAtuacao {
+  return row.area_atuacao === "estudio" || row.area_atuacao === "escritorio" ? row.area_atuacao : "escritorio";
+}
+
+/** Coluna «Remuneração»: mensal (escritório) ou por hora (estúdio), conforme área de atuação. */
 function textoRemuneracaoColunaTabela(row: RhFuncionario): { texto: string; title?: string } {
+  if (areaAtuacaoTabela(row) === "estudio") {
+    const rh = Number(row.remuneracao_hora_centavos ?? 0);
+    if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+    return { texto: "—" };
+  }
   const sal = Number(row.salario);
-  if (sal > 0) return { texto: fmtBRL(sal) };
-  const rh = Number(row.remuneracao_hora_centavos ?? 0);
-  if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+  if (sal > 0) return { texto: fmtBRL(sal), title: "Remuneração mensal" };
   return { texto: "—" };
+}
+
+/** Valor numérico para ordenar remuneração (mensal em reais; hora em centavos). */
+function valorRemuneracaoOrdenacao(row: RhFuncionario): number {
+  if (areaAtuacaoTabela(row) === "estudio") return Number(row.remuneracao_hora_centavos ?? 0);
+  return Math.round(Number(row.salario) * 100);
 }
 
 function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
@@ -477,7 +501,7 @@ function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
 type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
 
 /** Colunas ordenáveis da tabela principal (todas as abas). */
-type PrestadoresSortCol = "nome" | "diretoria" | "gerencia" | "cargo" | "lider" | "salario" | "status";
+type PrestadoresSortCol = "nome" | "cargo" | "lider" | "data_funcao" | "salario" | "status";
 
 const ABAS_PAGINA_RH_FUNC: { key: AbaPaginaRhFunc; label: string }[] = [
   { key: "headcount", label: "Head Count" },
@@ -1209,24 +1233,6 @@ export default function RhPrestadoresPage() {
     setModalForm("ver");
   };
 
-  const orgMetaLinha = useCallback(
-    (row: RhFuncionario) => {
-      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
-      if (o) {
-        return {
-          diretoria: o.diretoriaNome,
-          gerencia: o.nivel === "diretoria" ? "—" : o.gerenciaNome || "—",
-        };
-      }
-      if (row.org_time_id) {
-        const t = opcoesTimes.find((x) => x.timeId === row.org_time_id);
-        if (t) return { diretoria: t.diretoriaNome, gerencia: t.gerenciaNome };
-      }
-      return { diretoria: "—", gerencia: "—" };
-    },
-    [opcoesTimes, opcoesVinculoFlat],
-  );
-
   const liderImediatoLinha = useCallback(
     (row: RhFuncionario) => {
       const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
@@ -1248,23 +1254,15 @@ export default function RhPrestadoresPage() {
     rows.sort((a, b) => {
       switch (col) {
         case "nome":
-          return mult * a.nome.localeCompare(b.nome, "pt-BR");
-        case "diretoria": {
-          const ad = orgMetaLinha(a).diretoria;
-          const bd = orgMetaLinha(b).diretoria;
-          return mult * ad.localeCompare(bd, "pt-BR");
-        }
-        case "gerencia": {
-          const ag = orgMetaLinha(a).gerencia;
-          const bg = orgMetaLinha(b).gerencia;
-          return mult * ag.localeCompare(bg, "pt-BR");
-        }
+          return mult * primeiroUltimoNome(a.nome).localeCompare(primeiroUltimoNome(b.nome), "pt-BR");
         case "cargo":
           return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
         case "lider":
           return mult * liderImediatoLinha(a).localeCompare(liderImediatoLinha(b), "pt-BR");
+        case "data_funcao":
+          return mult * dataFuncaoOuInicioIso(a).localeCompare(dataFuncaoOuInicioIso(b), "pt-BR");
         case "salario":
-          return mult * (Number(a.salario) - Number(b.salario));
+          return mult * (valorRemuneracaoOrdenacao(a) - valorRemuneracaoOrdenacao(b));
         case "status": {
           const ord: Record<string, number> = { ativo: 0, indisponivel: 1, encerrado: 2 };
           const oa = ord[a.status] ?? 99;
@@ -1277,7 +1275,7 @@ export default function RhPrestadoresPage() {
       }
     });
     return rows;
-  }, [filtrada, sortPrestadores, orgMetaLinha, liderImediatoLinha]);
+  }, [filtrada, sortPrestadores, liderImediatoLinha]);
 
   const inserirHistorico = useCallback(
     async (
@@ -2088,7 +2086,7 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração", "Status", "Ações"].map((h) => (
+                {["Nome", "Função", "Líder Imediato", "Data da Função", "Remuneração", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -2096,9 +2094,9 @@ export default function RhPrestadoresPage() {
               </tr>
             </thead>
             <tbody>
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
             </tbody>
           </table>
         </div>
@@ -2213,7 +2211,7 @@ export default function RhPrestadoresPage() {
   const tabelaAcoesRh = abaPagina === "acoes_rh";
   const tabelaAnotacoesRh = abaPagina === "anotacoes";
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
-  const colunasTabela = tabelaSemSalario ? 7 : 8;
+  const colunasTabela = tabelaSemSalario ? 6 : 7;
   const thStyleSort = getThStyle(t);
   const thStyleSortRight = getThStyle(t, { textAlign: "right" });
 
@@ -2694,7 +2692,7 @@ export default function RhPrestadoresPage() {
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              minWidth: tabelaSemSalario ? 680 : 820,
+              minWidth: tabelaSemSalario ? 620 : 720,
             }}
           >
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
@@ -2703,24 +2701,6 @@ export default function RhPrestadoresPage() {
                 <SortTableTh<PrestadoresSortCol>
                   label="Nome"
                   col="nome"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Diretoria"
-                  col="diretoria"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Gerência"
-                  col="gerencia"
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
@@ -2737,8 +2717,17 @@ export default function RhPrestadoresPage() {
                   align="left"
                 />
                 <SortTableTh<PrestadoresSortCol>
-                  label="Líder imediato"
+                  label="Líder Imediato"
                   col="lider"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Data da Função"
+                  col="data_funcao"
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
@@ -2813,10 +2802,11 @@ export default function RhPrestadoresPage() {
                 </tr>
               ) : (
                 filtradaOrdenada.map((row, i) => {
-                  const { diretoria, gerencia } = orgMetaLinha(row);
+                  const nomeExibicao = primeiroUltimoNome(row.nome) || "—";
                   const liderCompleto = liderImediatoLinha(row);
                   const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                   const remCol = textoRemuneracaoColunaTabela(row);
+                  const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
                   return (
                     <tr key={row.id}>
                       <td
@@ -2828,9 +2818,9 @@ export default function RhPrestadoresPage() {
                           textOverflow: "ellipsis",
                           background: zebraStripe(i),
                         }}
-                        title={row.nome}
+                        title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
                       >
-                        {row.nome}
+                        {nomeExibicao}
                         {revisaoCadastralPendenteParaFuncionario(row) ? (
                           <span
                             style={{
@@ -2850,18 +2840,15 @@ export default function RhPrestadoresPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={diretoria}>
-                        {diretoria}
-                      </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={gerencia}>
-                        {gerencia}
-                      </td>
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
                       <td
                         style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }}
                         title={liderCompleto !== "—" ? liderCompleto : undefined}
                       >
                         {lider}
+                      </td>
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), fontVariantNumeric: "tabular-nums" }}>
+                        {dataFuncaoTxt}
                       </td>
                       {!tabelaSemSalario ? (
                         <td
