@@ -147,7 +147,7 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
-  const { user, theme: t, activePage, setActivePage } = useApp();
+  const { user, theme: t, activePage } = useApp();
   const [retryKey, setRetryKey] = useState(0);
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);

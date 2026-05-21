@@ -15,7 +15,13 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "ci": "npm run lint && npm run test && npm run build",
+    "precommit": "lint-staged",
+    "prepare": "node scripts/install-git-hooks.mjs"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --max-warnings 0"
   },
   "dependencies": {
     "@sentry/react": "^9.47.1",
@@ -48,6 +54,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "jsdom": "^29.1.0",
+    "lint-staged": "^15.4.3",
     "rollup-plugin-visualizer": "^5.11.0",
     "typescript": "^5.2.0",
     "typescript-eslint": "^8.58.0",

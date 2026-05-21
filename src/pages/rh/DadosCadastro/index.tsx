@@ -346,7 +346,7 @@ export default function RhDadosCadastroPage() {
     if (!row) return null;
     const d = proximaRevisaoCadastralEm(row.cadastro_revisado_em, row.created_at);
     return d ? d.toLocaleDateString("pt-BR") : null;
-  }, [row?.cadastro_revisado_em, row?.created_at]);
+  }, [row]);
 
   const orgLabel = useMemo(() => {
     if (!row) return "—";

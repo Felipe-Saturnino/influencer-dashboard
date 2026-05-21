@@ -27,8 +27,9 @@ export default tseslint.config(
       'no-useless-assignment': 'off',
       'preserve-caught-error': 'off',
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // error (não warn): CI usa --max-warnings 0 — warning também quebra o pipeline
+      'react-hooks/exhaustive-deps': 'error',
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
