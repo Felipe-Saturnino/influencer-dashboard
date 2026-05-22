@@ -84,10 +84,6 @@ export default function Campanhas() {
     return arr;
   }, [campanhas, sortCamp, operadoras]);
   const ativas = campanhas.filter((c) => c.ativo).length;
-  const contadorLabel =
-    campanhas.length === 1
-      ? "1 campanha cadastrada"
-      : `${campanhas.length} campanhas cadastradas`;
 
   const th = getThStyle(t);
   const td = getTdStyle(t);
@@ -190,18 +186,15 @@ export default function Campanhas() {
         <div style={{ padding: "16px 20px 0" }}>
           <BlocoLabel label="Campanhas cadastradas" />
         </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "12px 20px 16px",
-          }}
-        >
-          <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-            {contadorLabel}
-          </span>
-          {perm.canCriarOk && (
+        {perm.canCriarOk && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              padding: "12px 20px 16px",
+            }}
+          >
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -211,8 +204,8 @@ export default function Campanhas() {
             >
               Nova Campanha
             </CtaCriarButton>
-          )}
-        </div>
+          </div>
+        )}
 
         {loading ? (
           <div

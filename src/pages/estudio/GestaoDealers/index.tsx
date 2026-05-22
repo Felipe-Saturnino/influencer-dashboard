@@ -448,9 +448,6 @@ export default function GestaoDealers() {
       )}
 
       {/* ─── Bloco 3: Elenco completo ────────────────────────────────────────── */}
-      <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-        <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "dealer" : "dealers"}
-      </div>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (

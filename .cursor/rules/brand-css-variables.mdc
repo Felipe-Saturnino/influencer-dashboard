@@ -221,6 +221,21 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 - **Nunca** select de operadora/influencer **fora** deste wrapper.
 - **Nunca** `justifyContent: "flex-start"` em fileiras de chips/status/plataforma na barra salvo exceção documentada no Global.
 
+### CTA de criação **dentro** do bloco de filtros
+
+Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filtros (ex.: Scout, Network, Figurinos, Gerenciamento Portal RH):
+
+| Regra | Valor |
+|-------|--------|
+| Componente | **`CtaCriarButton`** — ver §3 (não montar `<button>` inline na barra) |
+| Forma / tamanho | Pill **999**, **`padding: 10px 20px`**, `Plus` **14px** — **não** usar o padding **`6px 14px`** dos pills de filtro (Histórico, Operadora, Hoje, etc.) |
+| Posição | Na linha do bloco, `gap: 10` com carrossel, selects e toggles; centralização da fileira conforme Global § Alinhamento |
+| Visual | Gradiente cheio (§3) — distinto do `color-mix` dos filtros **ativos** |
+
+**Proibido na barra:** CTA de criação com `borderRadius: 10`, label com `+` no texto em vez de ícone, ou gradiente inline duplicado.
+
+**Fora do bloco** (card da Agenda, `PageHeader`, toolbar de tabela): mesmo **`CtaCriarButton`** — §3; só muda o wrapper pai, não o contrato do botão.
+
 ---
 
 ## 6. Iconografia em filtros e controles da barra
@@ -419,5 +434,6 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
+- [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (pill 999, `10px 20px`, `Plus` 14) — não confundir com pills `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
 - [ ] Semântica de dado intacta (Global)

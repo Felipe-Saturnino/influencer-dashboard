@@ -23,6 +23,13 @@ Botões de fluxo **criar/adicionar** na página (não confundir com **Salvar** e
 - **Spin** (qualquer perfil, `useBrand === false`): Scout — `var(--brand-primary, #4a2082)` → `var(--brand-secondary, #1e36f8)`.
 - **Operadora** (`useBrand === true`): `var(--brand-action)` → `var(--brand-contrast)`.
 
+## Posição na UI
+
+| Contexto | Onde colocar |
+|----------|----------------|
+| **Dentro do bloco de filtros** | Mesma linha (`getFilterBarRowStyle`, `gap: 10`) — Scout, Network, Figurinos, Gerenciamento Portal RH, etc. Ver `PADRAO-FILTROS-DASHBOARD.md` § CTA na barra |
+| **Fora do bloco** | Card (Agenda), `PageHeader`, toolbar acima da tabela — **mesmo** `CtaCriarButton` |
+
 ## Páginas migradas (toolbar criar)
 
 Agenda, Scout, Network, Campanhas, Figurinos, Gestão de Prestadores, Organograma, Vagas, Portal RH (Gerenciamento), Gestão de Usuários, Gestão de Operadoras, Gestão de Mesas, Status Técnico (Adicionar CIDR).

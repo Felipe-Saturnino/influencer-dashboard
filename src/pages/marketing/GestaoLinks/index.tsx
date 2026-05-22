@@ -18,7 +18,6 @@ import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib
 
 const COR = {
   vermelho: "#e84025",
-  ciano: "#70cae4",
   verde: "#22c55e",
 } as const;
 
@@ -394,10 +393,6 @@ export default function GestaoLinks() {
           ) : undefined
         }
       />
-
-      <div style={{ marginTop: 12, marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: `${COR.ciano}15`, border: `1px solid ${COR.ciano}40`, fontSize: 12, color: t.text, fontFamily: FONT.body }}>
-        Ao mapear um link, os dados históricos são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.
-      </div>
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>

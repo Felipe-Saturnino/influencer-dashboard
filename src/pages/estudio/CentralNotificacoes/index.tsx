@@ -5,7 +5,6 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { usePendenciasCount } from "../../../hooks/usePendenciasCount";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -264,7 +263,6 @@ export default function CentralNotificacoes() {
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("central_notificacoes");
-  const pendentesGestor = usePendenciasCount("gestor");
   /** Inbox do estúdio (troca/feedback): não-operador com acesso à Central; permissões em role_permissions. */
   const verInboxEstudio = user?.role !== "operador" && (perm.loading || perm.canView !== "nao");
 
@@ -1018,20 +1016,6 @@ export default function CentralNotificacoes() {
         title="Central de Notificações"
         subtitle="Gerencie solicitações entre operadoras e estúdio com histórico de conversas."
       />
-      <p
-        style={{
-          color: t.textMuted,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          margin: "-12px 0 24px",
-          lineHeight: 1.45,
-        }}
-      >
-        {verInboxEstudio && pendentesGestor > 0
-          ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
-          : "Campanhas de roteiro e solicitações ao estúdio."}
-      </p>
-
       <div style={{ marginBottom: 14 }}>
         <div
           style={{

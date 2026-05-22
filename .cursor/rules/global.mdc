@@ -226,6 +226,10 @@ Dentro do wrapper do bloco de filtros (`primaryTransparentBg/Border` ou equivale
 
 Referência visual: **Overview Influencer**, Agenda, Feedback, Streamers.
 
+### CTA de criação na barra de filtros
+
+Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar **`CtaCriarButton`** (Brand §3 e §5 — pill **999**, `padding` **10px 20px**, ícone **`Plus` 14px**). **Não** reutilizar o padding **6px 14px** dos pills de filtro. CTAs **Salvar**, **Editar** em modais e ações de linha ficam fora deste contrato até migração explícita.
+
 ### Espaçamento e visual dos campos (barra)
 
 - **Gap entre controlos** na mesma linha (carrossel, Histórico, Influencer, Operadora, Hoje, modo de vista): **`10`** — usar `FILTER_BAR_ROW_GAP` / `getFilterBarRowStyle()` de `lib/filterBarStyles.ts`.
