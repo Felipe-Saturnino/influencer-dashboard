@@ -30,9 +30,20 @@ Botões de fluxo **criar/adicionar** na página (não confundir com **Salvar** e
 | **Dentro do bloco de filtros** | Mesma linha (`getFilterBarRowStyle`, `gap: 10`) — Scout, Network, Figurinos, Gerenciamento Portal RH, etc. Ver `PADRAO-FILTROS-DASHBOARD.md` § CTA na barra |
 | **Fora do bloco** | Card (Agenda), `PageHeader`, toolbar acima da tabela — **mesmo** `CtaCriarButton` |
 
-## Páginas migradas (toolbar criar)
+## Rótulo visível vs modal (inventário)
 
-Agenda, Scout, Network, Campanhas, Figurinos, Gestão de Prestadores, Organograma, Vagas, Portal RH (Gerenciamento), Gestão de Usuários, Gestão de Operadoras, Gestão de Mesas, Status Técnico (Adicionar CIDR).
+| Superfície | Onde identificar | Rótulo para varredura / docs |
+|------------|------------------|------------------------------|
+| **Página** | `CtaCriarButton` + `data-cta-surface="page"` | Texto **`children`** do componente (ex.: `Nova Live`, `Solicitar`) — é o que o usuário vê |
+| **Modal** | `<button>` com gradiente no rodapé do modal | Texto do botão **dentro do modal** (ex.: `Criar Live`, `Adicionar`, `Salvar`) — fase de migração à parte |
+
+**Regra:** não usar `+` no `children` de `CtaCriarButton` — o ícone `Plus` já substitui o prefixo.
+
+**Varredura:** `node scripts/scan-cta-legacy.mjs` — secções `PÁGINA (migrado)` e `MODAL (legado)`.
+
+## Páginas migradas (CTA na página — `CtaCriarButton`)
+
+Agenda (Nova Live), Scout, Network, Campanhas (Nova Campanha), Figurinos, Gestão de Prestadores, Organograma, Vagas, Portal RH (Gerenciamento), Gestão de Usuários (Novo Usuário), Gestão de Operadoras (Nova Operadora), Gestão de Mesas (Nova mesa), Status Técnico (Adicionar CIDR), Banca de Jogo (Solicitar).
 
 ## Exemplo
 

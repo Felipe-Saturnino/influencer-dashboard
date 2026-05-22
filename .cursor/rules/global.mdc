@@ -155,7 +155,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 
 **Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
 
-**CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast).
+**CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
 **Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`. Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
 

@@ -9,6 +9,7 @@ import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstant
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -802,17 +803,9 @@ function BlocoSolicitacoes({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
         <BlocoLabel label="Solicitações" />
         {podeSolicitar ? (
-          <button
-            type="button"
-            onClick={() => void aoClicarSolicitar()}
-            style={{
-              padding: "8px 16px", borderRadius: 10, border: "none",
-              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-              color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-            }}
-          >
-            + Solicitar
-          </button>
+          <CtaCriarButton type="button" onClick={() => void aoClicarSolicitar()}>
+            Solicitar
+          </CtaCriarButton>
         ) : null}
       </div>
 

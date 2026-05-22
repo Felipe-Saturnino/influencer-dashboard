@@ -52,6 +52,7 @@ export function CtaCriarButton({
       type={type}
       disabled={isDisabled}
       style={baseStyle}
+      data-cta-surface="page"
       {...rest}
     >
       {loading ? (

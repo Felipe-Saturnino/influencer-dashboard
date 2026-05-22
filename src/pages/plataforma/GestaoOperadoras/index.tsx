@@ -82,7 +82,6 @@ export default function GestaoOperadoras() {
     return arr;
   }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
-  const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
   const thStyle = getThStyle(t);
   if (perm.loading) {
     return (
@@ -182,10 +181,8 @@ export default function GestaoOperadoras() {
         boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
         overflow: "hidden",
       }}>
-        {/* Header da tabela */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 16px" }}>
-          <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>{contadorLabel}</span>
-          {perm.canCriarOk && (
+        {perm.canCriarOk && (
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "18px 20px 16px" }}>
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -195,8 +192,8 @@ export default function GestaoOperadoras() {
             >
               Nova Operadora
             </CtaCriarButton>
-          )}
-        </div>
+          </div>
+        )}
 
         {loading ? (
           <div
