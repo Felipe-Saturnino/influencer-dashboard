@@ -26,8 +26,9 @@ export default defineConfig(({ mode }) => {
               { name: "vendor-react", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },
               { name: "vendor-supabase", test: /[\\/]node_modules[\\/]@supabase[\\/]supabase-js[\\/]/ },
               { name: "vendor-charts", test: /[\\/]node_modules[\\/]recharts[\\/]/ },
+              /** Nome estável; alterar só se for preciso invalidar asset corrompido no CDN (deploy parcial). */
               {
-                name: "vendor-icons",
+                name: "vendor-ui-icons",
                 test: /[\\/]node_modules[\\/](react-icons|lucide-react)[\\/]/,
               },
               /** PDF / etiquetas RH — isolado para não diluir o chunk principal ao navegar noutras áreas */

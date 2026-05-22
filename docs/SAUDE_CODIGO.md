@@ -21,7 +21,7 @@
 ### O que foi feito
 
 - **Lazy loading das páginas**: Login e TrocarSenha continuam carregados no início; demais páginas são carregadas sob demanda ao navegar.
-- **Manual chunks no Vite**: `vendor-react`, `vendor-supabase`, `vendor-charts`, `vendor-icons` — melhora cache do navegador.
+- **Manual chunks no Vite**: `vendor-react`, `vendor-supabase`, `vendor-charts`, `vendor-ui-icons` — melhora cache do navegador.
 - **Preconnect** no `index.html` para `fonts.googleapis.com` e `fonts.gstatic.com`.
 
 ### Efeito esperado
@@ -35,7 +35,16 @@ Com lazy loading + manualChunks, cada página gera chunks com hash no nome (ex.:
 - Os hashes mudam e os chunks antigos são removidos.
 - Usuários com a app aberta (cache antigo) tentam carregar chunks que não existem mais → 404 → erro.
 
-**Solução implementada:**
+### HTTP 500 em chunk estático (ex.: `vendor-ui-icons-*.js`)
+
+Se **só um** arquivo em `/assets/*.js` falhar com **500** e `Content-Length: 0`, enquanto o `index.html` e outros chunks respondem **200** com `application/javascript`, o `index.html` foi publicado mas aquele asset **não subiu** (deploy interrompido / instabilidade do Cloudflare Pages).
+
+**O que fazer:**
+1. Cloudflare → projeto → **Deployments** → **Retry deployment** no deploy mais recente (ou novo push).
+2. Confirmar no DevTools que o chunk referenciado no `index.html` retorna 200 e ~80 KB (lucide + react-icons).
+3. Se persistir: alterar o `name` do grupo em `vite.config.ts` (`vendor-ui-icons`) para gerar novo hash e redeploy.
+
+**Solução implementada (404 / cache antigo):**
 - `ErrorBoundary` detecta ChunkLoadError e recarrega a página automaticamente.
 - Listener global em `main.tsx` para `unhandledrejection` de chunk também dispara reload.
 - O usuário recebe a nova versão sem precisar recarregar manualmente.
