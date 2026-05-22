@@ -1,106 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
+import { MENU } from "../../../constants/menu";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2, BookOpen, Share2, Radio, Shield } from "lucide-react";
-import {
-  GiTv,
-  GiCalendar,
-  GiConversation,
-  GiPerson,
-  GiBinoculars,
-  GiCash,
-  GiPokerHand,
-  GiMicrophone,
-  GiShare,
-  GiCardRandom,
-  GiRingingBell,
-  GiShirt,
-  GiNotebook,
-  GiFactory,
-  GiRoundTable,
-  GiRadarSweep,
-} from "react-icons/gi";
+import { HelpCircle } from "lucide-react";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
-// ─── Menu estrutura ───────────────────────────────────────────────────────────
-const MENU_AJUDA = [
-  {
-    section: "Dashboards",
-    items: [
-      { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
-      { key: "mesas_spin" as PageKey, label: "Overview Spin", Icon: GiPokerHand },
-      { key: "dash_midias_sociais" as PageKey, label: "Mídias Sociais", Icon: GiShare },
-      {
-        key: "dash_overview_influencer" as PageKey,
-        label: "Overview Influencer",
-        Icon: GiMicrophone,
-      },
-    ],
-  },
-  {
-    section: "Lives",
-    items: [
-      { key: "agenda" as PageKey, label: "Agenda", Icon: GiCalendar },
-      { key: "resultados" as PageKey, label: "Resultados", Icon: ClipboardList },
-      { key: "feedback" as PageKey, label: "Feedback", Icon: GiConversation },
-      { key: "influencers" as PageKey, label: "Influencers", Icon: GiPerson },
-      { key: "scout" as PageKey, label: "Scout", Icon: GiBinoculars },
-    ],
-  },
-  {
-    section: "Aquisição",
-    items: [
-      { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
-      { key: "banca_jogo" as PageKey, label: "Banca de Jogo", Icon: GiPokerHand },
-    ],
-  },
-  {
-    section: "Afiliados",
-    items: [
-      { key: "afiliados" as PageKey, label: "Afiliados", Icon: Users },
-      { key: "afiliados_network" as PageKey, label: "Network", Icon: Network },
-    ],
-  },
-  {
-    section: "Marketing",
-    items: [
-      { key: "campanhas" as PageKey, label: "Campanhas", Icon: Megaphone },
-      { key: "gestao_links" as PageKey, label: "Gestão de Links", Icon: Link2 },
-    ],
-  },
-  {
-    section: "Estúdio",
-    items: [
-      { key: "gestao_dealers" as PageKey, label: "Gestão de Dealers", Icon: GiCardRandom },
-      { key: "central_notificacoes" as PageKey, label: "Central de Notificações", Icon: GiRingingBell },
-      { key: "rh_figurinos" as PageKey, label: "Figurinos", Icon: GiShirt },
-      { key: "roteiro_mesa" as PageKey, label: "Roteiro de Mesa", Icon: GiNotebook },
-    ],
-  },
-  {
-    section: "Conteúdo",
-    items: [
-      { key: "playbook_influencers" as PageKey, label: "Playbook Influencers", Icon: BookOpen },
-      { key: "links_materiais" as PageKey, label: "Links e Materiais", Icon: Share2 },
-      { key: "spin_na_rede" as PageKey, label: "Spin na Rede", Icon: Radio },
-      { key: "rh_portal" as PageKey, label: "Portal de RH", Icon: Megaphone },
-    ],
-  },
-  {
-    section: "Plataforma",
-    items: [
-      { key: "gestao_usuarios" as PageKey, label: "Gestão de Usuários", Icon: Shield },
-      { key: "gestao_operadoras" as PageKey, label: "Gestão de Operadoras", Icon: GiFactory },
-      { key: "gestao_mesas" as PageKey, label: "Gestão de Mesas", Icon: GiRoundTable },
-      { key: "status_tecnico" as PageKey, label: "Status Técnico", Icon: GiRadarSweep },
-    ],
-  },
-];
+function podeVerPaginaNoMenu(cv: string | null | undefined): boolean {
+  return cv === "sim" || cv === "proprios";
+}
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 // Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
@@ -1935,11 +1847,37 @@ const LABELS_ABA: Record<Aba, string> = {
 };
 
 export default function Ajuda() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
   const [aba, setAba] = useState<Aba>("conheca");
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
+
+  const menuAjudaVisivel = useMemo(
+    () =>
+      MENU.map((sec) => ({
+        ...sec,
+        items: sec.items.filter((item) => podeVerPaginaNoMenu(permissions[item.key])),
+      })).filter((sec) => sec.items.length > 0),
+    [permissions],
+  );
+
+  const primeiroPageKeyVisivel = useMemo((): PageKey | null => {
+    const first = menuAjudaVisivel[0]?.items[0];
+    return first?.key ?? null;
+  }, [menuAjudaVisivel]);
+
+  const paginaAtualVisivel = useMemo(
+    () => menuAjudaVisivel.some((sec) => sec.items.some((item) => item.key === paginaSelecionada)),
+    [menuAjudaVisivel, paginaSelecionada],
+  );
+
+  useEffect(() => {
+    if (!primeiroPageKeyVisivel) return;
+    if (!paginaAtualVisivel) {
+      setPaginaSelecionada(primeiroPageKeyVisivel);
+    }
+  }, [primeiroPageKeyVisivel, paginaAtualVisivel]);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const pillActiveBg = brand.useBrand
@@ -2059,6 +1997,59 @@ export default function Ajuda() {
             <AbaGlossario dark={isDark} t={t} brand={brand} />
           </div>
         </div>
+      ) : menuAjudaVisivel.length === 0 ? (
+        <div
+          role="tabpanel"
+          id={`panel-ajuda-${aba}`}
+          aria-labelledby={`tab-ajuda-${aba}`}
+          style={{
+            background: t.cardBg,
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 18,
+            padding: "48px 32px",
+            boxShadow: cardShadow,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: navActiveBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <HelpCircle size={22} color={brand.primary} aria-hidden="true" />
+          </div>
+          <p
+            style={{
+              fontSize: 14,
+              lineHeight: 1.65,
+              color: t.text,
+              fontFamily: FONT.body,
+              margin: "0 auto 8px",
+              maxWidth: 420,
+            }}
+          >
+            Você não tem acesso às páginas da plataforma.
+          </p>
+          <p
+            style={{
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              margin: "0 auto",
+              maxWidth: 420,
+            }}
+          >
+            Procure o administrador para solicitar as permissões necessárias em Gestão de Usuários.
+          </p>
+        </div>
       ) : (
         <div
           role="tabpanel"
@@ -2080,7 +2071,7 @@ export default function Ajuda() {
             }}
           >
             <nav>
-              {MENU_AJUDA.map((sec) => (
+              {menuAjudaVisivel.map((sec) => (
                 <div key={sec.section} style={{ marginBottom: 20 }}>
                   <div style={{
                     fontSize: 10,
@@ -2094,7 +2085,7 @@ export default function Ajuda() {
                   }}>
                     {sec.section}
                   </div>
-                  {sec.items.map(({ key, label, Icon }) => {
+                  {sec.items.map(({ key, label, icon: Icon }) => {
                     const ativo = paginaSelecionada === key;
                     return (
                       <button

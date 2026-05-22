@@ -10,12 +10,15 @@ function GlossarioCategCard({
   cat,
   dark,
   t,
+  forcarAberta = false,
 }: {
   cat: GlossarioCategoria;
   dark: boolean;
   t: Theme;
+  forcarAberta?: boolean;
 }) {
-  const [aberta, setAberta] = useState(true);
+  const [abertaManual, setAbertaManual] = useState(false);
+  const aberta = forcarAberta || abertaManual;
 
   return (
     <div
@@ -28,7 +31,7 @@ function GlossarioCategCard({
     >
       <button
         type="button"
-        onClick={() => setAberta((v) => !v)}
+        onClick={() => setAbertaManual((v) => !v)}
         aria-expanded={aberta}
         style={{
           width: "100%",
@@ -295,7 +298,13 @@ export function AbaGlossario({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {categoriasFiltradas.map((cat) => (
-            <GlossarioCategCard key={cat.key} cat={cat} dark={dark} t={t} />
+            <GlossarioCategCard
+              key={cat.key}
+              cat={cat}
+              dark={dark}
+              t={t}
+              forcarAberta={!!q}
+            />
           ))}
         </div>
       )}
