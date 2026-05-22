@@ -75,15 +75,15 @@ Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselP
 
 ### Barra da Agenda — linha principal (obrigatório)
 
-**Espaçamento:** `gap: 10` entre carrossel, Hoje, modo de vista, Influencer e Operadora (`lib/filterBarStyles.ts`). Visual Influencer/Operadora: **Overview Influencer** (pill 999, `t.text` inativo).
+**Layout:** `getFilterBarWrapperStyle` + `getFilterBarRowStyle` (`gap: 10`). **Hoje**, **Mês/Semana/Dia**, Influencer e Operadora: pill 999 + `getFiltroBarPillStateStyle` (referência **Overview Influencer**).
 
 Ordem típica no strip `primaryTransparent*`:
 
 1. Carrossel de período (`carouselNavStyles`)
 2. **`FiltroHojeButton`** — atalho para hoje + modo Dia (`aria-pressed` quando dia corrente em vista Dia)
-3. **`FiltroModoVisualizacaoSelect`** — opções Mês / Semana / Dia; ícone `CalendarRange` 15px (Global + Brand)
+3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia
 4. **`FiltroInfluencerSelect`** (`mode="multiple"`) quando `showFiltroInfluencer`
-5. **`FiltroOperadoraSelect`** (`pill`) quando `showFiltroOperadora`
+5. **`FiltroOperadoraSelect`** quando `showFiltroOperadora`
 
 ```tsx
 import {
@@ -103,7 +103,7 @@ Segunda linha: chips **Status** e **Plataforma** (domínio Lives — sem compone
 - **`FiltroOperadoraSelect`** na mesma linha dos outros controles (Global + Brand).
 - Opção agregadora: **`Todas Operadoras`** — nunca “Todas as operadoras” nem “Operadoras” só.
 - **Sem** prefixo textual “Operadora” antes do select (remover padrão legado em Influencers).
-- `pill` + `minWidth={200}` quando o strip usar chips arredondados.
+- Defaults do componente (`pill` 999, `minWidth` 200) — não omitir agregadora **Todas Operadoras**.
 
 ### Badges de filtro ativo
 

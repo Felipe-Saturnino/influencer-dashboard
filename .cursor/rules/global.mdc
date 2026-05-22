@@ -341,15 +341,15 @@ Quando a página tiver **seletor de granularidade de calendário** na barra (ex.
 | Componente | `FiltroModoVisualizacaoSelect` (`src/components/FiltroModoVisualizacaoSelect.tsx`) |
 | Ícone | **`CalendarRange` 15px** no trigger — **não** `Calendar` (reservado ao **Histórico**) |
 | Opções | Lista `{ value, label }` da página (ex.: `mes`, `semana`, `dia`) |
-| Estilo | Pill **999**; dropdown custom (radio no painel); `color-mix` `--brand-action` 15% |
-| Pesquisa | Só se `options.length > 5` |
+| Estilo | Pill **999** + `getFiltroBarPillStateStyle` — inativo no valor `defaultValue` (Agenda: **`mes`**); ativo em Semana/Dia |
+| `defaultValue` | Valor “padrão” da página (ex.: `"mes"` na Agenda) |
+| Pesquisa no painel | Só se `options.length > 5` |
 | Carrossel | `carouselNavStyles` — passo e rótulo central dependem do modo (regra na página) |
 
 ```tsx
-import { FiltroModoVisualizacaoSelect } from "../components/dashboard";
-
 <FiltroModoVisualizacaoSelect
   value={view}
+  defaultValue="mes"
   onChange={setView}
   options={[
     { value: "mes", label: "Mês" },
@@ -359,7 +359,7 @@ import { FiltroModoVisualizacaoSelect } from "../components/dashboard";
 />
 ```
 
-**Proibido:** `SingleDropdown` local; cópia inline do dropdown de visualização; ícone `Calendar` neste controlo.
+**Proibido:** trigger sempre em destaque marca sem `defaultValue`; `SingleDropdown` local; ícone `Calendar` neste controlo.
 
 ### Botão Hoje (Agenda)
 

@@ -6,6 +6,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
@@ -235,14 +236,8 @@ export default function Agenda() {
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
-          {/* Linha principal — centralizada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={getFilterBarRowStyle()}>
             <button
               type="button"
               onClick={prev}
@@ -265,6 +260,7 @@ export default function Agenda() {
 
             <FiltroModoVisualizacaoSelect
               value={view}
+              defaultValue="mes"
               options={AGENDA_MODO_VISUALIZACAO_OPTIONS}
               onChange={(v) => setView(v as ViewMode)}
             />
@@ -280,8 +276,6 @@ export default function Agenda() {
 
             {showFiltroOperadora && operadorasList.length > 0 && (
               <FiltroOperadoraSelect
-                pill
-                minWidth={200}
                 value={filterOperadora}
                 onChange={setFilterOperadora}
                 operadoras={operadorasList}

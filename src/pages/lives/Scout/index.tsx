@@ -11,7 +11,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2, Plus } from "lucide-react";
 
 export type OperadoraScoutOpt = { slug: string; nome: string };
 
@@ -366,21 +366,6 @@ export default function Scout() {
         subtitle="Registre prospectos e acompanhe o funil do primeiro contato ao fechamento."
         brand={brand}
         t={t}
-        right={
-          perm.canCriarOk ? (
-            <button
-              type="button"
-              onClick={() => setModalNovo(true)}
-              style={{
-                padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
-                background: CTA_GRADIENT,
-                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-              }}
-            >
-              + Adicionar
-            </button>
-          ) : undefined
-        }
       />
 
       {/* Bloco 1: Cards Consolidados */}
@@ -397,67 +382,18 @@ export default function Scout() {
               ))}
             </div>
           </div>
-          <div>
-            <div style={{ marginBottom: 10, paddingLeft: 2 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                Cobertura de Plataformas
-              </div>
-              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4 }}>
-                Clique em uma plataforma para filtrar a lista; clique de novo para ver todos.
-              </div>
-            </div>
-            <div className="app-table-wrap">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, width: "100%" }}>
-              {PLATS_ORDEM.map((plat) => {
-                const count = porPlat[plat] ?? 0;
-                const cor = PLAT_COLOR[plat as Plataforma];
-                const filtroAtivo = filterPlat === plat;
-                return (
-                  <button
-                    key={plat}
-                    type="button"
-                    onClick={() => setFilterPlat(filtroAtivo ? "todas" : plat)}
-                    aria-pressed={filtroAtivo}
-                    aria-label={filtroAtivo ? `Remover filtro ${plat}` : `Filtrar por ${plat}`}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                      padding: "12px 16px", borderRadius: 18,
-                      background: brand.blockBg,
-                      border: filtroAtivo ? `2px solid ${cor}` : `1.5px solid ${cor}55`,
-                      boxShadow: filtroAtivo ? `0 0 0 2px ${cor}33` : "0 2px 8px rgba(0,0,0,0.08)",
-                      minWidth: 0,
-                      cursor: "pointer",
-                      font: "inherit",
-                      textAlign: "center",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center" }}>
-                      {plat}
-                    </span>
-                    <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0, alignSelf: "center" }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Bloco 2: Filtros (estilo Influencers) */}
+      {/* Bloco 2: Filtros (estilo Agenda / Influencers) */}
       <div style={{ marginBottom: 20 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          {/* Linha 1: Status (filtro de plataforma: chips em Cobertura de Plataformas) */}
+          {/* Linha 1: Status */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
             {STATUS_SCOUT_OPTS.map((s) => {
@@ -483,7 +419,44 @@ export default function Scout() {
             })}
           </div>
 
-          {/* Linha 2: Cachê / Views */}
+          {/* Linha 2: Plataforma (cobertura — filtro na lista) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+            {PLATS_ORDEM.map((plat) => {
+              const active = filterPlat === plat;
+              const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+              const nPlat = porPlat[plat] ?? 0;
+              return (
+                <button
+                  key={plat}
+                  type="button"
+                  onClick={() => setFilterPlat(active ? "todas" : plat)}
+                  aria-pressed={active}
+                  aria-label={active ? `Remover filtro ${plat}` : `Filtrar por ${plat}`}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                    border: `1px solid ${active ? color : color + "55"}`,
+                    background: active ? `${color}22` : `${color}11`,
+                    color: active ? color : color + "cc",
+                    fontSize: 12, fontWeight: active ? 700 : 500,
+                    fontFamily: FONT.body, transition: "all 0.15s",
+                    lineHeight: 1,
+                  }}
+                >
+                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                  <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>{plat}</span>
+                  <span style={{ width: 1, height: 10, background: `${color}44`, flexShrink: 0, alignSelf: "center" }} aria-hidden="true" />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: nPlat > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
+                    {nPlat}
+                  </span>
+                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Linha 3: Cachê / Views */}
           <div className="app-grid-2" style={{
             paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
             gap: 18,
@@ -552,19 +525,59 @@ export default function Scout() {
             </div>
           </div>
 
-          {/* Linha 3: Barra de Pesquisa */}
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+          {/* Linha 4: Busca + Adicionar */}
+          <div style={{
+            paddingTop: 12,
+            marginTop: 12,
+            borderTop: `1px solid ${t.cardBorder}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome ou e-mail..."
+              aria-label="Buscar prospecto por nome ou e-mail"
               style={{
-                width: "100%", boxSizing: "border-box", padding: "10px 16px",
-                borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-                fontFamily: FONT.body, outline: "none",
+                flex: "1 1 200px",
+                minWidth: 0,
+                boxSizing: "border-box",
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                outline: "none",
               }}
             />
+            {perm.canCriarOk && (
+              <button
+                type="button"
+                onClick={() => setModalNovo(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexShrink: 0,
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: "pointer",
+                  background: CTA_GRADIENT,
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <Plus size={14} aria-hidden="true" />
+                Adicionar
+              </button>
+            )}
           </div>
 
           {(filterStatus !== "todos" || filterPlat !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax) || (viewsMax > 0 && viewsLimit < viewsMax)) && (

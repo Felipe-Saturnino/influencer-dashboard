@@ -3,6 +3,12 @@ import { CalendarRange, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
+import {
+  FILTRO_BAR_PILL_GAP,
+  FILTRO_BAR_PILL_PADDING,
+  getFiltroBarPillStateStyle,
+  getFiltroCampoAtivoStyle,
+} from "../lib/filterBarStyles";
 
 export type ModoVisualizacaoOption = { value: string; label: string };
 
@@ -10,10 +16,12 @@ export interface FiltroModoVisualizacaoSelectProps {
   value: string;
   onChange: (value: string) => void;
   options: readonly ModoVisualizacaoOption[];
+  /** Valor considerado “padrão” (estilo inativo no trigger). Default: primeira opção. */
+  defaultValue?: string;
+  /** Destaque no trigger quando valor ≠ `defaultValue` (default true). */
+  highlightWhenNotDefault?: boolean;
   disabled?: boolean;
-  /** Prefixo do `aria-label` do trigger (padrão: Modo de visualização). */
   ariaLabelPrefix?: string;
-  /** `aria-label` do listbox (padrão: Selecionar modo de visualização). */
   listboxAriaLabel?: string;
 }
 
@@ -30,21 +38,27 @@ function useDropdownAlign(open: boolean, triggerRef: React.RefObject<HTMLButtonE
 }
 
 /**
- * Seleção única de modo de visualização de período (ex.: Mês / Semana / Dia na Agenda).
- * Layout alinhado a `FiltroInfluencerSelect` / `FiltroOperadoraSelect` (pill 999, dropdown custom).
- * Ícone padrão: `CalendarRange` 15px — distinto do botão Histórico (`Calendar`).
+ * Seleção única de modo de visualização (ex.: Mês / Semana / Dia na Agenda).
+ * Trigger com o mesmo pill/estados que Operadora, Influencer e Histórico (Overview Influencer).
  */
 export function FiltroModoVisualizacaoSelect({
   value,
   onChange,
   options,
+  defaultValue,
+  highlightWhenNotDefault = true,
   disabled = false,
   ariaLabelPrefix = "Modo de visualização",
   listboxAriaLabel = "Selecionar modo de visualização",
 }: FiltroModoVisualizacaoSelectProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const accentColor = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
+  const resolvedDefault = defaultValue ?? options[0]?.value ?? "";
+  const isHighlighted = highlightWhenNotDefault && value !== resolvedDefault;
+  const stateStyle = getFiltroBarPillStateStyle(t, brand, isHighlighted);
+  const activeOptionStyle = getFiltroCampoAtivoStyle(brand);
+  const accentColor = activeOptionStyle.color;
+
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -69,7 +83,6 @@ export function FiltroModoVisualizacaoSelect({
     [options, value]
   );
 
-  const enableSearch = options.length > 5;
   const panelStyle: CSSProperties = {
     position: "absolute",
     top: "calc(100% + 6px)",
@@ -82,29 +95,8 @@ export function FiltroModoVisualizacaoSelect({
     padding: 8,
     minWidth: 160,
     boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-    maxHeight: enableSearch ? "min(320px, 55vh)" : 240,
+    maxHeight: 240,
     overflowY: "auto",
-  };
-
-  const triggerStyle: CSSProperties = {
-    padding: "6px 14px",
-    borderRadius: 999,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: disabled ? "not-allowed" : "pointer",
-    outline: "none",
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    whiteSpace: "nowrap",
-    lineHeight: 1.25,
-    opacity: disabled ? 0.6 : 1,
-    border: `1px solid ${accentColor}`,
-    background: brand.useBrand
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)",
-    color: accentColor,
-    fontWeight: 700,
   };
 
   return (
@@ -118,7 +110,22 @@ export function FiltroModoVisualizacaoSelect({
         aria-controls={listboxId}
         aria-label={`${ariaLabelPrefix} — ${triggerLabel}`}
         onClick={() => !disabled && setOpen((o) => !o)}
-        style={triggerStyle}
+        style={{
+          padding: FILTRO_BAR_PILL_PADDING,
+          borderRadius: 999,
+          fontSize: 13,
+          fontFamily: FONT.body,
+          cursor: disabled ? "not-allowed" : "pointer",
+          outline: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: FILTRO_BAR_PILL_GAP,
+          whiteSpace: "nowrap",
+          lineHeight: 1.25,
+          transition: "all 0.15s",
+          opacity: disabled ? 0.6 : 1,
+          ...stateStyle,
+        }}
       >
         <CalendarRange size={15} strokeWidth={2} aria-hidden="true" />
         {triggerLabel}
@@ -151,9 +158,7 @@ export function FiltroModoVisualizacaoSelect({
                   padding: "8px 12px",
                   borderRadius: 8,
                   border: "none",
-                  background: selected
-                    ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                    : "transparent",
+                  background: selected ? activeOptionStyle.background : "transparent",
                   color: selected ? accentColor : t.text,
                   fontSize: 12,
                   fontFamily: FONT.body,

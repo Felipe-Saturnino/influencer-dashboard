@@ -253,8 +253,8 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
 | Busca textual | `Search` | 14–16 | À esquerda do `<input type="search">`, `aria-label` no input |
 | Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
-| Modo de vista (Mês/Semana/Dia) | `CalendarRange` | 15 | **`FiltroModoVisualizacaoSelect`** — dropdown na barra; ver Global |
-| Atalho Hoje (Agenda) | `History` | 15 | **`FiltroHojeButton`** — pill 999; ver Global § Botão Hoje |
+| Modo de vista (Mês/Semana/Dia) | `CalendarRange` | 15 | **`FiltroModoVisualizacaoSelect`** — `getFiltroBarPillStateStyle`; inativo no `defaultValue` |
+| Atalho Hoje (Agenda) | `History` | 15 | **`FiltroHojeButton`** — `getFiltroBarPillStateStyle`; ver Global § Botão Hoje |
 | Carregando (secundário) | `Clock` | 12 | Texto “Carregando…” — não é filtro |
 
 **Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.

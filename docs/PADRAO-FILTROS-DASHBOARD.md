@@ -56,7 +56,7 @@ import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../lib/filter
 
 ---
 
-## Visual unificado dos pills (Operadora, Influencer, Histórico, Hoje)
+## Visual unificado dos pills (Operadora, Influencer, Histórico, Hoje, Mês/Semana/Dia)
 
 | Propriedade | Inativo | Ativo |
 |-------------|---------|-------|
@@ -77,9 +77,22 @@ Implementação: `getFiltroBarPillStateStyle(t, brand, active)` — **não** dup
 <FiltroInfluencerSelect mode="single" value={…} onChange={…} influencers={…} />
 
 <FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
+
+<FiltroModoVisualizacaoSelect
+  value={view}
+  defaultValue="mes"
+  onChange={setView}
+  options={[
+    { value: "mes", label: "Mês" },
+    { value: "semana", label: "Semana" },
+    { value: "dia", label: "Dia" },
+  ]}
+/>
 ```
 
-Rótulo do carrossel com Histórico ligado: **`Todo o período`**.
+- **Hoje:** `aria-pressed` quando dia corrente em modo Dia; ativo = estilo marca.
+- **Modo:** inativo com valor `defaultValue` (**Mês** na Agenda); Semana/Dia = ativo.
+- Histórico (dashboards): rótulo do carrossel **`Todo o período`** quando ligado.
 
 ---
 
@@ -92,11 +105,18 @@ Rótulo do carrossel com Histórico ligado: **`Todo o período`**.
 
 ---
 
+## Agenda — barra de referência
+
+`src/pages/lives/Agenda/index.tsx` — carrossel + **Hoje** + **Mês/Semana/Dia** + Influencer + Operadora na mesma linha (`getFilterBarRowStyle`). Sem `FiltroHistoricoButton`.
+
+---
+
 ## Checklist rápido
 
 - [ ] Wrapper `getFilterBarWrapperStyle` (`12px 20px`, `primaryTransparent*`)
 - [ ] Linha com **`gap: 10`**
 - [ ] Histórico: `FiltroHistoricoButton` (estados partilhados)
+- [ ] Agenda: `FiltroHojeButton` + `FiltroModoVisualizacaoSelect` com `defaultValue="mes"`
 - [ ] Operadora + Influencer nos componentes canónicos
 - [ ] Carrossel: `lib/carouselNavStyles.ts`
 
@@ -112,7 +132,9 @@ Rótulo do carrossel com Histórico ligado: **`Todo o período`**.
 | Operadora | `src/components/FiltroOperadoraSelect.tsx` |
 | Influencer | `src/components/FiltroInfluencerSelect.tsx` |
 | Hoje | `src/components/dashboard/FiltroHojeButton.tsx` |
+| Modo Mês/Semana/Dia | `src/components/FiltroModoVisualizacaoSelect.tsx` |
+| Agenda (barra completa) | `src/pages/lives/Agenda/index.tsx` |
 
 ---
 
-*Última atualização: Histórico/Hoje alinhados a Operadora/Influencer via `getFiltroBarPillStateStyle`.*
+*Última atualização: Agenda (Hoje + período) com `getFiltroBarPillStateStyle` e `defaultValue="mes"`.*
