@@ -804,7 +804,7 @@ function BlocoSolicitacoes({
         <BlocoLabel label="Solicitações" />
         {podeSolicitar ? (
           <CtaCriarButton type="button" onClick={() => void aoClicarSolicitar()}>
-            Solicitar
+            Solicitar Banca
           </CtaCriarButton>
         ) : null}
       </div>

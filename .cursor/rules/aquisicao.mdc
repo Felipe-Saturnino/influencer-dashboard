@@ -61,7 +61,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Vazio filtro: `Nenhuma solicitação em aberto neste filtro.`
 - Responsivo: &lt;768px ocultar CPF/Data; &lt;480px cards verticais.
 - FilterBar: **`FiltroInfluencerSelect`** (`mode="multiple"`, agregadora **Todos Influencers**) + **`FiltroOperadoraSelect`** (`pill`, Todas Operadoras) — Financeiro e Banca de Jogo.
-- CTA nova solicitação (influencer/agência): **`CtaCriarButton`** no bloco Solicitações — rótulo visível **`Solicitar`** (sem `+` no texto; ícone `Plus` no componente). Confirmação no modal: botão **Solicitar** no rodapé (`ModalSolicitar`) — migração de modais em fase seguinte.
+- CTA nova solicitação (influencer/agência): **`CtaCriarButton`** no bloco Solicitações — rótulo visível **`Solicitar Banca`** (ícone `Plus` 14px no componente; sem `+` no texto). Confirmação no modal: botão **Solicitar** no rodapé (`ModalSolicitar`) — migração de modais em fase seguinte.
 - **Handoff:** liberar banca, operadora, histórico.
 
 ---

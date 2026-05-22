@@ -294,7 +294,7 @@ export default function AfiliadosNetwork() {
             />
             {perm.canCriarOk && (
               <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
-                Adicionar
+                Novo Afiliado
               </CtaCriarButton>
             )}
           </div>

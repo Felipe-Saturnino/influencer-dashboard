@@ -496,7 +496,7 @@ export function GerenciamentoPostagens({
               setModalCriar(true);
             }}
           >
-            Criar
+            Nova Postagem
           </CtaCriarButton>
         }
       />

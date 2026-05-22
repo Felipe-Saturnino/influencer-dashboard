@@ -263,7 +263,8 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - Funções de sync/email: `console.error(e)` + fallback PT-BR nos `catch`; **`resData.erro`** / `resData.error` da edge function permitidos no `try`.
 - Confirmações antes de ações externas (sync/email) — manter; overlay mínimo **`rgba(0,0,0,0.65)`**.
 - Filtros de log: `aria-pressed` + chip ativo com **`color-mix`** + `--brand-primary` (não `BRAND.roxoVivo + "22"`).
-- CTAs (`btnAcao`, Adicionar CIDR, Confirmar): gradiente `var(--brand-primary)` + `var(--brand-secondary)` — nunca `--brand-action`.
+- CTA página (allowlist CIDR): **`CtaCriarButton`** — rótulo **`Nova Rede`** (`Plus` 14px; Brand §3).
+- CTAs linha/modal (`btnAcao`, Confirmar, Salvar CIDR): gradiente `var(--brand-primary)` + `var(--brand-secondary)` — nunca `--brand-action`.
 - CTAs Sync/Enviar: `Loader2` branco durante operação (`AcaoCtaContent`).
 - 3 tabelas: `getThStyle`/`getTdStyle`, `app-table-wrap`, `<caption hidden>`, `scope="col"`, hover + `zebraStripe`.
 - Modal CIDR: `ref + setTimeout(100)` no prefixo; `90dvh`; Escape.

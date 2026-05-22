@@ -45,7 +45,7 @@ Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.
 | `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | Título visual legado `Playbook — Influencers` até unificação com menu |
 | `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
 | `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
-| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) |
+| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
 
 ```tsx
 // Família A — ícone + h1 + subtítulo

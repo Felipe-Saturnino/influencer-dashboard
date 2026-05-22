@@ -557,7 +557,7 @@ export default function Scout() {
             />
             {perm.canCriarOk && (
               <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
-                Adicionar
+                Novo Influencer
               </CtaCriarButton>
             )}
           </div>

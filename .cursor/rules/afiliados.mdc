@@ -42,13 +42,10 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 
 ---
 
-## CTA — Gradiente (dentro do componente)
+## CTA de criação na página (Network)
 
-```tsx
-const ctaGradient = brand.useBrand
-  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-  : "linear-gradient(135deg, #4a2082, #1e36f8)";
-```
+- **`CtaCriarButton`** — rótulo visível **`Novo Afiliado`** (ícone `Plus` 14px no componente; ver Brand §3 e `docs/PADRAO-CTA-CRIAR.md`).
+- Modais / linha: gradiente legado via `getCtaCriarGradient` até migração — **não** duplicar `<Plus>` no markup.
 
 ---
 

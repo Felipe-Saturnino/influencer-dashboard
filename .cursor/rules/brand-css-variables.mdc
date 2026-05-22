@@ -72,9 +72,9 @@ Helpers partilhados: `getCtaCriarGradient` / `CtaCriarButton` (`lib/ctaCriarStyl
 
 ## 3. CTAs, chips e `color-mix`
 
-### CTA de criação na página (Nova Live, Adicionar, Criar, …)
+### CTA de criação na página (`CtaCriarButton`)
 
-**Componente obrigatório:** `CtaCriarButton` — texto visível + ícone **`Plus` 14px** (Lucide); **não** prefixar `+` no label.
+**Componente obrigatório:** `CtaCriarButton` — ícone **`Plus` 14px** (Lucide) **sempre** à esquerda do texto (implementado no componente; **não** repetir `+` no `children` nem `<Plus>` manual ao lado).
 
 | Propriedade | Valor |
 |-------------|--------|
@@ -85,6 +85,9 @@ Helpers partilhados: `getCtaCriarGradient` / `CtaCriarButton` (`lib/ctaCriarStyl
 | Cor do texto | **`#fff`** |
 | Gradiente **Spin** (todos os perfis sem whitelabel) | `linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))` — referência Scout |
 | Gradiente **operadora** (`useBrand`) | `linear-gradient(135deg, var(--brand-action), var(--brand-contrast))` |
+| `data-cta-surface` | **`page`** (inventário / varredura) |
+
+**Rótulos (`children` = texto visível):** preferir **Novo/Nova** + entidade — catálogo em `docs/PADRAO-CTA-CRIAR.md`. Exemplos: `Nova Live`, `Novo Influencer`, `Solicitar Banca`, `Nova Postagem`, `Nova Rede`.
 
 ```tsx
 import { CtaCriarButton } from "../components/CtaCriarButton";
@@ -92,7 +95,8 @@ import { CtaCriarButton } from "../components/CtaCriarButton";
 <CtaCriarButton onClick={abrirModal}>Nova Live</CtaCriarButton>
 ```
 
-- `loading` + `loadingLabel` quando houver verificação assíncrona (ex.: Agenda).
+- `loading` + `loadingLabel` quando houver verificação assíncrona (ex.: Agenda — **Verificando...**).
+- `aria-label` igual ao texto visível quando o botão for só ícone+texto (default: usar o mesmo `children`).
 - `disabledBackground` só quando o domínio exigir cinza em `disabled` (ex.: Status Técnico).
 - **Salvar** em modais e outros CTAs secundários: fora deste contrato até migração explícita.
 

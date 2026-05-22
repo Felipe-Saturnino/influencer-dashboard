@@ -566,6 +566,8 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 
 ### Scout
 
+- CTA novo prospecto: **`CtaCriarButton`** na barra de filtros — rótulo **`Novo Influencer`** (`Plus` 14px no componente; Brand §3).
+
 **`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 
 **`PLAT_METRICA` — sempre em PT-BR:**

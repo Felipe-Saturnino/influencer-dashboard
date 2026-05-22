@@ -41,16 +41,39 @@ Botões de fluxo **criar/adicionar** na página (não confundir com **Salvar** e
 
 **Varredura:** `node scripts/scan-cta-legacy.mjs` — secções `PÁGINA (migrado)` e `MODAL (legado)`.
 
-## Páginas migradas (CTA na página — `CtaCriarButton`)
+## Ícone `Plus` (obrigatório)
 
-Agenda (Nova Live), Scout, Network, Campanhas (Nova Campanha), Figurinos, Gestão de Prestadores, Organograma, Vagas, Portal RH (Gerenciamento), Gestão de Usuários (Novo Usuário), Gestão de Operadoras (Nova Operadora), Gestão de Mesas (Nova mesa), Status Técnico (Adicionar CIDR), Banca de Jogo (Solicitar).
+O ícone **não** vai no `children` — é renderizado **só** dentro de `CtaCriarButton` (`Plus` 14px; em `loading`, `Loader2` 14px). **Proibido** duplicar `+` no texto ou montar outro `<Plus>` ao lado do componente.
+
+Inventário: `node scripts/list-cta-criar.mjs`
+
+## Rótulos canónicos (`children` = texto na tela)
+
+Preferir **Novo/Nova** + entidade do domínio (igual ao menu quando fizer sentido). `aria-label` = mesmo texto visível, salvo exceção documentada na secção.
+
+| Página (menu) | Texto do botão |
+|---------------|----------------|
+| Agenda | Nova Live |
+| Banca de Jogo | Solicitar Banca |
+| Campanhas | Nova Campanha |
+| Figurinos | Cadastrar peça |
+| Gestão de Mesas | Nova mesa |
+| Gestão de Operadoras | Nova Operadora |
+| Gestão de Prestadores | Novo Prestador |
+| Gestão de Usuários | Novo Usuário |
+| Network | Novo Afiliado |
+| Organograma | Nova diretoria |
+| Portal de RH | Nova Postagem |
+| Scout | Novo Influencer |
+| Status Técnico | Nova Rede |
+| Vagas | Nova vaga |
 
 ## Exemplo
 
 ```tsx
 import { CtaCriarButton } from "../components/CtaCriarButton";
 
-<CtaCriarButton onClick={abrirNovo}>Adicionar</CtaCriarButton>
+<CtaCriarButton onClick={abrirNovo}>Novo Afiliado</CtaCriarButton>
 
 <CtaCriarButton loading={checando} loadingLabel="Verificando...">
   Nova Live

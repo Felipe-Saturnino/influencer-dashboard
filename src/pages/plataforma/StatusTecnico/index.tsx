@@ -1776,9 +1776,9 @@ export default function StatusTecnico() {
               }}
               disabledBackground={BRAND.cinza}
               style={{ marginBottom: 20 }}
-              aria-label="Adicionar prefixo CIDR"
+              aria-label="Nova Rede"
             >
-              Adicionar
+              Nova Rede
             </CtaCriarButton>
           )}
         </div>
