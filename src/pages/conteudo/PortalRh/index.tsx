@@ -18,8 +18,6 @@ import { PageHeader } from "../../../components/PageHeader";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
 
-type RhPostagemStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
-
 function isPostagemPublica(status: RhPostagemStatus | string | null | undefined): boolean {
   return !status || status === "publicado";
 }
