@@ -180,7 +180,10 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 | **`FiltroOperadoraSelect`** | `src/components/FiltroOperadoraSelect.tsx` | **Único** padrão para filtro de **lista de operadoras** na barra (ver tabela e snippet abaixo) |
 | **`FiltroHistoricoButton`** | `src/components/dashboard/FiltroHistoricoButton.tsx` | **Único** padrão para botão **Histórico** na barra (Overview Influencer) |
 | **`FiltroInfluencerSelect`** | `src/components/FiltroInfluencerSelect.tsx` | **Único** padrão para filtro de **influencer(s)** na barra (`mode` single \| multiple) |
-| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora nem influencer na barra): campanha, aba, status… |
+| **`FiltroModoVisualizacaoSelect`** | `src/components/FiltroModoVisualizacaoSelect.tsx` | Modo de vista de calendário na barra (Mês / Semana / Dia) — ícone `CalendarRange` 15px |
+| **`FiltroHojeButton`** | `src/components/dashboard/FiltroHojeButton.tsx` | Atalho **Hoje** na Agenda — ícone `History` 15px (não confundir com Histórico) |
+| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
+| `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
 | Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
 
@@ -219,6 +222,8 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
 | Busca textual | `Search` | 14–16 | À esquerda do `<input type="search">`, `aria-label` no input |
 | Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
+| Modo de vista (Mês/Semana/Dia) | `CalendarRange` | 15 | **`FiltroModoVisualizacaoSelect`** — dropdown na barra; ver Global |
+| Atalho Hoje (Agenda) | `History` | 15 | **`FiltroHojeButton`** — pill 999; ver Global § Botão Hoje |
 | Carregando (secundário) | `Clock` | 12 | Texto “Carregando…” — não é filtro |
 
 **Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.
@@ -355,6 +360,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
 - [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
 - [ ] Filtro de influencer(s): `FiltroInfluencerSelect` + agregadora **Todos Influencers** + pill 999
+- [ ] Modo Mês/Semana/Dia (se aplicável): `FiltroModoVisualizacaoSelect` + `CalendarRange` 15px
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`

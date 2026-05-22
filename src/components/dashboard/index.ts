@@ -25,6 +25,16 @@ export {
   type FiltroHistoricoButtonProps,
 } from "./FiltroHistoricoButton";
 export {
+  FiltroHojeButton,
+  HOJE_FILTRO_ARIA_LABEL,
+  type FiltroHojeButtonProps,
+} from "./FiltroHojeButton";
+export {
+  FiltroModoVisualizacaoSelect,
+  type FiltroModoVisualizacaoSelectProps,
+  type ModoVisualizacaoOption,
+} from "../FiltroModoVisualizacaoSelect";
+export {
   FiltroInfluencerSelect,
   INFLUENCER_FILTRO_ARIA_LABEL,
   INFLUENCER_FILTRO_TODOS_LABEL,

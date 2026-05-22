@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -12,16 +12,16 @@ import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { ViewMes, ViewSemana, ViewDia, type ViewMode } from "./AgendaCalendarViews";
-import { FiltroInfluencerSelect } from "../../../components/dashboard";
+import {
+  FiltroHojeButton,
+  FiltroInfluencerSelect,
+  FiltroModoVisualizacaoSelect,
+} from "../../../components/dashboard";
 import { PlatLogo } from "../../../components/PlatLogo";
 import {
-  CalendarDays,
   CalendarRange,
-  Check,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
   X,
   Loader2,
   Plus,
@@ -62,107 +62,15 @@ function toISO(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-// ─── SINGLE DROPDOWN (Visualização) ──────────────────────────────────────────
-interface SingleDropdownTheme {
-  cardBg: string;
-  cardBorder: string;
-  text: string;
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-interface SingleDropdownProps {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  icon?: React.ReactNode;
-  t: SingleDropdownTheme;
-}
-
-function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDropdownProps & { accent?: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const accentColor = accent ?? BRAND.roxoVivo;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const current = options.find(o => o.value === value);
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Modo de visualização: ${current?.label ?? value}`}
-        style={{
-          padding: "6px 14px", borderRadius: 999,
-          border: `1px solid ${accentColor}`,
-          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)" : `${accentColor}22`,
-          color: accentColor,
-          fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
-          cursor: "pointer", outline: "none",
-          display: "flex", alignItems: "center", gap: 6,
-          whiteSpace: "nowrap" as const,
-          lineHeight: 1,
-        }}
-      >
-        {icon && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>{icon}</span>}
-        <span style={{ display: "inline-flex", alignItems: "center" }}>{current?.label}</span>
-        {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" /> : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          style={{
-            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
-            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12, padding: 8, minWidth: 130,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}
-        >
-          {options.map(opt => {
-            const selected = opt.value === value;
-            return (
-              <button
-                type="button"
-                role="menuitem"
-                key={opt.value}
-                onClick={() => { onChange(opt.value); setOpen(false); }}
-                style={{
-                  width: "100%", padding: "8px 12px", borderRadius: 8,
-                  border: "none",
-                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)" : `${accentColor}22`) : "transparent",
-                  color: selected ? accentColor : t.text,
-                  fontSize: 12, fontFamily: FONT.body,
-                  cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "center", gap: 8,
-                  fontWeight: selected ? 700 : 400,
-                }}
-              >
-                <span style={{
-                  width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
-                  background: selected ? accentColor : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {selected ? <Check size={9} color="#fff" aria-hidden="true" /> : null}
-                </span>
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
+  { value: "mes", label: "Mês" },
+  { value: "semana", label: "Semana" },
+  { value: "dia", label: "Dia" },
+] as const;
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
@@ -249,7 +157,12 @@ export default function Agenda() {
     if (view === "dia")    d.setDate(d.getDate() + 1);
     setCurrent(d);
   }
-  function goToday() { setCurrent(new Date()); }
+  const filtroHojeAtivo = view === "dia" && isSameCalendarDay(current, new Date());
+
+  function aplicarFiltroHoje() {
+    setCurrent(new Date());
+    setView("dia");
+  }
 
   function headerTitle() {
     if (view === "mes")    return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
@@ -269,7 +182,6 @@ export default function Agenda() {
     boxShadow: cardShadow,
   };
 
-  const DEFAULT_CHIP_COLOR = "var(--brand-primary, #7c3aed)";
   const calendarViewProps = {
     current,
     livesForDay,
@@ -280,27 +192,6 @@ export default function Agenda() {
     setView,
     onOpenLive: (live: Live) => setModal({ open: true, live }),
   };
-  function chipActiveBg(color: string): string {
-    if (color.startsWith("var(")) return `color-mix(in srgb, ${color} 14%, transparent)`;
-    return `${color}22`;
-  }
-
-  const chipBase = (active: boolean, color: string = DEFAULT_CHIP_COLOR): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 999, fontSize: 13,
-    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
-    background: active ? chipActiveBg(color) : "transparent",
-    color: active ? color : t.textMuted,
-    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
-    transition: "all 0.15s",
-    display: "flex", alignItems: "center", gap: 6,
-    lineHeight: 1,
-  });
-
-  const VIEW_OPTIONS = [
-    { value: "mes",    label: "Mês"    },
-    { value: "semana", label: "Semana" },
-    { value: "dia",    label: "Dia"    },
-  ];
 
   async function tentarAbrirNovaLive() {
     if (!user) return;
@@ -397,15 +288,12 @@ export default function Agenda() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button type="button" onClick={goToday} style={chipBase(false)}>Hoje</button>
+            <FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
 
-            <SingleDropdown
+            <FiltroModoVisualizacaoSelect
               value={view}
-              options={VIEW_OPTIONS}
-              onChange={v => setView(v as ViewMode)}
-              icon={<CalendarDays size={13} aria-hidden="true" />}
-              t={t}
-              accent={brand.accent}
+              options={AGENDA_MODO_VISUALIZACAO_OPTIONS}
+              onChange={(v) => setView(v as ViewMode)}
             />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (

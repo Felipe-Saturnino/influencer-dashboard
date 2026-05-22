@@ -82,6 +82,7 @@ components/     # Compartilhados — usar antes de criar local
   dashboard/    # KpiCard, SectionTitle, SortTableTh, SelectComIcone, FunilVisual, DashboardPageHeader, …
   PageHeader.tsx
   FiltroInfluencerSelect.tsx
+  FiltroModoVisualizacaoSelect.tsx
   FiltroEntidadeMultiSelect.tsx
   OperacoesModal.tsx (ModalBase, ModalHeader)
   CampoObrigatorioMark.tsx
@@ -147,7 +148,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
 
 **Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`. Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
 
@@ -310,6 +311,53 @@ import { FiltroInfluencerSelect } from "../components/dashboard";
 **Proibido em código novo:** `SelectComIcone` + `User` para filtro de influencers na barra; `InfluencerDropdown` / `InfluencerMultiSelect`; agregadora “Todos os influencers” ou rótulo “Influencers” só no trigger vazio; `<select>` nativo na barra para este filtro.
 
 **Exceção:** outro layout só com **autorização explícita** de produto. Formulários/modais (campo obrigatório de influencer no cadastro) — **não** usar `FiltroInfluencerSelect`.
+
+### Modo de visualização de período (Mês / Semana / Dia) — barra
+
+Quando a página tiver **seletor de granularidade de calendário** na barra (ex.: Agenda de Lives), usar **`FiltroModoVisualizacaoSelect`**.
+
+| Regra | Valor |
+|--------|--------|
+| Componente | `FiltroModoVisualizacaoSelect` (`src/components/FiltroModoVisualizacaoSelect.tsx`) |
+| Ícone | **`CalendarRange` 15px** no trigger — **não** `Calendar` (reservado ao **Histórico**) |
+| Opções | Lista `{ value, label }` da página (ex.: `mes`, `semana`, `dia`) |
+| Estilo | Pill **999**; dropdown custom (radio no painel); `color-mix` `--brand-action` 15% |
+| Pesquisa | Só se `options.length > 5` |
+| Carrossel | `carouselNavStyles` — passo e rótulo central dependem do modo (regra na página) |
+
+```tsx
+import { FiltroModoVisualizacaoSelect } from "../components/dashboard";
+
+<FiltroModoVisualizacaoSelect
+  value={view}
+  onChange={setView}
+  options={[
+    { value: "mes", label: "Mês" },
+    { value: "semana", label: "Semana" },
+    { value: "dia", label: "Dia" },
+  ]}
+/>
+```
+
+**Proibido:** `SingleDropdown` local; cópia inline do dropdown de visualização; ícone `Calendar` neste controlo.
+
+### Botão Hoje (Agenda de Lives)
+
+Atalho para data corrente + modo Dia — **`FiltroHojeButton`** (`src/components/dashboard/FiltroHojeButton.tsx`).
+
+| Regra | Valor |
+|--------|--------|
+| Ícone | **`History` 15px** — distinto do Histórico (`Calendar`) e do modo de vista (`CalendarRange`) |
+| Estilo | Pill **999**; `aria-pressed` quando o dia corrente está selecionado em modo Dia |
+| `aria-label` | `HOJE_FILTRO_ARIA_LABEL` — “Ir para o dia de hoje” |
+
+```tsx
+import { FiltroHojeButton } from "../components/dashboard";
+
+<FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
+```
+
+**Escopo actual:** só **Agenda** (`lives/Agenda`). Não substituir `FiltroHistoricoButton` dos dashboards.
 
 ### Pesquisa dentro do filtro (> 5 valores)
 
@@ -509,7 +557,9 @@ Quando não houver skeleton para o bloco principal:
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
 - Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.
-- Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` ou pill retangular).
+- Modo **Mês/Semana/Dia** na barra sem `FiltroModoVisualizacaoSelect` ou com ícone `Calendar` no lugar de `CalendarRange`.
+- Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
+- Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Strings de vazio ou sem permissão diferentes das fixas acima.

@@ -71,6 +71,29 @@ Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselP
 - **Agenda:** `aria-label` `Período anterior` / `Próximo período`; rótulo = título da vista (mês/semana/dia).
 - **Feedback:** `Semana anterior` / `Próxima semana`; rótulo da semana ou `Todo o período` em Histórico.
 
+### Barra da Agenda — linha principal (obrigatório)
+
+Ordem típica no strip `primaryTransparent*`:
+
+1. Carrossel de período (`carouselNavStyles`)
+2. **`FiltroHojeButton`** — atalho para hoje + modo Dia (`aria-pressed` quando dia corrente em vista Dia)
+3. **`FiltroModoVisualizacaoSelect`** — opções Mês / Semana / Dia; ícone `CalendarRange` 15px (Global + Brand)
+4. **`FiltroInfluencerSelect`** (`mode="multiple"`) quando `showFiltroInfluencer`
+5. **`FiltroOperadoraSelect`** (`pill`) quando `showFiltroOperadora`
+
+```tsx
+import {
+  FiltroHojeButton,
+  FiltroModoVisualizacaoSelect,
+  FiltroInfluencerSelect,
+  FiltroOperadoraSelect,
+} from "../../../components/dashboard";
+```
+
+**Proibido na Agenda:** dropdown local de visualização (`SingleDropdown` duplicado); botão Hoje com `borderRadius: 10` ou ícone `Calendar`; usar `FiltroHistoricoButton` (modo acumulado de dashboards — Agenda não tem Histórico na barra).
+
+Segunda linha: chips **Status** e **Plataforma** (domínio Lives — sem componente global partilhado).
+
 ### Filtro de operadora (Agenda, Resultados, Feedback, Influencers)
 
 - **`FiltroOperadoraSelect`** na mesma linha dos outros controles (Global + Brand).
@@ -345,6 +368,8 @@ Toda string visível ao usuário deve estar em português do Brasil.
 ## Regras Específicas por Página
 
 ### Agenda
+
+**Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
 
 **Calendário — `gridAutoRows`:**
 ```tsx
@@ -677,6 +702,7 @@ const STATUS_SCOUT_COLOR = {
 
 - Nunca declarar `PlatLogo` localmente — importar de `src/components/PlatLogo`
 - Nunca filtro de influencer na barra fora de `FiltroInfluencerSelect` (agregadora **Todos Influencers**)
+- Nunca modo Mês/Semana/Dia ou botão Hoje na Agenda fora de `FiltroModoVisualizacaoSelect` / `FiltroHojeButton`
 - Nunca usar `window.confirm()` — padrão de dois cliques com estado inline
 - Nunca usar `window.alert()` — `setError()` com bloco vermelho inline
 - Nunca usar `▼ ▲ ✕ ✓ ⚠ ℹ 🗑 🕐 ✨ 🔒` como ícones — usar Lucide equivalente

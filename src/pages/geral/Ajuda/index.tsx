@@ -257,12 +257,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Modos de Visualização",
         texto:
-          "A agenda oferece três modos, selecionáveis no seletor de período:\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: sete colunas com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
+          "A agenda oferece três modos, selecionáveis no filtro em pill (ícone de calendário em intervalo — Mês, Semana ou Dia):\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: sete colunas com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
       },
       {
         subtitulo: "Navegação e Filtros",
         texto:
-          "Use as setas para avançar ou recuar no período, ou clique em Hoje para voltar à data atual.\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo da navegação de período. Para perfis com acesso a múltiplos influencers, o seletor de Influencers aparece na linha principal. Para perfis com acesso a múltiplas operadoras, o seletor de Operadora também aparece na linha principal.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "Use as setas para avançar ou recuar no período conforme o modo (mês, semana ou dia). O botão **Hoje** (pill, ícone distinto do Histórico dos dashboards) volta para a data atual e abre a visualização Dia — ele fica destacado quando você já está no dia de hoje nesse modo.\n\nNa mesma linha: filtro **Mês / Semana / Dia**, e — para perfis com escopo amplo — **Influencers** (**Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) e **Operadoras** (**Todas Operadoras**).\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
       },
       {
         subtitulo: "Criando uma Nova Live",
