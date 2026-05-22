@@ -11,6 +11,7 @@ import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import { onInputBlurBrand, onInputFocusBrand } from "./gestaoUsuariosHelpers";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 interface AbaUsuariosProps {
   /** Atalhos administrativos (criar/editar/desativar) só quando o utilizador é admin na app. */
@@ -244,24 +245,9 @@ export function AbaUsuarios({
           />
         </div>
         {modoAdmin && podeCriarUsuario ? (
-          <button
-            type="button"
-            onClick={abrirNovo}
-            style={{
-              background: BRAND.gradiente,
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 18px",
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
-            + Novo Usuário
-          </button>
+          <CtaCriarButton type="button" onClick={abrirNovo} style={{ flexShrink: 0 }}>
+            Novo Usuário
+          </CtaCriarButton>
         ) : null}
       </div>
 

@@ -8,6 +8,7 @@ import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/th
 import { Operadora } from "../../../types";
 import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -83,10 +84,6 @@ export default function GestaoOperadoras() {
   const ativas = operadoras.filter((o) => o.ativo).length;
   const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
   const thStyle = getThStyle(t);
-  const ctaNovaBg = dashBrand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
-
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -189,23 +186,15 @@ export default function GestaoOperadoras() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 16px" }}>
           <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>{contadorLabel}</span>
           {perm.canCriarOk && (
-            <button
+            <CtaCriarButton
               type="button"
-              onClick={() => { setEditando(null); setModalOpen(true); }}
-              style={{
-                background: ctaNovaBg,
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "9px 18px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 700,
+              onClick={() => {
+                setEditando(null);
+                setModalOpen(true);
               }}
             >
-              + Nova Operadora
-            </button>
+              Nova Operadora
+            </CtaCriarButton>
           )}
         </div>
 

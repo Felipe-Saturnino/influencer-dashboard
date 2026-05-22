@@ -8,7 +8,9 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader } from "../../../components/dashboard";
-import { Network, X, Eye, Pencil, Trash2, Loader2, Plus } from "lucide-react";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
 
 export type OperadoraOpt = { slug: string; nome: string };
 
@@ -112,9 +114,6 @@ function StatusAfiliadoBadge({ value }: { value: StatusAfiliado }) {
 export default function AfiliadosNetwork() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const funnelCardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const perm = usePermission("afiliados_network");
   const [list, setList] = useState<AfiliadoNetworkRow[]>([]);
@@ -294,28 +293,9 @@ export default function AfiliadosNetwork() {
               }}
             />
             {perm.canCriarOk && (
-              <button
-                type="button"
-                onClick={() => setModalNovo(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  flexShrink: 0,
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  cursor: "pointer",
-                  background: ctaGradient,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                }}
-              >
-                <Plus size={14} aria-hidden="true" />
+              <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
                 Adicionar
-              </button>
+              </CtaCriarButton>
             )}
           </div>
 
@@ -409,7 +389,7 @@ export default function AfiliadosNetwork() {
                   height: 44,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  background: ctaGradient,
+                  background: getCtaCriarGradient(brand),
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -479,7 +459,7 @@ export default function AfiliadosNetwork() {
                     borderRadius: 10,
                     border: "none",
                     cursor: "pointer",
-                    background: ctaGradient,
+                    background: getCtaCriarGradient(brand),
                     color: "#fff",
                     fontSize: 12,
                     fontWeight: 700,
@@ -734,9 +714,6 @@ function ModalEditar({
   const tabActiveBg = brand.useBrand
     ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
     : "rgba(124,58,237,0.15)";
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
   const [nome, setNome] = useState(row?.nome ?? "");
   const [status, setStatus] = useState<StatusAfiliado>(row?.status ?? "visualizado");
@@ -1200,7 +1177,7 @@ function ModalEditar({
               border: "none",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
-              background: ctaGradient,
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontSize: 13,
               fontWeight: 700,

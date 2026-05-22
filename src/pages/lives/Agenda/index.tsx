@@ -19,14 +19,8 @@ import {
   FiltroModoVisualizacaoSelect,
 } from "../../../components/dashboard";
 import { PlatLogo } from "../../../components/PlatLogo";
-import {
-  CalendarRange,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Loader2,
-  Plus,
-} from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
@@ -174,9 +168,6 @@ export default function Agenda() {
     return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const card: React.CSSProperties = {
@@ -367,31 +358,13 @@ export default function Agenda() {
       <div style={card}>
         {perm.canCriarOk && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-            <button
-              type="button"
+            <CtaCriarButton
               onClick={() => void tentarAbrirNovaLive()}
-              disabled={checandoNovaLive}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "10px 20px", borderRadius: 10, border: "none",
-                cursor: checandoNovaLive ? "not-allowed" : "pointer",
-                opacity: checandoNovaLive ? 0.75 : 1,
-                background: ctaGradient,
-                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-              }}
+              loading={checandoNovaLive}
+              loadingLabel="Verificando..."
             >
-              {checandoNovaLive ? (
-                <>
-                  <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden="true" />
-                  Verificando...
-                </>
-              ) : (
-                <>
-                  <Plus size={14} aria-hidden="true" />
-                  Nova Live
-                </>
-              )}
-            </button>
+              Nova Live
+            </CtaCriarButton>
           </div>
         )}
         {loading ? (

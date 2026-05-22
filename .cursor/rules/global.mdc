@@ -153,7 +153,9 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+
+**CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast).
 
 **Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`. Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
 
@@ -633,6 +635,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Página nova sem atualizar MDC da secção (e Ajuda quando aplicável).
 - Página logada sem subtítulo sob o `h1`, ou `h1` diferente do `label` em `menu.ts`.
 - Ajuda/glossário com nome de página divergente do menu (ex.: “Resultado de Lives” em vez de “Resultados”).
+- CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.

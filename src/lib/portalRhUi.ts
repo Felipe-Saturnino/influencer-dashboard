@@ -1,8 +1,7 @@
 import type { useDashboardBrand } from "../hooks/useDashboardBrand";
+import { getCtaCriarGradient } from "./ctaCriarStyles";
 
-/** Gradiente de CTA do Portal RH (fora de dashboards — fallback Spin fixo). */
+/** @deprecated Preferir `getCtaCriarGradient` ou `CtaCriarButton`. */
 export function ctaGradientPortalRh(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+  return getCtaCriarGradient(brand);
 }

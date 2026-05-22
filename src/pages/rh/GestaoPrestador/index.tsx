@@ -8,7 +8,6 @@ import {
   History,
   Loader2,
   Pencil,
-  Plus,
   StickyNote,
   Trash2,
   UserCircle2,
@@ -22,6 +21,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
@@ -389,9 +390,7 @@ const blurSensivel: CSSProperties = {
 };
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+  return getCtaCriarGradient(brand);
 }
 
 type FormState = {
@@ -2639,27 +2638,9 @@ export default function RhPrestadoresPage() {
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
           {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-            <button
-              type="button"
-              onClick={abrirNovo}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              <Plus size={16} aria-hidden />
+            <CtaCriarButton type="button" onClick={abrirNovo}>
               Novo Prestador
-            </button>
+            </CtaCriarButton>
           ) : null}
           {abaPagina === "anotacoes" && perm.canEditarOk ? (
             <button

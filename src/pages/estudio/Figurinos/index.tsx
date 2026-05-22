@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Plus, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,6 +11,8 @@ import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { PageHeader } from "../../../components/PageHeader";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -50,12 +52,6 @@ const SECTION_LABEL_STYLE: CSSProperties = {
   letterSpacing: "0.08em",
   margin: 0,
 };
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-}
 
 function focusTabButton(id: string) {
   document.getElementById(id)?.focus();
@@ -793,31 +789,15 @@ export default function FigurinosPage() {
               Bipar código
             </button>
             {podeCriar ? (
-              <button
+              <CtaCriarButton
                 type="button"
                 onClick={() => {
                   setErroGlobal(null);
                   setModalCadastro(true);
                 }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexShrink: 0,
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradient(brand),
-                  color: "#fff",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
               >
-                <Plus size={16} aria-hidden />
                 Cadastrar peça
-              </button>
+              </CtaCriarButton>
             ) : null}
           </div>
 
@@ -1229,7 +1209,7 @@ export default function FigurinosPage() {
               padding: "10px 16px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -1315,7 +1295,7 @@ export default function FigurinosPage() {
                 padding: 12,
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,
@@ -1643,7 +1623,7 @@ function ModalCadastroPeca({
               padding: 12,
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -1708,7 +1688,7 @@ function ModalSucessoCadastro({
               padding: "12px 16px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -2112,7 +2092,7 @@ function ModalRetirada({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2355,7 +2335,7 @@ function ModalDevolucao({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2518,7 +2498,7 @@ function ModalManutencaoPeca({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2785,7 +2765,7 @@ function ModalDetalhe({
                 padding: "10px 18px",
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,

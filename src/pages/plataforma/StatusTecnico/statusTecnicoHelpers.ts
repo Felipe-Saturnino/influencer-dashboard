@@ -1,3 +1,5 @@
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+
 export const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 
 export const ERRO_SYNC_CDA =
@@ -24,9 +26,7 @@ export function ctaGradientStatus(
   cinza: string,
 ): string {
   if (disabled) return cinza;
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
+  return getCtaCriarGradient(brand);
 }
 
 export function tableRowHoverBg(isDark: boolean): string {

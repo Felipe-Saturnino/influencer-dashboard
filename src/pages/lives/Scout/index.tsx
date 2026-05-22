@@ -10,8 +10,10 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader } from "../../../components/dashboard";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2, Plus } from "lucide-react";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
 
 export type OperadoraScoutOpt = { slug: string; nome: string };
 
@@ -42,7 +44,6 @@ const STATUS_SCOUT_COLOR: Record<StatusScout, string> = {
 
 const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "Cassino"] as const;
 
-const CTA_GRADIENT = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 const SLIDER_TRACK_GRADIENT = "linear-gradient(90deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 const SLIDER_THUMB_GRADIENT = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 
@@ -555,28 +556,9 @@ export default function Scout() {
               }}
             />
             {perm.canCriarOk && (
-              <button
-                type="button"
-                onClick={() => setModalNovo(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  flexShrink: 0,
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  cursor: "pointer",
-                  background: CTA_GRADIENT,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                }}
-              >
-                <Plus size={14} aria-hidden="true" />
+              <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
                 Adicionar
-              </button>
+              </CtaCriarButton>
             )}
           </div>
 
@@ -650,7 +632,7 @@ export default function Scout() {
           return (
             <div key={s.id} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", boxShadow: cardShadow }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: CTA_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: getCtaCriarGradient(brand), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
                   {(s.nome_artistico || "?")[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -727,7 +709,7 @@ export default function Scout() {
                     type="button"
                     onClick={() => setModal({ mode: "editar", scout: s })}
                     aria-label={`Editar prospecto ${s.nome_artistico}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: CTA_GRADIENT, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: getCtaCriarGradient(brand), color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
                   >
                     <Pencil size={13} aria-hidden="true" /> Editar
                   </button>
@@ -1462,7 +1444,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           <div style={{ flex: 1, minWidth: 0 }} />
           <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
           <button type="button" onClick={() => void handleSave()} disabled={saving}
-            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: CTA_GRADIENT, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: getCtaCriarGradient(brand), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving && criandoUsuario ? (
               <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
             ) : saving ? (

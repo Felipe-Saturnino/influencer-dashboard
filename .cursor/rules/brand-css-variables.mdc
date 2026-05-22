@@ -66,23 +66,46 @@ Obrigatório em páginas com header de marca, barra de filtros transparente, CTA
 | `primaryIconBg` / `primaryIconBorder` / `primaryIconColor` | Badge 28×28 ou 32×32 do header |
 | `primaryTransparentBg` / `primaryTransparentBorder` | **Barra de filtros** (strip transparente) |
 
-Helpers partilhados (implementação no `lib/`, regra aqui): ex. `ctaGradientPortalRh(brand)` — mesmo contrato do gradiente CTA abaixo.
+Helpers partilhados: `getCtaCriarGradient` / `CtaCriarButton` (`lib/ctaCriarStyles.ts`, `components/CtaCriarButton.tsx`).
 
 ---
 
 ## 3. CTAs, chips e `color-mix`
 
-### Gradiente CTA primário
+### CTA de criação na página (Nova Live, Adicionar, Criar, …)
+
+**Componente obrigatório:** `CtaCriarButton` — texto visível + ícone **`Plus` 14px** (Lucide); **não** prefixar `+` no label.
+
+| Propriedade | Valor |
+|-------------|--------|
+| `borderRadius` | **999** (pill — mesma família do Histórico) |
+| `padding` | **10px 20px** (referência Nova Live / Agenda) |
+| `fontSize` / `fontWeight` | **13** / **700** |
+| `gap` ícone–texto | **6** |
+| Cor do texto | **`#fff`** |
+| Gradiente **Spin** (todos os perfis sem whitelabel) | `linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))` — referência Scout |
+| Gradiente **operadora** (`useBrand`) | `linear-gradient(135deg, var(--brand-action), var(--brand-contrast))` |
 
 ```tsx
-const ctaGradient = brand.useBrand
-  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-  : "linear-gradient(135deg, #4a2082, #1e36f8)";
-// texto do botão sempre #fff
+import { CtaCriarButton } from "../components/CtaCriarButton";
+
+<CtaCriarButton onClick={abrirModal}>Nova Live</CtaCriarButton>
 ```
 
-- **Nunca** iniciar fallback Spin com `#7c3aed` no gradiente — usar `#4a2082` → `#1e36f8`.
-- Botão primário **sólido** (sem gradiente): só quando o layout exigir; preferir gradiente nos CTAs “+ Criar”, “Salvar” principais.
+- `loading` + `loadingLabel` quando houver verificação assíncrona (ex.: Agenda).
+- `disabledBackground` só quando o domínio exigir cinza em `disabled` (ex.: Status Técnico).
+- **Salvar** em modais e outros CTAs secundários: fora deste contrato até migração explícita.
+
+### Gradiente CTA genérico (legado / modais)
+
+```tsx
+import { getCtaCriarGradient } from "../lib/ctaCriarStyles";
+
+background: getCtaCriarGradient(brand);
+```
+
+- Fallback Spin nos `var()`: **#4a2082** → **#1e36f8** (alinhado ao Scout).
+- Botão primário **sólido** (sem gradiente): só quando o layout exigir.
 
 ### Chip / pill ativo e inativo na barra
 
@@ -371,7 +394,8 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - `rgba(124,58,237,…)` fixo em `dashboards/` ou quando `brand.useBrand`.
 - `brand.accent` em links externos.
 - `GiShare` / GameIcons no header de página.
-- Gradiente fallback com `#7c3aed` no início.
+- Gradiente fallback com `#7c3aed` no início (usar `CtaCriarButton` / `getCtaCriarGradient`).
+- CTA de criação inline sem `CtaCriarButton`; label com `+` em vez de ícone `Plus`.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
 - Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.

@@ -17,12 +17,12 @@ import {
   Loader2,
   MonitorCheck,
   Network,
-  Plus,
   RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { tabAtivaPrincipalStyle } from "../GestaoUsuarios/gestaoUsuariosHelpers";
@@ -1766,7 +1766,7 @@ export default function StatusTecnico() {
             Redes permitidas — check-in de prestadores
           </StatusSectionTitle>
           {perm.canEditarOk && (
-            <button
+            <CtaCriarButton
               type="button"
               onClick={() => {
                 setCidrErroForm(null);
@@ -1774,27 +1774,12 @@ export default function StatusTecnico() {
                 setNovoRotuloCidr("");
                 setModalCidrAdicionar(true);
               }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: "none",
-                background: ctaGradientStatus(dashBrand, false, BRAND.cinza),
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                flexShrink: 0,
-                marginBottom: 20,
-              }}
+              disabledBackground={BRAND.cinza}
+              style={{ marginBottom: 20 }}
               aria-label="Adicionar prefixo CIDR"
             >
-              <Plus size={16} aria-hidden="true" strokeWidth={2.5} />
               Adicionar
-            </button>
+            </CtaCriarButton>
           )}
         </div>
         {loading ? (

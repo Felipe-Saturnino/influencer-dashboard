@@ -5,9 +5,10 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { Pencil, Plus, Trash2, Loader2, AlertCircle, LayoutGrid } from "lucide-react";
+import { Pencil, Trash2, Loader2, AlertCircle, LayoutGrid } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Role } from "../../../types";
@@ -216,32 +217,15 @@ export default function GestaoMesas() {
             operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
           />
           {perm.canCriarOk && (
-            <button
+            <CtaCriarButton
               type="button"
               onClick={() => {
                 setEditando(null);
                 setModalOpen(true);
               }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: dashBrand.useBrand
-                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                  : "linear-gradient(135deg, #4a2082, #1e36f8)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "9px 18px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 700,
-              }}
             >
-              <Plus size={16} strokeWidth={2} aria-hidden />
               Nova mesa
-            </button>
+            </CtaCriarButton>
           )}
         </div>
       </div>

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Check, Clock, Loader2, Pencil, Plus } from "lucide-react";
+import { Archive, Check, Clock, Loader2, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -17,7 +16,7 @@ import {
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
-import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
@@ -104,7 +103,6 @@ export function GerenciamentoPostagens({
   onDadosAlterados: () => void;
 }) {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<PostagemGerenciamentoRow[]>([]);
@@ -491,30 +489,15 @@ export function GerenciamentoPostagens({
           </>
         }
         linhaAposSubabas={
-          <button
+          <CtaCriarButton
             type="button"
             onClick={() => {
               setEditRef(null);
               setModalCriar(true);
             }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: "none",
-              cursor: "pointer",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              background: ctaGradientPortalRh(brand),
-            }}
           >
-            <Plus size={16} aria-hidden />
             Criar
-          </button>
+          </CtaCriarButton>
         }
       />
 

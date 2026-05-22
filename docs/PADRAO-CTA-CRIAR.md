@@ -1,0 +1,44 @@
+# Padrão — CTA de criação (`CtaCriarButton`)
+
+Botões de fluxo **criar/adicionar** na página (não confundir com **Salvar** em modais — migração em fase seguinte).
+
+## Implementação
+
+| Ficheiro | Papel |
+|----------|--------|
+| `src/components/CtaCriarButton.tsx` | Componente |
+| `src/lib/ctaCriarStyles.ts` | `getCtaCriarGradient`, `getCtaCriarButtonStyle`, constantes |
+
+## Visual
+
+| Item | Valor |
+|------|--------|
+| Forma | `borderRadius: 999` |
+| Tamanho | `padding: 10px 20px`, `fontSize: 13`, `fontWeight: 700`, `gap: 6` |
+| Ícone | `Plus` Lucide **14px**, `aria-hidden` |
+| Texto | Branco `#fff` — **sem** `+` no label |
+
+## Gradiente
+
+- **Spin** (qualquer perfil, `useBrand === false`): Scout — `var(--brand-primary, #4a2082)` → `var(--brand-secondary, #1e36f8)`.
+- **Operadora** (`useBrand === true`): `var(--brand-action)` → `var(--brand-contrast)`.
+
+## Páginas migradas (toolbar criar)
+
+Agenda, Scout, Network, Campanhas, Figurinos, Gestão de Prestadores, Organograma, Vagas, Portal RH (Gerenciamento), Gestão de Usuários, Gestão de Operadoras, Gestão de Mesas, Status Técnico (Adicionar CIDR).
+
+## Exemplo
+
+```tsx
+import { CtaCriarButton } from "../components/CtaCriarButton";
+
+<CtaCriarButton onClick={abrirNovo}>Adicionar</CtaCriarButton>
+
+<CtaCriarButton loading={checando} loadingLabel="Verificando...">
+  Nova Live
+</CtaCriarButton>
+```
+
+---
+
+*Regras: `brand-css-variables.mdc` §3 · `global.mdc` componentes.*

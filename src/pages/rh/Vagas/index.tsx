@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, CheckCircle2, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { Briefcase, CheckCircle2, Loader2, Search, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -17,6 +17,8 @@ import {
 import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasCandidaturasPainel";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
 import { PageHeader } from "../../../components/PageHeader";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
@@ -43,11 +45,6 @@ const RH_VAGAS_SELECT = `
   candidato:rh_funcionarios ( id, nome )
 `.trim();
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 function textoMultilinha(s: string): string {
   const t = (s ?? "").trim();
@@ -297,7 +294,7 @@ export default function RhVagasPage() {
         padding: "8px 14px",
         borderRadius: 10,
         border: "none",
-        background: ctaGradient(brand),
+        background: getCtaCriarGradient(brand),
         color: "#fff",
         fontWeight: 700,
         fontSize: 13,
@@ -534,27 +531,9 @@ export default function RhVagasPage() {
                 </div>
                 <div style={{ flex: 1 }} />
                 {podeCriarVaga ? (
-                  <button
-                    type="button"
-                    onClick={() => setModalNovaVagaAberto(true)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "10px 16px",
-                      borderRadius: 12,
-                      border: "none",
-                      cursor: "pointer",
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      background: ctaGradient(brand),
-                    }}
-                  >
-                    <Plus size={16} aria-hidden />
+                  <CtaCriarButton type="button" onClick={() => setModalNovaVagaAberto(true)}>
                     Nova vaga
-                  </button>
+                  </CtaCriarButton>
                 ) : null}
               </div>
             </header>
@@ -747,7 +726,7 @@ export default function RhVagasPage() {
               padding: "10px 18px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontSize: 13,

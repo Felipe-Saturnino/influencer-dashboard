@@ -31,7 +31,11 @@ import {
 } from "../../../lib/rhStaffHorarioTurno";
 import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
-import { FiltroOperadoraSelect } from "../../../components/dashboard";
+import {
+  FiltroOperadoraSelect,
+  FiltroTurnoSelect,
+  GESTAO_STAFF_TURNO_FILTRO_OPCOES,
+} from "../../../components/dashboard";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
@@ -858,23 +862,10 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <p
-              id="staff-filtros-legenda"
-              style={{
-                textAlign: "center",
-                fontSize: 12,
-                fontWeight: 600,
-                color: t.textMuted,
-                margin: "0 0 10px",
-                fontFamily: FONT.body,
-              }}
-            >
-              Pesquisar / Operadora / Turno
-            </p>
             <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
               <div
                 role="group"
-                aria-labelledby="staff-filtros-legenda"
+                aria-label="Filtros de pesquisa, operadora e turno"
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
@@ -921,30 +912,14 @@ export default function RhGestaoStaffPage() {
                     minWidth={200}
                   />
                 </div>
-                <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
-                  <select
+                <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
+                  <FiltroTurnoSelect
                     id="staff-filtro-turno"
-                    aria-label="Filtrar por turno"
                     value={filtroTurnoStaff}
-                    onChange={(e) => setFiltroTurnoStaff(e.target.value as FiltroTurnoStaffTabela)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="nenhum">Nenhum</option>
-                    <option value="manha">Manhã</option>
-                    <option value="tarde">Tarde</option>
-                    <option value="noite">Noite</option>
-                    <option value="comercial">Comercial</option>
-                  </select>
+                    onChange={(v) => setFiltroTurnoStaff(v as FiltroTurnoStaffTabela)}
+                    options={GESTAO_STAFF_TURNO_FILTRO_OPCOES}
+                    minWidth={200}
+                  />
                 </div>
               </div>
             </div>

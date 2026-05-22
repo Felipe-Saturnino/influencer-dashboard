@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Network, Plus } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Network } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -23,6 +23,8 @@ import type {
 } from "../../../types/rhOrganograma";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
 import {
@@ -68,10 +70,6 @@ async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", id
     if (error) return error.message;
   }
   return null;
-}
-
-function ctaGradient(_brand: ReturnType<typeof useDashboardBrand>): string {
-  return "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
 function ModalFocusBody({ children }: { children: ReactNode }) {
@@ -795,27 +793,9 @@ export default function RhOrganogramaPage() {
         subtitle="Diretorias, gerências e times"
         actions={
           podeEditar && modo === "gerenciar" ? (
-            <button
-              type="button"
-              onClick={abrirNovaDiretoria}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              <Plus size={16} aria-hidden />
+            <CtaCriarButton type="button" onClick={abrirNovaDiretoria}>
               Nova diretoria
-            </button>
+            </CtaCriarButton>
           ) : null
         }
       />
@@ -1104,7 +1084,7 @@ export default function RhOrganogramaPage() {
                 ...inputStyle,
                 width: "auto",
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 cursor: salvandoDir ? "wait" : "pointer",
@@ -1214,7 +1194,7 @@ export default function RhOrganogramaPage() {
                 ...inputStyle,
                 width: "auto",
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 cursor: salvandoGer ? "wait" : "pointer",
@@ -1307,7 +1287,7 @@ export default function RhOrganogramaPage() {
                 ...inputStyle,
                 width: "auto",
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 cursor: salvandoTime ? "wait" : "pointer",
