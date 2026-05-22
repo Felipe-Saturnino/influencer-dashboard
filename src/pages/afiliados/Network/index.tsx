@@ -8,7 +8,7 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader } from "../../../components/dashboard";
-import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Network, X, Eye, Pencil, Trash2, Loader2, Plus } from "lucide-react";
 
 export type OperadoraOpt = { slug: string; nome: string };
 
@@ -123,8 +123,7 @@ export default function AfiliadosNetwork() {
   const [modalNovo, setModalNovo] = useState(false);
 
   const [search, setSearch] = useState("");
-  /** Vazio = mostrar todos exceto Fechado; com itens = apenas esses status */
-  const [funnelSel, setFunnelSel] = useState<StatusAfiliado[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraOpt[]>([]);
 
   useEffect(() => {
@@ -149,16 +148,14 @@ export default function AfiliadosNetwork() {
     void loadData();
   }, [loadData]);
 
-  const toggleFunnel = (s: StatusAfiliado) => {
-    setFunnelSel((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
-  };
-
   const filtered = list.filter((row) => {
     const q = search.trim().toLowerCase();
     if (q && !row.nome.toLowerCase().includes(q) && !(row.email ?? "").toLowerCase().includes(q)) return false;
-    if (funnelSel.length === 0) {
+    if (filterStatus === "todos") {
       if (row.status === "fechado") return false;
-    } else if (!funnelSel.includes(row.status)) return false;
+    } else if (row.status !== filterStatus) {
+      return false;
+    }
     return true;
   });
 
@@ -177,7 +174,7 @@ export default function AfiliadosNetwork() {
     );
   }
 
-  const hasFilters = funnelSel.length > 0 || !!search.trim();
+  const hasFilters = filterStatus !== "todos" || !!search.trim();
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -187,27 +184,6 @@ export default function AfiliadosNetwork() {
         subtitle="Funil de prospecção e conversão de prospectos em afiliados cadastrados."
         brand={brand}
         t={t}
-        right={
-          perm.canCriarOk ? (
-            <button
-              type="button"
-              onClick={() => setModalNovo(true)}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                background: ctaGradient,
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-              }}
-            >
-              + Adicionar
-            </button>
-          ) : undefined
-        }
       />
 
       {!loading && (
@@ -217,31 +193,23 @@ export default function AfiliadosNetwork() {
           </div>
           <div className="app-grid-kpi-4" style={{ width: "100%" }}>
             {STATUS_OPTS.map((s) => {
-              const active = funnelSel.includes(s);
               const cor = STATUS_COLOR[s];
               return (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => toggleFunnel(s)}
-                  aria-pressed={active}
-                  aria-label={`${active ? "Remover filtro" : "Filtrar por"} ${STATUS_LABEL[s]}, ${porStatus[s] ?? 0} cadastros`}
                   style={{
-                    textAlign: "left",
-                    cursor: "pointer",
-                    font: "inherit",
                     background: brand.blockBg,
-                    border: active ? `2px solid ${cor}` : `1px solid ${t.cardBorder}`,
+                    border: `1px solid ${t.cardBorder}`,
                     borderLeft: `3px solid ${cor}`,
                     borderRadius: 18,
                     padding: "16px 20px",
-                    boxShadow: active ? `0 0 0 2px ${cor}33` : funnelCardShadow,
+                    boxShadow: funnelCardShadow,
                     minWidth: 0,
                   }}
                 >
                   <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: brand.secondary, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_LABEL[s]}</div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -257,30 +225,106 @@ export default function AfiliadosNetwork() {
             padding: "12px 20px",
           }}
         >
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou e-mail..."
-            aria-label="Buscar afiliado por nome ou e-mail"
+          {/* Linha 1: Status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
+            {STATUS_OPTS.map((s) => {
+              const active = filterStatus === s;
+              const color = STATUS_COLOR[s];
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFilterStatus(active ? "todos" : s)}
+                  aria-pressed={active}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "5px 12px",
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    border: `1px solid ${active ? color : color + "55"}`,
+                    background: active ? `${color}22` : "transparent",
+                    color: active ? color : t.textMuted,
+                    fontSize: 12,
+                    fontWeight: active ? 700 : 400,
+                    fontFamily: FONT.body,
+                    transition: "all 0.15s",
+                    lineHeight: 1,
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
+                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Linha 2: Busca + Adicionar */}
+          <div
             style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              outline: "none",
+              paddingTop: 12,
+              marginTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
             }}
-          />
+          >
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nome ou e-mail..."
+              aria-label="Buscar afiliado por nome ou e-mail"
+              style={{
+                flex: "1 1 200px",
+                minWidth: 0,
+                boxSizing: "border-box",
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                outline: "none",
+              }}
+            />
+            {perm.canCriarOk && (
+              <button
+                type="button"
+                onClick={() => setModalNovo(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexShrink: 0,
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: "pointer",
+                  background: ctaGradient,
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <Plus size={14} aria-hidden="true" />
+                Adicionar
+              </button>
+            )}
+          </div>
+
           {hasFilters && (
             <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
               <button
                 type="button"
                 onClick={() => {
-                  setFunnelSel([]);
+                  setFilterStatus("todos");
                   setSearch("");
                 }}
                 style={{

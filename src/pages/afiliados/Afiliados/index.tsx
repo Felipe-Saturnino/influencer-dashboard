@@ -297,32 +297,60 @@ export default function Afiliados() {
       {showManagementUI && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {/* Linha 1: Status */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => {
                 const active = filterStatus === s;
                 const color = STATUS_COLOR[s];
                 return (
-                  <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)} aria-pressed={active} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, cursor: "pointer", border: `1px solid ${active ? color : color + "55"}`, background: active ? `${color}22` : "transparent", color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400, fontFamily: FONT.body, lineHeight: 1 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                    {STATUS_LABEL[s]}
-                    {active && <X size={9} aria-hidden="true" />}
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setFilterStatus(active ? "todos" : s)}
+                    aria-pressed={active}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted,
+                      fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                      lineHeight: 1,
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
+                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                   </button>
                 );
               })}
-              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
-                <>
-                  <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-                  <FiltroOperadoraSelect
-                    pill
-                    minWidth={200}
-                    value={filterOp}
-                    onChange={setFilterOp}
-                    operadoras={operadorasNoEscopo}
-                  />
-                </>
-              )}
             </div>
+
+            {/* Linha 2: Operadora */}
+            {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                justifyContent: "center",
+                width: "100%",
+                paddingTop: 12,
+                marginTop: 12,
+                borderTop: `1px solid ${t.cardBorder}`,
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
+                <FiltroOperadoraSelect
+                  pill
+                  minWidth={200}
+                  value={filterOp}
+                  onChange={setFilterOp}
+                  operadoras={operadorasNoEscopo}
+                />
+              </div>
+            )}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail..." aria-label="Buscar por nome ou e-mail" style={{ width: "100%", boxSizing: "border-box", padding: "10px 16px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none" }} />
             </div>
