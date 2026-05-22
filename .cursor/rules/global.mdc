@@ -228,7 +228,7 @@ Referência visual: **Overview Influencer**, Agenda, Feedback, Streamers.
 
 ### CTA de criação na barra de filtros
 
-Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar **`CtaCriarButton`** (Brand §3 e §5 — pill **999**, `padding` **10px 20px**, ícone **`Plus` 14px**). **Não** reutilizar o padding **6px 14px** dos pills de filtro. CTAs **Salvar**, **Editar** em modais e ações de linha ficam fora deste contrato até migração explícita.
+Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar **`CtaCriarButton`** (Brand §3 e §5 — `borderRadius` **10** como abas Overview Spin, `padding` **10px 20px**, ícone **`Plus` 14px**). **Não** reutilizar pill **999** nem padding **6px 14px** dos filtros. CTAs **Salvar**, **Editar** em modais e ações de linha ficam fora deste contrato até migração explícita.
 
 ### Espaçamento e visual dos campos (barra)
 

@@ -78,7 +78,7 @@ Helpers partilhados: `getCtaCriarGradient` / `CtaCriarButton` (`lib/ctaCriarStyl
 
 | Propriedade | Valor |
 |-------------|--------|
-| `borderRadius` | **999** (pill — mesma família do Histórico) |
+| `borderRadius` | **10** (mesmo raio das **abas** Overview Spin — não pill 999 dos filtros) |
 | `padding` | **10px 20px** (referência Nova Live / Agenda) |
 | `fontSize` / `fontWeight` | **13** / **700** |
 | `gap` ícone–texto | **6** |
@@ -228,11 +228,11 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | Regra | Valor |
 |-------|--------|
 | Componente | **`CtaCriarButton`** — ver §3 (não montar `<button>` inline na barra) |
-| Forma / tamanho | Pill **999**, **`padding: 10px 20px`**, `Plus` **14px** — **não** usar o padding **`6px 14px`** dos pills de filtro (Histórico, Operadora, Hoje, etc.) |
+| Forma / tamanho | **`borderRadius: 10`** (abas Overview Spin), **`padding: 10px 20px`**, `Plus` **14px** — **não** usar pill **999** nem padding **`6px 14px`** dos filtros |
 | Posição | Na linha do bloco, `gap: 10` com carrossel, selects e toggles; centralização da fileira conforme Global § Alinhamento |
 | Visual | Gradiente cheio (§3) — distinto do `color-mix` dos filtros **ativos** |
 
-**Proibido na barra:** CTA de criação com `borderRadius: 10`, label com `+` no texto em vez de ícone, ou gradiente inline duplicado.
+**Proibido na barra:** CTA de criação com `borderRadius: 999` (pill de filtro), label com `+` no texto em vez de ícone, ou gradiente inline duplicado.
 
 **Fora do bloco** (card da Agenda, `PageHeader`, toolbar de tabela): mesmo **`CtaCriarButton`** — §3; só muda o wrapper pai, não o contrato do botão.
 
@@ -434,6 +434,6 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
-- [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (pill 999, `10px 20px`, `Plus` 14) — não confundir com pills `6px 14px`
+- [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
 - [ ] Semântica de dado intacta (Global)

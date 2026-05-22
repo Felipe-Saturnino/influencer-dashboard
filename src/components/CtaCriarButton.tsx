@@ -20,7 +20,7 @@ export interface CtaCriarButtonProps extends Omit<ButtonHTMLAttributes<HTMLButto
 }
 
 /**
- * CTA primário de criação (+ label) — pill 999, gradiente Scout ou whitelabel action→contrast.
+ * CTA primário de criação (+ label) — `borderRadius` 10 (abas Overview Spin), gradiente Scout ou whitelabel.
  */
 export function CtaCriarButton({
   children,

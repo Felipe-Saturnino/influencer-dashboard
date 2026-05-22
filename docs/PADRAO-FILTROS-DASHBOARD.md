@@ -103,7 +103,7 @@ Quando **Adicionar / Criar / Nova …** ficar na **mesma strip** de filtros:
 | Item | Pills de filtro | CTA de criação |
 |------|-----------------|----------------|
 | Componente | `FiltroHistoricoButton`, `FiltroOperadoraSelect`, … | **`CtaCriarButton`** |
-| `borderRadius` | **999** | **999** |
+| `borderRadius` | **999** | **10** (abas Overview Spin) |
 | `padding` | **6px 14px** | **10px 20px** |
 | Ícone | conforme tipo (Calendar, Shield, …) | **`Plus` 14px** |
 | Fundo | `color-mix` quando ativo | gradiente cheio (ver `PADRAO-CTA-CRIAR.md`) |

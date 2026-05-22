@@ -13,7 +13,7 @@ Botões de fluxo **criar/adicionar** na página (não confundir com **Salvar** e
 
 | Item | Valor |
 |------|--------|
-| Forma | `borderRadius: 999` |
+| Forma | `borderRadius: 10` (referência: abas Overview / Posicionamento em Overview Spin) |
 | Tamanho | `padding: 10px 20px`, `fontSize: 13`, `fontWeight: 700`, `gap: 6` |
 | Ícone | `Plus` Lucide **14px**, `aria-hidden` |
 | Texto | Branco `#fff` — **sem** `+` no label |

@@ -1,8 +1,11 @@
 import type { CSSProperties } from "react";
 import { FONT } from "../constants/theme";
 
-/** Forma pill — alinhada ao Histórico (`borderRadius: 999`). */
-export const CTA_CRIAR_BORDER_RADIUS = 999;
+/**
+ * Raio das abas Overview Spin (`mesas_spin` — tablist Overview / Posicionamento).
+ * Não usar 999 (pill dos filtros); mantém padding 10×20 sem aumentar o botão.
+ */
+export const CTA_CRIAR_BORDER_RADIUS = 10;
 
 /** Dimensões — referência Nova Live (Agenda). */
 export const CTA_CRIAR_PADDING = "10px 20px" as const;
