@@ -16,12 +16,9 @@ import {
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
-import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
-import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -79,6 +76,64 @@ const ERRO_APROVAR =
 const ERRO_ARQUIVAR =
   "Não foi possível arquivar a postagem. Se o problema persistir, contate o suporte.";
 
+const SELECT_FILTRO_GER_STYLE_BASE = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  fontSize: 12,
+  fontFamily: FONT.body,
+  cursor: "pointer",
+  minWidth: 0,
+} as const;
+
+/** Filtros de tipo e status — renderizados no bloco de filtros da página (linha 3). */
+export function GerenciamentoPostagensFiltrosTipoStatus({
+  filtroTipo,
+  onFiltroTipoChange,
+  filtroStatus,
+  onFiltroStatusChange,
+}: {
+  filtroTipo: "todos" | RhPostagemTipoUi;
+  onFiltroTipoChange: (v: "todos" | RhPostagemTipoUi) => void;
+  filtroStatus: "todos" | RhPostagemStatus;
+  onFiltroStatusChange: (v: "todos" | RhPostagemStatus) => void;
+}) {
+  const { theme: t } = useApp();
+  const selectStyle = {
+    ...SELECT_FILTRO_GER_STYLE_BASE,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+  } as const;
+
+  return (
+    <>
+      <select
+        value={filtroTipo}
+        onChange={(e) => onFiltroTipoChange(e.target.value as typeof filtroTipo)}
+        aria-label="Filtrar por tipo de postagem"
+        style={selectStyle}
+      >
+        <option value="todos">Todos</option>
+        <option value="comunicado">Comunicados</option>
+        <option value="politica">Políticas e Normativas</option>
+        <option value="rh_talk">RH Talks</option>
+      </select>
+      <select
+        value={filtroStatus}
+        onChange={(e) => onFiltroStatusChange(e.target.value as typeof filtroStatus)}
+        aria-label="Filtrar por status da postagem"
+        style={selectStyle}
+      >
+        <option value="todos">Todos</option>
+        <option value="publicado">Publicado</option>
+        <option value="rascunho">Rascunho</option>
+        <option value="aprovacao">Aprovação</option>
+        <option value="arquivado">Arquivado</option>
+      </select>
+    </>
+  );
+}
+
 function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
   switch (status) {
     case "publicado":
@@ -98,23 +153,32 @@ export function GerenciamentoPostagens({
   categoriasCom,
   categoriasPol,
   onDadosAlterados,
+  buscaDeb,
+  modoHistorico,
+  idxMes,
+  mesesDisponiveis,
+  filtroTipo,
+  filtroStatus,
+  onMesesCarrosselChange,
+  onRegisterAbrirCriar,
 }: {
   categoriasCom: Categoria[];
   categoriasPol: Categoria[];
   onDadosAlterados: () => void;
+  buscaDeb: string;
+  modoHistorico: boolean;
+  idxMes: number;
+  mesesDisponiveis: MesCarrosselEntry[];
+  filtroTipo: "todos" | RhPostagemTipoUi;
+  filtroStatus: "todos" | RhPostagemStatus;
+  onMesesCarrosselChange: (meses: MesCarrosselEntry[]) => void;
+  onRegisterAbrirCriar?: (abrir: () => void) => void;
 }) {
   const { theme: t, user } = useApp();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<PostagemGerenciamentoRow[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-
-  const [filtroTipo, setFiltroTipo] = useState<"todos" | RhPostagemTipoUi>("todos");
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | RhPostagemStatus>("todos");
-  const [busca, setBusca] = useState("");
-  const [buscaDeb, setBuscaDeb] = useState("");
-  const [idxMes, setIdxMes] = useState(0);
-  const [modoHistorico, setModoHistorico] = useState(false);
 
   const [modalCriar, setModalCriar] = useState(false);
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
@@ -134,11 +198,6 @@ export function GerenciamentoPostagens({
       return col;
     });
   }, []);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);
-    return () => window.clearTimeout(id);
-  }, [busca]);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -302,21 +361,22 @@ export function GerenciamentoPostagens({
     void carregar();
   }, [carregar]);
 
-  const mesesDisponiveis = useMemo(
+  const mesesFromRows = useMemo(
     () => buildMesesCarrossel(rows.map((r) => ({ iso: r.publishedAt }))),
     [rows],
   );
 
   useEffect(() => {
-    if (mesesDisponiveis.length === 0) return;
-    setIdxMes((i) => Math.min(i, mesesDisponiveis.length - 1));
-  }, [mesesDisponiveis]);
+    onMesesCarrosselChange(mesesFromRows);
+  }, [mesesFromRows, onMesesCarrosselChange]);
 
   useEffect(() => {
-    if (rows.length > 0 && mesesDisponiveis.length > 0) {
-      setIdxMes(mesesDisponiveis.length - 1);
-    }
-  }, [rows.length, mesesDisponiveis.length]);
+    onRegisterAbrirCriar?.(() => {
+      setEditRef(null);
+      setModalCriar(true);
+    });
+    return () => onRegisterAbrirCriar?.(() => {});
+  }, [onRegisterAbrirCriar]);
 
   const rowsFiltradas = useMemo(() => {
     let list = rows;
@@ -374,18 +434,6 @@ export function GerenciamentoPostagens({
     });
     return list;
   }, [rowsFiltradas, sortCol, sortDir]);
-
-  const selectFiltroStyle = {
-    padding: "8px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontSize: 12,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    minWidth: 0,
-  } as const;
 
   async function aprovarPostagem(row: PostagemGerenciamentoRow) {
     if (!user?.id) return;
@@ -452,56 +500,6 @@ export function GerenciamentoPostagens({
 
   return (
     <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento" tabIndex={0}>
-      <PortalRhBlocoFiltros
-        meses={mesesDisponiveis}
-        idxMes={idxMes}
-        onIdxMesChange={setIdxMes}
-        modoHistorico={modoHistorico}
-        onModoHistoricoChange={setModoHistorico}
-        busca={busca}
-        onBuscaChange={setBusca}
-        buscaPlaceholder={PAGE_SEARCH.portalRh}
-        buscaAriaLabel="Pesquisar postagens por palavras-chave"
-        linhaSubabas={
-          <>
-            <select
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
-              aria-label="Filtrar por tipo de postagem"
-              style={selectFiltroStyle}
-            >
-              <option value="todos">Todos</option>
-              <option value="comunicado">Comunicados</option>
-              <option value="politica">Políticas e Normativas</option>
-              <option value="rh_talk">RH Talks</option>
-            </select>
-            <select
-              value={filtroStatus}
-              onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-              aria-label="Filtrar por status da postagem"
-              style={selectFiltroStyle}
-            >
-              <option value="todos">Todos</option>
-              <option value="publicado">Publicado</option>
-              <option value="rascunho">Rascunho</option>
-              <option value="aprovacao">Aprovação</option>
-              <option value="arquivado">Arquivado</option>
-            </select>
-          </>
-        }
-        linhaAposSubabas={
-          <CtaCriarButton
-            type="button"
-            onClick={() => {
-              setEditRef(null);
-              setModalCriar(true);
-            }}
-          >
-            Nova Postagem
-          </CtaCriarButton>
-        }
-      />
-
       {erro ? (
         <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
           {erro}
