@@ -24,6 +24,40 @@ Configuração na raiz: `eslint.config.js` (TypeScript, React Hooks, React Refre
 
 Avisos (`warnings`), por exemplo `exhaustive-deps` ou `no-explicit-any` em modo aviso, **não** fazem falhar o `lint` por defeito; apenas os **erros** bloqueiam o CI.
 
+O projeto usa `--max-warnings 0`: qualquer aviso tratado como erro também bloqueia commit e CI.
+
+### Pre-commit local (evitar “Commit failed”)
+
+Depois de `npm install`, o script `prepare` instala um hook Git (`.git/hooks/pre-commit`) que executa:
+
+1. `npm run precommit` → **lint-staged** (`eslint --max-warnings 0` só nos ficheiros **em stage**)
+2. `npm run test`
+
+Se o commit falhar no ESLint, a mensagem indica ficheiro e linha (ex.: variável declarada e não usada — `@typescript-eslint/no-unused-vars`).
+
+**Antes de commitar**, na raiz do projeto:
+
+```bash
+npm run lint
+```
+
+Valida **todo** o `src/` (não só o que está em stage) e evita surpresas ao fazer commit parcial ou após refactors que removem uso de variáveis.
+
+Comandos úteis:
+
+| Comando | Quando usar |
+|---------|-------------|
+| `npm run lint` | Antes de cada commit (recomendado) |
+| `npm run lint:fix` | Corrigir o que o ESLint conseguir automaticamente |
+| `npm run precommit` | Simular só o lint dos ficheiros em stage |
+| `npm run ci` | Mesmo conjunto do CI: lint + test + build |
+
+**Ignorar o hook uma vez** (emergência): `SKIP_SIMPLE_GIT_HOOKS=1 git commit ...`
+
+**Hook não corre?** Volte a instalar dependências (`npm install`) ou confirme que existe `.git/hooks/pre-commit` após o `prepare`.
+
+**Cursor / VS Code:** extensão ESLint ativa — erros de variável não usada aparecem no editor antes do commit.
+
 ## Variáveis de ambiente
 
 O projeto usa variáveis de ambiente do Vite (prefixo `VITE_`). São embutidas no build em tempo de compilação.

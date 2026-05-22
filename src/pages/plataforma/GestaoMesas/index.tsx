@@ -203,19 +203,17 @@ export default function GestaoMesas() {
       <div
         style={{
           marginBottom: 16,
-          padding: 16,
-          borderRadius: 18,
+          padding: "12px 20px",
+          borderRadius: 14,
           background: dashBrand.primaryTransparentBg,
-          border: `1px solid ${dashBrand.primaryTransparentBorder}`,
-          boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+          border: dashBrand.primaryTransparentBorder,
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <FiltroOperadoraSelect
             value={filtroOperadora}
             onChange={setFiltroOperadora}
             operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
-            minWidth={200}
           />
           {perm.canCriarOk && (
             <button

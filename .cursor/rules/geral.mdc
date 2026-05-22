@@ -36,11 +36,27 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 
+### Nomenclatura — sempre o nome do menu
+
+A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`label` do item).
+
+| Onde | Regra |
+|------|--------|
+| `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` | Campo **`titulo`** = mesmo texto que `label` no menu (ex.: `Resultados`, `Feedback`, `Agenda`) |
+| `MENU_AJUDA` (sidebar interna da Ajuda) | Campo **`label`** alinhado ao menu lateral |
+| `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
+| Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
+
+**Proibido** inventar títulos longos na Ajuda quando o menu já tem nome curto (`Feedback de Lives`, `Agenda de Lives`, etc.), salvo **exceção documentada** no MDC da secção (ex.: Playbook — título visual `Playbook — Influencers` vs menu `Playbook Influencers` até unificação).
+
+Ao renomear item no menu, atualizar em cascata: `menu.ts`, `h1` da página, `titulo`/`label` na Ajuda, glossário e MDC da secção (tabela de subtítulos canónicos).
+
 ### Ao adicionar página no menu
 
 1. Entrada em `glossarioData.ts` (e bloco em `index.tsx` se houver tour textual).
 2. Termos novos de domínio no glossário.
-3. Handoff Claude pode completar textos — estrutura fica neste MDC.
+3. `titulo` e `label` na Ajuda = `label` de `menu.ts`.
+4. Handoff pode completar corpo dos blocos — estrutura e nomenclatura ficam neste MDC + Brand §4.
 
 ### Handoff pendente
 
@@ -96,4 +112,6 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Duplicar regras de dashboard/operacional neste MDC.
 - Canal público com `usePermission` ou copy de página interna sem adaptar.
 - Alterar página de produto sem rever `glossarioData.ts` / Ajuda.
+- **`titulo` na Ajuda** ou referência no glossário com nome diferente do menu (`menu.ts`).
+- Citar subtítulo desatualizado na Ajuda após mudança no `PageHeader` da página.
 - GameIcons no conteúdo de ajuda quando Lucide bastar.

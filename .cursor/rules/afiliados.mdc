@@ -28,12 +28,17 @@ alwaysApply: false
 
 ## Cabeçalho de página
 
-Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do componente:
+Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do componente (Brand §4):
 
 - Badge do ícone: **28×28**, `borderRadius: 8`
-- `h1`: `fontSize: 22`, uppercase, `FONT_TITLE`, cor `brand.primary`
-- Subtítulo: `FONT.body`, 13px, `t.textMuted`
+- **`title`:** igual ao `label` em `menu.ts`
+- **Subtítulo:** `FONT.body`, 13px, `t.textMuted` — uma linha; condicional por persona quando aplicável
 - Ícone: **Lucide** no JSX da página (ex.: `Users`, `Network`)
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `afiliados` | Afiliados | Gestão: *Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras.* · Perfil próprio: *Seu perfil de afiliado na plataforma.* |
+| `afiliados_network` | Network | Funil de prospecção e conversão de prospectos em afiliados cadastrados. |
 
 ---
 
@@ -75,7 +80,7 @@ Botão **Adicionar Anotação** (Network): `var(--brand-secondary)` com `brand.u
 
 ## Ajuda
 
-Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc`. **Não** documentar criação de usuário apenas em status Fechado — alinhar ao `handleSave` em Network.
+Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc` (**`titulo` = label do menu**). **Não** documentar criação de usuário apenas em status Fechado — alinhar ao `handleSave` em Network.
 
 ---
 

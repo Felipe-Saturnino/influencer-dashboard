@@ -16,7 +16,7 @@ alwaysApply: false
 
 **Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-**Marca / filtros / headers:** Brand MDC. **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
+**Marca / filtros / headers:** Brand MDC. **`PageHeader`:** `title` = `menu.ts` + `subtitle` obrigatório (Brand §4). **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
 
 **Nota de repo:** pastas `rh/GestaoEscala`, `rh/GestaoStaff`, `rh/Calendario` serão renomeadas para `escala/` num refactor futuro (incl. GestaoStaff). `PageKey` pode manter prefixo `rh_`.
 

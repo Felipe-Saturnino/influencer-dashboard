@@ -32,33 +32,39 @@ alwaysApply: false
 
 ---
 
-## Header de Página — Padrão da Seção
+## Header de Página — título, subtítulo e família visual
 
-**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** — diferente de páginas com **`PageHeader`** no Estúdio / marketing / financeiro (28×28 + título 22). Até unificação explícita de produto, **manter 18 / 32 nesta seção**.
+Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.mdc`).
+
+**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** (Família A) — diferente de **`PageHeader`** 28/22 (Família B). Até unificação explícita de produto, **manter 18 / 32** nas páginas desta secção que já usam Família A.
+
+**Subtítulo obrigatório:** `<p>` sob o bloco ícone + `h1`, `fontSize: 13`, `t.textMuted`, `FONT.body`, tipicamente `paddingLeft: 40` para alinhar ao ícone.
+
+| PageKey | h1 (menu) | Subtítulo canónico | Notas |
+|---|---|---|---|
+| `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | Título visual legado `Playbook — Influencers` até unificação com menu |
+| `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
+| `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
+| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) |
 
 ```tsx
-// Padrão atual de Conteúdo (e várias Lives)
+// Família A — ícone + h1 + subtítulo
 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-  <span style={{
-    width: 32, height: 32, borderRadius: 9,
-    background: brand.primaryIconBg,
-    border: brand.primaryIconBorder,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    color: brand.primaryIconColor, flexShrink: 0,
-  }}>
-    <IconeDoComponente size={16} aria-hidden="true" />
+  <span style={{ width: 32, height: 32, borderRadius: 9, /* brand.primaryIcon* */ }}>
+    <Icone size={16} aria-hidden="true" />
   </span>
-  <h1 style={{
-    fontSize: 18, fontWeight: 800, color: brand.primary,
-    fontFamily: FONT_TITLE, margin: 0,
-    letterSpacing: "0.05em", textTransform: "uppercase",
-  }}>
-    Título da Página
+  <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+    Links e Materiais
   </h1>
 </div>
+<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", paddingLeft: 40, lineHeight: 1.45 }}>
+  Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
+</p>
 ```
 
-*Opcional:* se a página for só título + ações e quiseres alinhar ao padrão Estúdio/marketing, podes usar `PageHeader` — aceita o padrão 28/22 e já inclui `useDashboardBrand`.
+**Playbook:** o subtítulo curto **não** substitui `PLAYBOOK_SUBTITULO_PARAGRAFOS` (corpo introdutório) — evoluir parágrafos em handoff separado.
+
+*Opcional:* página só com título + ações pode usar `PageHeader` (Família B) — já inclui slot de `subtitle`.
 
 ---
 

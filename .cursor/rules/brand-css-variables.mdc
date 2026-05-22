@@ -112,9 +112,28 @@ Indicador secundário na FilterBar: `<Clock size={12} aria-hidden />` + texto �
 
 ### Regra de conteúdo (obrigatória em toda página logada)
 
-1. **Título (`h1`):** texto **idêntico** ao `label` do item no menu (`src/constants/menu.ts`) para a `key` da página — mesma grafia e capitalização (ex.: menu “Gestão de Dealers” → título “Gestão de Dealers”, não “Dealers”).
-2. **Subtítulo:** uma linha em `t.textMuted`, `fontSize: 13`, `FONT.body`, descrevendo **em poucas palavras** a função da página — obrigatório em páginas novas; em legado, preencher na próxima alteração.
+1. **Título (`h1`):** texto **idêntico** ao `label` do item no menu (`src/constants/menu.ts`) para a `key` da página — mesma grafia e capitalização (ex.: menu “Resultados” → título “Resultados”, não “Resultado de Lives”; menu “Agenda” → “Agenda”, não “Agenda de Lives”).
+2. **Subtítulo:** **uma linha** fixa sob o `h1`, `color: t.textMuted`, `fontSize: 13`, `margin: "5px 0 0"`, `fontFamily: FONT.body`, descrevendo o propósito da página em linguagem de produto (não regras técnicas). **Obrigatório** em páginas novas e ao alterar cabeçalho em legado.
 3. **Ícone do header:** **Lucide** (ou ícone já usado no menu da mesma página), `aria-hidden="true"`, `strokeWidth` default **2**. **GameIcons só no menu lateral** — não repetir Gi* no badge do header.
+
+**Páginas novas — checklist de implementação:**
+
+| Passo | O quê |
+|-------|--------|
+| 1 | Copiar `label` de `menu.ts` para `title` / `h1` |
+| 2 | Definir subtítulo canónico (tabela da secção em `dashboards.mdc`, `lives.mdc`, etc., ou handoff aprovado) |
+| 3 | Usar `PageHeader`, `DashboardPageHeader` ou header inline da secção **com** subtítulo no mesmo bloco visual do título |
+| 4 | Atualizar Ajuda: `titulo` em `CONTEUDO_*` = mesmo nome do menu — ver `geral.mdc` |
+
+**Exceções ao subtítulo único:**
+
+| Caso | Padrão |
+|------|--------|
+| **Influencers / Afiliados** | Subtítulo condicional: gestão vs perfil próprio (textos canónicos no MDC da secção) |
+| **Central de Notificações** | Subtítulo **fixo** no `PageHeader`; contador ou mensagem contextual num **segundo** `<p>` abaixo do header (formato dinâmico evolui depois) |
+| **Playbook Influencers** | Subtítulo curto sob o `h1`; parágrafos introdutórios longos (`PLAYBOOK_SUBTITULO_PARAGRAFOS`) são corpo — não substituem o subtítulo |
+
+**Anti-patterns de subtítulo:** janela técnica no lugar de valor (“após 5 h” só no texto de Ajuda se necessário); nome de tabela/RPC; duplicar o subtítulo no `subtitle` do `PageHeader` **e** num parágrafo igual logo abaixo; título com sufixo “de Lives” quando o menu não usa.
 
 ### Implementação — preferir componentes
 
@@ -131,12 +150,22 @@ Props mínimas:
 <PageHeader
   icon={<Icone size={14} aria-hidden="true" />}
   title="Gestão de Links"   // = menu.ts label
-  subtitle="Mapeamento de UTMs órfãos a influencers e campanhas."
+  subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
   actions={...}
 />
 ```
 
-**Nunca:** emoji no `h1`; ícone sem wrapper; `fontSize: 26` no título.
+**Dashboards (parágrafo sob `h1`, mesmo estilo):**
+
+```tsx
+<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+  Acompanhe performance, conversão e financeiro do canal de influencers.
+</p>
+```
+
+**Conteúdo Família A (32/18):** subtítulo no `<p>` com `paddingLeft: 40` alinhado ao ícone, ou `PageHeader` se a página migrar para Família B.
+
+**Nunca:** emoji no `h1`; ícone sem wrapper; `fontSize: 26` no título; página logada de produto **sem** subtítulo.
 
 ---
 
@@ -189,7 +218,7 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
 | Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
 
-`SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill={true}` em dashboards/Lives quando o visual for chip 999px; indicador ▾ embutido no componente.
+`SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
 ### Filtro de operadora — contrato visual (obrigatório)
 
@@ -200,7 +229,7 @@ Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes 
 - `aria-label` do controlo: **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`).
 - **Sem** rótulo de texto ao lado (“Operadora”, “Filtrar por operadora”).
 - Destaque quando slug específica selecionada: `highlightWhenFiltered` (default `true`) — `color-mix` com `--brand-action`.
-- `pill={true}` em barras estilo chip (Lives, Marketing, Aquisição); default `false` em dashboards analíticos.
+- **`pill` default `true`** em `FiltroOperadoraSelect` / `SelectComIcone` na barra (referência: **Overview Influencer**); estado inativo: `t.text`, fundo `t.inputBg`, borda `t.cardBorder`.
 
 ```tsx
 <FiltroOperadoraSelect

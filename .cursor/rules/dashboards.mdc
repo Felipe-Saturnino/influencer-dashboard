@@ -73,14 +73,16 @@ alwaysApply: false
 </div>
 ```
 
-**Referência de títulos e subtítulos canônicos:**
+**Referência de títulos e subtítulos canônicos** (`h1` = `label` em `menu.ts`):
 
-| Página | h1 | Subtítulo |
+| PageKey | h1 | Subtítulo |
 |---|---|---|
-| Overview Spin | `Overview Spin` | `Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.` |
-| Streamers | `Streamers` | `Performance do canal de influencers — financeiro, conversão e operação.` |
-| Mídias Sociais | `Mídias Sociais` | `Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.` |
-| Overview Influencer | `Overview Influencer` | `Visão executiva da performance do canal de influencers.` |
+| `streamers` | Streamers | Acompanhe performance, conversão e financeiro do canal de influencers. |
+| `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
+| `dash_midias_sociais` | Mídias Sociais | Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas. |
+| `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+
+**Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
 
 **Exceção — Overview Spin:** cabeçalho com badge 28×28 à esquerda (ícone + h1 + subtítulo em linha), não o bloco centralizado acima. Motivo: página híbrida com abas Overview + Posicionamento operacional.
 
@@ -574,7 +576,9 @@ Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(
 
 ## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
 
-Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`: `streamers`, `mesas_spin`, `dash_midias_sociais`, `dash_overview_influencer`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga.
+Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender blocos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`: `streamers`, `mesas_spin`, `dash_midias_sociais`, `dash_overview_influencer`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga.
+
+**Nomenclatura:** o campo `titulo` de cada entrada e o `label` em `MENU_AJUDA` devem usar o **mesmo nome do menu** (`menu.ts`) — ex.: “Mídias Sociais”, “Overview Spin”, nunca sufixos inventados (“Feedback de Lives”) salvo exceção documentada em `geral.mdc`.
 
 ---
 

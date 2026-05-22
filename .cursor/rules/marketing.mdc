@@ -14,6 +14,19 @@ alwaysApply: false
 
 ---
 
+## Cabeçalho — título e subtítulo
+
+`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `campanhas` | Campanhas | Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards. |
+| `gestao_links` | Gestão de Links | Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios. |
+
+Texto de **afiliados** no subtítulo de Gestão de Links é intencional (roadmap da secção Afiliados).
+
+---
+
 ## Identificação
 
 | PageKey | Página | Caminho |

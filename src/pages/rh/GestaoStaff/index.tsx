@@ -717,8 +717,6 @@ export default function RhGestaoStaffPage() {
   const podeTimeAnterior = !todosTimes && times.length > 0 && idxTime > 0;
   const podeTimeProximo = !todosTimes && times.length > 0 && idxTime < times.length - 1;
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
     borderRadius: 8,
@@ -778,13 +776,12 @@ export default function RhGestaoStaffPage() {
         <div
           style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
-            boxShadow: cardShadow,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => setIdxTime((i) => Math.max(0, i - 1))}
@@ -883,8 +880,8 @@ export default function RhGestaoStaffPage() {
                   flexWrap: "wrap",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 12,
-                  rowGap: 14,
+                  gap: 10,
+                  rowGap: 10,
                   maxWidth: "100%",
                 }}
               >
@@ -921,8 +918,7 @@ export default function RhGestaoStaffPage() {
                     operadoras={operadorasFiltroOpts}
                     todasValue={FILTRO_STAFF_OPERADORA_TODAS}
                     extraOptions={[{ value: FILTRO_STAFF_OPERADORA_NENHUMA, label: "Nenhuma" }]}
-                    minWidth={160}
-                    highlightWhenFiltered={false}
+                    minWidth={200}
                   />
                 </div>
                 <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>

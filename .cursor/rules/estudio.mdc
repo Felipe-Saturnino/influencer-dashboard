@@ -14,6 +14,21 @@ alwaysApply: false
 
 ---
 
+## Cabeçalho — título e subtítulo
+
+`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `gestao_dealers` | Gestão de Dealers | Catálogo do elenco com especialidades, turnos e solicitações das operadoras. |
+| `central_notificacoes` | Central de Notificações | **Fixo:** Gerencie solicitações entre operadoras e estúdio com histórico de conversas. |
+| `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
+| `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por operadora para o dealer usar em mesa. |
+
+**Central de Notificações:** após o `PageHeader`, manter `<p>` separado para texto dinâmico (ex.: contador de pendentes ou “Campanhas de roteiro…”) — não substituir o `subtitle` fixo do header.
+
+---
+
 ## Identificação
 
 | PageKey | Página | Caminho |

@@ -1218,8 +1218,8 @@ export default function RhGestaoEscalaPage() {
         <div
           style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}
         >
@@ -1228,13 +1228,13 @@ export default function RhGestaoEscalaPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 16,
+              gap: 10,
               flexWrap: "wrap",
               marginBottom: 0,
               width: "100%",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <button
                 type="button"
                 onClick={mesAnterior}

@@ -75,6 +75,8 @@ Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselP
 
 ### Barra da Agenda — linha principal (obrigatório)
 
+**Espaçamento:** `gap: 10` entre carrossel, Hoje, modo de vista, Influencer e Operadora (`lib/filterBarStyles.ts`). Visual Influencer/Operadora: **Overview Influencer** (pill 999, `t.text` inativo).
+
 Ordem típica no strip `primaryTransparent*`:
 
 1. Carrossel de período (`carouselNavStyles`)

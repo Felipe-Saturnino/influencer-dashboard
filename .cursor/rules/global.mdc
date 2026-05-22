@@ -44,7 +44,12 @@ Em **todo** desenvolvimento novo ou mudança de UX/fluxo/regra de negócio visí
 
 - Revisar `src/pages/geral/Ajuda/` (`index.tsx`, `glossarioData.ts` e entradas por `pageKey`).
 - **Incluir**, **alterar** ou **remover** textos de ajuda e termos do glossário conforme a mudança — não só quando a página fica em `geral/`.
+- **Nomes de página:** em Ajuda, glossário e referências cruzadas, usar sempre o **`label` do menu** (`menu.ts`) — nunca título legado divergente (ex.: “Resultado de Lives” → “Resultados”). Detalhes: `geral.mdc`.
 - Detalhes de estrutura: `geral.mdc`.
+
+### Cabeçalho de página (título + subtítulo)
+
+Toda página logada de produto: **`h1` = label do menu** + **subtítulo de uma linha** (propósito em PT-BR). Implementação visual e famílias A/B: **`brand-css-variables.mdc` §4**. Textos canónicos por secção: MDC da pasta (`dashboards.mdc`, `lives.mdc`, …).
 
 ---
 
@@ -89,7 +94,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, carouselNavStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -217,7 +222,13 @@ Dentro do wrapper do bloco de filtros (`primaryTransparentBg/Border` ou equivale
 - **Exceção:** alinhamento à esquerda (`justifyContent: "flex-start"`) ou outro layout **somente** quando o produto solicitar explicitamente no pedido de desenvolvimento.
 - Linhas com **dois painéis lado a lado** (ex.: sliders Cachê / Views em Influencers e Scout) mantêm o grid interno (`app-grid-2`, `space-between` nos rótulos do slider) — a regra de centralização aplica-se às **fileiras de chips e à barra principal** de toggles/selects, não ao conteúdo full-width de cada coluna do grid.
 
-Referência visual: Agenda, Feedback, Influencers, Scout.
+Referência visual: **Overview Influencer**, Agenda, Feedback, Streamers.
+
+### Espaçamento e visual dos campos (barra)
+
+- **Gap entre controlos** na mesma linha (carrossel, Histórico, Influencer, Operadora, Hoje, modo de vista): **`10`** — usar `FILTER_BAR_ROW_GAP` / `getFilterBarRowStyle()` de `lib/filterBarStyles.ts`.
+- **Wrapper:** `getFilterBarWrapperStyle(brand)` — `padding: "12px 20px"`, `borderRadius: 14`, `primaryTransparent*`.
+- **Influencer e Operadora** na mesma barra: mesmo pill **999**, mesmo estado inativo (`t.text`, `t.inputBg`, `t.cardBorder`) — referência **Overview Influencer** (`FiltroOperadoraSelect` + `FiltroInfluencerSelect`).
 
 ### Opção “Todos” por defeito
 
@@ -240,7 +251,7 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 
 **Proibido em código novo:** `SelectComIcone` + `Shield` montado à mão; `<select>` sem ícone; markup duplicado com `position: absolute` no ícone; rótulo lateral em uppercase antes do campo.
 
-**Props usuais:** `operadoras={lista}`, `podeVerOperadora`, `pill` (Lives/chips), `minWidth`, `disabled`, `showTodasOption={false}` quando escopo força uma slug; `extraOptions` para domínios com “Nenhuma” (Staff, Escala, Dealers) — **não** renomear a agregadora.
+**Props usuais:** `operadoras={lista}`, `podeVerOperadora`, `minWidth` (default **200**), `disabled`, `showTodasOption={false}` quando escopo força uma slug; `extraOptions` para domínios com “Nenhuma” (Staff, Escala, Dealers) — **não** renomear a agregadora. Visual inativo/ativo: referência **Overview Influencer** (`pill` 999, `getFiltroCampoInativoStyle` em `lib/filterBarStyles.ts`).
 
 ```tsx
 {showFiltroOperadora && (
@@ -282,7 +293,7 @@ import { FiltroHistoricoButton } from "../components/dashboard";
 
 ### Filtro de influencer (lista na barra) — obrigatório
 
-Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, usar **`FiltroInfluencerSelect`** — referência visual: **Streamers** (ícone `User` 15px, pill 999).
+Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, usar **`FiltroInfluencerSelect`** — referência visual: **Overview Influencer** / operadora na mesma barra (ícone `User` 15px, pill 999, cor inativa `t.text` via `getFiltroCampoInativoStyle`).
 
 | Regra | Valor |
 |--------|--------|
@@ -323,7 +334,7 @@ import { FiltroInfluencerSelect } from "../components/dashboard";
 
 ### Modo de visualização de período (Mês / Semana / Dia) — barra
 
-Quando a página tiver **seletor de granularidade de calendário** na barra (ex.: Agenda de Lives), usar **`FiltroModoVisualizacaoSelect`**.
+Quando a página tiver **seletor de granularidade de calendário** na barra (ex.: **Agenda**), usar **`FiltroModoVisualizacaoSelect`**.
 
 | Regra | Valor |
 |--------|--------|
@@ -350,7 +361,7 @@ import { FiltroModoVisualizacaoSelect } from "../components/dashboard";
 
 **Proibido:** `SingleDropdown` local; cópia inline do dropdown de visualização; ícone `Calendar` neste controlo.
 
-### Botão Hoje (Agenda de Lives)
+### Botão Hoje (Agenda)
 
 Atalho para data corrente + modo Dia — **`FiltroHojeButton`** (`src/components/dashboard/FiltroHojeButton.tsx`).
 
@@ -604,6 +615,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 
 ## Anti-patterns (global)
 
+- Concluir alterações em `src/**/*.tsx` sem correr `npm run lint` na raiz (o pre-commit só linta ficheiros em stage; variáveis órfãs após refactor bloqueiam o commit).
 - Implementar página sem ler Brand + MDC da secção.
 - Ignorar matriz de Gestão de Usuários (exceto admin).
 - Pré-liberar permissão `sim` para roles em página nova.
@@ -619,6 +631,8 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Strings de vazio ou sem permissão diferentes das fixas acima.
 - Semântica de KPI invertida manualmente (fora de `isInverso`).
 - Página nova sem atualizar MDC da secção (e Ajuda quando aplicável).
+- Página logada sem subtítulo sob o `h1`, ou `h1` diferente do `label` em `menu.ts`.
+- Ajuda/glossário com nome de página divergente do menu (ex.: “Resultado de Lives” em vez de “Resultados”).
 - `window.confirm()` / `alert()` para fluxos de modal.
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.

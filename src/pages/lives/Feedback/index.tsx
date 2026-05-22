@@ -549,7 +549,7 @@ export default function Feedback() {
           </div>
 
           {/* Linha 2: Status (padrão Agenda — legenda + cores) */}
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
             {(["realizada", "nao_realizada", "todos"] as const).map((status) => {
               const active = statusFiltro === status;

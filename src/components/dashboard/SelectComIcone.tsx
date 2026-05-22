@@ -24,7 +24,7 @@ export function SelectComIcone({
   children,
   label,
   minWidth = 160,
-  pill = false,
+  pill = true,
   style,
   id,
   disabled = false,

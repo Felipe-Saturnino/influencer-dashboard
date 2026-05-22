@@ -56,13 +56,13 @@ export function PortalRhBlocoFiltros({
         borderRadius: 14,
         border: brand.primaryTransparentBorder,
         background: brand.primaryTransparentBg,
-        padding: "14px 18px",
+        padding: "12px 20px",
         marginBottom: 16,
       }}
     >
       {/* Linha 1 — carrossel de mês + Histórico (data de publicação) */}
       <div style={{ ...LINHA_FILTRO, marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button
             type="button"
             aria-label="Mês anterior"

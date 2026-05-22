@@ -20,6 +20,21 @@ alwaysApply: false
 
 ---
 
+## Cabeçalho — título e subtítulo
+
+Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `PageHeader`. **`h1`** = `label` em `menu.ts`.
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `gestao_usuarios` | Gestão de Usuários | Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma. |
+| `gestao_operadoras` | Gestão de Operadoras | Gerencie operadoras parceiras, identidade visual e configurações de integração. |
+| `gestao_mesas` | Gestão de Mesas | Cadastre e gerencie as mesas disponíveis por operadora. |
+| `status_tecnico` | Status Técnico | Monitore integrações, alertas automáticos e sincronizações da plataforma. |
+
+**Gestão de Usuários:** um único subtítulo para todos os perfis (não variantes admin vs somente leitura no header).
+
+---
+
 ## `useDashboardBrand()` — Onde é obrigatório
 
 - **GestaoOperadoras** e **StatusTecnico:** header, CTAs, whitelabel operador.

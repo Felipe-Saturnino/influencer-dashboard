@@ -1,8 +1,22 @@
 # Padrão de filtros na barra (FilterBar)
 
-Este documento define o padrão visual e de ícones que **toda página nova** (ou refatoração) deve seguir nos controlos repetíveis da **barra de filtros** transparente.
+Referência canónica: **`src/pages/dashboards/DashboardOverviewInfluencer/index.tsx`** (barra de filtros).
 
-**Pill na barra:** `borderRadius: 999` — Histórico, Influencer, Operadora, modo de visualização (Mês/Semana/Dia), Hoje (Agenda) e filtros futuros — ver `brand-css-variables.mdc` §5.
+Este documento define o padrão visual e de ícones que **toda página** deve seguir nos controlos repetíveis da **barra de filtros** transparente.
+
+---
+
+## Helpers partilhados
+
+`src/lib/filterBarStyles.ts`:
+
+| Export | Uso |
+|--------|-----|
+| `FILTER_BAR_PADDING` | `"12px 20px"` no wrapper |
+| `FILTER_BAR_ROW_GAP` | `10` entre carrossel, Histórico, filtros |
+| `getFilterBarRowStyle()` | Linha centralizada com `gap: 10` |
+| `getFilterBarWrapperStyle(brand)` | Strip transparente Brand §5 |
+| `getFiltroCampoInativoStyle(t)` | Estado inativo pill (Operadora + Influencer) |
 
 ---
 
@@ -16,122 +30,82 @@ Este documento define o padrão visual e de ícones que **toda página nova** (o
 | **Modo Mês / Semana / Dia** | `CalendarRange` | 15px | `FiltroModoVisualizacaoSelect` |
 | **Hoje** (Agenda) | `History` | 15px | `FiltroHojeButton` |
 
-**Não confundir:** `Calendar` = Histórico dos dashboards · `CalendarRange` = granularidade de calendário · `History` = atalho Hoje na Agenda.
-
 **Não usar** `GiCalendar`, `GiShield`, etc. nesta barra.
 
 ---
 
 ## Container da barra de filtros
 
-- `borderRadius: 14`
-- `border: brand.primaryTransparentBorder`
-- `background: brand.primaryTransparentBg`
-- `padding: "12px 20px"`
-- `useDashboardBrand()` para whitelabel
+```tsx
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../lib/filterBarStyles";
 
-Referências: `Streamers/index.tsx`, `lives/Agenda/index.tsx`.
+<div style={{ marginBottom: 14 }}>
+  <div style={getFilterBarWrapperStyle(brand)}>
+    <div style={getFilterBarRowStyle()}>
+      {/* carrossel, Histórico, FiltroInfluencerSelect, FiltroOperadoraSelect, … */}
+    </div>
+  </div>
+</div>
+```
+
+- `useDashboardBrand()` para whitelabel
+- **Gap 10** entre todos os controlos da linha (não usar 18)
+
+---
+
+## Visual dos campos Influencer e Operadora
+
+| Propriedade | Valor (inativo) |
+|-------------|-----------------|
+| `borderRadius` | **999** (pill) |
+| `border` | `1px solid t.cardBorder` |
+| `background` | `t.inputBg ?? t.cardBg` |
+| `color` | **`t.text`** (não `textMuted`) |
+| `fontSize` | 13 |
+| `minWidth` operadora | **200** (default do componente) |
+
+Estado **ativo** (valor ≠ agregador): borda/fundo marca (`--brand-action` / `brand.accent`, `color-mix` 15%) — já em `FiltroOperadoraSelect` e `FiltroInfluencerSelect`.
+
+```tsx
+<FiltroOperadoraSelect
+  value={filtroOperadora}
+  onChange={setFiltroOperadora}
+  operadoras={lista}
+  podeVerOperadora={podeVerOperadora}
+/>
+
+<FiltroInfluencerSelect mode="single" value={…} onChange={…} influencers={…} />
+```
+
+`pill` e `minWidth={200}` são **default** — só omitir props redundantes.
 
 ---
 
 ## Botão Histórico
 
-`FiltroHistoricoButton` — modo período acumulado nos dashboards; rótulo do carrossel **`Todo o período`** quando ativo.
-
-```tsx
-import { FiltroHistoricoButton } from "../../components/dashboard";
-
-<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
-```
+`FiltroHistoricoButton` — rótulo do carrossel **`Todo o período`** quando ativo.
 
 ---
 
-## Filtro Influencer
+## Modo de visualização (Agenda)
 
-`FiltroInfluencerSelect` — agregadora **Todos Influencers**; `mode="single"` ou `"multiple"`.
-
-```tsx
-import { FiltroInfluencerSelect } from "../../components/dashboard";
-```
-
-Ver `global.mdc` § Filtro de influencer.
-
----
-
-## Filtro Operadora
-
-`FiltroOperadoraSelect` — agregadora **Todas Operadoras**.
-
-```tsx
-import { FiltroOperadoraSelect } from "../../components/dashboard";
-
-<FiltroOperadoraSelect value={filtroOperadora} onChange={setFiltroOperadora} operadoras={lista} pill />
-```
-
----
-
-## Modo de visualização (Mês / Semana / Dia)
-
-`FiltroModoVisualizacaoSelect` — seleção única com dropdown custom (radio no painel).
-
-- Ícone **`CalendarRange` 15px** no trigger
-- Opções definidas pela página (`mes`, `semana`, `dia` na Agenda)
-- Carrossel da página deve adaptar passo e rótulo ao modo (`carouselNavStyles`)
-
-```tsx
-import { FiltroModoVisualizacaoSelect } from "../../components/dashboard";
-
-<FiltroModoVisualizacaoSelect
-  value={view}
-  onChange={setView}
-  options={[
-    { value: "mes", label: "Mês" },
-    { value: "semana", label: "Semana" },
-    { value: "dia", label: "Dia" },
-  ]}
-/>
-```
-
-**Uso actual:** Agenda de Lives. **Legado proibido:** `SingleDropdown` local ou em `dashboard/SingleDropdown.tsx`.
+`FiltroModoVisualizacaoSelect` — pill 999, ícone `CalendarRange`.
 
 ---
 
 ## Botão Hoje (Agenda)
 
-`FiltroHojeButton` — vai para a data de hoje e força modo **Dia**; `aria-pressed` quando já está nesse estado.
-
-```tsx
-import { FiltroHojeButton } from "../../components/dashboard";
-
-<FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
-```
-
-**Não** usar na Agenda o `FiltroHistoricoButton` dos dashboards.
+`FiltroHojeButton` — pill 999, ícone `History` (não confundir com Histórico).
 
 ---
 
-## Barra da Agenda de Lives (referência completa)
+## Checklist rápido
 
-```
-[ ◀ período ▶ ]  [ Hoje ]  [ 📅 Mês ▾ ]  [ Influencers ]  [ Operadoras ]
-        ↑              ↑           ↑
-   carouselNav    FiltroHoje   FiltroModoVisualizacao
-```
-
-Segunda linha: chips Status e Plataforma (regras em `lives.mdc`).
-
----
-
-## Checklist rápido (nova página)
-
-- [ ] Barra com `primaryTransparentBorder` / `primaryTransparentBg`
-- [ ] Pill **999** nos controlos da strip
-- [ ] Histórico: `FiltroHistoricoButton` + `Calendar` 15px (se aplicável)
-- [ ] Influencer: `FiltroInfluencerSelect` + **Todos Influencers**
-- [ ] Operadora: `FiltroOperadoraSelect` + **Todas Operadoras**
-- [ ] Mês/Semana/Dia: `FiltroModoVisualizacaoSelect` + `CalendarRange` (se aplicável)
-- [ ] Agenda: `FiltroHojeButton` + `History` (não Histórico acumulado)
+- [ ] Wrapper `getFilterBarWrapperStyle` ou equivalente (`12px 20px`, `primaryTransparent*`)
+- [ ] Linha com **`gap: 10`**
+- [ ] `FiltroOperadoraSelect` + `FiltroInfluencerSelect` com visual Overview Influencer
 - [ ] Carrossel: `lib/carouselNavStyles.ts`
+- [ ] Sem `gap: 18` na linha principal de filtros
 
 ---
 
@@ -139,14 +113,12 @@ Segunda linha: chips Status e Plataforma (regras em `lives.mdc`).
 
 | Descrição | Caminho |
 |-----------|---------|
-| Agenda (barra completa) | `src/pages/lives/Agenda/index.tsx` |
-| Modo Mês/Semana/Dia | `src/components/FiltroModoVisualizacaoSelect.tsx` |
-| Botão Hoje | `src/components/dashboard/FiltroHojeButton.tsx` |
-| Influencer | `src/components/FiltroInfluencerSelect.tsx` |
+| Referência visual | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Estilos da barra | `src/lib/filterBarStyles.ts` |
 | Operadora | `src/components/FiltroOperadoraSelect.tsx` |
+| Influencer | `src/components/FiltroInfluencerSelect.tsx` |
 | Histórico | `src/components/dashboard/FiltroHistoricoButton.tsx` |
-| Carrossel | `src/lib/carouselNavStyles.ts` |
 
 ---
 
-*Última atualização: barra unificada (Influencer, Operadora, Modo visualização, Hoje na Agenda, Histórico).*
+*Última atualização: padronização global (pill 999, cor inativa `t.text`, gap 10, Overview Influencer).*

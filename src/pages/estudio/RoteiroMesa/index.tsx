@@ -1121,7 +1121,7 @@ export default function RoteiroMesa() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 16,
+              gap: 10,
               flexWrap: narrowMobile ? "nowrap" : "wrap",
               overflowX: narrowMobile ? "auto" : undefined,
               paddingBottom: narrowMobile ? 4 : 0,

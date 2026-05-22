@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
+import { getFiltroCampoInativoStyle } from "../lib/filterBarStyles";
 
 /** Valor canónico da opção agregadora (todos no escopo). */
 export const INFLUENCER_FILTRO_TODOS_VALUE = "todos";
@@ -65,12 +66,7 @@ function useActiveFilterStyle(isActive: boolean) {
   const brand = useDashboardBrand();
   const { theme: t } = useApp();
   if (!isActive) {
-    return {
-      border: `1px solid ${t.cardBorder}`,
-      background: t.inputBg ?? t.cardBg,
-      color: t.textMuted,
-      fontWeight: 400 as const,
-    };
+    return getFiltroCampoInativoStyle(t);
   }
   const accent = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
   return {
