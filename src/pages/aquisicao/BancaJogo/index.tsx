@@ -5,7 +5,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
@@ -121,6 +121,28 @@ function rowInteressaConsolidado(r: BancaRowDb, periodo: { inicio: string; fim: 
   if (s >= periodo.inicio && s <= periodo.fim) return true;
   if (l && l >= periodo.inicio && l <= periodo.fim) return true;
   return false;
+}
+
+function rowPassaFiltrosComunsBanca(r: BancaRowDb, filtros: BlocoFiltros): boolean {
+  if (!filtros.podeVerInfluencer(r.influencer_id)) return false;
+  if (filtros.filterInfluencers.length > 0 && !filtros.filterInfluencers.includes(r.influencer_id)) return false;
+  if (filtros.filtroOp?.length) {
+    if (!r.operadora_slug || !filtros.filtroOp.includes(r.operadora_slug)) return false;
+  } else if (filtros.filterOperadora && filtros.filterOperadora !== "todas") {
+    if (r.operadora_slug !== filtros.filterOperadora) return false;
+  }
+  return true;
+}
+
+/** KPIs e consolidado: influencer, operadora e janela de período (solicitado_em / liberado_em). */
+function rowPassaFiltrosKpiBanca(
+  r: BancaRowDb,
+  filtros: BlocoFiltros,
+  periodo: { inicio: string; fim: string } | null,
+  historico: boolean,
+): boolean {
+  if (!rowPassaFiltrosComunsBanca(r, filtros)) return false;
+  return rowInteressaConsolidado(r, periodo, historico);
 }
 
 interface BlocoFiltros {
@@ -1762,6 +1784,21 @@ export default function BancaJogo() {
     historico,
   }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico]);
 
+  const kpisBanca = useMemo(() => {
+    const periodo = filtros.historico ? null : periodoDoMes(filtros.mesFiltro);
+    let solicitado = 0;
+    let aprovado = 0;
+    let pago = 0;
+    for (const r of ciclosRows) {
+      if (!rowPassaFiltrosKpiBanca(r, filtros, periodo, filtros.historico)) continue;
+      const v = Number(r.valor) || 0;
+      if (r.status === "solicitado") solicitado += v;
+      else if (r.status === "aprovado") aprovado += v;
+      else if (r.status === "liberado") pago += v;
+    }
+    return { solicitado, aprovado, pago };
+  }, [ciclosRows, filtros]);
+
   const idxMesAtual = MESES_OPCOES.findIndex((m) => m.value === mesFiltro);
   function prevMes() {
     if (idxMesAtual < MESES_OPCOES.length - 1) setMesFiltro(MESES_OPCOES[idxMesAtual + 1]?.value ?? "");
@@ -1931,6 +1968,53 @@ export default function BancaJogo() {
               />
             )}
           </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div className="app-grid-kpi-3" style={{ width: "100%", gap: 14 }}>
+          {[
+            { label: "R$ Solicitado", total: kpisBanca.solicitado, color: STATUS_BANCA.solicitado.color },
+            { label: "R$ Aprovado", total: kpisBanca.aprovado, color: STATUS_BANCA.aprovado.color },
+            { label: "R$ Pago", total: kpisBanca.pago, color: STATUS_BANCA.liberado.color },
+          ].map((k) => (
+            <div
+              key={k.label}
+              aria-label={`${k.label}: ${fmtMoeda(k.total)}`}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${t.cardBorder}`,
+                borderLeft: `3px solid ${k.color}`,
+                background: brand.blockBg,
+                padding: "16px 18px",
+                boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {k.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: k.color,
+                  fontFamily: FONT_TITLE,
+                  marginTop: 6,
+                }}
+              >
+                {fmtMoeda(k.total)}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
