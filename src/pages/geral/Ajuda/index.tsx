@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2, BookOpen, Share2, Radio } from "lucide-react";
+import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2, BookOpen, Share2, Radio, Shield } from "lucide-react";
 import {
   GiTv,
   GiCalendar,
@@ -20,6 +20,9 @@ import {
   GiRingingBell,
   GiShirt,
   GiNotebook,
+  GiFactory,
+  GiRoundTable,
+  GiRadarSweep,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -86,6 +89,15 @@ const MENU_AJUDA = [
       { key: "links_materiais" as PageKey, label: "Links e Materiais", Icon: Share2 },
       { key: "spin_na_rede" as PageKey, label: "Spin na Rede", Icon: Radio },
       { key: "rh_portal" as PageKey, label: "Portal de RH", Icon: Megaphone },
+    ],
+  },
+  {
+    section: "Plataforma",
+    items: [
+      { key: "gestao_usuarios" as PageKey, label: "Gestão de Usuários", Icon: Shield },
+      { key: "gestao_operadoras" as PageKey, label: "Gestão de Operadoras", Icon: GiFactory },
+      { key: "gestao_mesas" as PageKey, label: "Gestão de Mesas", Icon: GiRoundTable },
+      { key: "status_tecnico" as PageKey, label: "Status Técnico", Icon: GiRadarSweep },
     ],
   },
 ];
@@ -318,7 +330,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Navegação e Período",
         texto:
-          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
+          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer (multi-seleção; agregadora **Todos Influencers**; pesquisa no painel quando há mais de cinco nomes) e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
       },
       {
         subtitulo: "Filtro de Status",
@@ -712,7 +724,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
@@ -809,7 +821,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
+          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
@@ -854,6 +866,102 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Criando uma Campanha",
         texto:
           "Clique em + Nova Campanha para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+      },
+    ],
+  },
+  gestao_operadoras: {
+    titulo: "Gestão de Operadoras",
+    blocos: [
+      {
+        texto:
+          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide), status de operação e horários de turno.",
+      },
+      {
+        subtitulo: "Lista de operadoras",
+        texto:
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. A tabela permite ordenação por qualquer coluna.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar operadora",
+        texto:
+          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Mesas. Novas operadoras são criadas como inativas.",
+      },
+      {
+        subtitulo: "Excluir operadora",
+        texto:
+          "A exclusão permanente só é possível quando não existirem registros vinculados (mesas, escalas, RH). Para remover o acesso sem perder histórico, desative a operadora em vez de excluir.",
+      },
+    ],
+  },
+  gestao_mesas: {
+    titulo: "Gestão de Mesas",
+    blocos: [
+      {
+        texto:
+          "Cadastro e manutenção das mesas físicas de cada operadora. As mesas cadastradas aqui são referência para a programação de lives, escalas de dealers e relatórios de performance.",
+      },
+      {
+        subtitulo: "Filtros e navegação",
+        texto:
+          "O filtro de operadora no topo permite visualizar mesas de uma operadora específica ou de todas simultaneamente (**Todas Operadoras**). A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar mesa",
+        texto:
+          "Cada mesa exige: operadora, nome, tipo de jogo, número da mesa, ID interno Spin e ID da mesa no catálogo da operadora. O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto. Para tipos de jogo não listados, selecione 'Outro' e especifique.",
+      },
+    ],
+  },
+  status_tecnico: {
+    titulo: "Status Técnico",
+    blocos: [
+      {
+        texto:
+          "Página restrita a administradores. Centraliza o monitoramento das integrações de dados da plataforma, exibe alertas automáticos, logs de erro recentes e gerencia as redes autorizadas para check-in de prestadores.",
+      },
+      {
+        subtitulo: "Painel de integrações",
+        texto:
+          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails) com o horário do último sync, volume de registros processados hoje e contagem de erros. Administradores podem disparar sincronizações manuais diretamente pela tabela — todas as ações exigem confirmação antes de executar.",
+      },
+      {
+        subtitulo: "Fluxo de dados",
+        texto:
+          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados. Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
+      },
+      {
+        subtitulo: "Alertas automáticos",
+        texto:
+          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. Alertas em vermelho indicam falha; em amarelo, atenção.",
+      },
+      {
+        subtitulo: "Redes permitidas — Check-in de prestadores",
+        texto:
+          "Gerencia os prefixos de rede CIDR autorizados para registro de ponto dos prestadores. O check-in fica bloqueado para qualquer IP que não esteja coberto por pelo menos um CIDR configurado. Administradores podem adicionar ou remover prefixos diretamente nesta seção.",
+      },
+    ],
+  },
+  gestao_usuarios: {
+    titulo: "Gestão de Usuários",
+    blocos: [
+      {
+        texto:
+          "Página de acesso restrito a administradores. Centraliza o cadastro de usuários, a configuração de permissões por perfil e a definição de quais páginas cada grupo pode acessar no menu.",
+      },
+      {
+        subtitulo: "Aba Usuários",
+        texto:
+          "Lista todos os usuários cadastrados. Permite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários, editar dados e escopos, redefinir senhas para o padrão e desativar acessos.",
+      },
+      {
+        subtitulo: "Aba Permissões",
+        texto:
+          "Define, por perfil, o que cada papel pode Ver, Criar, Editar e Excluir em cada página da plataforma. O perfil Administrador não é configurado aqui — mantém acesso total fixo. As alterações entram em vigor no próximo carregamento de página do usuário afetado.",
+      },
+      {
+        subtitulo: "Abas Operadora, Gestores e Prestadores",
+        texto:
+          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Gestores: define o menu por tipo de gestor (ex.: Estúdio, Marketing).\n— Prestadores: define o menu por área de atuação (ex.: Game Presenter, Customer Service).\nO acesso efetivo é sempre o cruzamento destas marcações com a matriz de Permissões.",
       },
     ],
   },
@@ -1697,6 +1805,91 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
           "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  gestao_operadoras: {
+    titulo: "Gestão de Operadoras",
+    blocos: [
+      {
+        subtitulo: "Não consigo ativar uma operadora?",
+        texto:
+          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Mesas. Cadastre as mesas primeiro e tente novamente.",
+      },
+      {
+        subtitulo: "Erro ao excluir uma operadora?",
+        texto:
+          "A exclusão falha quando existem registros vinculados à operadora (mesas, escalas, figurinos, etc.). Remova todos os vínculos primeiro, ou desative a operadora sem excluir para preservar o histórico.",
+      },
+      {
+        subtitulo: "As cores do brandguide não aparecem para o operador?",
+        texto:
+          "Verifique se as quatro cores estão preenchidas em formato #RRGGBB e se o logo foi enviado. O operador precisa fazer logout e login novamente para que o brandguide atualizado seja carregado.",
+      },
+    ],
+  },
+  gestao_mesas: {
+    titulo: "Gestão de Mesas",
+    blocos: [
+      {
+        subtitulo: "Erro ao cadastrar uma mesa — 'já existe uma mesa com este ID'?",
+        texto:
+          "O ID Spin e o ID da operadora são únicos por operadora. Verifique se já existe uma mesa com os mesmos identificadores na lista. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
+      },
+      {
+        subtitulo: "A lista aparece vazia mesmo havendo mesas cadastradas?",
+        texto:
+          "Verifique se o filtro de operadora está selecionado em **Todas Operadoras**. Se um filtro específico estiver ativo, apenas as mesas daquela operadora serão exibidas.",
+      },
+    ],
+  },
+  status_tecnico: {
+    titulo: "Status Técnico",
+    blocos: [
+      {
+        subtitulo: "Uma integração aparece como 'Falha' — o que fazer?",
+        texto:
+          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Se o erro persistir após corrigir a causa, use o botão Sync para forçar uma nova tentativa.",
+      },
+      {
+        subtitulo: "O botão Sync não aparece para uma integração?",
+        texto:
+          "Apenas as integrações CDA, Social Media KPIs e Spin na Rede RSS possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+      },
+      {
+        subtitulo: "Um prestador não consegue fazer check-in?",
+        texto:
+          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.",
+      },
+      {
+        subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
+        texto:
+          "Os alertas são calculados com base nos registros de email_envios do dia corrente (UTC). Se o envio foi feito muito cedo ou próximo da meia-noite, pode haver defasagem de fuso horário. Verifique nos Logs Recentes se o envio aparece registrado.",
+      },
+    ],
+  },
+  gestao_usuarios: {
+    titulo: "Gestão de Usuários",
+    blocos: [
+      {
+        subtitulo: "Um usuário diz que não vê determinada página no menu após alteração?",
+        texto:
+          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Operadora, Gestores ou Prestadores, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
+      },
+      {
+        subtitulo: "As abas Permissões, Operadora, Gestores e Prestadores não aparecem?",
+        texto:
+          "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
+      },
+      {
+        subtitulo: "Erro ao salvar permissões ou páginas?",
+        texto:
+          "Verifique sua conexão com a internet. Se o erro persistir, recarregue a página antes de tentar novamente — isso evita salvar um estado inconsistente. Em caso de erro contínuo, contate o suporte técnico.",
+      },
+      {
+        subtitulo: "Não consigo criar um novo usuário?",
+        texto:
+          "O botão '+ Novo Usuário' só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
       },
     ],
   },

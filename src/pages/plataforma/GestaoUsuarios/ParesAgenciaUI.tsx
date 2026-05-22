@@ -1,9 +1,9 @@
 import { Plus, Trash2 } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 import type { Operadora } from "../../../types";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BRAND } from "./constants";
 import { FONT } from "../../../constants/theme";
-import type { Theme } from "../../../constants/theme";
 
 interface ParesAgenciaUIProps {
   pares: Array<{ influencerId: string; operadoraSlug: string }>;
@@ -15,7 +15,6 @@ interface ParesAgenciaUIProps {
   labelStyle: React.CSSProperties;
   selectStyle: React.CSSProperties;
   field: React.CSSProperties;
-  t: Theme;
 }
 
 export function ParesAgenciaUI({
@@ -28,8 +27,8 @@ export function ParesAgenciaUI({
   labelStyle,
   selectStyle,
   field,
-  t,
 }: ParesAgenciaUIProps) {
+  const { theme: t } = useApp();
   return (
     <div style={field}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -91,6 +90,7 @@ export function ParesAgenciaUI({
             <button
               type="button"
               onClick={() => onRemove(idx)}
+              aria-label={`Remover par ${idx + 1}`}
               style={{
                 display: "flex",
                 alignItems: "center",

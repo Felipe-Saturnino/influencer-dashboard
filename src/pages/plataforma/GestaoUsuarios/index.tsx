@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Briefcase, Building2, KeyRound, Shield, User, UserCog, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { UserCog } from "lucide-react";
-import { GiShield, GiPerson, GiLockedChest, GiOfficeChair, GiBriefcase } from "react-icons/gi";
-import { BRAND, FONT_TITLE } from "./constants";
+import { FONT_TITLE } from "./constants";
 import { AbaUsuarios } from "./AbaUsuarios";
 import { AbaPermissoes } from "./AbaPermissoes";
 import { AbaOperadora } from "./AbaOperadora";
 import { AbaGestores } from "./AbaGestores";
 import { AbaPrestadores } from "./AbaPrestadores";
+import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
+import { handleGestaoTabsArrowKeyDown, tabAtivaPrincipalStyle } from "./gestaoUsuariosHelpers";
 
 type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestadores";
 
@@ -29,10 +30,30 @@ export default function GestaoUsuarios() {
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
   }, [isAdmin, perm.canEditarOk, aba]);
 
+  const abasConfigPlataforma = useMemo(
+    (): { key: Exclude<AbaGestao, "usuarios">; label: string; icon: React.ReactNode }[] => [
+      { key: "permissoes", label: "Permissões", icon: <KeyRound size={13} aria-hidden="true" /> },
+      { key: "operadora", label: "Operadora", icon: <Building2 size={13} aria-hidden="true" /> },
+      { key: "gestores", label: "Gestores", icon: <Briefcase size={13} aria-hidden="true" /> },
+      { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden="true" /> },
+    ],
+    [],
+  );
+
+  const ABAS = useMemo((): { key: AbaGestao; label: string; icon: React.ReactNode }[] => {
+    if (!isAdmin) return [{ key: "usuarios", label: "Usuários", icon: <Users size={13} aria-hidden="true" /> }];
+    return [
+      { key: "usuarios", label: "Usuários", icon: <User size={13} aria-hidden="true" /> },
+      ...(perm.canEditarOk ? abasConfigPlataforma : []),
+    ];
+  }, [isAdmin, perm.canEditarOk, abasConfigPlataforma]);
+
+  const abaKeys = useMemo(() => ABAS.map((a) => a.key), [ABAS]);
+
   if (perm.loading) {
     return (
-      <div className="app-page-shell" style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Carregando…
+      <div className="app-page-shell">
+        <GestaoUsuariosLoading />
       </div>
     );
   }
@@ -54,17 +75,6 @@ export default function GestaoUsuarios() {
     boxShadow: cardShadow,
   };
 
-  const abasConfigPlataforma: { key: Exclude<AbaGestao, "usuarios">; label: string; icon: React.ReactNode }[] = [
-    { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
-    { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
-    { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
-    { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
-  ];
-
-  const ABAS: { key: AbaGestao; label: string; icon: React.ReactNode }[] = isAdmin
-    ? [{ key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> }, ...(perm.canEditarOk ? abasConfigPlataforma : [])]
-    : [{ key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> }];
-
   return (
     <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -83,7 +93,7 @@ export default function GestaoUsuarios() {
               flexShrink: 0,
             }}
           >
-            <GiShield size={14} />
+            <Shield size={14} aria-hidden="true" />
           </span>
           <div>
             <h1
@@ -109,32 +119,42 @@ export default function GestaoUsuarios() {
       </div>
 
       {isAdmin && (
-        <div role="tablist" aria-label="Seções de gestão de usuários" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div
+          role="tablist"
+          aria-label="Seções de gestão de usuários"
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", overflowX: "auto", scrollbarWidth: "thin" }}
+        >
           {ABAS.map((a) => {
             const ativa = aba === a.key;
+            const tabStyle = tabAtivaPrincipalStyle(ativa, t.cardBorder, t.inputBg ?? t.bg);
             return (
               <button
                 key={a.key}
                 type="button"
                 role="tab"
                 id={`tab-gestao-${a.key}`}
+                tabIndex={ativa ? 0 : -1}
                 aria-selected={ativa}
                 aria-controls={`panel-gestao-${a.key}`}
                 onClick={() => setAba(a.key)}
+                onKeyDown={(e) =>
+                  handleGestaoTabsArrowKeyDown(e, abaKeys, a.key, setAba, "tab-gestao-")
+                }
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  background: ativa ? `${BRAND.roxoVivo}22` : t.inputBg ?? t.bg,
-                  border: `1px solid ${ativa ? BRAND.roxoVivo : t.cardBorder}`,
-                  color: ativa ? BRAND.roxoVivo : t.textMuted,
+                  background: tabStyle.background,
+                  border: tabStyle.border,
+                  color: ativa ? tabStyle.color : t.textMuted,
                   borderRadius: 20,
                   padding: "7px 18px",
                   cursor: "pointer",
                   fontFamily: FONT.body,
                   fontSize: 13,
-                  fontWeight: ativa ? 700 : 400,
+                  fontWeight: tabStyle.fontWeight,
                   transition: "all 0.18s",
+                  flexShrink: 0,
                 }}
               >
                 {a.icon}
@@ -148,22 +168,26 @@ export default function GestaoUsuarios() {
       <div
         style={card}
         {...(isAdmin
-          ? { role: "tabpanel" as const, id: `panel-gestao-${aba}`, "aria-labelledby": `tab-gestao-${aba}` }
+          ? {
+              role: "tabpanel" as const,
+              id: `panel-gestao-${aba}`,
+              "aria-labelledby": `tab-gestao-${aba}`,
+              tabIndex: 0,
+            }
           : { role: "region" as const, "aria-label": "Usuários da plataforma" })}
       >
         {aba === "usuarios" && (
           <AbaUsuarios
-            t={t}
             modoAdmin={isAdmin}
             podeCriarUsuario={perm.canCriarOk}
             podeEditarUsuario={perm.canEditarOk}
             podeExcluirUsuario={perm.canExcluirOk}
           />
         )}
-        {aba === "permissoes" && <AbaPermissoes t={t} />}
-        {aba === "operadora" && <AbaOperadora t={t} />}
-        {aba === "gestores" && <AbaGestores t={t} />}
-        {aba === "prestadores" && <AbaPrestadores t={t} />}
+        {aba === "permissoes" && <AbaPermissoes />}
+        {aba === "operadora" && <AbaOperadora />}
+        {aba === "gestores" && <AbaGestores />}
+        {aba === "prestadores" && <AbaPrestadores />}
       </div>
     </div>
   );

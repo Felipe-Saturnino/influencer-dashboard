@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../types";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, PAGES, ROLES_PERMISSOES, PERM_OPCOES, roleLabel, roleBadgeColor } from "./constants";
-
-interface AbaPermissoesProps {
-  t: Theme;
-}
+import { SalvarCtaContent } from "./gestaoUsuariosUi";
+import { ctaGradientSalvar, handleGestaoTabsArrowKeyDown } from "./gestaoUsuariosHelpers";
 
 /** Verde #22c55e / vermelho #e84025 — paleta semântica global; leve tinte nos selects da matriz. */
 function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { background: string; borderColor: string } {
@@ -30,7 +29,9 @@ function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { b
   };
 }
 
-export function AbaPermissoes({ t }: AbaPermissoesProps) {
+export function AbaPermissoes() {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
   const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
   const [salvando, setSalvando] = useState(false);
@@ -264,9 +265,13 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
               type="button"
               role="tab"
               id={`tab-perm-${r}`}
+              tabIndex={ativo ? 0 : -1}
               aria-selected={ativo}
               aria-controls="panel-permissoes-matriz"
               onClick={() => setRoleAtivo(r)}
+              onKeyDown={(e) =>
+                handleGestaoTabsArrowKeyDown(e, ROLES_PERMISSOES, r, setRoleAtivo, "tab-perm-")
+              }
               style={{
                 border: `${ativo ? "1.5px" : "1px"} solid ${ativo ? cor : t.cardBorder}`,
                 background: ativo ? `${cor}30` : t.inputBg ?? "transparent",
@@ -290,36 +295,40 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
         role="tabpanel"
         id="panel-permissoes-matriz"
         aria-labelledby={`tab-perm-${roleAtivo}`}
+        tabIndex={0}
         style={{
-          overflowX: "auto",
           borderRadius: 12,
           border: `1px solid ${t.cardBorder}`,
-          overflow: "hidden",
         }}
       >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                Seção
-              </th>
-              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                Página
-              </th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
-            </tr>
-          </thead>
-          <tbody>{linhas}</tbody>
-        </table>
+        <div className="app-table-wrap">
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+            }}
+          >
+            <caption style={{ display: "none" }}>
+              Matriz de permissões por página — perfil {roleLabel(roleAtivo)}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                  Seção
+                </th>
+                <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                  Página
+                </th>
+                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
+                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
+                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
+                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
+              </tr>
+            </thead>
+            <tbody>{linhas}</tbody>
+          </table>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
@@ -363,7 +372,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -374,9 +383,15 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
               fontWeight: 600,
               opacity: salvando ? 0.7 : 1,
               transition: "opacity 0.15s",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
+            <SalvarCtaContent
+              salvando={salvando}
+              label={`Salvar permissões — ${roleLabel(roleAtivo)}`}
+            />
           </button>
         </div>
       </div>

@@ -5,16 +5,28 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { Pencil, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
-import { GiRoundTable } from "react-icons/gi";
+import { Pencil, Plus, Trash2, Loader2, AlertCircle, LayoutGrid } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
+import { ctaGradientSalvar } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import { BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
+
+const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
+const ERRO_EXCLUIR_MESA = "Não foi possível excluir a mesa. Verifique se não há registros vinculados.";
+const ERRO_SALVAR_MESA = "Não foi possível salvar a mesa. Verifique os dados e tente novamente.";
+const ERRO_MESA_DUPLICADA =
+  "Já existe uma mesa com este ID Spin ou ID da operadora para esta operadora.";
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Futebol Brasileiro", "Poker", "Outro"] as const;
+
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+}
 
 type MesaSpinCadastroRow = {
   id: string;
@@ -38,7 +50,7 @@ function nomeOperadoraJoin(row: MesaSpinCadastroRow): string | undefined {
 }
 
 export default function GestaoMesas() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
   const dashBrand = useDashboardBrand();
   const perm = usePermission("gestao_mesas");
   const [rows, setRows] = useState<MesaSpinCadastroRow[]>([]);
@@ -124,10 +136,18 @@ export default function GestaoMesas() {
     return arr;
   }, [rowsFiltradas, sortMesa]);
 
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell">
+        <GestaoUsuariosLoading />
+      </div>
+    );
+  }
+
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ fontFamily: FONT.body, color: t.textMuted, textAlign: "center", padding: 24 }}>
-        Você não tem permissão para visualizar a Gestão de Mesas.
+        {MSG_SEM_PERMISSAO}
       </div>
     );
   }
@@ -141,7 +161,7 @@ export default function GestaoMesas() {
   };
 
   return (
-    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell">
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
         <span
           style={{
@@ -158,7 +178,7 @@ export default function GestaoMesas() {
             marginTop: 3,
           }}
         >
-          <GiRoundTable size={14} aria-hidden />
+          <LayoutGrid size={14} aria-hidden="true" />
         </span>
         <div>
           <h1
@@ -180,14 +200,22 @@ export default function GestaoMesas() {
         </div>
       </div>
 
-      <div style={{ ...card, marginBottom: 16 }}>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 16,
+          borderRadius: 18,
+          background: dashBrand.primaryTransparentBg,
+          border: `1px solid ${dashBrand.primaryTransparentBorder}`,
+          boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+        }}
+      >
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <FiltroOperadoraSelect
             value={filtroOperadora}
             onChange={setFiltroOperadora}
             operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
             minWidth={200}
-            highlightWhenFiltered={false}
           />
           {perm.canCriarOk && (
             <button
@@ -340,8 +368,19 @@ export default function GestaoMesas() {
                 </tr>
               </thead>
               <tbody>
-                {rowsOrdenadas.map((r, i) => (
-                  <tr key={r.id} style={{ background: zebraStripe(i) }}>
+                {rowsOrdenadas.map((r, i) => {
+                  const zebra = zebraStripe(i);
+                  return (
+                  <tr
+                    key={r.id}
+                    style={{ background: zebra }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = zebra;
+                    }}
+                  >
                     <td style={getTdStyle(t)} title={r.operadora_slug}>
                       {nomeOperadoraJoin(r) ?? r.operadora_slug}
                     </td>
@@ -362,6 +401,8 @@ export default function GestaoMesas() {
                           {perm.canEditarOk && (
                             <button
                               type="button"
+                              aria-label={`Editar mesa ${r.nome_mesa}`}
+                              title={`Editar mesa ${r.nome_mesa}`}
                               onClick={() => {
                                 setEditando(r);
                                 setModalOpen(true);
@@ -369,25 +410,24 @@ export default function GestaoMesas() {
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 4,
+                                justifyContent: "center",
+                                width: 32,
+                                height: 32,
                                 background: "transparent",
                                 border: `1px solid ${t.cardBorder}`,
                                 borderRadius: 10,
-                                padding: "6px 12px",
                                 cursor: "pointer",
-                                fontSize: 12,
-                                fontWeight: 600,
                                 color: t.text,
-                                fontFamily: FONT.body,
                               }}
                             >
-                              <Pencil size={13} aria-hidden />
-                              Editar
+                              <Pencil size={14} aria-hidden="true" />
                             </button>
                           )}
                           {perm.canExcluirOk && (
                             <button
                               type="button"
+                              aria-label={`Excluir mesa ${r.nome_mesa}`}
+                              title={`Excluir mesa ${r.nome_mesa}`}
                               onClick={() => {
                                 setDeleteError(null);
                                 setDeleteTarget(r);
@@ -395,27 +435,25 @@ export default function GestaoMesas() {
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 4,
+                                justifyContent: "center",
+                                width: 32,
+                                height: 32,
                                 background: "transparent",
                                 border: `1px solid rgba(232,64,37,0.35)`,
                                 borderRadius: 10,
-                                padding: "6px 12px",
                                 cursor: "pointer",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: "#e84025",
-                                fontFamily: FONT.body,
+                                color: BRAND.vermelho,
                               }}
                             >
-                              <Trash2 size={13} aria-hidden />
-                              Excluir
+                              <Trash2 size={14} aria-hidden="true" />
                             </button>
                           )}
                         </div>
                       </td>
                     )}
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>
@@ -425,10 +463,7 @@ export default function GestaoMesas() {
       {modalOpen && (
         <ModalMesa
           key={editando?.id ?? "nova"}
-          t={t}
-          dashBrand={dashBrand}
           editando={editando}
-          userRole={user?.role ?? null}
           onClose={() => setModalOpen(false)}
           onSalvo={() => {
             void carregar();
@@ -449,7 +484,8 @@ export default function GestaoMesas() {
             const { error } = await supabase.from("mesas_spin_cadastro").delete().eq("id", deleteTarget.id);
             setDeleteLoading(false);
             if (error) {
-              setDeleteError(error.message || "Não foi possível excluir.");
+              console.error(error);
+              setDeleteError(ERRO_EXCLUIR_MESA);
               return;
             }
             setDeleteTarget(null);
@@ -471,20 +507,17 @@ function tipoJogoInitial(edit: MesaSpinCadastroRow | null): { preset: string; ou
 }
 
 function ModalMesa({
-  t,
-  dashBrand,
   editando,
-  userRole,
   onClose,
   onSalvo,
 }: {
-  t: ReturnType<typeof useApp>["theme"];
-  dashBrand: ReturnType<typeof useDashboardBrand>;
   editando: MesaSpinCadastroRow | null;
-  userRole: string | null;
   onClose: () => void;
   onSalvo: () => void;
 }) {
+  const { theme: t, user } = useApp();
+  const dashBrand = useDashboardBrand();
+  const userRole = user?.role ?? null;
   const baseId = useId();
   const ini = tipoJogoInitial(editando);
   const [operadoras, setOperadoras] = useState<{ slug: string; nome: string }[]>([]);
@@ -563,12 +596,13 @@ function ModalMesa({
       onSalvo();
       onClose();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
-      setErro(
-        msg.includes("duplicate") || msg.includes("ux_mesas")
-          ? "Já existe uma mesa com este ID Spin ou ID da operadora para esta operadora."
-          : msg,
-      );
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "";
+      if (msg.includes("duplicate") || msg.includes("ux_mesas")) {
+        setErro(ERRO_MESA_DUPLICADA);
+      } else {
+        console.error(e);
+        setErro(ERRO_SALVAR_MESA);
+      }
     } finally {
       setSalvando(false);
     }
@@ -828,12 +862,13 @@ function ModalMesa({
           onClick={() => void salvar()}
           disabled={salvando}
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
             padding: "9px 20px",
             borderRadius: 10,
             border: "none",
-            background: dashBrand.useBrand
-              ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-              : "linear-gradient(135deg, #4a2082, #1e36f8)",
+            background: ctaGradientSalvar(dashBrand, salvando, BRAND.cinza),
             color: "#fff",
             fontFamily: FONT.body,
             fontSize: 13,
@@ -842,7 +877,7 @@ function ModalMesa({
             opacity: salvando ? 0.85 : 1,
           }}
         >
-          {salvando ? "Salvando…" : editando ? "Salvar" : "Cadastrar"}
+          <SalvarCtaContent salvando={salvando} label={editando ? "Salvar" : "Cadastrar"} labelSalvando="Salvando…" />
         </button>
       </div>
     </ModalBase>

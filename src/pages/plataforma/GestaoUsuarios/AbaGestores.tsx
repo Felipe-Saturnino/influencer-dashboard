@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, PAGES, GESTOR_TIPOS } from "./constants";
 import { Checkbox } from "./Checkbox";
+import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
+import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
 
-interface AbaGestoresProps {
-  t: Theme;
-}
-
-export function AbaGestores({ t }: AbaGestoresProps) {
+export function AbaGestores() {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [gestorTipoPages, setGestorTipoPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -85,7 +86,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
   };
 
   if (loading) {
-    return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
+    return <GestaoUsuariosLoading />;
   }
 
   const ordemSecoes = [
@@ -127,7 +128,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
             <div
               style={{
                 padding: "12px 16px",
-                background: "rgba(30,54,248,0.10)",
+                background: brandTintBg("12", "var(--brand-secondary, #1e36f8)"),
                 fontFamily: FONT.body,
                 fontWeight: 700,
                 fontSize: 14,
@@ -166,7 +167,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
                         <div
                           style={{
                             padding: "10px 16px",
-                            background: "rgba(30,54,248,0.06)",
+                            background: brandTintBg("8", "var(--brand-secondary, #1e36f8)"),
                             borderBottom: `2px solid ${t.cardBorder}`,
                             fontFamily: FONT.body,
                             fontWeight: 700,
@@ -178,7 +179,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
                         >
                           {secao}
                         </div>
-                        <div style={{ padding: "8px 14px" }}>
+                        <div style={{ padding: "8px 14px 6px" }}>
                           {pagesDaSec.map((p, idx) => (
                             <label
                               key={p.key}
@@ -262,7 +263,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -272,9 +273,12 @@ export function AbaGestores({ t }: AbaGestoresProps) {
               fontSize: 13,
               fontWeight: 600,
               opacity: salvando ? 0.7 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {salvando ? "Salvando..." : "Salvar páginas"}
+            <SalvarCtaContent salvando={salvando} label="Salvar páginas" />
           </button>
         </div>
       </div>

@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Operadora } from "../../../types";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, PAGES } from "./constants";
 import { Checkbox } from "./Checkbox";
+import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
+import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
 
-interface AbaOperadoraProps {
-  t: Theme;
-}
-
-export function AbaOperadora({ t }: AbaOperadoraProps) {
+export function AbaOperadora() {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [operadoraPages, setOperadoraPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,7 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
   };
 
   if (loading) {
-    return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
+    return <GestaoUsuariosLoading />;
   }
 
   if (operadoras.length === 0) {
@@ -136,7 +137,7 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
             <div
               style={{
                 padding: "12px 16px",
-                background: "rgba(74,32,130,0.12)",
+                background: brandTintBg("12"),
                 fontFamily: FONT.body,
                 fontWeight: 700,
                 fontSize: 14,
@@ -176,7 +177,7 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
                       <div
                         style={{
                           padding: "10px 16px",
-                          background: "rgba(74,32,130,0.08)",
+                          background: brandTintBg("8"),
                           borderBottom: `2px solid ${t.cardBorder}`,
                           fontFamily: FONT.body,
                           fontWeight: 700,
@@ -188,7 +189,7 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
                       >
                         {secao}
                       </div>
-                      <div style={{ padding: "8px 14px" }}>
+                      <div style={{ padding: "8px 14px 6px" }}>
                         {pagesDaSec.map((p, idx) => (
                           <label
                             key={p.key}
@@ -263,7 +264,7 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -273,9 +274,12 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
               fontSize: 13,
               fontWeight: 600,
               opacity: salvando ? 0.7 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {salvando ? "Salvando..." : "Salvar páginas"}
+            <SalvarCtaContent salvando={salvando} label="Salvar páginas" />
           </button>
         </div>
       </div>

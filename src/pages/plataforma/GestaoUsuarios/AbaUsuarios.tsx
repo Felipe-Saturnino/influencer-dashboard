@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, KeyRound } from "lucide-react";
+import { KeyRound, Search } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES, FILTROS_PERFIL_LINHAS } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
+import { onInputBlurBrand, onInputFocusBrand } from "./gestaoUsuariosHelpers";
 
 interface AbaUsuariosProps {
-  t: Theme;
   /** Atalhos administrativos (criar/editar/desativar) só quando o utilizador é admin na app. */
   modoAdmin: boolean;
   /** Criar: botão «+ Novo Usuário» (matriz Gestão de Usuários / Criar). */
@@ -83,12 +84,12 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
 }
 
 export function AbaUsuarios({
-  t,
   modoAdmin,
   podeCriarUsuario,
   podeEditarUsuario,
   podeExcluirUsuario,
 }: AbaUsuariosProps) {
+  const { theme: t } = useApp();
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,11 +146,10 @@ export function AbaUsuarios({
         setFeedbackAcao({ tipo: "ok", msg: okMsg });
         await carregar();
       } catch (e) {
+        console.error("[GestaoUsuarios] admin-usuario-acao:", e);
         const msg = isAbortError(e)
           ? "Tempo esgotado ou rede indisponível. Confira se a função admin-usuario-acao está deployada no Supabase."
-          : e instanceof Error
-            ? e.message
-            : "Não foi possível concluir a operação.";
+          : "Não foi possível concluir a operação. Tente novamente.";
         setFeedbackAcao({ tipo: "erro", msg });
       } finally {
         setAcaoEmAndamento(null);
@@ -239,12 +239,8 @@ export function AbaUsuarios({
               outline: "none",
               transition: "border-color 0.18s",
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = BRAND.roxoVivo;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = t.cardBorder;
-            }}
+            onFocus={onInputFocusBrand}
+            onBlur={(e) => onInputBlurBrand(e, t.cardBorder)}
           />
         </div>
         {modoAdmin && podeCriarUsuario ? (
@@ -403,7 +399,7 @@ export function AbaUsuarios({
       )}
 
       {loading ? (
-        <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+        <GestaoUsuariosLoading />
       ) : usuariosListaFinal.length === 0 ? (
         <div
           style={{
@@ -561,8 +557,15 @@ export function AbaUsuarios({
                           fontWeight: 600,
                         }}
                       >
-                        <KeyRound size={14} aria-hidden />
-                        {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
+                        <KeyRound size={14} aria-hidden="true" />
+                        {isEstaAcao(u.id, "reset_senha") ? (
+                          <>
+                            <AcaoCardSpinner color={BRAND.amarelo} />
+                            Reset senha
+                          </>
+                        ) : (
+                          "Reset senha"
+                        )}
                       </button>
                     ) : null}
                     {ativo && podeExcluirUsuario ? (
@@ -590,7 +593,14 @@ export function AbaUsuarios({
                           e.currentTarget.style.background = "none";
                         }}
                       >
-                        {isEstaAcao(u.id, "desativar") ? "…" : "Desativar"}
+                        {isEstaAcao(u.id, "desativar") ? (
+                          <>
+                            <AcaoCardSpinner color={BRAND.vermelho} />
+                            Desativar
+                          </>
+                        ) : (
+                          "Desativar"
+                        )}
                       </button>
                     ) : null}
                     {!ativo && podeEditarUsuario ? (
@@ -611,7 +621,14 @@ export function AbaUsuarios({
                           fontWeight: 600,
                         }}
                       >
-                        {isEstaAcao(u.id, "ativar") ? "…" : "ATIVAR"}
+                        {isEstaAcao(u.id, "ativar") ? (
+                          <>
+                            <AcaoCardSpinner color={BRAND.verde} />
+                            Reativar
+                          </>
+                        ) : (
+                          "Reativar"
+                        )}
                       </button>
                     ) : null}
                   </div>
@@ -658,7 +675,6 @@ export function AbaUsuarios({
         ((!editando && podeCriarUsuario) || (!!editando && podeEditarUsuario)) && (
         <ModalUsuario
           key={editando?.id ?? "novo"}
-          t={t}
           editando={editando}
           operadoras={operadoras}
           onClose={() => setModalOpen(false)}

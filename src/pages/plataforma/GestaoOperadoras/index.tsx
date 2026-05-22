@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../../../lib/supabase";
 import { validarBrandguide } from "../../../lib/brandguideValidation";
 import { useApp } from "../../../context/AppContext";
@@ -6,13 +6,29 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, AlertCircle, Upload, Check, Trash2 } from "lucide-react";
-import { GiShield } from "react-icons/gi";
+import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
+import {
+  ctaGradientSalvar,
+  handleGestaoTabsArrowKeyDown,
+  tabAtivaPrincipalStyle,
+} from "../GestaoUsuarios/gestaoUsuariosHelpers";
+
+const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
+const ERRO_EXCLUIR_OPERADORA =
+  "Não foi possível excluir a operadora. Verifique vínculos ou tente desativar em vez de excluir.";
+const ERRO_SALVAR_OPERADORA = "Não foi possível salvar. Verifique os dados e tente novamente.";
+const ERRO_UPLOAD_LOGO = "Não foi possível enviar o logo.";
+const ERRO_UPLOAD_FONTE = "Não foi possível enviar a fonte.";
+
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+}
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -66,24 +82,25 @@ export default function GestaoOperadoras() {
   }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
   const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
+  const thStyle = getThStyle(t);
+  const ctaNovaBg = dashBrand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
 
-  // ─── Estilos de tabela ───────────────────────────────────────────────────
-  const th: React.CSSProperties = {
-    textAlign: "left", padding: "10px 16px", color: t.textMuted,
-    fontWeight: 700, fontSize: 11, textTransform: "uppercase",
-    letterSpacing: "0.08em", fontFamily: FONT.body,
-    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    whiteSpace: "nowrap",
-  };
-  const td: React.CSSProperties = {
-    padding: "12px 16px", color: t.text, fontFamily: FONT.body,
-    fontSize: 13, verticalAlign: "middle",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell">
+        <GestaoUsuariosLoading />
+      </div>
+    );
+  }
 
   if (perm.canView === "nao") {
-    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a Gestão de Operadoras.</div>;
+    return (
+      <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        {MSG_SEM_PERMISSAO}
+      </div>
+    );
   }
 
   const mostrarColunaAcoes = perm.canEditarOk || perm.canExcluirOk;
@@ -98,13 +115,16 @@ export default function GestaoOperadoras() {
       setOperadoraParaExcluir(null);
       await carregar();
     } catch (e: unknown) {
-      const msg =
-        e instanceof Error && /foreign key|violates|referência/i.test(e.message)
-          ? "Não é possível excluir: existem registros vinculados a esta operadora (mesas, RH, figurinos, etc.). Remova ou altere esses vínculos antes, ou desative a operadora em Editar."
-          : e instanceof Error
-            ? e.message
-            : "Não foi possível excluir a operadora.";
-      setErroExcluirOperadora(msg);
+      const fk =
+        e instanceof Error && /foreign key|violates|referência/i.test(e.message);
+      if (fk) {
+        setErroExcluirOperadora(
+          "Não é possível excluir: existem registros vinculados a esta operadora (mesas, RH, figurinos, etc.). Remova ou altere esses vínculos antes, ou desative a operadora em Editar.",
+        );
+      } else {
+        console.error(e);
+        setErroExcluirOperadora(ERRO_EXCLUIR_OPERADORA);
+      }
     } finally {
       setExcluindoOperadora(false);
     }
@@ -123,7 +143,7 @@ export default function GestaoOperadoras() {
           color: dashBrand.primaryIconColor,
           flexShrink: 0, marginTop: 3,
         }}>
-          <GiShield size={14} />
+          <Building2 size={14} aria-hidden="true" />
         </span>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: dashBrand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
@@ -138,9 +158,9 @@ export default function GestaoOperadoras() {
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
       <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
         {[
-          { label: "Total",    valor: operadoras.length,            cor: BRAND.roxoVivo },
-          { label: "Ativas",   valor: ativas,                       cor: "#059669"      },
-          { label: "Inativas", valor: operadoras.length - ativas,   cor: BRAND.cinza    },
+          { label: "Total", valor: loading ? "—" : operadoras.length, cor: BRAND.roxoVivo },
+          { label: "Ativas", valor: loading ? "—" : ativas, cor: "#059669" },
+          { label: "Inativas", valor: loading ? "—" : operadoras.length - ativas, cor: BRAND.cinza },
         ].map((c) => (
           <div key={c.label} style={{
             background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -173,10 +193,15 @@ export default function GestaoOperadoras() {
               type="button"
               onClick={() => { setEditando(null); setModalOpen(true); }}
               style={{
-                background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                color: "#fff", border: "none", borderRadius: 10,
-                padding: "9px 18px", cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
+                background: ctaNovaBg,
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "9px 18px",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
               }}
             >
               + Nova Operadora
@@ -185,12 +210,27 @@ export default function GestaoOperadoras() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 20px", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Carregando...</div>
+          <div
+            style={{
+              padding: "40px 20px",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Loader2 size={20} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
+            Carregando…
+          </div>
         ) : operadoras.length === 0 ? (
           <div style={{ padding: "48px 20px", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+          <div className="app-table-wrap">
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+            <caption style={{ display: "none" }}>Lista de operadoras cadastradas</caption>
             <thead>
               <tr>
                 <SortTableTh<OpSortCol>
@@ -198,7 +238,7 @@ export default function GestaoOperadoras() {
                   col="slug"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={th}
+                  thStyle={thStyle}
                   align="left"
                   onSort={(c) =>
                     setSortOp((s) => ({
@@ -212,7 +252,7 @@ export default function GestaoOperadoras() {
                   col="nome"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={th}
+                  thStyle={thStyle}
                   align="left"
                   onSort={(c) =>
                     setSortOp((s) => ({
@@ -226,7 +266,7 @@ export default function GestaoOperadoras() {
                   col="status"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={th}
+                  thStyle={thStyle}
                   align="left"
                   onSort={(col) =>
                     setSortOp((s) => ({
@@ -240,7 +280,7 @@ export default function GestaoOperadoras() {
                   col="criada"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={th}
+                  thStyle={thStyle}
                   align="left"
                   onSort={(c) =>
                     setSortOp((s) => ({
@@ -249,13 +289,28 @@ export default function GestaoOperadoras() {
                     }))
                   }
                 />
-                {mostrarColunaAcoes && <th style={th}>Ações</th>}
+                {mostrarColunaAcoes && (
+                  <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                    Ações
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {operadorasOrdenadas.map((op, idx) => (
-                <tr key={op.slug} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
-                  <td style={td}>
+              {operadorasOrdenadas.map((op, idx) => {
+                const zebra = zebraStripe(idx);
+                return (
+                <tr
+                  key={op.slug}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={getTdStyle(t)}>
                     <code style={{
                       background: `${BRAND.roxoVivo}18`, borderRadius: 6,
                       padding: "3px 9px", fontSize: 12,
@@ -265,8 +320,8 @@ export default function GestaoOperadoras() {
                       {op.slug}
                     </code>
                   </td>
-                  <td style={{ ...td, fontWeight: 600 }}>{op.nome}</td>
-                  <td style={td}>
+                  <td style={{ ...getTdStyle(t), fontWeight: 600 }}>{op.nome}</td>
+                  <td style={getTdStyle(t)}>
                     <span style={{
                       background: op.ativo ? "#05966922" : "#6b728022",
                       color: op.ativo ? "#059669" : "#6b7280",
@@ -277,48 +332,65 @@ export default function GestaoOperadoras() {
                       {op.ativo ? "Ativa" : "Inativa"}
                     </span>
                   </td>
-                  <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
+                  <td style={{ ...getTdStyle(t), color: t.textMuted, fontSize: 12 }}>
                     {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                   </td>
                   {mostrarColunaAcoes && (
-                    <td style={td}>
-                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
                         {perm.canEditarOk ? (
                           <button
                             type="button"
+                            aria-label={`Editar operadora ${op.nome ?? op.slug}`}
+                            title={`Editar operadora ${op.nome ?? op.slug}`}
                             onClick={() => { setEditando(op); setModalOpen(true); }}
                             style={{
-                              display: "inline-flex", alignItems: "center", gap: 5,
-                              background: "transparent", border: `1px solid ${t.cardBorder}`,
-                              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
-                              fontFamily: FONT.body, fontSize: 12, color: t.text, fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 32,
+                              height: 32,
+                              background: "transparent",
+                              border: `1px solid ${t.cardBorder}`,
+                              borderRadius: 10,
+                              cursor: "pointer",
+                              color: t.text,
                             }}
                           >
-                            <Pencil size={13} aria-hidden /> Editar
+                            <Pencil size={14} aria-hidden="true" />
                           </button>
                         ) : null}
                         {perm.canExcluirOk ? (
                           <button
                             type="button"
+                            aria-label={`Excluir operadora ${op.nome ?? op.slug}`}
+                            title={`Excluir operadora ${op.nome ?? op.slug}`}
                             onClick={() => {
                               setErroExcluirOperadora(null);
                               setOperadoraParaExcluir(op);
                             }}
                             style={{
-                              display: "inline-flex", alignItems: "center", gap: 5,
-                              background: "transparent", border: `1px solid ${BRAND.vermelho}66`,
-                              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
-                              fontFamily: FONT.body, fontSize: 12, color: BRAND.vermelho, fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 32,
+                              height: 32,
+                              background: "transparent",
+                              border: `1px solid ${BRAND.vermelho}66`,
+                              borderRadius: 10,
+                              cursor: "pointer",
+                              color: BRAND.vermelho,
                             }}
                           >
-                            <Trash2 size={13} aria-hidden /> Excluir
+                            <Trash2 size={14} aria-hidden="true" />
                           </button>
                         ) : null}
                       </div>
                     </td>
                   )}
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
           </div>
@@ -328,8 +400,6 @@ export default function GestaoOperadoras() {
       {modalOpen && (
         <ModalOperadora
           key={editando?.slug ?? "nova"}
-          t={t}
-          dashBrand={dashBrand}
           editando={editando}
           onClose={() => setModalOpen(false)}
           onSalvo={carregar}
@@ -358,14 +428,6 @@ export default function GestaoOperadoras() {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-interface ModalProps {
-  t: ReturnType<typeof useApp>["theme"];
-  dashBrand: ReturnType<typeof useDashboardBrand>;
-  editando: Operadora | null;
-  onClose: () => void;
-  onSalvo: () => void;
-}
-
 type ModalTabId = "dados" | "brand" | "operacoes";
 
 type MesaCadastroResumo = {
@@ -388,7 +450,18 @@ function normHex6(s: string): string | null {
   return /^#[0-9a-fA-F]{6}$/.test(x) ? x.toLowerCase() : null;
 }
 
-function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps) {
+function ModalOperadora({
+  editando,
+  onClose,
+  onSalvo,
+}: {
+  editando: Operadora | null;
+  onClose: () => void;
+  onSalvo: () => void;
+}) {
+  const { theme: t } = useApp();
+  const dashBrand = useDashboardBrand();
+  const nomeInputRef = useRef<HTMLInputElement>(null);
   const isNova = !editando;
   const [aba, setAba] = useState<ModalTabId>("dados");
   const [nome, setNome] = useState(editando?.nome ?? "");
@@ -413,6 +486,11 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
   const brandObrigatorio = isNova || ativo;
   const storageSlug = (editando?.slug ?? slug).trim();
+
+  useEffect(() => {
+    const id = window.setTimeout(() => nomeInputRef.current?.focus(), 100);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     if (!editando) {
@@ -469,7 +547,8 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setLogoUrl(`${publicUrl}?v=${Date.now()}`);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao enviar logo.");
+      console.error(err);
+      setErro(ERRO_UPLOAD_LOGO);
     } finally {
       setUploadingLogo(false);
       e.target.value = "";
@@ -501,7 +580,8 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setFontUrl(publicUrl);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao enviar fonte.");
+      console.error(err);
+      setErro(ERRO_UPLOAD_FONTE);
     } finally {
       setUploadingFont(false);
       e.target.value = "";
@@ -665,7 +745,8 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       onSalvo();
       onClose();
     } catch (e: unknown) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+      console.error(e);
+      setErro(ERRO_SALVAR_OPERADORA);
     } finally {
       setSalvando(false);
     }
@@ -686,37 +767,46 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
   const fieldStyle: React.CSSProperties = { marginBottom: 18 };
   const tryClose = () => { if (!salvando) onClose(); };
 
-  const tabs: { id: ModalTabId; label: string }[] = isNova
-    ? [
-        { id: "dados", label: "Dados cadastrais" },
-        { id: "brand", label: "Brandguide" },
-      ]
-    : [
-        { id: "dados", label: "Dados cadastrais" },
-        { id: "brand", label: "Brandguide" },
-        { id: "operacoes", label: "Operações" },
-      ];
+  const tabs = useMemo(
+    (): { id: ModalTabId; label: string }[] =>
+      isNova
+        ? [
+            { id: "dados", label: "Dados cadastrais" },
+            { id: "brand", label: "Brandguide" },
+          ]
+        : [
+            { id: "dados", label: "Dados cadastrais" },
+            { id: "brand", label: "Brandguide" },
+            { id: "operacoes", label: "Operações" },
+          ],
+    [isNova],
+  );
+
+  const tabIds = useMemo(() => tabs.map((x) => x.id), [tabs]);
 
   const tabBtn = (id: ModalTabId, label: string) => {
     const sel = aba === id;
+    const tabStyle = tabAtivaPrincipalStyle(sel, t.cardBorder, t.inputBg ?? t.bg);
     return (
       <button
         key={id}
         type="button"
         role="tab"
         id={`tab-op-${id}`}
+        tabIndex={sel ? 0 : -1}
         aria-selected={sel}
         aria-controls={`panel-op-${id}`}
         onClick={() => setAba(id)}
+        onKeyDown={(e) => handleGestaoTabsArrowKeyDown(e, tabIds, id, setAba, "tab-op-")}
         style={{
           padding: "8px 14px",
           borderRadius: 10,
-          border: `1px solid ${sel ? BRAND.roxoVivo : t.cardBorder}`,
-          background: sel ? `${BRAND.roxoVivo}18` : "transparent",
-          color: sel ? BRAND.roxoVivo : t.textMuted,
+          border: tabStyle.border,
+          background: tabStyle.background,
+          color: sel ? tabStyle.color : t.textMuted,
           fontFamily: FONT.body,
           fontSize: 12,
-          fontWeight: sel ? 700 : 600,
+          fontWeight: tabStyle.fontWeight,
           cursor: "pointer",
         }}
       >
@@ -859,18 +949,19 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       </div>
 
       {aba === "dados" && (
-        <div role="tabpanel" id="panel-op-dados" aria-labelledby="tab-op-dados">
+        <div role="tabpanel" id="panel-op-dados" aria-labelledby="tab-op-dados" tabIndex={0}>
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Nome
               <CampoObrigatorioMark />
             </label>
             <input
+              ref={nomeInputRef}
               style={inputStyle}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Ex: Blaze"
-              autoFocus
+              aria-label="Nome da operadora"
             />
           </div>
 
@@ -962,13 +1053,13 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       )}
 
       {aba === "brand" && (
-        <div role="tabpanel" id="panel-op-brand" aria-labelledby="tab-op-brand">
+        <div role="tabpanel" id="panel-op-brand" aria-labelledby="tab-op-brand" tabIndex={0}>
           {brandGrid}
         </div>
       )}
 
       {!isNova && aba === "operacoes" && (
-        <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes">
+        <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes" tabIndex={0}>
           <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
             Horário de turno dos dealers
           </div>
@@ -1076,13 +1167,25 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
           onClick={salvar}
           disabled={salvando}
           style={{
-            background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-            color: "#fff", border: "none", borderRadius: 10,
-            padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
-            fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            background: ctaGradientSalvar(dashBrand, salvando, BRAND.cinza),
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "9px 20px",
+            cursor: salvando ? "not-allowed" : "pointer",
+            fontFamily: FONT.body,
+            fontSize: 13,
+            fontWeight: 700,
+            opacity: salvando ? 0.85 : 1,
           }}
         >
-          {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar operadora"}
+          <SalvarCtaContent
+            salvando={salvando}
+            label={editando ? "Salvar alterações" : "Criar operadora"}
+          />
         </button>
       </div>
     </ModalBase>
