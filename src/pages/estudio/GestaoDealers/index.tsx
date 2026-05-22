@@ -15,7 +15,6 @@ import {
   Flag,
   ChevronLeft,
   ChevronRight,
-  Search,
   CircleDot,
   Users,
   User,
@@ -25,7 +24,9 @@ import {
   Star,
 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
@@ -419,30 +420,13 @@ export default function GestaoDealers() {
                 })}
               </div>
             </div>
-            <div style={{ position: "relative", width: "100%" }}>
-              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <Search size={14} strokeWidth={2} />
-              </span>
-              <input
-                type="search"
-                value={buscaDealer}
-                onChange={(e) => setBuscaDealer(e.target.value)}
-                placeholder="Buscar por nome ou nickname..."
-                aria-label="Buscar dealers por nome ou nickname"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "7px 12px 7px 36px",
-                  borderRadius: 999,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg,
-                  color: t.text,
-                  fontSize: 12,
-                  fontFamily: FONT.body,
-                  outline: "none",
-                }}
-              />
-            </div>
+            <BarraPesquisaPagina
+              value={buscaDealer}
+              onChange={setBuscaDealer}
+              placeholder={PAGE_SEARCH.nomeNickname}
+              aria-label="Buscar dealers por nome ou nickname"
+              wrapperStyle={{ width: "100%" }}
+            />
           </div>
         </div>
       )}

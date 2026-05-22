@@ -1994,7 +1994,7 @@ export default function Ajuda() {
               boxShadow: cardShadow,
             }}
           >
-            <AbaGlossario dark={isDark} t={t} brand={brand} />
+            <AbaGlossario dark={isDark} t={t} />
           </div>
         </div>
       ) : menuAjudaVisivel.length === 0 ? (

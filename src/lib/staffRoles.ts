@@ -8,8 +8,21 @@ export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
 }
 
 /**
+ * Perfis sem escopo operadora/influencer na Gestão nem na app — só `role_permissions` (aba Permissões).
+ * Visão global de dados quando Ver = sim; ações conforme Criar/Editar/Excluir.
+ */
+export const ROLES_SEM_RESTRICAO_ESCOPO: readonly Role[] = [
+  "executivo",
+  "investidor",
+  "shift_leader",
+  "service_manager",
+  "figurino",
+  "rh",
+];
+
+/**
+ * @deprecated preferir ROLES_SEM_RESTRICAO_ESCOPO — subset staff Spin (sem executivo/investidor).
  * Perfis staff Spin: sem escopo por operadora na Gestão nem na app — só `role_permissions` (aba Permissões).
- * Mesma visão ampla de operadoras/influencers nos filtros que Executivo (sem user_scopes).
  */
 export const ROLES_STAFF_APENAS_PERMISSOES: readonly Role[] = [
   "shift_leader",

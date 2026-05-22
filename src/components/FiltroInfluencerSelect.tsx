@@ -8,6 +8,8 @@ import {
   FILTRO_BAR_PILL_PADDING,
   getFiltroBarPillStateStyle,
 } from "../lib/filterBarStyles";
+import { FILTER_SEARCH_INFLUENCER } from "../lib/searchBarConstants";
+import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 /** Valor canónico da opção agregadora (todos no escopo). */
 export const INFLUENCER_FILTRO_TODOS_VALUE = "todos";
@@ -72,7 +74,7 @@ function useActiveFilterStyle(isActive: boolean) {
   return getFiltroBarPillStateStyle(t, brand, isActive);
 }
 
-function SearchField({
+function FiltroPainelSearchFocus({
   value,
   onChange,
   placeholder,
@@ -81,34 +83,17 @@ function SearchField({
   onChange: (v: string) => void;
   placeholder: string;
 }) {
-  const { theme: t } = useApp();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, []);
   return (
-    <input
-      ref={inputRef}
-      type="search"
+    <BarraPesquisaFiltroPainel
+      inputRef={inputRef}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
       placeholder={placeholder}
-      aria-label="Pesquisar na lista"
-      autoComplete="off"
-      style={{
-        width: "100%",
-        boxSizing: "border-box",
-        marginBottom: 8,
-        padding: "8px 10px",
-        borderRadius: 8,
-        border: `1px solid ${t.cardBorder}`,
-        background: t.inputBg,
-        color: t.text,
-        fontSize: 12,
-        fontFamily: FONT.body,
-        outline: "none",
-      }}
     />
   );
 }
@@ -285,10 +270,10 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
           style={panelStyle}
         >
           {enableSearch ? (
-            <SearchField
+            <FiltroPainelSearchFocus
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Pesquisar…"
+              placeholder={FILTER_SEARCH_INFLUENCER}
             />
           ) : null}
 

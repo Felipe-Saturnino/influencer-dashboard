@@ -10,7 +10,9 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader } from "../../../components/dashboard";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
@@ -536,24 +538,12 @@ export default function Scout() {
             gap: 10,
             flexWrap: "wrap",
           }}>
-            <input
+            <BarraPesquisaPagina
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
+              onChange={setSearch}
+              placeholder={PAGE_SEARCH.nomeEmail}
               aria-label="Buscar prospecto por nome ou e-mail"
-              style={{
-                flex: "1 1 200px",
-                minWidth: 0,
-                boxSizing: "border-box",
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                outline: "none",
-              }}
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
             {perm.canCriarOk && (
               <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>

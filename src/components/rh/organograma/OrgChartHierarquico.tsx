@@ -1,5 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
-import { Search, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
@@ -152,45 +154,14 @@ export function OrgChartHierarquico({
         <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
           Selecione uma diretoria para ver gerências, times e equipe.
         </p>
-        <label htmlFor="org-hierarquia-busca" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-          Pesquisar por nome de funcionário, diretoria, gerência ou time
-        </label>
-        <div style={{ position: "relative", maxWidth: 520, marginBottom: 20 }}>
-          <Search
-            size={16}
-            strokeWidth={2}
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: t.textMuted,
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            id="org-hierarquia-busca"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Ex.: Maria, Comercial, CX…"
-            autoComplete="off"
-            aria-label="Pesquisar organograma por funcionário, diretoria, gerência ou time"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px 10px 38px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontSize: 14,
-              fontFamily: FONT.body,
-              outline: "none",
-            }}
-          />
-        </div>
+        <BarraPesquisaPagina
+          id="org-hierarquia-busca"
+          value={busca}
+          onChange={setBusca}
+          placeholder={PAGE_SEARCH.organograma}
+          aria-label="Pesquisar organograma por prestador, gerência ou time"
+          wrapperStyle={{ maxWidth: 520, marginBottom: 20, width: "100%" }}
+        />
 
         {semResultadosBusca ? (
           <div

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, CheckCircle2, Loader2, Search, Trash2 } from "lucide-react";
+import { Briefcase, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -16,7 +16,9 @@ import {
 } from "../../../lib/rhVagasFormat";
 import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasCandidaturasPainel";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -200,41 +202,14 @@ export default function RhVagasPage() {
   }
 
   const inputBusca = (id: string, ariaLabel: string) => (
-    <div style={{ position: "relative", maxWidth: 480, marginBottom: 16 }}>
-      <Search
-        size={16}
-        aria-hidden
-        style={{
-          position: "absolute",
-          left: 12,
-          top: "50%",
-          transform: "translateY(-50%)",
-          color: t.textMuted,
-          pointerEvents: "none",
-        }}
-      />
-      <input
-        id={id}
-        type="search"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Nome da vaga ou diretoria…"
-        autoComplete="off"
-        aria-label={ariaLabel}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "10px 12px 10px 38px",
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg,
-          color: t.text,
-          fontSize: 14,
-          fontFamily: FONT.body,
-          outline: "none",
-        }}
-      />
-    </div>
+    <BarraPesquisaPagina
+      id={id}
+      value={busca}
+      onChange={setBusca}
+      placeholder={PAGE_SEARCH.vaga}
+      aria-label={ariaLabel}
+      wrapperStyle={{ maxWidth: 480, marginBottom: 16, width: "100%" }}
+    />
   );
 
   const renderCardBase = (v: RhVagaRow, extras?: ReactNode, opts?: { statusLabel?: string }) => (

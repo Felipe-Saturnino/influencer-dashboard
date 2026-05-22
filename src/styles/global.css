@@ -309,3 +309,9 @@ aside *::-webkit-scrollbar-thumb:hover {
   white-space: nowrap;
   border: 0;
 }
+
+/* Placeholder das barras de pesquisa (página e painel de filtro) — alinhado ao Scout */
+.app-barra-pesquisa-pagina-input::placeholder {
+  color: inherit;
+  opacity: 0.5;
+}

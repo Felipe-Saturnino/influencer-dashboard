@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { supabase } from "../../../lib/supabase";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import {
@@ -162,30 +164,14 @@ export function RhVagasCandidaturasPainel({
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>Filtros</div>
-        <div style={{ position: "relative", maxWidth: 520, marginBottom: 14 }}>
-          <Search
-            size={16}
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: t.textMuted,
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            id="busca-candidaturas"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome da vaga, candidato ou e-mail…"
-            autoComplete="off"
-            aria-label="Pesquisar por nome da vaga, nome do candidato ou e-mail do candidato"
-            style={{ ...inputStyle, width: "100%", boxSizing: "border-box", paddingLeft: 38 }}
-          />
-        </div>
+        <BarraPesquisaPagina
+          id="busca-candidaturas"
+          value={busca}
+          onChange={setBusca}
+          placeholder={PAGE_SEARCH.vagaCandidato}
+          aria-label="Pesquisar por nome da vaga, nome do candidato ou e-mail do candidato"
+          wrapperStyle={{ maxWidth: 520, marginBottom: 14, width: "100%" }}
+        />
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <div>
             <label htmlFor="filtro-tipo-cand" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>

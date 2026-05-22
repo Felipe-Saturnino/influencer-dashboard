@@ -1811,7 +1811,6 @@ export default function RhCalendarioPage() {
                         ariaFilterPrefix="Filtrar por staff"
                         listboxAriaLabel="Selecionar membro do staff"
                         enableSearch
-                        searchPlaceholder="Pesquisar prestador…"
                       />
                     ) : null}
                     {mostrarBotaoMeuCalendario ? (
@@ -2066,7 +2065,6 @@ export default function RhCalendarioPage() {
                         ariaFilterPrefix="Filtrar por staff"
                         listboxAriaLabel="Selecionar membro do staff"
                         enableSearch
-                        searchPlaceholder="Pesquisar prestador…"
                       />
                     ) : null}
                     {mostrarBotaoMeuControle ? (

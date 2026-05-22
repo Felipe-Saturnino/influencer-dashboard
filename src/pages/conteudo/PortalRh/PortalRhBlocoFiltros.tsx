@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroHistoricoButton } from "../../../components/dashboard";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { FONT } from "../../../constants/theme";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { MesCarrosselEntry } from "./portalRhCarrossel";
@@ -24,8 +25,8 @@ export function PortalRhBlocoFiltros({
   onModoHistoricoChange,
   busca,
   onBuscaChange,
-  buscaPlaceholder = "Pesquisar por assunto ou descrição",
-  buscaAriaLabel = "Pesquisar por assunto ou descrição",
+  buscaPlaceholder = PAGE_SEARCH.portalRh,
+  buscaAriaLabel = "Pesquisar postagens por palavras-chave",
   linhaSubabas,
   linhaAposSubabas,
 }: {
@@ -100,38 +101,13 @@ export function PortalRhBlocoFiltros({
           marginBottom: linhaSubabas || linhaAposSubabas ? 12 : 0,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            padding: "8px 12px",
-            width: "100%",
-          }}
-        >
-          <Search size={16} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => onBuscaChange(e.target.value)}
-            placeholder={buscaPlaceholder}
-            aria-label={buscaAriaLabel}
-            style={{
-              flex: 1,
-              border: "none",
-              background: "transparent",
-              color: t.text,
-              fontSize: 13,
-              outline: "none",
-              fontFamily: FONT.body,
-              minWidth: 0,
-              width: "100%",
-            }}
-          />
-        </div>
+        <BarraPesquisaPagina
+          value={busca}
+          onChange={onBuscaChange}
+          placeholder={buscaPlaceholder}
+          aria-label={buscaAriaLabel}
+          wrapperStyle={{ width: "100%" }}
+        />
       </div>
 
       {/* Linha 3 — filtros extras (categorias ou tipo/status) */}

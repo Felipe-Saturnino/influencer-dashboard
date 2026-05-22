@@ -26,7 +26,9 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
@@ -589,15 +591,12 @@ export default function Influencers() {
 
             {/* Linha 4: Barra de Pesquisa */}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
-              <input
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome artístico ou e-mail..."
-                style={{
-                  width: "100%", boxSizing: "border-box", padding: "10px 16px",
-                  borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-                  fontFamily: FONT.body, outline: "none",
-                }}
+              <BarraPesquisaPagina
+                value={search}
+                onChange={setSearch}
+                placeholder={PAGE_SEARCH.nomeEmail}
+                aria-label="Buscar influencer por nome ou e-mail"
+                wrapperStyle={{ width: "100%" }}
               />
             </div>
 

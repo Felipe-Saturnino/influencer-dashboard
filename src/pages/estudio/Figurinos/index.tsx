@@ -10,7 +10,9 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -743,25 +745,12 @@ export default function FigurinosPage() {
               width: "100%",
             }}
           >
-            <input
-              type="search"
+            <BarraPesquisaPagina
               value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por código, categoria, operadora ou emprestado para…"
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.figurinos}
               aria-label="Buscar peças na aba atual"
-              style={{
-                flex: "1 1 200px",
-                minWidth: 0,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                boxSizing: "border-box",
-                outline: "none",
-              }}
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
             <button
               type="button"
@@ -1949,27 +1938,14 @@ function ModalRetirada({
           </div>
         ) : (
           <>
-            <input
-              ref={buscaRef}
-              type="search"
+            <BarraPesquisaPagina
+              inputRef={buscaRef}
               value={buscaPrestador}
-              onChange={(e) => setBuscaPrestador(e.target.value)}
+              onChange={setBuscaPrestador}
               disabled={loadingPrestadores || !!erroCargaPrestadores || prestadores.length === 0}
-              placeholder="Digite para filtrar…"
+              placeholder={FILTER_SEARCH_STAFF}
               aria-label="Filtrar prestadores por nome ou setor"
-              aria-required="true"
-              autoComplete="off"
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: 8,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-              }}
+              wrapperStyle={{ width: "100%", marginBottom: 8 }}
             />
             <div
               role="listbox"

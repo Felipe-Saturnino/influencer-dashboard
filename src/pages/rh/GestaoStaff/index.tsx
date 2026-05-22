@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, StickyNote, Trash2, Upload, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -30,7 +30,9 @@ import {
   textoHorarioTurnoSomenteOperadora,
 } from "../../../lib/rhStaffHorarioTurno";
 import type { Operadora } from "../../../types";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import {
   FiltroOperadoraSelect,
   FiltroTurnoSelect,
@@ -876,31 +878,18 @@ export default function RhGestaoStaffPage() {
                   maxWidth: "100%",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
-                  <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
-                  <input
-                    id="staff-busca-nome-nick"
-                    type="search"
-                    value={buscaNomeNickname}
-                    onChange={(e) => setBuscaNomeNickname(e.target.value)}
-                    placeholder="Nome ou nickname"
-                    autoComplete="off"
-                    aria-label="Pesquisar por nome ou nickname"
-                    style={{
-                      width: "clamp(200px, 50vw, 320px)",
-                      maxWidth: "100%",
-                      boxSizing: "border-box",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      outline: "none",
-                    }}
-                  />
-                </div>
+                <BarraPesquisaPagina
+                  id="staff-busca-nome-nick"
+                  value={buscaNomeNickname}
+                  onChange={setBuscaNomeNickname}
+                  placeholder={PAGE_SEARCH.nomeNickname}
+                  aria-label="Pesquisar por nome ou nickname"
+                  wrapperStyle={{
+                    flex: "0 0 auto",
+                    width: "clamp(200px, 50vw, 320px)",
+                    maxWidth: "100%",
+                  }}
+                />
                 <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
                   <FiltroOperadoraSelect
                     id="staff-filtro-operadora"

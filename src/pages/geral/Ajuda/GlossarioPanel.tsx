@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Search, ChevronRight, X } from "lucide-react";
-import { BRAND_SEMANTIC, FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
-import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ChevronRight, X } from "lucide-react";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
 import { GLOSSARIO_CATEGORIAS, type GlossarioCategoria } from "./glossarioData";
-
-type DashboardBrand = ReturnType<typeof useDashboardBrand>;
 
 function GlossarioCategCard({
   cat,
@@ -191,11 +190,9 @@ function GlossarioCategCard({
 export function AbaGlossario({
   dark,
   t,
-  brand,
 }: {
   dark: boolean;
   t: Theme;
-  brand: DashboardBrand;
 }) {
   const [busca, setBusca] = useState("");
   const q = busca.trim().toLowerCase();
@@ -213,49 +210,20 @@ export function AbaGlossario({
       })).filter((cat) => cat.termos.length > 0)
     : GLOSSARIO_CATEGORIAS;
 
-  const totalTermos = GLOSSARIO_CATEGORIAS.reduce((sum, cat) => sum + cat.termos.length, 0);
   const resultadosCount = categoriasFiltradas.reduce((sum, cat) => sum + cat.termos.length, 0);
 
   return (
     <div>
       <div style={{ position: "relative", marginBottom: 20 }}>
-        <Search
-          size={14}
-          color={t.textMuted}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            left: 14,
-            top: "50%",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-          }}
-        />
-        <input
+        <BarraPesquisaPagina
           value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder={`Buscar entre ${totalTermos} termos e métricas...`}
+          onChange={setBusca}
+          placeholder={PAGE_SEARCH.glossario}
           aria-label="Buscar no glossário"
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "10px 14px 10px 38px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            color: t.text,
-            fontSize: 14,
-            fontFamily: FONT.body,
-            outline: "none",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = brand.useBrand ? "var(--brand-primary)" : BRAND_SEMANTIC.roxoVivo;
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = t.cardBorder;
-          }}
+          wrapperStyle={{ width: "100%" }}
+          inputStyle={{ fontSize: 14, paddingRight: busca ? 36 : undefined }}
         />
-        {busca && (
+        {busca ? (
           <button
             type="button"
             onClick={() => setBusca("")}
@@ -275,14 +243,14 @@ export function AbaGlossario({
           >
             <X size={14} aria-hidden="true" />
           </button>
-        )}
+        ) : null}
       </div>
 
-      {busca.trim() && (
+      {busca.trim() ? (
         <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, marginBottom: 16 }}>
           {resultadosCount} resultado(s) para &quot;{busca.trim()}&quot;
         </p>
-      )}
+      ) : null}
 
       {categoriasFiltradas.length === 0 ? (
         <div

@@ -8,7 +8,9 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader } from "../../../components/dashboard";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
 
@@ -273,24 +275,12 @@ export default function AfiliadosNetwork() {
               flexWrap: "wrap",
             }}
           >
-            <input
+            <BarraPesquisaPagina
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
+              onChange={setSearch}
+              placeholder={PAGE_SEARCH.nomeEmail}
               aria-label="Buscar afiliado por nome ou e-mail"
-              style={{
-                flex: "1 1 200px",
-                minWidth: 0,
-                boxSizing: "border-box",
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                outline: "none",
-              }}
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
             {perm.canCriarOk && (
               <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>

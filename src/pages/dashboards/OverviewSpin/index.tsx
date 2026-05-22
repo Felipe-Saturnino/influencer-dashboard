@@ -1890,8 +1890,34 @@ export default function OverviewSpin() {
       }
     }
 
-    return JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
-  }, [mesasCadastro, slugListEscopoComparativo, podeVerOperadora]);
+    const fromCadastro = JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
+    if (fromCadastro.length > 0) return fromCadastro;
+
+    // Fallback: perfil sem escopo e catálogo vazio (RLS legado) — exibir colunas por jogo quando houver dados.
+    if (escoposVisiveis.semRestricaoEscopo === true) {
+      const withData = new Set<JogoComparativoKey>();
+      const srcRows = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
+      for (const r of srcRows) {
+        const lbl = labelMesaCda(r, operadorasListFmt);
+        if (isMesaBlackjackComparativo(r, operadorasListFmt)) withData.add("blackjack");
+        if (lbl === "Roleta") withData.add("roleta");
+        if (lbl === "Speed Baccarat") withData.add("baccarat");
+        if (isMesaFutebolBrasileiro(r, operadorasListFmt)) withData.add("futebol_brasileiro");
+      }
+      if (withData.size > 0) return JOGOS_COMPARATIVO.filter((j) => withData.has(j.key));
+    }
+
+    return fromCadastro;
+  }, [
+    mesasCadastro,
+    slugListEscopoComparativo,
+    podeVerOperadora,
+    escoposVisiveis.semRestricaoEscopo,
+    historico,
+    porTabelaFiltradasHist,
+    porTabelaFiltradas,
+    operadorasListFmt,
+  ]);
 
   const exibirBlocoDadosPorMesaFutebol = useMemo(() => {
     if (modoAgregadoTodasOperadoras) return false;

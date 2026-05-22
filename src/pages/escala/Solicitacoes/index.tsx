@@ -428,7 +428,6 @@ export default function EscalaSolicitacoesPage() {
         ariaFilterPrefix="Filtrar por staff"
         listboxAriaLabel="Selecionar membro do staff"
         enableSearch
-        searchPlaceholder="Pesquisar prestador…"
       />
     </div>
   );

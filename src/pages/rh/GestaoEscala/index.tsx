@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
+import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -7,7 +7,9 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
@@ -1825,24 +1827,12 @@ export default function RhGestaoEscalaPage() {
                     minWidth: 0,
                   }}
                 >
-                  <Search size={16} aria-hidden="true" style={{ color: t.textMuted, flexShrink: 0 }} />
-                  <input
-                    type="search"
+                  <BarraPesquisaPagina
                     value={filtroNicknameEscala}
-                    onChange={(e) => setFiltroNicknameEscala(e.target.value)}
-                    placeholder="Pesquisar nickname…"
-                    aria-label="Filtrar tabela de escala por nickname"
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg ?? t.cardBg ?? "transparent",
-                      color: t.text,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                    }}
+                    onChange={setFiltroNicknameEscala}
+                    placeholder={PAGE_SEARCH.nomeNickname}
+                    aria-label="Filtrar tabela de escala por nome ou nickname"
+                    wrapperStyle={{ flex: 1, minWidth: 0, width: "100%" }}
                   />
                 </div>
               </div>

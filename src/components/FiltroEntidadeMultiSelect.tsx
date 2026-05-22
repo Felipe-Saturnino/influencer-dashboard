@@ -6,6 +6,8 @@
 import { useState, useEffect, useRef, useLayoutEffect, useMemo } from "react";
 import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
 import { FONT, type Theme } from "../constants/theme";
+import { FILTER_SEARCH_STAFF } from "../lib/searchBarConstants";
+import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 const BRAND_PRIMARY = "var(--brand-primary, #7c3aed)";
 const SEMANTIC_RED = "#e84025";
@@ -31,7 +33,7 @@ export default function FiltroEntidadeMultiSelect({
   ariaFilterPrefix = "Filtrar por influencer",
   listboxAriaLabel = "Selecionar influencers",
   enableSearch = false,
-  searchPlaceholder = "Pesquisar…",
+  searchPlaceholder = FILTER_SEARCH_STAFF,
 }: FiltroEntidadeMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
@@ -148,27 +150,11 @@ export default function FiltroEntidadeMultiSelect({
           }}
         >
           {enableSearch ? (
-            <input
-              ref={searchInputRef}
-              type="search"
+            <BarraPesquisaFiltroPainel
+              inputRef={searchInputRef}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={setSearchQuery}
               placeholder={searchPlaceholder}
-              aria-label="Pesquisar na lista"
-              autoComplete="off"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                marginBottom: 8,
-                padding: "8px 10px",
-                borderRadius: 8,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontSize: 12,
-                fontFamily: FONT.body,
-                outline: "none",
-              }}
             />
           ) : null}
           {selected.length > 0 && (

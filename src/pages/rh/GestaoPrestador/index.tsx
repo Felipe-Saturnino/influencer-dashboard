@@ -70,7 +70,9 @@ import {
   revisaoCadastralPendenteParaFuncionario,
   prestadorExigeRevisaoCadastral,
 } from "../../../lib/rhCadastroRevisao";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -2394,15 +2396,13 @@ export default function RhPrestadoresPage() {
           </div>
         </div>
         <div style={{ width: "100%" }}>
-          {lbl("rh-func-busca", "Pesquisar por nome, CPF ou e-mail")}
-          <input
+          <BarraPesquisaPagina
             id="rh-func-busca"
-            type="search"
             value={busca}
-            onChange={(ev) => setBusca(ev.target.value)}
-            placeholder="Nome, CPF ou e-mail"
+            onChange={setBusca}
+            placeholder={PAGE_SEARCH.nomeCpfEmail}
             aria-label="Pesquisar por nome, CPF ou e-mail"
-            style={inputStyle}
+            wrapperStyle={{ width: "100%" }}
           />
         </div>
       </div>
@@ -4473,14 +4473,13 @@ export default function RhPrestadoresPage() {
             </div>
             <div style={{ marginBottom: 10 }}>
               {lblReq("rt-busca", "Participantes")}
-              <input
+              <BarraPesquisaPagina
                 id="rt-busca"
-                type="search"
                 value={rtBusca}
-                onChange={(e) => setRtBusca(e.target.value)}
-                placeholder="Digite o nome para buscar"
-                style={inputStyle}
+                onChange={setRtBusca}
+                placeholder={FILTER_SEARCH_STAFF}
                 aria-label="Pesquisar funcionários para adicionar como participantes"
+                wrapperStyle={{ width: "100%", marginBottom: 0 }}
               />
               {rtBusca.trim() ? (
                 <div

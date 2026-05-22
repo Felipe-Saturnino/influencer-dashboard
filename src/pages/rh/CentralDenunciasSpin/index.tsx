@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, History, ListFilter, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, History, ListFilter, Loader2, Pencil, Shield, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -18,7 +18,9 @@ import {
 import type { DenunciaListRow, AnexoRow } from "./types";
 import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
 import { ModalAtenderDenuncia, ModalConfirmarExclusao } from "./ModalsAtender";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
@@ -337,39 +339,14 @@ export default function CentralDenunciasSpin() {
             marginRight: "auto",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              padding: "8px 12px",
-              width: "100%",
-            }}
-          >
-            <Search size={16} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
-            <input
-              id="busca-relato"
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Pesquisar por palavras-chave no relato"
-              aria-label="Pesquisar denúncias por palavras-chave no relato"
-              style={{
-                flex: 1,
-                border: "none",
-                background: "transparent",
-                color: t.text,
-                fontSize: 13,
-                outline: "none",
-                fontFamily: FONT.body,
-                minWidth: 0,
-                width: "100%",
-              }}
-            />
-          </div>
+          <BarraPesquisaPagina
+            id="busca-relato"
+            value={busca}
+            onChange={setBusca}
+            placeholder={PAGE_SEARCH.denuncias}
+            aria-label="Pesquisar denúncias por palavras-chave no relato"
+            wrapperStyle={{ width: "100%" }}
+          />
         </div>
       </section>
 

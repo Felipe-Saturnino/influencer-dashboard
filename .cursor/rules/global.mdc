@@ -157,7 +157,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
-**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`. Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
+**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`, **`BarraPesquisaPagina`** (busca de lista na página), **`BarraPesquisaFiltroPainel`** (busca no painel do filtro). Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
 
 ```typescript
 import {
@@ -311,7 +311,7 @@ Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, us
 | Opção agregadora — **multi** | `value={[]}` equivale a Todos Influencers |
 | `aria-label` do controlo | Prefixo `Filtrar por influencer — {rótulo atual}`; nome do filtro: **`Influencers`** (`INFLUENCER_FILTRO_ARIA_LABEL`) |
 | Estilo | Pill `borderRadius: 999`; ativo: `color-mix` com `--brand-action` 15% |
-| Pesquisa no painel | Automática quando `influencers.length > 5` (placeholder “Pesquisar…”) |
+| Pesquisa no painel | Automática quando `influencers.length > 5` — placeholder **`Pesquisar Influencer...`** (`FILTER_SEARCH_INFLUENCER`) |
 | Visibilidade | `showFiltroInfluencer` de `useDashboardFiltros()` — **não** alterar regras de escopo |
 
 ```tsx
@@ -385,12 +385,44 @@ import { FiltroHojeButton } from "../components/dashboard";
 
 **Escopo actual:** só **Agenda** (`lives/Agenda`). Não substituir `FiltroHistoricoButton` dos dashboards.
 
+### Barras de pesquisa na página (lista / filtros de tabela)
+
+Filtra registros na própria página (não é campo de formulário nem busca só dentro de dropdown).
+
+| Regra | Valor |
+|-------|--------|
+| Componente | **`BarraPesquisaPagina`** (`src/components/BarraPesquisaPagina.tsx`) |
+| Estilos | `getBarraPesquisaPaginaInputStyle` / ícone em `lib/searchBarStyles.ts` — **referência visual: Lives → Scout** (`borderRadius` 12, `border` `t.cardBorder`, fundo `t.inputBg`, `fontSize` 13) |
+| Ícone | **`Search`** Lucide 16px à esquerda (`padding-left` 38px) — **obrigatório**; não markup solto |
+| Reticências no placeholder | Três pontos ASCII **`...`** (`SEARCH_PLACEHOLDER_ELLIPSIS` em `lib/searchBarConstants.ts`) — **não** usar `…` (U+2026) em placeholders novos |
+| Textos canónicos | `PAGE_SEARCH.*` em `searchBarConstants.ts` quando o domínio for partilhado |
+| `type` | `search` + `aria-label` descritivo (distinto do placeholder quando fizer sentido) |
+
+**Exceção (manter markup local):** **Financeiro** e **Banca de Jogo** — busca no card *Consolidado* (fora do padrão de strip Scout).
+
+```tsx
+import { BarraPesquisaPagina } from "../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../lib/searchBarConstants";
+
+<BarraPesquisaPagina
+  value={busca}
+  onChange={setBusca}
+  placeholder={PAGE_SEARCH.nomeEmail}
+  aria-label="Buscar por nome ou e-mail"
+  wrapperStyle={{ width: "100%" }}
+/>
+```
+
+**Modais / seletor com lista:** mesma barra (`BarraPesquisaPagina`) + listbox abaixo (ex.: Figurinos prestador, RH Talks participantes, concluir vaga HC). Placeholder de staff: `FILTER_SEARCH_STAFF` → `Pesquisar Staff...`.
+
 ### Pesquisa dentro do filtro (> 5 valores)
 
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
-- **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`).
-- **Outros domínios:** componente partilhado equivalente ou busca embutida; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
-- Placeholder de busca curto (ex.: “Pesquisar…”); filtrar por correspondência parcial no nome.
+- **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`) com **`BarraPesquisaFiltroPainel`**.
+- **Staff / entidade genérica:** `FiltroEntidadeMultiSelect` com `enableSearch` — placeholder default **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
+- **Outros domínios:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
+- Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
+- Filtrar por correspondência parcial no nome.
 
 ---
 

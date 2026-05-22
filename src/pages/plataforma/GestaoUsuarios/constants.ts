@@ -1,5 +1,5 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
-import { ROLES_STAFF_APENAS_PERMISSOES } from "../../../lib/staffRoles";
+import { ROLES_SEM_RESTRICAO_ESCOPO } from "../../../lib/staffRoles";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
@@ -186,10 +186,5 @@ export function roleBadgeColor(role: Role): string {
 
 /** Admin, Executivo, Investidor e staff Spin não usam escopo por operadora/influencer na Gestão de Usuários. */
 export function escopoBloqueado(role: Role): boolean {
-  return (
-    role === "admin" ||
-    role === "executivo" ||
-    role === "investidor" ||
-    ROLES_STAFF_APENAS_PERMISSOES.includes(role)
-  );
+  return role === "admin" || ROLES_SEM_RESTRICAO_ESCOPO.includes(role);
 }

@@ -258,7 +258,7 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
-| Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
+| Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
@@ -293,7 +293,8 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Campanha / UTM | `Megaphone` ou `Link2` | 13–15 | `SelectComIcone` conforme domínio |
 | Perfil / role (plataforma) | `UserCog` ou `Shield` | 13–14 | Preferir Lucide; legado `GiPerson` / `GiShield` em Gestão de Usuários |
 | Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
-| Busca textual | `Search` | 14–16 | À esquerda do `<input type="search">`, `aria-label` no input |
+| Busca textual (página) | `Search` | **16** | **`BarraPesquisaPagina`** — ícone absoluto à esquerda; borda no `input` (padrão Scout). Ver Global § Barras de pesquisa |
+| Busca no painel do filtro | `Search` | **14** | **`BarraPesquisaFiltroPainel`** — placeholder `Pesquisar [Nome do filtro]...` |
 | Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
 | Modo de vista (Mês/Semana/Dia) | `CalendarRange` | 15 | **`FiltroModoVisualizacaoSelect`** — `getFiltroBarPillStateStyle`; inativo no `defaultValue` |
 | Atalho Hoje (Agenda) | `History` | 15 | **`FiltroHojeButton`** — `getFiltroBarPillStateStyle`; ver Global § Botão Hoje |

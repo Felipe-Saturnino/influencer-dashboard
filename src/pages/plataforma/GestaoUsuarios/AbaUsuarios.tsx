@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { KeyRound, Search } from "lucide-react";
+import { KeyRound } from "lucide-react";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
@@ -10,7 +12,6 @@ import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES,
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
-import { onInputBlurBrand, onInputFocusBrand } from "./gestaoUsuariosHelpers";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 interface AbaUsuariosProps {
@@ -215,35 +216,14 @@ export function AbaUsuarios({
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Linha 1: pesquisa + novo usuário */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
-          <Search
-            size={14}
-            color={t.textMuted}
-            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
-            aria-hidden
-          />
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome ou e-mail..."
-            aria-label="Buscar usuários por nome ou e-mail"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 16px 10px 36px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontSize: 14,
-              fontFamily: FONT.body,
-              outline: "none",
-              transition: "border-color 0.18s",
-            }}
-            onFocus={onInputFocusBrand}
-            onBlur={(e) => onInputBlurBrand(e, t.cardBorder)}
-          />
-        </div>
+        <BarraPesquisaPagina
+          value={busca}
+          onChange={setBusca}
+          placeholder={PAGE_SEARCH.nomeEmail}
+          aria-label="Buscar usuários por nome ou e-mail"
+          wrapperStyle={{ flex: "1 1 240px", minWidth: 200 }}
+          inputStyle={{ fontSize: 14 }}
+        />
         {modoAdmin && podeCriarUsuario ? (
           <CtaCriarButton type="button" onClick={abrirNovo} style={{ flexShrink: 0 }}>
             Novo Usuário

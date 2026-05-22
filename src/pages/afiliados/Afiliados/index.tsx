@@ -13,7 +13,9 @@ import OperadoraTag from "../../../components/OperadoraTag";
 import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto";
 import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 function SensitiveField({
@@ -352,7 +354,13 @@ export default function Afiliados() {
               </div>
             )}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail..." aria-label="Buscar por nome ou e-mail" style={{ width: "100%", boxSizing: "border-box", padding: "10px 16px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none" }} />
+              <BarraPesquisaPagina
+                value={search}
+                onChange={setSearch}
+                placeholder={PAGE_SEARCH.nomeEmail}
+                aria-label="Buscar por nome ou e-mail"
+                wrapperStyle={{ width: "100%" }}
+              />
             </div>
             {(filterStatus !== "todos" || filterOp !== "todas" || search) && (
               <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>

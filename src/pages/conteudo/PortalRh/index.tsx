@@ -12,6 +12,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { PageHeader } from "../../../components/PageHeader";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
@@ -715,7 +716,7 @@ export default function PortalRhPage() {
                   onModoHistoricoChange={setModoHistorico}
                   busca={busca}
                   onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaPlaceholder={PAGE_SEARCH.portalRh}
                   buscaAriaLabel="Pesquisar comunicados por assunto ou descrição"
                   linhaSubabas={
                     <FiltroSubtabPills
@@ -795,7 +796,7 @@ export default function PortalRhPage() {
                   onModoHistoricoChange={setModoHistorico}
                   busca={busca}
                   onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaPlaceholder={PAGE_SEARCH.portalRh}
                   buscaAriaLabel="Pesquisar políticas por assunto ou descrição"
                   linhaSubabas={
                     <FiltroSubtabPills
@@ -847,7 +848,7 @@ export default function PortalRhPage() {
                   onModoHistoricoChange={setModoHistorico}
                   busca={busca}
                   onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
+                  buscaPlaceholder={PAGE_SEARCH.portalRh}
                   buscaAriaLabel="Pesquisar RH Talks por assunto ou descrição"
                 />
                 {talksFiltrados.length === 0 ? (

@@ -21,6 +21,7 @@ import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -459,8 +460,8 @@ export function GerenciamentoPostagens({
         onModoHistoricoChange={setModoHistorico}
         busca={busca}
         onBuscaChange={setBusca}
-        buscaPlaceholder="Palavras-chave no assunto ou descrição"
-        buscaAriaLabel="Pesquisar postagens por assunto ou descrição"
+        buscaPlaceholder={PAGE_SEARCH.portalRh}
+        buscaAriaLabel="Pesquisar postagens por palavras-chave"
         linhaSubabas={
           <>
             <select
