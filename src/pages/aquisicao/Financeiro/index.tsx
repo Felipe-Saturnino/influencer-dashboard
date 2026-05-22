@@ -12,7 +12,7 @@ import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -2971,11 +2971,11 @@ export default function Financeiro() {
             <FiltroHistoricoButton active={historico} onClick={() => setHistorico((h) => !h)} />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-              <InfluencerMultiSelect
-                selected={filterInfluencers}
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
-                t={t}
               />
             )}
 

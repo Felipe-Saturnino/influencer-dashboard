@@ -1,50 +1,51 @@
+/**
+ * Multi-select genérico (legado) — uso temporário em filtros Staff / Time.
+ * Não usar para filtro de influencers na barra; ver `FiltroInfluencerSelect`.
+ * Staff e Time terão componentes dedicados num refactor futuro.
+ */
 import { useState, useEffect, useRef, useLayoutEffect, useMemo } from "react";
 import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
 import { FONT, type Theme } from "../constants/theme";
 
 const BRAND_PRIMARY = "var(--brand-primary, #7c3aed)";
-const SEMANTIC_RED = "#e94025";
+const SEMANTIC_RED = "#e84025";
 
-interface InfluencerMultiSelectProps {
+export interface FiltroEntidadeMultiSelectProps {
   selected: string[];
   onChange: (v: string[]) => void;
-  influencers: { id: string; name: string }[];
+  items: { id: string; name: string }[];
   t: Theme;
-  /** Rótulo do trigger quando nada está selecionado (padrão: "Influencers"). */
   triggerEmptyLabel?: string;
-  /** `aria-label` do botão (padrão: "Filtrar por influencer — …"). */
   ariaFilterPrefix?: string;
-  /** `aria-label` do listbox (padrão: "Selecionar influencers"). */
   listboxAriaLabel?: string;
-  /** Campo de pesquisa no topo do dropdown (filtra por nome, correspondência parcial). */
   enableSearch?: boolean;
   searchPlaceholder?: string;
 }
 
-export default function InfluencerMultiSelect({
+export default function FiltroEntidadeMultiSelect({
   selected,
   onChange,
-  influencers,
+  items,
   t,
   triggerEmptyLabel = "Influencers",
   ariaFilterPrefix = "Filtrar por influencer",
   listboxAriaLabel = "Selecionar influencers",
   enableSearch = false,
   searchPlaceholder = "Pesquisar…",
-}: InfluencerMultiSelectProps) {
+}: FiltroEntidadeMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const listboxId = useRef(`inf-multiselect-${Math.random().toString(36).slice(2, 9)}`).current;
+  const listboxId = useRef(`ent-multiselect-${Math.random().toString(36).slice(2, 9)}`).current;
 
-  const filteredInfluencers = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return influencers;
-    return influencers.filter((inf) => inf.name.toLowerCase().includes(q));
-  }, [influencers, searchQuery]);
+    if (!q) return items;
+    return items.filter((inf) => inf.name.toLowerCase().includes(q));
+  }, [items, searchQuery]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -69,8 +70,8 @@ export default function InfluencerMultiSelect({
       return;
     }
     if (enableSearch) {
-      const t = requestAnimationFrame(() => searchInputRef.current?.focus());
-      return () => cancelAnimationFrame(t);
+      const id = requestAnimationFrame(() => searchInputRef.current?.focus());
+      return () => cancelAnimationFrame(id);
     }
   }, [open, enableSearch]);
 
@@ -84,7 +85,7 @@ export default function InfluencerMultiSelect({
     selected.length === 0
       ? triggerEmptyLabel
       : selected.length === 1
-        ? (influencers.find((i) => i.id === selected[0])?.name ?? triggerEmptyLabel)
+        ? (items.find((i) => i.id === selected[0])?.name ?? triggerEmptyLabel)
         : `${selected.length} selecionados`;
 
   const dropdownMinWidth = enableSearch ? 240 : 190;
@@ -195,7 +196,7 @@ export default function InfluencerMultiSelect({
               <X size={10} aria-hidden /> Limpar seleção
             </button>
           )}
-          {filteredInfluencers.length === 0 ? (
+          {filteredItems.length === 0 ? (
             enableSearch && searchQuery.trim() ? (
               <div
                 style={{
@@ -210,7 +211,7 @@ export default function InfluencerMultiSelect({
               </div>
             ) : null
           ) : (
-            filteredInfluencers.map((inf) => {
+            filteredItems.map((inf) => {
               const checked = selected.includes(inf.id);
               return (
                 <div

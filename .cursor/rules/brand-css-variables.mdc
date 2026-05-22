@@ -84,14 +84,16 @@ const ctaGradient = brand.useBrand
 - **Nunca** iniciar fallback Spin com `#7c3aed` no gradiente — usar `#4a2082` → `#1e36f8`.
 - Botão primário **sólido** (sem gradiente): só quando o layout exigir; preferir gradiente nos CTAs “+ Criar”, “Salvar” principais.
 
-### Chip / filtro ativo / botão Histórico na barra
+### Chip / filtro ativo na barra (exceto botão Histórico)
 
-| Contexto | Token no `color-mix` | Borda/texto ativo |
-|----------|----------------------|-------------------|
+**Botão Histórico:** sempre **`FiltroHistoricoButton`** (Global § Botão Histórico) — não aplicar a tabela abaixo; visual fixo Overview Influencer (`Calendar` 15px, pill 999, `brand.accent` + `color-mix` `--brand-action` 15%).
+
+| Contexto | Token no `color-mix` (outros chips/selects ativos) | Borda/texto ativo |
+|----------|------------------------------------------------------|-------------------|
 | `src/pages/dashboards/**` | `var(--brand-action, #7c3aed)` 15% | `brand.accent` ou `--brand-action` |
 | Demais secções | `var(--brand-accent, #1e36f8)` ou `var(--brand-primary, #7c3aed)` 12–15% | `brand.accent` ou `brand.primary` |
 
-Fallback Spin quando `!brand.useBrand`: `rgba(124,58,237,0.15)` **apenas fora de** `dashboards/`.
+Fallback Spin quando `!brand.useBrand`: `rgba(124,58,237,0.15)` **apenas fora de** `dashboards/` — **não** no `FiltroHistoricoButton`.
 
 ### Links de marca (não semânticos)
 
@@ -140,6 +142,13 @@ Props mínimas:
 
 ## 5. Barra de filtros
 
+### Pill `borderRadius: 999` (padrão de controles na barra)
+
+Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defeito — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
+
+- **Não** usar `borderRadius: 10` ou `20` na barra salvo exceção documentada na secção.
+- `SelectComIcone` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B, domínios que não sejam filtro de lista na strip).
+
 Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 
 ```tsx
@@ -170,8 +179,9 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
 |------------|---------|-------------|
 | **`FiltroOperadoraSelect`** | `src/components/FiltroOperadoraSelect.tsx` | **Único** padrão para filtro de **lista de operadoras** na barra (ver tabela e snippet abaixo) |
 | **`FiltroHistoricoButton`** | `src/components/dashboard/FiltroHistoricoButton.tsx` | **Único** padrão para botão **Histórico** na barra (Overview Influencer) |
-| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para filtro de operadoras — usar `FiltroOperadoraSelect`): influencer, campanha, aba, status… |
-| `InfluencerMultiSelect` | `src/components/InfluencerMultiSelect.tsx` | Multi-seleção de influencers (já inclui `User` no trigger) |
+| **`FiltroInfluencerSelect`** | `src/components/FiltroInfluencerSelect.tsx` | **Único** padrão para filtro de **influencer(s)** na barra (`mode` single \| multiple) |
+| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora nem influencer na barra): campanha, aba, status… |
+| `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
 | Input com ícone | Markup local | Busca, campos na barra — ícone `Search` absoluto à esquerda |
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill={true}` em dashboards/Lives quando o visual for chip 999px; indicador ▾ embutido no componente.
@@ -203,8 +213,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Tipo de filtro | Ícone (Lucide) | Tamanho ref. | Componente / notas |
 |----------------|----------------|--------------|-------------------|
 | Operadora | `Shield` | 15 | **`FiltroOperadoraSelect`** (envolve `SelectComIcone`); opção agregadora **Todas Operadoras**; legado `GiShield` / markup duplicado proibido em código novo |
-| Influencer (único) | `User` | 13–15 | `SelectComIcone` |
-| Influencer (múltiplo) | `User` no trigger | 13 | `InfluencerMultiSelect` |
+| Influencer (único ou múltiplo) | `User` | **15** no trigger | **`FiltroInfluencerSelect`** — agregadora **Todos Influencers**; pill 999 |
 | Campanha / UTM | `Megaphone` ou `Link2` | 13–15 | `SelectComIcone` conforme domínio |
 | Perfil / role (plataforma) | `UserCog` ou `Shield` | 13–14 | Preferir Lucide; legado `GiPerson` / `GiShield` em Gestão de Usuários |
 | Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
@@ -329,6 +338,8 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Gradiente fallback com `#7c3aed` no início.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
+- Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
+- Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada na secção.
 - Botão Histórico na barra sem `FiltroHistoricoButton` (markup inline, `History` 14, pill retangular).
 - Ação de **linha** só com texto, sem ícone (código novo).
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
@@ -343,6 +354,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] `useDashboardBrand()` + header com título = `menu.ts` + subtítulo
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
 - [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
+- [ ] Filtro de influencer(s): `FiltroInfluencerSelect` + agregadora **Todos Influencers** + pill 999
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`

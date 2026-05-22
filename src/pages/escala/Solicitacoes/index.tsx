@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { DashboardPageHeader, SectionTitle } from "../../../components/dashboard";
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import FiltroEntidadeMultiSelect from "../../../components/FiltroEntidadeMultiSelect";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
@@ -419,10 +419,10 @@ export default function EscalaSolicitacoesPage() {
     <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
   ) : (
     <div style={{ flex: "1 1 260px", minWidth: 220 }}>
-      <InfluencerMultiSelect
+      <FiltroEntidadeMultiSelect
         selected={filtroStaffIds}
         onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
-        influencers={staffMultiselectItems}
+        items={staffMultiselectItems}
         t={t}
         triggerEmptyLabel="Staff"
         ariaFilterPrefix="Filtrar por staff"

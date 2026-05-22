@@ -25,7 +25,7 @@ import {
   FunilVisual,
   FiltroHistoricoButton,
   FiltroOperadoraSelect,
-  SelectComIcone,
+  FiltroInfluencerSelect,
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
@@ -53,7 +53,6 @@ import {
   Table2,
   TrendingUp,
   Trophy,
-  User,
   UserPlus,
   Video,
 } from "lucide-react";
@@ -1042,21 +1041,15 @@ export default function DashboardOverviewInfluencer() {
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={15} aria-hidden="true" />}
-                label="Filtrar por influencer"
-                pill
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {perfis
+                influencers={perfis
                   .filter((p) => influencersComDadosIds.includes(p.id) && podeVerInfluencer(p.id))
                   .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome_artistico}</option>
-                  ))}
-              </SelectComIcone>
+                  .map((p) => ({ id: p.id, name: p.nome_artistico ?? "" }))}
+              />
             )}
 
             {showFiltroOperadora && (

@@ -7,7 +7,7 @@ import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { FiltroHistoricoButton, FiltroOperadoraSelect, SelectComIcone, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
@@ -637,17 +637,14 @@ export default function DashboardFinanceiro() {
             </button>
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={14} aria-hidden />}
-                label="Filtrar por influencer"
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
-                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                ))}
-              </SelectComIcone>
+                influencers={[...rows]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((r) => ({ id: r.influencer_id, name: r.nome }))}
+              />
             )}
             {showFiltroOperadora && (
               <FiltroOperadoraSelect

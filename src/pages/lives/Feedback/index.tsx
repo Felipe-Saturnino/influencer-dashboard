@@ -12,7 +12,7 @@ import {
   X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, MessageSquare,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { DashboardPageHeader, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
@@ -527,7 +527,12 @@ export default function Feedback() {
             />
 
             {showFiltroInfluencer && influencers.length > 0 && (
-              <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={influencerFiltros}
+                onChange={setInfluencerFiltros}
+                influencers={influencers}
+              />
             )}
             {showFiltroOperadora && operadorasList.length > 0 && (
               <FiltroOperadoraSelect

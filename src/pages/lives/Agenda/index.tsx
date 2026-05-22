@@ -12,8 +12,7 @@ import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { ViewMes, ViewSemana, ViewDia, type ViewMode } from "./AgendaCalendarViews";
-// Dívida técnica (B5): migrar para InfluencerDropdown em refatoração de filtros.
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { PlatLogo } from "../../../components/PlatLogo";
 import {
   CalendarDays,
@@ -410,11 +409,11 @@ export default function Agenda() {
             />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-              <InfluencerMultiSelect
-                selected={filterInfluencers}
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
-                t={t}
               />
             )}
 

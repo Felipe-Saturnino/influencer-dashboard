@@ -81,7 +81,8 @@ Cinza    #6b7280 → neutro, sem dados
 components/     # Compartilhados — usar antes de criar local
   dashboard/    # KpiCard, SectionTitle, SortTableTh, SelectComIcone, FunilVisual, DashboardPageHeader, …
   PageHeader.tsx
-  InfluencerMultiSelect.tsx
+  FiltroInfluencerSelect.tsx
+  FiltroEntidadeMultiSelect.tsx
   OperacoesModal.tsx (ModalBase, ModalHeader)
   CampoObrigatorioMark.tsx
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
@@ -146,13 +147,21 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir).
 
-**Outros:** `PageHeader`, `InfluencerMultiSelect`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`.
+**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`. Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
 
 ```typescript
-import { FiltroOperadoraSelect, OPERADORA_FILTRO_TODAS_VALUE, OPERADORA_FILTRO_TODAS_LABEL, OPERADORA_FILTRO_ARIA_LABEL } from "../components/dashboard";
-// ou: from "../components/FiltroOperadoraSelect"
+import {
+  FiltroOperadoraSelect,
+  OPERADORA_FILTRO_TODAS_VALUE,
+  OPERADORA_FILTRO_TODAS_LABEL,
+  OPERADORA_FILTRO_ARIA_LABEL,
+  FiltroInfluencerSelect,
+  INFLUENCER_FILTRO_TODOS_VALUE,
+  INFLUENCER_FILTRO_TODOS_LABEL,
+} from "../components/dashboard";
+// ou: from "../components/FiltroOperadoraSelect" / FiltroInfluencerSelect
 ```
 
 Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não copiar localmente.
@@ -261,11 +270,52 @@ import { FiltroHistoricoButton } from "../components/dashboard";
 
 **Proibido em código novo:** botão Histórico só com texto; markup pill duplicado inline; `GiCalendar` / `History` montado à mão na barra.
 
+### Filtro de influencer (lista na barra) — obrigatório
+
+Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, usar **`FiltroInfluencerSelect`** — referência visual: **Streamers** (ícone `User` 15px, pill 999).
+
+| Regra | Valor |
+|--------|--------|
+| Componente | `FiltroInfluencerSelect` (`src/components/FiltroInfluencerSelect.tsx`) |
+| Modo | `mode="single"` (valor `todos` \| id) ou `mode="multiple"` (array vazio = agregador) — **definido pela página**, não pelo componente |
+| Ícone | **User** (Lucide, **15px**, `aria-hidden`) **sempre** no trigger (vazio ou com seleção) |
+| Opção agregadora — **rótulo** | **`Todos Influencers`** (`INFLUENCER_FILTRO_TODOS_LABEL`) |
+| Opção agregadora — **valor (single)** | `todos` (`INFLUENCER_FILTRO_TODOS_VALUE`) |
+| Opção agregadora — **multi** | `value={[]}` equivale a Todos Influencers |
+| `aria-label` do controlo | Prefixo `Filtrar por influencer — {rótulo atual}`; nome do filtro: **`Influencers`** (`INFLUENCER_FILTRO_ARIA_LABEL`) |
+| Estilo | Pill `borderRadius: 999`; ativo: `color-mix` com `--brand-action` 15% |
+| Pesquisa no painel | Automática quando `influencers.length > 5` (placeholder “Pesquisar…”) |
+| Visibilidade | `showFiltroInfluencer` de `useDashboardFiltros()` — **não** alterar regras de escopo |
+
+```tsx
+import { FiltroInfluencerSelect } from "../components/dashboard";
+
+// Único
+<FiltroInfluencerSelect
+  mode="single"
+  value={filtroInfluencer}
+  onChange={setFiltroInfluencer}
+  influencers={lista}
+/>
+
+// Múltiplo
+<FiltroInfluencerSelect
+  mode="multiple"
+  value={filterInfluencers}
+  onChange={setFilterInfluencers}
+  influencers={lista}
+/>
+```
+
+**Proibido em código novo:** `SelectComIcone` + `User` para filtro de influencers na barra; `InfluencerDropdown` / `InfluencerMultiSelect`; agregadora “Todos os influencers” ou rótulo “Influencers” só no trigger vazio; `<select>` nativo na barra para este filtro.
+
+**Exceção:** outro layout só com **autorização explícita** de produto. Formulários/modais (campo obrigatório de influencer no cadastro) — **não** usar `FiltroInfluencerSelect`.
+
 ### Pesquisa dentro do filtro (> 5 valores)
 
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
-- **Multi:** `InfluencerMultiSelect` com `enableSearch={true}` quando `influencers.length > 5` (ou equivalente).
-- **Único:** preferir componente com busca embutida; `<select>` nativo com >5 opções é **legado** — migrar para dropdown pesquisável quando tocar na página.
+- **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`).
+- **Outros domínios:** componente partilhado equivalente ou busca embutida; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
 - Placeholder de busca curto (ex.: “Pesquisar…”); filtrar por correspondência parcial no nome.
 
 ---
@@ -458,6 +508,7 @@ Quando não houver skeleton para o bloco principal:
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.

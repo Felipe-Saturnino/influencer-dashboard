@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy } from "react";
-import { Loader2, ChevronLeft, ChevronRight, Clock, Tv, User } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Clock, Tv } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { FiltroHistoricoButton, FiltroOperadoraSelect, SelectComIcone } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -85,19 +85,12 @@ function StreamersFiltrosEUAbas({
           <FiltroHistoricoButton active={sf.historico} onClick={sf.toggleHistorico} />
 
           {showFiltroInfluencer && (
-            <SelectComIcone
-              icon={<User size={15} aria-hidden />}
-              label="Filtrar por influencer"
+            <FiltroInfluencerSelect
+              mode="single"
               value={sf.filtroInfluencer}
               onChange={sf.setFiltroInfluencer}
-            >
-              <option value="todos">Todos os influencers</option>
-              {sf.influencerOptions.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
-                </option>
-              ))}
-            </SelectComIcone>
+              influencers={sf.influencerOptions.map((r) => ({ id: r.id, name: r.nome }))}
+            />
           )}
 
           {showFiltroOperadora && (

@@ -40,7 +40,7 @@ import {
   labelHorarioTurnoStaffPorValor,
 } from "../../../lib/rhStaffHorarioTurno";
 import { DashboardPageHeader } from "../../../components/dashboard";
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import FiltroEntidadeMultiSelect from "../../../components/FiltroEntidadeMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -1791,10 +1791,10 @@ export default function RhCalendarioPage() {
                 ) : (
                   <>
                     {showTimeFilter ? (
-                      <InfluencerMultiSelect
+                      <FiltroEntidadeMultiSelect
                         selected={compFilterTimeIds}
                         onChange={setCompFilterTimeIds}
-                        influencers={timeMultiselectItems}
+                        items={timeMultiselectItems}
                         t={t}
                         triggerEmptyLabel="Time"
                         ariaFilterPrefix="Filtrar por time"
@@ -1802,10 +1802,10 @@ export default function RhCalendarioPage() {
                       />
                     ) : null}
                     {showStaffFilter ? (
-                      <InfluencerMultiSelect
+                      <FiltroEntidadeMultiSelect
                         selected={compFilterStaffIds}
                         onChange={setCompFilterStaffIds}
-                        influencers={staffMultiselectItems}
+                        items={staffMultiselectItems}
                         t={t}
                         triggerEmptyLabel="Staff"
                         ariaFilterPrefix="Filtrar por staff"
@@ -2046,10 +2046,10 @@ export default function RhCalendarioPage() {
                 ) : (
                   <>
                     {showTimeFilterPresenca ? (
-                      <InfluencerMultiSelect
+                      <FiltroEntidadeMultiSelect
                         selected={presencaFilterTimeIds}
                         onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                        influencers={timeMultiselectItems}
+                        items={timeMultiselectItems}
                         t={t}
                         triggerEmptyLabel="Time"
                         ariaFilterPrefix="Filtrar por time"
@@ -2057,10 +2057,10 @@ export default function RhCalendarioPage() {
                       />
                     ) : null}
                     {showStaffFilterPresenca ? (
-                      <InfluencerMultiSelect
+                      <FiltroEntidadeMultiSelect
                         selected={presencaFilterStaffIds}
                         onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                        influencers={staffPresencaMultiselectItems}
+                        items={staffPresencaMultiselectItems}
                         t={t}
                         triggerEmptyLabel="Staff"
                         ariaFilterPrefix="Filtrar por staff"

@@ -36,13 +36,13 @@ alwaysApply: false
 // Logo de plataforma com fallback gracioso
 import { PlatLogo } from "../../../components/PlatLogo";
 
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 ```
 
 **`PlatLogo`** recebe `{ plataforma: string; size?: number; isDark: boolean }`.
 Nunca declarar localmente. Nunca usar `●` como único fallback sem o componente.
 
-**`InfluencerDropdown`** recebe `{ items, selected, onChange, accent? }` — usar em **Feedback** e em telas novas; `accent={brand.accent}` reflete operadora. **Legado:** **Agenda** e **Resultados** ainda usam `InfluencerMultiSelect` no código atual; ao refatorar filtros, preferir migrar para `InfluencerDropdown` para alinhar UX (checkbox, "Limpar", acento).
+**Filtro de influencer na barra:** **`FiltroInfluencerSelect`** (`mode="multiple"` em Agenda, Resultados, Feedback) — Global + Brand. Agregadora **Todos Influencers**; pesquisa no painel quando >5 nomes; ícone `User` 15px sempre no trigger.
 
 ---
 
@@ -464,11 +464,9 @@ const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
 
 ### Feedback
 
-**`InfluencerDropdown` — usar sempre o componente compartilhado:**
+**Filtro de influencer na barra:** `FiltroInfluencerSelect` com `mode="multiple"` — Global § Filtro de influencer. Agregadora **Todos Influencers**; não declarar dropdown local.
 ```tsx
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-
-// Nunca declarar InfluencerDropdown localmente nesta ou em qualquer outra página
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 ```
 
 **`ModalFeedbackEdit` — usar `useDashboardBrand()` internamente:**
@@ -678,7 +676,7 @@ const STATUS_SCOUT_COLOR = {
 ## O Que Nunca Fazer Nesta Seção
 
 - Nunca declarar `PlatLogo` localmente — importar de `src/components/PlatLogo`
-- Nunca declarar `InfluencerDropdown` localmente — importar de `src/components/InfluencerDropdown`
+- Nunca filtro de influencer na barra fora de `FiltroInfluencerSelect` (agregadora **Todos Influencers**)
 - Nunca usar `window.confirm()` — padrão de dois cliques com estado inline
 - Nunca usar `window.alert()` — `setError()` com bloco vermelho inline
 - Nunca usar `▼ ▲ ✕ ✓ ⚠ ℹ 🗑 🕐 ✨ 🔒` como ícones — usar Lucide equivalente

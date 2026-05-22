@@ -222,7 +222,7 @@ import { FiltroHistoricoButton } from "../../../components/dashboard";
 
 Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, borda/texto ativo `brand.accent`, fundo ativo `color-mix` com `--brand-action` 15%. **Proibido** markup inline duplicado ou `GiCalendar`.
 
-**Selects na FilterBar:** influencer e outros domínios via `SelectComIcone`. **Operadora:** sempre `FiltroOperadoraSelect` (Global + Brand) — opção agregadora **`Todas Operadoras`**, ícone Shield no campo. Nunca `<div style="relative"> + <span>ícone + <select>` inline nem `SelectComIcone` manual para operadora.
+**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
 
 **Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 

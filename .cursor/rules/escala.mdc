@@ -80,6 +80,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Solicitações (`escala_solicitacoes`)
 
 - Pedidos de escala/troca.
+- Filtro **Staff** na barra: `FiltroEntidadeMultiSelect` (legado — **não** é `FiltroInfluencerSelect`; refactor Staff/Time dedicado pendente).
 - **Handoff:** estados, aprovação, thread se aplicável.
 
 ---

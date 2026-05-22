@@ -7,8 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-// Dívida técnica (B6): migrar para InfluencerDropdown na refatoração de filtros.
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
@@ -685,11 +684,11 @@ export default function Resultados() {
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
               {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-                <InfluencerMultiSelect
-                  selected={filterInfluencers}
+                <FiltroInfluencerSelect
+                  mode="multiple"
+                  value={filterInfluencers}
                   onChange={setFilterInfluencers}
                   influencers={influencerListVisiveis}
-                  t={t}
                 />
               )}
               {showFiltroOperadora && operadorasList.length > 0 && (

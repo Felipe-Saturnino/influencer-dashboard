@@ -7,11 +7,11 @@ import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
 import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { FiltroHistoricoButton, FiltroOperadoraSelect, SelectComIcone, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock, Filter, Gauge, Trophy, User, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Filter, Gauge, Trophy, X } from "lucide-react";
 import {
   GiTrophy, GiMedal, GiLaurelsTrophy,
   GiArcheryTarget,
@@ -737,17 +737,14 @@ export default function DashboardConversao() {
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={14} aria-hidden />}
-                label="Filtrar por influencer"
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
-                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                ))}
-              </SelectComIcone>
+                influencers={[...rows]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((r) => ({ id: r.influencer_id, name: r.nome }))}
+              />
             )}
 
             {showFiltroOperadora && (

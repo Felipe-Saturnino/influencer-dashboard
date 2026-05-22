@@ -1196,7 +1196,12 @@ function jogoComparativoKeysFromCadastroMesa(tipoJogo: string, nomeMesa: string)
   const t = tipoJogo.trim().toLowerCase();
   const n = nomeMesa.trim().toLowerCase();
   const keys = new Set<JogoComparativoKey>();
-  if (t.includes("futebol brasileiro") || (n.includes("futebol") && n.includes("brasileiro"))) {
+  if (
+    t.includes("futebol brasileiro") ||
+    t.includes("futebol studio") ||
+    t.includes("futebol_studio") ||
+    (n.includes("futebol") && (n.includes("brasileiro") || n.includes("studio")))
+  ) {
     keys.add("futebol_brasileiro");
   }
   if (t.includes("blackjack") || /\bblackjack\b/.test(n)) keys.add("blackjack");
@@ -1205,21 +1210,6 @@ function jogoComparativoKeysFromCadastroMesa(tipoJogo: string, nomeMesa: string)
     keys.add("baccarat");
   }
   return [...keys];
-}
-
-function inferJogosComparativoFromPorTabela(
-  rows: PorTabelaRow[],
-  operadorasListFmt: { slug: string; nome: string }[],
-): Set<JogoComparativoKey> {
-  const keys = new Set<JogoComparativoKey>();
-  for (const r of rows) {
-    if (isMesaBlackjackComparativo(r, operadorasListFmt)) keys.add("blackjack");
-    const lbl = labelMesaCda(r, operadorasListFmt);
-    if (lbl === "Roleta") keys.add("roleta");
-    if (lbl === "Speed Baccarat") keys.add("baccarat");
-    if (lbl === LABEL_FUTEBOL_BRASILEIRO) keys.add("futebol_brasileiro");
-  }
-  return keys;
 }
 
 function calcularPctComparativoOficial(
@@ -1900,23 +1890,8 @@ export default function OverviewSpin() {
       }
     }
 
-    if (keys.size === 0) {
-      const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-      for (const k of inferJogosComparativoFromPorTabela(src, operadorasListFmt)) {
-        keys.add(k);
-      }
-    }
-
     return JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
-  }, [
-    mesasCadastro,
-    slugListEscopoComparativo,
-    historico,
-    porTabelaFiltradas,
-    porTabelaFiltradasHist,
-    operadorasListFmt,
-    podeVerOperadora,
-  ]);
+  }, [mesasCadastro, slugListEscopoComparativo, podeVerOperadora]);
 
   const exibirBlocoDadosPorMesaFutebol = useMemo(() => {
     if (modoAgregadoTodasOperadoras) return false;

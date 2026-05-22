@@ -24,3 +24,13 @@ export {
   HISTORICO_FILTRO_ARIA_LABEL_INACTIVE,
   type FiltroHistoricoButtonProps,
 } from "./FiltroHistoricoButton";
+export {
+  FiltroInfluencerSelect,
+  INFLUENCER_FILTRO_ARIA_LABEL,
+  INFLUENCER_FILTRO_TODOS_LABEL,
+  INFLUENCER_FILTRO_TODOS_VALUE,
+  type FiltroInfluencerSelectProps,
+  type FiltroInfluencerSelectMultipleProps,
+  type FiltroInfluencerSelectSingleProps,
+  type InfluencerFiltroOption,
+} from "../FiltroInfluencerSelect";

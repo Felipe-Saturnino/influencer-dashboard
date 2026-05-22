@@ -29,8 +29,8 @@ import {
   KpiCardDepositos,
   FunilVisual,
   FiltroHistoricoButton,
+  FiltroInfluencerSelect,
   FiltroOperadoraSelect,
-  SelectComIcone,
   SkeletonKpiCard,
   SortTableTh,
   type SortDir,
@@ -47,7 +47,6 @@ import {
   Filter,
   TrendingUp,
   Trophy,
-  User,
   UserPlus,
   Users,
   Video,
@@ -617,17 +616,14 @@ export default function DashboardOverview() {
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={15} aria-hidden />}
-                label="Filtrar por influencer"
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {[...ranking].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
-                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                ))}
-              </SelectComIcone>
+                influencers={[...ranking]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((r) => ({ id: r.influencer_id, name: r.nome }))}
+              />
             )}
 
             {showFiltroOperadora && (
