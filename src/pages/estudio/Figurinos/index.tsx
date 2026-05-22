@@ -586,60 +586,6 @@ export default function FigurinosPage() {
         icon={<Shirt size={14} aria-hidden />}
         title="Figurinos"
         subtitle="Controle o inventário de peças com retiradas, devoluções e manutenções."
-        actions={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setErroGlobal(null);
-                setModalScanner(true);
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <ScanLine size={16} aria-hidden />
-              Bipar código
-            </button>
-            {podeCriar ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setErroGlobal(null);
-                  setModalCadastro(true);
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradient(brand),
-                  color: "#fff",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                <Plus size={16} aria-hidden />
-                Cadastrar peça
-              </button>
-            ) : null}
-          </div>
-        }
       />
 
       {erroGlobal ? (
@@ -664,6 +610,47 @@ export default function FigurinosPage() {
         </div>
       ) : null}
 
+      {/* Bloco 1: Consolidado */}
+      <div style={{ marginBottom: 20 }}>
+        <h2
+          style={{
+            ...SECTION_LABEL_STYLE,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            marginBottom: 8,
+          }}
+        >
+          CONSOLIDADO
+        </h2>
+        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
+          {[
+            { label: "Total de peças", value: kpis.tot, cor: t.text },
+            { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
+            { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
+            { label: "Fixos", value: kpis.fx, cor: "#0ea5e9" },
+            { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
+          ].map((k) => (
+            <div
+              key={k.label}
+              aria-label={`${k.label}: ${k.value}`}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${t.cardBorder}`,
+                background: brand.blockBg,
+                padding: "16px 18px",
+                boxShadow: cardShadow,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
+                {k.label.toUpperCase()}
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bloco 2: Filtros */}
       <div style={{ marginBottom: 20 }}>
         <h2
           style={{
@@ -750,117 +737,140 @@ export default function FigurinosPage() {
               ))}
             </select>
           </div>
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
-            aria-label="Buscar peças na aba atual"
+
+          <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
               width: "100%",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          CONSOLIDADO
-        </h2>
-        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
-          {[
-            { label: "Total de peças", value: kpis.tot, cor: t.text },
-            { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
-            { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
-            { label: "Fixos", value: kpis.fx, cor: "#0ea5e9" },
-            { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
-          ].map((k) => (
-            <div
-              key={k.label}
-              aria-label={`${k.label}: ${k.value}`}
-              style={{
-                borderRadius: 14,
-                border: `1px solid ${t.cardBorder}`,
-                background: brand.blockBg,
-                padding: "16px 18px",
-                boxShadow: cardShadow,
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
-                {k.label.toUpperCase()}
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 8 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 10,
-          }}
-        >
-          INVENTÁRIO
-        </h2>
-      </div>
-
-      <div
-        role="tablist"
-        aria-label="Status do inventário"
-        style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
-        onKeyDown={(e) => onTabsKeyDown(e, FIGURINOS_ABAS, aba, setAba, (a) => `tab-fig-${a}`)}
-      >
-        {FIGURINOS_ABAS.map((a) => (
-          <button
-            key={a}
-            type="button"
-            role="tab"
-            aria-selected={aba === a}
-            id={`tab-fig-${a}`}
-            aria-controls={`panel-fig-${a}`}
-            tabIndex={aba === a ? 0 : -1}
-            onClick={() => setAba(a)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: `1px solid ${aba === a ? brand.accent : t.cardBorder}`,
-              background:
-                aba === a
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
-                  : "transparent",
-              color: aba === a ? brand.accent : t.textMuted,
-              fontWeight: aba === a ? 700 : 500,
             }}
           >
-            {labelAba(a)}
-          </button>
-        ))}
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por código, categoria, operadora ou emprestado para…"
+              aria-label="Buscar peças na aba atual"
+              style={{
+                flex: "1 1 200px",
+                minWidth: 0,
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                boxSizing: "border-box",
+                outline: "none",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setErroGlobal(null);
+                setModalScanner(true);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <ScanLine size={16} aria-hidden />
+              Bipar código
+            </button>
+            {podeCriar ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setErroGlobal(null);
+                  setModalCadastro(true);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexShrink: 0,
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: ctaGradient(brand),
+                  color: "#fff",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={16} aria-hidden />
+                Cadastrar peça
+              </button>
+            ) : null}
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Status do inventário"
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              justifyContent: "center",
+              width: "100%",
+              paddingTop: 12,
+              marginTop: 4,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+            onKeyDown={(e) => onTabsKeyDown(e, FIGURINOS_ABAS, aba, setAba, (a) => `tab-fig-${a}`)}
+          >
+            {FIGURINOS_ABAS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                role="tab"
+                aria-selected={aba === a}
+                id={`tab-fig-${a}`}
+                aria-controls={`panel-fig-${a}`}
+                tabIndex={aba === a ? 0 : -1}
+                onClick={() => setAba(a)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  border: `1px solid ${aba === a ? brand.accent : t.cardBorder}`,
+                  background:
+                    aba === a
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                        : "rgba(124,58,237,0.15)"
+                      : "transparent",
+                  color: aba === a ? brand.accent : t.textMuted,
+                  fontWeight: aba === a ? 700 : 500,
+                }}
+              >
+                {labelAba(a)}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {/* Bloco 3: Tabela */}
       <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`} tabIndex={0}>
         {loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, color: t.textMuted }}>
