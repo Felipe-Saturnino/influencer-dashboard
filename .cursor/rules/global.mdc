@@ -210,6 +210,15 @@ if (perm.canView === "nao") {
 
 Visual da barra (fundo transparente, ícones, carrossel): **Brand MDC** + `lib/carouselNavStyles.ts` para setas/rótulo. Aqui: regras de **dados e UX** do filtro.
 
+### Alinhamento no bloco de filtros
+
+Dentro do wrapper do bloco de filtros (`primaryTransparentBg/Border` ou equivalente documentado na secção), **cada linha de controles** (chips de status/plataforma, carrossel + Histórico, selects pill, busca) deve usar `display: flex`, `flexWrap: "wrap"`, `alignItems: "center"`, **`justifyContent: "center"`** e **`width: "100%"`** quando houver espaço horizontal — para que os filtros fiquem centralizados e quebrem de forma responsiva em mobile.
+
+- **Exceção:** alinhamento à esquerda (`justifyContent: "flex-start"`) ou outro layout **somente** quando o produto solicitar explicitamente no pedido de desenvolvimento.
+- Linhas com **dois painéis lado a lado** (ex.: sliders Cachê / Views em Influencers e Scout) mantêm o grid interno (`app-grid-2`, `space-between` nos rótulos do slider) — a regra de centralização aplica-se às **fileiras de chips e à barra principal** de toggles/selects, não ao conteúdo full-width de cada coluna do grid.
+
+Referência visual: Agenda, Feedback, Influencers, Scout.
+
 ### Opção “Todos” por defeito
 
 - Filtro alimentado por base/cadastro (influencer, status, área, etc.) deve incluir opção agregadora conforme domínio (`Todos`, `Todas`, …).
@@ -561,6 +570,7 @@ Quando não houver skeleton para o bloco principal:
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
+- Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Strings de vazio ou sem permissão diferentes das fixas acima.
 - Semântica de KPI invertida manualmente (fora de `isInverso`).

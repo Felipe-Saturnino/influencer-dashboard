@@ -458,7 +458,7 @@ export default function Scout() {
           padding: "12px 20px",
         }}>
           {/* Linha 1: Status (filtro de plataforma: chips em Cobertura de Plataformas) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
             {STATUS_SCOUT_OPTS.map((s) => {
               const active = filterStatus === s;

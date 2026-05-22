@@ -158,14 +158,16 @@ Wrapper obrigatório (dentro de `marginBottom` ~14–20):
   background: brand.primaryTransparentBg,
   padding: "12px 20px",
 }}>
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
     {/* carrossel, chips, selects, Histórico, loading secundário */}
   </div>
 </div>
 ```
 
+- **Alinhamento:** `justifyContent: "center"` + `width: "100%"` em cada linha de filtros do bloco (chips, carrossel, selects) — ver **Global** § Alinhamento no bloco de filtros. Alinhar à esquerda só com pedido explícito de produto.
 - **Nunca** `brand.blockBg`, `t.cardBg` ou fundo sólido no strip.
 - **Nunca** select de operadora/influencer **fora** deste wrapper.
+- **Nunca** `justifyContent: "flex-start"` em fileiras de chips/status/plataforma na barra salvo exceção documentada no Global.
 
 ---
 

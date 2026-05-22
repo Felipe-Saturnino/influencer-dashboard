@@ -59,10 +59,12 @@ Todo bloco de filtros desta seção usa fundo transparente de marca.
     background: brand.primaryTransparentBg,
     padding: "12px 20px",
   }}>
-    {/* conteúdo dos filtros */}
+    {/* conteúdo dos filtros — linhas de chips/selects: justifyContent center + width 100% (Global § Alinhamento) */}
   </div>
 </div>
 ```
+
+**Alinhamento:** chips de Status, Plataforma e a linha principal da barra (carrossel, `FiltroHojeButton`, selects) centralizados no bloco; ver **Global** § Alinhamento no bloco de filtros e **Brand** §5.
 
 ### Carrossel de período / semana
 
