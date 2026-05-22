@@ -3,6 +3,11 @@ import { Calendar } from "lucide-react";
 import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
+import {
+  FILTRO_BAR_PILL_GAP,
+  FILTRO_BAR_PILL_PADDING,
+  getFiltroBarPillStateStyle,
+} from "../../lib/filterBarStyles";
 
 /** aria-label quando o modo histórico está desligado (ativar). */
 export const HISTORICO_FILTRO_ARIA_LABEL_INACTIVE =
@@ -20,8 +25,7 @@ export interface FiltroHistoricoButtonProps {
 }
 
 /**
- * Botão Histórico da barra de filtros — padrão Overview Influencer:
- * pill 999, Calendar 15px, fundo ativo com --brand-action 15%, borda/texto ativo brand.accent.
+ * Botão Histórico na barra — mesmo pill/estados que Operadora e Influencer (Overview Influencer).
  */
 export function FiltroHistoricoButton({
   active,
@@ -32,6 +36,7 @@ export function FiltroHistoricoButton({
 }: FiltroHistoricoButtonProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const stateStyle = getFiltroBarPillStateStyle(t, brand, active);
 
   return (
     <button
@@ -42,19 +47,16 @@ export function FiltroHistoricoButton({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 6,
-        padding: "6px 14px",
+        gap: FILTRO_BAR_PILL_GAP,
+        padding: FILTRO_BAR_PILL_PADDING,
         borderRadius: 999,
         cursor: "pointer",
         fontFamily: FONT.body,
         fontSize: 13,
-        border: active ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-        background: active
-          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-          : "transparent",
-        color: active ? brand.accent : t.textMuted,
-        fontWeight: active ? 700 : 400,
+        lineHeight: 1.25,
+        whiteSpace: "nowrap",
         transition: "all 0.15s",
+        ...stateStyle,
         ...style,
       }}
     >

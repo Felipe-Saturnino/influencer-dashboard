@@ -32,7 +32,16 @@ export function getFilterBarWrapperStyle(brand: {
   };
 }
 
-/** Estado inativo de campo pill na barra — alinhado a `FiltroOperadoraSelect` / Overview Influencer. */
+export type FiltroBarBrand = {
+  useBrand: boolean;
+  accent: string;
+};
+
+/** Padding/gap partilhados por pill na barra (Histórico, Hoje, Influencer trigger, …). */
+export const FILTRO_BAR_PILL_PADDING = "6px 14px" as const;
+export const FILTRO_BAR_PILL_GAP = 6;
+
+/** Estado inativo de pill na barra — Operadora, Influencer, Histórico, Hoje (Overview Influencer). */
 export function getFiltroCampoInativoStyle(t: Theme): Pick<
   CSSProperties,
   "border" | "background" | "color" | "fontWeight"
@@ -43,4 +52,29 @@ export function getFiltroCampoInativoStyle(t: Theme): Pick<
     color: t.text,
     fontWeight: 400,
   };
+}
+
+/** Estado ativo de pill na barra (Histórico ligado, influencer/operadora filtrados, Hoje pressionado). */
+export function getFiltroCampoAtivoStyle(brand: FiltroBarBrand): Pick<
+  CSSProperties,
+  "border" | "background" | "color" | "fontWeight"
+> {
+  const accent = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
+  return {
+    border: `1px solid ${accent}`,
+    background: brand.useBrand
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+      : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)",
+    color: accent,
+    fontWeight: 700,
+  };
+}
+
+/** Inativo ou ativo — único ponto para toggles da barra. */
+export function getFiltroBarPillStateStyle(
+  t: Theme,
+  brand: FiltroBarBrand,
+  active: boolean
+): Pick<CSSProperties, "border" | "background" | "color" | "fontWeight"> {
+  return active ? getFiltroCampoAtivoStyle(brand) : getFiltroCampoInativoStyle(t);
 }

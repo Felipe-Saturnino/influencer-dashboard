@@ -228,7 +228,7 @@ Referência visual: **Overview Influencer**, Agenda, Feedback, Streamers.
 
 - **Gap entre controlos** na mesma linha (carrossel, Histórico, Influencer, Operadora, Hoje, modo de vista): **`10`** — usar `FILTER_BAR_ROW_GAP` / `getFilterBarRowStyle()` de `lib/filterBarStyles.ts`.
 - **Wrapper:** `getFilterBarWrapperStyle(brand)` — `padding: "12px 20px"`, `borderRadius: 14`, `primaryTransparent*`.
-- **Influencer e Operadora** na mesma barra: mesmo pill **999**, mesmo estado inativo (`t.text`, `t.inputBg`, `t.cardBorder`) — referência **Overview Influencer** (`FiltroOperadoraSelect` + `FiltroInfluencerSelect`).
+- **Pills da barra** (Operadora, Influencer, **Histórico**, Hoje): mesmo `borderRadius` **999**, `padding` **6px 14px**, `gap` interno **6**, estados via `getFiltroBarPillStateStyle` — referência **Overview Influencer**.
 
 ### Opção “Todos” por defeito
 
@@ -275,7 +275,7 @@ Sempre que a página tiver **toggle Histórico** na barra de filtros (junto ao c
 |--------|--------|
 | Componente | `FiltroHistoricoButton` (`src/components/dashboard/FiltroHistoricoButton.tsx`) |
 | Ícone | **Calendar** (Lucide, 15px, `aria-hidden`) + texto visível **Histórico** |
-| Estilo | Pill `borderRadius: 999`; ativo: borda/texto `brand.accent`, fundo `color-mix(..., var(--brand-action) 15%, transparent)` |
+| Estilo | Pill 999 + `getFiltroBarPillStateStyle` — inativo: `t.text` / `t.inputBg`; ativo: `getFiltroCampoAtivoStyle` (igual Operadora/Influencer) |
 | `aria-pressed` | Ligado ao estado do modo histórico |
 | `aria-label` (analítico) | Inativo: `HISTORICO_FILTRO_ARIA_LABEL_INACTIVE` — “Ativar modo histórico — ver todo o período”; ativo: `HISTORICO_FILTRO_ARIA_LABEL_ACTIVE` |
 | Rótulo do carrossel (modo on) | **`Todo o período`** (nunca “Total” só) |
@@ -289,7 +289,7 @@ import { FiltroHistoricoButton } from "../components/dashboard";
 
 **Portal RH:** nas abas Comunicados, Políticas e RH Talks o Histórico segue o modo período (`Todo o período`, filtro por **data de publicação**); postagens **arquivadas nunca** aparecem nessas abas. Na aba **Gerenciamento**, o mesmo botão + carrossel usam data de publicação; arquivadas entram na lista e o filtro **Status da postagem** define o que ver.
 
-**Proibido em código novo:** botão Histórico só com texto; markup pill duplicado inline; `GiCalendar` / `History` montado à mão na barra.
+**Proibido em código novo:** botão Histórico com fundo `transparent` inativo, `t.textMuted` inativo, ou `brand.accent` fixo sem `getFiltroBarPillStateStyle`; markup pill duplicado inline; `GiCalendar` / `History` montado à mão na barra.
 
 ### Filtro de influencer (lista na barra) — obrigatório
 
@@ -368,7 +368,7 @@ Atalho para data corrente + modo Dia — **`FiltroHojeButton`** (`src/components
 | Regra | Valor |
 |--------|--------|
 | Ícone | **`History` 15px** — distinto do Histórico (`Calendar`) e do modo de vista (`CalendarRange`) |
-| Estilo | Pill **999**; `aria-pressed` quando o dia corrente está selecionado em modo Dia |
+| Estilo | Pill **999** + `getFiltroBarPillStateStyle` (igual Histórico/Operadora); `aria-pressed` quando dia corrente em modo Dia |
 | `aria-label` | `HOJE_FILTRO_ARIA_LABEL` — “Ir para o dia de hoje” |
 
 ```tsx

@@ -222,7 +222,7 @@ import { FiltroHistoricoButton } from "../../../components/dashboard";
 <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 ```
 
-Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, borda/texto ativo `brand.accent`, fundo ativo `color-mix` com `--brand-action` 15%. **Proibido** markup inline duplicado ou `GiCalendar`.
+Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, estados `getFiltroBarPillStateStyle` (igual Operadora/Influencer). **Proibido** markup inline, fundo transparente/`textMuted` no inativo, ou `GiCalendar`.
 
 **Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
 

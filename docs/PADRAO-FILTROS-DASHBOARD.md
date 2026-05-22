@@ -14,9 +14,13 @@ Este documento define o padrão visual e de ícones que **toda página** deve se
 |--------|-----|
 | `FILTER_BAR_PADDING` | `"12px 20px"` no wrapper |
 | `FILTER_BAR_ROW_GAP` | `10` entre carrossel, Histórico, filtros |
+| `FILTRO_BAR_PILL_PADDING` | `"6px 14px"` em cada pill |
+| `FILTRO_BAR_PILL_GAP` | `6` entre ícone e texto no pill |
 | `getFilterBarRowStyle()` | Linha centralizada com `gap: 10` |
 | `getFilterBarWrapperStyle(brand)` | Strip transparente Brand §5 |
-| `getFiltroCampoInativoStyle(t)` | Estado inativo pill (Operadora + Influencer) |
+| `getFiltroCampoInativoStyle(t)` | Estado inativo |
+| `getFiltroCampoAtivoStyle(brand)` | Estado ativo |
+| `getFiltroBarPillStateStyle(t, brand, active)` | Toggle inativo/ativo |
 
 ---
 
@@ -48,64 +52,53 @@ import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../lib/filter
 </div>
 ```
 
-- `useDashboardBrand()` para whitelabel
 - **Gap 10** entre todos os controlos da linha (não usar 18)
 
 ---
 
-## Visual dos campos Influencer e Operadora
+## Visual unificado dos pills (Operadora, Influencer, Histórico, Hoje)
 
-| Propriedade | Valor (inativo) |
-|-------------|-----------------|
-| `borderRadius` | **999** (pill) |
-| `border` | `1px solid t.cardBorder` |
-| `background` | `t.inputBg ?? t.cardBg` |
-| `color` | **`t.text`** (não `textMuted`) |
-| `fontSize` | 13 |
-| `minWidth` operadora | **200** (default do componente) |
+| Propriedade | Inativo | Ativo |
+|-------------|---------|-------|
+| `borderRadius` | **999** | **999** |
+| `padding` | **6px 14px** | **6px 14px** |
+| `border` | `t.cardBorder` | marca (`--brand-action` ou `brand.accent`) |
+| `background` | `t.inputBg ?? t.cardBg` | `color-mix` 15% marca |
+| `color` | **`t.text`** | cor de destaque marca |
+| `fontWeight` | 400 | 700 |
 
-Estado **ativo** (valor ≠ agregador): borda/fundo marca (`--brand-action` / `brand.accent`, `color-mix` 15%) — já em `FiltroOperadoraSelect` e `FiltroInfluencerSelect`.
+Implementação: `getFiltroBarPillStateStyle(t, brand, active)` — **não** duplicar inline.
 
 ```tsx
-<FiltroOperadoraSelect
-  value={filtroOperadora}
-  onChange={setFiltroOperadora}
-  operadoras={lista}
-  podeVerOperadora={podeVerOperadora}
-/>
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+
+<FiltroOperadoraSelect value={filtroOperadora} onChange={setFiltroOperadora} operadoras={lista} />
 
 <FiltroInfluencerSelect mode="single" value={…} onChange={…} influencers={…} />
+
+<FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
 ```
 
-`pill` e `minWidth={200}` são **default** — só omitir props redundantes.
+Rótulo do carrossel com Histórico ligado: **`Todo o período`**.
 
 ---
 
-## Botão Histórico
+## Legado removido (não usar)
 
-`FiltroHistoricoButton` — rótulo do carrossel **`Todo o período`** quando ativo.
-
----
-
-## Modo de visualização (Agenda)
-
-`FiltroModoVisualizacaoSelect` — pill 999, ícone `CalendarRange`.
-
----
-
-## Botão Hoje (Agenda)
-
-`FiltroHojeButton` — pill 999, ícone `History` (não confundir com Histórico).
+- Histórico inativo com `background: transparent` ou `color: t.textMuted`
+- Histórico ativo só com `brand.accent` sem ramo `useBrand` / `--brand-primary`
+- Markup inline de botão Histórico na barra (usar sempre `FiltroHistoricoButton`)
+- `gap: 18` na linha principal da barra
 
 ---
 
 ## Checklist rápido
 
-- [ ] Wrapper `getFilterBarWrapperStyle` ou equivalente (`12px 20px`, `primaryTransparent*`)
+- [ ] Wrapper `getFilterBarWrapperStyle` (`12px 20px`, `primaryTransparent*`)
 - [ ] Linha com **`gap: 10`**
-- [ ] `FiltroOperadoraSelect` + `FiltroInfluencerSelect` com visual Overview Influencer
+- [ ] Histórico: `FiltroHistoricoButton` (estados partilhados)
+- [ ] Operadora + Influencer nos componentes canónicos
 - [ ] Carrossel: `lib/carouselNavStyles.ts`
-- [ ] Sem `gap: 18` na linha principal de filtros
 
 ---
 
@@ -115,10 +108,11 @@ Estado **ativo** (valor ≠ agregador): borda/fundo marca (`--brand-action` / `b
 |-----------|---------|
 | Referência visual | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Estilos da barra | `src/lib/filterBarStyles.ts` |
+| Histórico | `src/components/dashboard/FiltroHistoricoButton.tsx` |
 | Operadora | `src/components/FiltroOperadoraSelect.tsx` |
 | Influencer | `src/components/FiltroInfluencerSelect.tsx` |
-| Histórico | `src/components/dashboard/FiltroHistoricoButton.tsx` |
+| Hoje | `src/components/dashboard/FiltroHojeButton.tsx` |
 
 ---
 
-*Última atualização: padronização global (pill 999, cor inativa `t.text`, gap 10, Overview Influencer).*
+*Última atualização: Histórico/Hoje alinhados a Operadora/Influencer via `getFiltroBarPillStateStyle`.*

@@ -3,6 +3,11 @@ import { History } from "lucide-react";
 import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
+import {
+  FILTRO_BAR_PILL_GAP,
+  FILTRO_BAR_PILL_PADDING,
+  getFiltroBarPillStateStyle,
+} from "../../lib/filterBarStyles";
 
 /** aria-label padrão do botão Hoje (Agenda). */
 export const HOJE_FILTRO_ARIA_LABEL = "Ir para o dia de hoje";
@@ -15,8 +20,7 @@ export interface FiltroHojeButtonProps {
 }
 
 /**
- * Atalho “Hoje” na barra de filtros — pill 999, ícone History 15px (distinto do Histórico `Calendar`).
- * Uso actual: Agenda (força modo Dia + data corrente).
+ * Atalho “Hoje” na barra — pill 999, ícone History 15px; estados iguais a Histórico/Operadora/Influencer.
  */
 export function FiltroHojeButton({
   active,
@@ -26,6 +30,7 @@ export function FiltroHojeButton({
 }: FiltroHojeButtonProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const stateStyle = getFiltroBarPillStateStyle(t, brand, active);
 
   return (
     <button
@@ -36,21 +41,16 @@ export function FiltroHojeButton({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 6,
-        padding: "6px 14px",
+        gap: FILTRO_BAR_PILL_GAP,
+        padding: FILTRO_BAR_PILL_PADDING,
         borderRadius: 999,
         cursor: "pointer",
         fontFamily: FONT.body,
         fontSize: 13,
-        border: active ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-        background: active
-          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-          : t.inputBg ?? t.cardBg,
-        color: active ? brand.accent : t.textMuted,
-        fontWeight: active ? 700 : 400,
-        transition: "all 0.15s",
-        whiteSpace: "nowrap",
         lineHeight: 1.25,
+        whiteSpace: "nowrap",
+        transition: "all 0.15s",
+        ...stateStyle,
         ...style,
       }}
     >

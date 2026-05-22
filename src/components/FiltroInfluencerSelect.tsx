@@ -3,7 +3,11 @@ import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
-import { getFiltroCampoInativoStyle } from "../lib/filterBarStyles";
+import {
+  FILTRO_BAR_PILL_GAP,
+  FILTRO_BAR_PILL_PADDING,
+  getFiltroBarPillStateStyle,
+} from "../lib/filterBarStyles";
 
 /** Valor canónico da opção agregadora (todos no escopo). */
 export const INFLUENCER_FILTRO_TODOS_VALUE = "todos";
@@ -65,18 +69,7 @@ function useClickOutside(ref: React.RefObject<HTMLDivElement | null>, onClose: (
 function useActiveFilterStyle(isActive: boolean) {
   const brand = useDashboardBrand();
   const { theme: t } = useApp();
-  if (!isActive) {
-    return getFiltroCampoInativoStyle(t);
-  }
-  const accent = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
-  return {
-    border: `1px solid ${accent}`,
-    background: brand.useBrand
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)",
-    color: accent,
-    fontWeight: 700 as const,
-  };
+  return getFiltroBarPillStateStyle(t, brand, isActive);
 }
 
 function SearchField({
@@ -263,7 +256,7 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
         aria-label={`${ARIA_FILTER_PREFIX} — ${triggerLabel}`}
         onClick={() => !disabled && setOpen((o) => !o)}
         style={{
-          padding: "6px 14px",
+          padding: FILTRO_BAR_PILL_PADDING,
           borderRadius: 999,
           fontSize: 13,
           fontFamily: FONT.body,
@@ -271,7 +264,7 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
           outline: "none",
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: FILTRO_BAR_PILL_GAP,
           whiteSpace: "nowrap",
           lineHeight: 1.25,
           opacity: disabled ? 0.6 : 1,

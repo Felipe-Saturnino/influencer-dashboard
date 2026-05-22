@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Shield } from "lucide-react";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
+import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import { SelectComIcone } from "./dashboard/SelectComIcone";
 
 /** Valor canónico da opção agregadora (todas as operadoras no escopo). */
@@ -61,16 +62,7 @@ export function FiltroOperadoraSelect({
   const isFiltered = value !== todasValue;
 
   const filteredStyle: CSSProperties | undefined =
-    highlightWhenFiltered && isFiltered
-      ? {
-          border: `1px solid ${brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent}`,
-          background: brand.useBrand
-            ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-            : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)",
-          color: brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent,
-          fontWeight: 700,
-        }
-      : undefined;
+    highlightWhenFiltered && isFiltered ? getFiltroCampoAtivoStyle(brand) : undefined;
 
   const list = [...operadoras]
     .filter((o) => (podeVerOperadora ? podeVerOperadora(o.slug) : true))
