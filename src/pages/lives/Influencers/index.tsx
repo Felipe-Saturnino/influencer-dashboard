@@ -18,7 +18,10 @@ function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
     : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
 }
 import OperadoraTag from "../../../components/OperadoraTag";
-import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
+import {
+  influencerElegivelQuadroPerfilIncompleto,
+  isPerfilIncompleto,
+} from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
@@ -125,6 +128,7 @@ interface Influencer {
   id:         string;
   name:       string;
   email:      string;
+  ativo?:     boolean | null;
   perfil:     Perfil | null;
   operadoras: InfluencerOperadora[];
 }
@@ -234,7 +238,7 @@ export default function Influencers() {
 
     if (showManagementUI) {
       const { data: profiles } = await supabase
-        .from("profiles").select("id, name, email").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
+        .from("profiles").select("id, name, email, ativo").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([
@@ -248,10 +252,11 @@ export default function Influencers() {
           if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
           opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null }) => ({
+        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null; ativo?: boolean | null }) => ({
           id: p.id,
           name: p.name ?? p.email ?? "",
           email: p.email ?? "",
+          ativo: p.ativo,
           perfil: perfisMap[p.id] ?? null,
           operadoras: opsPorInf[p.id] ?? [],
         }));
@@ -368,9 +373,8 @@ export default function Influencers() {
     return true;
   });
 
-  // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
   const incompletos = listNoEscopo.filter((i) =>
-    (i.perfil?.status ?? "ativo") === "ativo" &&
+    influencerElegivelQuadroPerfilIncompleto(i.perfil, i.ativo) &&
     isPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "")
   );
 
@@ -474,7 +478,7 @@ export default function Influencers() {
             padding: "12px 20px",
           }}>
             {/* Linha 1: Status / Operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => {
                 const active = filterStatus === s;
@@ -512,7 +516,7 @@ export default function Influencers() {
             </div>
 
             {/* Linha 2: Plataforma */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
               {PLATAFORMAS.map((plat) => {
                 const active = filterPlat === plat;

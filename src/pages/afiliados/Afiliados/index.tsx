@@ -11,6 +11,7 @@ import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Trash2 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto";
+import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
@@ -229,7 +230,7 @@ export default function Afiliados() {
   });
 
   const incompletos = listNoEscopo.filter((i) =>
-    (i.perfil?.status ?? "ativo") === "ativo" &&
+    influencerElegivelQuadroPerfilIncompleto(i.perfil, true) &&
     isAfiliadoPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "", i.email),
   );
 
