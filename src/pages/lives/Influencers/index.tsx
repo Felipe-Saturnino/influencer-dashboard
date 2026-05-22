@@ -413,7 +413,7 @@ export default function Influencers() {
       <DashboardPageHeader
         icon={<Mic size={14} aria-hidden="true" />}
         title="Influencers"
-        subtitle={showManagementUI ? "Gerencie o cadastro completo dos influencers parceiros." : "Seu perfil completo na plataforma."}
+        subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}
       />

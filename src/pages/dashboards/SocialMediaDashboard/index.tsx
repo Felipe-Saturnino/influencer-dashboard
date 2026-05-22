@@ -1062,7 +1062,7 @@ export default function SocialMediaDashboard() {
               Mídias sociais
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.
+              Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas.
             </p>
           </div>
         </div>

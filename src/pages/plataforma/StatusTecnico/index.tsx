@@ -1295,7 +1295,7 @@ export default function StatusTecnico() {
             Status Técnico
           </h1>
           <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
-            Acompanhamento de integrações e saúde da plataforma.
+            Monitore integrações, alertas automáticos e sincronizações da plataforma.
           </p>
         </div>
       </div>

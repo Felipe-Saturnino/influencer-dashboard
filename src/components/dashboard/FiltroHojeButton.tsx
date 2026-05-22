@@ -4,7 +4,7 @@ import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
-/** aria-label padrão do botão Hoje (Agenda de Lives). */
+/** aria-label padrão do botão Hoje (Agenda). */
 export const HOJE_FILTRO_ARIA_LABEL = "Ir para o dia de hoje";
 
 export interface FiltroHojeButtonProps {
@@ -16,7 +16,7 @@ export interface FiltroHojeButtonProps {
 
 /**
  * Atalho “Hoje” na barra de filtros — pill 999, ícone History 15px (distinto do Histórico `Calendar`).
- * Uso actual: Agenda de Lives (força modo Dia + data corrente).
+ * Uso actual: Agenda (força modo Dia + data corrente).
  */
 export function FiltroHojeButton({
   active,

@@ -5,7 +5,7 @@ alwaysApply: true
 
 # MDC Brand — Whitelabel e padrões de UI de marca
 
-**Escopo:** identidade visual da operadora, componentes de filtro com ícone, navegação de período, cabeçalhos de página, **toolbars com botões em texto**, ações em ícone em tabela/lista e CTAs primários. **Não** cobre regras de negócio por página (ver MDCs de secção) nem **semântica de dados** (ver `global.mdc`).
+**Escopo:** identidade visual da operadora, componentes de filtro com ícone, navegação de período, cabeçalhos de página, **toolbars com botões em texto**, ações em ícone em tabela/lista e CTAs primários. **Não** cobre regras de negócio por página (ver MDCs de secção), **semântica de dados** (ver `global.mdc`) nem **build Vite / chunks / deploy Cloudflare** (ver `global.mdc` § Build Vite — ex.: `lucide`/`react-icons` em `vendor-react`, sem chunk `vendor-icons`).
 
 **Relação com outros MDCs**
 

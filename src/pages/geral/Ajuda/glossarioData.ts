@@ -34,7 +34,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Validação de Live",
         definicao:
-          "Processo de confirmar o resultado de uma live agendada — registrando se ela foi Realizada ou Não Realizada, e quando realizada, os dados de duração e audiência. A validação é feita na página Resultado de Lives.",
+          "Processo de confirmar o resultado de uma live agendada — registrando se ela foi Realizada ou Não Realizada, e quando realizada, os dados de duração e audiência. A validação é feita na página Resultados.",
         nota:
           "Somente lives com horário passado há mais de 5 horas aparecem para validação — a janela garante que a live terminou antes do registro.\n\nA operadora deve ser informada obrigatoriamente na validação, pois é o vínculo usado pelo módulo Financeiro para calcular os pagamentos do ciclo correspondente.",
         referencia: "Resultados",
@@ -42,7 +42,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Janela de Elegibilidade",
         definicao:
-          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultado de Lives para validação.",
+          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultados para validação.",
         nota:
           "A janela padrão é de 5 horas após o horário agendado (fuso local). Lives ainda dentro desse intervalo não entram na fila de validação — o sistema assume que a transmissão pode ainda estar em andamento.",
         referencia: "Resultados",
@@ -50,7 +50,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Semana de Referência",
         definicao:
-          "Período de sete dias usado como unidade de filtro na página Feedback de Lives para agrupar lives validadas e seus resultados.",
+          "Período de sete dias usado como unidade de filtro na página Feedback para agrupar lives validadas e seus resultados.",
         nota:
           "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe todo o período com dados cadastrados.",
         referencia: "Feedback",

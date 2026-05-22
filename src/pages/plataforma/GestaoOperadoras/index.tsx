@@ -150,7 +150,7 @@ export default function GestaoOperadoras() {
             Gestão de Operadoras
           </h1>
           <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-            Gerencie as operadoras parceiras da Spin Gaming.
+            Gerencie operadoras parceiras, identidade visual e configurações de integração.
           </p>
         </div>
       </div>

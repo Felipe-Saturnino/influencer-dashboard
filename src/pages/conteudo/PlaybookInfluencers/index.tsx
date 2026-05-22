@@ -882,6 +882,19 @@ export default function PlaybookInfluencers() {
           )}
         </div>
 
+        <p
+          style={{
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+            margin: "5px 0 0",
+            paddingLeft: 40,
+            lineHeight: 1.45,
+          }}
+        >
+          Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.
+        </p>
+
         <div style={{
           marginTop: 12,
           paddingLeft: 40,

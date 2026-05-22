@@ -223,8 +223,8 @@ export default function Agenda() {
 
       <DashboardPageHeader
         icon={<CalendarRange size={14} aria-hidden="true" />}
-        title="Agenda de Lives"
-        subtitle="Calendário central de lives — visualize, agende e acompanhe lives de todos os influencers."
+        title="Agenda"
+        subtitle="Visualize, agende e acompanhe as lives dos influencers."
         brand={brand}
         t={t}
         right={
@@ -269,7 +269,7 @@ export default function Agenda() {
           padding: "12px 20px",
         }}>
           {/* Linha principal — centralizada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={prev}

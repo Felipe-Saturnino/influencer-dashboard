@@ -134,7 +134,7 @@ export default function Campanhas() {
       <PageHeader
         icon={<Megaphone size={14} aria-hidden />}
         title="Campanhas"
-        subtitle="Cadastre campanhas de mídias sociais. UTMs mapeados na Gestão de Links alimentam o Dashboard de Mídias (funil e performance)."
+        subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 
       <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>

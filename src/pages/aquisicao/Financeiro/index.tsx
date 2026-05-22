@@ -2885,7 +2885,7 @@ export default function Financeiro() {
         <PageHeader
           icon={<Wallet size={14} aria-hidden />}
           title="Financeiro"
-          subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+          subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
         />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
@@ -2932,7 +2932,7 @@ export default function Financeiro() {
       <PageHeader
         icon={<Wallet size={14} aria-hidden />}
         title="Financeiro"
-        subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+        subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
       />
 
       {/* Bloco de filtros (similar Agenda) */}
@@ -2943,7 +2943,7 @@ export default function Financeiro() {
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Mês anterior"

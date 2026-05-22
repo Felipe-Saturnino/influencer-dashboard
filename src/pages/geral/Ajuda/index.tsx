@@ -140,12 +140,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das plataformas parceiras.",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das operadoras parceiras.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por plataforma (ex.: Blaze, Casa de Apostas). Com **Todas Operadoras** selecionado no filtro, os valores financeiros são somados entre plataformas.",
+          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora (ex.: Blaze, Casa de Apostas). Com **Todas Operadoras** selecionado no filtro, os valores financeiros são somados entre operadoras.",
       },
       {
         subtitulo: "KPIs Consolidados",
@@ -248,7 +248,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   agenda: {
-    titulo: "Agenda de Lives",
+    titulo: "Agenda",
     blocos: [
       {
         texto:
@@ -287,7 +287,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   resultados: {
-    titulo: "Resultado de Lives",
+    titulo: "Resultados",
     blocos: [
       {
         texto:
@@ -321,7 +321,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   feedback: {
-    titulo: "Feedback de Lives",
+    titulo: "Feedback",
     blocos: [
       {
         texto:
@@ -369,7 +369,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos influencers parceiros.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
+          "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
       },
       {
         subtitulo: "Quadros de Resumo",
@@ -1129,7 +1129,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   agenda: {
-    titulo: "Agenda de Lives",
+    titulo: "Agenda",
     blocos: [
       {
         subtitulo: "Uma live não aparece no calendário?",
@@ -1179,7 +1179,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   resultados: {
-    titulo: "Resultado de Lives",
+    titulo: "Resultados",
     blocos: [
       {
         subtitulo: "Uma live não aparece na lista?",
@@ -1224,7 +1224,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   feedback: {
-    titulo: "Feedback de Lives",
+    titulo: "Feedback",
     blocos: [
       {
         subtitulo: "Nenhuma live aparece na lista?",

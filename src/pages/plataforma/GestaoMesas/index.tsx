@@ -195,7 +195,7 @@ export default function GestaoMesas() {
             Gestão de Mesas
           </h1>
           <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", maxWidth: 560, lineHeight: 1.45 }}>
-            Cadastro de mesas por operadora.
+            Cadastre e gerencie as mesas disponíveis por operadora.
           </p>
         </div>
       </div>

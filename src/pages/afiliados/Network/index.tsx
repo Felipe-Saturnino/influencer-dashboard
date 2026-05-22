@@ -184,7 +184,7 @@ export default function AfiliadosNetwork() {
       <DashboardPageHeader
         icon={<Network size={14} aria-hidden="true" />}
         title="Network"
-        subtitle="Funil de prospecção e cadastro de afiliados."
+        subtitle="Funil de prospecção e conversão de prospectos em afiliados cadastrados."
         brand={brand}
         t={t}
         right={

@@ -190,7 +190,7 @@ export default function SpinNaRede() {
       </div>
 
       <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, maxWidth: 720, lineHeight: 1.45 }}>
-        Citações e menções públicas à Spin em notícias e feeds.
+        Acompanhe as menções e aparições públicas da Spin Gaming na mídia.
       </p>
 
       {erro && (

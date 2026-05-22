@@ -3460,7 +3460,7 @@ export default function OverviewSpin() {
               Overview Spin
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resultados consolidados das mesas ao vivo — Baccarat, Roleta, Blackjack e Futebol Brasileiro.
+              Resultados financeiros e operacionais das mesas ao vivo por operadora.
             </p>
           </div>
         </div>
@@ -3480,7 +3480,7 @@ export default function OverviewSpin() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 18,
+              gap: 10,
               flexWrap: "wrap",
               marginBottom: 12,
             }}

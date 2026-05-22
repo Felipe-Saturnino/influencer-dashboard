@@ -249,7 +249,7 @@ export default function Afiliados() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <DashboardPageHeader icon={<Users size={14} aria-hidden="true" />} title="Afiliados" subtitle={showManagementUI ? "Gerencie cadastro, operação e vínculos com operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
+      <DashboardPageHeader icon={<Users size={14} aria-hidden="true" />} title="Afiliados" subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
 
       {showManagementUI && (
         <div className="app-grid-2" style={{ gap: 16, marginBottom: 20 }}>

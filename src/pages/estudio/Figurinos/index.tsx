@@ -585,7 +585,7 @@ export default function FigurinosPage() {
       <PageHeader
         icon={<Shirt size={14} aria-hidden />}
         title="Figurinos"
-        subtitle="Controle de peças, etiquetas, empréstimos e devoluções por operadora."
+        subtitle="Controle o inventário de peças com retiradas, devoluções e manutenções."
         actions={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button

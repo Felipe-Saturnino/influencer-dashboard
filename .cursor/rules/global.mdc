@@ -26,8 +26,8 @@ Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
 | MDC | Conteúdo |
 |-----|----------|
-| **Global** | Semântica de dados, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos |
-| **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha |
+| **Global** | Semântica de dados, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
+| **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** inclui `vite.config` nem chunks de produção |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
 ### Manutenção dos MDCs de secção
@@ -558,6 +558,50 @@ Quando não houver skeleton para o bloco principal:
 
 ---
 
+## Build Vite (Rolldown) e deploy — Cloudflare Pages
+
+**Onde documentar:** este Global + `vite.config.ts` + `docs/SETUP.md` (deploy) + `docs/SAUDE_CODIGO.md` (sintomas). **Não** colocar em `brand-css-variables.mdc` — Brand é UI/whitelabel, não pipeline de build.
+
+Deploy de produção: **Cloudflare Pages** (`npm run build` → pasta `dist`). Vite 8 usa **Rolldown** — `manualChunks` legado **não** funciona; usar `build.rolldownOptions.output.codeSplitting.groups` em `vite.config.ts`.
+
+### Grupos de chunk permitidos (contrato atual)
+
+| Grupo | Conteúdo |
+|--------|-----------|
+| `vendor-react` | `react`, `react-dom`, **`lucide-react`**, **`react-icons`** |
+| `vendor-supabase` | `@supabase/supabase-js` |
+| `vendor-charts` | `recharts` |
+| `vendor-jspdf` | `jspdf` |
+| `vendor-qrcode` | `qrcode`, `qrcode.react` |
+
+Demais dependências: chunks por rota (lazy) gerados pelo bundler — **não** inventar grupo `vendor-icons`, `vendor-ui-icons` ou equivalente só para ícones.
+
+### Regra obrigatória — ícones no `vendor-react`
+
+**Proibido** criar chunk isolado para `lucide-react` / `react-icons` (`vendor-icons`, `vendor-ui-icons`, etc.).
+
+Motivo validado em produção: no Cloudflare Pages esse ficheiro costuma responder **HTTP 500** com corpo vazio após deploy, enquanto `vendor-react`, `index` e CSS respondem **200**. **Retry** e **renomear o chunk** não corrigem de forma fiável.
+
+O `index.html` gerado **não** deve ter `modulepreload` para `vendor-*-icons-*`; ícones carregam dentro de `vendor-react-*.js`.
+
+### Pós-deploy — verificação rápida (F12 → Network)
+
+1. Abrir o ambiente (ex.: `*.pages.dev`) com hard refresh (Ctrl+Shift+R).
+2. Confirmar **200** + `application/javascript` em `vendor-react-*.js` e no `index-*.js`.
+3. Se a app ficar em branco e **um** `.js` em `/assets/` der **500** com tamanho 0: ver § Falha de chunk abaixo — **não** assumir que é bug de página React.
+
+### Falha de chunk após deploy
+
+| Sintoma | Causa provável | Ação |
+|--------|----------------|------|
+| **500** num `.js` referenciado no `index.html`, outros assets **200** | Asset não publicado ou chunk isolado problemático (histórico: ícones) | Rollback no Cloudflare → corrigir `vite.config.ts` (fundir chunk no `vendor-react` ou num vendor que já sobe) → novo deploy |
+| **404** em chunk após deploy com app já aberta | Hash antigo em cache | `ErrorBoundary` + listener em `main.tsx` recarregam; utilizador pode Ctrl+Shift+R |
+| Build CI verde, site quebrado | Desalinhamento CDN vs `index.html` | Validar Network no URL de **produção**, não só preview local |
+
+Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e validar esse ficheiro em `/assets/` antes de considerar estável.
+
+---
+
 ## Anti-patterns (global)
 
 - Implementar página sem ler Brand + MDC da secção.
@@ -583,3 +627,5 @@ Quando não houver skeleton para o bloco principal:
 - CPF ou dado sensível sem máscara em tabela pública.
 - Expor infraestrutura (tabela, RPC, stack) na UI.
 - Emoji no `h1` ou em `BlocoLabel`.
+- Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
+- Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).

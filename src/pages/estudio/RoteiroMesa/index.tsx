@@ -1109,7 +1109,7 @@ export default function RoteiroMesa() {
       <PageHeader
         icon={<NotebookPen size={14} aria-hidden />}
         title="Roteiro de Mesa"
-        subtitle="Scripts, orientações e campanhas por bloco e operadora."
+        subtitle="Scripts e orientações de live por operadora para o dealer usar em mesa."
       />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}

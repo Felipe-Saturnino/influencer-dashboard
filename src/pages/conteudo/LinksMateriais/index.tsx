@@ -457,7 +457,7 @@ export default function LinksMateriais() {
           color: t.textMuted,
         }}>
           <p style={{ margin: 0 }}>
-            Gere o link de rastreamento e registre o UTM em Gestão de Links.
+            Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
           </p>
         </div>
       </div>

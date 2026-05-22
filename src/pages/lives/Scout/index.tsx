@@ -363,7 +363,7 @@ export default function Scout() {
       <DashboardPageHeader
         icon={<Search size={14} aria-hidden="true" />}
         title="Scout"
-        subtitle="Prospecte e registre informações de influencers para parcerias."
+        subtitle="Registre prospectos e acompanhe o funil do primeiro contato ao fechamento."
         brand={brand}
         t={t}
         right={

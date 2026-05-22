@@ -68,6 +68,28 @@ Use os mesmos nomes: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 4. Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` como variáveis de ambiente no projeto
 5. Faça o deploy
 
+### Build Vite — chunks (obrigatório antes de alterar `vite.config.ts`)
+
+O projeto usa **Vite 8 + Rolldown** (`codeSplitting.groups` em `vite.config.ts`). Regra de produção validada no Cloudflare Pages:
+
+- **`lucide-react` e `react-icons` vão no grupo `vendor-react`** — nunca em chunk isolado (`vendor-icons`, `vendor-ui-icons`, etc.).
+- Chunk isolado de ícones costuma gerar **HTTP 500** (ficheiro vazio) após deploy; a plataforma fica em branco no F12 mesmo com build CI verde.
+- Detalhe completo: **`.cursor/rules/global.mdc`** (§ Build Vite e deploy) e **`docs/SAUDE_CODIGO.md`** (sintomas e rollback).
+
+### Conferência pós-deploy
+
+1. Abrir a URL de produção com **Ctrl+Shift+R**.
+2. DevTools → **Network**: todos os `.js` listados no `index.html` devem estar **200** e `application/javascript`.
+3. **Não** deve existir pedido a `vendor-*-icons-*`; ícones vêm em `vendor-react-*.js`.
+
+Se um asset em `/assets/` responder **500** com tamanho 0:
+
+1. **Rollback** no Cloudflare para o último deploy estável.
+2. Reverter ou corrigir alteração em `vite.config.ts` (fundir o chunk problemático num vendor que já sobe, em geral `vendor-react`).
+3. Novo commit + deploy e repetir a conferência acima.
+
+**Retry** no mesmo deploy raramente resolve quando só um chunk falha; preferir rollback + fix no `vite.config.ts`.
+
 ## Supabase — RLS (Row Level Security)
 
 Para garantir segurança no backend, configure políticas RLS nas tabelas relevantes (`profiles`, `lives`, `influencer_operadoras`, `pagamentos`, etc.), alinhadas aos roles e escopos do aplicativo.

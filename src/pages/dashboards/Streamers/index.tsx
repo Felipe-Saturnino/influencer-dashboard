@@ -225,7 +225,7 @@ function StreamersAutorizado() {
                   Streamers
                 </h1>
                 <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-                  Performance do canal de influencers — financeiro, conversão e operação.
+                  Acompanhe performance, conversão e financeiro do canal de influencers.
                 </p>
               </div>
             </div>

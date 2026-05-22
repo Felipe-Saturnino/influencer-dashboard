@@ -110,9 +110,7 @@ export default function GestaoUsuarios() {
               Gestão de Usuários
             </h1>
             <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
-              {isAdmin
-                ? "Gerencie usuários, acessos e permissões da plataforma."
-                : "Visualização de usuários da plataforma."}
+              Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma.
             </p>
           </div>
         </div>

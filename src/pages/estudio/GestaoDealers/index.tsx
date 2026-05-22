@@ -233,7 +233,7 @@ export default function GestaoDealers() {
       <PageHeader
         icon={<Users size={14} aria-hidden />}
         title="Gestão de Dealers"
-        subtitle="Elenco sincronizado a partir da Gestão de Staff quando o time é Game Presenter."
+        subtitle="Catálogo do elenco com especialidades, turnos e solicitações das operadoras."
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
@@ -242,7 +242,7 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"

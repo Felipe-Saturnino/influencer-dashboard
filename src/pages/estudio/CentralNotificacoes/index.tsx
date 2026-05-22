@@ -1016,12 +1016,21 @@ export default function CentralNotificacoes() {
       <PageHeader
         icon={<Bell size={14} aria-hidden />}
         title="Central de Notificações"
-        subtitle={
-          verInboxEstudio && pendentesGestor > 0
-            ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
-            : "Campanhas de roteiro e solicitações ao estúdio."
-        }
+        subtitle="Gerencie solicitações entre operadoras e estúdio com histórico de conversas."
       />
+      <p
+        style={{
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          fontSize: 13,
+          margin: "-12px 0 24px",
+          lineHeight: 1.45,
+        }}
+      >
+        {verInboxEstudio && pendentesGestor > 0
+          ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
+          : "Campanhas de roteiro e solicitações ao estúdio."}
+      </p>
 
       <div style={{ marginBottom: 14 }}>
         <div

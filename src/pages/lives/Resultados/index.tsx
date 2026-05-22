@@ -667,8 +667,8 @@ export default function Resultados() {
 
       <DashboardPageHeader
         icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Resultado de Lives"
-        subtitle="Lives agendadas cujo horário já passou há mais de 5 horas, pendentes de validação."
+        title="Resultados"
+        subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
         brand={brand}
         t={t}
       />
@@ -682,7 +682,7 @@ export default function Resultados() {
             background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
               {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
                 <FiltroInfluencerSelect
                   mode="multiple"

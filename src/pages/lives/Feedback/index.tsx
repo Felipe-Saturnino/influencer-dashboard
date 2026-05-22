@@ -477,8 +477,8 @@ export default function Feedback() {
 
       <DashboardPageHeader
         icon={<MessageSquare size={14} aria-hidden="true" />}
-        title="Feedback de Lives"
-        subtitle="Resultado final das lives validadas em Resultados."
+        title="Feedback"
+        subtitle="Consulte o histórico validado de lives com KPIs e dados de resultado."
         brand={brand}
         t={t}
       />

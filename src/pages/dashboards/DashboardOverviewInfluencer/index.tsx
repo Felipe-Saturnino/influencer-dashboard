@@ -998,7 +998,7 @@ export default function DashboardOverviewInfluencer() {
               Overview Influencer
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Visão executiva da performance do canal de influencers.
+              Resumo executivo de financeiro, operação e conversão do canal de influencers.
             </p>
           </div>
         </div>

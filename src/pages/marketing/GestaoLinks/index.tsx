@@ -385,7 +385,7 @@ export default function GestaoLinks() {
       <PageHeader
         icon={<Link2 size={14} aria-hidden />}
         title="Gestão de Links"
-        subtitle="Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer."
+        subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
         actions={
           totalPendentes > 0 ? (
             <span style={{ background: COR.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>

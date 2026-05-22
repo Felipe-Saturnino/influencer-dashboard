@@ -1874,7 +1874,7 @@ export default function BancaJogo() {
       <PageHeader
         icon={<Coins size={14} aria-hidden />}
         title="Banca de Jogo"
-        subtitle="Solicitações de pagamento de banca por influencer e operadora."
+        subtitle="Solicite, aprove e libere bancas de jogo por parceiro e operadora."
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -1884,7 +1884,7 @@ export default function BancaJogo() {
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Mês anterior"
