@@ -299,7 +299,7 @@ export default function Afiliados() {
       {showManagementUI && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
-            {/* Linha 1: Status */}
+            {/* Linha 1: Status + Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => {
@@ -328,32 +328,22 @@ export default function Afiliados() {
                   </button>
                 );
               })}
+              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+                <>
+                  <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} aria-hidden="true" />
+                  <FiltroOperadoraSelect
+                    pill
+                    minWidth={200}
+                    value={filterOp}
+                    onChange={setFilterOp}
+                    operadoras={operadorasNoEscopo}
+                  />
+                </>
+              )}
             </div>
 
-            {/* Linha 2: Operadora */}
-            {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                justifyContent: "center",
-                width: "100%",
-                paddingTop: 12,
-                marginTop: 12,
-                borderTop: `1px solid ${t.cardBorder}`,
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
-                <FiltroOperadoraSelect
-                  pill
-                  minWidth={200}
-                  value={filterOp}
-                  onChange={setFilterOp}
-                  operadoras={operadorasNoEscopo}
-                />
-              </div>
-            )}
-            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            {/* Linha 2: Busca */}
+            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, width: "100%" }}>
               <BarraPesquisaPagina
                 value={search}
                 onChange={setSearch}
