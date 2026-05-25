@@ -14,7 +14,8 @@ import {
   zebraStripe,
   zebraStripeBrandContrast,
 } from "../../../lib/tableStyles";
-import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, FiltroBarTabButton, type SortDir } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -36,6 +37,7 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  GitCompare,
   Share2,
   TrendingDown,
   Target,
@@ -84,6 +86,12 @@ const TAB_LABELS: Record<SocialMediaTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
   alcance: "Alcance",
+};
+
+const TAB_ICONS: Record<SocialMediaTab, typeof BarChart2> = {
+  overview: BarChart2,
+  conversao: GitCompare,
+  alcance: Share2,
 };
 
 const COR_FUNIL_A = {
@@ -1118,51 +1126,19 @@ export default function SocialMediaDashboard() {
 
           <div role="tablist" aria-label="Seções Mídias sociais" style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             {tabIds.map((key) => {
-              const ativo = aba === key;
+              const TabIcon = TAB_ICONS[key];
               return (
-                <button
+                <FiltroBarTabButton
                   key={key}
-                  type="button"
-                  role="tab"
                   id={`tab-midias-${key}`}
-                  tabIndex={ativo ? 0 : -1}
-                  aria-selected={ativo}
+                  active={aba === key}
                   aria-controls={`panel-midias-${key}`}
                   onClick={() => setAba(key)}
-                  onKeyDown={(e) => {
-                    const current = tabIds.indexOf(key);
-                    if (e.key === "ArrowRight") {
-                      e.preventDefault();
-                      const next = tabIds[(current + 1) % tabIds.length];
-                      setAba(next);
-                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
-                    }
-                    if (e.key === "ArrowLeft") {
-                      e.preventDefault();
-                      const next = tabIds[(current - 1 + tabIds.length) % tabIds.length];
-                      setAba(next);
-                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
-                    }
-                  }}
-                  style={{
-                    padding: "10px 18px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.accent : t.textMuted,
-                    fontWeight: ativo ? 700 : 500,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                  }}
+                  onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-midias-")}
+                  icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
                 >
                   {TAB_LABELS[key]}
-                </button>
+                </FiltroBarTabButton>
               );
             })}
           </div>

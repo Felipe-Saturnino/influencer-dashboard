@@ -7,11 +7,18 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
-import { Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
+import { Ban, CheckCircle2, Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  FiltroOperadoraSelect,
+  SortTableTh,
+  onFiltroBarTabsKeyDown,
+  type SortDir,
+} from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -412,21 +419,7 @@ export default function GestaoLinks() {
               <div
                 role="tablist"
                 aria-label="Status dos links"
-                onKeyDown={(e) => {
-                  const idx = ABAS_LIST.indexOf(aba);
-                  if (e.key === "ArrowRight") {
-                    e.preventDefault();
-                    const next = ABAS_LIST[(idx + 1) % ABAS_LIST.length];
-                    setAba(next);
-                    (e.currentTarget.querySelector(`[data-aba="${next}"]`) as HTMLElement)?.focus();
-                  }
-                  if (e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    const prev = ABAS_LIST[(idx - 1 + ABAS_LIST.length) % ABAS_LIST.length];
-                    setAba(prev);
-                    (e.currentTarget.querySelector(`[data-aba="${prev}"]`) as HTMLElement)?.focus();
-                  }
-                }}
+                onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_LIST, setAba, (k) => `tab-links-${k}`)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -442,40 +435,27 @@ export default function GestaoLinks() {
                 </span>
                 {ABAS_LIST.map((a) => {
                   const ativa = aba === a;
-                  const tabBgAtiva = brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+                  const labels: Record<Aba, string> = {
+                    pendentes: "Pendentes",
+                    mapeados: "Mapeados",
+                    ignorados: "Ignorados",
+                  };
+                  const icons: Record<Aba, React.ReactNode> = {
+                    pendentes: <Link2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+                    mapeados: <CheckCircle2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+                    ignorados: <Ban {...FILTRO_BAR_TAB_ICON_PROPS} />,
+                  };
                   return (
-                    <button
+                    <FiltroBarTabButton
                       key={a}
-                      id={`tab-${a}`}
-                      type="button"
-                      data-aba={a}
-                      role="tab"
-                      aria-selected={ativa}
+                      id={`tab-links-${a}`}
+                      active={ativa}
                       aria-controls={`painel-${a}`}
-                      tabIndex={ativa ? 0 : -1}
                       onClick={() => setAba(a)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 14px",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        border: `1px solid ${ativa ? brand.accent : t.cardBorder}`,
-                        background: ativa ? tabBgAtiva : (t.inputBg ?? t.cardBg),
-                        color: ativa ? brand.accent : t.textMuted,
-                        fontSize: 13,
-                        fontWeight: ativa ? 700 : 400,
-                        fontFamily: FONT.body,
-                        transition: "all 0.15s",
-                        flexShrink: 0,
-                        whiteSpace: "nowrap",
-                      }}
+                      icon={icons[a]}
                     >
-                      {a.charAt(0).toUpperCase() + a.slice(1)}
-                      {a === "pendentes" && totalPendentes > 0 && (
+                      {labels[a]}
+                      {a === "pendentes" && totalPendentes > 0 ? (
                         <span
                           aria-label={`${totalPendentes} pendente${totalPendentes !== 1 ? "s" : ""}`}
                           style={{
@@ -489,8 +469,8 @@ export default function GestaoLinks() {
                         >
                           {totalPendentes}
                         </span>
-                      )}
-                    </button>
+                      ) : null}
+                    </FiltroBarTabButton>
                   );
                 })}
               </div>

@@ -25,6 +25,13 @@ export {
   type FiltroHistoricoButtonProps,
 } from "./FiltroHistoricoButton";
 export { FiltroBarPillButton, type FiltroBarPillButtonProps } from "./FiltroBarPillButton";
+export { FiltroBarTabButton, type FiltroBarTabButtonProps } from "./FiltroBarTabButton";
+export {
+  FILTRO_BAR_TAB_ICON_SIZE,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  handleFiltroBarTabsArrowKeyDown,
+  onFiltroBarTabsKeyDown,
+} from "../../lib/filterBarStyles";
 export {
   FiltroTodosTimesButton,
   type FiltroTodosTimesButtonProps,

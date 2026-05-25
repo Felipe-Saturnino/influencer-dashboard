@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -8,7 +8,8 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
-import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Trash2, Contact, Briefcase, Coins, History } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto";
 import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
@@ -108,19 +109,51 @@ function StatusBadge({ value, onChange, readonly }: { value: StatusAfiliado; onC
   );
 }
 
-function handleTabArrowKey<T extends string>(
-  tabs: { key: T }[],
-  current: T,
-  setTab: (k: T) => void,
-  e: KeyboardEvent,
-) {
-  const idx = tabs.findIndex((tb) => tb.key === current);
-  if (idx < 0) return;
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-    e.preventDefault();
-    if (e.key === "ArrowRight") setTab(tabs[(idx + 1) % tabs.length].key);
-    else setTab(tabs[(idx - 1 + tabs.length) % tabs.length].key);
-  }
+type AfiliadoModalTab = "cadastral" | "operacao" | "financeiro" | "operadoras" | "historico";
+
+const AFILIADO_TAB_ICONS: Record<AfiliadoModalTab, ReactNode> = {
+  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operacao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  financeiro: <Coins {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operadoras: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+function AfiliadoModalTabs({
+  tabs,
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+}: {
+  tabs: { key: AfiliadoModalTab; label: string }[];
+  tab: AfiliadoModalTab;
+  setTab: (k: AfiliadoModalTab) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+}) {
+  const tabKeys = tabs.map((tb) => tb.key);
+  return (
+    <div
+      role="tablist"
+      aria-label="Secções"
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabs.map((tb) => (
+        <FiltroBarTabButton
+          key={tb.key}
+          id={`${tabIdPrefix}${tb.key}`}
+          active={tab === tb.key}
+          aria-controls={`${panelIdPrefix}${tb.key}`}
+          onClick={() => setTab(tb.key)}
+          icon={AFILIADO_TAB_ICONS[tb.key]}
+        >
+          {tb.label}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
 }
 
 export default function Afiliados() {
@@ -439,9 +472,6 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v || "—"}</span>;
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
   useModalEscape(onClose, true);
   useEffect(() => { const id = window.setTimeout(() => ref.current?.focus(), 50); return () => window.clearTimeout(id); }, []);
   const tabs = [
@@ -467,24 +497,7 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: brand.useBrand ? `1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)` : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary }} /> Modo visualização — somente leitura. Dados sensíveis protegidos.
         </div>
-        <div role="tablist" aria-label="Secções" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`tab-af-ver-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`panel-af-ver-${tb.key}`}
-              tabIndex={tab === tb.key ? 0 : -1}
-              onClick={() => setTab(tb.key)}
-              onKeyDown={(e) => handleTabArrowKey(tabs, tab, setTab, e)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <AfiliadoModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="tab-af-ver-" panelIdPrefix="panel-af-ver-" />
         {tab === "cadastral" && (
           <div role="tabpanel" id="panel-af-ver-cadastral" aria-labelledby="tab-af-ver-cadastral">
             <div style={rowS}><label style={labelStyle}>E-mail</label>{val(row.email)}</div>
@@ -554,9 +567,6 @@ function ModalEditar({
   const brand = useDashboardBrand();
   const ref = useRef<HTMLDivElement>(null);
   const existing = row.perfil;
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
   const ctaSalvar = brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, #4a2082, #1e36f8)";
@@ -572,7 +582,7 @@ function ModalEditar({
     });
     return m;
   });
-  const [tab, setTab] = useState<"cadastral" | "operacao" | "financeiro" | "operadoras">("cadastral");
+  const [tab, setTab] = useState<AfiliadoModalTab>("cadastral");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmExcluir, setConfirmExcluir] = useState(false);
@@ -679,24 +689,7 @@ function ModalEditar({
           <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
         </div>
 
-        <div role="tablist" aria-label="Secções do cadastro" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`tab-af-ed-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`panel-af-ed-${tb.key}`}
-              tabIndex={tab === tb.key ? 0 : -1}
-              onClick={() => setTab(tb.key)}
-              onKeyDown={(e) => handleTabArrowKey(tabs, tab, setTab, e)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`, background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <AfiliadoModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" />
 
         {error && (
           <div role="alert" aria-live="polite" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", justifyContent: "space-between", gap: 8 }}>

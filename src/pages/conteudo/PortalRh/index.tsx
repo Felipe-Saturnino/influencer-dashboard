@@ -1,5 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { FileText, Loader2, Megaphone, MessagesSquare, Pin, SlidersHorizontal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  Banknote,
+  CalendarDays,
+  FileText,
+  Gift,
+  LayoutGrid,
+  Loader2,
+  Megaphone,
+  MessagesSquare,
+  Pin,
+  Scale,
+  Shield,
+  SlidersHorizontal,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -9,12 +24,13 @@ import { ComunicadoCard, PoliticaCard, RhTalkCard } from "./PortalRhCards";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
 
@@ -172,61 +188,60 @@ function onPortalRhTabsKeyDown(
   }
 }
 
+const SUBTAB_ICONS: Record<string, ReactNode> = {
+  todos: <LayoutGrid {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  urgente: <TriangleAlert {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  geral: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  pagamento: <Wallet {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  eventos: <CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  conduta: <Scale {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  seguranca: <Shield {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  bonificacao: <Gift {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  folha_pagamento: <Banknote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 function FiltroSubtabPills({
   filtroAtivo,
   onFiltro,
   configs,
   categorias,
-  t,
 }: {
   filtroAtivo: string;
   onFiltro: (key: string) => void;
   configs: SubtabCategoriaConfig[];
   categorias: RhPortalCategoria[];
-  t: ReturnType<typeof useApp>["theme"];
 }) {
-  const pillBase = (ativo: boolean, accent?: string) => ({
-    padding: "8px 14px",
-    borderRadius: 999,
-    border: ativo
-      ? accent
-        ? `1px solid ${accent}`
-        : "1px solid var(--brand-primary, #7c3aed)"
-      : `1px solid ${t.cardBorder}`,
-    background: ativo
-      ? accent
-        ? `${accent}22`
-        : "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)"
-      : t.cardBg,
-    color: t.text,
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-  });
+  const tabKeys = ["todos", ...configs.map((c) => c.key)] as const;
 
   return (
     <div
-      role="group"
+      role="tablist"
       aria-label="Filtrar por categoria"
       style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", width: "100%" }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, onFiltro, (k) => `tab-rh-portal-cat-${k}`)}
     >
-      <button type="button" aria-pressed={filtroAtivo === "todos"} onClick={() => onFiltro("todos")} style={pillBase(filtroAtivo === "todos")}>
+      <FiltroBarTabButton
+        id="tab-rh-portal-cat-todos"
+        active={filtroAtivo === "todos"}
+        onClick={() => onFiltro("todos")}
+        icon={SUBTAB_ICONS.todos}
+      >
         Todos
-      </button>
+      </FiltroBarTabButton>
       {configs.map((cfg) => {
         const cat = resolveCategoriaTab(categorias, cfg);
         const ativo = filtroAtivo === cfg.key;
         return (
-          <button
+          <FiltroBarTabButton
             key={cfg.key}
-            type="button"
-            aria-pressed={ativo}
+            id={`tab-rh-portal-cat-${cfg.key}`}
+            active={ativo}
             onClick={() => onFiltro(cfg.key)}
-            style={pillBase(ativo, cat?.accent_hex)}
+            activeColor={cat?.accent_hex}
+            icon={SUBTAB_ICONS[cfg.key] ?? <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
           >
             {cfg.label}
-          </button>
+          </FiltroBarTabButton>
         );
       })}
     </div>
@@ -235,7 +250,6 @@ function FiltroSubtabPills({
 
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
   const perm = usePermission("rh_portal");
 
   const [aba, setAba] = useState<AbaPortal>("comunicados");
@@ -474,7 +488,6 @@ export default function PortalRhPage() {
           onFiltro={setFiltroCatCom}
           configs={SUBTABS_COMUNICADO}
           categorias={categoriasCom}
-          t={t}
         />
       );
     }
@@ -485,7 +498,6 @@ export default function PortalRhPage() {
           onFiltro={setFiltroCatPol}
           configs={SUBTABS_POLITICA}
           categorias={categoriasPol}
-          t={t}
         />
       );
     }
@@ -500,7 +512,7 @@ export default function PortalRhPage() {
       );
     }
     return null;
-  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, categoriasPol, filtroTipoGer, filtroStatusGer, perm.canEditarOk, t]);
+  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, categoriasPol, filtroTipoGer, filtroStatusGer, perm.canEditarOk]);
 
   useEffect(() => {
     if (comunicados.length > 0 && mesesCom.length > 0) setIdxMesCom(mesesCom.length - 1);
@@ -746,38 +758,18 @@ export default function PortalRhPage() {
                   ? [{ key: "gerenciamento" as const, label: "Gerenciamento de Postagens", Icon: SlidersHorizontal }]
                   : []),
               ] as const
-            ).map(({ key, label, Icon }) => {
-              const ativa = aba === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  id={`tab-rh-portal-${key}`}
-                  aria-selected={ativa}
-                  aria-controls={`panel-rh-portal-${key}`}
-                  tabIndex={ativa ? 0 : -1}
-                  onClick={() => setAba(key)}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: 12,
-                    border: ativa ? brand.primaryTransparentBorder : `1px solid ${t.cardBorder}`,
-                    background: ativa ? brand.primaryTransparentBg : t.cardBg,
-                    color: ativa ? t.text : t.textMuted,
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Icon size={16} aria-hidden />
-                  {label}
-                </button>
-              );
-            })}
+            ).map(({ key, label, Icon }) => (
+              <FiltroBarTabButton
+                key={key}
+                id={`tab-rh-portal-${key}`}
+                active={aba === key}
+                aria-controls={`panel-rh-portal-${key}`}
+                onClick={() => setAba(key)}
+                icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                {label}
+              </FiltroBarTabButton>
+            ))}
           </div>
         }
         linhaSubabas={linhaSubabasFiltro ?? undefined}

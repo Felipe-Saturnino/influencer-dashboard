@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Shirt, Trash2, Wrench, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -19,10 +19,12 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import {
   FiltroFigurinosCategoriaSelect,
   FiltroFigurinosTamanhoSelect,
+  FiltroBarTabButton,
   FiltroOperadoraSelect,
   SortTableTh,
   type SortDir,
 } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -54,38 +56,19 @@ type Aba = RhFigurinoStatus;
 
 const FIGURINOS_ABAS: Aba[] = ["available", "borrowed", "maintenance", "discarded"];
 
+const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
+  available: <Package {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  borrowed: <HandHelping {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  maintenance: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 const SECTION_LABEL_STYLE: CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.08em",
   margin: 0,
 };
-
-function focusTabButton(id: string) {
-  document.getElementById(id)?.focus();
-}
-
-function onTabsKeyDown<A extends string>(
-  e: KeyboardEvent,
-  tabs: readonly A[],
-  active: A,
-  setActive: (v: A) => void,
-  tabId: (a: A) => string,
-) {
-  const idx = tabs.indexOf(active);
-  if (idx < 0) return;
-  if (e.key === "ArrowRight") {
-    e.preventDefault();
-    const next = tabs[(idx + 1) % tabs.length];
-    setActive(next);
-    focusTabButton(tabId(next));
-  } else if (e.key === "ArrowLeft") {
-    e.preventDefault();
-    const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
-    setActive(prev);
-    focusTabButton(tabId(prev));
-  }
-}
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
@@ -779,37 +762,19 @@ export default function FigurinosPage() {
               marginTop: 4,
               borderTop: `1px solid ${t.cardBorder}`,
             }}
-            onKeyDown={(e) => onTabsKeyDown(e, FIGURINOS_ABAS, aba, setAba, (a) => `tab-fig-${a}`)}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, FIGURINOS_ABAS, setAba, (a) => `tab-fig-${a}`)}
           >
             {FIGURINOS_ABAS.map((a) => (
-              <button
+              <FiltroBarTabButton
                 key={a}
-                type="button"
-                role="tab"
-                aria-selected={aba === a}
                 id={`tab-fig-${a}`}
+                active={aba === a}
                 aria-controls={`panel-fig-${a}`}
-                tabIndex={aba === a ? 0 : -1}
                 onClick={() => setAba(a)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  border: `1px solid ${aba === a ? brand.accent : t.cardBorder}`,
-                  background:
-                    aba === a
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                        : "rgba(124,58,237,0.15)"
-                      : "transparent",
-                  color: aba === a ? brand.accent : t.textMuted,
-                  fontWeight: aba === a ? 700 : 500,
-                }}
+                icon={FIGURINOS_TAB_ICONS[a]}
               >
                 {labelAba(a)}
-              </button>
+              </FiltroBarTabButton>
             ))}
           </div>
         </div>
@@ -2596,6 +2561,16 @@ type AbaDetalheFig = "detalhes" | "historico";
 
 const DETALHE_ABAS: AbaDetalheFig[] = ["detalhes", "historico"];
 
+const DETALHE_TAB_ICONS: Record<AbaDetalheFig, ReactNode> = {
+  detalhes: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const DETALHE_TAB_LABELS: Record<AbaDetalheFig, string> = {
+  detalhes: "Detalhes",
+  historico: "Histórico",
+};
+
 function ModalDetalhe({
   peca,
   operadorasTexto,
@@ -2650,37 +2625,19 @@ function ModalDetalhe({
         role="tablist"
         aria-label="Seções do detalhe"
         style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
-        onKeyDown={(e) => onTabsKeyDown(e, DETALHE_ABAS, abaDet, setAbaDet, (a) => `tab-fig-detalhe-${a}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, DETALHE_ABAS, setAbaDet, (a) => `tab-fig-detalhe-${a}`)}
       >
         {DETALHE_ABAS.map((a) => (
-          <button
+          <FiltroBarTabButton
             key={a}
-            type="button"
-            role="tab"
-            aria-selected={abaDet === a}
             id={`tab-fig-detalhe-${a}`}
+            active={abaDet === a}
             aria-controls={`panel-fig-detalhe-${a}`}
-            tabIndex={abaDet === a ? 0 : -1}
             onClick={() => setAbaDet(a)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: `1px solid ${abaDet === a ? brand.accent : t.cardBorder}`,
-              background:
-                abaDet === a
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
-                  : "transparent",
-              color: abaDet === a ? brand.accent : t.textMuted,
-              fontWeight: abaDet === a ? 700 : 500,
-            }}
+            icon={DETALHE_TAB_ICONS[a]}
           >
-            {a === "detalhes" ? "Detalhes" : "Histórico"}
-          </button>
+            {DETALHE_TAB_LABELS[a]}
+          </FiltroBarTabButton>
         ))}
       </div>
 

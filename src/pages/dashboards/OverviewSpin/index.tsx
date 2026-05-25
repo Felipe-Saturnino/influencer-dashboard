@@ -20,14 +20,21 @@ const TAB_LABELS_SPIN: Record<OverviewSpinTab, string> = {
   overview: "Overview",
   posicionamento: "Posicionamento",
 };
+
+const TAB_ICONS_SPIN: Record<OverviewSpinTab, typeof LayoutDashboard> = {
+  overview: LayoutDashboard,
+  posicionamento: MapPin,
+};
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   MarginBadge,
   FiltroHistoricoButton,
   FiltroOperadoraSelect,
+  FiltroBarTabButton,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import {
   getThStyle,
   getThStyleBrandAction,
@@ -48,7 +55,9 @@ import {
   Clock,
   Dice6,
   Hash,
+  LayoutDashboard,
   Loader2,
+  MapPin,
   Table2,
   Target,
   TrendingUp,
@@ -3577,55 +3586,21 @@ export default function OverviewSpin() {
             style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
           >
             {tabIdsSpin.map((key) => {
-              const ativo = aba === key;
+              const TabIcon = TAB_ICONS_SPIN[key];
               return (
-                <button
+                <FiltroBarTabButton
                   key={key}
-                  type="button"
-                  role="tab"
                   id={`tab-overview-spin-${key}`}
-                  tabIndex={ativo ? 0 : -1}
-                  aria-selected={ativo}
+                  active={aba === key}
                   aria-controls={`panel-overview-spin-${key}`}
                   onClick={() => selecionarAbaSpin(key)}
-                  onKeyDown={(e) => {
-                    const current = tabIdsSpin.indexOf(key);
-                    if (e.key === "ArrowRight") {
-                      e.preventDefault();
-                      const next = tabIdsSpin[(current + 1) % tabIdsSpin.length];
-                      selecionarAbaSpin(next);
-                      requestAnimationFrame(() => {
-                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
-                      });
-                    }
-                    if (e.key === "ArrowLeft") {
-                      e.preventDefault();
-                      const next = tabIdsSpin[(current - 1 + tabIdsSpin.length) % tabIdsSpin.length];
-                      selecionarAbaSpin(next);
-                      requestAnimationFrame(() => {
-                        document.getElementById(`tab-overview-spin-${next}`)?.focus();
-                      });
-                    }
-                  }}
-                  style={{
-                    padding: "10px 18px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.accent : t.textMuted,
-                    fontWeight: ativo ? 700 : 500,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                  }}
+                  onKeyDown={(e) =>
+                    handleFiltroBarTabsArrowKeyDown(e, tabIdsSpin, key, selecionarAbaSpin, "tab-overview-spin-")
+                  }
+                  icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
                 >
                   {TAB_LABELS_SPIN[key]}
-                </button>
+                </FiltroBarTabButton>
               );
             })}
           </div>

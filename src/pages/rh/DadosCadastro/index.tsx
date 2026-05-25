@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Download, Files, History, Loader2, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { AlertTriangle, Briefcase, CheckCircle2, Contact, Download, FileText, Files, History, Loader2, Trash2, Upload } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -33,6 +33,7 @@ import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import {
   MESES_CICLO_REVISAO_CADASTRO,
   payloadMarcarRevisaoCadastral,
@@ -307,6 +308,13 @@ const ABAS: { key: AbaCadastro; label: string }[] = [
   { key: "documentos", label: "Documentos" },
   { key: "historico", label: "Histórico" },
 ];
+
+const CADASTRO_TAB_ICONS: Record<AbaCadastro, ReactNode> = {
+  trabalho: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  documentos: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
 
 export default function RhDadosCadastroPage() {
   const { theme: t, user } = useApp();
@@ -639,10 +647,6 @@ export default function RhDadosCadastroPage() {
     await carregarMedia(row.id);
   };
 
-  const tabActiveBg = brand.useBrand
-    ? `color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)`
-    : `color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)`;
-
   const inputStyle: CSSProperties = {
     width: "100%",
     padding: "10px 12px",
@@ -870,40 +874,26 @@ export default function RhDadosCadastroPage() {
         aria-label="Seções do cadastro"
         style={{
           display: "flex",
-          gap: 6,
+          gap: 8,
           marginBottom: 18,
           flexWrap: "nowrap",
           overflowX: "auto",
           WebkitOverflowScrolling: "touch",
           paddingBottom: 2,
         }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
       >
-        {ABAS.map((tb) => {
-          const ativa = aba === tb.key;
-          return (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              aria-selected={ativa}
-              onClick={() => setAba(tb.key)}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                background: ativa ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: ativa ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          );
-        })}
+        {ABAS.map((tb) => (
+          <FiltroBarTabButton
+            key={tb.key}
+            id={`tab-cadastro-${tb.key}`}
+            active={aba === tb.key}
+            onClick={() => setAba(tb.key)}
+            icon={CADASTRO_TAB_ICONS[tb.key]}
+          >
+            {tb.label}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "trabalho" ? (

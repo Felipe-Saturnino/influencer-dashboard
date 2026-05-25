@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy } from "react";
-import { Loader2, ChevronLeft, ChevronRight, Clock, Tv } from "lucide-react";
+import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Tv, Wallet } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,7 +7,13 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect } from "../../../components/dashboard";
+import {
+  FiltroBarTabButton,
+  FiltroHistoricoButton,
+  FiltroInfluencerSelect,
+  FiltroOperadoraSelect,
+} from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -20,6 +26,12 @@ const TAB_LABELS: Record<StreamersTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
   financeiro: "Financeiro",
+};
+
+const TAB_ICONS: Record<StreamersTab, typeof BarChart2> = {
+  overview: BarChart2,
+  conversao: GitCompare,
+  financeiro: Wallet,
 };
 
 function StreamersFiltrosEUAbas({
@@ -125,56 +137,19 @@ function StreamersFiltrosEUAbas({
           style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
         >
           {tabIds.map((key) => {
-            const ativo = aba === key;
+            const TabIcon = TAB_ICONS[key];
             return (
-              <button
+              <FiltroBarTabButton
                 key={key}
-                type="button"
-                role="tab"
                 id={`tab-streamers-${key}`}
-                tabIndex={ativo ? 0 : -1}
-                aria-selected={ativo}
+                active={aba === key}
                 aria-controls={`panel-streamers-${key}`}
                 onClick={() => setAba(key)}
-                onKeyDown={(e) => {
-                  const tabs: StreamersTab[] = ["overview", "conversao", "financeiro"];
-                  const current = tabs.indexOf(key);
-                  if (e.key === "ArrowRight") {
-                    e.preventDefault();
-                    const next = tabs[(current + 1) % tabs.length];
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-streamers-${next}`)?.focus();
-                    });
-                  }
-                  if (e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    const next = tabs[(current - 1 + tabs.length) % tabs.length];
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-streamers-${next}`)?.focus();
-                    });
-                  }
-                }}
-                style={{
-                  padding: "10px 18px",
-                  minHeight: 44,
-                  borderRadius: 10,
-                  border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                  background: ativo
-                    ? brand.useBrand
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                    : (t.inputBg ?? t.cardBg),
-                  color: ativo ? brand.accent : t.textMuted,
-                  fontWeight: ativo ? 700 : 500,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                }}
+                onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-streamers-")}
+                icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
               >
                 {TAB_LABELS[key]}
-              </button>
+              </FiltroBarTabButton>
             );
           })}
         </div>

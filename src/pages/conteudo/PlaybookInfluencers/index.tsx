@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties, type KeyboardEvent } from "react";
+import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,6 +11,8 @@ import {
   BookOpen, Users, Calendar, Gamepad2,
   Zap, Wrench, Star, MonitorPlay, ShieldCheck, Loader2,
 } from "lucide-react";
+import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE } from "../../../lib/filterBarStyles";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 /** Texto introdutório fixo abaixo do título (visível em todas as abas). */
@@ -399,41 +401,19 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
 );
 
 const ABAS: AbaConfig[] = [
-  { key: "posicionamento", label: "Posicionamento", icon: <Star size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
-  { key: "dealers", label: "Dealers", icon: <Users size={14} aria-hidden />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
-  { key: "agendamento", label: "Agendamento", icon: <Calendar size={14} aria-hidden />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
-  { key: "jogos", label: "Jogos", icon: <Gamepad2 size={14} aria-hidden />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
-  { key: "blackjack", label: "Side Bets", icon: <Zap size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },
-  { key: "tecnico", label: "Situações Técnicas", icon: <Wrench size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoTecnico },
-  { key: "funfacts", label: "Fun Facts", icon: <Info size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.ciano, content: ConteudoFunFacts },
-  { key: "acesso", label: "Acesso aos Jogos", icon: <MonitorPlay size={14} aria-hidden />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoAcesso },
+  { key: "posicionamento", label: "Posicionamento", icon: <Star size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
+  { key: "dealers", label: "Dealers", icon: <Users size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
+  { key: "agendamento", label: "Agendamento", icon: <Calendar size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
+  { key: "jogos", label: "Jogos", icon: <Gamepad2 size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
+  { key: "blackjack", label: "Side Bets", icon: <Zap size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },
+  { key: "tecnico", label: "Situações Técnicas", icon: <Wrench size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoTecnico },
+  { key: "funfacts", label: "Fun Facts", icon: <Info size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.ciano, content: ConteudoFunFacts },
+  { key: "acesso", label: "Acesso aos Jogos", icon: <MonitorPlay size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoAcesso },
 ];
 
 const ITENS_OBRIGATORIOS = ABAS.filter((a) => a.obrigatoria && a.itemKey);
 
-function focusTabButton(id: string) {
-  document.getElementById(id)?.focus();
-}
-
-function onPlaybookTabsKeyDown(
-  e: KeyboardEvent,
-  abaAtiva: string,
-  setAbaAtiva: (key: string) => void,
-) {
-  const idx = ABAS.findIndex((a) => a.key === abaAtiva);
-  if (idx < 0) return;
-  if (e.key === "ArrowRight") {
-    e.preventDefault();
-    const next = ABAS[(idx + 1) % ABAS.length];
-    setAbaAtiva(next.key);
-    focusTabButton(`tab-${next.key}`);
-  } else if (e.key === "ArrowLeft") {
-    e.preventDefault();
-    const prev = ABAS[(idx - 1 + ABAS.length) % ABAS.length];
-    setAbaAtiva(prev.key);
-    focusTabButton(`tab-${prev.key}`);
-  }
-}
+const PLAYBOOK_TAB_KEYS = ABAS.map((a) => a.key);
 
 // ─── PAINEL DE AUDITORIA ──────────────────────────────────────────────────────
 function PainelAuditoria({
@@ -964,38 +944,22 @@ export default function PlaybookInfluencers() {
             role="tablist"
             aria-label="Seções do Playbook"
             style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 0, scrollbarWidth: "none" }}
-            onKeyDown={(e) => onPlaybookTabsKeyDown(e, abaAtiva, setAbaAtiva)}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, PLAYBOOK_TAB_KEYS, setAbaAtiva, (k) => `tab-${k}`)}
           >
           {ABAS.map((aba) => {
             const isAtiva = abaAtiva === aba.key;
             const jaConfirmou = roleParidadeInfluencer(user?.role) && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
             return (
-              <button
+              <FiltroBarTabButton
                 key={aba.key}
-                type="button"
-                role="tab"
                 id={`tab-${aba.key}`}
-                aria-selected={isAtiva}
+                active={isAtiva}
                 aria-controls={`panel-${aba.key}`}
-                tabIndex={isAtiva ? 0 : -1}
                 onClick={() => setAbaAtiva(aba.key)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "9px 14px",
-                  borderRadius: "10px 10px 0 0",
-                  border: `1px solid ${isAtiva ? t.cardBorder : "transparent"}`,
-                  borderBottom: isAtiva ? `1px solid ${brand.blockBg ?? t.cardBg}` : "none",
-                  background: isAtiva ? (brand.blockBg ?? t.cardBg) : "transparent",
-                  color: isAtiva ? aba.accentColor : t.textMuted,
-                  fontSize: 12, fontWeight: isAtiva ? 700 : 500,
-                  fontFamily: FONT.body,
-                  cursor: "pointer", whiteSpace: "nowrap",
-                  transition: "all 0.15s",
-                  position: "relative",
-                  flexShrink: 0,
-                }}
+                activeColor={aba.accentColor}
+                icon={aba.icon}
+                style={{ flexShrink: 0 }}
               >
-                <span style={{ color: isAtiva ? aba.accentColor : t.textMuted, display: "flex" }}>{aba.icon}</span>
                 {aba.label}
                 {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.vermelho, flexShrink: 0 }} aria-hidden />
@@ -1017,7 +981,7 @@ export default function PlaybookInfluencers() {
                     fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
                   }}>OBR</span>
                 )}
-              </button>
+              </FiltroBarTabButton>
             );
           })}
           </div>

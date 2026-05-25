@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -6,7 +6,8 @@ import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MENU } from "../../../constants/menu";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -1846,6 +1847,12 @@ const LABELS_ABA: Record<Aba, string> = {
   glossario: "Glossário",
 };
 
+const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
+  conheca: <BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  troubleshooting: <LifeBuoy {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  glossario: <BookMarked {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 export default function Ajuda() {
   const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
@@ -1880,9 +1887,6 @@ export default function Ajuda() {
   }, [primeiroPageKeyVisivel, paginaAtualVisivel]);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const pillActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 18%, transparent)"
-    : `${BRAND_SEMANTIC.roxoVivo}22`;
   const navActiveBg = brand.useBrand
     ? "color-mix(in srgb, var(--brand-primary) 12%, transparent)"
     : `${BRAND_SEMANTIC.roxo}18`;
@@ -1948,35 +1952,20 @@ export default function Ajuda() {
         role="tablist"
         aria-label="Seções de ajuda"
         style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS, setAba, (k) => `tab-ajuda-${k}`)}
       >
-        {ABAS.map((a) => {
-          const ativo = aba === a;
-          return (
-            <button
-              key={a}
-              type="button"
-              role="tab"
-              id={`tab-ajuda-${a}`}
-              aria-selected={ativo}
-              aria-controls={`panel-ajuda-${a}`}
-              onClick={() => setAba(a)}
-              style={{
-                padding: "8px 20px",
-                borderRadius: 20,
-                border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                background: ativo ? pillActiveBg : (t.inputBg ?? t.cardBg),
-                color: ativo ? brand.accent : t.textMuted,
-                transition: "all 0.2s",
-              }}
-            >
-              {LABELS_ABA[a]}
-            </button>
-          );
-        })}
+        {ABAS.map((a) => (
+          <FiltroBarTabButton
+            key={a}
+            id={`tab-ajuda-${a}`}
+            active={aba === a}
+            aria-controls={`panel-ajuda-${a}`}
+            onClick={() => setAba(a)}
+            icon={AJUDA_TAB_ICONS[a]}
+          >
+            {LABELS_ABA[a]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "glossario" ? (

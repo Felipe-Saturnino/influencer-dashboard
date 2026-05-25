@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
@@ -11,15 +11,68 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import {
   DashboardPageHeader,
+  FiltroBarTabButton,
   FiltroPlataformaSemanticoPill,
   FiltroStatusSemanticoPill,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+
+type ScoutModalTab = "contato" | "canais" | "anotacoes";
+
+const SCOUT_TAB_ICONS: Record<ScoutModalTab, ReactNode> = {
+  contato: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  canais: <Share2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  anotacoes: <StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const SCOUT_TAB_LABELS: Record<ScoutModalTab, string> = {
+  contato: "Contato",
+  canais: "Canais",
+  anotacoes: "Anotações",
+};
+
+function ScoutModalTabs({
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+}: {
+  tab: ScoutModalTab;
+  setTab: (k: ScoutModalTab) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+}) {
+  const tabKeys: ScoutModalTab[] = ["contato", "canais", "anotacoes"];
+  return (
+    <div
+      role="tablist"
+      aria-label="Seções do prospecto"
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabKeys.map((tb) => (
+        <FiltroBarTabButton
+          key={tb}
+          id={`${tabIdPrefix}${tb}`}
+          active={tab === tb}
+          aria-controls={`${panelIdPrefix}${tb}`}
+          onClick={() => setTab(tb)}
+          icon={SCOUT_TAB_ICONS[tb]}
+          style={{ flexShrink: 0 }}
+        >
+          {SCOUT_TAB_LABELS[tb]}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 export type OperadoraScoutOpt = { slug: string; nome: string };
 
@@ -52,12 +105,6 @@ const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "C
 
 const SLIDER_TRACK_GRADIENT = "linear-gradient(90deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 const SLIDER_THUMB_GRADIENT = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
-
-function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-}
 
 // Métrica exibida por plataforma (apenas front — não altera DB)
 const PLAT_METRICA: Record<string, string> = {
@@ -699,12 +746,11 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
+  const [tab, setTab] = useState<ScoutModalTab>("contato");
   const [anotacoes, setAnotacoes] = useState<ScoutAnotacao[]>([]);
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const row: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
-  const tabActiveBg = livesTabActiveBg(brand);
 
   useEffect(() => { containerRef.current?.focus(); }, []);
 
@@ -757,22 +803,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
         </div>
-        <div role="tablist" aria-label="Seções do prospecto" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`scout-viz-tab-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`scout-viz-panel-${tb}`}
-              onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <ScoutModalTabs tab={tab} setTab={setTab} tabIdPrefix="scout-viz-tab-" panelIdPrefix="scout-viz-panel-" />
         {tab === "contato" && (
           <div role="tabpanel" id="scout-viz-panel-contato" aria-labelledby="scout-viz-tab-contato">
             <div style={row}><label style={labelStyle}>E-mail</label>{val(scout.email)}</div>
@@ -840,8 +871,10 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabActiveBg = livesTabActiveBg(brand);
-  const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
+  const chipSelBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
+    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+  const [tab, setTab] = useState<ScoutModalTab>("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
   const [status, setStatus] = useState<StatusScout>(scout?.status ?? "visualizado");
   const [tipoContato, setTipoContato] = useState<string>(scout?.tipo_contato ?? "");
@@ -1197,22 +1230,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           </select>
         </div>
 
-        <div role="tablist" aria-label="Seções do prospecto" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`scout-edit-tab-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`scout-edit-panel-${tb}`}
-              onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <ScoutModalTabs tab={tab} setTab={setTab} tabIdPrefix="scout-edit-tab-" panelIdPrefix="scout-edit-panel-" />
 
         {error && (
           <div
@@ -1344,7 +1362,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                   const sel = categorias.includes(c);
                   return (
                     <button key={c} type="button" onClick={() => toggleCategoria(c)}
-                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? brand.primary : t.cardBorder}`, background: sel ? tabActiveBg : (t.inputBg ?? t.cardBg), color: sel ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
+                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? brand.primary : t.cardBorder}`, background: sel ? chipSelBg : (t.inputBg ?? t.cardBg), color: sel ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                       {c}
                     </button>
                   );

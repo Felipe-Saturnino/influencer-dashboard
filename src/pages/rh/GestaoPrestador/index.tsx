@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertCircle,
+  Building2,
   CheckCircle2,
   ClipboardList,
   Eye,
   EyeOff,
   FileSignature,
+  FolderOpen,
   History,
+  Landmark,
   Layers,
   Loader2,
   Pencil,
@@ -79,11 +82,17 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import {
   FiltroBarCampoSelect,
+  FiltroBarTabButton,
   SkeletonTableRow,
   SortTableTh,
   type SortDir,
 } from "../../../components/dashboard";
-import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import {
+  FILTRO_BAR_TAB_ICON_SIZE,
+  getFilterBarRowStyle,
+  getFilterBarWrapperStyle,
+  handleFiltroBarTabsArrowKeyDown,
+} from "../../../lib/filterBarStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
@@ -2190,10 +2199,23 @@ export default function RhPrestadoresPage() {
     </label>
   );
 
-  const tabActiveBgModal = brand.useBrand
-    ? "var(--brand-action-12)"
-    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
   const idTabModal = (k: AbaFuncModal) => `rh-func-tab-${k}`;
+  const iconAbaModal = (k: AbaFuncModal) => {
+    const sz = FILTRO_BAR_TAB_ICON_SIZE;
+    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
+    if (k === "pessoais") return <UserCircle2 {...p} />;
+    if (k === "contratacao") return <FileSignature {...p} />;
+    if (k === "empresa") return <Building2 {...p} />;
+    if (k === "bancarios") return <Landmark {...p} />;
+    return <FolderOpen {...p} />;
+  };
+  const iconAbaPagina = (k: AbaPaginaRhFunc) => {
+    const sz = FILTRO_BAR_TAB_ICON_SIZE;
+    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
+    if (k === "headcount") return <Users {...p} />;
+    if (k === "acoes_rh") return <ClipboardList {...p} />;
+    return <StickyNote {...p} />;
+  };
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
   const fecharModalFuncionario = () => {
     if (salvando) return;
@@ -2225,9 +2247,6 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const tabActiveBgPagina = brand.useBrand
-    ? "var(--brand-action-12)"
-    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
     width: "100%",
@@ -2576,35 +2595,27 @@ export default function RhPrestadoresPage() {
             />
           </div>
           <div role="tablist" aria-label="Módulos de gestão de colaboradores" style={filterBarSection(true)}>
-            {ABAS_PAGINA_RH_FUNC.map((tb) => {
-              const ativa = abaPagina === tb.key;
-              return (
-                <button
-                  key={tb.key}
-                  type="button"
-                  role="tab"
-                  id={idTabPagina(tb.key)}
-                  aria-selected={ativa}
-                  aria-controls={panelPaginaRhId}
-                  tabIndex={ativa ? 0 : -1}
-                  onClick={() => setAbaPagina(tb.key)}
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: 20,
-                    flexShrink: 0,
-                    border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                    background: ativa ? tabActiveBgPagina : (t.inputBg ?? t.cardBg),
-                    color: ativa ? brand.primary : t.textMuted,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  {tb.label}
-                </button>
-              );
-            })}
+            {ABAS_PAGINA_RH_FUNC.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.key}
+                id={idTabPagina(tb.key)}
+                active={abaPagina === tb.key}
+                aria-controls={panelPaginaRhId}
+                onClick={() => setAbaPagina(tb.key)}
+                onKeyDown={(e) =>
+                  handleFiltroBarTabsArrowKeyDown(
+                    e,
+                    ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                    tb.key,
+                    setAbaPagina,
+                    "rh-gest-func-pag-",
+                  )
+                }
+                icon={iconAbaPagina(tb.key)}
+              >
+                {tb.label}
+              </FiltroBarTabButton>
+            ))}
           </div>
         </div>
       </div>
@@ -2921,46 +2932,38 @@ export default function RhPrestadoresPage() {
               paddingBottom: 2,
             }}
           >
-            {abasModalDef.map((tb) => {
-              const ativa = abaModal === tb.key;
-              return (
-                <button
-                  key={tb.key}
-                  type="button"
-                  role="tab"
-                  id={idTabModal(tb.key)}
-                  aria-selected={ativa}
-                  aria-controls={idPanelModal(tb.key)}
-                  tabIndex={ativa ? 0 : -1}
-                  onClick={() => setAbaModal(tb.key)}
-                  aria-label={
-                    modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
-                      ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
-                      : tb.label
-                  }
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: 20,
-                    flexShrink: 0,
-                    border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                    background: ativa ? tabActiveBgModal : (t.inputBg ?? t.cardBg),
-                    color: ativa ? brand.primary : t.textMuted,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  {tb.label}
-                  {modalForm !== "ver" && errosPorAbaModal[tb.key] > 0 ? (
-                    <span style={{ color: "#e84025", fontWeight: 800 }} aria-hidden>
-                      {" "}
-                      · {errosPorAbaModal[tb.key]}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
+            {abasModalDef.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.key}
+                id={idTabModal(tb.key)}
+                active={abaModal === tb.key}
+                aria-controls={idPanelModal(tb.key)}
+                onClick={() => setAbaModal(tb.key)}
+                onKeyDown={(e) =>
+                  handleFiltroBarTabsArrowKeyDown(
+                    e,
+                    abasModalDef.map((x) => x.key),
+                    tb.key,
+                    setAbaModal,
+                    "rh-func-tab-",
+                  )
+                }
+                icon={iconAbaModal(tb.key)}
+                aria-label={
+                  modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
+                    ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
+                    : undefined
+                }
+              >
+                {tb.label}
+                {modalForm !== "ver" && errosPorAbaModal[tb.key] > 0 ? (
+                  <span style={{ color: "#e84025", fontWeight: 800 }} aria-hidden>
+                    {" "}
+                    · {errosPorAbaModal[tb.key]}
+                  </span>
+                ) : null}
+              </FiltroBarTabButton>
+            ))}
           </div>
 
           {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && erroGlobal ? (

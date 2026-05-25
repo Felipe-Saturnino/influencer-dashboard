@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from "react";
+import { handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 
 export const BRAND_FOCUS_BORDER = "var(--brand-primary, #7c3aed)";
 
@@ -20,19 +21,7 @@ export function handleGestaoTabsArrowKeyDown<T extends string>(
   onSelect: (key: T) => void,
   tabIdPrefix: string,
 ) {
-  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-  e.preventDefault();
-  const idx = orderedTabs.indexOf(currentKey);
-  if (idx < 0) return;
-  const nextIdx =
-    e.key === "ArrowRight"
-      ? (idx + 1) % orderedTabs.length
-      : (idx - 1 + orderedTabs.length) % orderedTabs.length;
-  const next = orderedTabs[nextIdx];
-  onSelect(next);
-  requestAnimationFrame(() => {
-    document.getElementById(`${tabIdPrefix}${next}`)?.focus();
-  });
+  handleFiltroBarTabsArrowKeyDown(e, orderedTabs, currentKey, onSelect, tabIdPrefix);
 }
 
 export function ctaGradientSalvar(

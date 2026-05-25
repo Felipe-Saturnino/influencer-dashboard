@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useModalEscape } from "../../../hooks/useModalEscape";
@@ -7,12 +7,64 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { DashboardPageHeader, FiltroStatusSemanticoPill } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroBarTabButton, FiltroStatusSemanticoPill, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Network, X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
+
+type NetworkModalTab = "contato" | "operacao" | "anotacoes";
+
+const NETWORK_TAB_ICONS: Record<NetworkModalTab, ReactNode> = {
+  contato: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operacao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  anotacoes: <StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const NETWORK_TAB_LABELS: Record<NetworkModalTab, string> = {
+  contato: "Contato",
+  operacao: "Operação",
+  anotacoes: "Anotações",
+};
+
+function NetworkModalTabs({
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+  ariaLabel = "Secções do afiliado",
+}: {
+  tab: NetworkModalTab;
+  setTab: (k: NetworkModalTab) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+  ariaLabel?: string;
+}) {
+  const tabKeys: NetworkModalTab[] = ["contato", "operacao", "anotacoes"];
+  return (
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabKeys.map((tb) => (
+        <FiltroBarTabButton
+          key={tb}
+          id={`${tabIdPrefix}${tb}`}
+          active={tab === tb}
+          aria-controls={`${panelIdPrefix}${tb}`}
+          onClick={() => setTab(tb)}
+          icon={NETWORK_TAB_ICONS[tb]}
+          style={{ flexShrink: 0 }}
+        >
+          {NETWORK_TAB_LABELS[tb]}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 export type OperadoraOpt = { slug: string; nome: string };
 
@@ -476,16 +528,13 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
+  const [tab, setTab] = useState<NetworkModalTab>("contato");
   const [anotacoes, setAnotacoes] = useState<AfiliadoAnotacao[]>([]);
   useModalEscape(onClose, true);
 
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
 
   useEffect(() => {
     containerRef.current?.focus();
@@ -571,43 +620,7 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
         </div>
-        <div role="tablist" aria-label="Secções do afiliado" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "operacao", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`tab-af-viz-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`panel-af-viz-${tb}`}
-              tabIndex={tab === tb ? 0 : -1}
-              onClick={() => setTab(tb)}
-              onKeyDown={(e) => {
-                const keys = ["contato", "operacao", "anotacoes"] as const;
-                const idx = keys.indexOf(tb);
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
-                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
-                }
-              }}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`,
-                background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb === "contato" ? "Contato" : tb === "operacao" ? "Operação" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-viz-" panelIdPrefix="panel-af-viz-" />
         {tab === "contato" && (
           <div role="tabpanel" id="panel-af-viz-contato" aria-labelledby="tab-af-viz-contato">
             <div style={rowS}>
@@ -678,10 +691,7 @@ function ModalEditar({
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
-  const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
+  const [tab, setTab] = useState<NetworkModalTab>("contato");
   const [nome, setNome] = useState(row?.nome ?? "");
   const [status, setStatus] = useState<StatusAfiliado>(row?.status ?? "visualizado");
   const [email, setEmail] = useState(row?.email ?? "");
@@ -925,43 +935,7 @@ function ModalEditar({
           </select>
         </div>
 
-        <div role="tablist" aria-label="Secções do cadastro" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "operacao", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`tab-af-ed-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`panel-af-ed-${tb}`}
-              tabIndex={tab === tb ? 0 : -1}
-              onClick={() => setTab(tb)}
-              onKeyDown={(e) => {
-                const keys = ["contato", "operacao", "anotacoes"] as const;
-                const idx = keys.indexOf(tb);
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
-                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
-                }
-              }}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`,
-                background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb === "contato" ? "Contato" : tb === "operacao" ? "Operação" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" ariaLabel="Secções do cadastro" />
 
         {error && (
           <div

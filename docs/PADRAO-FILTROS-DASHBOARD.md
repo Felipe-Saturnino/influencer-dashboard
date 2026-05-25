@@ -23,6 +23,11 @@ Este documento define o padrão visual e de ícones que **toda página** deve se
 | `getFiltroBarPillStateStyle(t, brand, active)` | Toggle inativo/ativo (marca) |
 | `FILTRO_STATUS_SEMANTICO_PILL` | Dimensões dos chips semânticos (10px radius, 44px altura) |
 | `getFiltroStatusSemanticoPillStyle(t, active, semanticColor)` | Chips Status / Plataforma (cor de domínio) |
+| `FILTRO_BAR_TAB_BUTTON` / `getFiltroBarTabButtonStyle` | Botões de **aba** (`role="tab"`) — referência Organograma |
+| `FILTRO_BAR_TAB_ICON_PROPS` | Ícone Lucide **16px** em cada aba |
+| `onFiltroBarTabsKeyDown` / `handleFiltroBarTabsArrowKeyDown` | Setas ← → no `tablist` |
+
+**Componente:** `FiltroBarTabButton` — uma aba = um ícone único + rótulo; ver Brand MDC §6 (Abas de navegação).
 
 ---
 

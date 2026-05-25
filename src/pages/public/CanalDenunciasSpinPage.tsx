@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } from "react";
-import { Loader2, Search, Lock, CircleCheckBig, VenetianMask, ShieldBan, Info } from "lucide-react";
+import { Loader2, Search, Lock, CircleCheckBig, VenetianMask, ShieldBan, Info, Megaphone } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../components/dashboard";
 import { supabase } from "../../lib/supabase";
 import { FONT, BASE_COLORS } from "../../constants/theme";
 import { CampoObrigatorioMark } from "../../components/CampoObrigatorioMark";
@@ -40,6 +41,8 @@ const BADGES: {
 ];
 
 type TabKey = "denunciar" | "consultar";
+
+const CANAL_TABS: TabKey[] = ["denunciar", "consultar"];
 
 type ConsultaPublicOk = {
   ok: true;
@@ -252,35 +255,6 @@ export default function CanalDenunciasSpinPage() {
     setConsultaData(j as ConsultaPublicOk);
   }
 
-  const tabBtn = (id: TabKey, label: string) => {
-    const ativo = aba === id;
-    return (
-      <button
-        type="button"
-        role="tab"
-        aria-selected={ativo}
-        id={`tab-canal-${id}`}
-        aria-controls={`panel-canal-${id}`}
-        onClick={() => setAba(id)}
-        style={{
-          padding: "12px 18px",
-          borderRadius: 10,
-          border: `1px solid ${ativo ? "rgba(124,58,237,0.45)" : "rgba(255,255,255,0.12)"}`,
-          background: ativo
-            ? `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`
-            : "rgba(255,255,255,0.95)",
-          color: ativo ? "#fff" : "#1a1028",
-          fontWeight: 700,
-          fontSize: 13,
-          fontFamily: FONT.body,
-          cursor: "pointer",
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-
   return (
     <div
       className="app-full-viewport-zoomed"
@@ -365,9 +339,26 @@ export default function CanalDenunciasSpinPage() {
           role="tablist"
           aria-label="Formulário do canal de denúncias"
           style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, CANAL_TABS, setAba, (k) => `tab-canal-${k}`)}
         >
-          {tabBtn("denunciar", "Realizar denúncia")}
-          {tabBtn("consultar", "Consultar denúncia")}
+          <FiltroBarTabButton
+            id="tab-canal-denunciar"
+            active={aba === "denunciar"}
+            aria-controls="panel-canal-denunciar"
+            onClick={() => setAba("denunciar")}
+            icon={<Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            Realizar denúncia
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-canal-consultar"
+            active={aba === "consultar"}
+            aria-controls="panel-canal-consultar"
+            onClick={() => setAba("consultar")}
+            icon={<Search {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            Consultar denúncia
+          </FiltroBarTabButton>
         </div>
 
         {aba === "denunciar" && (

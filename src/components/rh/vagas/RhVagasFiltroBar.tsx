@@ -1,6 +1,7 @@
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
-import { Briefcase, ClipboardList, ClipboardType, SlidersHorizontal, Users } from "lucide-react";
-import { FONT } from "../../../constants/theme";
+import { Briefcase, ClipboardList, ClipboardType, SlidersHorizontal, UserCheck } from "lucide-react";
+import { FiltroBarTabButton } from "../../dashboard/FiltroBarTabButton";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
@@ -85,10 +86,6 @@ export function RhVagasFiltroBar({
     ...TAB_BASE.filter((k) => k !== "gerenciamento" || mostrarGerenciamento),
     ...(mostrarCandidaturas ? (["candidaturas"] as const) : []),
   ];
-
-  const tabActiveBg = brand.useBrand
-    ? "var(--brand-action-12)"
-    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
@@ -177,59 +174,26 @@ export function RhVagasFiltroBar({
           style={filterBarSection(false)}
         >
           {tabs.map((key) => {
-            const ativo = aba === key;
+            const TabIcon =
+              key === "abertas"
+                ? Briefcase
+                : key === "em_andamento"
+                  ? ClipboardList
+                  : key === "gerenciamento"
+                    ? SlidersHorizontal
+                    : UserCheck;
             return (
-              <button
+              <FiltroBarTabButton
                 key={key}
-                type="button"
-                role="tab"
                 id={`tab-rh-vagas-${key}`}
-                tabIndex={ativo ? 0 : -1}
-                aria-selected={ativo}
+                active={aba === key}
                 aria-controls={`panel-rh-vagas-${key}`}
                 onClick={() => setAba(key)}
-                onKeyDown={(e) => {
-                  const list = [...tabs];
-                  const current = list.indexOf(key);
-                  if (e.key === "ArrowRight") {
-                    e.preventDefault();
-                    const next = list[(current + 1) % list.length]!;
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-rh-vagas-${next}`)?.focus();
-                    });
-                  }
-                  if (e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    const next = list[(current - 1 + list.length) % list.length]!;
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-rh-vagas-${next}`)?.focus();
-                    });
-                  }
-                }}
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: 20,
-                  flexShrink: 0,
-                  border: `1px solid ${ativo ? brand.primary : t.cardBorder}`,
-                  background: ativo ? tabActiveBg : (t.inputBg ?? t.cardBg ?? "transparent"),
-                  color: ativo ? brand.primary : t.textMuted,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
+                onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabs, key, setAba, "tab-rh-vagas-")}
+                icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
               >
-                {key === "abertas" ? <Briefcase size={14} aria-hidden="true" /> : null}
-                {key === "em_andamento" ? <ClipboardList size={14} aria-hidden="true" /> : null}
-                {key === "gerenciamento" ? <SlidersHorizontal size={14} aria-hidden="true" /> : null}
-                {key === "candidaturas" ? <Users size={14} aria-hidden="true" /> : null}
                 {TAB_LABELS[key]}
-              </button>
+              </FiltroBarTabButton>
             );
           })}
         </div>
