@@ -27,7 +27,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
-import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
@@ -482,27 +482,15 @@ export default function Influencers() {
             {/* Linha 1: Status / Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-              {STATUS_OPTS.map((s) => {
-                const active = filterStatus === s;
-                const color = STATUS_COLOR[s];
-                return (
-                  <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : "transparent",
-                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {STATUS_OPTS.map((s) => (
+                <FiltroStatusSemanticoPill
+                  key={s}
+                  label={STATUS_LABEL[s]}
+                  semanticColor={STATUS_COLOR[s]}
+                  active={filterStatus === s}
+                  onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+                />
+              ))}
               {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />

@@ -78,3 +78,38 @@ export function getFiltroBarPillStateStyle(
 ): Pick<CSSProperties, "border" | "background" | "color" | "fontWeight"> {
   return active ? getFiltroCampoAtivoStyle(brand) : getFiltroCampoInativoStyle(t);
 }
+
+/** Dimensões alinhadas às abas Overview Spin (secção tablist). */
+export const FILTRO_STATUS_SEMANTICO_PILL = {
+  padding: "10px 18px",
+  minHeight: 44,
+  borderRadius: 10,
+  fontSize: 13,
+  gap: 6,
+  dotSize: 8,
+} as const;
+
+/**
+ * Pill de filtro por status com cor semântica (bolinha) — ativo usa a cor do domínio, não brand.accent.
+ * Inativo: mesmo contraste das abas Overview Spin (`t.cardBorder`, `t.inputBg`, peso 500).
+ */
+export function getFiltroStatusSemanticoPillStyle(
+  t: Theme,
+  active: boolean,
+  semanticColor: string
+): Pick<CSSProperties, "border" | "background" | "color" | "fontWeight"> {
+  if (active) {
+    return {
+      border: `1px solid ${semanticColor}`,
+      background: `color-mix(in srgb, ${semanticColor} 15%, transparent)`,
+      color: semanticColor,
+      fontWeight: 700,
+    };
+  }
+  return {
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.textMuted,
+    fontWeight: 500,
+  };
+}

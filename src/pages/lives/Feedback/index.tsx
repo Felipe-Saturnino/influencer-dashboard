@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
-import { DashboardPageHeader, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroHistoricoButton,
+  FiltroOperadoraSelect,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -551,31 +556,16 @@ export default function Feedback() {
           {/* Linha 2: Status (padrão Agenda — legenda + cores) */}
           <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
-            {(["realizada", "nao_realizada", "todos"] as const).map((status) => {
-              const active = statusFiltro === status;
-              const color = STATUS_COLOR[status];
-              return (
-                <button
-                  type="button"
-                  key={status}
-                  aria-pressed={active}
-                  onClick={() => setStatusFiltro(status)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                    lineHeight: 1,
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[status]}</span>
-                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                </button>
-              );
-            })}
+            {(["realizada", "nao_realizada", "todos"] as const).map((status) => (
+              <FiltroStatusSemanticoPill
+                key={status}
+                label={STATUS_LABEL[status]}
+                semanticColor={STATUS_COLOR[status]}
+                active={statusFiltro === status}
+                onClick={() => setStatusFiltro(status)}
+                showClearIcon={status !== "todos"}
+              />
+            ))}
           </div>
         </div>
       </div>

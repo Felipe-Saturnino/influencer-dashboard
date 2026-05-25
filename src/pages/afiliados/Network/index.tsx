@@ -7,7 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { DashboardPageHeader } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroStatusSemanticoPill } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -229,38 +229,15 @@ export default function AfiliadosNetwork() {
           {/* Linha 1: Status */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-            {STATUS_OPTS.map((s) => {
-              const active = filterStatus === s;
-              const color = STATUS_COLOR[s];
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setFilterStatus(active ? "todos" : s)}
-                  aria-pressed={active}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "5px 12px",
-                    borderRadius: 999,
-                    cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    color: active ? color : t.textMuted,
-                    fontSize: 12,
-                    fontWeight: active ? 700 : 400,
-                    fontFamily: FONT.body,
-                    transition: "all 0.15s",
-                    lineHeight: 1,
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
-                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                </button>
-              );
-            })}
+            {STATUS_OPTS.map((s) => (
+              <FiltroStatusSemanticoPill
+                key={s}
+                label={STATUS_LABEL[s]}
+                semanticColor={STATUS_COLOR[s]}
+                active={filterStatus === s}
+                onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+              />
+            ))}
           </div>
 
           {/* Linha 2: Busca + Adicionar */}

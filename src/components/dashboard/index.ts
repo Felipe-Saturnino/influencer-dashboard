@@ -48,6 +48,10 @@ export {
 } from "../FiltroInfluencerSelect";
 export { FiltroTurnoSelect, type FiltroTurnoSelectProps } from "../FiltroTurnoSelect";
 export {
+  FiltroStatusSemanticoPill,
+  type FiltroStatusSemanticoPillProps,
+} from "../FiltroStatusSemanticoPill";
+export {
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,
   TURNO_FILTRO_ARIA_LABEL,
   TURNO_FILTRO_TODOS_LABEL,
