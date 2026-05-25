@@ -86,7 +86,8 @@ alwaysApply: false
 
 ## Roteiro de Mesa (`roteiro_mesa`)
 
-- Filtros: Jogo, Tipo; **operadora** via `FiltroOperadoraSelect` (pill na direita da barra); conteúdo após operadora selecionada.
+- Filtros na barra: **Jogo** e **Tipo** com **`FiltroSemanticoTabPill`** (visual abas Overview Spin — `borderRadius` 10, `10px 18px`, `minHeight` 44; ativo na cor de `JOGO_TAG_CONFIG` / `TIPO_CONFIG`, não marca); **operadora** via `FiltroOperadoraSelect` à direita. **Não** usar `FilterChip` local nem pill 999/uppercase legado na barra.
+- Conteúdo após operadora selecionada.
 - Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"`.
 - `BannerPendencias` + `ModalThreadSolicitacao`.
 - **Handoff:** CRUD campanhas de mesa, exclusão 2 cliques.

@@ -10,7 +10,7 @@ import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
-import { FiltroOperadoraSelect } from "../../../components/dashboard";
+import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -631,32 +631,6 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   );
 }
 
-// ─── FILTER CHIP ─────────────────────────────────────────────────────────────
-function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClick, dark }: {
-  label: string; active: boolean;
-  activeColor: string; activeBg: string; activeBorder: string;
-  onClick: () => void; dark: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        padding: "5px 13px", borderRadius: 20,
-        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
-        background: active ? activeBg : "transparent",
-        color: active ? activeColor : dark ? "#7c7c9e" : "#666",
-        fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
-        textTransform: "uppercase", letterSpacing: "0.06em",
-        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 // ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
 function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor }: {
   sugestao: RoteiroSugestao; podeExcluir: boolean;
@@ -1134,18 +1108,35 @@ export default function RoteiroMesa() {
                 {JOGOS.map(({ key, label }) => {
                   const jcfg = JOGO_TAG_CONFIG[key];
                   return (
-                    <FilterChip key={key} label={label} active={filtroJogo === key} activeColor={jcfg.color(dark)} activeBg={jcfg.bg} activeBorder={jcfg.border} onClick={() => setFiltroJogo(key)} dark={dark} />
+                    <FiltroSemanticoTabPill
+                      key={key}
+                      label={label}
+                      semanticColor={jcfg.color(dark)}
+                      active={filtroJogo === key}
+                      onClick={() => setFiltroJogo(key)}
+                    />
                   );
                 })}
               </div>
               <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0, margin: "0 4px" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Tipo</span>
-                <FilterChip label="Todos" active={filtroTipo === "todos"} activeColor={dark ? "#b08aee" : "#3a1868"} activeBg="rgba(74,32,130,0.15)" activeBorder={BRAND.roxoBorder} onClick={() => setFiltroTipo("todos")} dark={dark} />
+                <FiltroSemanticoTabPill
+                  label="Todos"
+                  semanticColor={dark ? "#b08aee" : "#3a1868"}
+                  active={filtroTipo === "todos"}
+                  onClick={() => setFiltroTipo("todos")}
+                />
                 {TIPOS.map(({ key, label }) => {
                   const cfg = TIPO_CONFIG[key];
                   return (
-                    <FilterChip key={key} label={label} active={filtroTipo === key} activeColor={cfg.tagColor(dark)} activeBg={cfg.tagBg} activeBorder={cfg.tagBorder} onClick={() => setFiltroTipo(key)} dark={dark} />
+                    <FiltroSemanticoTabPill
+                      key={key}
+                      label={label}
+                      semanticColor={cfg.tagColor(dark)}
+                      active={filtroTipo === key}
+                      onClick={() => setFiltroTipo(key)}
+                    />
                   );
                 })}
               </div>

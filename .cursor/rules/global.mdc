@@ -153,7 +153,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
@@ -347,6 +347,7 @@ Quando o filtro usa **cor de domínio** no estado ativo (verde/vermelho/amarelo 
 |------------|--------|--------|
 | **`FiltroStatusSemanticoPill`** | Chips de **status** com bolinha 8px colorida | Borda, fundo `color-mix` 15% e texto na **cor semântica** (`semanticColor`) |
 | **`FiltroPlataformaSemanticoPill`** | Chips de **plataforma** com `PlatLogo` 13px | Idem, cor de `PLAT_COLOR` / domínio |
+| **`FiltroSemanticoTabPill`** | Chips **sem** bolinha (ex.: Jogo/Tipo no Roteiro de Mesa) | Idem — só rótulo; mesmas dimensões das abas Overview Spin |
 
 Estilos: `getFiltroStatusSemanticoPillStyle` + `FILTRO_STATUS_SEMANTICO_PILL` em `src/lib/filterBarStyles.ts`. Inativo: `t.cardBorder`, `t.inputBg`, `t.textMuted`, peso **500**. Ativo: peso **700**.
 

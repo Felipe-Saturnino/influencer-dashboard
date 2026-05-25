@@ -52,6 +52,10 @@ export {
   type FiltroStatusSemanticoPillProps,
 } from "../FiltroStatusSemanticoPill";
 export {
+  FiltroSemanticoTabPill,
+  type FiltroSemanticoTabPillProps,
+} from "../FiltroSemanticoTabPill";
+export {
   FiltroPlataformaSemanticoPill,
   type FiltroPlataformaSemanticoPillProps,
 } from "../FiltroPlataformaSemanticoPill";
