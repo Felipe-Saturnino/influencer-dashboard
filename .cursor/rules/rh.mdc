@@ -40,7 +40,10 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Gestão de Prestadores (`rh_funcionarios`)
 
-- `PageHeader`; multi-aba (cadastral, headcount, ações RH, etc.).
+- `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
+- **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
+- **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `Building2` / «Todas Diretorias»; Gerência `Layers` / «Todas Gerências»; Setor `UsersRound` / «Todos Setores»; Contrato `FileSignature` / «Todos Contrato»; Status `ShieldEllipsis` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`: headcount, ações RH, anotações).
+- Sem filtro de operadora nesta página.
 - Tabelas: ações em ícone (`btnIconTabela`); `SortTableTh` onde houver colunas ordenáveis (Global).
 - CTA gradiente em ações primárias de linha quando aplicável.
 - **Handoff:** abas, headcount, fluxos de aprovação RH.

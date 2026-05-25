@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertCircle,
+  Building2,
   CheckCircle2,
   ClipboardList,
   Eye,
   EyeOff,
+  FileSignature,
   History,
+  Layers,
   Loader2,
   Pencil,
+  ShieldEllipsis,
   StickyNote,
   Trash2,
   UserCircle2,
   Users,
+  UsersRound,
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -75,7 +80,13 @@ import { PageHeader } from "../../../components/PageHeader";
 import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
-import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroBarCampoSelect,
+  SkeletonTableRow,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
 
@@ -85,6 +96,14 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
   { value: "Estagio", label: "Estágio" },
   { value: "Temporario", label: "Temporário" },
 ];
+
+const PRESTADOR_STATUS_FILTRO_EXTRA = [
+  { value: "ativo", label: "Ativos" },
+  { value: "indisponivel", label: "Indisponíveis" },
+  { value: "encerrado", label: "Encerrado" },
+] as const;
+
+const FILTRO_ICON = { size: 15, strokeWidth: 2, "aria-hidden": true as const };
 
 type FiltroTipoAcaoHistoricoPrestador =
   | "todos"
@@ -1077,6 +1096,19 @@ export default function RhPrestadoresPage() {
     });
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [opcoesVinculoFlat, filtroDiretoria]);
+
+  const opcoesFiltroDiretoria = useMemo(
+    () => diretoriasOpcoes.map((d) => ({ value: d, label: d })),
+    [diretoriasOpcoes],
+  );
+  const opcoesFiltroGerencia = useMemo(
+    () => gerenciasOpcoes.map((g) => ({ value: g, label: g })),
+    [gerenciasOpcoes],
+  );
+  const opcoesFiltroSetor = useMemo(
+    () => setoresUnicos.map((s) => ({ value: s, label: s })),
+    [setoresUnicos],
+  );
 
   useEffect(() => {
     if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
@@ -2200,6 +2232,13 @@ export default function RhPrestadoresPage() {
   const tabActiveBgPagina = brand.useBrand
     ? "var(--brand-action-12)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder
+      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+      : {}),
+  });
   const idTabPagina = (k: AbaPaginaRhFunc) => `rh-gest-func-pag-${k}`;
   const panelPaginaRhId = "rh-gest-func-panel-pag";
   const legendaTabelaPorAba =
@@ -2291,121 +2330,6 @@ export default function RhPrestadoresPage() {
           {sucessoMsg}
         </div>
       ) : null}
-
-      <div
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
-          padding: "14px 16px",
-          marginBottom: 16,
-          boxShadow: cardShadow,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-            gap: 10,
-            marginBottom: 12,
-            alignItems: "end",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-filtro-dir", "Diretoria")}
-            <select
-              id="rh-filtro-dir"
-              value={filtroDiretoria}
-              onChange={(ev) => setFiltroDiretoria(ev.target.value)}
-              aria-label="Filtrar por diretoria"
-              style={inputStyle}
-            >
-              <option value="">Todas</option>
-              {diretoriasOpcoes.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-filtro-ger", "Gerência")}
-            <select
-              id="rh-filtro-ger"
-              value={filtroGerencia}
-              onChange={(ev) => setFiltroGerencia(ev.target.value)}
-              aria-label="Filtrar por gerência"
-              style={inputStyle}
-            >
-              <option value="">Todas</option>
-              {gerenciasOpcoes.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-setor", "Setor")}
-            <select
-              id="rh-func-setor"
-              value={filtroSetor}
-              onChange={(ev) => setFiltroSetor(ev.target.value)}
-              aria-label="Filtrar por setor"
-              style={inputStyle}
-            >
-              <option value="">Todos</option>
-              {setoresUnicos.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-contrato", "Tipo de contrato")}
-            <select
-              id="rh-func-contrato"
-              value={filtroContrato}
-              onChange={(ev) => setFiltroContrato(ev.target.value as typeof filtroContrato)}
-              aria-label="Filtrar por tipo de contrato"
-              style={inputStyle}
-            >
-              <option value="todos">Todos</option>
-              {TIPOS_CONTRATO.map((x) => (
-                <option key={x.value} value={x.value}>
-                  {x.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-status", "Status")}
-            <select
-              id="rh-func-status"
-              value={filtroStatus}
-              onChange={(ev) => setFiltroStatus(ev.target.value as FiltroStatusPrestador)}
-              aria-label="Filtrar por status"
-              style={inputStyle}
-            >
-              <option value="disponiveis">Todos disponíveis</option>
-              <option value="ativo">Ativos</option>
-              <option value="indisponivel">Indisponíveis</option>
-              <option value="encerrado">Encerrado</option>
-            </select>
-          </div>
-        </div>
-        <div style={{ width: "100%" }}>
-          <BarraPesquisaPagina
-            id="rh-func-busca"
-            value={busca}
-            onChange={setBusca}
-            placeholder={PAGE_SEARCH.nomeCpfEmail}
-            aria-label="Pesquisar por nome, CPF ou e-mail"
-            wrapperStyle={{ width: "100%" }}
-          />
-        </div>
-      </div>
 
       <div className="app-grid-3" style={{ gap: 16, marginBottom: 16 }}>
         <div
@@ -2593,46 +2517,100 @@ export default function RhPrestadoresPage() {
         </div>
       </div>
 
-      <div
-        role="tablist"
-        aria-label="Módulos de gestão de colaboradores"
-        style={{
-          display: "flex",
-          gap: 6,
-          marginBottom: 12,
-          flexWrap: "wrap",
-          paddingBottom: 2,
-        }}
-      >
-        {ABAS_PAGINA_RH_FUNC.map((tb) => {
-          const ativa = abaPagina === tb.key;
-          return (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={idTabPagina(tb.key)}
-              aria-selected={ativa}
-              aria-controls={panelPaginaRhId}
-              tabIndex={ativa ? 0 : -1}
-              onClick={() => setAbaPagina(tb.key)}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                background: ativa ? tabActiveBgPagina : (t.inputBg ?? t.cardBg),
-                color: ativa ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          );
-        })}
+      <div style={{ marginBottom: 18 }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={filterBarSection(false)}>
+            <FiltroBarCampoSelect
+              id="rh-filtro-dir"
+              value={filtroDiretoria}
+              onChange={setFiltroDiretoria}
+              options={opcoesFiltroDiretoria}
+              icon={<Building2 {...FILTRO_ICON} />}
+              ariaLabel="Diretorias"
+              todasLabel="Todas Diretorias"
+            />
+            <FiltroBarCampoSelect
+              id="rh-filtro-ger"
+              value={filtroGerencia}
+              onChange={setFiltroGerencia}
+              options={opcoesFiltroGerencia}
+              icon={<Layers {...FILTRO_ICON} />}
+              ariaLabel="Gerências"
+              todasLabel="Todas Gerências"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-setor"
+              value={filtroSetor}
+              onChange={setFiltroSetor}
+              options={opcoesFiltroSetor}
+              icon={<UsersRound {...FILTRO_ICON} />}
+              ariaLabel="Setores"
+              todasLabel="Todos Setores"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-contrato"
+              value={filtroContrato}
+              onChange={(v) => setFiltroContrato(v as typeof filtroContrato)}
+              options={TIPOS_CONTRATO}
+              icon={<FileSignature {...FILTRO_ICON} />}
+              ariaLabel="Tipos de contrato"
+              todasValue="todos"
+              todasLabel="Todos Contrato"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-status"
+              value={filtroStatus}
+              onChange={(v) => setFiltroStatus(v as FiltroStatusPrestador)}
+              options={[]}
+              extraOptions={PRESTADOR_STATUS_FILTRO_EXTRA}
+              icon={<ShieldEllipsis {...FILTRO_ICON} />}
+              ariaLabel="Status"
+              todasValue="disponiveis"
+              todasLabel="Todos Status"
+            />
+          </div>
+          <div style={filterBarSection(true)}>
+            <BarraPesquisaPagina
+              id="rh-func-busca"
+              value={busca}
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.nomeCpfEmail}
+              aria-label="Pesquisar por nome, CPF ou e-mail"
+              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
+            />
+          </div>
+          <div role="tablist" aria-label="Módulos de gestão de colaboradores" style={filterBarSection(true)}>
+            {ABAS_PAGINA_RH_FUNC.map((tb) => {
+              const ativa = abaPagina === tb.key;
+              return (
+                <button
+                  key={tb.key}
+                  type="button"
+                  role="tab"
+                  id={idTabPagina(tb.key)}
+                  aria-selected={ativa}
+                  aria-controls={panelPaginaRhId}
+                  tabIndex={ativa ? 0 : -1}
+                  onClick={() => setAbaPagina(tb.key)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 20,
+                    flexShrink: 0,
+                    border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
+                    background: ativa ? tabActiveBgPagina : (t.inputBg ?? t.cardBg),
+                    color: ativa ? brand.primary : t.textMuted,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  {tb.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>

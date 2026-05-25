@@ -108,3 +108,8 @@ export {
   TURNO_FILTRO_TODOS_VALUE,
   type TurnoFiltroOption,
 } from "../../lib/filtroTurnoConstants";
+export {
+  FiltroBarCampoSelect,
+  type FiltroBarCampoOption,
+  type FiltroBarCampoSelectProps,
+} from "../FiltroBarCampoSelect";
