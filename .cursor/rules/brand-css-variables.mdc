@@ -202,7 +202,8 @@ Props mínimas:
 
 Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defeito — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
 
-- **Não** usar `borderRadius: 10` ou `20` na barra salvo exceção documentada na secção.
+- **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
+- **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
 - `SelectComIcone` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B, domínios que não sejam filtro de lista na strip).
 
 Wrapper obrigatório (dentro de `marginBottom` ~14–20):
@@ -255,6 +256,8 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroInfluencerSelect`** | `src/components/FiltroInfluencerSelect.tsx` | **Único** padrão para filtro de **influencer(s)** na barra (`mode` single \| multiple) |
 | **`FiltroModoVisualizacaoSelect`** | `src/components/FiltroModoVisualizacaoSelect.tsx` | Modo de vista de calendário na barra (Mês / Semana / Dia) — ícone `CalendarRange` 15px |
 | **`FiltroHojeButton`** | `src/components/dashboard/FiltroHojeButton.tsx` | Atalho **Hoje** na Agenda — ícone `History` 15px (não confundir com Histórico) |
+| **`FiltroStatusSemanticoPill`** | `src/components/FiltroStatusSemanticoPill.tsx` | Chips de **status** na barra (bolinha 8px + cor semântica ativa) — Lives, Afiliados |
+| **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
@@ -292,7 +295,9 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | Influencer (único ou múltiplo) | `User` | **15** no trigger | **`FiltroInfluencerSelect`** — agregadora **Todos Influencers**; pill 999 |
 | Campanha / UTM | `Megaphone` ou `Link2` | 13–15 | `SelectComIcone` conforme domínio |
 | Perfil / role (plataforma) | `UserCog` ou `Shield` | 13–14 | Preferir Lucide; legado `GiPerson` / `GiShield` em Gestão de Usuários |
-| Status de workflow | `ListFilter` ou `CircleDot` | 13–15 | Chip ou `SelectComIcone` |
+| Status (chip semântico na barra) | Bolinha 8px (`semanticColor`) | — | **`FiltroStatusSemanticoPill`** — Lives, Afiliados; não pill 999 |
+| Plataforma (chip semântico na barra) | **`PlatLogo`** | 13 | **`FiltroPlataformaSemanticoPill`** — Agenda, Influencers, Scout |
+| Status de workflow (`<select>`) | `ListFilter` ou `CircleDot` | 13–15 | `SelectComIcone` — **não** substituir chips semânticos acima |
 | Busca textual (página) | `Search` | **16** | **`BarraPesquisaPagina`** — ícone absoluto à esquerda; borda no `input` (padrão Scout). Ver Global § Barras de pesquisa |
 | Busca no painel do filtro | `Search` | **14** | **`BarraPesquisaFiltroPainel`** — placeholder `Pesquisar [Nome do filtro]...` |
 | Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
@@ -419,7 +424,8 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
 - Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
-- Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada na secção.
+- Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
+- Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
 - Ação de **linha** só com texto, sem ícone (código novo).
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).

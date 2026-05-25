@@ -20,7 +20,9 @@ Este documento define o padrão visual e de ícones que **toda página** deve se
 | `getFilterBarWrapperStyle(brand)` | Strip transparente Brand §5 |
 | `getFiltroCampoInativoStyle(t)` | Estado inativo |
 | `getFiltroCampoAtivoStyle(brand)` | Estado ativo |
-| `getFiltroBarPillStateStyle(t, brand, active)` | Toggle inativo/ativo |
+| `getFiltroBarPillStateStyle(t, brand, active)` | Toggle inativo/ativo (marca) |
+| `FILTRO_STATUS_SEMANTICO_PILL` | Dimensões dos chips semânticos (10px radius, 44px altura) |
+| `getFiltroStatusSemanticoPillStyle(t, active, semanticColor)` | Chips Status / Plataforma (cor de domínio) |
 
 ---
 
@@ -53,6 +55,34 @@ import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../lib/filter
 ```
 
 - **Gap 10** entre todos os controlos da linha (não usar 18)
+
+---
+
+## Filtros semânticos (Status e Plataforma)
+
+Chips com **cor de negócio** no estado ativo — **distintos** dos pills 999 de marca (Histórico, Operadora, Influencer).
+
+| Propriedade | Inativo | Ativo |
+|-------------|---------|-------|
+| `borderRadius` | **10** | **10** |
+| `padding` | **10px 18px** | **10px 18px** |
+| `minHeight` | **44** | **44** |
+| `fontSize` | **13** | **13** |
+| `border` | `t.cardBorder` | cor semântica (`semanticColor`) |
+| `background` | `t.inputBg` | `color-mix` 15% cor semântica |
+| `color` | `t.textMuted` | cor semântica |
+| `fontWeight` | 500 | 700 |
+
+| Componente | Conteúdo do chip |
+|------------|------------------|
+| `FiltroStatusSemanticoPill` | Bolinha 8px + rótulo; `<X>` ao desmarcar (default) |
+| `FiltroPlataformaSemanticoPill` | `PlatLogo` 13px + rótulo; prop opcional `count` (Influencers, Scout) |
+
+```tsx
+import { FiltroStatusSemanticoPill, FiltroPlataformaSemanticoPill } from "../components/dashboard";
+```
+
+**Páginas:** status — Agenda, Feedback, Influencers, Scout, Afiliados, Network; plataforma — Agenda, Influencers, Scout.
 
 ---
 
@@ -114,6 +144,7 @@ Na linha: `getFilterBarRowStyle()` (`gap: 10`) — CTA na mesma fileira que carr
 
 ## Legado removido (não usar)
 
+- Chips status/plataforma na barra com `borderRadius: 999`, `padding: 5px 12px`, ativo só `${cor}22` inline (usar `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill`)
 - Histórico inativo com `background: transparent` ou `color: t.textMuted`
 - Histórico ativo só com `brand.accent` sem ramo `useBrand` / `--brand-primary`
 - Markup inline de botão Histórico na barra (usar sempre `FiltroHistoricoButton`)
@@ -149,8 +180,10 @@ Na linha: `getFilterBarRowStyle()` (`gap: 10`) — CTA na mesma fileira que carr
 | Influencer | `src/components/FiltroInfluencerSelect.tsx` |
 | Hoje | `src/components/dashboard/FiltroHojeButton.tsx` |
 | Modo Mês/Semana/Dia | `src/components/FiltroModoVisualizacaoSelect.tsx` |
+| Status semântico | `src/components/FiltroStatusSemanticoPill.tsx` |
+| Plataforma semântica | `src/components/FiltroPlataformaSemanticoPill.tsx` |
 | Agenda (barra completa) | `src/pages/lives/Agenda/index.tsx` |
 
 ---
 
-*Última atualização: Agenda (Hoje + período) com `getFiltroBarPillStateStyle` e `defaultValue="mes"`.*
+*Última atualização: chips Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`) — estilo abas Overview Spin + cor semântica ativa.*

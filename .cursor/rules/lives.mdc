@@ -96,7 +96,15 @@ import {
 
 **Proibido na Agenda:** dropdown local de visualização (`SingleDropdown` duplicado); botão Hoje com `borderRadius: 10` ou ícone `Calendar`; usar `FiltroHistoricoButton` (modo acumulado de dashboards — Agenda não tem Histórico na barra).
 
-Segunda linha: chips **Status** e **Plataforma** (domínio Lives — sem componente global partilhado).
+Segunda linha: chips **Status** e **Plataforma** — **`FiltroStatusSemanticoPill`** e **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos). Cores de `STATUS_COLOR` / `PLAT_COLOR` da página; **não** redeclarar pill 999 inline.
+
+```tsx
+import { FiltroStatusSemanticoPill, FiltroPlataformaSemanticoPill } from "../../../components/dashboard";
+```
+
+- **Agenda:** status (toggle `null` \| valor) + plataforma (sem contagem).
+- **Feedback:** status inclui opção **Todos** — `showClearIcon={false}` em `todos` se ativo único; sem plataforma na barra.
+- **Influencers / Scout:** plataforma com prop **`count`** (`porPlat`) após separador vertical (mantido no componente).
 
 ### Filtro de operadora (Agenda, Resultados, Feedback, Influencers)
 
@@ -105,23 +113,9 @@ Segunda linha: chips **Status** e **Plataforma** (domínio Lives — sem compone
 - **Sem** prefixo textual “Operadora” antes do select (remover padrão legado em Influencers).
 - Defaults do componente (`pill` 999, `minWidth` 200) — não omitir agregadora **Todas Operadoras**.
 
-### Badges de filtro ativo
+### Badges de filtro ativo (Status / Plataforma)
 
-```tsx
-// Sempre usar <X> do Lucide — nunca "✕" unicode
-import { X } from "lucide-react";
-
-<button
-  onClick={() => setFiltro(ativo ? null : valor)}
-  role="button"
-  aria-pressed={ativo}
-  style={{ ... }}
->
-  <span style={{ width: 8, height: 8, borderRadius: "50%", background: cor }} />
-  {label}
-  {ativo && <X size={9} aria-hidden="true" />}
-</button>
-```
+Usar **`FiltroStatusSemanticoPill`** / **`FiltroPlataformaSemanticoPill`** — o `<X size={9}>` ao desmarcar já vem do componente (`showClearIcon`). **Não** duplicar markup de chip na barra.
 
 ### Botão Histórico (páginas com carrossel de semanas)
 

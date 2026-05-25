@@ -153,7 +153,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
@@ -235,6 +235,7 @@ Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar 
 - **Gap entre controlos** na mesma linha (carrossel, Histórico, Influencer, Operadora, Hoje, modo de vista): **`10`** — usar `FILTER_BAR_ROW_GAP` / `getFilterBarRowStyle()` de `lib/filterBarStyles.ts`.
 - **Wrapper:** `getFilterBarWrapperStyle(brand)` — `padding: "12px 20px"`, `borderRadius: 14`, `primaryTransparent*`.
 - **Pills da barra** (Operadora, Influencer, **Histórico**, Hoje): mesmo `borderRadius` **999**, `padding` **6px 14px**, `gap` interno **6**, estados via `getFiltroBarPillStateStyle` — referência **Overview Influencer**.
+- **Chips semânticos** (Status, Plataforma em Lives/Afiliados): `borderRadius` **10**, `10px 18px`, `minHeight` **44** — `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` (§ Filtros semânticos abaixo); **não** misturar com pill 999 de marca.
 
 ### Opção “Todos” por defeito
 
@@ -337,6 +338,45 @@ import { FiltroInfluencerSelect } from "../components/dashboard";
 **Proibido em código novo:** `SelectComIcone` + `User` para filtro de influencers na barra; `InfluencerDropdown` / `InfluencerMultiSelect`; agregadora “Todos os influencers” ou rótulo “Influencers” só no trigger vazio; `<select>` nativo na barra para este filtro.
 
 **Exceção:** outro layout só com **autorização explícita** de produto. Formulários/modais (campo obrigatório de influencer no cadastro) — **não** usar `FiltroInfluencerSelect`.
+
+### Filtros semânticos Status e Plataforma (chips na barra)
+
+Quando o filtro usa **cor de domínio** no estado ativo (verde/vermelho/amarelo de status, cor de plataforma), **não** usar pill **999** nem `getFiltroBarPillStateStyle` (marca). Usar componentes partilhados — visual das **abas Overview Spin** (`borderRadius: 10`, `padding: 10px 18px`, `minHeight: 44`, `fontSize: 13`).
+
+| Componente | Quando | Ativo |
+|------------|--------|--------|
+| **`FiltroStatusSemanticoPill`** | Chips de **status** com bolinha 8px colorida | Borda, fundo `color-mix` 15% e texto na **cor semântica** (`semanticColor`) |
+| **`FiltroPlataformaSemanticoPill`** | Chips de **plataforma** com `PlatLogo` 13px | Idem, cor de `PLAT_COLOR` / domínio |
+
+Estilos: `getFiltroStatusSemanticoPillStyle` + `FILTRO_STATUS_SEMANTICO_PILL` em `src/lib/filterBarStyles.ts`. Inativo: `t.cardBorder`, `t.inputBg`, `t.textMuted`, peso **500**. Ativo: peso **700**.
+
+```tsx
+import { FiltroStatusSemanticoPill, FiltroPlataformaSemanticoPill } from "../components/dashboard";
+
+<FiltroStatusSemanticoPill
+  label={STATUS_LABEL[s]}
+  semanticColor={STATUS_COLOR[s]}
+  active={filterStatus === s}
+  onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+/>
+
+<FiltroPlataformaSemanticoPill
+  plataforma={plat}
+  semanticColor={PLAT_COLOR[plat] ?? "#94a3b8"}
+  active={filterPlat === plat}
+  isDark={isDark ?? false}
+  count={porPlat[plat]} // opcional — Influencers / Scout
+  onClick={() => setFilterPlat(filterPlat === plat ? "todas" : plat)}
+/>
+```
+
+- **`showClearIcon`:** default `true` — `<X size={9}>` quando ativo (toggle off). Feedback: `showClearIcon={false}` em opção agregadora “Todos” se aplicável.
+- **Páginas (status):** Agenda, Feedback, Influencers, Scout, Afiliados, Network.
+- **Páginas (plataforma):** Agenda, Influencers, Scout (`count` obrigatório nas duas últimas).
+
+**Proibido em código novo:** markup inline de chip status/plataforma com `borderRadius: 999`, `padding: 5px 12px`, fundo ativo só com `${cor}22` sem `getFiltroStatusSemanticoPillStyle`.
+
+Detalhe por secção: `lives.mdc`, `afiliados.mdc`; referência: `docs/PADRAO-FILTROS-DASHBOARD.md` § Filtros semânticos.
 
 ### Modo de visualização de período (Mês / Semana / Dia) — barra
 

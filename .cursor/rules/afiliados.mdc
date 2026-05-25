@@ -54,6 +54,16 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 - Na barra de chips de status: **`FiltroOperadoraSelect`** após divisor — **sem** label lateral “Operadora”.
 - Opção agregadora: **Todas Operadoras** (`pill`, `minWidth={200}`).
 
+## Filtro de status (Afiliados e Network)
+
+- Chips de status na barra: **`FiltroStatusSemanticoPill`** — Global § Filtros semânticos (visual abas Overview Spin + bolinha `STATUS_COLOR`).
+- Toggle: valor ativo ↔ agregador (`todos` em Afiliados/Network; Agenda usa `null` — regra da página).
+- **Não** usar pill 999 inline nem cor de marca no chip ativo.
+
+```tsx
+import { FiltroStatusSemanticoPill } from "../../../components/dashboard";
+```
+
 ## Estados ativos — tabs e filtros
 
 ```tsx

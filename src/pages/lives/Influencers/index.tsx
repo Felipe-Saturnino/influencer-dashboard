@@ -534,7 +534,7 @@ export default function Influencers() {
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                    <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora — até
+                    <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
                     {cacheLimit >= cacheMax ? "Todos" : fmtBRL(cacheLimit) + "/h"}
