@@ -16,7 +16,13 @@ import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstant
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroFigurinosCategoriaSelect,
+  FiltroFigurinosTamanhoSelect,
+  FiltroOperadoraSelect,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -690,50 +696,20 @@ export default function FigurinosPage() {
                 operadoras={operadorasVisiveis}
               />
             ) : null}
-            <select
+            <FiltroFigurinosCategoriaSelect
+              pill
+              minWidth={200}
               value={filtroCat}
-              onChange={(e) => setFiltroCat(e.target.value)}
-              aria-label="Filtrar por categoria"
-              style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.textMuted,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              <option value="todas">Todas as categorias</option>
-              {CATEGORIAS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={setFiltroCat}
+              categorias={CATEGORIAS}
+            />
+            <FiltroFigurinosTamanhoSelect
+              pill
+              minWidth={200}
               value={filtroTam}
-              onChange={(e) => setFiltroTam(e.target.value)}
-              aria-label="Filtrar por tamanho"
-              style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.textMuted,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              <option value="todas">Todos os tamanhos</option>
-              {TAMANHOS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              onChange={setFiltroTam}
+              tamanhos={TAMANHOS}
+            />
           </div>
 
           <div

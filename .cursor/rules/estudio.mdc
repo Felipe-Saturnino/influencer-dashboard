@@ -79,7 +79,7 @@ alwaysApply: false
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
 - Tabelas 4 abas: hover, tablist ARIA completo.
-- Filtro operadora: **`FiltroOperadoraSelect`** na barra de filtros (Global + Brand); opção agregadora **Todas Operadoras**.
+- Filtros na barra (strip `primaryTransparent*`): **`FiltroOperadoraSelect`** (**Todas Operadoras**), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
 - **Handoff:** barcode, condição da peça, abas.
 
 ---
@@ -119,3 +119,4 @@ alwaysApply: false
 - GameIcons no header (`PageHeader` + Lucide).
 - Query de observações sem `.limit()`.
 - Filtro de operadora com `GiShield`, markup manual ou agregadora “Todas as operadoras” / “Operadoras” só — usar `FiltroOperadoraSelect` (**Todas Operadoras**).
+- Figurinos: `<select>` nativo para categoria/tamanho — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` (**Todas Categorias** / **Todos Tamanhos**).

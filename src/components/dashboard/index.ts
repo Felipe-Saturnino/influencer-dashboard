@@ -56,6 +56,22 @@ export {
   type FiltroPlataformaSemanticoPillProps,
 } from "../FiltroPlataformaSemanticoPill";
 export {
+  FiltroFigurinosCategoriaSelect,
+  type FiltroFigurinosCategoriaSelectProps,
+} from "../FiltroFigurinosCategoriaSelect";
+export {
+  FiltroFigurinosTamanhoSelect,
+  type FiltroFigurinosTamanhoSelectProps,
+} from "../FiltroFigurinosTamanhoSelect";
+export {
+  FIGURINO_CATEGORIA_TODAS_VALUE,
+  FIGURINO_CATEGORIA_TODAS_LABEL,
+  FIGURINO_CATEGORIA_ARIA_LABEL,
+  FIGURINO_TAMANHO_TODAS_VALUE,
+  FIGURINO_TAMANHO_TODAS_LABEL,
+  FIGURINO_TAMANHO_ARIA_LABEL,
+} from "../../lib/filtroFigurinosConstants";
+export {
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,
   TURNO_FILTRO_ARIA_LABEL,
   TURNO_FILTRO_TODOS_LABEL,
