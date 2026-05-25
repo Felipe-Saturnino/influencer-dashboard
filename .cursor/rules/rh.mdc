@@ -79,6 +79,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 ## Central de Denúncias (`rh_central_denuncias`)
 
 - Gestão interna de protocolos (distinto do canal público).
+- Barra de filtros (`getFilterBarWrapperStyle`): **Linha 1** — carrossel de mês (`carouselNavStyles`, maio/2026 → atual; rótulo **Todo o período** em Histórico) + `FiltroHistoricoButton` + tipo (`FiltroEntidadeBarSelect`, `TriangleAlert`, agregadora **Todos Tipos**, multi `overlaps`) + status (`FiltroBarCampoSelect`, `ShieldAlert`, **Todos Status**); **Linha 2** — `BarraPesquisaPagina` no relato.
 - Modais: `ModalsVerHist`, `ModalsAtender` — a11y Global.
 - **Handoff:** SLA, status, atendimento, histórico.
 
