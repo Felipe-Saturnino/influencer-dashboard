@@ -1,6 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { Building2, ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
-import { FONT } from "../../../constants/theme";
+import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
 
@@ -147,37 +147,16 @@ export function OrgFiltroBarDiretorias({
             </button>
           </div>
 
-          <button
-            type="button"
+          <FiltroBarPillButton
+            active={todas}
+            onClick={toggleTodasDiretorias}
+            icon={<Building2 size={15} strokeWidth={2} aria-hidden="true" />}
             aria-label={
               todas ? "Ver uma diretoria de cada vez" : "Ver todas as diretorias de uma vez"
             }
-            aria-pressed={todas}
-            onClick={toggleTodasDiretorias}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              minHeight: 44,
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: todas ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: todas
-                ? brand.useBrand
-                  ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                  : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                : "transparent",
-              color: todas ? brand.accent : t.textMuted,
-              fontWeight: todas ? 700 : 400,
-              transition: "all 0.15s",
-            }}
           >
-            <Building2 size={15} strokeWidth={2} aria-hidden />
             Todas as diretorias
-          </button>
+          </FiltroBarPillButton>
 
           {loading ? (
             <span

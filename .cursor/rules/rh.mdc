@@ -60,6 +60,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 ## Organograma (`rh_organograma`)
 
 - Árvore de times/cargos; componentes de organograma em `lib/`.
+- Barra de diretorias (`OrgFiltroBarDiretorias`): carrossel + pill **Todas as diretorias** via `FiltroBarPillButton` (mesmo contrato que Histórico na barra), ícone `Building2` 15px; `aria-pressed` quando agregador ativo.
 - **Handoff:** edição, filtros, export.
 
 ---
