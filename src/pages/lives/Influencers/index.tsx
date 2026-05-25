@@ -27,7 +27,12 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
-import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroOperadoraSelect,
+  FiltroPlataformaSemanticoPill,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
@@ -508,33 +513,17 @@ export default function Influencers() {
             {/* Linha 2: Plataforma */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-              {PLATAFORMAS.map((plat) => {
-                const active = filterPlat === plat;
-                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-                const nPlat = porPlat[plat] ?? 0;
-                return (
-                  <button key={plat} type="button" onClick={() => setFilterPlat(active ? "todas" : plat)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : `${color}11`,
-                      color: active ? color : color + "cc",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>{plat}</span>
-                    <span style={{ width: 1, height: 10, background: `${color}44`, flexShrink: 0, alignSelf: "center" }} aria-hidden />
-                    <span style={{ fontSize: 12, fontWeight: 800, color: nPlat > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
-                      {nPlat}
-                    </span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {PLATAFORMAS.map((plat) => (
+                <FiltroPlataformaSemanticoPill
+                  key={plat}
+                  plataforma={plat}
+                  semanticColor={PLAT_COLOR[plat as Plataforma] ?? "#94a3b8"}
+                  active={filterPlat === plat}
+                  isDark={isDark ?? false}
+                  count={porPlat[plat] ?? 0}
+                  onClick={() => setFilterPlat(filterPlat === plat ? "todas" : plat)}
+                />
+              ))}
             </div>
 
             {/* Linha 3: Filtro de Cachê */}

@@ -9,7 +9,11 @@ import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { DashboardPageHeader, FiltroStatusSemanticoPill } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroPlataformaSemanticoPill,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -413,38 +417,17 @@ export default function Scout() {
           {/* Linha 2: Plataforma (cobertura — filtro na lista) */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-            {PLATS_ORDEM.map((plat) => {
-              const active = filterPlat === plat;
-              const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-              const nPlat = porPlat[plat] ?? 0;
-              return (
-                <button
-                  key={plat}
-                  type="button"
-                  onClick={() => setFilterPlat(active ? "todas" : plat)}
-                  aria-pressed={active}
-                  aria-label={active ? `Remover filtro ${plat}` : `Filtrar por ${plat}`}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : `${color}11`,
-                    color: active ? color : color + "cc",
-                    fontSize: 12, fontWeight: active ? 700 : 500,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                    lineHeight: 1,
-                  }}
-                >
-                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                  <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>{plat}</span>
-                  <span style={{ width: 1, height: 10, background: `${color}44`, flexShrink: 0, alignSelf: "center" }} aria-hidden="true" />
-                  <span style={{ fontSize: 12, fontWeight: 800, color: nPlat > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
-                    {nPlat}
-                  </span>
-                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                </button>
-              );
-            })}
+            {PLATS_ORDEM.map((plat) => (
+              <FiltroPlataformaSemanticoPill
+                key={plat}
+                plataforma={plat}
+                semanticColor={PLAT_COLOR[plat as Plataforma] ?? "#94a3b8"}
+                active={filterPlat === plat}
+                isDark={isDark ?? false}
+                count={porPlat[plat] ?? 0}
+                onClick={() => setFilterPlat(filterPlat === plat ? "todas" : plat)}
+              />
+            ))}
           </div>
 
           {/* Linha 3: Cachê / Views */}
