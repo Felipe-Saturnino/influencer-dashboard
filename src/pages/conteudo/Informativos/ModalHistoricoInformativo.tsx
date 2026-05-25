@@ -76,8 +76,10 @@ export function ModalHistoricoInformativo({
     void carregar();
   }, [open, informativoId, carregar]);
 
+  if (!open || !informativoId) return null;
+
   return (
-    <ModalBase open={open} onClose={onClose} maxWidth={520}>
+    <ModalBase maxWidth={520} onClose={onClose} zIndex={1102}>
       <ModalHeader title={`Histórico — ${assunto}`} onClose={onClose} />
       <div style={{ padding: "0 20px 20px", fontFamily: FONT.body }}>
         {erro ? (

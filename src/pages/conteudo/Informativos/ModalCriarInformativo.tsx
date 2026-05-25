@@ -199,8 +199,10 @@ export function ModalCriarInformativo({
     boxSizing: "border-box" as const,
   };
 
+  if (!open) return null;
+
   return (
-    <ModalBase open={open} onClose={onClose} maxWidth={640}>
+    <ModalBase maxWidth={640} onClose={onClose} zIndex={1100}>
       <ModalHeader title={modo === "editar" ? "Editar informativo" : "Novo informativo"} onClose={onClose} />
       <div style={{ padding: "0 20px 20px", fontFamily: FONT.body }}>
         {erro ? (
