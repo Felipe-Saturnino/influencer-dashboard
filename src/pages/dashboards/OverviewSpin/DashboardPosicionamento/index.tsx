@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -17,7 +17,8 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../../lib/tableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
-import { SkeletonKpiCard } from "../../../../components/dashboard";
+import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
 import {
   type HeatmapHistoricoModo,
   type LobbyPosicaoRow,
@@ -47,6 +48,8 @@ const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
   { id: "7d", label: "7 dias" },
   { id: "30d", label: "30 dias" },
 ];
+
+type CatVisSortCol = "categoria" | "top3" | "top10";
 
 function KpiPosCard({
   label,
@@ -442,6 +445,10 @@ function DashboardPosicionamentoOperadora({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
+  const [sortCatVis, setSortCatVis] = useState<{ col: CatVisSortCol; dir: SortDir }>({
+    col: "top10",
+    dir: "desc",
+  });
 
   const data = useLobbyPosicionamentoData(operadoraSlug, refDate);
   const {
@@ -470,6 +477,33 @@ function DashboardPosicionamentoOperadora({
     [historicoModo, refDate],
   );
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
+
+  const onSortCatVis = useCallback((col: CatVisSortCol) => {
+    setSortCatVis((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
+  }, []);
+
+  const catsOrdenadas = useMemo(() => {
+    const arr = [...cats];
+    const { col, dir } = sortCatVis;
+    arr.sort((a, b) => {
+      switch (col) {
+        case "categoria":
+          return compareLocaleTexto(a.categoria, b.categoria, dir);
+        case "top3":
+          return compareNumber(a.pctTop3, b.pctTop3, dir);
+        case "top10":
+          return compareNumber(a.pctTop10, b.pctTop10, dir);
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [cats, sortCatVis]);
+
+  const thCatVis = getThStyle(t);
 
   const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
@@ -803,19 +837,37 @@ function DashboardPosicionamentoOperadora({
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={getThStyle(t)}>
-                    Jogo
-                  </th>
-                  <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                    Top 3
-                  </th>
-                  <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                    Top 10
-                  </th>
+                  <SortTableTh<CatVisSortCol>
+                    label="Jogo"
+                    col="categoria"
+                    sortCol={sortCatVis.col}
+                    sortDir={sortCatVis.dir}
+                    thStyle={thCatVis}
+                    align="left"
+                    onSort={onSortCatVis}
+                  />
+                  <SortTableTh<CatVisSortCol>
+                    label="Top 3"
+                    col="top3"
+                    sortCol={sortCatVis.col}
+                    sortDir={sortCatVis.dir}
+                    thStyle={getThStyle(t, { textAlign: "right" })}
+                    align="right"
+                    onSort={onSortCatVis}
+                  />
+                  <SortTableTh<CatVisSortCol>
+                    label="Top 10"
+                    col="top10"
+                    sortCol={sortCatVis.col}
+                    sortDir={sortCatVis.dir}
+                    thStyle={getThStyle(t, { textAlign: "right" })}
+                    align="right"
+                    onSort={onSortCatVis}
+                  />
                 </tr>
               </thead>
               <tbody>
-                {cats.map((c, i) => (
+                {catsOrdenadas.map((c, i) => (
                   <tr key={c.categoria} style={{ background: zebraStripe(i) }}>
                     <td style={getTdStyle(t)}>{c.categoria}</td>
                     <td style={getTdNumStyle(t)}>{c.pctTop3.toFixed(0)}%</td>

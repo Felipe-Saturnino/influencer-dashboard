@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { ShieldCheck, AlertCircle } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, PAGES, PRESTADOR_TIPOS } from "./constants";
 import { Checkbox } from "./Checkbox";
+import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
+import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
 
-interface AbaPrestadoresProps {
-  t: Theme;
-}
-
-export function AbaPrestadores({ t }: AbaPrestadoresProps) {
+export function AbaPrestadores() {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [prestadorTipoPages, setPrestadorTipoPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -85,7 +86,7 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
   };
 
   if (loading) {
-    return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
+    return <GestaoUsuariosLoading />;
   }
 
   const ordemSecoes = [
@@ -131,7 +132,7 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
             <div
               style={{
                 padding: "12px 16px",
-                background: "rgba(112,202,228,0.12)",
+                background: brandTintBg("12", BRAND.ciano),
                 fontFamily: FONT.body,
                 fontWeight: 700,
                 fontSize: 14,
@@ -170,7 +171,7 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
                         <div
                           style={{
                             padding: "10px 16px",
-                            background: "rgba(112,202,228,0.08)",
+                            background: brandTintBg("8", BRAND.ciano),
                             borderBottom: `2px solid ${t.cardBorder}`,
                             fontFamily: FONT.body,
                             fontWeight: 700,
@@ -182,7 +183,7 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
                         >
                           {secao}
                         </div>
-                        <div style={{ padding: "8px 14px" }}>
+                        <div style={{ padding: "8px 14px 6px" }}>
                           {pagesDaSec.map((p, idx) => (
                             <label
                               key={p.key}
@@ -266,7 +267,7 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -276,9 +277,12 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
               fontSize: 13,
               fontWeight: 600,
               opacity: salvando ? 0.7 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {salvando ? "Salvando..." : "Salvar páginas"}
+            <SalvarCtaContent salvando={salvando} label="Salvar páginas" />
           </button>
         </div>
       </div>

@@ -6,10 +6,11 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield, Loader2, NotebookPen } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2, NotebookPen } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -22,7 +23,7 @@ function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
 }
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
 export type TipoSugestao = "script" | "orientacao" | "alerta";
-export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat";
+export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro";
 
 export interface RoteiroSugestao {
   id: string;
@@ -59,10 +60,11 @@ const BLOCOS: { key: BlocoRoteiro; label: string }[] = [
 ];
 
 const JOGOS: { key: JogoTag; label: string }[] = [
-  { key: "todos",     label: "Todos os Jogos" },
-  { key: "blackjack", label: "BlackJack"      },
-  { key: "roleta",    label: "Roleta"         },
-  { key: "baccarat",  label: "Baccarat"       },
+  { key: "todos",              label: "Todos os Jogos" },
+  { key: "blackjack",          label: "BlackJack" },
+  { key: "roleta",             label: "Roleta" },
+  { key: "baccarat",           label: "Baccarat" },
+  { key: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 const TIPOS: { key: TipoSugestao; label: string }[] = [
@@ -175,6 +177,7 @@ const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => stri
   blackjack: { bg: "rgba(30,54,248,0.12)",   color: (d) => d ? "#7b95ff" : "#1631c4", border: "rgba(30,54,248,0.28)"   },
   roleta:    { bg: "rgba(232,64,37,0.12)",   color: (d) => d ? "#ff8570" : "#b02a14", border: "rgba(232,64,37,0.28)"   },
   baccarat:  { bg: "rgba(112,202,228,0.12)", color: (d) => d ? "#70cae4" : "#0f6a8a", border: "rgba(112,202,228,0.28)" },
+  futebol_brasileiro: { bg: "rgba(249,115,22,0.12)", color: (d) => d ? "#fb923c" : "#c2410c", border: "rgba(249,115,22,0.28)" },
 };
 
 // ─── TAG CHIP ─────────────────────────────────────────────────────────────────
@@ -625,32 +628,6 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
           </button>
         </div>
     </ModalBase>
-  );
-}
-
-// ─── FILTER CHIP ─────────────────────────────────────────────────────────────
-function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClick, dark }: {
-  label: string; active: boolean;
-  activeColor: string; activeBg: string; activeBorder: string;
-  onClick: () => void; dark: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        padding: "5px 13px", borderRadius: 20,
-        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
-        background: active ? activeBg : "transparent",
-        color: active ? activeColor : dark ? "#7c7c9e" : "#666",
-        fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
-        textTransform: "uppercase", letterSpacing: "0.06em",
-        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -1106,7 +1083,7 @@ export default function RoteiroMesa() {
       <PageHeader
         icon={<NotebookPen size={14} aria-hidden />}
         title="Roteiro de Mesa"
-        subtitle="Scripts, orientações e campanhas por bloco e operadora."
+        subtitle="Scripts e orientações de live por operadora para o dealer usar em mesa."
       />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
@@ -1118,7 +1095,7 @@ export default function RoteiroMesa() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 16,
+              gap: 10,
               flexWrap: narrowMobile ? "nowrap" : "wrap",
               overflowX: narrowMobile ? "auto" : undefined,
               paddingBottom: narrowMobile ? 4 : 0,
@@ -1131,44 +1108,49 @@ export default function RoteiroMesa() {
                 {JOGOS.map(({ key, label }) => {
                   const jcfg = JOGO_TAG_CONFIG[key];
                   return (
-                    <FilterChip key={key} label={label} active={filtroJogo === key} activeColor={jcfg.color(dark)} activeBg={jcfg.bg} activeBorder={jcfg.border} onClick={() => setFiltroJogo(key)} dark={dark} />
+                    <FiltroSemanticoTabPill
+                      key={key}
+                      label={label}
+                      semanticColor={jcfg.color(dark)}
+                      active={filtroJogo === key}
+                      onClick={() => setFiltroJogo(key)}
+                    />
                   );
                 })}
               </div>
               <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0, margin: "0 4px" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Tipo</span>
-                <FilterChip label="Todos" active={filtroTipo === "todos"} activeColor={dark ? "#b08aee" : "#3a1868"} activeBg="rgba(74,32,130,0.15)" activeBorder={BRAND.roxoBorder} onClick={() => setFiltroTipo("todos")} dark={dark} />
+                <FiltroSemanticoTabPill
+                  label="Todos"
+                  semanticColor={dark ? "#b08aee" : "#3a1868"}
+                  active={filtroTipo === "todos"}
+                  onClick={() => setFiltroTipo("todos")}
+                />
                 {TIPOS.map(({ key, label }) => {
                   const cfg = TIPO_CONFIG[key];
                   return (
-                    <FilterChip key={key} label={label} active={filtroTipo === key} activeColor={cfg.tagColor(dark)} activeBg={cfg.tagBg} activeBorder={cfg.tagBorder} onClick={() => setFiltroTipo(key)} dark={dark} />
+                    <FiltroSemanticoTabPill
+                      key={key}
+                      label={label}
+                      semanticColor={cfg.tagColor(dark)}
+                      active={filtroTipo === key}
+                      onClick={() => setFiltroTipo(key)}
+                    />
                   );
                 })}
               </div>
             </div>
             {/* Direita: Operadora (só quando showFiltroOperadora; não aparece para perfil Operador) */}
             {mostrarFiltroOp && opcoesFiltro.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 32px", borderRadius: 999,
-                    border: `1px solid ${filtroOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background: filtroOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`) : (t.inputBg ?? t.cardBg),
-                    color: filtroOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13, fontWeight: filtroOperadora !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
-                  {[...opcoesFiltro]
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={opcoesFiltro}
+                showTodasOption={!operadoraSlugsForcado?.length}
+              />
             )}
           </div>
           {narrowMobile ? (

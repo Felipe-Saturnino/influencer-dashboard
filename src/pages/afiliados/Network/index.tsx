@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useModalEscape } from "../../../hooks/useModalEscape";
@@ -7,8 +7,64 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { DashboardPageHeader } from "../../../components/dashboard";
-import { Network, X, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { DashboardPageHeader, FiltroBarTabButton, FiltroStatusSemanticoPill, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { Network, X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
+
+type NetworkModalTab = "contato" | "operacao" | "anotacoes";
+
+const NETWORK_TAB_ICONS: Record<NetworkModalTab, ReactNode> = {
+  contato: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operacao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  anotacoes: <StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const NETWORK_TAB_LABELS: Record<NetworkModalTab, string> = {
+  contato: "Contato",
+  operacao: "Operação",
+  anotacoes: "Anotações",
+};
+
+function NetworkModalTabs({
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+  ariaLabel = "Secções do afiliado",
+}: {
+  tab: NetworkModalTab;
+  setTab: (k: NetworkModalTab) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+  ariaLabel?: string;
+}) {
+  const tabKeys: NetworkModalTab[] = ["contato", "operacao", "anotacoes"];
+  return (
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabKeys.map((tb) => (
+        <FiltroBarTabButton
+          key={tb}
+          id={`${tabIdPrefix}${tb}`}
+          active={tab === tb}
+          aria-controls={`${panelIdPrefix}${tb}`}
+          onClick={() => setTab(tb)}
+          icon={NETWORK_TAB_ICONS[tb]}
+          style={{ flexShrink: 0 }}
+        >
+          {NETWORK_TAB_LABELS[tb]}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 export type OperadoraOpt = { slug: string; nome: string };
 
@@ -112,9 +168,6 @@ function StatusAfiliadoBadge({ value }: { value: StatusAfiliado }) {
 export default function AfiliadosNetwork() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const funnelCardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const perm = usePermission("afiliados_network");
   const [list, setList] = useState<AfiliadoNetworkRow[]>([]);
@@ -123,8 +176,7 @@ export default function AfiliadosNetwork() {
   const [modalNovo, setModalNovo] = useState(false);
 
   const [search, setSearch] = useState("");
-  /** Vazio = mostrar todos exceto Fechado; com itens = apenas esses status */
-  const [funnelSel, setFunnelSel] = useState<StatusAfiliado[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraOpt[]>([]);
 
   useEffect(() => {
@@ -149,16 +201,14 @@ export default function AfiliadosNetwork() {
     void loadData();
   }, [loadData]);
 
-  const toggleFunnel = (s: StatusAfiliado) => {
-    setFunnelSel((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
-  };
-
   const filtered = list.filter((row) => {
     const q = search.trim().toLowerCase();
     if (q && !row.nome.toLowerCase().includes(q) && !(row.email ?? "").toLowerCase().includes(q)) return false;
-    if (funnelSel.length === 0) {
+    if (filterStatus === "todos") {
       if (row.status === "fechado") return false;
-    } else if (!funnelSel.includes(row.status)) return false;
+    } else if (row.status !== filterStatus) {
+      return false;
+    }
     return true;
   });
 
@@ -177,37 +227,16 @@ export default function AfiliadosNetwork() {
     );
   }
 
-  const hasFilters = funnelSel.length > 0 || !!search.trim();
+  const hasFilters = filterStatus !== "todos" || !!search.trim();
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
         icon={<Network size={14} aria-hidden="true" />}
         title="Network"
-        subtitle="Funil de prospecção e cadastro de afiliados."
+        subtitle="Funil de prospecção e conversão de prospectos em afiliados cadastrados."
         brand={brand}
         t={t}
-        right={
-          perm.canCriarOk ? (
-            <button
-              type="button"
-              onClick={() => setModalNovo(true)}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                background: ctaGradient,
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-              }}
-            >
-              + Adicionar
-            </button>
-          ) : undefined
-        }
       />
 
       {!loading && (
@@ -217,31 +246,23 @@ export default function AfiliadosNetwork() {
           </div>
           <div className="app-grid-kpi-4" style={{ width: "100%" }}>
             {STATUS_OPTS.map((s) => {
-              const active = funnelSel.includes(s);
               const cor = STATUS_COLOR[s];
               return (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => toggleFunnel(s)}
-                  aria-pressed={active}
-                  aria-label={`${active ? "Remover filtro" : "Filtrar por"} ${STATUS_LABEL[s]}, ${porStatus[s] ?? 0} cadastros`}
                   style={{
-                    textAlign: "left",
-                    cursor: "pointer",
-                    font: "inherit",
                     background: brand.blockBg,
-                    border: active ? `2px solid ${cor}` : `1px solid ${t.cardBorder}`,
+                    border: `1px solid ${t.cardBorder}`,
                     borderLeft: `3px solid ${cor}`,
                     borderRadius: 18,
                     padding: "16px 20px",
-                    boxShadow: active ? `0 0 0 2px ${cor}33` : funnelCardShadow,
+                    boxShadow: funnelCardShadow,
                     minWidth: 0,
                   }}
                 >
                   <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: brand.secondary, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_LABEL[s]}</div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -257,30 +278,52 @@ export default function AfiliadosNetwork() {
             padding: "12px 20px",
           }}
         >
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou e-mail..."
-            aria-label="Buscar afiliado por nome ou e-mail"
+          {/* Linha 1: Status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
+            {STATUS_OPTS.map((s) => (
+              <FiltroStatusSemanticoPill
+                key={s}
+                label={STATUS_LABEL[s]}
+                semanticColor={STATUS_COLOR[s]}
+                active={filterStatus === s}
+                onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+              />
+            ))}
+          </div>
+
+          {/* Linha 2: Busca + Adicionar */}
+          <div
             style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              outline: "none",
+              paddingTop: 12,
+              marginTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
             }}
-          />
+          >
+            <BarraPesquisaPagina
+              value={search}
+              onChange={setSearch}
+              placeholder={PAGE_SEARCH.nomeEmail}
+              aria-label="Buscar afiliado por nome ou e-mail"
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
+            />
+            {perm.canCriarOk && (
+              <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
+                Novo Afiliado
+              </CtaCriarButton>
+            )}
+          </div>
+
           {hasFilters && (
             <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
               <button
                 type="button"
                 onClick={() => {
-                  setFunnelSel([]);
+                  setFilterStatus("todos");
                   setSearch("");
                 }}
                 style={{
@@ -365,7 +408,7 @@ export default function AfiliadosNetwork() {
                   height: 44,
                   borderRadius: "50%",
                   flexShrink: 0,
-                  background: ctaGradient,
+                  background: getCtaCriarGradient(brand),
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -435,7 +478,7 @@ export default function AfiliadosNetwork() {
                     borderRadius: 10,
                     border: "none",
                     cursor: "pointer",
-                    background: ctaGradient,
+                    background: getCtaCriarGradient(brand),
                     color: "#fff",
                     fontSize: 12,
                     fontWeight: 700,
@@ -485,16 +528,13 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
+  const [tab, setTab] = useState<NetworkModalTab>("contato");
   const [anotacoes, setAnotacoes] = useState<AfiliadoAnotacao[]>([]);
   useModalEscape(onClose, true);
 
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
 
   useEffect(() => {
     containerRef.current?.focus();
@@ -580,43 +620,7 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
         </div>
-        <div role="tablist" aria-label="Secções do afiliado" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "operacao", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`tab-af-viz-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`panel-af-viz-${tb}`}
-              tabIndex={tab === tb ? 0 : -1}
-              onClick={() => setTab(tb)}
-              onKeyDown={(e) => {
-                const keys = ["contato", "operacao", "anotacoes"] as const;
-                const idx = keys.indexOf(tb);
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
-                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
-                }
-              }}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`,
-                background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb === "contato" ? "Contato" : tb === "operacao" ? "Operação" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-viz-" panelIdPrefix="panel-af-viz-" />
         {tab === "contato" && (
           <div role="tabpanel" id="panel-af-viz-contato" aria-labelledby="tab-af-viz-contato">
             <div style={rowS}>
@@ -687,13 +691,7 @@ function ModalEditar({
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "rgba(124,58,237,0.15)";
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-  const [tab, setTab] = useState<"contato" | "operacao" | "anotacoes">("contato");
+  const [tab, setTab] = useState<NetworkModalTab>("contato");
   const [nome, setNome] = useState(row?.nome ?? "");
   const [status, setStatus] = useState<StatusAfiliado>(row?.status ?? "visualizado");
   const [email, setEmail] = useState(row?.email ?? "");
@@ -937,43 +935,7 @@ function ModalEditar({
           </select>
         </div>
 
-        <div role="tablist" aria-label="Secções do cadastro" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "operacao", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`tab-af-ed-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`panel-af-ed-${tb}`}
-              tabIndex={tab === tb ? 0 : -1}
-              onClick={() => setTab(tb)}
-              onKeyDown={(e) => {
-                const keys = ["contato", "operacao", "anotacoes"] as const;
-                const idx = keys.indexOf(tb);
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  if (e.key === "ArrowRight") setTab(keys[(idx + 1) % keys.length]);
-                  else setTab(keys[(idx - 1 + keys.length) % keys.length]);
-                }
-              }}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`,
-                background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb === "contato" ? "Contato" : tb === "operacao" ? "Operação" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" ariaLabel="Secções do cadastro" />
 
         {error && (
           <div
@@ -1156,7 +1118,7 @@ function ModalEditar({
               border: "none",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
-              background: ctaGradient,
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontSize: 13,
               fontWeight: 700,

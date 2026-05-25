@@ -5,17 +5,17 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
   Eye,
   History,
   Send,
+  Flag,
   ChevronLeft,
   ChevronRight,
-  Search,
   CircleDot,
-  Shield,
   Users,
   User,
   Spade,
@@ -24,7 +24,10 @@ import {
   Star,
 } from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
@@ -50,6 +53,7 @@ const JOGOS_OPTS: { value: DealerJogoCadastro; label: string }[] = [
   { value: "blackjack", label: "Blackjack" },
   { value: "roleta", label: "Roleta" },
   { value: "baccarat", label: "Baccarat" },
+  { value: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
@@ -71,6 +75,7 @@ const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
   blackjack: <Spade size={13} aria-hidden />,
   roleta: <CircleDot size={13} aria-hidden />,
   baccarat: <Crown size={13} aria-hidden />,
+  futebol_brasileiro: <Flag size={13} aria-hidden />,
 };
 
 const CARD_SHADOW = (isDark: boolean) =>
@@ -171,7 +176,7 @@ export default function GestaoDealers() {
 
   /** Contagens por jogo com turno + gênero + operadora (sem o filtro de jogo). */
   const porJogo = useMemo(() => {
-    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0 };
+    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, futebol_brasileiro: 0 };
     dealersPorOperadora.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return;
@@ -215,36 +220,6 @@ export default function GestaoDealers() {
     return operadoraSlugsForcado[0] ?? null;
   }, [user?.role, operadoraSlugsForcado, filtroOperadora]);
 
-  const selectOperadoraStyle: CSSProperties = {
-    padding: "6px 14px 6px 30px",
-    borderRadius: 999,
-    border: `1px solid ${filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.cardBorder}`,
-    background:
-      filtroOperadora !== "todas" && filtroOperadora !== "nenhuma"
-        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)")
-        : (t.inputBg ?? t.cardBg),
-    color: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.text,
-    fontSize: 13,
-    fontWeight: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? 700 : 400,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
-
-  const btnNavTurnoStyle: CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -259,7 +234,7 @@ export default function GestaoDealers() {
       <PageHeader
         icon={<Users size={14} aria-hidden />}
         title="Gestão de Dealers"
-        subtitle="Elenco sincronizado a partir da Gestão de Staff quando o time é Game Presenter."
+        subtitle="Catálogo do elenco com especialidades, turnos e solicitações das operadoras."
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
@@ -268,39 +243,34 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" aria-label="Turno anterior" onClick={irTurnoAnterior} style={btnNavTurnoStyle}>
-              <ChevronLeft size={14} />
-            </button>
-            <span
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: 160,
-                textAlign: "center",
-              }}
+            <button
+              type="button"
+              aria-label="Turno anterior"
+              onClick={irTurnoAnterior}
+              style={getCarouselBtnNavStyle(t, false)}
             >
-              {labelTurnoCarrossel}
-            </span>
-            <button type="button" aria-label="Próximo turno" onClick={irTurnoProximo} style={btnNavTurnoStyle}>
-              <ChevronRight size={14} />
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t)}>{labelTurnoCarrossel}</span>
+            <button
+              type="button"
+              aria-label="Próximo turno"
+              onClick={irTurnoProximo}
+              style={getCarouselBtnNavStyle(t, false)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={13} aria-hidden />
-                </span>
-                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectOperadoraStyle}>
-                  <option value="todas">Todas as operadoras</option>
-                  <option value="nenhuma">Nenhuma operadora</option>
-                  {[...opcoesFiltroOperadora].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                    <option key={op.slug} value={op.slug}>{op.nome}</option>
-                  ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={opcoesFiltroOperadora}
+                extraOptions={[{ value: "nenhuma", label: "Nenhuma operadora" }]}
+              />
             )}
           </div>
         </div>
@@ -450,38 +420,18 @@ export default function GestaoDealers() {
                 })}
               </div>
             </div>
-            <div style={{ position: "relative", width: "100%" }}>
-              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <Search size={14} strokeWidth={2} />
-              </span>
-              <input
-                type="search"
-                value={buscaDealer}
-                onChange={(e) => setBuscaDealer(e.target.value)}
-                placeholder="Buscar por nome ou nickname..."
-                aria-label="Buscar dealers por nome ou nickname"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "7px 12px 7px 36px",
-                  borderRadius: 999,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg,
-                  color: t.text,
-                  fontSize: 12,
-                  fontFamily: FONT.body,
-                  outline: "none",
-                }}
-              />
-            </div>
+            <BarraPesquisaPagina
+              value={buscaDealer}
+              onChange={setBuscaDealer}
+              placeholder={PAGE_SEARCH.nomeNickname}
+              aria-label="Buscar dealers por nome ou nickname"
+              wrapperStyle={{ width: "100%" }}
+            />
           </div>
         </div>
       )}
 
       {/* ─── Bloco 3: Elenco completo ────────────────────────────────────────── */}
-      <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-        <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "dealer" : "dealers"}
-      </div>
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (

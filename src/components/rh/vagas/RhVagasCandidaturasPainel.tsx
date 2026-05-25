@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import {
   RH_VAGA_CANDIDATURA_ETAPAS,
   emailCandidaturaDeJoin,
@@ -10,27 +10,13 @@ import {
   vagaPassaFiltroTipoCandidaturas,
 } from "../../../lib/rhVagasFormat";
 import { RH_CANDIDATURAS_SELECT } from "../../../lib/rhVagaCandidaturaQueries";
+import { VAGA_FILTRO_TODAS_VAGAS_VALUE } from "../../../lib/rhVagasFiltroConstants";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow, RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
+import type { FiltroBarCampoOption } from "../../FiltroBarCampoSelect";
 import { CandidaturaKanbanCard } from "./CandidaturaKanbanCard";
 import { ModalCandidaturaHistorico } from "./ModalCandidaturaHistorico";
 import { ModalCandidaturaVer } from "./ModalCandidaturaVer";
-
-const STATUS_FILTRO: Array<RhVagaStatus | "todos"> = ["todos", "aberta", "em_andamento", "concluida", "cancelada"];
-
-const LABEL_STATUS: Record<RhVagaStatus | "todos", string> = {
-  todos: "Todos os status",
-  aberta: "Aberta",
-  em_andamento: "Em andamento",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
-};
-
-const TIPO_FILTRO: { value: RhVagasCandidaturasFiltroTipo; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "externo", label: "Externo" },
-  { value: "interno", label: "Interno" },
-];
 
 type Theme = {
   text: string;
@@ -43,20 +29,26 @@ type Theme = {
 
 export function RhVagasCandidaturasPainel({
   t,
-  cardShadow,
+  busca,
+  filtroTipo,
+  filtroStatusVaga,
+  vagaIdFiltro,
+  onOpcoesVagaChange,
+  onVagaIdFiltroReset,
   podeEditarEtapa,
 }: {
   t: Theme;
-  cardShadow: string;
+  busca: string;
+  filtroTipo: RhVagasCandidaturasFiltroTipo;
+  filtroStatusVaga: RhVagaStatus | "todos";
+  vagaIdFiltro: string;
+  onOpcoesVagaChange: (opcoes: FiltroBarCampoOption[]) => void;
+  onVagaIdFiltroReset: () => void;
   podeEditarEtapa: boolean;
 }) {
   const [candidaturas, setCandidaturas] = useState<RhVagaCandidaturaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [busca, setBusca] = useState("");
-  const [filtroTipo, setFiltroTipo] = useState<RhVagasCandidaturasFiltroTipo>("todos");
-  const [filtroStatusVaga, setFiltroStatusVaga] = useState<RhVagaStatus | "todos">("todos");
-  const [vagaIdFiltro, setVagaIdFiltro] = useState<string>("todas");
   const [candidaturaVerId, setCandidaturaVerId] = useState<string | null>(null);
   const [candidaturaHistorico, setCandidaturaHistorico] = useState<RhVagaCandidaturaRow | null>(null);
 
@@ -106,12 +98,16 @@ export function RhVagasCandidaturasPainel({
   }, [candidaturasFiltradasBloco1]);
 
   useEffect(() => {
-    if (vagaIdFiltro === "todas") return;
-    if (!opcoesVaga.some((v) => v.id === vagaIdFiltro)) setVagaIdFiltro("todas");
-  }, [opcoesVaga, vagaIdFiltro]);
+    onOpcoesVagaChange(opcoesVaga.map((v) => ({ value: v.id, label: labelVagaComCodigo(v) })));
+  }, [opcoesVaga, onOpcoesVagaChange]);
+
+  useEffect(() => {
+    if (vagaIdFiltro === VAGA_FILTRO_TODAS_VAGAS_VALUE) return;
+    if (!opcoesVaga.some((v) => v.id === vagaIdFiltro)) onVagaIdFiltroReset();
+  }, [opcoesVaga, vagaIdFiltro, onVagaIdFiltroReset]);
 
   const candidaturasKanban = useMemo(() => {
-    if (vagaIdFiltro === "todas") return candidaturasFiltradasBloco1;
+    if (vagaIdFiltro === VAGA_FILTRO_TODAS_VAGAS_VALUE) return candidaturasFiltradasBloco1;
     return candidaturasFiltradasBloco1.filter((c) => c.vaga_id === vagaIdFiltro);
   }, [candidaturasFiltradasBloco1, vagaIdFiltro]);
 
@@ -128,193 +124,75 @@ export function RhVagasCandidaturasPainel({
     return m;
   }, [candidaturasKanban]);
 
-  const inputStyle = {
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontSize: 14,
-    fontFamily: FONT.body,
-    outline: "none" as const,
-  };
-
-  const selectStyle = { ...inputStyle, minWidth: 160 };
-
   return (
     <>
-      <header style={{ marginBottom: 16 }}>
-        <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Candidaturas</h2>
-        <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-          Acompanhamento do funil de candidatos por vaga.
-        </p>
-      </header>
-
-      <section
-        aria-label="Filtros de candidaturas"
-        style={{
-          marginBottom: 20,
-          padding: 16,
-          borderRadius: 12,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg ?? t.inputBg,
-          boxShadow: cardShadow,
-        }}
-      >
-        <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>Filtros</div>
-        <div style={{ position: "relative", maxWidth: 520, marginBottom: 14 }}>
-          <Search
-            size={16}
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: t.textMuted,
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            id="busca-candidaturas"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome da vaga, candidato ou e-mail…"
-            autoComplete="off"
-            aria-label="Pesquisar por nome da vaga, nome do candidato ou e-mail do candidato"
-            style={{ ...inputStyle, width: "100%", boxSizing: "border-box", paddingLeft: 38 }}
-          />
+      {erro ? (
+        <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>
+          {erro}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <label htmlFor="filtro-tipo-cand" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-              Tipo de vaga
-            </label>
-            <select
-              id="filtro-tipo-cand"
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value as RhVagasCandidaturasFiltroTipo)}
-              aria-label="Filtrar por tipo de vaga"
-              style={selectStyle}
-            >
-              {TIPO_FILTRO.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="filtro-status-cand" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-              Status da vaga
-            </label>
-            <select
-              id="filtro-status-cand"
-              value={filtroStatusVaga}
-              onChange={(e) => setFiltroStatusVaga(e.target.value as RhVagaStatus | "todos")}
-              aria-label="Filtrar por status da vaga"
-              style={selectStyle}
-            >
-              {STATUS_FILTRO.map((s) => (
-                <option key={s} value={s}>
-                  {LABEL_STATUS[s]}
-                </option>
-              ))}
-            </select>
-          </div>
+      ) : null}
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40 }}>
+          <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
-      </section>
-
-      <section aria-label="Quadro de candidatos">
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="filtro-vaga-cand" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-            Vaga
-          </label>
-          <select
-            id="filtro-vaga-cand"
-            value={vagaIdFiltro}
-            onChange={(e) => setVagaIdFiltro(e.target.value)}
-            aria-label="Filtrar por vaga"
-            style={{ ...selectStyle, width: "100%", maxWidth: 560 }}
-          >
-            <option value="todas">Todas as vagas (filtros acima)</option>
-            {opcoesVaga.map((v) => (
-              <option key={v.id} value={v.id}>
-                {labelVagaComCodigo(v)}
-              </option>
-            ))}
-          </select>
+      ) : candidaturasKanban.length === 0 ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Nenhuma candidatura para os filtros atuais.
         </div>
-
-        {erro ? (
-          <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>
-            {erro}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
-          </div>
-        ) : candidaturasKanban.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhuma candidatura para os filtros atuais.
-          </div>
-        ) : (
-          <div className="app-vagas-candidaturas-kanban" role="region" aria-label="Funil de candidaturas">
-            {RH_VAGA_CANDIDATURA_ETAPAS.map((col) => {
-              const itens = porEtapa.get(col.id) ?? [];
-              return (
+      ) : (
+        <div className="app-vagas-candidaturas-kanban" role="region" aria-label="Funil de candidaturas">
+          {RH_VAGA_CANDIDATURA_ETAPAS.map((col) => {
+            const itens = porEtapa.get(col.id) ?? [];
+            return (
+              <div
+                key={col.id}
+                style={{
+                  borderRadius: 12,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.cardBg ?? t.inputBg,
+                  minHeight: 120,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <div
-                  key={col.id}
                   style={{
-                    borderRadius: 12,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.cardBg ?? t.inputBg,
-                    minHeight: 120,
+                    padding: "10px 12px",
+                    borderBottom: `1px solid ${t.cardBorder}`,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: t.text,
+                    fontFamily: FONT.body,
                     display: "flex",
-                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: 8,
                   }}
                 >
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      borderBottom: `1px solid ${t.cardBorder}`,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: t.text,
-                      fontFamily: FONT_TITLE,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 8,
-                    }}
-                  >
-                    <span>{col.label}</span>
-                    <span style={{ color: t.textMuted, fontWeight: 600, fontFamily: FONT.body }}>{itens.length}</span>
-                  </div>
-                  <ul style={{ listStyle: "none", margin: 0, padding: 8, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                    {itens.length === 0 ? (
-                      <li style={{ fontSize: 12, color: t.textMuted, padding: 8, fontFamily: FONT.body, textAlign: "center" }}>—</li>
-                    ) : (
-                      itens.map((c) => (
-                        <CandidaturaKanbanCard
-                          key={c.id}
-                          c={c}
-                          etapaColuna={col.id}
-                          t={t}
-                          onVer={() => setCandidaturaVerId(c.id)}
-                          onHistorico={() => setCandidaturaHistorico(c)}
-                        />
-                      ))
-                    )}
-                  </ul>
+                  <span>{col.label}</span>
+                  <span style={{ color: t.textMuted, fontWeight: 600, fontFamily: FONT.body }}>{itens.length}</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                <ul style={{ listStyle: "none", margin: 0, padding: 8, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {itens.length === 0 ? (
+                    <li style={{ fontSize: 12, color: t.textMuted, padding: 8, fontFamily: FONT.body, textAlign: "center" }}>—</li>
+                  ) : (
+                    itens.map((c) => (
+                      <CandidaturaKanbanCard
+                        key={c.id}
+                        c={c}
+                        etapaColuna={col.id}
+                        t={t}
+                        onVer={() => setCandidaturaVerId(c.id)}
+                        onHistorico={() => setCandidaturaHistorico(c)}
+                      />
+                    ))
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <ModalCandidaturaVer
         open={candidaturaVerId !== null}

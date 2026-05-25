@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type ReactNode, type CSSProperties } from "react";
-import { X, Loader2, Eye, EyeOff, Download } from "lucide-react";
+import { X, Loader2, Eye, EyeOff, Download, FileText, MessageSquare } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -149,13 +150,28 @@ export function ModalVerDenuncia({
             <X size={20} aria-hidden />
           </button>
         </div>
-        <div style={{ padding: "12px 20px 0", display: "flex", gap: 8 }}>
-          <button type="button" role="tab" aria-selected={aba === "dados"} onClick={() => setAba("dados")} style={tabBtn(aba === "dados", t)}>
+        <div
+          role="tablist"
+          aria-label="Seções da denúncia"
+          style={{ padding: "12px 20px 0", display: "flex", gap: 8 }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ["dados", "relato"] as const, setAba, (k) => `tab-ver-den-${k}`)}
+        >
+          <FiltroBarTabButton
+            id="tab-ver-den-dados"
+            active={aba === "dados"}
+            onClick={() => setAba("dados")}
+            icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
             Dados da denúncia
-          </button>
-          <button type="button" role="tab" aria-selected={aba === "relato"} onClick={() => setAba("relato")} style={tabBtn(aba === "relato", t)}>
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-ver-den-relato"
+            active={aba === "relato"}
+            onClick={() => setAba("relato")}
+            icon={<MessageSquare {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
             Relato da denúncia
-          </button>
+          </FiltroBarTabButton>
         </div>
         <div style={{ padding: "16px 20px 22px" }}>
           {aba === "dados" && (
@@ -256,20 +272,6 @@ export function ModalVerDenuncia({
       </div>
     </div>
   );
-}
-
-function tabBtn(ativo: boolean, t: Theme) {
-  return {
-    padding: "10px 14px",
-    borderRadius: 10,
-    border: `1px solid ${ativo ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-    color: t.text,
-    fontWeight: 600,
-    fontSize: 13,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-  } as const;
 }
 
 export function ModalHistoricoDenuncia({

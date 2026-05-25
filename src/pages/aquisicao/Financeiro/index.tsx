@@ -4,6 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, TOTAL_ROW_BG, zebraStripe } from "../../../lib/tableStyles";
@@ -11,11 +12,11 @@ import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   compareInfluencerPerfilStatus,
@@ -35,7 +36,6 @@ import {
   Loader2,
   Plus,
   RotateCcw,
-  Shield,
   Wallet,
 } from "lucide-react";
 
@@ -2683,21 +2683,6 @@ export default function Financeiro() {
   function nextMes() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
-  const btnNavStyle: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`, background: "transparent",
-    color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-  const chipBase = (active: boolean) => ({
-    padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
-    background: active ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : (t.inputBg ?? t.cardBg),
-    color: active ? "var(--brand-action, #7c3aed)" : t.textMuted,
-    fontSize: 13, fontWeight: active ? 700 : 400,
-    fontFamily: FONT.body, cursor: "pointer", outline: "none",
-  });
-
   useEffect(() => {
     supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER])
       .then(({ data }) => { if (data) setInfluencerList(data); });
@@ -2900,7 +2885,7 @@ export default function Financeiro() {
         <PageHeader
           icon={<Wallet size={14} aria-hidden />}
           title="Financeiro"
-          subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+          subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
         />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
@@ -2947,7 +2932,7 @@ export default function Financeiro() {
       <PageHeader
         icon={<Wallet size={14} aria-hidden />}
         title="Financeiro"
-        subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+        subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
       />
 
       {/* Bloco de filtros (similar Agenda) */}
@@ -2958,57 +2943,51 @@ export default function Financeiro() {
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" aria-label="Mês anterior" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
-              <ChevronLeft size={14} aria-hidden />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              onClick={prevMes}
+              style={getCarouselBtnNavStyle(t, idxMesAtual >= MESES_OPCOES.length - 1)}
+              disabled={idxMesAtual >= MESES_OPCOES.length - 1}
+              title="Mês anterior"
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
-              {historico ? "Total" : (MESES_OPCOES.find(m => m.value === mesFiltro)?.label ?? mesFiltro)}
+            <span style={getCarouselPeriodLabelStyle(t)}>
+              {historico ? "Todo o período" : (MESES_OPCOES.find(m => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
-            <button type="button" aria-label="Próximo mês" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
-              <ChevronRight size={14} aria-hidden />
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              onClick={nextMes}
+              style={getCarouselBtnNavStyle(t, idxMesAtual <= 0)}
+              disabled={idxMesAtual <= 0}
+              title="Próximo mês"
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button type="button" aria-pressed={historico} onClick={() => setHistorico(h => !h)} style={chipBase(historico)}>
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={() => setHistorico((h) => !h)} />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-              <InfluencerMultiSelect
-                selected={filterInfluencers}
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
-                t={t}
               />
             )}
 
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={13} aria-hidden />
-                </span>
-                <select
-                  aria-label="Filtrar por operadora"
-                  value={filterOperadora}
-                  onChange={(e) => setFilterOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 30px", borderRadius: 999,
-                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filterOperadora}
+                onChange={setFilterOperadora}
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
           </div>
         </div>

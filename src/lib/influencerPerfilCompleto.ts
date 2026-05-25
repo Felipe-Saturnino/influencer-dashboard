@@ -10,6 +10,29 @@ export interface InfluencerPerfilCadastro {
   conta?: string | null;
 }
 
+/** Conta na plataforma (`profiles.ativo`); `null`/`undefined` tratados como ativo (legado). */
+export function influencerExisteNaPlataforma(profileAtivo?: boolean | null): boolean {
+  return profileAtivo !== false;
+}
+
+/** Cadastro em `influencer_perfil` e status operacional não encerrado (regra Playbook). */
+export function influencerElegivelAuditoriaPerfil(perfil: { status?: string | null } | null): boolean {
+  if (!perfil) return false;
+  const s = (perfil.status ?? "ativo").toLowerCase();
+  return s !== "inativo" && s !== "cancelado";
+}
+
+/** Quadro “Perfil incompleto”: existe na plataforma, tem `influencer_perfil` e status operacional ativo. */
+export function influencerElegivelQuadroPerfilIncompleto(
+  perfil: { status?: string | null } | null,
+  profileAtivo?: boolean | null,
+): boolean {
+  if (!influencerExisteNaPlataforma(profileAtivo)) return false;
+  if (!perfil) return false;
+  const s = (perfil.status ?? "ativo").toLowerCase();
+  return s === "ativo";
+}
+
 export function isPerfilIncompleto(
   perfil: InfluencerPerfilCadastro | null,
   name: string

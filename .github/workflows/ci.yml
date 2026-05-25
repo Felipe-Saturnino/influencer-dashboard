@@ -6,8 +6,16 @@ name: CI
 on:
   push:
     branches: [main, master, staging]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdc"
+      - "docs/**"
   pull_request:
     branches: [main, master, staging]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdc"
+      - "docs/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

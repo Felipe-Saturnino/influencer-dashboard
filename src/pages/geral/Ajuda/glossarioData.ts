@@ -34,7 +34,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Validação de Live",
         definicao:
-          "Processo de confirmar o resultado de uma live agendada — registrando se ela foi Realizada ou Não Realizada, e quando realizada, os dados de duração e audiência. A validação é feita na página Resultado de Lives.",
+          "Processo de confirmar o resultado de uma live agendada — registrando se ela foi Realizada ou Não Realizada, e quando realizada, os dados de duração e audiência. A validação é feita na página Resultados.",
         nota:
           "Somente lives com horário passado há mais de 5 horas aparecem para validação — a janela garante que a live terminou antes do registro.\n\nA operadora deve ser informada obrigatoriamente na validação, pois é o vínculo usado pelo módulo Financeiro para calcular os pagamentos do ciclo correspondente.",
         referencia: "Resultados",
@@ -42,7 +42,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Janela de Elegibilidade",
         definicao:
-          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultado de Lives para validação.",
+          "Intervalo de tempo após o horário agendado de uma live em que ela passa a aparecer na página Resultados para validação.",
         nota:
           "A janela padrão é de 5 horas após o horário agendado (fuso local). Lives ainda dentro desse intervalo não entram na fila de validação — o sistema assume que a transmissão pode ainda estar em andamento.",
         referencia: "Resultados",
@@ -50,7 +50,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Semana de Referência",
         definicao:
-          "Período de sete dias usado como unidade de filtro na página Feedback de Lives para agrupar lives validadas e seus resultados.",
+          "Período de sete dias usado como unidade de filtro na página Feedback para agrupar lives validadas e seus resultados.",
         nota:
           "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe todo o período com dados cadastrados.",
         referencia: "Feedback",
@@ -438,7 +438,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Percentual de retenção da casa sobre o volume apostado. Representa o 'edge' natural do jogo — quanto, em média, a casa retém de cada real apostado.",
         formula: "GGR ÷ Turnover × 100",
         nota:
-          "Para jogos de mesa ao vivo, valores entre 3% e 10% são típicos. Acima de 10%: período excepcionalmente favorável para a casa. Abaixo de 0%: período negativo — saques superaram depósitos.\n\nA Margem varia por tipo de jogo. O Comparativo de Jogo na Overview Spin permite visualizar a margem individual de Blackjack, Roleta e Speed Baccarat.",
+          "Para jogos de mesa ao vivo, valores entre 3% e 10% são típicos. Acima de 10%: período excepcionalmente favorável para a casa. Abaixo de 0%: período negativo — saques superaram depósitos.\n\nA Margem varia por tipo de jogo. O Comparativo de Jogo na Overview Spin permite visualizar a margem individual de Blackjack, Roleta, Speed Baccarat e Futebol Brasileiro.",
         referencia: "Overview Spin",
       },
       {
@@ -468,9 +468,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogos Spin",
         definicao:
-          "Os três tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.",
+          "Os tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.\n— Futebol Brasileiro: jogo ao vivo com mesas configuráveis por operadora (inicialmente na Casa de Apostas).",
         nota:
-          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta e Speed Baccarat lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente.",
+          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta, Speed Baccarat e Futebol Brasileiro lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente. Em Dados por Mesa, a Casa de Apostas também exibe Futebol Brasileiro abaixo de Baccarat e Roleta.",
         referencia: "Overview Spin",
       },
       {
@@ -637,7 +637,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Dealer",
         definicao:
-          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat), turno, gênero, fotos e operadora vinculada.",
+          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
         referencia: "Gestão de Dealers",
       },
       {
@@ -726,6 +726,34 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Agrupamento de ações de marketing vinculado a uma ou mais operadoras. Campanhas são criadas na página Campanhas e podem ser usadas como destino no mapeamento de links na Gestão de Links.",
         nota: "Campanhas inativas não aparecem como opção ao mapear novos links, mas mantêm os vínculos existentes.",
         referencia: "Campanhas · Gestão de Links",
+      },
+    ],
+  },
+  {
+    key: "rh_portal",
+    label: "Portal de RH",
+    accentColor: "#a78bfa",
+    termos: [
+      {
+        termo: "RH Talk",
+        definicao:
+          "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de colaboradores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
+        nota: "A ata fica disponível no Portal de RH apenas para participantes registrados da reunião.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Lido e Ciente",
+        definicao:
+          "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento oficial no Portal de RH (política ou normativa), com registro de data e hora.",
+        nota:
+          "Diferente de apenas marcar um comunicado como Lido. O registro de Lido e Ciente implica responsabilidade sobre o conteúdo do documento. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Read Receipt",
+        definicao:
+          "Registro de leitura de um comunicado ou documento pelo usuário, com data e hora. Usado para rastrear quais colaboradores já visualizaram comunicados obrigatórios.",
+        referencia: "Portal de RH",
       },
     ],
   },

@@ -4,14 +4,16 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import {
   compareAtivoBoolean,
@@ -19,7 +21,7 @@ import {
   compareLocaleTexto,
   compareNumber,
 } from "../../../lib/classificacaoSort";
-import { ChevronLeft, ChevronRight, Coins, Eye, EyeOff, Loader2, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Coins, Eye, EyeOff, Loader2 } from "lucide-react";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { Role } from "../../../types";
@@ -120,6 +122,28 @@ function rowInteressaConsolidado(r: BancaRowDb, periodo: { inicio: string; fim: 
   if (s >= periodo.inicio && s <= periodo.fim) return true;
   if (l && l >= periodo.inicio && l <= periodo.fim) return true;
   return false;
+}
+
+function rowPassaFiltrosComunsBanca(r: BancaRowDb, filtros: BlocoFiltros): boolean {
+  if (!filtros.podeVerInfluencer(r.influencer_id)) return false;
+  if (filtros.filterInfluencers.length > 0 && !filtros.filterInfluencers.includes(r.influencer_id)) return false;
+  if (filtros.filtroOp?.length) {
+    if (!r.operadora_slug || !filtros.filtroOp.includes(r.operadora_slug)) return false;
+  } else if (filtros.filterOperadora && filtros.filterOperadora !== "todas") {
+    if (r.operadora_slug !== filtros.filterOperadora) return false;
+  }
+  return true;
+}
+
+/** KPIs e consolidado: influencer, operadora e janela de período (solicitado_em / liberado_em). */
+function rowPassaFiltrosKpiBanca(
+  r: BancaRowDb,
+  filtros: BlocoFiltros,
+  periodo: { inicio: string; fim: string } | null,
+  historico: boolean,
+): boolean {
+  if (!rowPassaFiltrosComunsBanca(r, filtros)) return false;
+  return rowInteressaConsolidado(r, periodo, historico);
 }
 
 interface BlocoFiltros {
@@ -779,17 +803,9 @@ function BlocoSolicitacoes({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
         <BlocoLabel label="Solicitações" />
         {podeSolicitar ? (
-          <button
-            type="button"
-            onClick={() => void aoClicarSolicitar()}
-            style={{
-              padding: "8px 16px", borderRadius: 10, border: "none",
-              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-              color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-            }}
-          >
-            + Solicitar
-          </button>
+          <CtaCriarButton type="button" onClick={() => void aoClicarSolicitar()}>
+            Solicitar Banca
+          </CtaCriarButton>
         ) : null}
       </div>
 
@@ -1761,6 +1777,21 @@ export default function BancaJogo() {
     historico,
   }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadorasList, mesFiltro, historico]);
 
+  const kpisBanca = useMemo(() => {
+    const periodo = filtros.historico ? null : periodoDoMes(filtros.mesFiltro);
+    let solicitado = 0;
+    let aprovado = 0;
+    let pago = 0;
+    for (const r of ciclosRows) {
+      if (!rowPassaFiltrosKpiBanca(r, filtros, periodo, filtros.historico)) continue;
+      const v = Number(r.valor) || 0;
+      if (r.status === "solicitado") solicitado += v;
+      else if (r.status === "aprovado") aprovado += v;
+      else if (r.status === "liberado") pago += v;
+    }
+    return { solicitado, aprovado, pago };
+  }, [ciclosRows, filtros]);
+
   const idxMesAtual = MESES_OPCOES.findIndex((m) => m.value === mesFiltro);
   function prevMes() {
     if (idxMesAtual < MESES_OPCOES.length - 1) setMesFiltro(MESES_OPCOES[idxMesAtual + 1]?.value ?? "");
@@ -1768,21 +1799,6 @@ export default function BancaJogo() {
   function nextMes() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
-
-  const btnNavStyle: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`, background: "transparent",
-    color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-  const chipBase = (active: boolean) => ({
-    padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
-    background: active ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : (t.inputBg ?? t.cardBg),
-    color: active ? "var(--brand-action, #7c3aed)" : t.textMuted,
-    fontSize: 13, fontWeight: active ? 700 : 400,
-    fontFamily: FONT.body, cursor: "pointer", outline: "none",
-  } as React.CSSProperties);
 
   async function carregarDados() {
     setLoading(true);
@@ -1888,7 +1904,7 @@ export default function BancaJogo() {
       <PageHeader
         icon={<Coins size={14} aria-hidden />}
         title="Banca de Jogo"
-        subtitle="Solicitações de pagamento de banca por influencer e operadora."
+        subtitle="Solicite, aprove e libere bancas de jogo por parceiro e operadora."
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -1898,59 +1914,100 @@ export default function BancaJogo() {
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" aria-label="Mês anterior" onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
-              <ChevronLeft size={14} aria-hidden />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              onClick={prevMes}
+              style={getCarouselBtnNavStyle(t, idxMesAtual >= MESES_OPCOES.length - 1)}
+              disabled={idxMesAtual >= MESES_OPCOES.length - 1}
+              title="Mês anterior"
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
-              {historico ? "Total" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
+            <span style={getCarouselPeriodLabelStyle(t)}>
+              {historico ? "Todo o período" : (MESES_OPCOES.find((m) => m.value === mesFiltro)?.label ?? mesFiltro)}
             </span>
-            <button type="button" aria-label="Próximo mês" onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
-              <ChevronRight size={14} aria-hidden />
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              onClick={nextMes}
+              style={getCarouselBtnNavStyle(t, idxMesAtual <= 0)}
+              disabled={idxMesAtual <= 0}
+              title="Próximo mês"
+            >
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button type="button" aria-pressed={historico} onClick={() => setHistorico((h) => !h)} style={chipBase(historico)}>
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={() => setHistorico((h) => !h)} />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-              <InfluencerMultiSelect
-                selected={filterInfluencers}
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
-                t={t}
               />
             )}
 
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <Shield size={13} aria-hidden />
-                </span>
-                <select
-                  aria-label="Filtrar por operadora"
-                  value={filterOperadora}
-                  onChange={(e) => setFilterOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 30px", borderRadius: 999,
-                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filterOperadora}
+                onChange={setFilterOperadora}
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
           </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div className="app-grid-kpi-3" style={{ width: "100%", gap: 14 }}>
+          {[
+            { label: "R$ Solicitado", total: kpisBanca.solicitado, color: STATUS_BANCA.solicitado.color },
+            { label: "R$ Aprovado", total: kpisBanca.aprovado, color: STATUS_BANCA.aprovado.color },
+            { label: "R$ Pago", total: kpisBanca.pago, color: STATUS_BANCA.liberado.color },
+          ].map((k) => (
+            <div
+              key={k.label}
+              aria-label={`${k.label}: ${fmtMoeda(k.total)}`}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${t.cardBorder}`,
+                borderLeft: `3px solid ${k.color}`,
+                background: brand.blockBg,
+                padding: "16px 18px",
+                boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {k.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: k.color,
+                  fontFamily: FONT_TITLE,
+                  marginTop: 6,
+                }}
+              >
+                {fmtMoeda(k.total)}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

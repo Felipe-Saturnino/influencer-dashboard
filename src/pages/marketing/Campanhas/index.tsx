@@ -13,6 +13,8 @@ import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
 const COR = {
@@ -20,12 +22,6 @@ const COR = {
   verde: "#22c55e",
   cinza: "#6b7280",
 } as const;
-
-function ctaGradient(useBrand: boolean): string {
-  return useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-}
 
 const MSG_ERRO_SALVAR = "Não foi possível salvar a campanha. Se o problema persistir, contate o suporte.";
 const MSG_ERRO_EXCLUIR = "Não foi possível excluir a campanha. Se o problema persistir, contate o suporte.";
@@ -88,10 +84,6 @@ export default function Campanhas() {
     return arr;
   }, [campanhas, sortCamp, operadoras]);
   const ativas = campanhas.filter((c) => c.ativo).length;
-  const contadorLabel =
-    campanhas.length === 1
-      ? "1 campanha cadastrada"
-      : `${campanhas.length} campanhas cadastradas`;
 
   const th = getThStyle(t);
   const td = getTdStyle(t);
@@ -134,7 +126,7 @@ export default function Campanhas() {
       <PageHeader
         icon={<Megaphone size={14} aria-hidden />}
         title="Campanhas"
-        subtitle="Cadastre campanhas de mídias sociais. UTMs mapeados na Gestão de Links alimentam o Dashboard de Mídias (funil e performance)."
+        subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 
       <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
@@ -194,40 +186,26 @@ export default function Campanhas() {
         <div style={{ padding: "16px 20px 0" }}>
           <BlocoLabel label="Campanhas cadastradas" />
         </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "12px 20px 16px",
-          }}
-        >
-          <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-            {contadorLabel}
-          </span>
-          {perm.canCriarOk && (
-            <button
+        {perm.canCriarOk && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              padding: "12px 20px 16px",
+            }}
+          >
+            <CtaCriarButton
               type="button"
               onClick={() => {
                 setEditando(null);
                 setModalOpen(true);
               }}
-              style={{
-                background: ctaGradient(brand.useBrand),
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "9px 18px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 700,
-              }}
             >
-              + Nova Campanha
-            </button>
-          )}
-        </div>
+              Nova Campanha
+            </CtaCriarButton>
+          </div>
+        )}
 
         {loading ? (
           <div
@@ -682,7 +660,7 @@ function ModalCampanha({ editando, operadoras, onClose, onSalvo }: ModalCampanha
           onClick={() => void salvar()}
           disabled={salvando}
           style={{
-            background: ctaGradient(brand.useBrand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             border: "none",
             borderRadius: 10,

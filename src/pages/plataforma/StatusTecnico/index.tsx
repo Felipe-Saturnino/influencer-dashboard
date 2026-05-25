@@ -1,20 +1,51 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
-import { CheckCircle2, AlertTriangle, XCircle, RefreshCw, Plus, Trash2, Network, AlertCircle } from "lucide-react";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  BarChart2,
+  Bell,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  MonitorCheck,
+  Network,
+  RefreshCw,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
+import { tabAtivaPrincipalStyle } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import {
+  ctaGradientStatus,
+  ERRO_EMAIL_AGENDA,
+  ERRO_EMAIL_DIRETORIA,
+  ERRO_REDE_EDGE,
+  ERRO_SYNC_CDA,
+  ERRO_SYNC_LOBBY_BLAZE,
+  ERRO_SYNC_SOCIAL,
+  ERRO_SYNC_SPIN_RSS,
+  MODAL_OVERLAY_BG,
+  MSG_SEM_PERMISSAO,
+  tableRowHoverBg,
+} from "./statusTecnicoHelpers";
+import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
 
-// ─── SectionTitle (padrão da plataforma) ─────────────────────────────────────
-function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+// ─── StatusSectionTitle (padrão da plataforma — não colidir com shared SectionTitle) ──
+function StatusSectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   return (
@@ -39,8 +70,8 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
   );
 }
 
-// ─── KpiCard (padrão da plataforma com accent bar) ───────────────────────────
-function KpiCard({ label, value, accentColor, loading }: {
+// ─── StatusKpiCard (accent bar — nomenclatura distinta do KpiCard shared) ─────
+function StatusKpiCard({ label, value, accentColor, loading }: {
   label: string; value: React.ReactNode; accentColor: string; loading?: boolean;
 }) {
   const { theme: t } = useApp();
@@ -177,17 +208,7 @@ export default function StatusTecnico() {
     padding: 24,
     border: `1px solid ${t.cardBorder}`,
   };
-  const thStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
-    color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
-    padding: "10px 14px", textAlign: "left",
-    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
-  const tdStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 13, color: t.text,
-    padding: "12px 14px", borderTop: `1px solid ${t.cardBorder}`,
-  };
+  const cidrInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -413,14 +434,14 @@ export default function StatusTecnico() {
 
       // invokeError = problema de rede ou função retornou 4xx/5xx
       if (invokeError) {
-        const msg = invokeError.message ?? "Erro ao chamar sync-metricas-cda";
-        let texto = msg;
-        if (msg.includes("Failed to fetch") || msg.includes("fetch")) {
-          texto =
-            "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas-cda implantada (supabase functions deploy sync-metricas-cda); (3) CORS/firewall/rede.";
-        } else if (msg.includes("401") || msg.includes("unauthorized")) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_CDA;
+        if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        } else if (im.includes("401") || im.includes("unauthorized")) {
           texto = "Não autorizado. Verifique no Supabase se a Edge Function sync-metricas-cda está implantada.";
-        } else if (msg.includes("404") || msg.includes("not found")) {
+        } else if (im.includes("404") || im.includes("not found")) {
           texto = "Edge Function sync-metricas-cda não encontrada. Execute: supabase functions deploy sync-metricas-cda";
         }
         setSyncMensagem({ tipo: "erro", texto });
@@ -448,13 +469,8 @@ export default function StatusTecnico() {
       });
       carregar();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      let texto = msg;
-      if (msg === "Failed to fetch") {
-        texto =
-          "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas-cda implantada (supabase functions deploy sync-metricas-cda); (3) CORS/firewall/rede; (4) Abra o DevTools (F12) → Network para ver o erro exato.";
-      }
-      setSyncMensagem({ tipo: "erro", texto });
+      console.error(e);
+      setSyncMensagem({ tipo: "erro", texto: ERRO_SYNC_CDA });
     } finally {
       setSyncExecutando(false);
     }
@@ -480,11 +496,11 @@ export default function StatusTecnico() {
       const resData = (resDataRaw ?? {}) as { ok?: boolean; erro?: string; message?: string };
 
       if (invokeError) {
+        const im = invokeError.message ?? "";
         let texto =
-          (typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : null) ??
-          invokeError.message ??
-          "Erro ao chamar trigger-social-kpis";
-        if (texto.includes("non-2xx") && resData.erro) texto = resData.erro;
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_SOCIAL;
+        if (im.includes("non-2xx") && resData.erro) texto = resData.erro;
+        else if (im.includes("Failed to fetch") || im.includes("fetch")) texto = ERRO_REDE_EDGE;
         if (texto.includes("404") || texto.includes("not found")) {
           texto =
             "Edge Function trigger-social-kpis não encontrada. Execute: supabase functions deploy trigger-social-kpis. Configure GITHUB_TOKEN e GITHUB_REPO nos Secrets.";
@@ -508,8 +524,8 @@ export default function StatusTecnico() {
         texto: resData?.message ?? "Workflow disparado. Verifique o Dashboard de Mídias Sociais em alguns minutos.",
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setSyncSocialMensagem({ tipo: "erro", texto: msg });
+      console.error(e);
+      setSyncSocialMensagem({ tipo: "erro", texto: ERRO_SYNC_SOCIAL });
     } finally {
       setSyncSocialExecutando(false);
     }
@@ -541,10 +557,14 @@ export default function StatusTecnico() {
       };
 
       if (invokeError) {
-        let texto = invokeError.message ?? "Erro ao chamar sync-spin-na-rede-rss";
-        if (texto.includes("404") || texto.includes("not found")) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_SPIN_RSS;
+        if (im.includes("404") || im.includes("not found")) {
           texto =
             "Edge Function sync-spin-na-rede-rss não encontrada. Execute: supabase functions deploy sync-spin-na-rede-rss";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
         }
         setSyncSpinRssMensagem({ tipo: "erro", texto });
         setSyncSpinRssExecutando(false);
@@ -569,8 +589,8 @@ export default function StatusTecnico() {
       });
       void carregar();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setSyncSpinRssMensagem({ tipo: "erro", texto: msg });
+      console.error(e);
+      setSyncSpinRssMensagem({ tipo: "erro", texto: ERRO_SYNC_SPIN_RSS });
     } finally {
       setSyncSpinRssExecutando(false);
     }
@@ -603,10 +623,14 @@ export default function StatusTecnico() {
       };
 
       if (invokeError) {
-        let texto = invokeError.message ?? "Erro ao chamar monitor-lobby-blaze";
-        if (texto.includes("404") || texto.includes("not found")) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_LOBBY_BLAZE;
+        if (im.includes("404") || im.includes("not found")) {
           texto =
             "Edge Function monitor-lobby-blaze não encontrada. Execute: supabase functions deploy monitor-lobby-blaze";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
         }
         setSyncLobbyBlazeMensagem({ tipo: "erro", texto });
         setSyncLobbyBlazeExecutando(false);
@@ -637,8 +661,8 @@ export default function StatusTecnico() {
       });
       void carregar();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setSyncLobbyBlazeMensagem({ tipo: "erro", texto: msg });
+      console.error(e);
+      setSyncLobbyBlazeMensagem({ tipo: "erro", texto: ERRO_SYNC_LOBBY_BLAZE });
     } finally {
       setSyncLobbyBlazeExecutando(false);
     }
@@ -685,17 +709,8 @@ export default function StatusTecnico() {
           res = await tentarFetch();
         }
       } catch (fetchErr) {
-        const raw = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-        const rede =
-          raw.includes("Failed to fetch") ||
-          raw.includes("NetworkError") ||
-          raw.toLowerCase().includes("network");
-        setEmailMensagem({
-          tipo: "erro",
-          texto: rede
-            ? "Não foi possível chegar à Edge Function (rede, firewall, bloqueador ou CORS). Abra F12 → Rede, tente de novo e confira se relatorio-diario-diretoria está publicada no Supabase."
-            : raw,
-        });
+        console.error(fetchErr);
+        setEmailMensagem({ tipo: "erro", texto: ERRO_REDE_EDGE });
         setEmailEnviando(false);
         return;
       }
@@ -730,12 +745,8 @@ export default function StatusTecnico() {
       });
       void carregar();
     } catch (e) {
-      let msg = e instanceof Error ? e.message : String(e);
-      if (/edge function/i.test(msg) || /FunctionsFetchError/i.test(msg)) {
-        msg =
-          "Não foi possível chamar a função relatorio-diario-diretoria. Atualize o app publicado (deploy do front), confira se a função existe no projeto do VITE_SUPABASE_URL, desative JWT na função se usar só anon, e rode: supabase functions deploy relatorio-diario-diretoria.";
-      }
-      setEmailMensagem({ tipo: "erro", texto: msg });
+      console.error(e);
+      setEmailMensagem({ tipo: "erro", texto: ERRO_EMAIL_DIRETORIA });
     } finally {
       setEmailEnviando(false);
     }
@@ -826,12 +837,8 @@ export default function StatusTecnico() {
       });
       void carregar();
     } catch (e) {
-      let msg = e instanceof Error ? e.message : String(e);
-      if (/edge function/i.test(msg) || /FunctionsFetchError/i.test(msg)) {
-        msg =
-          "Não foi possível chamar email-agenda-diaria. Faça deploy: supabase functions deploy email-agenda-diaria e defina EMAIL_AGENDA_DESTINATARIOS.";
-      }
-      setEmailAgendaMensagem({ tipo: "erro", texto: msg });
+      console.error(e);
+      setEmailAgendaMensagem({ tipo: "erro", texto: ERRO_EMAIL_AGENDA });
     } finally {
       setEmailAgendaEnviando(false);
     }
@@ -1178,15 +1185,19 @@ export default function StatusTecnico() {
   const corTaxaErro = parseFloat(taxaErro) > 5 ? BRAND.vermelho : parseFloat(taxaErro) > 0 ? BRAND.amarelo : BRAND.verde;
 
   const btnAcao = (disabled: boolean): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 8, border: "none",
-    background: disabled
-      ? BRAND.cinza
-      : dashBrand.useBrand
-        ? "var(--brand-primary)"
-        : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-    color: "#fff", fontSize: 12, fontWeight: 700,
-    fontFamily: FONT.body, cursor: disabled ? "not-allowed" : "pointer",
-    display: "inline-flex", alignItems: "center", gap: 6,
+    padding: "6px 14px",
+    borderRadius: 8,
+    border: "none",
+    background: ctaGradientStatus(dashBrand, disabled, BRAND.cinza),
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: FONT.body,
+    cursor: disabled ? "not-allowed" : "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    opacity: disabled ? 0.85 : 1,
   });
   const mostrarColunaAcao = perm.canEditarOk;
   const formatarHora = (iso: string) => {
@@ -1243,10 +1254,24 @@ export default function StatusTecnico() {
     }
   };
 
+  useEffect(() => {
+    if (!modalCidrAdicionar) return;
+    const id = window.setTimeout(() => cidrInputRef.current?.focus(), 100);
+    return () => window.clearTimeout(id);
+  }, [modalCidrAdicionar]);
+
+  if (perm.loading) {
+    return (
+      <div className="app-page-shell">
+        <GestaoUsuariosLoading />
+      </div>
+    );
+  }
+
   if (perm.canView === "nao") {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar o Status Técnico.
+      <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        {MSG_SEM_PERMISSAO}
       </div>
     );
   }
@@ -1263,39 +1288,39 @@ export default function StatusTecnico() {
           display: "flex", alignItems: "center", justifyContent: "center",
           color: dashBrand.primaryIconColor, flexShrink: 0,
         }}>
-          <GiRadarSweep size={14} />
+          <MonitorCheck size={14} aria-hidden="true" />
         </span>
         <div>
           <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: dashBrand.primary, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Status Técnico
           </h1>
           <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
-            Acompanhamento de integrações e saúde da plataforma.
+            Monitore integrações, alertas automáticos e sincronizações da plataforma.
           </p>
         </div>
       </div>
 
       {/* ── KPI Cards — accent bar ── */}
       <div className="app-grid-kpi-4" style={{ gap: 16 }}>
-        <KpiCard
+        <StatusKpiCard
           label="Integrações Ativas"
           loading={loading}
           accentColor={corIntegracoes}
           value={<span style={{ color: corIntegracoes }}>{integracoesAtivasCount} / {totalIntegracoes}</span>}
         />
-        <KpiCard
+        <StatusKpiCard
           label="Último Sync"
           loading={loading}
           accentColor={BRAND.ciano}
           value={<span style={{ fontSize: 20, fontWeight: 700 }}>{ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}</span>}
         />
-        <KpiCard
+        <StatusKpiCard
           label="Registros Hoje"
           loading={loading}
           accentColor={BRAND.roxoVivo}
           value={<span style={{ color: BRAND.roxoVivo }}>{registrosHojeTotal.toLocaleString("pt-BR")}</span>}
         />
-        <KpiCard
+        <StatusKpiCard
           label="Taxa de Erro"
           loading={loading}
           accentColor={corTaxaErro}
@@ -1305,7 +1330,7 @@ export default function StatusTecnico() {
 
       {/* ── Status das Integrações ── */}
       <div style={card}>
-        <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
+        <StatusSectionTitle icon={<Activity size={14} aria-hidden="true" />}>Status das Integrações</StatusSectionTitle>
         {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
@@ -1343,17 +1368,18 @@ export default function StatusTecnico() {
           </div>
         )}
         {loading ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+          <StatusTecnicoLoadingBlock />
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="app-table-wrap">
             <table style={{
               width: "100%", borderCollapse: "separate", borderSpacing: 0,
               borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}`,
             }}>
+              <caption style={{ display: "none" }}>Status das integrações de dados</caption>
               <thead>
                 <tr>
                   {["Integração", "Último Sync", "Registros Hoje", "Erros", "Status", ...(mostrarColunaAcao ? ["Ação"] : [])].map((h) => (
-                    <th key={h} style={{ ...thStyle, textAlign: "left" }}>{h}</th>
+                    <th key={h} scope="col" style={{ ...getThStyle(t), textAlign: "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1377,16 +1403,25 @@ export default function StatusTecnico() {
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
                   const status = "status" in row ? row.status : null;
-                  const rowBg = idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
+                  const zebra = zebraStripe(idx);
                   return (
-                    <tr key={row.slug} style={{ background: rowBg }}>
-                      <td style={tdStyle}>
+                    <tr
+                      key={row.slug}
+                      style={{ background: zebra }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebra;
+                      }}
+                    >
+                      <td style={getTdStyle(t)}>
                         {row.nome}
                       </td>
-                      <td style={tdStyle}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
-                      <td style={tdStyle}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{erros as number}</td>
-                      <td style={tdStyle}>
+                      <td style={getTdStyle(t)}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
+                      <td style={getTdStyle(t)}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
+                      <td style={getTdStyle(t)}>{erros as number}</td>
+                      <td style={getTdStyle(t)}>
                         {status && (
                           <span style={{
                             display: "inline-flex", alignItems: "center", gap: 6,
@@ -1403,7 +1438,7 @@ export default function StatusTecnico() {
                         )}
                       </td>
                       {mostrarColunaAcao && (
-                      <td style={tdStyle}>
+                      <td style={getTdStyle(t)}>
                         {(isLobbyBlaze || isLobbyCda) && (
                           <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
                         )}
@@ -1417,8 +1452,12 @@ export default function StatusTecnico() {
                             disabled={syncExecutandoRow || !perm.canEditarOk}
                             style={btnAcao(syncExecutandoRow)}
                           >
-                            <RefreshCw size={13} aria-hidden="true" />
-                            {syncExecutandoRow ? "Sincronizando..." : "Sync"}
+                            <AcaoCtaContent
+                              executando={syncExecutandoRow}
+                              label="Sync"
+                              labelExecutando="Sincronizando..."
+                              icon={<RefreshCw size={13} aria-hidden="true" />}
+                            />
                           </button>
                         )}
                         {isEmailDir && (
@@ -1428,7 +1467,7 @@ export default function StatusTecnico() {
                             disabled={emailEnviando || !perm.canEditarOk}
                             style={btnAcao(emailEnviando)}
                           >
-                            {emailEnviando ? "Enviando..." : "Enviar"}
+                            <AcaoCtaContent executando={emailEnviando} label="Enviar" labelExecutando="Enviando..." />
                           </button>
                         )}
                         {isEmailAgenda && (
@@ -1438,7 +1477,7 @@ export default function StatusTecnico() {
                             disabled={emailAgendaEnviando || !perm.canEditarOk}
                             style={btnAcao(emailAgendaEnviando)}
                           >
-                            {emailAgendaEnviando ? "Enviando..." : "Enviar"}
+                            <AcaoCtaContent executando={emailAgendaEnviando} label="Enviar" labelExecutando="Enviando..." />
                           </button>
                         )}
                       </td>
@@ -1454,7 +1493,7 @@ export default function StatusTecnico() {
 
       {/* Fluxo de Dados — sem legenda textual (#5 + remoção legenda) */}
       <div style={card}>
-        <SectionTitle icon={<GiGearStick size={14} />}>Fluxo de Dados (últimos 14 dias)</SectionTitle>
+        <StatusSectionTitle icon={<BarChart2 size={14} aria-hidden="true" />}>Fluxo de Dados (últimos 14 dias)</StatusSectionTitle>
 
         {/* Legenda visual compacta — sem texto explicativo de escala */}
         <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
@@ -1475,11 +1514,15 @@ export default function StatusTecnico() {
         </div>
 
         {loading ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+          <StatusTecnicoLoadingBlock />
         ) : fluxoDados.length === 0 ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>{MSG_SEM_DADOS_FILTRO}</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            role="img"
+            aria-label="Gráfico de barras empilhadas com o fluxo de dados dos últimos 14 dias por fonte"
+            style={{ display: "flex", flexDirection: "column", gap: 10 }}
+          >
             {[...fluxoDados.slice(-14)].reverse().map((f) => {
               const isHover = fluxoHover === f.data;
               const pct = (v: number) => f.total > 0 ? (v / f.total) * 100 : 0;
@@ -1556,13 +1599,13 @@ export default function StatusTecnico() {
                       maxWidth: "calc(100% - 120px)",
                       overflow: "hidden",
                     }}>
-                      {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
-                      {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
-                      {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }}>●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
-                      {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }}>●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
-                      {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }}>●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
+                      {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
+                      {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
+                      {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
-                        <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
+                        <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
                     </div>
                   )}
@@ -1575,7 +1618,7 @@ export default function StatusTecnico() {
 
       {/* Alertas — hierarquia erro vs aviso (#4, #8) */}
       <div style={card}>
-        <SectionTitle icon={<GiSiren size={14} />}>Alertas</SectionTitle>
+        <StatusSectionTitle icon={<Bell size={14} aria-hidden="true" />}>Alertas</StatusSectionTitle>
         {alertas.length === 0 ? (
           <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
@@ -1594,7 +1637,13 @@ export default function StatusTecnico() {
                   borderLeft: `${a.nivel === "erro" ? "4px" : "2px"} solid ${a.nivel === "erro" ? BRAND.vermelho : BRAND.amarelo}`,
                 }}
               >
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{a.nivel === "erro" ? "🔴" : "🟡"}</span>
+                <span style={{ fontSize: 16, flexShrink: 0, display: "flex" }}>
+                  {a.nivel === "erro" ? (
+                    <XCircle size={16} color={BRAND.vermelho} aria-hidden="true" />
+                  ) : (
+                    <AlertTriangle size={16} color={BRAND.amarelo} aria-hidden="true" />
+                  )}
+                </span>
                 <span style={{
                   fontFamily: FONT.body, fontSize: 13, color: t.text,
                   fontWeight: a.nivel === "erro" ? 700 : 400,
@@ -1609,45 +1658,40 @@ export default function StatusTecnico() {
 
       {/* Logs Recentes */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: dashBrand.primaryIconBg,
-              border: dashBrand.primaryIconBorder,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: dashBrand.primaryIconColor, flexShrink: 0,
-            }}>
-              <GiCircuitry size={13} />
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              Logs Recentes
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {(["1h", "24h", "48h"] as const).map((f) => (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
+          <StatusSectionTitle icon={<FileText size={14} aria-hidden="true" />}>Logs Recentes</StatusSectionTitle>
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            {(["1h", "24h", "48h"] as const).map((f) => {
+              const ativo = logFiltro === f;
+              const chip = tabAtivaPrincipalStyle(ativo, t.cardBorder, t.inputBg ?? t.bg);
+              return (
               <button
                 key={f}
                 type="button"
-                aria-pressed={logFiltro === f}
+                aria-pressed={ativo}
                 aria-label={f === "1h" ? "Filtrar logs da última hora" : f === "24h" ? "Filtrar logs das últimas 24 horas" : "Filtrar logs das últimas 48 horas"}
                 onClick={() => setLogFiltro(f)}
                 style={{
-                  padding: "6px 12px", borderRadius: 8,
-                  border: `1px solid ${logFiltro === f ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: logFiltro === f ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: logFiltro === f ? BRAND.roxoVivo : t.textMuted,
-                  cursor: "pointer", fontFamily: FONT.body, fontSize: 12, fontWeight: 600,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: chip.border,
+                  background: chip.background,
+                  color: ativo ? chip.color : t.textMuted,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                  fontWeight: chip.fontWeight,
                 }}
               >
                 {f === "1h" ? "Última 1 hora" : f === "24h" ? "Últimas 24h" : "Últimas 48h"}
               </button>
-            ))}
+            );
+            })}
           </div>
         </div>
 
         {loading ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+          <StatusTecnicoLoadingBlock />
         ) : (() => {
           const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
           const desdeDisplay = new Date(); desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
@@ -1655,12 +1699,13 @@ export default function StatusTecnico() {
           return techLogsFiltrados.length === 0 ? (
             <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Nenhum log de erro no período.</p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
+            <div className="app-table-wrap">
               <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+                <caption style={{ display: "none" }}>Logs de erro recentes das integrações</caption>
                 <thead>
                   <tr>
                     {["Hora", "Integração", "Tipo", "Descrição"].map((h) => (
-                      <th key={h} style={thStyle}>{h}</th>
+                      <th key={h} scope="col" style={getThStyle(t)}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1686,14 +1731,24 @@ export default function StatusTecnico() {
                             lobby_blaze: "Lobby Blaze",
                             lobby_cda: "Lobby Casa de Apostas",
                           }[log.tipo] ?? log.tipo;
+                    const zebra = zebraStripe(idx);
                     return (
-                      <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
-                        <td style={tdStyle}>{formatarHora(log.created_at)}</td>
-                        <td style={tdStyle}>{integracaoLabel}</td>
-                        <td style={tdStyle}>
+                      <tr
+                        key={log.id}
+                        style={{ background: zebra }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebra;
+                        }}
+                      >
+                        <td style={getTdStyle(t)}>{formatarHora(log.created_at)}</td>
+                        <td style={getTdStyle(t)}>{integracaoLabel}</td>
+                        <td style={getTdStyle(t)}>
                           <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{log.tipo}</code>
                         </td>
-                        <td style={tdStyle}>{log.descricao}</td>
+                        <td style={getTdStyle(t)}>{log.descricao}</td>
                       </tr>
                     );
                   })}
@@ -1706,26 +1761,12 @@ export default function StatusTecnico() {
 
       {/* Redes permitidas — check-in de prestadores */}
       <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: dashBrand.primaryIconBg,
-              border: dashBrand.primaryIconBorder,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: dashBrand.primaryIconColor, flexShrink: 0,
-            }}>
-              <Network size={14} aria-hidden="true" />
-            </span>
-            <span style={{
-              fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE,
-              letterSpacing: "0.05em", textTransform: "uppercase",
-            }}>
-              Redes permitidas — check-in de prestadores
-            </span>
-          </div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <StatusSectionTitle icon={<Network size={14} aria-hidden="true" />}>
+            Redes permitidas — check-in de prestadores
+          </StatusSectionTitle>
           {perm.canEditarOk && (
-            <button
+            <CtaCriarButton
               type="button"
               onClick={() => {
                 setCidrErroForm(null);
@@ -1733,30 +1774,16 @@ export default function StatusTecnico() {
                 setNovoRotuloCidr("");
                 setModalCidrAdicionar(true);
               }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                flexShrink: 0,
-              }}
-              aria-label="Adicionar prefixo CIDR"
+              disabledBackground={BRAND.cinza}
+              style={{ marginBottom: 20 }}
+              aria-label="Nova Rede"
             >
-              <Plus size={16} aria-hidden="true" strokeWidth={2.5} />
-              Adicionar
-            </button>
+              Nova Rede
+            </CtaCriarButton>
           )}
         </div>
         {loading ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+          <StatusTecnicoLoadingBlock />
         ) : cidrRows.length === 0 ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
             Nenhum prefixo configurado. O Check-in/Check-out de prestadores fica bloqueado até existir pelo menos um CIDR.
@@ -1829,95 +1856,94 @@ export default function StatusTecnico() {
 
       {/* Configuração de Alertas */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          Configuração de Alertas
-        </h2>
-        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16 }}>
+        <StatusSectionTitle icon={<AlertTriangle size={14} aria-hidden="true" />}>Configuração de Alertas</StatusSectionTitle>
+        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16, marginTop: -12 }}>
           Condições monitoradas automaticamente. Edição futura via administração.
         </p>
         {loading ? (
-          <p style={{ color: t.textMuted }}>Carregando...</p>
+          <StatusTecnicoLoadingBlock />
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+          <div className="app-table-wrap">
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden" }}>
+              <caption style={{ display: "none" }}>Condições monitoradas para alertas automáticos</caption>
               <thead>
                 <tr>
-                  <th style={thStyle}>Alerta</th>
-                  <th style={thStyle}>Condição</th>
+                  <th scope="col" style={getThStyle(t)}>Alerta</th>
+                  <th scope="col" style={getThStyle(t)}>Condição</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={tdStyle}>Nenhum Sync CDA com sucesso</td>
-                  <td style={tdStyle}>Último sync com falha, nenhum OK</td>
+                  <td style={getTdStyle(t)}>Nenhum Sync CDA com sucesso</td>
+                  <td style={getTdStyle(t)}>Último sync com falha, nenhum OK</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync CDA atrasado</td>
-                  <td style={tdStyle}>&gt; 24h sem sync OK</td>
+                  <td style={getTdStyle(t)}>Sync CDA atrasado</td>
+                  <td style={getTdStyle(t)}>&gt; 24h sem sync OK</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Taxa de erro alta no Sync CDA</td>
-                  <td style={tdStyle}>&gt; 5%</td>
+                  <td style={getTdStyle(t)}>Taxa de erro alta no Sync CDA</td>
+                  <td style={getTdStyle(t)}>&gt; 5%</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync CDA sem dados recentes</td>
-                  <td style={tdStyle}>Nenhum registro hoje (com histórico)</td>
+                  <td style={getTdStyle(t)}>Sync CDA sem dados recentes</td>
+                  <td style={getTdStyle(t)}>Nenhum registro hoje (com histórico)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Erro no Sync Social Media</td>
-                  <td style={tdStyle}>pipeline_runs status=error (24h)</td>
+                  <td style={getTdStyle(t)}>Erro no Sync Social Media</td>
+                  <td style={getTdStyle(t)}>pipeline_runs status=error (24h)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync Social Media com erro</td>
-                  <td style={tdStyle}>tech_logs canal (24h)</td>
+                  <td style={getTdStyle(t)}>Sync Social Media com erro</td>
+                  <td style={getTdStyle(t)}>tech_logs canal (24h)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync Social Media sem dados recentes</td>
-                  <td style={tdStyle}>Sem kpi_daily em 3 dias (com histórico)</td>
+                  <td style={getTdStyle(t)}>Sync Social Media sem dados recentes</td>
+                  <td style={getTdStyle(t)}>Sem kpi_daily em 3 dias (com histórico)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync Social Media atrasado</td>
-                  <td style={tdStyle}>&gt; 36h sem pipeline success</td>
+                  <td style={getTdStyle(t)}>Sync Social Media atrasado</td>
+                  <td style={getTdStyle(t)}>&gt; 36h sem pipeline success</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Erro ao enviar E-mail - Relatório de Influencers (Resend)</td>
-                  <td style={tdStyle}>tech_logs relatorio_diretoria (24h)</td>
+                  <td style={getTdStyle(t)}>Erro ao enviar E-mail - Relatório de Influencers (Resend)</td>
+                  <td style={getTdStyle(t)}>tech_logs relatorio_diretoria (24h)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
-                  <td style={tdStyle}>Sem email_envios hoje (tipo relatorio_diretoria)</td>
+                  <td style={getTdStyle(t)}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
+                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo relatorio_diretoria)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Erro ao enviar E-mail - Agenda do dia (Resend)</td>
-                  <td style={tdStyle}>tech_logs email_agenda_diaria (24h)</td>
+                  <td style={getTdStyle(t)}>Erro ao enviar E-mail - Agenda do dia (Resend)</td>
+                  <td style={getTdStyle(t)}>tech_logs email_agenda_diaria (24h)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
-                  <td style={tdStyle}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
+                  <td style={getTdStyle(t)}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
+                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Nenhum ingest Spin na Rede (RSS) com sucesso</td>
-                  <td style={tdStyle}>Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)</td>
+                  <td style={getTdStyle(t)}>Nenhum ingest Spin na Rede (RSS) com sucesso</td>
+                  <td style={getTdStyle(t)}>Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Ingest Spin na Rede (RSS) atrasada</td>
-                  <td style={tdStyle}>&gt; 24h sem sync_logs OK</td>
+                  <td style={getTdStyle(t)}>Ingest Spin na Rede (RSS) atrasada</td>
+                  <td style={getTdStyle(t)}>&gt; 24h sem sync_logs OK</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Taxa de erro alta no ingest Spin na Rede RSS</td>
-                  <td style={tdStyle}>&gt; 5% em sync_logs (slug spin_na_rede_rss)</td>
+                  <td style={getTdStyle(t)}>Taxa de erro alta no ingest Spin na Rede RSS</td>
+                  <td style={getTdStyle(t)}>&gt; 5% em sync_logs (slug spin_na_rede_rss)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Nenhuma coleta Lobby Blaze com sucesso</td>
-                  <td style={tdStyle}>Último sync_logs com falha, nenhum OK (slug lobby_blaze)</td>
+                  <td style={getTdStyle(t)}>Nenhuma coleta Lobby Blaze com sucesso</td>
+                  <td style={getTdStyle(t)}>Último sync_logs com falha, nenhum OK (slug lobby_blaze)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Coleta Lobby Blaze atrasada</td>
-                  <td style={tdStyle}>&gt; 24h sem sync_logs OK</td>
+                  <td style={getTdStyle(t)}>Coleta Lobby Blaze atrasada</td>
+                  <td style={getTdStyle(t)}>&gt; 24h sem sync_logs OK</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Taxa de erro alta no Lobby Blaze</td>
-                  <td style={tdStyle}>&gt; 5% em sync_logs (slug lobby_blaze)</td>
+                  <td style={getTdStyle(t)}>Taxa de erro alta no Lobby Blaze</td>
+                  <td style={getTdStyle(t)}>&gt; 5% em sync_logs (slug lobby_blaze)</td>
                 </tr>
               </tbody>
             </table>
@@ -1933,7 +1959,7 @@ export default function StatusTecnico() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
+            background: MODAL_OVERLAY_BG,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2015,7 +2041,7 @@ export default function StatusTecnico() {
                   }
                 }}
                 style={{
-                  background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  background: ctaGradientStatus(dashBrand, false, BRAND.cinza),
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,
@@ -2041,7 +2067,7 @@ export default function StatusTecnico() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
+            background: MODAL_OVERLAY_BG,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2095,12 +2121,14 @@ export default function StatusTecnico() {
                 <CampoObrigatorioMark />
               </label>
               <input
+                ref={cidrInputRef}
                 id="status-tecnico-cidr-input"
                 type="text"
                 value={novoCidr}
                 onChange={(e) => setNovoCidr(e.target.value)}
                 placeholder="ex.: 187.102.187.36/30"
                 autoComplete="off"
+                aria-label="Prefixo CIDR"
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -2161,7 +2189,10 @@ export default function StatusTecnico() {
                 disabled={cidrSalvando}
                 onClick={() => void salvarCidrAllowlist()}
                 style={{
-                  background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: ctaGradientStatus(dashBrand, cidrSalvando, BRAND.cinza),
                   color: "#fff",
                   border: "none",
                   borderRadius: 10,
@@ -2170,10 +2201,17 @@ export default function StatusTecnico() {
                   fontFamily: FONT.body,
                   fontSize: 13,
                   fontWeight: 700,
-                  opacity: cidrSalvando ? 0.75 : 1,
+                  opacity: cidrSalvando ? 0.85 : 1,
                 }}
               >
-                {cidrSalvando ? "A guardar…" : "Guardar"}
+                {cidrSalvando ? (
+                  <>
+                    <Loader2 size={14} color="#fff" className="app-lucide-spin" aria-hidden="true" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar"
+                )}
               </button>
             </div>
           </div>

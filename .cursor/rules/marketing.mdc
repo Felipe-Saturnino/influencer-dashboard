@@ -6,99 +6,58 @@ globs:
 alwaysApply: false
 ---
 
-# Seção: Marketing — Padrões de UI/UX
+# Seção Marketing
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC — não duplicar aqui.
+
+---
+
+## Cabeçalho — título e subtítulo
+
+`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `campanhas` | Campanhas | Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards. |
+| `gestao_links` | Gestão de Links | Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios. |
+
+Texto de **afiliados** no subtítulo de Gestão de Links é intencional (roadmap da secção Afiliados).
+
+---
 
 ## Identificação
 
-- Caminho: `src/pages/marketing/`
-- Páginas: `Campanhas/index.tsx`, `GestaoLinks/index.tsx`
-- Token set: **Legado** (`--brand-primary`, `--brand-secondary`, `--brand-accent`)
-- Perfis de uso: Gestor — acesso exclusivo de operação interna
+| PageKey | Página | Caminho |
+|---------|--------|---------|
+| `campanhas` | Campanhas | `marketing/Campanhas/` |
+| `gestao_links` | Gestão de Links | `marketing/GestaoLinks/` |
+
+Perfis: Gestor (operação interna).
 
 ---
 
-## Header de página
+## Campanhas (`campanhas`)
 
-- Badge: **28×28**, `borderRadius: 8`, `brand.primaryIconBg/Border/Color`
-- `h1`: `fontSize: 22`, `fontWeight: 800`, uppercase, `FONT_TITLE`, `brand.primary`
-- Componente: `PageHeader` (`src/components/PageHeader.tsx`)
-- Ícone: **exclusivamente Lucide** — `Megaphone` (Campanhas), `Link2` (Gestão de Links)
-- **Proibido:** `GiXxx` de `react-icons/gi` no badge do header
-
----
-
-## Bloco de filtros
-
-### Gestão de Links — somente filtro de operadora
-
-- Wrapper: `brand.primaryTransparentBg` + `brand.primaryTransparentBorder`
-- Container do select: **`<div>`** com `position: relative` — nunca `<span>`
-- `aria-label="Filtrar por operadora"` no `<select>`
-- Fundo ativo quando operadora selecionada: `color-mix(in srgb, var(--brand-accent) 15%, transparent)` com `brand.useBrand`; senão `var(--brand-primary)` 15%
-
-### Campanhas — sem FilterBar
-
-Campanhas não tem período nem operadora — sem bloco de filtros.
+- Sem FilterBar de período/operadora.
+- KPI cards: `borderTop: 3px solid` (não `borderLeft`); sombra Global.
+- Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
+- `autoFocus` em modal: ref + `setTimeout(100)`.
+- Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
+- **Handoff:** UTMs, classificação, ativar/inativar.
 
 ---
 
-## Abas (Tabs) — padrão ARIA completo
+## Gestão de Links (`gestao_links`)
 
-Obrigatório em Gestão de Links:
-
-1. `role="tablist"` + `aria-label` + `onKeyDown` (ArrowLeft / ArrowRight)
-2. Cada tab: `type="button"`, `role="tab"`, `id={`tab-${a}`}`, `data-aba`, `aria-selected`, `aria-controls={`painel-${a}`}`, `tabIndex={ativa ? 0 : -1}`
-3. Conteúdo: `role="tabpanel"`, `id={`painel-${aba}`}`, `aria-labelledby={`tab-${aba}`}`, `tabIndex={0}`
-
----
-
-## Tabelas operacionais
-
-```tsx
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-```
-
-- Wrapper: `app-table-wrap` + `borderCollapse: "separate"` + `borderSpacing: 0`
-- `<caption>` oculto (clip/absolute), `<th scope="col">`
-- Zebra: `zebraStripe(i)`; hover com `t.isDark`
-- `type="button"` em todos os botões de ação da tabela
-
----
-
-## KPI cards (Campanhas)
-
-- `borderTop: 3px solid ${cor}` — **não** `borderLeft`
-- `brand.blockBg`, `borderRadius: 18`, sombra com `t.isDark`
-
----
-
-## Loading
-
-| Contexto | Padrão |
-|----------|--------|
-| Lista / bloco principal | `Loader2 size={22}` + `app-lucide-spin` + `var(--brand-primary, #7c3aed)` + texto descritivo |
-| CTA em ação | `Loader2 size={13}` + `color="#fff"` |
-
-Loading permanece **no bloco da tabela** (Campanhas) ou **no tabpanel** (Gestão de Links) — não early-return de página inteira.
-
----
-
-## Gradientes de CTA
-
-```tsx
-background: brand.useBrand
-  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-  : "linear-gradient(135deg, #4a2082, #1e36f8)",
-color: "#fff",
-```
-
----
-
-## Modais
-
-- `useApp()` + `useDashboardBrand()` **internamente** — nunca props `t` / `brand`
-- `ModalBase` + `ModalHeader` de `OperacoesModal` (`aria-labelledby` via `useId()` interno)
-- Erros: `role="alert"` + `aria-live="polite"`; mensagem fixa ao usuário + `console.error`
+- Filtro operadora: **`FiltroOperadoraSelect`** (`pill`) **dentro** do strip `primaryTransparent*` — nunca solto entre header e abas; agregadora **Todas Operadoras**.
+- Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
+- Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
+- Tabela: `tableLayout: fixed`; mobile ocultar Depósitos/GGR; manter UTM, FTDs, Ações.
+- `SortTableTh` + default em coluna de data quando existir (Global).
+- Vazios por aba: ver tabela em estados abaixo.
+- **Handoff:** mapear UTM, ignorar, sincronização métricas.
 
 ---
 
@@ -106,44 +65,17 @@ color: "#fff",
 
 | Estado | Mensagem |
 |--------|----------|
-| Nenhuma campanha | `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.` |
-| Link pendente vazio | `Nenhum link pendente. Tudo mapeado!` |
-| Link mapeado vazio | `Nenhum link mapeado ainda.` |
-| Link ignorado vazio | `Nenhum link ignorado.` |
-| Sem permissão | `Você não tem permissão para visualizar esta página.` |
+| Links pendentes vazio | `Nenhum link pendente. Tudo mapeado!` |
+| Mapeados vazio | `Nenhum link mapeado ainda.` |
+| Ignorados vazio | `Nenhum link ignorado.` |
+| Sem permissão | String Global |
 
 ---
 
-## Constantes de cor
+## Anti-patterns (Marketing)
 
-```typescript
-const COR = { vermelho: "#e84025", verde: "#22c55e", cinza: "#6b7280", ciano: "#70cae4" };
-// Marca: brand.primary, brand.secondary, brand.accent
-```
-
----
-
-## Funções utilitárias
-
-```typescript
-import { fmtBRL } from "../../../lib/dashboardHelpers";
-// Proibido fmt() / formatBRL() local
-```
-
----
-
-## Anti-patterns
-
-- GameIcons no header
-- `const BRAND` com `roxo`, `azul`, `roxoVivo`
-- `fmt()` local
-- `brand` / `t` como props de modal
-- Botão sem `type="button"`
-- Loading só com texto
-- `borderCollapse: "collapse"` sem `app-table-wrap` / `caption`
-- Erro com `e.message` visível
-- `isDark` desestruturado de `useApp()` — usar `t.isDark`
-- `<span>` como container de posicionamento do select
-- Abas sem `tabpanel` + teclado + `tabIndex`
-- `borderLeft` nos KPI cards
-- Permissão com nome da página no texto
+- Filtro operadora fora do bloco de filtros ou sem `FiltroOperadoraSelect` / agregadora fora de **Todas Operadoras**.
+- `const BRAND` local com hex duplicados.
+- `fmt()` local — usar `fmtBRL` de `dashboardHelpers`.
+- Abas sem `tabpanel` / setas de teclado.
+- `brand` / `t` passados a modais.

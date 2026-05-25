@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertCircle,
+  Building2,
   CheckCircle2,
   ClipboardList,
   Eye,
   EyeOff,
+  FileSignature,
+  FolderOpen,
   History,
+  Landmark,
+  Layers,
   Loader2,
   Pencil,
-  Plus,
   StickyNote,
   Trash2,
   UserCircle2,
@@ -22,6 +26,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
@@ -57,17 +63,37 @@ import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgT
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
+import { primeiroUltimoNome, syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
   mensagemFeedbackSyncPrestador,
   syncUsuarioPrestadorAposSalvarRh,
 } from "../../../lib/rhPrestadorUsuarioSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
+import {
+  cadastroRevisaoJaRegistradaPeloPrestador,
+  revisaoCadastralPendenteParaFuncionario,
+  prestadorExigeRevisaoCadastral,
+} from "../../../lib/rhCadastroRevisao";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
-import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroBarCampoSelect,
+  FiltroBarTabButton,
+  SkeletonTableRow,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
+import {
+  FILTRO_BAR_TAB_ICON_SIZE,
+  getFilterBarRowStyle,
+  getFilterBarWrapperStyle,
+  handleFiltroBarTabsArrowKeyDown,
+} from "../../../lib/filterBarStyles";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
 
@@ -77,6 +103,12 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
   { value: "Estagio", label: "Estágio" },
   { value: "Temporario", label: "Temporário" },
 ];
+
+const PRESTADOR_STATUS_FILTRO_EXTRA = [
+  { value: "ativo", label: "Ativos" },
+  { value: "indisponivel", label: "Indisponíveis" },
+  { value: "encerrado", label: "Encerrado" },
+] as const;
 
 type FiltroTipoAcaoHistoricoPrestador =
   | "todos"
@@ -119,13 +151,37 @@ function remuneracaoHoraCentavosDeRow(f: RhFuncionario): string {
   return String(Math.round(Number(v)));
 }
 
-/** Coluna «Remuneração»: mensal quando preenchida; senão valor por hora (centavos → reais). */
+/** ISO YYYY-MM-DD: Data da Função se preenchida; senão Data de início. */
+function dataFuncaoOuInicioIso(row: RhFuncionario): string {
+  const df = String(row.data_funcao ?? "").trim();
+  if (df) return df.slice(0, 10);
+  return String(row.data_inicio ?? "").trim().slice(0, 10);
+}
+
+function textoDataFuncaoColunaTabela(row: RhFuncionario): string {
+  return fmtDataIsoPtBr(dataFuncaoOuInicioIso(row));
+}
+
+function areaAtuacaoTabela(row: RhFuncionario): RhAreaAtuacao {
+  return row.area_atuacao === "estudio" || row.area_atuacao === "escritorio" ? row.area_atuacao : "escritorio";
+}
+
+/** Coluna «Remuneração»: mensal (escritório) ou por hora (estúdio), conforme área de atuação. */
 function textoRemuneracaoColunaTabela(row: RhFuncionario): { texto: string; title?: string } {
+  if (areaAtuacaoTabela(row) === "estudio") {
+    const rh = Number(row.remuneracao_hora_centavos ?? 0);
+    if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+    return { texto: "—" };
+  }
   const sal = Number(row.salario);
-  if (sal > 0) return { texto: fmtBRL(sal) };
-  const rh = Number(row.remuneracao_hora_centavos ?? 0);
-  if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+  if (sal > 0) return { texto: fmtBRL(sal), title: "Remuneração mensal" };
   return { texto: "—" };
+}
+
+/** Valor numérico para ordenar remuneração (mensal em reais; hora em centavos). */
+function valorRemuneracaoOrdenacao(row: RhFuncionario): number {
+  if (areaAtuacaoTabela(row) === "estudio") return Number(row.remuneracao_hora_centavos ?? 0);
+  return Math.round(Number(row.salario) * 100);
 }
 
 function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
@@ -360,9 +416,7 @@ const blurSensivel: CSSProperties = {
 };
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+  return getCtaCriarGradient(brand);
 }
 
 type FormState = {
@@ -472,7 +526,7 @@ function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
 type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
 
 /** Colunas ordenáveis da tabela principal (todas as abas). */
-type PrestadoresSortCol = "nome" | "diretoria" | "gerencia" | "cargo" | "lider" | "salario" | "status";
+type PrestadoresSortCol = "nome" | "cargo" | "lider" | "data_funcao" | "salario" | "status";
 
 const ABAS_PAGINA_RH_FUNC: { key: AbaPaginaRhFunc; label: string }[] = [
   { key: "headcount", label: "Head Count" },
@@ -1048,6 +1102,19 @@ export default function RhPrestadoresPage() {
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [opcoesVinculoFlat, filtroDiretoria]);
 
+  const opcoesFiltroDiretoria = useMemo(
+    () => diretoriasOpcoes.map((d) => ({ value: d, label: d })),
+    [diretoriasOpcoes],
+  );
+  const opcoesFiltroGerencia = useMemo(
+    () => gerenciasOpcoes.map((g) => ({ value: g, label: g })),
+    [gerenciasOpcoes],
+  );
+  const opcoesFiltroSetor = useMemo(
+    () => setoresUnicos.map((s) => ({ value: s, label: s })),
+    [setoresUnicos],
+  );
+
   useEffect(() => {
     if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
   }, [filtroGerencia, gerenciasOpcoes]);
@@ -1157,7 +1224,8 @@ export default function RhPrestadoresPage() {
       else encerrado += 1;
     }
     const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
-    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos };
+    const revisaoPendente = filtrada.filter((r) => revisaoCadastralPendenteParaFuncionario(r));
+    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente };
   }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
@@ -1203,24 +1271,6 @@ export default function RhPrestadoresPage() {
     setModalForm("ver");
   };
 
-  const orgMetaLinha = useCallback(
-    (row: RhFuncionario) => {
-      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
-      if (o) {
-        return {
-          diretoria: o.diretoriaNome,
-          gerencia: o.nivel === "diretoria" ? "—" : o.gerenciaNome || "—",
-        };
-      }
-      if (row.org_time_id) {
-        const t = opcoesTimes.find((x) => x.timeId === row.org_time_id);
-        if (t) return { diretoria: t.diretoriaNome, gerencia: t.gerenciaNome };
-      }
-      return { diretoria: "—", gerencia: "—" };
-    },
-    [opcoesTimes, opcoesVinculoFlat],
-  );
-
   const liderImediatoLinha = useCallback(
     (row: RhFuncionario) => {
       const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
@@ -1242,23 +1292,15 @@ export default function RhPrestadoresPage() {
     rows.sort((a, b) => {
       switch (col) {
         case "nome":
-          return mult * a.nome.localeCompare(b.nome, "pt-BR");
-        case "diretoria": {
-          const ad = orgMetaLinha(a).diretoria;
-          const bd = orgMetaLinha(b).diretoria;
-          return mult * ad.localeCompare(bd, "pt-BR");
-        }
-        case "gerencia": {
-          const ag = orgMetaLinha(a).gerencia;
-          const bg = orgMetaLinha(b).gerencia;
-          return mult * ag.localeCompare(bg, "pt-BR");
-        }
+          return mult * primeiroUltimoNome(a.nome).localeCompare(primeiroUltimoNome(b.nome), "pt-BR");
         case "cargo":
           return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
         case "lider":
           return mult * liderImediatoLinha(a).localeCompare(liderImediatoLinha(b), "pt-BR");
+        case "data_funcao":
+          return mult * dataFuncaoOuInicioIso(a).localeCompare(dataFuncaoOuInicioIso(b), "pt-BR");
         case "salario":
-          return mult * (Number(a.salario) - Number(b.salario));
+          return mult * (valorRemuneracaoOrdenacao(a) - valorRemuneracaoOrdenacao(b));
         case "status": {
           const ord: Record<string, number> = { ativo: 0, indisponivel: 1, encerrado: 2 };
           const oa = ord[a.status] ?? 99;
@@ -1271,7 +1313,7 @@ export default function RhPrestadoresPage() {
       }
     });
     return rows;
-  }, [filtrada, sortPrestadores, orgMetaLinha, liderImediatoLinha]);
+  }, [filtrada, sortPrestadores, liderImediatoLinha]);
 
   const inserirHistorico = useCallback(
     async (
@@ -2082,7 +2124,7 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração", "Status", "Ações"].map((h) => (
+                {["Nome", "Função", "Líder Imediato", "Data da Função", "Remuneração", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -2090,9 +2132,9 @@ export default function RhPrestadoresPage() {
               </tr>
             </thead>
             <tbody>
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
             </tbody>
           </table>
         </div>
@@ -2157,10 +2199,23 @@ export default function RhPrestadoresPage() {
     </label>
   );
 
-  const tabActiveBgModal = brand.useBrand
-    ? "var(--brand-action-12)"
-    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
   const idTabModal = (k: AbaFuncModal) => `rh-func-tab-${k}`;
+  const iconAbaModal = (k: AbaFuncModal) => {
+    const sz = FILTRO_BAR_TAB_ICON_SIZE;
+    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
+    if (k === "pessoais") return <UserCircle2 {...p} />;
+    if (k === "contratacao") return <FileSignature {...p} />;
+    if (k === "empresa") return <Building2 {...p} />;
+    if (k === "bancarios") return <Landmark {...p} />;
+    return <FolderOpen {...p} />;
+  };
+  const iconAbaPagina = (k: AbaPaginaRhFunc) => {
+    const sz = FILTRO_BAR_TAB_ICON_SIZE;
+    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
+    if (k === "headcount") return <Users {...p} />;
+    if (k === "acoes_rh") return <ClipboardList {...p} />;
+    return <StickyNote {...p} />;
+  };
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
   const fecharModalFuncionario = () => {
     if (salvando) return;
@@ -2192,9 +2247,13 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const tabActiveBgPagina = brand.useBrand
-    ? "var(--brand-action-12)"
-    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder
+      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+      : {}),
+  });
   const idTabPagina = (k: AbaPaginaRhFunc) => `rh-gest-func-pag-${k}`;
   const panelPaginaRhId = "rh-gest-func-panel-pag";
   const legendaTabelaPorAba =
@@ -2207,7 +2266,7 @@ export default function RhPrestadoresPage() {
   const tabelaAcoesRh = abaPagina === "acoes_rh";
   const tabelaAnotacoesRh = abaPagina === "anotacoes";
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
-  const colunasTabela = tabelaSemSalario ? 7 : 8;
+  const colunasTabela = tabelaSemSalario ? 6 : 7;
   const thStyleSort = getThStyle(t);
   const thStyleSortRight = getThStyle(t, { textAlign: "right" });
 
@@ -2287,124 +2346,7 @@ export default function RhPrestadoresPage() {
         </div>
       ) : null}
 
-      <div
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
-          padding: "14px 16px",
-          marginBottom: 16,
-          boxShadow: cardShadow,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-            gap: 10,
-            marginBottom: 12,
-            alignItems: "end",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-filtro-dir", "Diretoria")}
-            <select
-              id="rh-filtro-dir"
-              value={filtroDiretoria}
-              onChange={(ev) => setFiltroDiretoria(ev.target.value)}
-              aria-label="Filtrar por diretoria"
-              style={inputStyle}
-            >
-              <option value="">Todas</option>
-              {diretoriasOpcoes.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-filtro-ger", "Gerência")}
-            <select
-              id="rh-filtro-ger"
-              value={filtroGerencia}
-              onChange={(ev) => setFiltroGerencia(ev.target.value)}
-              aria-label="Filtrar por gerência"
-              style={inputStyle}
-            >
-              <option value="">Todas</option>
-              {gerenciasOpcoes.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-setor", "Setor")}
-            <select
-              id="rh-func-setor"
-              value={filtroSetor}
-              onChange={(ev) => setFiltroSetor(ev.target.value)}
-              aria-label="Filtrar por setor"
-              style={inputStyle}
-            >
-              <option value="">Todos</option>
-              {setoresUnicos.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-contrato", "Tipo de contrato")}
-            <select
-              id="rh-func-contrato"
-              value={filtroContrato}
-              onChange={(ev) => setFiltroContrato(ev.target.value as typeof filtroContrato)}
-              aria-label="Filtrar por tipo de contrato"
-              style={inputStyle}
-            >
-              <option value="todos">Todos</option>
-              {TIPOS_CONTRATO.map((x) => (
-                <option key={x.value} value={x.value}>
-                  {x.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            {lbl("rh-func-status", "Status")}
-            <select
-              id="rh-func-status"
-              value={filtroStatus}
-              onChange={(ev) => setFiltroStatus(ev.target.value as FiltroStatusPrestador)}
-              aria-label="Filtrar por status"
-              style={inputStyle}
-            >
-              <option value="disponiveis">Todos disponíveis</option>
-              <option value="ativo">Ativos</option>
-              <option value="indisponivel">Indisponíveis</option>
-              <option value="encerrado">Encerrado</option>
-            </select>
-          </div>
-        </div>
-        <div style={{ width: "100%" }}>
-          {lbl("rh-func-busca", "Pesquisar por nome, CPF ou e-mail")}
-          <input
-            id="rh-func-busca"
-            type="search"
-            value={busca}
-            onChange={(ev) => setBusca(ev.target.value)}
-            placeholder="Nome, CPF ou e-mail"
-            aria-label="Pesquisar por nome, CPF ou e-mail"
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      <div className="app-grid-2" style={{ gap: 16, marginBottom: 16 }}>
+      <div className="app-grid-3" style={{ gap: 16, marginBottom: 16 }}>
         <div
           style={{
             background: brand.useBrand ? brand.blockBg : t.cardBg,
@@ -2535,74 +2477,155 @@ export default function RhPrestadoresPage() {
             </div>
           )}
         </div>
-      </div>
 
-      <div
-        role="tablist"
-        aria-label="Módulos de gestão de colaboradores"
-        style={{
-          display: "flex",
-          gap: 6,
-          marginBottom: 12,
-          flexWrap: "wrap",
-          paddingBottom: 2,
-        }}
-      >
-        {ABAS_PAGINA_RH_FUNC.map((tb) => {
-          const ativa = abaPagina === tb.key;
-          return (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={idTabPagina(tb.key)}
-              aria-selected={ativa}
-              aria-controls={panelPaginaRhId}
-              tabIndex={ativa ? 0 : -1}
-              onClick={() => setAbaPagina(tb.key)}
+        <div
+          style={{
+            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            border: "1px solid rgba(245, 158, 11, 0.35)",
+            borderRadius: 18,
+            padding: 20,
+            boxShadow: cardShadow,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#f59e0b",
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              fontFamily: FONT.body,
+              marginBottom: 6,
+            }}
+          >
+            <AlertCircle size={13} aria-hidden />
+            Revisão cadastral pendente
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#f59e0b", fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+            {resumoPrestadoresCards.revisaoPendente.length}
+          </div>
+          {resumoPrestadoresCards.revisaoPendente.length === 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#22c55e", fontFamily: FONT.body }}>
+              <CheckCircle2 size={14} aria-hidden />
+              Todos os cadastros filtrados estão em dia na revisão de 6 meses.
+            </div>
+          ) : (
+            <div
               style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                background: ativa ? tabActiveBgPagina : (t.inputBg ?? t.cardBg),
-                color: ativa ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                maxHeight: 220,
+                overflow: "auto",
               }}
             >
-              {tb.label}
-            </button>
-          );
-        })}
+              {resumoPrestadoresCards.revisaoPendente.map((row) => (
+                <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                  {row.nome}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 18 }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={filterBarSection(false)}>
+            <FiltroBarCampoSelect
+              id="rh-filtro-dir"
+              value={filtroDiretoria}
+              onChange={setFiltroDiretoria}
+              options={opcoesFiltroDiretoria}
+              icon={FilterBarIcons.diretoria}
+              ariaLabel="Diretorias"
+              todasLabel="Todas Diretorias"
+            />
+            <FiltroBarCampoSelect
+              id="rh-filtro-ger"
+              value={filtroGerencia}
+              onChange={setFiltroGerencia}
+              options={opcoesFiltroGerencia}
+              icon={<Layers size={15} strokeWidth={2} aria-hidden="true" />}
+              ariaLabel="Gerências"
+              todasLabel="Todas Gerências"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-setor"
+              value={filtroSetor}
+              onChange={setFiltroSetor}
+              options={opcoesFiltroSetor}
+              icon={FilterBarIcons.time}
+              ariaLabel="Setores"
+              todasLabel="Todos Setores"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-contrato"
+              value={filtroContrato}
+              onChange={(v) => setFiltroContrato(v as typeof filtroContrato)}
+              options={TIPOS_CONTRATO}
+              icon={<FileSignature size={15} strokeWidth={2} aria-hidden="true" />}
+              ariaLabel="Tipos de contrato"
+              todasValue="todos"
+              todasLabel="Todos Contratos"
+            />
+            <FiltroBarCampoSelect
+              id="rh-func-status"
+              value={filtroStatus}
+              onChange={(v) => setFiltroStatus(v as FiltroStatusPrestador)}
+              options={[]}
+              extraOptions={PRESTADOR_STATUS_FILTRO_EXTRA}
+              icon={FilterBarIcons.status}
+              ariaLabel="Status"
+              todasValue="disponiveis"
+              todasLabel="Todos Status"
+            />
+          </div>
+          <div style={filterBarSection(true)}>
+            <BarraPesquisaPagina
+              id="rh-func-busca"
+              value={busca}
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.nomeCpfEmail}
+              aria-label="Pesquisar por nome, CPF ou e-mail"
+              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
+            />
+          </div>
+          <div role="tablist" aria-label="Módulos de gestão de colaboradores" style={filterBarSection(true)}>
+            {ABAS_PAGINA_RH_FUNC.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.key}
+                id={idTabPagina(tb.key)}
+                active={abaPagina === tb.key}
+                aria-controls={panelPaginaRhId}
+                onClick={() => setAbaPagina(tb.key)}
+                onKeyDown={(e) =>
+                  handleFiltroBarTabsArrowKeyDown(
+                    e,
+                    ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                    tb.key,
+                    setAbaPagina,
+                    "rh-gest-func-pag-",
+                  )
+                }
+                icon={iconAbaPagina(tb.key)}
+              >
+                {tb.label}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
           {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-            <button
-              type="button"
-              onClick={abrirNovo}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              <Plus size={16} aria-hidden />
+            <CtaCriarButton type="button" onClick={abrirNovo}>
               Novo Prestador
-            </button>
+            </CtaCriarButton>
           ) : null}
           {abaPagina === "anotacoes" && perm.canEditarOk ? (
             <button
@@ -2635,7 +2658,7 @@ export default function RhPrestadoresPage() {
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              minWidth: tabelaSemSalario ? 680 : 820,
+              minWidth: tabelaSemSalario ? 620 : 720,
             }}
           >
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
@@ -2644,24 +2667,6 @@ export default function RhPrestadoresPage() {
                 <SortTableTh<PrestadoresSortCol>
                   label="Nome"
                   col="nome"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Diretoria"
-                  col="diretoria"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Gerência"
-                  col="gerencia"
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
@@ -2678,8 +2683,17 @@ export default function RhPrestadoresPage() {
                   align="left"
                 />
                 <SortTableTh<PrestadoresSortCol>
-                  label="Líder imediato"
+                  label="Líder Imediato"
                   col="lider"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Data da Função"
+                  col="data_funcao"
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
@@ -2754,10 +2768,11 @@ export default function RhPrestadoresPage() {
                 </tr>
               ) : (
                 filtradaOrdenada.map((row, i) => {
-                  const { diretoria, gerencia } = orgMetaLinha(row);
+                  const nomeExibicao = primeiroUltimoNome(row.nome) || "—";
                   const liderCompleto = liderImediatoLinha(row);
                   const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                   const remCol = textoRemuneracaoColunaTabela(row);
+                  const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
                   return (
                     <tr key={row.id}>
                       <td
@@ -2769,15 +2784,27 @@ export default function RhPrestadoresPage() {
                           textOverflow: "ellipsis",
                           background: zebraStripe(i),
                         }}
-                        title={row.nome}
+                        title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
                       >
-                        {row.nome}
-                      </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={diretoria}>
-                        {diretoria}
-                      </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={gerencia}>
-                        {gerencia}
+                        {nomeExibicao}
+                        {revisaoCadastralPendenteParaFuncionario(row) ? (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              marginLeft: 8,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#f59e0b",
+                              border: "1px solid rgba(245, 158, 11, 0.45)",
+                              background: "rgba(245, 158, 11, 0.12)",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            Revisão pendente
+                          </span>
+                        ) : null}
                       </td>
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
                       <td
@@ -2785,6 +2812,9 @@ export default function RhPrestadoresPage() {
                         title={liderCompleto !== "—" ? liderCompleto : undefined}
                       >
                         {lider}
+                      </td>
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), fontVariantNumeric: "tabular-nums" }}>
+                        {dataFuncaoTxt}
                       </td>
                       {!tabelaSemSalario ? (
                         <td
@@ -2902,46 +2932,38 @@ export default function RhPrestadoresPage() {
               paddingBottom: 2,
             }}
           >
-            {abasModalDef.map((tb) => {
-              const ativa = abaModal === tb.key;
-              return (
-                <button
-                  key={tb.key}
-                  type="button"
-                  role="tab"
-                  id={idTabModal(tb.key)}
-                  aria-selected={ativa}
-                  aria-controls={idPanelModal(tb.key)}
-                  tabIndex={ativa ? 0 : -1}
-                  onClick={() => setAbaModal(tb.key)}
-                  aria-label={
-                    modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
-                      ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
-                      : tb.label
-                  }
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: 20,
-                    flexShrink: 0,
-                    border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                    background: ativa ? tabActiveBgModal : (t.inputBg ?? t.cardBg),
-                    color: ativa ? brand.primary : t.textMuted,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  {tb.label}
-                  {modalForm !== "ver" && errosPorAbaModal[tb.key] > 0 ? (
-                    <span style={{ color: "#e84025", fontWeight: 800 }} aria-hidden>
-                      {" "}
-                      · {errosPorAbaModal[tb.key]}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
+            {abasModalDef.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.key}
+                id={idTabModal(tb.key)}
+                active={abaModal === tb.key}
+                aria-controls={idPanelModal(tb.key)}
+                onClick={() => setAbaModal(tb.key)}
+                onKeyDown={(e) =>
+                  handleFiltroBarTabsArrowKeyDown(
+                    e,
+                    abasModalDef.map((x) => x.key),
+                    tb.key,
+                    setAbaModal,
+                    "rh-func-tab-",
+                  )
+                }
+                icon={iconAbaModal(tb.key)}
+                aria-label={
+                  modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
+                    ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
+                    : undefined
+                }
+              >
+                {tb.label}
+                {modalForm !== "ver" && errosPorAbaModal[tb.key] > 0 ? (
+                  <span style={{ color: "#e84025", fontWeight: 800 }} aria-hidden>
+                    {" "}
+                    · {errosPorAbaModal[tb.key]}
+                  </span>
+                ) : null}
+              </FiltroBarTabButton>
+            ))}
           </div>
 
           {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && erroGlobal ? (
@@ -2997,6 +3019,38 @@ export default function RhPrestadoresPage() {
           >
             {abaModal === "pessoais" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                {leitura && snapshotEdicao && prestadorExigeRevisaoCadastral(snapshotEdicao.status) ? (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      marginBottom: 12,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${revisaoCadastralPendenteParaFuncionario(snapshotEdicao) ? "rgba(245, 158, 11, 0.45)" : t.cardBorder}`,
+                      background: revisaoCadastralPendenteParaFuncionario(snapshotEdicao)
+                        ? "rgba(245, 158, 11, 0.1)"
+                        : t.inputBg,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                      color: t.text,
+                    }}
+                  >
+                    <strong>Revisão cadastral (prestador):</strong>{" "}
+                    {cadastroRevisaoJaRegistradaPeloPrestador(snapshotEdicao.cadastro_revisado_em)
+                      ? `última em ${fmtDataIsoPtBr(String(snapshotEdicao.cadastro_revisado_em).slice(0, 10))}`
+                      : `primeira revisão pendente — prazo desde cadastro em ${fmtDataIsoPtBr(String(snapshotEdicao.created_at).slice(0, 10))}`}
+                    {snapshotEdicao.cadastro_revisao_tipo === "sem_alteracao"
+                      ? " — declarada sem alterações"
+                      : snapshotEdicao.cadastro_revisao_tipo === "alteracao"
+                        ? " — com atualização de dados/documentos"
+                        : ""}
+                    {revisaoCadastralPendenteParaFuncionario(snapshotEdicao) ? (
+                      <span style={{ color: "#f59e0b", fontWeight: 700 }}> · Pendente (ciclo 6 meses)</span>
+                    ) : (
+                      <span style={{ color: "#22c55e", fontWeight: 600 }}> · Em dia</span>
+                    )}
+                  </div>
+                ) : null}
                 <div style={{ marginBottom: 10 }}>
                   {lblReqCad("f-nome", "Nome completo")}
                   <input
@@ -4396,14 +4450,13 @@ export default function RhPrestadoresPage() {
             </div>
             <div style={{ marginBottom: 10 }}>
               {lblReq("rt-busca", "Participantes")}
-              <input
+              <BarraPesquisaPagina
                 id="rt-busca"
-                type="search"
                 value={rtBusca}
-                onChange={(e) => setRtBusca(e.target.value)}
-                placeholder="Digite o nome para buscar"
-                style={inputStyle}
+                onChange={setRtBusca}
+                placeholder={FILTER_SEARCH_STAFF}
                 aria-label="Pesquisar funcionários para adicionar como participantes"
+                wrapperStyle={{ width: "100%", marginBottom: 0 }}
               />
               {rtBusca.trim() ? (
                 <div

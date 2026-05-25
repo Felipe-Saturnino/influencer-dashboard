@@ -1,9 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Loader2, Megaphone, MessagesSquare, Pin, SlidersHorizontal } from "lucide-react";
-import { stripHtmlText } from "../../../lib/portalRhWorkflow";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  Banknote,
+  CalendarDays,
+  FileText,
+  Gift,
+  LayoutGrid,
+  Loader2,
+  Megaphone,
+  MessagesSquare,
+  Pin,
+  Scale,
+  Shield,
+  SlidersHorizontal,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
+import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
-import { GerenciamentoPostagens } from "./GerenciamentoPostagens";
-import { buildMesesCarrossel, itemNoMesCarrossel } from "./portalRhCarrossel";
+import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
+import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, PoliticaCard, RhTalkCard } from "./PortalRhCards";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
@@ -11,11 +26,13 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
-
-type RhPostagemStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
 
 function isPostagemPublica(status: RhPostagemStatus | string | null | undefined): boolean {
   return !status || status === "publicado";
@@ -140,61 +157,91 @@ function receiptKey(ct: string, id: string): string {
   return `${ct}:${id}`;
 }
 
+const ERRO_CARREGAR_PORTAL =
+  "Não foi possível carregar o portal. Se o problema persistir, contate o suporte.";
+
+function tabsPortalRhKeys(canEditarOk: boolean): AbaPortal[] {
+  const keys: AbaPortal[] = ["comunicados", "politicas", "rhtalks"];
+  if (canEditarOk) keys.push("gerenciamento");
+  return keys;
+}
+
+function onPortalRhTabsKeyDown(
+  e: KeyboardEvent,
+  abaAtiva: AbaPortal,
+  setAba: (key: AbaPortal) => void,
+  canEditarOk: boolean,
+) {
+  const tabs = tabsPortalRhKeys(canEditarOk);
+  const idx = tabs.indexOf(abaAtiva);
+  if (idx < 0) return;
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    const next = tabs[(idx + 1) % tabs.length];
+    setAba(next);
+    document.getElementById(`tab-rh-portal-${next}`)?.focus();
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+    setAba(prev);
+    document.getElementById(`tab-rh-portal-${prev}`)?.focus();
+  }
+}
+
+const SUBTAB_ICONS: Record<string, ReactNode> = {
+  todos: <LayoutGrid {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  urgente: <TriangleAlert {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  geral: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  pagamento: <Wallet {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  eventos: <CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  conduta: <Scale {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  seguranca: <Shield {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  bonificacao: <Gift {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  folha_pagamento: <Banknote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 function FiltroSubtabPills({
   filtroAtivo,
   onFiltro,
   configs,
   categorias,
-  t,
 }: {
   filtroAtivo: string;
   onFiltro: (key: string) => void;
   configs: SubtabCategoriaConfig[];
   categorias: RhPortalCategoria[];
-  t: ReturnType<typeof useApp>["theme"];
 }) {
-  const pillBase = (ativo: boolean, accent?: string) => ({
-    padding: "8px 14px",
-    borderRadius: 999,
-    border: ativo
-      ? accent
-        ? `1px solid ${accent}`
-        : "1px solid var(--brand-primary, #7c3aed)"
-      : `1px solid ${t.cardBorder}`,
-    background: ativo
-      ? accent
-        ? `${accent}22`
-        : "color-mix(in srgb, var(--brand-primary, #7c3aed) 14%, transparent)"
-      : t.cardBg,
-    color: t.text,
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-  });
+  const tabKeys = ["todos", ...configs.map((c) => c.key)] as const;
 
   return (
     <div
-      role="group"
+      role="tablist"
       aria-label="Filtrar por categoria"
-      style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 0 }}
+      style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", width: "100%" }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, onFiltro, (k) => `tab-rh-portal-cat-${k}`)}
     >
-      <button type="button" aria-pressed={filtroAtivo === "todos"} onClick={() => onFiltro("todos")} style={pillBase(filtroAtivo === "todos")}>
+      <FiltroBarTabButton
+        id="tab-rh-portal-cat-todos"
+        active={filtroAtivo === "todos"}
+        onClick={() => onFiltro("todos")}
+        icon={SUBTAB_ICONS.todos}
+      >
         Todos
-      </button>
+      </FiltroBarTabButton>
       {configs.map((cfg) => {
         const cat = resolveCategoriaTab(categorias, cfg);
         const ativo = filtroAtivo === cfg.key;
         return (
-          <button
+          <FiltroBarTabButton
             key={cfg.key}
-            type="button"
-            aria-pressed={ativo}
+            id={`tab-rh-portal-cat-${cfg.key}`}
+            active={ativo}
             onClick={() => onFiltro(cfg.key)}
-            style={pillBase(ativo, cat?.accent_hex)}
+            activeColor={cat?.accent_hex}
+            icon={SUBTAB_ICONS[cfg.key] ?? <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
           >
             {cfg.label}
-          </button>
+          </FiltroBarTabButton>
         );
       })}
     </div>
@@ -226,7 +273,12 @@ export default function PortalRhPage() {
   const [idxMesCom, setIdxMesCom] = useState(0);
   const [idxMesPol, setIdxMesPol] = useState(0);
   const [idxMesTalk, setIdxMesTalk] = useState(0);
+  const [idxMesGer, setIdxMesGer] = useState(0);
+  const [mesesGer, setMesesGer] = useState<MesCarrosselEntry[]>(() => buildMesesCarrossel([]));
+  const [filtroTipoGer, setFiltroTipoGer] = useState<"todos" | RhPostagemTipoUi>("todos");
+  const [filtroStatusGer, setFiltroStatusGer] = useState<"todos" | RhPostagemStatus>("todos");
   const [modoHistorico, setModoHistorico] = useState(false);
+  const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
@@ -256,17 +308,20 @@ export default function PortalRhPage() {
       supabase.from("rh_portal_rh_talk").select("*").order("data_reuniao", { ascending: false }),
     ]);
 
-    if (catRes.error) setErro(catRes.error.message);
-    else if (comRes.error) setErro(comRes.error.message);
-    else if (docRes.error) setErro(docRes.error.message);
-    else if (talkRes.error) setErro(talkRes.error.message);
+    if (catRes.error || comRes.error || docRes.error || talkRes.error) {
+      const err = catRes.error ?? comRes.error ?? docRes.error ?? talkRes.error;
+      console.error("[PortalRh] carregar:", err);
+      setErro(ERRO_CARREGAR_PORTAL);
+      setLoading(false);
+      return;
+    }
 
     const cats = (catRes.data ?? []) as RhPortalCategoria[];
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
     setCategoriasPol(cats.filter((c) => c.scope === "politica"));
 
-    const visivelPortal = (status: RhPostagemStatus | null | undefined) =>
-      isPostagemPublica(status) || status === "arquivado";
+    /** Abas de leitura: nunca exibir arquivados — só conteúdo publicado. */
+    const visivelPortal = (status: RhPostagemStatus | null | undefined) => isPostagemPublica(status);
 
     const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => visivelPortal(c.status));
     setComunicados(comRows);
@@ -358,11 +413,11 @@ export default function PortalRhPage() {
     [comunicados],
   );
   const mesesPol = useMemo(
-    () => buildMesesCarrossel(documentos.map((d) => ({ iso: d.published_at ?? d.updated_at }))),
+    () => buildMesesCarrossel(documentos.map((d) => ({ iso: d.published_at }))),
     [documentos],
   );
   const mesesTalksDisponiveis = useMemo(
-    () => buildMesesCarrossel(talks.map((tk) => ({ iso: tk.data_reuniao }))),
+    () => buildMesesCarrossel(talks.map((tk) => ({ iso: tk.published_at }))),
     [talks],
   );
 
@@ -375,6 +430,89 @@ export default function PortalRhPage() {
   useEffect(() => {
     setIdxMesTalk((i) => Math.min(i, Math.max(0, mesesTalksDisponiveis.length - 1)));
   }, [mesesTalksDisponiveis.length]);
+  useEffect(() => {
+    setIdxMesGer((i) => Math.min(i, Math.max(0, mesesGer.length - 1)));
+  }, [mesesGer.length]);
+
+  const handleRegisterAbrirCriar = useCallback((fn: () => void) => {
+    abrirCriarGerenciamentoRef.current = fn;
+  }, []);
+
+  const handleMesesGerChange = useCallback((meses: MesCarrosselEntry[]) => {
+    setMesesGer(meses);
+  }, []);
+
+  const filtroCarrossel = useMemo(() => {
+    switch (aba) {
+      case "politicas":
+        return { meses: mesesPol, idx: idxMesPol, setIdx: setIdxMesPol };
+      case "rhtalks":
+        return { meses: mesesTalksDisponiveis, idx: idxMesTalk, setIdx: setIdxMesTalk };
+      case "gerenciamento":
+        return { meses: mesesGer, idx: idxMesGer, setIdx: setIdxMesGer };
+      default:
+        return { meses: mesesCom, idx: idxMesCom, setIdx: setIdxMesCom };
+    }
+  }, [aba, mesesCom, mesesPol, mesesTalksDisponiveis, mesesGer, idxMesCom, idxMesPol, idxMesTalk, idxMesGer]);
+
+  const buscaFiltroMeta = useMemo(() => {
+    switch (aba) {
+      case "politicas":
+        return {
+          placeholder: PAGE_SEARCH.portalRh,
+          ariaLabel: "Pesquisar políticas por assunto ou descrição",
+        };
+      case "rhtalks":
+        return {
+          placeholder: PAGE_SEARCH.portalRh,
+          ariaLabel: "Pesquisar RH Talks por assunto ou descrição",
+        };
+      case "gerenciamento":
+        return {
+          placeholder: PAGE_SEARCH.portalRh,
+          ariaLabel: "Pesquisar postagens por palavras-chave",
+        };
+      default:
+        return {
+          placeholder: PAGE_SEARCH.portalRh,
+          ariaLabel: "Pesquisar comunicados por assunto ou descrição",
+        };
+    }
+  }, [aba]);
+
+  const linhaSubabasFiltro = useMemo(() => {
+    if (aba === "comunicados") {
+      return (
+        <FiltroSubtabPills
+          filtroAtivo={filtroCatCom}
+          onFiltro={setFiltroCatCom}
+          configs={SUBTABS_COMUNICADO}
+          categorias={categoriasCom}
+        />
+      );
+    }
+    if (aba === "politicas") {
+      return (
+        <FiltroSubtabPills
+          filtroAtivo={filtroCatPol}
+          onFiltro={setFiltroCatPol}
+          configs={SUBTABS_POLITICA}
+          categorias={categoriasPol}
+        />
+      );
+    }
+    if (aba === "gerenciamento" && perm.canEditarOk) {
+      return (
+        <GerenciamentoPostagensFiltrosTipoStatus
+          filtroTipo={filtroTipoGer}
+          onFiltroTipoChange={setFiltroTipoGer}
+          filtroStatus={filtroStatusGer}
+          onFiltroStatusChange={setFiltroStatusGer}
+        />
+      );
+    }
+    return null;
+  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, categoriasPol, filtroTipoGer, filtroStatusGer, perm.canEditarOk]);
 
   useEffect(() => {
     if (comunicados.length > 0 && mesesCom.length > 0) setIdxMesCom(mesesCom.length - 1);
@@ -396,7 +534,7 @@ export default function PortalRhPage() {
 
   const comunicadosLista = useMemo(() => {
     let list = comunicados.filter((c) => !c.is_pinned);
-    list = list.filter((c) => (modoHistorico ? c.status === "arquivado" : isPostagemPublica(c.status)));
+    list = list.filter((c) => isPostagemPublica(c.status));
     if (!modoHistorico) {
       const mesSel = mesesCom[idxMesCom];
       list = list.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
@@ -443,10 +581,10 @@ export default function PortalRhPage() {
   ]);
 
   const documentosFiltrados = useMemo(() => {
-    let list = documentos.filter((d) => (modoHistorico ? d.status === "arquivado" : isPostagemPublica(d.status)));
+    let list = documentos.filter((d) => isPostagemPublica(d.status));
     if (!modoHistorico) {
       const mesSel = mesesPol[idxMesPol];
-      list = list.filter((d) => itemNoMesCarrossel(d.published_at ?? d.updated_at, mesSel));
+      list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
     }
     if (filtroCatPol !== "todos") {
       const cfg = SUBTABS_POLITICA.find((x) => x.key === filtroCatPol);
@@ -466,10 +604,10 @@ export default function PortalRhPage() {
   }, [documentos, filtroCatPol, modoHistorico, mesesPol, idxMesPol, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
   const talksFiltrados = useMemo(() => {
-    let list = talks.filter((tk) => (modoHistorico ? tk.status === "arquivado" : isPostagemPublica(tk.status)));
+    let list = talks.filter((tk) => isPostagemPublica(tk.status));
     if (!modoHistorico) {
       const mesSel = mesesTalksDisponiveis[idxMesTalk];
-      list = list.filter((tk) => itemNoMesCarrossel(tk.data_reuniao, mesSel));
+      list = list.filter((tk) => itemNoMesCarrossel(tk.published_at, mesSel));
     }
     if (buscaDeb) {
       list = list.filter(
@@ -581,7 +719,7 @@ export default function PortalRhPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, background: t.bg }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -594,48 +732,55 @@ export default function PortalRhPage() {
         subtitle="Comunicados oficiais, políticas internas e atas das RH Talks."
       />
 
-      <div role="tablist" aria-label="Seções do portal de RH" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-        {(
-          [
-            { key: "comunicados" as const, label: "Comunicados", Icon: Megaphone },
-            { key: "politicas" as const, label: "Políticas e normativas", Icon: FileText },
-            { key: "rhtalks" as const, label: "RH Talks", Icon: MessagesSquare },
-            ...(perm.canEditarOk
-              ? [{ key: "gerenciamento" as const, label: "Gerenciamento de Postagens", Icon: SlidersHorizontal }]
-              : []),
-          ] as const
-        ).map(({ key, label, Icon }) => {
-          const ativa = aba === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              id={`tab-rh-portal-${key}`}
-              aria-selected={ativa}
-              aria-controls={`panel-rh-portal-${key}`}
-              onClick={() => setAba(key)}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: ativa ? `1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 45%, transparent)` : `1px solid ${t.cardBorder}`,
-                background: ativa ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : t.cardBg,
-                color: ativa ? t.text : t.textMuted,
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <Icon size={16} aria-hidden />
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <PortalRhBlocoFiltros
+        meses={filtroCarrossel.meses}
+        idxMes={filtroCarrossel.idx}
+        onIdxMesChange={filtroCarrossel.setIdx}
+        modoHistorico={modoHistorico}
+        onModoHistoricoChange={setModoHistorico}
+        busca={busca}
+        onBuscaChange={setBusca}
+        buscaPlaceholder={buscaFiltroMeta.placeholder}
+        buscaAriaLabel={buscaFiltroMeta.ariaLabel}
+        linhaAbas={
+          <div
+            role="tablist"
+            aria-label="Seções do portal de RH"
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
+            onKeyDown={(e) => onPortalRhTabsKeyDown(e, aba, setAba, perm.canEditarOk)}
+          >
+            {(
+              [
+                { key: "comunicados" as const, label: "Comunicados", Icon: Megaphone },
+                { key: "politicas" as const, label: "Políticas e normativas", Icon: FileText },
+                { key: "rhtalks" as const, label: "RH Talks", Icon: MessagesSquare },
+                ...(perm.canEditarOk
+                  ? [{ key: "gerenciamento" as const, label: "Gerenciamento de Postagens", Icon: SlidersHorizontal }]
+                  : []),
+              ] as const
+            ).map(({ key, label, Icon }) => (
+              <FiltroBarTabButton
+                key={key}
+                id={`tab-rh-portal-${key}`}
+                active={aba === key}
+                aria-controls={`panel-rh-portal-${key}`}
+                onClick={() => setAba(key)}
+                icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                {label}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+        }
+        linhaSubabas={linhaSubabasFiltro ?? undefined}
+        linhaAposSubabas={
+          aba === "gerenciamento" && perm.canEditarOk ? (
+            <CtaCriarButton type="button" onClick={() => abrirCriarGerenciamentoRef.current?.()}>
+              Nova Postagem
+            </CtaCriarButton>
+          ) : undefined
+        }
+      />
 
       {erro ? (
         <div role="alert" style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
@@ -653,6 +798,14 @@ export default function PortalRhPage() {
           categoriasCom={categoriasCom}
           categoriasPol={categoriasPol}
           onDadosAlterados={() => void carregar()}
+          buscaDeb={buscaDeb}
+          modoHistorico={modoHistorico}
+          idxMes={idxMesGer}
+          mesesDisponiveis={mesesGer}
+          filtroTipo={filtroTipoGer}
+          filtroStatus={filtroStatusGer}
+          onMesesCarrosselChange={handleMesesGerChange}
+          onRegisterAbrirCriar={handleRegisterAbrirCriar}
         />
       ) : (
         <>
@@ -660,30 +813,11 @@ export default function PortalRhPage() {
             role="tabpanel"
             id={`panel-rh-portal-${aba}`}
             aria-labelledby={`tab-rh-portal-${aba}`}
+            tabIndex={0}
             style={{ marginTop: 4 }}
           >
             {aba === "comunicados" ? (
               <div>
-                <PortalRhBlocoFiltros
-                  meses={mesesCom}
-                  idxMes={idxMesCom}
-                  onIdxMesChange={setIdxMesCom}
-                  modoHistorico={modoHistorico}
-                  onModoHistoricoChange={setModoHistorico}
-                  busca={busca}
-                  onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
-                  buscaAriaLabel="Pesquisar comunicados por assunto ou descrição"
-                  linhaSubabas={
-                    <FiltroSubtabPills
-                      filtroAtivo={filtroCatCom}
-                      onFiltro={setFiltroCatCom}
-                      configs={SUBTABS_COMUNICADO}
-                      categorias={categoriasCom}
-                      t={t}
-                    />
-                  }
-                />
                 {comunicadoPinned ? (
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -708,11 +842,9 @@ export default function PortalRhPage() {
 
                 {comunicadosLista.length === 0 && !comunicadoPinned ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem comunicados arquivados."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : comunicadosLista.length === 0 ? (
                   <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -746,33 +878,11 @@ export default function PortalRhPage() {
               </div>
             ) : aba === "politicas" ? (
               <div>
-                <PortalRhBlocoFiltros
-                  meses={mesesPol}
-                  idxMes={idxMesPol}
-                  onIdxMesChange={setIdxMesPol}
-                  modoHistorico={modoHistorico}
-                  onModoHistoricoChange={setModoHistorico}
-                  busca={busca}
-                  onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
-                  buscaAriaLabel="Pesquisar políticas por assunto ou descrição"
-                  linhaSubabas={
-                    <FiltroSubtabPills
-                      filtroAtivo={filtroCatPol}
-                      onFiltro={setFiltroCatPol}
-                      configs={SUBTABS_POLITICA}
-                      categorias={categoriasPol}
-                      t={t}
-                    />
-                  }
-                />
                 {documentosFiltrados.length === 0 ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem políticas arquivadas."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -800,31 +910,18 @@ export default function PortalRhPage() {
               </div>
             ) : (
               <div>
-                <PortalRhBlocoFiltros
-                  meses={mesesTalksDisponiveis}
-                  idxMes={idxMesTalk}
-                  onIdxMesChange={setIdxMesTalk}
-                  modoHistorico={modoHistorico}
-                  onModoHistoricoChange={setModoHistorico}
-                  busca={busca}
-                  onBuscaChange={setBusca}
-                  buscaPlaceholder="Pesquisar por assunto ou descrição"
-                  buscaAriaLabel="Pesquisar RH Talks por assunto ou descrição"
-                />
                 {talksFiltrados.length === 0 ? (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                    {modoHistorico
-                      ? "Sem RH Talks arquivados."
-                      : buscaDeb
-                        ? "Nenhum resultado para os termos pesquisados."
-                        : "Sem dados para o período selecionado."}
+                    {buscaDeb
+                      ? "Nenhum resultado para os termos pesquisados."
+                      : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {talksFiltrados.map((tk) => {
                       const n = talkCounts[tk.id] ?? 0;
                       const restrito = n > 0 && !talkParticipantTalkIds.has(tk.id);
-                      const dataPub = tk.published_at ?? tk.data_reuniao;
+                      const dataPub = tk.published_at;
                       return (
                         <li key={tk.id}>
                           <RhTalkCard
@@ -882,19 +979,6 @@ export default function PortalRhPage() {
         />
       ) : null}
 
-      <style>{`
-        .sr-only {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          padding: 0;
-          margin: -1px;
-          overflow: hidden;
-          clip: rect(0, 0, 0, 0);
-          white-space: nowrap;
-          border: 0;
-        }
-      `}</style>
     </div>
   );
 }

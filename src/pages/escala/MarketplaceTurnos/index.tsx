@@ -1,10 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { List, MoreHorizontal, Store } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, List, MoreHorizontal, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { DashboardPageHeader, SectionTitle } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroCalendarioTimeSelect,
+  FiltroBarTabButton,
+  FiltroHistoricoButton,
+  FiltroSolicitacoesTipoAcaoSelect,
+  SectionTitle,
+} from "../../../components/dashboard";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
@@ -22,9 +32,12 @@ import {
   getMesesDisponiveisEscalaCarrossel,
   idxMesInicialEscalaCarrossel,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-import { MesCarrosselPeriodo } from "../components/MesCarrosselPeriodo";
-
 const MOCK_OFERTAS: LinhaOfertaMarketplace[] = [];
+
+const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "todos").map((o) => ({
+  id: o.value,
+  name: o.label,
+}));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 
@@ -66,6 +79,12 @@ export default function EscalaMarketplaceTurnosPage() {
   const hoje = useMemo(() => new Date(), []);
   const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
   const [idxMes, setIdxMes] = useState(() => idxMesInicialEscalaCarrossel(getMesesDisponiveisEscalaCarrossel(new Date()), new Date()));
+  const [historico, setHistorico] = useState(false);
+
+  const idxMesInicial = useMemo(
+    () => idxMesInicialEscalaCarrossel(mesesDisponiveis, hoje),
+    [mesesDisponiveis, hoje],
+  );
 
   useEffect(() => {
     setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
@@ -73,14 +92,24 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const [aba, setAba] = useState<"todas" | "minhas">("todas");
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
-  const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
+  const [filtroTimeIdsTodas, setFiltroTimeIdsTodas] = useState<string[]>([]);
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
 
+  const filtroTimeTodas = useMemo((): EscalaTimeFiltro => {
+    if (filtroTimeIdsTodas.length === 0) return "todos";
+    return filtroTimeIdsTodas[0] as EscalaTimeFiltro;
+  }, [filtroTimeIdsTodas]);
+
   const linhasMes = useMemo(() => {
+    if (historico) return MOCK_OFERTAS;
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
     return filtrarPorMesEscala(MOCK_OFERTAS, m.ano, m.mes);
-  }, [mesesDisponiveis, idxMes]);
+  }, [mesesDisponiveis, idxMes, historico]);
+
+  const mesSelecionado = mesesDisponiveis[idxMes];
+  const carrosselPrimeiro = idxMes === 0;
+  const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
 
   const linhasVendasTodas = useMemo(() => {
     return linhasMes.filter(
@@ -103,17 +132,13 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const porStatus = (s: OfertaStatusUi) => minhasBase.filter((r) => r.status === s);
 
-  const selectStyle = {
-    padding: "8px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    minWidth: 160,
-    cursor: "pointer" as const,
-  };
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder
+      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+      : {}),
+  });
 
   if (perm.loading) {
     return (
@@ -131,91 +156,82 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }
 
-  const blocoFiltrosCard = (
-    <div
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${t.cardBorder}`,
-        background: brand.blockBg,
-        padding: "14px 18px",
-        marginBottom: 18,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 14,
-        alignItems: "center",
-      }}
-    >
-      <MesCarrosselPeriodo
-        mesesDisponiveis={mesesDisponiveis}
-        idxMes={idxMes}
-        onIdxMesChange={setIdxMes}
-        t={t}
-        brand={{ blockBg: brand.blockBg, cardBorder: t.cardBorder }}
+  const blocoCarrosselHistorico = (
+    <>
+      <button
+        type="button"
+        aria-label="Mês anterior"
+        style={getCarouselBtnNavStyle(t, historico || carrosselPrimeiro)}
+        onClick={() => {
+          setHistorico(false);
+          setIdxMes((i) => Math.max(0, i - 1));
+        }}
+        disabled={historico || carrosselPrimeiro}
+      >
+        <ChevronLeft size={14} aria-hidden="true" />
+      </button>
+      <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
+        {historico ? "Todo o período" : (mesSelecionado?.label ?? "—")}
+      </span>
+      <button
+        type="button"
+        aria-label="Próximo mês"
+        style={getCarouselBtnNavStyle(t, historico || carrosselUltimo)}
+        onClick={() => {
+          setHistorico(false);
+          setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1));
+        }}
+        disabled={historico || carrosselUltimo}
+      >
+        <ChevronRight size={14} aria-hidden="true" />
+      </button>
+      <FiltroHistoricoButton
+        active={historico}
+        onClick={() => {
+          if (historico) {
+            setHistorico(false);
+            setIdxMes(idxMesInicial >= 0 ? idxMesInicial : Math.max(0, mesesDisponiveis.length - 1));
+          } else {
+            setHistorico(true);
+          }
+        }}
       />
-      {aba === "todas" && (
-        <>
-          <select
-            aria-label="Filtrar por tipo de ação"
-            value={filtroTipoTodas}
-            onChange={(e) => setFiltroTipoTodas(e.target.value as EscalaAcaoFiltro)}
-            style={selectStyle}
-          >
-            {ESCALA_ACAO_TIPO_OPCOES_TODAS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar por time"
-            value={filtroTimeTodas}
-            onChange={(e) => setFiltroTimeTodas(e.target.value as EscalaTimeFiltro)}
-            style={selectStyle}
-          >
-            {ESCALA_TIME_OPCOES.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </>
-      )}
-      {aba === "minhas" && (
-        <>
-          <select
-            aria-label="Filtrar por tipo de ação"
+    </>
+  );
+
+  const blocoFiltrosLinha1 =
+    aba === "todas" ? (
+      <>
+        {blocoCarrosselHistorico}
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoTodas}
+          onChange={setFiltroTipoTodas}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
+        />
+        <FiltroCalendarioTimeSelect
+          selected={filtroTimeIdsTodas}
+          onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
+          items={MARKETPLACE_TIME_ITEMS}
+        />
+      </>
+    ) : (
+      <div className="app-marketplace-filtro-minhas">
+        <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+        <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
+          {blocoCarrosselHistorico}
+          <FiltroSolicitacoesTipoAcaoSelect
             value={filtroTipoMinhas}
-            onChange={(e) => setFiltroTipoMinhas(e.target.value as EscalaAcaoFiltro)}
-            style={selectStyle}
-          >
-            {ESCALA_ACAO_TIPO_OPCOES_MINHAS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            style={{
-              padding: "8px 18px",
-              borderRadius: 10,
-              border: "none",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-              color: "#fff",
-              background: brand.useBrand
-                ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                : "linear-gradient(135deg, #4a2082, #1e36f8)",
-            }}
-          >
+            onChange={setFiltroTipoMinhas}
+            opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
+          />
+        </div>
+        <div className="app-marketplace-filtro-minhas__cta">
+          <button type="button" aria-label="Ofertar" style={getCtaCriarButtonStyle(brand)}>
             Ofertar
           </button>
-        </>
-      )}
-    </div>
-  );
+        </div>
+      </div>
+    );
 
   function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
     if (rows.length === 0) {
@@ -537,64 +553,34 @@ export default function EscalaMarketplaceTurnosPage() {
         t={t}
       />
 
-      <div role="tablist" aria-label="Vista do marketplace" style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          role="tab"
-          id="tab-mkt-todas"
-          aria-selected={aba === "todas"}
-          aria-controls="panel-mkt-todas"
-          onClick={() => setAba("todas")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${aba === "todas" ? brand.accent : t.cardBorder}`,
-            background:
-              aba === "todas"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: aba === "todas" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: aba === "todas" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Todas as Ofertas
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="tab-mkt-minhas"
-          aria-selected={aba === "minhas"}
-          aria-controls="panel-mkt-minhas"
-          onClick={() => setAba("minhas")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${aba === "minhas" ? brand.accent : t.cardBorder}`,
-            background:
-              aba === "minhas"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: aba === "minhas" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: aba === "minhas" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Minhas Ofertas
-        </button>
+      <div style={{ marginBottom: 18 }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
+          <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
+            <FiltroBarTabButton
+              id="tab-mkt-todas"
+              active={aba === "todas"}
+              aria-controls="panel-mkt-todas"
+              onClick={() => setAba("todas")}
+              icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Todas as Ofertas
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-mkt-minhas"
+              active={aba === "minhas"}
+              aria-controls="panel-mkt-minhas"
+              onClick={() => setAba("minhas")}
+              icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Minhas Ofertas
+            </FiltroBarTabButton>
+          </div>
+        </div>
       </div>
 
       {aba === "todas" && (
         <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
-          {blocoFiltrosCard}
           <SectionTitle icon={<List size={14} aria-hidden="true" />}>Ofertas de Vendas</SectionTitle>
           {renderTabelaVendas(linhasVendasTodas)}
           <div style={{ height: 22 }} />
@@ -605,7 +591,6 @@ export default function EscalaMarketplaceTurnosPage() {
 
       {aba === "minhas" && (
         <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
-          {blocoFiltrosCard}
           <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Interessado">
             Ofertas em análise
           </SectionTitle>

@@ -9,7 +9,7 @@ import {
   aplicarRedirecionamentoPosLoginOuHome,
 } from "../lib/rhLoginDadosCadastroDeepLink";
 import {
-  ROLES_STAFF_APENAS_PERMISSOES,
+  ROLES_SEM_RESTRICAO_ESCOPO,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
   roleParidadeInfluencer,
 } from "../lib/staffRoles";
@@ -220,8 +220,8 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
-  // Executivo, Investidor e staff Spin (Shift Leader, Service Manager, Figurino, RH): só role_permissions — sem user_scopes operadora.
-  if (role === "executivo" || role === "investidor" || ROLES_STAFF_APENAS_PERMISSOES.includes(role)) {
+  // Executivo, Investidor e staff Spin: só role_permissions — sem user_scopes operadora/influencer.
+  if (ROLES_SEM_RESTRICAO_ESCOPO.includes(role)) {
     return {
       influencersVisiveis: [],
       operadorasVisiveis: [],

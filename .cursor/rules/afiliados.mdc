@@ -6,7 +6,13 @@ globs:
 alwaysApply: false
 ---
 
-# Seção: Afiliados — Padrões de UI/UX
+# Seção Afiliados
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC — tokens **legado** nesta secção (não `--brand-action` em UI nova).
+
+---
 
 ## Identificação
 
@@ -22,24 +28,41 @@ alwaysApply: false
 
 ## Cabeçalho de página
 
-Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do componente:
+Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do componente (Brand §4):
 
 - Badge do ícone: **28×28**, `borderRadius: 8`
-- `h1`: `fontSize: 22`, uppercase, `FONT_TITLE`, cor `brand.primary`
-- Subtítulo: `FONT.body`, 13px, `t.textMuted`
+- **`title`:** igual ao `label` em `menu.ts`
+- **Subtítulo:** `FONT.body`, 13px, `t.textMuted` — uma linha; condicional por persona quando aplicável
 - Ícone: **Lucide** no JSX da página (ex.: `Users`, `Network`)
 
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `afiliados` | Afiliados | Gestão: *Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras.* · Perfil próprio: *Seu perfil de afiliado na plataforma.* |
+| `afiliados_network` | Network | Funil de prospecção e conversão de prospectos em afiliados cadastrados. |
+
 ---
 
-## CTA — Gradiente (dentro do componente)
+## CTA de criação na página (Network)
+
+- **`CtaCriarButton`** — rótulo visível **`Novo Afiliado`** (ícone `Plus` 14px no componente; ver Brand §3 e `docs/PADRAO-CTA-CRIAR.md`).
+- Modais / linha: gradiente legado via `getCtaCriarGradient` até migração — **não** duplicar `<Plus>` no markup.
+
+---
+
+## Filtro de operadora (lista Afiliados)
+
+- Na barra de chips de status: **`FiltroOperadoraSelect`** após divisor — **sem** label lateral “Operadora”.
+- Opção agregadora: **Todas Operadoras** (`pill`, `minWidth={200}`).
+
+## Filtro de status (Afiliados e Network)
+
+- Chips de status na barra: **`FiltroStatusSemanticoPill`** — Global § Filtros semânticos (visual abas Overview Spin + bolinha `STATUS_COLOR`).
+- Toggle: valor ativo ↔ agregador (`todos` em Afiliados/Network; Agenda usa `null` — regra da página).
+- **Não** usar pill 999 inline nem cor de marca no chip ativo.
 
 ```tsx
-const ctaGradient = brand.useBrand
-  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-  : "linear-gradient(135deg, #4a2082, #1e36f8)";
+import { FiltroStatusSemanticoPill } from "../../../components/dashboard";
 ```
-
----
 
 ## Estados ativos — tabs e filtros
 
@@ -64,7 +87,7 @@ Botão **Adicionar Anotação** (Network): `var(--brand-secondary)` com `brand.u
 
 ## Ajuda
 
-Fundir legado + código real em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` (`afiliados`, `afiliados_network`). **Não** documentar criação de usuário apenas em status Fechado — alinhar ao `handleSave` em Network.
+Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc` (**`titulo` = label do menu**). **Não** documentar criação de usuário apenas em status Fechado — alinhar ao `handleSave` em Network.
 
 ---
 

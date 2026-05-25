@@ -1,21 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Archive,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  History,
-  Loader2,
-  Pencil,
-  Plus,
-  Search,
-} from "lucide-react";
+import { Archive, Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   fmtDataColunaGerenciamento,
@@ -23,13 +11,16 @@ import {
   labelPoliticaFromSlug,
   registrarHistoricoStatus,
   RH_POSTAGEM_STATUS_LABEL,
+  RH_POSTAGEM_TIPO_UI_LABEL,
   stripHtmlText,
   type RhPostagemContentType,
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -80,15 +71,61 @@ function compareDataIso(a: string | null, b: string | null, dir: number): number
   return dir * (ta - tb);
 }
 
-function fmtMesAnoCarrossel(ano: number, mes: number): string {
-  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
+const ERRO_CARREGAR_GERENCIAMENTO =
+  "Não foi possível carregar as postagens. Se o problema persistir, contate o suporte.";
+const ERRO_APROVAR =
+  "Não foi possível aprovar a postagem. Se o problema persistir, contate o suporte.";
+const ERRO_ARQUIVAR =
+  "Não foi possível arquivar a postagem. Se o problema persistir, contate o suporte.";
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+const POSTAGEM_TIPO_FILTRO_OPCOES = (["comunicado", "politica", "rh_talk"] as const).map((value) => ({
+  value,
+  label: RH_POSTAGEM_TIPO_UI_LABEL[value],
+}));
+
+const POSTAGEM_STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "aprovacao", "arquivado"] as const).map(
+  (value) => ({
+    value,
+    label: RH_POSTAGEM_STATUS_LABEL[value],
+  }),
+);
+
+/** Filtros de tipo e status — renderizados no bloco de filtros da página (linha 3). */
+export function GerenciamentoPostagensFiltrosTipoStatus({
+  filtroTipo,
+  onFiltroTipoChange,
+  filtroStatus,
+  onFiltroStatusChange,
+}: {
+  filtroTipo: "todos" | RhPostagemTipoUi;
+  onFiltroTipoChange: (v: "todos" | RhPostagemTipoUi) => void;
+  filtroStatus: "todos" | RhPostagemStatus;
+  onFiltroStatusChange: (v: "todos" | RhPostagemStatus) => void;
+}) {
+  return (
+    <>
+      <FiltroBarCampoSelect
+        id="filtro-tipo-postagem-portal-rh"
+        value={filtroTipo}
+        onChange={(v) => onFiltroTipoChange(v as typeof filtroTipo)}
+        options={POSTAGEM_TIPO_FILTRO_OPCOES}
+        icon={<Newspaper size={15} strokeWidth={2} aria-hidden="true" />}
+        ariaLabel="Tipos de postagem"
+        todasValue="todos"
+        todasLabel="Todas Postagens"
+      />
+      <FiltroBarCampoSelect
+        id="filtro-status-postagem-portal-rh"
+        value={filtroStatus}
+        onChange={(v) => onFiltroStatusChange(v as typeof filtroStatus)}
+        options={POSTAGEM_STATUS_FILTRO_OPCOES}
+        icon={FilterBarIcons.status}
+        ariaLabel="Status da postagem"
+        todasValue="todos"
+        todasLabel="Todos Status"
+      />
+    </>
+  );
 }
 
 function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
@@ -110,28 +147,38 @@ export function GerenciamentoPostagens({
   categoriasCom,
   categoriasPol,
   onDadosAlterados,
+  buscaDeb,
+  modoHistorico,
+  idxMes,
+  mesesDisponiveis,
+  filtroTipo,
+  filtroStatus,
+  onMesesCarrosselChange,
+  onRegisterAbrirCriar,
 }: {
   categoriasCom: Categoria[];
   categoriasPol: Categoria[];
   onDadosAlterados: () => void;
+  buscaDeb: string;
+  modoHistorico: boolean;
+  idxMes: number;
+  mesesDisponiveis: MesCarrosselEntry[];
+  filtroTipo: "todos" | RhPostagemTipoUi;
+  filtroStatus: "todos" | RhPostagemStatus;
+  onMesesCarrosselChange: (meses: MesCarrosselEntry[]) => void;
+  onRegisterAbrirCriar?: (abrir: () => void) => void;
 }) {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<PostagemGerenciamentoRow[]>([]);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [filtroTipo, setFiltroTipo] = useState<"todos" | RhPostagemTipoUi>("todos");
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | RhPostagemStatus>("todos");
-  const [busca, setBusca] = useState("");
-  const [buscaDeb, setBuscaDeb] = useState("");
-  const [idxMes, setIdxMes] = useState(0);
-
   const [modalCriar, setModalCriar] = useState(false);
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
   const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
+  const [confirmandoArquivarId, setConfirmandoArquivarId] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -145,11 +192,6 @@ export function GerenciamentoPostagens({
       return col;
     });
   }, []);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);
-    return () => window.clearTimeout(id);
-  }, [busca]);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -170,9 +212,14 @@ export function GerenciamentoPostagens({
         .order("created_at", { ascending: false }),
     ]);
 
-    if (comRes.error) setErro(comRes.error.message);
-    else if (docRes.error) setErro(docRes.error.message);
-    else if (talkRes.error) setErro(talkRes.error.message);
+    if (comRes.error || docRes.error || talkRes.error) {
+      const err = comRes.error ?? docRes.error ?? talkRes.error;
+      console.error("[GerenciamentoPostagens] carregar:", err);
+      setErro(ERRO_CARREGAR_GERENCIAMENTO);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
 
     const userIds = new Set<string>();
     const built: PostagemGerenciamentoRow[] = [];
@@ -308,41 +355,28 @@ export function GerenciamentoPostagens({
     void carregar();
   }, [carregar]);
 
-  const mesesDisponiveis = useMemo(() => {
-    const keys = new Set<string>();
-    for (const r of rows) {
-      const d = new Date(r.createdAt);
-      keys.add(`${d.getFullYear()}-${d.getMonth()}`);
-    }
-    const entries = [...keys].map((k) => {
-      const [ano, mes] = k.split("-").map(Number);
-      return { ano, mes, label: fmtMesAnoCarrossel(ano, mes) };
+  const mesesFromRows = useMemo(
+    () => buildMesesCarrossel(rows.map((r) => ({ iso: r.publishedAt }))),
+    [rows],
+  );
+
+  useEffect(() => {
+    onMesesCarrosselChange(mesesFromRows);
+  }, [mesesFromRows, onMesesCarrosselChange]);
+
+  useEffect(() => {
+    onRegisterAbrirCriar?.(() => {
+      setEditRef(null);
+      setModalCriar(true);
     });
-    entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
-    if (entries.length) return entries;
-    const hoje = new Date();
-    return [{ ano: hoje.getFullYear(), mes: hoje.getMonth(), label: fmtMesAnoCarrossel(hoje.getFullYear(), hoje.getMonth()) }];
-  }, [rows]);
-
-  useEffect(() => {
-    if (mesesDisponiveis.length === 0) return;
-    setIdxMes((i) => Math.min(i, mesesDisponiveis.length - 1));
-  }, [mesesDisponiveis]);
-
-  useEffect(() => {
-    if (rows.length > 0 && mesesDisponiveis.length > 0) {
-      setIdxMes(mesesDisponiveis.length - 1);
-    }
-  }, [rows.length, mesesDisponiveis.length]);
+    return () => onRegisterAbrirCriar?.(() => {});
+  }, [onRegisterAbrirCriar]);
 
   const rowsFiltradas = useMemo(() => {
-    const mesSel = mesesDisponiveis[idxMes];
     let list = rows;
-    if (mesSel) {
-      list = list.filter((r) => {
-        const d = new Date(r.createdAt);
-        return d.getFullYear() === mesSel.ano && d.getMonth() === mesSel.mes;
-      });
+    if (!modoHistorico) {
+      const mesSel = mesesDisponiveis[idxMes];
+      list = list.filter((r) => itemNoMesCarrossel(r.publishedAt, mesSel));
     }
     if (filtroTipo !== "todos") {
       list = list.filter((r) => r.tipoUi === filtroTipo);
@@ -354,7 +388,7 @@ export function GerenciamentoPostagens({
       list = list.filter((r) => r.textoBusca.includes(buscaDeb));
     }
     return list;
-  }, [rows, mesesDisponiveis, idxMes, filtroTipo, filtroStatus, buscaDeb]);
+  }, [rows, mesesDisponiveis, idxMes, modoHistorico, filtroTipo, filtroStatus, buscaDeb]);
 
   const rowsOrdenadas = useMemo(() => {
     const list = [...rowsFiltradas];
@@ -395,35 +429,6 @@ export function GerenciamentoPostagens({
     return list;
   }, [rowsFiltradas, sortCol, sortDir]);
 
-  const mesSel = mesesDisponiveis[idxMes];
-  const carouselPrimeiro = idxMes <= 0;
-  const carouselUltimo = idxMes >= mesesDisponiveis.length - 1;
-
-  const btnNav = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
-
-  const selectFiltroStyle = {
-    padding: "8px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontSize: 12,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    minWidth: 0,
-  } as const;
-
   async function aprovarPostagem(row: PostagemGerenciamentoRow) {
     if (!user?.id) return;
     setAcaoLoading(row.id);
@@ -460,7 +465,8 @@ export function GerenciamentoPostagens({
       await carregar();
       onDadosAlterados();
     } else {
-      setErro(error.message);
+      console.error("[GerenciamentoPostagens] aprovar:", error);
+      setErro(ERRO_APROVAR);
     }
     setAcaoLoading(null);
   }
@@ -480,165 +486,14 @@ export function GerenciamentoPostagens({
       await carregar();
       onDadosAlterados();
     } else {
-      setErro(error.message);
+      console.error("[GerenciamentoPostagens] arquivar:", error);
+      setErro(ERRO_ARQUIVAR);
     }
     setAcaoLoading(null);
   }
 
-  const filtroWrap = {
-    borderRadius: 14,
-    border: brand.primaryTransparentBorder,
-    background: brand.primaryTransparentBg,
-    padding: "14px 18px",
-    marginBottom: 16,
-  };
-
   return (
-    <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento">
-      <div style={filtroWrap}>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              aria-label="Mês anterior"
-              disabled={carouselPrimeiro}
-              onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
-              style={{ ...btnNav, opacity: carouselPrimeiro ? 0.4 : 1, cursor: carouselPrimeiro ? "not-allowed" : "pointer" }}
-            >
-              <ChevronLeft size={16} aria-hidden />
-            </button>
-            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 140, textAlign: "center" }}>
-              {mesSel?.label ?? "—"}
-            </span>
-            <button
-              type="button"
-              aria-label="Próximo mês"
-              disabled={carouselUltimo}
-              onClick={() => setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1))}
-              style={{ ...btnNav, opacity: carouselUltimo ? 0.4 : 1, cursor: carouselUltimo ? "not-allowed" : "pointer" }}
-            >
-              <ChevronRight size={16} aria-hidden />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setFiltroStatus("arquivado")}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: `1px solid ${filtroStatus === "arquivado" ? brand.primary : t.cardBorder}`,
-              background:
-                filtroStatus === "arquivado"
-                  ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
-                  : t.inputBg,
-              color: filtroStatus === "arquivado" ? brand.primary : t.textMuted,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <History size={14} aria-hidden />
-            Histórico
-          </button>
-
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
-            aria-label="Filtrar por tipo de postagem"
-            style={selectFiltroStyle}
-          >
-            <option value="todos">Todos</option>
-            <option value="comunicado">Comunicados</option>
-            <option value="politica">Políticas e Normativas</option>
-            <option value="rh_talk">RH Talks</option>
-          </select>
-
-          <select
-            value={filtroStatus}
-            onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
-            aria-label="Filtrar por status da postagem"
-            style={selectFiltroStyle}
-          >
-            <option value="todos">Todos</option>
-            <option value="publicado">Publicado</option>
-            <option value="rascunho">Rascunho</option>
-            <option value="aprovacao">Aprovação</option>
-            <option value="arquivado">Arquivado</option>
-          </select>
-        </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-          <div
-            style={{
-              flex: "1 1 200px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              padding: "8px 12px",
-              minWidth: 200,
-            }}
-          >
-            <Search size={16} color={t.textMuted} aria-hidden />
-            <input
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Palavras-chave no assunto ou descrição"
-              aria-label="Pesquisar postagens por assunto ou descrição"
-              style={{
-                flex: 1,
-                border: "none",
-                background: "transparent",
-                color: t.text,
-                fontSize: 13,
-                outline: "none",
-                fontFamily: FONT.body,
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setEditRef(null);
-              setModalCriar(true);
-            }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: "none",
-              cursor: "pointer",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              background: ctaGradient(brand),
-            }}
-          >
-            <Plus size={16} aria-hidden />
-            Criar
-          </button>
-        </div>
-      </div>
-
+    <div role="tabpanel" id="panel-rh-portal-gerenciamento" aria-labelledby="tab-rh-portal-gerenciamento" tabIndex={0}>
       {erro ? (
         <div role="alert" style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: "rgba(232,64,37,0.12)", color: "#e84025", fontSize: 13 }}>
           {erro}
@@ -749,8 +604,18 @@ export function GerenciamentoPostagens({
               {rowsOrdenadas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status);
                 const busy = acaoLoading === row.id;
+                const zebraBg = zebraStripe(i);
                 return (
-                  <tr key={`${row.contentType}-${row.id}`} style={{ background: zebraStripe(i) }}>
+                  <tr
+                    key={`${row.contentType}-${row.id}`}
+                    style={{ background: zebraBg }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = zebraBg;
+                    }}
+                  >
                     <td
                       style={{
                         ...getTdStyle(t),
@@ -801,12 +666,32 @@ export function GerenciamentoPostagens({
                         {acoes.includes("arquivar") ? (
                           <button
                             type="button"
-                            aria-label={`Arquivar ${row.assunto}`}
+                            aria-label={`${confirmandoArquivarId === row.id ? "Confirmar arquivamento:" : "Arquivar:"} ${row.assunto}`}
                             disabled={busy}
-                            onClick={() => void arquivarPostagem(row)}
-                            style={btnAcao(t)}
+                            onClick={() => {
+                              if (confirmandoArquivarId !== row.id) {
+                                setConfirmandoArquivarId(row.id);
+                                return;
+                              }
+                              void arquivarPostagem(row);
+                              setConfirmandoArquivarId(null);
+                            }}
+                            onBlur={() => setConfirmandoArquivarId(null)}
+                            style={{
+                              ...btnAcao(t),
+                              ...(confirmandoArquivarId === row.id
+                                ? {
+                                    border: "1px solid rgba(232,64,37,0.6)",
+                                    background: "rgba(232,64,37,0.15)",
+                                    color: "#e84025",
+                                  }
+                                : {}),
+                            }}
                           >
                             <Archive size={13} aria-hidden />
+                            {confirmandoArquivarId === row.id ? (
+                              <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
+                            ) : null}
                           </button>
                         ) : null}
                         {acoes.includes("historico") ? (
@@ -854,7 +739,6 @@ export function GerenciamentoPostagens({
         contentType={histRef?.contentType ?? null}
         contentId={histRef?.id ?? null}
         onClose={() => setHistRef(null)}
-        t={t}
       />
     </div>
   );

@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo, type CSSProperties } from "react";
-import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Shield, Bell, Layers } from "lucide-react";
+import { useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Bell, Layers, MessageSquare } from "lucide-react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { usePendenciasCount } from "../../../hooks/usePendenciasCount";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
@@ -14,6 +14,7 @@ import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroHistoricoButton, FiltroOperadoraSelect, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
@@ -166,6 +167,20 @@ type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "roteiro_mesa";
 
 const ABAS_STAFF: AbaStaff[] = ["troca", "feedback", "campanha_roteiro", "roteiro_mesa"];
 
+const TAB_STAFF_DOM_ID: Record<AbaStaff, string> = {
+  troca: "tab-central-troca",
+  feedback: "tab-central-feedback",
+  campanha_roteiro: "tab-central-campanha-roteiro",
+  roteiro_mesa: "tab-central-roteiro-mesa",
+};
+
+const STAFF_TAB_META: Record<AbaStaff, { label: string; panelId: string; icon: ReactNode }> = {
+  troca: { label: "Troca de dealer", panelId: "panel-central-troca", icon: <Inbox {...FILTRO_BAR_TAB_ICON_PROPS} /> },
+  feedback: { label: "Feedbacks", panelId: "panel-central-feedback", icon: <MessageSquare {...FILTRO_BAR_TAB_ICON_PROPS} /> },
+  campanha_roteiro: { label: "Campanhas", panelId: "panel-central-campanha-roteiro", icon: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} /> },
+  roteiro_mesa: { label: "Roteiros", panelId: "panel-central-roteiro-mesa", icon: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} /> },
+};
+
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
@@ -255,7 +270,6 @@ export default function CentralNotificacoes() {
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("central_notificacoes");
-  const pendentesGestor = usePendenciasCount("gestor");
   /** Inbox do estúdio (troca/feedback): não-operador com acesso à Central; permissões em role_permissions. */
   const verInboxEstudio = user?.role !== "operador" && (perm.loading || perm.canView !== "nao");
 
@@ -614,32 +628,6 @@ export default function CentralNotificacoes() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 12px 6px 32px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
-
-  const btnNavStyle: React.CSSProperties = {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   const cardShell: React.CSSProperties = {
     background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
@@ -668,21 +656,12 @@ export default function CentralNotificacoes() {
     (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
   ).length;
 
-  const chipTab = (ativo: boolean) => ({
-    padding: "8px 14px",
-    borderRadius: 999,
-    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-    background: ativo
-      ? brand.useBrand
-        ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-        : "rgba(124,58,237,0.15)"
-      : "transparent",
-    color: ativo ? brand.accent : t.textMuted,
-    fontWeight: ativo ? 700 : 500,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-  });
+  const badgeCounts: Record<AbaStaff, number> = {
+    troca: badgeTroca,
+    feedback: badgeFb,
+    campanha_roteiro: badgeCampRoteiro,
+    roteiro_mesa: badgeMesaRoteiro,
+  };
 
   function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[], opts?: { staffMesclado?: boolean }) {
     const staffMesclado = opts?.staffMesclado ?? false;
@@ -1028,14 +1007,9 @@ export default function CentralNotificacoes() {
       <PageHeader
         icon={<Bell size={14} aria-hidden />}
         title="Central de Notificações"
-        subtitle={
-          verInboxEstudio && pendentesGestor > 0
-            ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
-            : "Campanhas de roteiro e solicitações ao estúdio."
-        }
+        subtitle="Gerencie solicitações entre operadoras e estúdio com histórico de conversas."
       />
-
-      <div style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 14 }}>
         <div
           style={{
             borderRadius: 14,
@@ -1044,237 +1018,111 @@ export default function CentralNotificacoes() {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: verInboxEstudio ? 12 : 0,
+            }}
+          >
             <button
               type="button"
-              style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
               onClick={irMesAnterior}
               disabled={historico || isPrimeiro}
               aria-label="Mês anterior"
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+            <span style={getCarouselPeriodLabelStyle(t)}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button
               type="button"
-              style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
               onClick={irMesProximo}
               disabled={historico || isUltimo}
               aria-label="Próximo mês"
             >
               <ChevronRight size={14} aria-hidden />
             </button>
-            <button
-              type="button"
-              onClick={toggleHistorico}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              <Calendar size={15} aria-hidden />
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <Shield size={15} aria-hidden style={{ position: "absolute", left: 10, pointerEvents: "none", color: t.textMuted }} />
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={selectStyle}
-                  disabled={!!operadoraSlugsForcado?.length}
-                  aria-label="Filtrar por operadora"
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+                disabled={!!operadoraSlugsForcado?.length}
+              />
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }}>
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }} aria-live="polite">
                 <Clock size={12} aria-hidden />
                 Carregando…
               </span>
             )}
           </div>
-        </div>
-      </div>
 
-      {verInboxEstudio ? (
-        <>
-          <div
-            style={{
-              position: "relative",
-              marginBottom: 20,
-              ...(narrowMobile
-                ? {
-                    overflow: "hidden",
-                  }
-                : {}),
-            }}
-          >
-          <div
-            role="tablist"
-            aria-label="Inbox da Central"
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: narrowMobile ? "nowrap" : "wrap",
-              overflowX: narrowMobile ? "auto" : undefined,
-              paddingBottom: narrowMobile ? 4 : 0,
-              scrollbarWidth: "none",
-            }}
-            onKeyDown={(e) => {
-              const idx = ABAS_STAFF.indexOf(abaStaff);
-              if (e.key === "ArrowRight") {
-                e.preventDefault();
-                setAbaStaff(ABAS_STAFF[(idx + 1) % ABAS_STAFF.length]);
-              }
-              if (e.key === "ArrowLeft") {
-                e.preventDefault();
-                setAbaStaff(ABAS_STAFF[(idx - 1 + ABAS_STAFF.length) % ABAS_STAFF.length]);
-              }
-            }}
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "troca"}
-              id="tab-central-troca"
-              aria-controls="panel-central-troca"
-              tabIndex={abaStaff === "troca" ? 0 : -1}
-              aria-label={badgeTroca > 0 ? `Troca de dealer, ${badgeTroca} solicitações pendentes` : "Troca de dealer"}
-              onClick={() => setAbaStaff("troca")}
-              style={chipTab(abaStaff === "troca")}
-            >
-              <Inbox size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
-              Troca de dealer
-              {badgeTroca > 0 ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    background: BRAND.vermelho,
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {badgeTroca}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "feedback"}
-              id="tab-central-feedback"
-              aria-controls="panel-central-feedback"
-              tabIndex={abaStaff === "feedback" ? 0 : -1}
-              aria-label={badgeFb > 0 ? `Feedbacks, ${badgeFb} solicitações pendentes` : "Feedbacks"}
-              onClick={() => setAbaStaff("feedback")}
-              style={chipTab(abaStaff === "feedback")}
-            >
-              Feedbacks
-              {badgeFb > 0 ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    background: BRAND.vermelho,
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {badgeFb}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "campanha_roteiro"}
-              id="tab-central-campanha-roteiro"
-              aria-controls="panel-central-campanha-roteiro"
-              tabIndex={abaStaff === "campanha_roteiro" ? 0 : -1}
-              aria-label={badgeCampRoteiro > 0 ? `Campanhas, ${badgeCampRoteiro} solicitações pendentes` : "Campanhas"}
-              onClick={() => setAbaStaff("campanha_roteiro")}
-              style={chipTab(abaStaff === "campanha_roteiro")}
-            >
-              <Megaphone size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
-              Campanhas
-              {badgeCampRoteiro > 0 ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    background: BRAND.vermelho,
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {badgeCampRoteiro}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "roteiro_mesa"}
-              id="tab-central-roteiro-mesa"
-              aria-controls="panel-central-roteiro-mesa"
-              tabIndex={abaStaff === "roteiro_mesa" ? 0 : -1}
-              aria-label={badgeMesaRoteiro > 0 ? `Roteiros, ${badgeMesaRoteiro} solicitações pendentes` : "Roteiros"}
-              onClick={() => setAbaStaff("roteiro_mesa")}
-              style={chipTab(abaStaff === "roteiro_mesa")}
-            >
-              <FileText size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
-              Roteiros
-              {badgeMesaRoteiro > 0 ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    background: BRAND.vermelho,
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {badgeMesaRoteiro}
-                </span>
-              ) : null}
-            </button>
+          {verInboxEstudio ? (
+            <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
+              <div
+                role="tablist"
+                aria-label="Inbox da Central"
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: narrowMobile ? "nowrap" : "wrap",
+                  justifyContent: "center",
+                  overflowX: narrowMobile ? "auto" : undefined,
+                  paddingBottom: narrowMobile ? 4 : 0,
+                  scrollbarWidth: "none",
+                }}
+                onKeyDown={(e) =>
+                  onFiltroBarTabsKeyDown(e, ABAS_STAFF, setAbaStaff, (k) => TAB_STAFF_DOM_ID[k])
+                }
+              >
+                {ABAS_STAFF.map((key) => {
+                  const meta = STAFF_TAB_META[key];
+                  const count = badgeCounts[key];
+                  return (
+                    <FiltroBarTabButton
+                      key={key}
+                      id={TAB_STAFF_DOM_ID[key]}
+                      active={abaStaff === key}
+                      aria-controls={meta.panelId}
+                      onClick={() => setAbaStaff(key)}
+                      aria-label={
+                        count > 0 ? `${meta.label}, ${count} solicitações pendentes` : meta.label
+                      }
+                      icon={meta.icon}
+                      style={{ flexShrink: 0 }}
+                    >
+                      {meta.label}
+                      {count > 0 ? (
+                        <span
+                          style={{
+                            background: BRAND.vermelho,
+                            color: "#fff",
+                            borderRadius: 10,
+                            padding: "0 6px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {count}
+                        </span>
+                      ) : null}
+                    </FiltroBarTabButton>
+                  );
+                })}
           </div>
           {narrowMobile ? (
             <div
@@ -1290,8 +1138,13 @@ export default function CentralNotificacoes() {
               }}
             />
           ) : null}
-          </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
+      {verInboxEstudio ? (
+        <>
           {abaStaff === "troca" ? (
             <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca" tabIndex={0}>
               {renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })}

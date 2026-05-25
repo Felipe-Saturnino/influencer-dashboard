@@ -7,14 +7,12 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-// Dívida técnica (B6): migrar para InfluencerDropdown na refatoração de filtros.
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import {
   AlertTriangle,
-  Shield,
   Check,
   CheckCircle,
   ClipboardList,
@@ -669,8 +667,8 @@ export default function Resultados() {
 
       <DashboardPageHeader
         icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Resultado de Lives"
-        subtitle="Lives agendadas cujo horário já passou há mais de 5 horas, pendentes de validação."
+        title="Resultados"
+        subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
         brand={brand}
         t={t}
       />
@@ -684,39 +682,24 @@ export default function Resultados() {
             background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
               {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-                <InfluencerMultiSelect
-                  selected={filterInfluencers}
+                <FiltroInfluencerSelect
+                  mode="multiple"
+                  value={filterInfluencers}
                   onChange={setFilterInfluencers}
                   influencers={influencerListVisiveis}
-                  t={t}
                 />
               )}
               {showFiltroOperadora && operadorasList.length > 0 && (
-                <SelectComIcone
+                <FiltroOperadoraSelect
                   pill
-                  icon={<Shield size={13} aria-hidden="true" />}
-                  label="Filtrar por operadora"
+                  minWidth={200}
                   value={filterOperadora}
                   onChange={setFilterOperadora}
-                  minWidth={200}
-                  style={{
-                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background:
-                      filterOperadora !== "todas"
-                        ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                        : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </SelectComIcone>
+                  operadoras={operadorasList}
+                  podeVerOperadora={podeVerOperadora}
+                />
               )}
             </div>
           </div>

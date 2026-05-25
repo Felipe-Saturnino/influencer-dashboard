@@ -5,6 +5,7 @@ import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
@@ -27,7 +28,9 @@ import {
   KpiCard,
   KpiCardDepositos,
   FunilVisual,
-  SelectComIcone,
+  FiltroHistoricoButton,
+  FiltroInfluencerSelect,
+  FiltroOperadoraSelect,
   SkeletonKpiCard,
   SortTableTh,
   type SortDir,
@@ -35,7 +38,6 @@ import {
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import {
   BarChart2,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -43,10 +45,8 @@ import {
   Receipt,
   Wallet,
   Filter,
-  Shield,
   TrendingUp,
   Trophy,
-  User,
   UserPlus,
   Users,
   Video,
@@ -577,15 +577,6 @@ export default function DashboardOverview() {
     );
   }
 
-  const btnNavStyle: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
@@ -601,85 +592,47 @@ export default function DashboardOverview() {
             <button
               type="button"
               aria-label="Mês anterior"
-              style={{ ...btnNavStyle, opacity: historico || idxMes === 0 ? 0.35 : 1, cursor: historico || idxMes === 0 ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || idxMes === 0)}
               onClick={irMesAnterior}
               disabled={historico || idxMes === 0}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
 
-            <span style={{
-              fontSize: 18, fontWeight: 800,
-              color: t.text,
-              fontFamily: FONT.body,
-              minWidth: 180, textAlign: "center",
-            }}>
+            <span style={getCarouselPeriodLabelStyle(t)}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
 
             <button
               type="button"
               aria-label="Próximo mês"
-              style={{ ...btnNavStyle, opacity: historico || idxMes === mesesDisponiveis.length - 1 ? 0.35 : 1, cursor: historico || idxMes === mesesDisponiveis.length - 1 ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || idxMes === mesesDisponiveis.length - 1)}
               onClick={irMesProximo}
               disabled={historico || idxMes === mesesDisponiveis.length - 1}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button
-              type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              onClick={toggleHistorico}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico
-                  ? `1px solid ${brand.accent}`
-                  : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              <Calendar size={15} aria-hidden />
-              Histórico
-            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={15} aria-hidden />}
-                label="Filtrar por influencer"
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {[...ranking].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
-                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                ))}
-              </SelectComIcone>
+                influencers={[...ranking]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((r) => ({ id: r.influencer_id, name: r.nome }))}
+              />
             )}
 
             {showFiltroOperadora && (
-              <SelectComIcone
-                icon={<Shield size={15} aria-hidden />}
-                label="Filtrar por operadora"
+              <FiltroOperadoraSelect
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => (
-                    <option key={o.slug} value={o.slug}>{o.nome}</option>
-                  ))}
-              </SelectComIcone>
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
 
             {loading && (

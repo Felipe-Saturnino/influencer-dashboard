@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
+import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
-import type { Theme } from "../../../constants/theme";
 import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
 import { ROLES_STAFF_APENAS_PERMISSOES, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
+import { MultiSelect, SingleSelectOperadora } from "./ModalUsuarioScopeSelects";
+import { SalvarCtaContent } from "./gestaoUsuariosUi";
+import { ctaGradientSalvar, onInputBlurBrand, onInputFocusBrand } from "./gestaoUsuariosHelpers";
 
 interface ModalUsuarioProps {
-  t: Theme;
   editando: UsuarioCompleto | null;
   operadoras: Operadora[];
   onClose: () => void;
   onSalvo: () => void;
 }
 
-export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
+export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
@@ -236,12 +239,13 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       onSalvo();
       onClose();
     } catch (e: unknown) {
+      console.error("[GestaoUsuarios] salvar usuário:", e);
       if (isAbortError(e)) {
         setErro(
           "Tempo esgotado ou rede indisponível. Confira se as funções criar-usuario e atualizar-perfil estão deployadas no Supabase (CLI: supabase functions deploy)."
         );
       } else {
-        setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+        setErro("Não foi possível salvar o usuário. Tente novamente.");
       }
     } finally {
       setSalvando(false);
@@ -280,150 +284,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   const updateParAgencia = (idx: number, f: "influencerId" | "operadoraSlug", val: string) =>
     setParesAgencia((prev) => prev.map((p, i) => (i === idx ? { ...p, [f]: val } : p)));
 
-  const SingleSelectOperadora = ({
-    label,
-    items,
-    selected,
-    onSelect,
-    cor = BRAND.roxoVivo,
-    obrigatorio = false,
-  }: {
-    label: string;
-    items: { value: string; label: string }[];
-    selected: string[];
-    onSelect: (v: string) => void;
-    cor?: string;
-    obrigatorio?: boolean;
-  }) => (
-    <div style={field}>
-      <label style={labelStyle}>
-        {label}
-        {obrigatorio ? <CampoObrigatorioMark /> : null}
-        <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(seleção única)</span>
-      </label>
-      <div
-        style={{
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 8,
-          padding: 10,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          maxHeight: 160,
-          overflowY: "auto",
-          background: t.inputBg ?? t.cardBg,
-        }}
-      >
-        {items.map((op) => {
-          const sel = selected.includes(op.value);
-          return (
-            <button
-              key={op.value}
-              type="button"
-              onClick={() => onSelect(op.value)}
-              style={{
-                border: `1px solid ${sel ? cor : t.cardBorder}`,
-                background: sel ? `${cor}22` : "transparent",
-                color: sel ? cor : t.text,
-                borderRadius: 20,
-                padding: "5px 12px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 12,
-                fontWeight: sel ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-            >
-              {op.label}
-            </button>
-          );
-        })}
-      </div>
-      {selected.length > 0 && (
-        <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 4 }}>
-          Operadora selecionada: {items.find((i) => i.value === selected[0])?.label ?? selected[0]}
-        </p>
-      )}
-    </div>
-  );
-
-  const MultiSelect = ({
-    label,
-    items,
-    selected,
-    onToggle,
-    cor = BRAND.roxoVivo,
-    obrigatorio = false,
-  }: {
-    label: string;
-    items: { value: string; label: string }[];
-    selected: string[];
-    onToggle: (v: string) => void;
-    cor?: string;
-    obrigatorio?: boolean;
-  }) => (
-    <div style={field}>
-      <label style={labelStyle}>
-        {label}
-        {obrigatorio ? <CampoObrigatorioMark /> : null}
-        <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(multi-seleção)</span>
-      </label>
-      <div
-        style={{
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 8,
-          padding: 10,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          maxHeight: 160,
-          overflowY: "auto",
-          background: t.inputBg ?? t.cardBg,
-        }}
-      >
-        {items.map((op) => {
-          const sel = selected.includes(op.value);
-          return (
-            <button
-              key={op.value}
-              type="button"
-              onClick={() => onToggle(op.value)}
-              style={{
-                border: `1px solid ${sel ? cor : t.cardBorder}`,
-                background: sel ? `${cor}22` : "transparent",
-                color: sel ? cor : t.text,
-                borderRadius: 20,
-                padding: "5px 12px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 12,
-                fontWeight: sel ? 700 : 400,
-                transition: "all 0.15s",
-                display: "flex",
-                alignItems: "center",
-                gap: sel ? 5 : 0,
-              }}
-            >
-              {op.label}
-              {sel && <X size={10} style={{ flexShrink: 0 }} />}
-            </button>
-          );
-        })}
-      </div>
-      {selected.length > 0 && (
-        <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 4 }}>
-          {selected.length} selecionado{selected.length !== 1 ? "s" : ""}
-        </p>
-      )}
-    </div>
-  );
-
   const tituloModal = editando ? "Editar Usuário" : "Novo Usuário";
-  const salvarBg = salvando
-    ? BRAND.cinza
-    : brand.useBrand
-      ? "var(--brand-primary)"
-      : BRAND.gradiente;
+  const salvarBg = ctaGradientSalvar(brand, salvando, BRAND.cinza);
 
   return (
     <ModalBase onClose={onClose} maxWidth={560} zIndex={999}>
@@ -438,8 +300,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Nome completo"
-            onFocus={(e) => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}
+            onFocus={onInputFocusBrand}
+            onBlur={(e) => onInputBlurBrand(e, t.cardBorder)}
           />
         </div>
         {!editando && (
@@ -454,8 +316,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@exemplo.com"
               type="email"
-              onFocus={(e) => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}
+              onFocus={onInputFocusBrand}
+              onBlur={(e) => onInputBlurBrand(e, t.cardBorder)}
             />
           </div>
         )}
@@ -492,6 +354,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         ) : role === "executivo" || role === "investidor" ? null : role === "gestor" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <MultiSelect
+              t={t}
+              field={field}
+              labelStyle={labelStyle}
               label="Tipos de gestor"
               obrigatorio
               cor={roleBadgeColor("gestor")}
@@ -503,6 +368,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         ) : role === "prestador" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <MultiSelect
+              t={t}
+              field={field}
+              labelStyle={labelStyle}
               label="Áreas de atuação"
               obrigatorio
               cor={roleBadgeColor("prestador")}
@@ -528,10 +396,12 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             labelStyle={labelStyle}
             selectStyle={selectStyle}
             field={field}
-            t={t}
           />
         ) : roleParidadeInfluencer(role) ? (
           <MultiSelect
+            t={t}
+            field={field}
+            labelStyle={labelStyle}
             label="Operadoras atribuídas"
             obrigatorio
             cor={roleBadgeColor(role)}
@@ -543,6 +413,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           <>
             {role !== "operador" && !ROLES_STAFF_APENAS_PERMISSOES.includes(role) && (
               <MultiSelect
+                t={t}
+                field={field}
+                labelStyle={labelStyle}
                 label="Influencers (opcional)"
                 cor={roleBadgeColor("operador")}
                 items={influencers.map((i) => ({ value: i.id, label: i.nome }))}
@@ -552,6 +425,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             )}
             {role === "operador" ? (
               <SingleSelectOperadora
+                t={t}
+                field={field}
+                labelStyle={labelStyle}
                 label="Operadora atribuída"
                 obrigatorio
                 cor={roleBadgeColor("operador")}
@@ -561,6 +437,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               />
             ) : (
               <MultiSelect
+                t={t}
+                field={field}
+                labelStyle={labelStyle}
                 label="Operadoras (opcional)"
                 cor={roleBadgeColor("executivo")}
                 items={operadoras.map((o) => ({ value: o.slug, label: o.nome }))}
@@ -573,6 +452,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         {erro && (
           <div
             role="alert"
+            aria-live="polite"
             style={{
               display: "flex",
               alignItems: "flex-start",
@@ -632,9 +512,15 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               fontWeight: 600,
               opacity: salvando ? 0.7 : 1,
               transition: "opacity 0.15s",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar usuário"}
+            <SalvarCtaContent
+              salvando={salvando}
+              label={editando ? "Salvar alterações" : "Criar usuário"}
+            />
           </button>
         </div>
     </ModalBase>

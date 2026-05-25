@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Eye, History, Loader2, Pencil, Search, Shield, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Shield, Trash2, TriangleAlert } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { FiltroBarCampoSelect, FiltroEntidadeBarSelect, FiltroHistoricoButton } from "../../../components/dashboard";
 import {
   STATUS_OPTIONS,
   STORAGE_BUCKET,
@@ -17,7 +21,9 @@ import {
 import type { DenunciaListRow, AnexoRow } from "./types";
 import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
 import { ModalAtenderDenuncia, ModalConfirmarExclusao } from "./ModalsAtender";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
@@ -25,22 +31,29 @@ function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
     : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
 }
 
-/** Primeiro mês com denúncias no canal: maio/2026 — não listar meses anteriores. */
-function monthKeys(): { value: string; label: string }[] {
-  const out: { value: string; label: string }[] = [{ value: "historico", label: "Histórico" }];
+type MesDenunciaEntry = { value: string; label: string };
+
+/** Primeiro mês do canal: maio/2026 — carrossel do mês atual para trás. */
+function buildMesesDenuncias(): MesDenunciaEntry[] {
   const minStart = new Date(2026, 4, 1);
   const now = new Date();
+  const out: MesDenunciaEntry[] = [];
   let d = new Date(now.getFullYear(), now.getMonth(), 1);
   while (d >= minStart) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const value = `${y}-${m}`;
-    const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-    out.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    const raw = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    out.push({ value, label: raw.charAt(0).toUpperCase() + raw.slice(1) });
     d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   }
   return out;
 }
+
+const DENUNCIA_TIPO_FILTRO_ITENS = TIPOS_DENUNCIA.map((item) => ({
+  id: item.key,
+  name: item.titulo,
+}));
 
 function rangeForMonth(ym: string): { start: string; end: string } {
   const [y, m] = ym.split("-").map(Number);
@@ -55,7 +68,8 @@ export default function CentralDenunciasSpin() {
   const perm = usePermission("rh_central_denuncias");
 
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [filtroPeriodoLista, setFiltroPeriodoLista] = useState("historico");
+  const [idxMes, setIdxMes] = useState(0);
+  const [modoHistorico, setModoHistorico] = useState(false);
   const [filtroTipos, setFiltroTipos] = useState<TipoDenunciaKey[]>([]);
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<DenunciaListRow[]>([]);
@@ -74,7 +88,11 @@ export default function CentralDenunciasSpin() {
   const [delRow, setDelRow] = useState<DenunciaListRow | null>(null);
   const [delLoading, setDelLoading] = useState(false);
 
-  const meses = useMemo(() => monthKeys(), []);
+  const meses = useMemo(() => buildMesesDenuncias(), []);
+  const filtroPeriodoLista = modoHistorico ? "historico" : (meses[idxMes]?.value ?? meses[0]?.value ?? "historico");
+  const carouselPrimeiro = idxMes <= 0;
+  const carouselUltimo = idxMes >= meses.length - 1;
+  const labelCarrossel = modoHistorico ? "Todo o período" : (meses[idxMes]?.label ?? "—");
 
   const fetchKpis = useCallback(async () => {
     const stats: DenunciaStatusDb[] = ["relatado", "em_avaliacao", "procedente", "nao_procedente"];
@@ -180,9 +198,13 @@ export default function CentralDenunciasSpin() {
     }
   }
 
-  function toggleTipoFiltro(k: TipoDenunciaKey) {
-    setFiltroTipos((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
-  }
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder
+      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+      : {}),
+  });
 
   if (perm.loading) {
     return (
@@ -209,80 +231,68 @@ export default function CentralDenunciasSpin() {
         subtitle="Canal de denúncias Spin"
       />
 
-      {/* Bloco 1 — Filtros */}
-      <section style={{ marginBottom: 22 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12, alignItems: "flex-end" }}>
-          <FiltroSelect
-            label="Status"
-            value={filtroStatus}
-            onChange={setFiltroStatus}
-            t={t}
-            options={[
-              { v: "todos", l: "Todos" },
-              ...STATUS_OPTIONS.map((s) => ({ v: s.value, l: s.label })),
-            ]}
-          />
-          <FiltroSelect
-            label="Período"
-            value={filtroPeriodoLista}
-            onChange={setFiltroPeriodoLista}
-            t={t}
-            options={meses.map((m) => ({ v: m.value, l: m.label }))}
-          />
-          <FiltroTipoMultiSelect
-            t={t}
-            filtroTipos={filtroTipos}
-            onLimpar={() => setFiltroTipos([])}
-            onToggle={toggleTipoFiltro}
-          />
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-            <label htmlFor="busca-relato" style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>
-              Busca no relato
-            </label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              <input
-                id="busca-relato"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void fetchLista()}
-                placeholder="Palavras-chave…"
-                style={{
-                  flex: 1,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 14,
-                }}
-              />
+      <div style={{ marginBottom: 22 }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={filterBarSection(false)}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               <button
                 type="button"
-                onClick={() => void fetchLista()}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradient(brand),
-                  color: "#fff",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontFamily: FONT.body,
-                  fontWeight: 600,
-                }}
+                aria-label="Mês anterior"
+                disabled={carouselPrimeiro || modoHistorico}
+                onClick={() => setIdxMes((i) => Math.max(0, i - 1))}
+                style={getCarouselBtnNavStyle(t, carouselPrimeiro || modoHistorico)}
               >
-                <Search size={16} aria-hidden />
-                Filtrar
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
+              <button
+                type="button"
+                aria-label="Próximo mês"
+                disabled={carouselUltimo || modoHistorico}
+                onClick={() => setIdxMes((i) => Math.min(meses.length - 1, i + 1))}
+                style={getCarouselBtnNavStyle(t, carouselUltimo || modoHistorico)}
+              >
+                <ChevronRight size={14} aria-hidden="true" />
               </button>
             </div>
+
+            <FiltroHistoricoButton active={modoHistorico} onClick={() => setModoHistorico((h) => !h)} />
+
+            <FiltroEntidadeBarSelect
+              selected={filtroTipos}
+              onChange={(ids) => setFiltroTipos(ids as TipoDenunciaKey[])}
+              items={DENUNCIA_TIPO_FILTRO_ITENS}
+              icon={<TriangleAlert size={15} strokeWidth={2} aria-hidden="true" />}
+              triggerEmptyLabel="Todos Tipos"
+              ariaFilterPrefix="Tipos de denúncia"
+              listboxAriaLabel="Tipos de denúncia"
+              enableSearch
+            />
+
+            <FiltroBarCampoSelect
+              id="filtro-status-denuncia"
+              value={filtroStatus}
+              onChange={setFiltroStatus}
+              options={STATUS_OPTIONS}
+              icon={FilterBarIcons.status}
+              ariaLabel="Status da denúncia"
+              todasValue="todos"
+              todasLabel="Todos Status"
+            />
+          </div>
+
+          <div style={filterBarSection(true)}>
+            <BarraPesquisaPagina
+              id="busca-relato"
+              value={busca}
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.denuncias}
+              aria-label="Pesquisar denúncias por palavras-chave no relato"
+              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
+            />
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Bloco 2 — KPIs por status (mesmo período do filtro acima) */}
       <div className="app-grid-kpi-4" style={{ marginBottom: 24 }}>
@@ -422,193 +432,6 @@ function fmtDt(iso: string) {
   } catch {
     return "—";
   }
-}
-
-function FiltroTipoMultiSelect({
-  t,
-  filtroTipos,
-  onLimpar,
-  onToggle,
-}: {
-  t: ReturnType<typeof useApp>["theme"];
-  filtroTipos: TipoDenunciaKey[];
-  onLimpar: () => void;
-  onToggle: (k: TipoDenunciaKey) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  const summaryLabel =
-    filtroTipos.length === 0
-      ? "Todos os tipos"
-      : `${filtroTipos.length} tipo${filtroTipos.length === 1 ? "" : "s"} selecionado${filtroTipos.length === 1 ? "" : "s"}`;
-
-  const triggerStyle = {
-    width: "100%",
-    minWidth: 180,
-    boxSizing: "border-box" as const,
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontFamily: FONT.body,
-    fontSize: 13,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    textAlign: "left" as const,
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocMouseDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={wrapRef} style={{ flex: "1 1 260px", minWidth: 0, alignSelf: "flex-end", position: "relative" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 6 }}>Tipo</div>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        aria-label="Tipo de denúncia — multi-seleção"
-        onClick={() => setOpen((v) => !v)}
-        style={triggerStyle}
-      >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{summaryLabel}</span>
-        <ChevronDown
-          size={16}
-          aria-hidden
-          style={{
-            flexShrink: 0,
-            opacity: 0.65,
-            transition: "transform 0.15s ease",
-            transform: open ? "rotate(180deg)" : undefined,
-          }}
-        />
-      </button>
-      {open ? (
-        <div
-          role="listbox"
-          aria-multiselectable="true"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: "100%",
-            marginTop: 4,
-            zIndex: 50,
-            maxHeight: 280,
-            overflowY: "auto",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.cardBg,
-            boxShadow: t.isDark ? "0 10px 28px rgba(0,0,0,0.5)" : "0 10px 28px rgba(0,0,0,0.12)",
-            padding: "10px 12px 12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              onLimpar();
-            }}
-            style={{
-              alignSelf: "flex-start",
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.textMuted,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-            }}
-          >
-            Limpar seleção
-          </button>
-          {TIPOS_DENUNCIA.map((tp) => {
-            const on = filtroTipos.includes(tp.key);
-            return (
-              <label
-                key={tp.key}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                }}
-              >
-                <input type="checkbox" checked={on} onChange={() => onToggle(tp.key)} />
-                <span>{tp.titulo}</span>
-              </label>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function FiltroSelect({
-  label,
-  value,
-  onChange,
-  options,
-  t,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { v: string; l: string }[];
-  t: ReturnType<typeof useApp>["theme"];
-}) {
-  return (
-    <div>
-      <label style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg,
-          color: t.text,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          minWidth: 180,
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.v} value={o.v}>
-            {o.l}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
 }
 
 function Btn({

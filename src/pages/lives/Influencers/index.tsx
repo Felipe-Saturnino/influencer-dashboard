@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -8,26 +8,82 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
-  Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield,
+  Eye, EyeOff, Pencil, X, ChevronDown, Loader2,
   Mic, Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
+  Contact, Share2, History,
 } from "lucide-react";
-
-function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-}
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import OperadoraTag from "../../../components/OperadoraTag";
-import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
+import {
+  influencerElegivelQuadroPerfilIncompleto,
+  isPerfilIncompleto,
+} from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import {
+  DashboardPageHeader,
+  FiltroOperadoraSelect,
+  FiltroPlataformaSemanticoPill,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
+
+type InfluencerModalTab = "cadastral" | "canais" | "financeiro" | "operadoras" | "historico";
+
+const INFLUENCER_TAB_ICONS: Record<InfluencerModalTab, ReactNode> = {
+  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  canais: <Share2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  financeiro: <Coins {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operadoras: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+function InfluencerModalTabs<T extends InfluencerModalTab>({
+  tabs,
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+  wrapStyle,
+}: {
+  tabs: { key: T; label: string }[];
+  tab: T;
+  setTab: (k: T) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+  wrapStyle?: CSSProperties;
+}) {
+  const tabKeys = tabs.map((tb) => tb.key);
+  return (
+    <div
+      role="tablist"
+      aria-label="Seções do influencer"
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2, ...wrapStyle }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabs.map((tb) => (
+        <FiltroBarTabButton
+          key={tb.key}
+          id={`${tabIdPrefix}${tb.key}`}
+          active={tab === tb.key}
+          aria-controls={`${panelIdPrefix}${tb.key}`}
+          onClick={() => setTab(tb.key)}
+          icon={INFLUENCER_TAB_ICONS[tb.key]}
+          style={{ flexShrink: 0 }}
+        >
+          {tb.label}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 // ─── BLUR EM DADOS SENSÍVEIS ──────────────────────────────────────────────────
 function SensitiveField({
@@ -125,6 +181,7 @@ interface Influencer {
   id:         string;
   name:       string;
   email:      string;
+  ativo?:     boolean | null;
   perfil:     Perfil | null;
   operadoras: InfluencerOperadora[];
 }
@@ -234,7 +291,7 @@ export default function Influencers() {
 
     if (showManagementUI) {
       const { data: profiles } = await supabase
-        .from("profiles").select("id, name, email").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
+        .from("profiles").select("id, name, email, ativo").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([
@@ -248,10 +305,11 @@ export default function Influencers() {
           if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
           opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null }) => ({
+        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null; ativo?: boolean | null }) => ({
           id: p.id,
           name: p.name ?? p.email ?? "",
           email: p.email ?? "",
+          ativo: p.ativo,
           perfil: perfisMap[p.id] ?? null,
           operadoras: opsPorInf[p.id] ?? [],
         }));
@@ -368,9 +426,8 @@ export default function Influencers() {
     return true;
   });
 
-  // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
   const incompletos = listNoEscopo.filter((i) =>
-    (i.perfil?.status ?? "ativo") === "ativo" &&
+    influencerElegivelQuadroPerfilIncompleto(i.perfil, i.ativo) &&
     isPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "")
   );
 
@@ -409,7 +466,7 @@ export default function Influencers() {
       <DashboardPageHeader
         icon={<Mic size={14} aria-hidden="true" />}
         title="Influencers"
-        subtitle={showManagementUI ? "Gerencie o cadastro completo dos influencers parceiros." : "Seu perfil completo na plataforma."}
+        subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}
       />
@@ -474,89 +531,45 @@ export default function Influencers() {
             padding: "12px 20px",
           }}>
             {/* Linha 1: Status / Operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-              {STATUS_OPTS.map((s) => {
-                const active = filterStatus === s;
-                const color = STATUS_COLOR[s];
-                return (
-                  <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : "transparent",
-                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {STATUS_OPTS.map((s) => (
+                <FiltroStatusSemanticoPill
+                  key={s}
+                  label={STATUS_LABEL[s]}
+                  semanticColor={STATUS_COLOR[s]}
+                  active={filterStatus === s}
+                  onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+                />
+              ))}
               {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
-                  <SelectComIcone
+                  <FiltroOperadoraSelect
                     pill
-                    icon={<Shield size={15} aria-hidden="true" />}
-                    label="Filtrar por operadora"
+                    minWidth={200}
                     value={filterOp}
                     onChange={setFilterOp}
-                    minWidth={200}
-                    style={{
-                      border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`,
-                      background:
-                        filterOp !== "todas"
-                          ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg),
-                      color: filterOp !== "todas" ? brand.accent : t.textMuted,
-                      fontWeight: filterOp !== "todas" ? 700 : 400,
-                    }}
-                  >
-                    <option value="todas">Todas as operadoras</option>
-                    {operadorasNoEscopo.map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                  </SelectComIcone>
+                    operadoras={operadorasNoEscopo}
+                  />
                 </>
               )}
             </div>
 
             {/* Linha 2: Plataforma */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-              {PLATAFORMAS.map((plat) => {
-                const active = filterPlat === plat;
-                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-                const nPlat = porPlat[plat] ?? 0;
-                return (
-                  <button key={plat} type="button" onClick={() => setFilterPlat(active ? "todas" : plat)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : `${color}11`,
-                      color: active ? color : color + "cc",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>{plat}</span>
-                    <span style={{ width: 1, height: 10, background: `${color}44`, flexShrink: 0, alignSelf: "center" }} aria-hidden />
-                    <span style={{ fontSize: 12, fontWeight: 800, color: nPlat > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
-                      {nPlat}
-                    </span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {PLATAFORMAS.map((plat) => (
+                <FiltroPlataformaSemanticoPill
+                  key={plat}
+                  plataforma={plat}
+                  semanticColor={PLAT_COLOR[plat as Plataforma] ?? "#94a3b8"}
+                  active={filterPlat === plat}
+                  isDark={isDark ?? false}
+                  count={porPlat[plat] ?? 0}
+                  onClick={() => setFilterPlat(filterPlat === plat ? "todas" : plat)}
+                />
+              ))}
             </div>
 
             {/* Linha 3: Filtro de Cachê */}
@@ -567,7 +580,7 @@ export default function Influencers() {
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                    <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora — até
+                    <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
                     {cacheLimit >= cacheMax ? "Todos" : fmtBRL(cacheLimit) + "/h"}
@@ -601,15 +614,12 @@ export default function Influencers() {
 
             {/* Linha 4: Barra de Pesquisa */}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
-              <input
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome artístico ou e-mail..."
-                style={{
-                  width: "100%", boxSizing: "border-box", padding: "10px 16px",
-                  borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-                  fontFamily: FONT.body, outline: "none",
-                }}
+              <BarraPesquisaPagina
+                value={search}
+                onChange={setSearch}
+                placeholder={PAGE_SEARCH.nomeEmail}
+                aria-label="Buscar influencer por nome ou e-mail"
+                wrapperStyle={{ width: "100%" }}
               />
             </div>
 
@@ -864,7 +874,6 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
   const row: CSSProperties = { marginBottom: 14 };
-  const tabActiveBg = livesTabActiveBg(brand);
   const val = (v?: string | number) => (
     <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>
       {v || "—"}
@@ -911,27 +920,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
-        <div role="tablist" aria-label="Seções do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`inf-viz-tab-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`inf-viz-panel-${tb.key}`}
-              onClick={() => setTab(tb.key)}
-              style={{
-                padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
-                background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <InfluencerModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="inf-viz-tab-" panelIdPrefix="inf-viz-panel-" />
 
         {tab === "cadastral" && (
           <>
@@ -1048,7 +1037,6 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
   const existing = influencer.perfil;
-  const tabActiveBg = livesTabActiveBg(brand);
   const ctaSalvar = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 
   useEffect(() => {
@@ -1199,27 +1187,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
           </button>
         </div>
 
-        <div role="tablist" aria-label="Seções do perfil do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`inf-edit-tab-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`inf-edit-panel-${tb.key}`}
-              onClick={() => setTab(tb.key)}
-              style={{
-                padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
-                background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <InfluencerModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="inf-edit-tab-" panelIdPrefix="inf-edit-panel-" />
 
         {error && (
           <div

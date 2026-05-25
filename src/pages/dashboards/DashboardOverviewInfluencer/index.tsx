@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
@@ -22,7 +23,9 @@ import {
   SectionTitle,
   KpiCard,
   FunilVisual,
-  SelectComIcone,
+  FiltroHistoricoButton,
+  FiltroOperadoraSelect,
+  FiltroInfluencerSelect,
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
@@ -38,7 +41,6 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
-  Calendar,
   CalendarDays,
   ChartColumnBig,
   ChevronLeft,
@@ -48,11 +50,9 @@ import {
   Eye,
   Filter,
   Gauge,
-  Shield,
   Table2,
   TrendingUp,
   Trophy,
-  User,
   UserPlus,
   Video,
 } from "lucide-react";
@@ -951,7 +951,6 @@ export default function DashboardOverviewInfluencer() {
     padding: 20,
     boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
-  const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
   const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
   const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
@@ -999,7 +998,7 @@ export default function DashboardOverviewInfluencer() {
               Overview Influencer
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Visão executiva da performance do canal de influencers.
+              Resumo executivo de financeiro, operação e conversão do canal de influencers.
             </p>
           </div>
         </div>
@@ -1016,71 +1015,51 @@ export default function DashboardOverviewInfluencer() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
-            <button type="button" aria-label="Mês anterior" style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} aria-hidden />
-            </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
-              {historico ? "Todo o período" : mesSelecionado?.label}
-            </span>
-            <button type="button" aria-label="Próximo mês" style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} aria-hidden />
-            </button>
-
-            {/* Botão Histórico — padrão Overview */}
             <button
               type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
-              onClick={toggleHistorico}
+              aria-label="Mês anterior"
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
             >
-              <Calendar size={15} aria-hidden="true" /> Histórico
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
+              {historico ? "Todo o período" : mesSelecionado?.label}
+            </span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (
-              <SelectComIcone
-                icon={<User size={15} aria-hidden="true" />}
-                label="Filtrar por influencer"
-                pill
+              <FiltroInfluencerSelect
+                mode="single"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-              >
-                <option value="todos">Todos os influencers</option>
-                {perfis
+                influencers={perfis
                   .filter((p) => influencersComDadosIds.includes(p.id) && podeVerInfluencer(p.id))
                   .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome_artistico}</option>
-                  ))}
-              </SelectComIcone>
+                  .map((p) => ({ id: p.id, name: p.nome_artistico ?? "" }))}
+              />
             )}
 
-            {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
-              <SelectComIcone
-                icon={<Shield size={15} aria-hidden="true" />}
-                label="Filtrar por operadora"
+              <FiltroOperadoraSelect
                 pill
+                minWidth={200}
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-              </SelectComIcone>
+                operadoras={operadorasList}
+              />
             )}
 
             {loading && (

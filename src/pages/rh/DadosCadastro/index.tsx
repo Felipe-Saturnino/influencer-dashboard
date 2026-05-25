@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { CheckCircle2, Download, Files, History, Loader2, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { AlertTriangle, Briefcase, CheckCircle2, Contact, Download, FileText, Files, History, Loader2, Trash2, Upload } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -33,6 +33,17 @@ import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import {
+  MESES_CICLO_REVISAO_CADASTRO,
+  payloadMarcarRevisaoCadastral,
+  cadastroRevisaoJaRegistradaPeloPrestador,
+  precisaRevisaoCadastral,
+  prestadorExigeRevisaoCadastral,
+  proximaRevisaoCadastralEm,
+  revisaoCadastralPendenteParaFuncionario,
+  notificarRevisaoCadastralAtualizada,
+} from "../../../lib/rhCadastroRevisao";
 
 const RH_SELF_MEDIA_BUCKET = "rh-prestador-self-media";
 
@@ -298,6 +309,13 @@ const ABAS: { key: AbaCadastro; label: string }[] = [
   { key: "historico", label: "Histórico" },
 ];
 
+const CADASTRO_TAB_ICONS: Record<AbaCadastro, ReactNode> = {
+  trabalho: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  documentos: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 export default function RhDadosCadastroPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -322,8 +340,21 @@ export default function RhDadosCadastroPage() {
   const [mediaRows, setMediaRows] = useState<RhFuncionarioSelfMedia[]>([]);
   const [signedById, setSignedById] = useState<Record<string, string>>({});
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [declaracaoSemAlteracao, setDeclaracaoSemAlteracao] = useState(false);
+  const [confirmandoSemAlteracao, setConfirmandoSemAlteracao] = useState(false);
 
   const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
+
+  const revisaoPendente = useMemo(
+    () => revisaoCadastralPendenteParaFuncionario(row),
+    [row],
+  );
+
+  const proximaRevisaoLabel = useMemo(() => {
+    if (!row) return null;
+    const d = proximaRevisaoCadastralEm(row.cadastro_revisado_em, row.created_at);
+    return d ? d.toLocaleDateString("pt-BR") : null;
+  }, [row]);
 
   const orgLabel = useMemo(() => {
     if (!row) return "—";
@@ -490,6 +521,38 @@ export default function RhDadosCadastroPage() {
     })();
   };
 
+  const marcarRevisaoCadastralNoBanco = async (funcionarioId: string, comAlteracao: boolean) => {
+    const patch = payloadMarcarRevisaoCadastral(comAlteracao ? "alteracao" : "sem_alteracao");
+    const { error } = await supabase.from("rh_funcionarios").update(patch).eq("id", funcionarioId);
+    return error;
+  };
+
+  const confirmarSemAlteracoes = async () => {
+    if (!perm.canEditarOk || !row || !form || !declaracaoSemAlteracao) return;
+    const e = validarCadastroSelf(form);
+    setFieldErr(e);
+    if (Object.keys(e).length > 0) {
+      setErroGlobal("Complete os dados obrigatórios antes de confirmar que nada mudou.");
+      return;
+    }
+    setConfirmandoSemAlteracao(true);
+    setErroGlobal(null);
+    setMsgOk(null);
+    const { error } = await supabase.rpc("rh_registrar_revisao_cadastral_sem_alteracao", {
+      p_funcionario_id: row.id,
+    });
+    setConfirmandoSemAlteracao(false);
+    if (error) {
+      setErroGlobal(error.message);
+      return;
+    }
+    setDeclaracaoSemAlteracao(false);
+    setMsgOk("Revisão cadastral registrada. Nenhuma alteração informada neste período.");
+    await carregarFuncionario();
+    await carregarHistorico(row.id);
+    notificarRevisaoCadastralAtualizada();
+  };
+
   const salvarCadastro = async () => {
     if (!perm.canEditarOk || !row || !form) return;
     const e = validarCadastroSelf(form);
@@ -498,7 +561,10 @@ export default function RhDadosCadastroPage() {
     setSalvando(true);
     setErroGlobal(null);
     setMsgOk(null);
-    const payload = buildPayloadFromForm(form, row.status);
+    const payload = {
+      ...buildPayloadFromForm(form, row.status),
+      ...(prestadorExigeRevisaoCadastral(row.status) ? payloadMarcarRevisaoCadastral("alteracao") : {}),
+    };
     const { data: atualizado, error } = await supabase.from("rh_funcionarios").update(payload).eq("id", row.id).select("*").maybeSingle();
     setSalvando(false);
     if (error) {
@@ -509,18 +575,20 @@ export default function RhDadosCadastroPage() {
       }
       return;
     }
-    setMsgOk("Dados atualizados.");
+    setMsgOk(revisaoPendente ? "Dados atualizados e revisão cadastral concluída." : "Dados atualizados.");
     if (atualizado) {
       await syncGamePresenterDealerFromRhFuncionario(atualizado as RhFuncionario);
     }
     await carregarFuncionario();
     await carregarHistorico(row.id);
+    if (revisaoPendente) notificarRevisaoCadastralAtualizada();
   };
 
   const uploadMidia = async (files: FileList | null) => {
     if (!perm.canEditarOk || !row || !files?.length) return;
     setUploadingDoc(true);
     setErroGlobal(null);
+    let uploaded = 0;
     try {
       for (const file of Array.from(files)) {
         const path = `${row.id}/${crypto.randomUUID()}_${sanitizeStorageFileName(file.name)}`;
@@ -545,6 +613,17 @@ export default function RhDadosCadastroPage() {
           setErroGlobal(insErr.message);
           break;
         }
+        uploaded += 1;
+      }
+      if (uploaded > 0 && prestadorExigeRevisaoCadastral(row.status)) {
+        const revErr = await marcarRevisaoCadastralNoBanco(row.id, true);
+        if (revErr) {
+          setErroGlobal(revErr.message);
+        } else if (revisaoPendente) {
+          setMsgOk("Documentos enviados e revisão cadastral concluída.");
+          await carregarFuncionario();
+          notificarRevisaoCadastralAtualizada();
+        }
       }
       await carregarMedia(row.id);
     } finally {
@@ -567,10 +646,6 @@ export default function RhDadosCadastroPage() {
     }
     await carregarMedia(row.id);
   };
-
-  const tabActiveBg = brand.useBrand
-    ? `color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)`
-    : `color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)`;
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -669,45 +744,156 @@ export default function RhDadosCadastroPage() {
         </div>
       ) : null}
 
+      {revisaoPendente ? (
+        <section
+          aria-labelledby="revisao-cadastral-titulo"
+          style={{
+            marginBottom: 18,
+            padding: "16px 18px",
+            borderRadius: 14,
+            border: "1px solid rgba(232, 64, 37, 0.28)",
+            borderLeft: `4px solid #e84025`,
+            background: `color-mix(in srgb, #e84025 6%, ${t.cardBg})`,
+          }}
+        >
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <AlertTriangle size={20} color="#e84025" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h2
+                id="revisao-cadastral-titulo"
+                style={{
+                  margin: "0 0 8px",
+                  fontFamily: FONT_TITLE,
+                  fontSize: 15,
+                  color: t.text,
+                }}
+              >
+                Atualização cadastral obrigatória
+              </h2>
+              <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT.body }}>
+                A cada {MESES_CICLO_REVISAO_CADASTRO} meses você deve revisar seu cadastro nesta página. Se algo mudou,
+                atualize os dados na aba <strong>Dados cadastrais</strong> e/ou envie novos documentos; em seguida salve ou
+                envie os arquivos. Se nada mudou, marque a declaração abaixo e confirme.
+              </p>
+              {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
+                <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Última revisão: {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
+                  {precisaRevisaoCadastral(row.cadastro_revisado_em, new Date(), row.created_at) ? " (vencida)" : null}
+                </p>
+              ) : (
+                <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Primeira revisão cadastral: o prazo de {MESES_CICLO_REVISAO_CADASTRO} meses conta desde o cadastro em
+                  Gestão de Prestadores ({fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}
+                  {proximaRevisaoLabel ? ` — prevista para ${proximaRevisaoLabel}` : ""}).
+                </p>
+              )}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  fontSize: 13,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  cursor: perm.canEditarOk ? "pointer" : "default",
+                  marginBottom: 12,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={declaracaoSemAlteracao}
+                  disabled={!perm.canEditarOk || confirmandoSemAlteracao || salvando}
+                  onChange={(ev) => setDeclaracaoSemAlteracao(ev.target.checked)}
+                  aria-label="Confirmar que não houve alteração nos dados cadastrais neste período"
+                  style={{ marginTop: 3, flexShrink: 0 }}
+                />
+                <span>
+                  Confirmo que meus dados cadastrais e documentos permanecem corretos e que não houve alteração no
+                  período desde a última revisão.
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando}
+                onClick={() => void confirmarSemAlteracoes()}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: brand.useBrand
+                    ? `linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))`
+                    : `linear-gradient(135deg, var(--brand-primary, #7c3aed), var(--brand-accent, #1e36f8))`,
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor:
+                    !perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity:
+                    !perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando ? 0.55 : 1,
+                  fontFamily: FONT.body,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {confirmandoSemAlteracao ? (
+                  <>
+                    <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                    Registrando…
+                  </>
+                ) : (
+                  "Confirmar sem alterações"
+                )}
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : proximaRevisaoLabel ? (
+        <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+          Próxima revisão cadastral prevista em {proximaRevisaoLabel}.
+          {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
+            <>
+              {" "}
+              Última revisão em {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
+              {row.cadastro_revisao_tipo === "sem_alteracao" ? " (sem alterações declaradas)" : null}.
+            </>
+          ) : (
+            <>
+              {" "}
+              Referência atual: cadastro em Gestão de Prestadores (
+              {fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}).
+            </>
+          )}
+        </p>
+      ) : null}
+
       <div
         role="tablist"
         aria-label="Seções do cadastro"
         style={{
           display: "flex",
-          gap: 6,
+          gap: 8,
           marginBottom: 18,
           flexWrap: "nowrap",
           overflowX: "auto",
           WebkitOverflowScrolling: "touch",
           paddingBottom: 2,
         }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
       >
-        {ABAS.map((tb) => {
-          const ativa = aba === tb.key;
-          return (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              aria-selected={ativa}
-              onClick={() => setAba(tb.key)}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 20,
-                flexShrink: 0,
-                border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
-                background: ativa ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: ativa ? brand.primary : t.textMuted,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          );
-        })}
+        {ABAS.map((tb) => (
+          <FiltroBarTabButton
+            key={tb.key}
+            id={`tab-cadastro-${tb.key}`}
+            active={aba === tb.key}
+            onClick={() => setAba(tb.key)}
+            icon={CADASTRO_TAB_ICONS[tb.key]}
+          >
+            {tb.label}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "trabalho" ? (

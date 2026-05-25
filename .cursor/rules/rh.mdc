@@ -1,0 +1,92 @@
+---
+description: Regras para a secção RH (menu). Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/rh/GestaoPrestador/**/*.tsx
+  - src/pages/rh/GestaoPrestador/**/*.ts
+  - src/pages/rh/DadosCadastro/**/*.tsx
+  - src/pages/rh/DadosCadastro/**/*.ts
+  - src/pages/rh/Organograma/**/*.tsx
+  - src/pages/rh/Organograma/**/*.ts
+  - src/pages/rh/Vagas/**/*.tsx
+  - src/pages/rh/Vagas/**/*.ts
+  - src/pages/rh/CentralDenunciasSpin/**/*.tsx
+  - src/pages/rh/CentralDenunciasSpin/**/*.ts
+alwaysApply: false
+---
+
+# Seção RH
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC (`PageHeader` 28/22 nas páginas de gestão). **`title` + `subtitle`:** `h1` = `label` em `menu.ts`; subtítulo obrigatório em páginas novas — Brand §4. Ajuda: `geral.mdc` (nome do menu). Filtro de operadora em **Gestão de Escala** e **Gestão de Staff:** `FiltroOperadoraSelect` — agregadora **Todas Operadoras**; `extraOptions` com **Nenhuma** quando o domínio exigir (ver Global).
+
+**Nota:** páginas de **Escala** (`GestaoEscala`, `GestaoStaff`, `Calendario`) estão em `escala.mdc` — não duplicar aqui.
+
+---
+
+## Identificação
+
+| PageKey | Label menu | Caminho |
+|---------|------------|---------|
+| `rh_funcionarios` | Gestão de Prestadores | `rh/GestaoPrestador/` |
+| `rh_dados_cadastro` | Dados de Cadastro | `rh/DadosCadastro/` |
+| `rh_organograma` | Organograma | `rh/Organograma/` |
+| `rh_vagas` | Vagas | `rh/Vagas/` |
+| `rh_central_denuncias` | Central de Denúncias | `rh/CentralDenunciasSpin/` |
+
+Canal público de denúncia (formulário externo): `geral.mdc` → `public/CanalDenunciasSpinPage.tsx`.
+
+---
+
+## Gestão de Prestadores (`rh_funcionarios`)
+
+- `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
+- **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
+- **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `FilterBarIcons.diretoria`; Gerência `Layers`; Setor `FilterBarIcons.time`; Contrato `FileSignature`; Status `FilterBarIcons.status` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`: headcount, ações RH, anotações).
+- Sem filtro de operadora nesta página.
+- Tabelas: ações em ícone (`btnIconTabela`); `SortTableTh` onde houver colunas ordenáveis (Global).
+- CTA gradiente em ações primárias de linha quando aplicável.
+- **Handoff:** abas, headcount, fluxos de aprovação RH.
+
+---
+
+## Dados de Cadastro (`rh_dados_cadastro`)
+
+- Documentos e metadados de cadastro.
+- **Handoff:** upload, exclusão, permissões.
+
+---
+
+## Organograma (`rh_organograma`)
+
+- Árvore de times/cargos; componentes de organograma em `lib/`.
+- Barra de diretorias (`OrgFiltroBarDiretorias`): carrossel + pill **Todas as diretorias** via `FiltroBarPillButton` (mesmo contrato que Histórico na barra), ícone `FilterBarIcons.diretoria` (`Building2`); `aria-pressed` quando agregador ativo.
+- **Handoff:** edição, filtros, export.
+
+---
+
+## Vagas (`rh_vagas`)
+
+- `PageHeader` + `RhVagasFiltroBar` (`getFilterBarWrapperStyle`): **Linha 1** abas (sem título/subtítulo por aba no painel); **Linha 2** `BarraPesquisaPagina` + filtros contextuais.
+- **Abertas / Em andamento:** só pesquisa na linha 2.
+- **Gerenciamento:** pesquisa + `FiltroBarCampoSelect` status (`ShieldEllipsis`, agregadora **Todos Status**) + `CtaCriarButton` **Nova Vaga** à direita.
+- **Candidaturas:** pesquisa + status + tipo (`ClipboardType`, **Todos Tipos**) + vagas (`ClipboardType`, **Todas Vagas**); estado dos filtros na página; opções de vaga vindas de `RhVagasCandidaturasPainel` via callback; kanban sem bloco de filtros duplicado.
+- Constantes: `lib/rhVagasFiltroConstants.ts`.
+- **Handoff:** estados, publicação, candidatos.
+
+---
+
+## Central de Denúncias (`rh_central_denuncias`)
+
+- Gestão interna de protocolos (distinto do canal público).
+- Barra de filtros (`getFilterBarWrapperStyle`): **Linha 1** — carrossel de mês (`carouselNavStyles`, maio/2026 → atual; rótulo **Todo o período** em Histórico) + `FiltroHistoricoButton` + tipo (`FiltroEntidadeBarSelect`, `TriangleAlert`, agregadora **Todos Tipos**, multi `overlaps`) + status (`FiltroBarCampoSelect`, `FilterBarIcons.status`, **Todos Status**); **Linha 2** — `BarraPesquisaPagina` no relato.
+- Modais: `ModalsVerHist`, `ModalsAtender` — a11y Global.
+- **Handoff:** SLA, status, atendimento, histórico.
+
+---
+
+## Anti-patterns (RH)
+
+- Documentar Gestão de Escala/Staff/Calendario neste ficheiro — usar `escala.mdc`.
+- Ações de linha só com texto (sem ícone + `aria-label` + `title`).
+- Confundir Central interna com página pública do Canal.

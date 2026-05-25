@@ -148,7 +148,7 @@ export default function SpinNaRede() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -190,7 +190,7 @@ export default function SpinNaRede() {
       </div>
 
       <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, maxWidth: 720, lineHeight: 1.45 }}>
-        Citações e menções públicas à Spin em notícias e feeds.
+        Acompanhe as menções e aparições públicas da Spin Gaming na mídia.
       </p>
 
       {erro && (
@@ -213,7 +213,7 @@ export default function SpinNaRede() {
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "24px 0" }}>
           <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden="true" />
-          <span style={{ color: t.textMuted, fontSize: 13 }}>A carregar menções…</span>
+          <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando menções…</span>
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
@@ -256,6 +256,8 @@ export default function SpinNaRede() {
                       href={row.item_url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      tabIndex={-1}
+                      aria-hidden
                       style={{
                         flexShrink: 0,
                         borderRadius: 10,
@@ -265,7 +267,6 @@ export default function SpinNaRede() {
                         textDecoration: "none",
                         color: "transparent",
                       }}
-                      aria-label={`Ir para a matéria: ${imgAlt}`}
                     >
                       <img
                         key={`${row.id}-${phase ?? "a"}`}
@@ -334,7 +335,7 @@ export default function SpinNaRede() {
                         gap: 6,
                         fontSize: 13,
                         fontWeight: 600,
-                        color: brand.accent,
+                        color: "var(--brand-primary, #7c3aed)",
                         textDecoration: "none",
                       }}
                     >

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
@@ -9,9 +9,70 @@ import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { DashboardPageHeader } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroBarTabButton,
+  FiltroPlataformaSemanticoPill,
+  FiltroStatusSemanticoPill,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
+} from "../../../components/dashboard";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+
+type ScoutModalTab = "contato" | "canais" | "anotacoes";
+
+const SCOUT_TAB_ICONS: Record<ScoutModalTab, ReactNode> = {
+  contato: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  canais: <Share2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  anotacoes: <StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const SCOUT_TAB_LABELS: Record<ScoutModalTab, string> = {
+  contato: "Contato",
+  canais: "Canais",
+  anotacoes: "Anotações",
+};
+
+function ScoutModalTabs({
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+}: {
+  tab: ScoutModalTab;
+  setTab: (k: ScoutModalTab) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+}) {
+  const tabKeys: ScoutModalTab[] = ["contato", "canais", "anotacoes"];
+  return (
+    <div
+      role="tablist"
+      aria-label="Seções do prospecto"
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabKeys.map((tb) => (
+        <FiltroBarTabButton
+          key={tb}
+          id={`${tabIdPrefix}${tb}`}
+          active={tab === tb}
+          aria-controls={`${panelIdPrefix}${tb}`}
+          onClick={() => setTab(tb)}
+          icon={SCOUT_TAB_ICONS[tb]}
+          style={{ flexShrink: 0 }}
+        >
+          {SCOUT_TAB_LABELS[tb]}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 export type OperadoraScoutOpt = { slug: string; nome: string };
 
@@ -42,15 +103,8 @@ const STATUS_SCOUT_COLOR: Record<StatusScout, string> = {
 
 const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "Cassino"] as const;
 
-const CTA_GRADIENT = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 const SLIDER_TRACK_GRADIENT = "linear-gradient(90deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 const SLIDER_THUMB_GRADIENT = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
-
-function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-}
 
 // Métrica exibida por plataforma (apenas front — não altera DB)
 const PLAT_METRICA: Record<string, string> = {
@@ -363,24 +417,9 @@ export default function Scout() {
       <DashboardPageHeader
         icon={<Search size={14} aria-hidden="true" />}
         title="Scout"
-        subtitle="Prospecte e registre informações de influencers para parcerias."
+        subtitle="Registre prospectos e acompanhe o funil do primeiro contato ao fechamento."
         brand={brand}
         t={t}
-        right={
-          perm.canCriarOk ? (
-            <button
-              type="button"
-              onClick={() => setModalNovo(true)}
-              style={{
-                padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
-                background: CTA_GRADIENT,
-                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-              }}
-            >
-              + Adicionar
-            </button>
-          ) : undefined
-        }
       />
 
       {/* Bloco 1: Cards Consolidados */}
@@ -397,93 +436,48 @@ export default function Scout() {
               ))}
             </div>
           </div>
-          <div>
-            <div style={{ marginBottom: 10, paddingLeft: 2 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                Cobertura de Plataformas
-              </div>
-              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4 }}>
-                Clique em uma plataforma para filtrar a lista; clique de novo para ver todos.
-              </div>
-            </div>
-            <div className="app-table-wrap">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, width: "100%" }}>
-              {PLATS_ORDEM.map((plat) => {
-                const count = porPlat[plat] ?? 0;
-                const cor = PLAT_COLOR[plat as Plataforma];
-                const filtroAtivo = filterPlat === plat;
-                return (
-                  <button
-                    key={plat}
-                    type="button"
-                    onClick={() => setFilterPlat(filtroAtivo ? "todas" : plat)}
-                    aria-pressed={filtroAtivo}
-                    aria-label={filtroAtivo ? `Remover filtro ${plat}` : `Filtrar por ${plat}`}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                      padding: "12px 16px", borderRadius: 18,
-                      background: brand.blockBg,
-                      border: filtroAtivo ? `2px solid ${cor}` : `1.5px solid ${cor}55`,
-                      boxShadow: filtroAtivo ? `0 0 0 2px ${cor}33` : "0 2px 8px rgba(0,0,0,0.08)",
-                      minWidth: 0,
-                      cursor: "pointer",
-                      font: "inherit",
-                      textAlign: "center",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center" }}>
-                      {plat}
-                    </span>
-                    <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0, alignSelf: "center" }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Bloco 2: Filtros (estilo Influencers) */}
+      {/* Bloco 2: Filtros (estilo Agenda / Influencers) */}
       <div style={{ marginBottom: 20 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          {/* Linha 1: Status (filtro de plataforma: chips em Cobertura de Plataformas) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+          {/* Linha 1: Status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-            {STATUS_SCOUT_OPTS.map((s) => {
-              const active = filterStatus === s;
-              const color = STATUS_SCOUT_COLOR[s];
-              return (
-                <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                    lineHeight: 1,
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_SCOUT_LABEL[s]}</span>
-                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                </button>
-              );
-            })}
+            {STATUS_SCOUT_OPTS.map((s) => (
+              <FiltroStatusSemanticoPill
+                key={s}
+                label={STATUS_SCOUT_LABEL[s]}
+                semanticColor={STATUS_SCOUT_COLOR[s]}
+                active={filterStatus === s}
+                onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
+              />
+            ))}
           </div>
 
-          {/* Linha 2: Cachê / Views */}
+          {/* Linha 2: Plataforma (cobertura — filtro na lista) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+            {PLATS_ORDEM.map((plat) => (
+              <FiltroPlataformaSemanticoPill
+                key={plat}
+                plataforma={plat}
+                semanticColor={PLAT_COLOR[plat as Plataforma] ?? "#94a3b8"}
+                active={filterPlat === plat}
+                isDark={isDark ?? false}
+                count={porPlat[plat] ?? 0}
+                onClick={() => setFilterPlat(filterPlat === plat ? "todas" : plat)}
+              />
+            ))}
+          </div>
+
+          {/* Linha 3: Cachê / Views */}
           <div className="app-grid-2" style={{
             paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
             gap: 18,
@@ -491,7 +485,7 @@ export default function Scout() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                  <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora — até
+                  <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : fmtBRL(cacheLimit) + "/h"}</span>
               </div>
@@ -522,7 +516,7 @@ export default function Scout() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                  <Eye size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Views — até
+                  <Eye size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Views
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
               </div>
@@ -552,19 +546,28 @@ export default function Scout() {
             </div>
           </div>
 
-          {/* Linha 3: Barra de Pesquisa */}
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
-            <input
+          {/* Linha 4: Busca + Adicionar */}
+          <div style={{
+            paddingTop: 12,
+            marginTop: 12,
+            borderTop: `1px solid ${t.cardBorder}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}>
+            <BarraPesquisaPagina
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-              style={{
-                width: "100%", boxSizing: "border-box", padding: "10px 16px",
-                borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-                fontFamily: FONT.body, outline: "none",
-              }}
+              onChange={setSearch}
+              placeholder={PAGE_SEARCH.nomeEmail}
+              aria-label="Buscar prospecto por nome ou e-mail"
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
+            {perm.canCriarOk && (
+              <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
+                Novo Influencer
+              </CtaCriarButton>
+            )}
           </div>
 
           {(filterStatus !== "todos" || filterPlat !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax) || (viewsMax > 0 && viewsLimit < viewsMax)) && (
@@ -637,7 +640,7 @@ export default function Scout() {
           return (
             <div key={s.id} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", boxShadow: cardShadow }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: CTA_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: getCtaCriarGradient(brand), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
                   {(s.nome_artistico || "?")[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -714,7 +717,7 @@ export default function Scout() {
                     type="button"
                     onClick={() => setModal({ mode: "editar", scout: s })}
                     aria-label={`Editar prospecto ${s.nome_artistico}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: CTA_GRADIENT, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: getCtaCriarGradient(brand), color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
                   >
                     <Pencil size={13} aria-hidden="true" /> Editar
                   </button>
@@ -743,12 +746,11 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
+  const [tab, setTab] = useState<ScoutModalTab>("contato");
   const [anotacoes, setAnotacoes] = useState<ScoutAnotacao[]>([]);
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const row: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
-  const tabActiveBg = livesTabActiveBg(brand);
 
   useEffect(() => { containerRef.current?.focus(); }, []);
 
@@ -801,22 +803,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
         </div>
-        <div role="tablist" aria-label="Seções do prospecto" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`scout-viz-tab-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`scout-viz-panel-${tb}`}
-              onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <ScoutModalTabs tab={tab} setTab={setTab} tabIdPrefix="scout-viz-tab-" panelIdPrefix="scout-viz-panel-" />
         {tab === "contato" && (
           <div role="tabpanel" id="scout-viz-panel-contato" aria-labelledby="scout-viz-tab-contato">
             <div style={row}><label style={labelStyle}>E-mail</label>{val(scout.email)}</div>
@@ -884,8 +871,10 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabActiveBg = livesTabActiveBg(brand);
-  const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
+  const chipSelBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
+    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+  const [tab, setTab] = useState<ScoutModalTab>("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
   const [status, setStatus] = useState<StatusScout>(scout?.status ?? "visualizado");
   const [tipoContato, setTipoContato] = useState<string>(scout?.tipo_contato ?? "");
@@ -1241,22 +1230,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           </select>
         </div>
 
-        <div role="tablist" aria-label="Seções do prospecto" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button
-              key={tb}
-              type="button"
-              role="tab"
-              id={`scout-edit-tab-${tb}`}
-              aria-selected={tab === tb}
-              aria-controls={`scout-edit-panel-${tb}`}
-              onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
-            </button>
-          ))}
-        </div>
+        <ScoutModalTabs tab={tab} setTab={setTab} tabIdPrefix="scout-edit-tab-" panelIdPrefix="scout-edit-panel-" />
 
         {error && (
           <div
@@ -1388,7 +1362,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                   const sel = categorias.includes(c);
                   return (
                     <button key={c} type="button" onClick={() => toggleCategoria(c)}
-                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? brand.primary : t.cardBorder}`, background: sel ? tabActiveBg : (t.inputBg ?? t.cardBg), color: sel ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
+                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? brand.primary : t.cardBorder}`, background: sel ? chipSelBg : (t.inputBg ?? t.cardBg), color: sel ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                       {c}
                     </button>
                   );
@@ -1449,7 +1423,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           <div style={{ flex: 1, minWidth: 0 }} />
           <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
           <button type="button" onClick={() => void handleSave()} disabled={saving}
-            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: CTA_GRADIENT, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: getCtaCriarGradient(brand), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving && criandoUsuario ? (
               <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
             ) : saving ? (

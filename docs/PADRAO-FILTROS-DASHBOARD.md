@@ -1,90 +1,184 @@
-# Padrão de filtros: Histórico, Influencer e Operadora
+# Padrão de filtros na barra (FilterBar)
 
-Este documento define o padrão visual e de ícones que **toda página nova** (ou refatoração) deve seguir quando expuser, na mesma barra:
+Referência canónica: **`src/pages/dashboards/DashboardOverviewInfluencer/index.tsx`** (barra de filtros).
 
-- um botão **Histórico** (alternar entre período corrente e “todo o período” / equivalente);
-- filtro de **Influencer(s)**;
-- filtro de **Operadora(s)**.
+Este documento define o padrão visual e de ícones que **toda página** deve seguir nos controlos repetíveis da **barra de filtros** transparente.
 
-O padrão de referência é o mesmo usado nos **Dashboards** (ex.: Streamers — Overview Spin e abas). Não reinventar ícones nem estilos divergentes nesses três controlos.
+---
+
+## Helpers partilhados
+
+`src/lib/filterBarStyles.ts`:
+
+| Export | Uso |
+|--------|-----|
+| `FILTER_BAR_PADDING` | `"12px 20px"` no wrapper |
+| `FILTER_BAR_ROW_GAP` | `10` entre carrossel, Histórico, filtros |
+| `FILTRO_BAR_PILL_PADDING` | `"6px 14px"` em cada pill |
+| `FILTRO_BAR_PILL_GAP` | `6` entre ícone e texto no pill |
+| `getFilterBarRowStyle()` | Linha centralizada com `gap: 10` |
+| `getFilterBarWrapperStyle(brand)` | Strip transparente Brand §5 |
+| `getFiltroCampoInativoStyle(t)` | Estado inativo |
+| `getFiltroCampoAtivoStyle(brand)` | Estado ativo |
+| `getFiltroBarPillStateStyle(t, brand, active)` | Toggle inativo/ativo (marca) |
+| `FILTRO_STATUS_SEMANTICO_PILL` | Dimensões dos chips semânticos (10px radius, 44px altura) |
+| `getFiltroStatusSemanticoPillStyle(t, active, semanticColor)` | Chips Status / Plataforma (cor de domínio) |
+| `FILTRO_BAR_TAB_BUTTON` / `getFiltroBarTabButtonStyle` | Botões de **aba** (`role="tab"`) — referência Organograma |
+| `FILTRO_BAR_TAB_ICON_PROPS` | Ícone Lucide **16px** em cada aba |
+| `onFiltroBarTabsKeyDown` / `handleFiltroBarTabsArrowKeyDown` | Setas ← → no `tablist` |
+
+**Componente:** `FiltroBarTabButton` — uma aba = um ícone único + rótulo; ver Brand MDC §6 (Abas de navegação).
 
 ---
 
 ## Ícones (obrigatório: Lucide React)
 
-| Controlo            | Ícone Lucide | Notas |
-|---------------------|--------------|--------|
-| Botão **Histórico** | `Calendar`   | Tamanho típico **15**; `aria-hidden` no ícone decorativo. |
-| Filtro **Influencer** | `User`     | Mesmo ícone em select nativo, `SelectComIcone` ou no `InfluencerDropdown` (multi-seleção). |
-| Filtro **Operadora**  | `Shield`   | À esquerda do `<select>` ou dentro de `SelectComIcone`. |
+**Fonte de verdade:** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). Brand MDC §6 tem a tabela completa e exceções de domínio.
 
-**Não usar** para estes três elementos: `GiCalendar`, `GiShield`, `GiStarMedal` nem outros ícones de bibliotecas alternativas — mantém consistência com Overview Spin / Overview Influencer.
+| Controlo | Ícone | `FilterBarIcons` | Componente |
+|----------|-------|------------------|------------|
+| **Histórico** (acumulado) | `Calendar` | `.historico` | `FiltroHistoricoButton` |
+| **Influencer(s)** | `User` | `.influencer` | `FiltroInfluencerSelect` |
+| **Operadora(s)** | `Shield` | `.operadora` | `FiltroOperadoraSelect` |
+| **Status** (`<select>`) | **`ShieldAlert`** | `.status` | `FiltroBarCampoSelect` — agregadora **Todos Status** |
+| **Time** | `UsersRound` | `.time` | `FiltroCalendarioTimeSelect`, `FiltroTodosTimesButton` |
+| **Staff** | `IdCard` | `.staff` | `FiltroCalendarioStaffSelect` |
+| **Turno** | `Clock` | `.turno` | `FiltroTurnoSelect` |
+| **Modo Mês / Semana / Dia** | `CalendarRange` | `.modoVisualizacao` | `FiltroModoVisualizacaoSelect` |
+| **Hoje** (Agenda) | `History` | `.hoje` | `FiltroHojeButton` |
 
-Importação de exemplo:
+**Não usar** `GiCalendar`, `GiShield`, `ListFilter` / `CircleDot` / `ShieldEllipsis` para status em `<select>` na barra.
 
-```tsx
-import { Calendar, Shield, User } from "lucide-react";
-```
+**Status semântico (chips):** `FiltroStatusSemanticoPill` com bolinha 8px — **não** `ShieldAlert` (Lives, Afiliados, etc.).
 
 ---
 
 ## Container da barra de filtros
 
-Alinhar ao bloco dos dashboards:
+```tsx
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../lib/filterBarStyles";
 
-- `borderRadius: 14`
-- `border: brand.primaryTransparentBorder`
-- `background: brand.primaryTransparentBg`
-- `padding: "12px 20px"` (ou equivalente já usado na secção, sem fundo sólido opaco no lugar do padrão transparente de marca)
+<div style={{ marginBottom: 14 }}>
+  <div style={getFilterBarWrapperStyle(brand)}>
+    <div style={getFilterBarRowStyle()}>
+      {/* carrossel, Histórico, FiltroInfluencerSelect, FiltroOperadoraSelect, … */}
+    </div>
+  </div>
+</div>
+```
 
-Usar `useDashboardBrand()` para `brand` e respeitar whitelabel (`useBrand`, `var(--brand-accent)`, etc.), como em `global.mdc` / `brand-css-variables.mdc`.
-
-Referência de implementação: `src/pages/dashboards/Streamers/index.tsx` (wrapper do bloco de filtros + botão Histórico + `SelectComIcone`).
-
----
-
-## Botão Histórico
-
-- `type="button"`
-- Estado ativo: `aria-pressed={true}` quando o modo histórico estiver ligado.
-- `aria-label` descritivo (ex.: ativar/desativar modo histórico).
-- Estilo pill: borda com `brand.accent` quando ativo; fundo com `color-mix` em whitelabel ou `rgba(124,58,237,0.15)` no fallback Spin; texto em `brand.accent` quando ativo.
-- Ícone: `<Calendar size={15} aria-hidden />` imediatamente antes do texto “Histórico”.
+- **Gap 10** entre todos os controlos da linha (não usar 18)
 
 ---
 
-## Filtro Influencer
+## Filtros semânticos (Status e Plataforma)
 
-- **Select simples (um valor):** preferir o componente `SelectComIcone` de `src/components/dashboard` com `icon={<User size={15} aria-hidden />}` e `label` acessível (ex. “Filtrar por influencer”).
-- **Multi-seleção:** usar `InfluencerDropdown` (`src/components/InfluencerDropdown.tsx`) ou `InfluencerMultiSelect` (`src/components/InfluencerMultiSelect.tsx`); ambos usam o ícone **`User`** no controlo do filtro.
+Chips com **cor de negócio** no estado ativo — **distintos** dos pills 999 de marca (Histórico, Operadora, Influencer).
 
-Opções: “Todos os influencers” + lista; respeitar `useDashboardFiltros()` (`showFiltroInfluencer`, escopos) quando aplicável.
+| Propriedade | Inativo | Ativo |
+|-------------|---------|-------|
+| `borderRadius` | **10** | **10** |
+| `padding` | **10px 18px** | **10px 18px** |
+| `minHeight` | **44** | **44** |
+| `fontSize` | **13** | **13** |
+| `border` | `t.cardBorder` | cor semântica (`semanticColor`) |
+| `background` | `t.inputBg` | `color-mix` 15% cor semântica |
+| `color` | `t.textMuted` | cor semântica |
+| `fontWeight` | 500 | 700 |
+
+| Componente | Conteúdo do chip |
+|------------|------------------|
+| `FiltroStatusSemanticoPill` | Bolinha 8px + rótulo; `<X>` ao desmarcar (default) |
+| `FiltroPlataformaSemanticoPill` | `PlatLogo` 13px + rótulo; prop opcional `count` (Influencers, Scout) |
+
+```tsx
+import { FiltroStatusSemanticoPill, FiltroPlataformaSemanticoPill } from "../components/dashboard";
+```
+
+**Páginas:** status — Agenda, Feedback, Influencers, Scout, Afiliados, Network; plataforma — Agenda, Influencers, Scout.
 
 ---
 
-## Filtro Operadora
+## Visual unificado dos pills (Operadora, Influencer, Histórico, Hoje, Mês/Semana/Dia)
 
-- **Select simples:** `SelectComIcone` com `icon={<Shield size={15} aria-hidden />}` **ou** um `<select>` com o ícone `Shield` posicionado à esquerda (`position: absolute`, `left: 10`, `pointerEvents: "none"`), padding esquerdo extra no select (`6px 14px 6px 30px`), mesmo padrão de estado ativo (borda/fundo com `brand.accent` quando não for “todas”).
-- Opções: “Todas as operadoras” + lista filtrada por `podeVerOperadora` quando existir permissão.
+| Propriedade | Inativo | Ativo |
+|-------------|---------|-------|
+| `borderRadius` | **999** | **999** |
+| `padding` | **6px 14px** | **6px 14px** |
+| `border` | `t.cardBorder` | marca (`--brand-action` ou `brand.accent`) |
+| `background` | `t.inputBg ?? t.cardBg` | `color-mix` 15% marca |
+| `color` | **`t.text`** | cor de destaque marca |
+| `fontWeight` | 400 | 700 |
+
+Implementação: `getFiltroBarPillStateStyle(t, brand, active)` — **não** duplicar inline.
+
+```tsx
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+
+<FiltroOperadoraSelect value={filtroOperadora} onChange={setFiltroOperadora} operadoras={lista} />
+
+<FiltroInfluencerSelect mode="single" value={…} onChange={…} influencers={…} />
+
+<FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
+
+<FiltroModoVisualizacaoSelect
+  value={view}
+  defaultValue="mes"
+  onChange={setView}
+  options={[
+    { value: "mes", label: "Mês" },
+    { value: "semana", label: "Semana" },
+    { value: "dia", label: "Dia" },
+  ]}
+/>
+```
+
+- **Hoje:** `aria-pressed` quando dia corrente em modo Dia; ativo = estilo marca.
+- **Modo:** inativo com valor `defaultValue` (**Mês** na Agenda); Semana/Dia = ativo.
+- Histórico (dashboards): rótulo do carrossel **`Todo o período`** quando ligado.
 
 ---
 
-## Navegação de período (quando existir)
+## CTA de criação na barra (distinto dos pills)
 
-Se a página tiver carrossel mês/semana junto aos filtros:
+Quando **Adicionar / Criar / Nova …** ficar na **mesma strip** de filtros:
 
-- Botões anterior/próximo: `ChevronLeft` / `ChevronRight`, estilo circular 44×44 alinhado aos dashboards.
-- Desabilitar navegação quando `historico === true` ou nos extremos do intervalo disponível.
+| Item | Pills de filtro | CTA de criação |
+|------|-----------------|----------------|
+| Componente | `FiltroHistoricoButton`, `FiltroOperadoraSelect`, … | **`CtaCriarButton`** |
+| `borderRadius` | **999** | **10** (abas Overview Spin) |
+| `padding` | **6px 14px** | **10px 20px** |
+| Ícone | conforme tipo (Calendar, Shield, …) | **`Plus` 14px** |
+| Fundo | `color-mix` quando ativo | gradiente cheio (ver `PADRAO-CTA-CRIAR.md`) |
+
+Na linha: `getFilterBarRowStyle()` (`gap: 10`) — CTA na mesma fileira que carrossel e selects.
 
 ---
 
-## Checklist rápido (nova página)
+## Legado removido (não usar)
 
-- [ ] `Calendar` + `User` + `Shield` só do **lucide-react** nestes três controlos.
-- [ ] Barra dentro do wrapper `primaryTransparentBorder` / `primaryTransparentBg`.
-- [ ] Botão Histórico com `aria-pressed` e labels acessíveis.
-- [ ] Filtros condicionados a `showFiltroInfluencer` / `showFiltroOperadora` quando usar `useDashboardFiltros`.
-- [ ] Nenhum `GiCalendar` / `GiShield` / `GiStarMedal` nesta barra.
+- Chips status/plataforma na barra com `borderRadius: 999`, `padding: 5px 12px`, ativo só `${cor}22` inline (usar `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill`)
+- Histórico inativo com `background: transparent` ou `color: t.textMuted`
+- Histórico ativo só com `brand.accent` sem ramo `useBrand` / `--brand-primary`
+- Markup inline de botão Histórico na barra (usar sempre `FiltroHistoricoButton`)
+- `gap: 18` na linha principal da barra
+
+---
+
+## Agenda — barra de referência
+
+`src/pages/lives/Agenda/index.tsx` — carrossel + **Hoje** + **Mês/Semana/Dia** + Influencer + Operadora na mesma linha (`getFilterBarRowStyle`). Sem `FiltroHistoricoButton`.
+
+---
+
+## Checklist rápido
+
+- [ ] Wrapper `getFilterBarWrapperStyle` (`12px 20px`, `primaryTransparent*`)
+- [ ] Linha com **`gap: 10`**
+- [ ] Histórico: `FiltroHistoricoButton` (estados partilhados)
+- [ ] Agenda: `FiltroHojeButton` + `FiltroModoVisualizacaoSelect` com `defaultValue="mes"`
+- [ ] Operadora + Influencer nos componentes canónicos
+- [ ] Carrossel: `lib/carouselNavStyles.ts`
 
 ---
 
@@ -92,11 +186,17 @@ Se a página tiver carrossel mês/semana junto aos filtros:
 
 | Descrição | Caminho |
 |-----------|---------|
-| Barra completa (Histórico + selects com ícones) | `src/pages/dashboards/Streamers/index.tsx` |
-| Dropdown multi-influencer (ícone User) | `src/components/InfluencerDropdown.tsx` |
-| Select com ícone à esquerda | `src/components/dashboard` (`SelectComIcone`) |
-| Marca / fundo do bloco | `useDashboardBrand` + regras em `.cursor/rules/global.mdc` |
+| Referência visual | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Estilos da barra | `src/lib/filterBarStyles.ts` |
+| Histórico | `src/components/dashboard/FiltroHistoricoButton.tsx` |
+| Operadora | `src/components/FiltroOperadoraSelect.tsx` |
+| Influencer | `src/components/FiltroInfluencerSelect.tsx` |
+| Hoje | `src/components/dashboard/FiltroHojeButton.tsx` |
+| Modo Mês/Semana/Dia | `src/components/FiltroModoVisualizacaoSelect.tsx` |
+| Status semântico | `src/components/FiltroStatusSemanticoPill.tsx` |
+| Plataforma semântica | `src/components/FiltroPlataformaSemanticoPill.tsx` |
+| Agenda (barra completa) | `src/pages/lives/Agenda/index.tsx` |
 
 ---
 
-*Última atualização: documento alinhado ao padrão dos Dashboards Streamers (Overview Spin). Alterações globais de ícone devem atualizar este ficheiro e, se necessário, os ficheiros de referência acima.*
+*Última atualização: chips Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`) — estilo abas Overview Spin + cor semântica ativa.*

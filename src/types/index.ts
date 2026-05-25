@@ -150,9 +150,12 @@ export interface UtmAlias {
   campanha_id:      string | null;
   influencer_name?: string;
   campanha_nome?:   string;
+  campanha_ativo?:  boolean;
   status:           UtmAliasStatus;
   primeiro_visto:   string;
   ultimo_visto:     string;
+  total_visits?:    number;
+  total_registrations?: number;
   total_ftds:       number;
   total_deposit:    number;
   total_withdrawal?: number;
@@ -219,7 +222,7 @@ export interface UserScope {
 // ─── DEALER ──────────────────────────────────────────────────────────────────
 export type DealerGenero = "feminino" | "masculino";
 export type DealerTurno = "manha" | "tarde" | "noite";
-export type DealerJogo = "blackjack" | "roleta" | "baccarat" | "mesa_vip";
+export type DealerJogo = "blackjack" | "roleta" | "baccarat" | "futebol_brasileiro" | "mesa_vip";
 
 export interface Dealer {
   id:               string;

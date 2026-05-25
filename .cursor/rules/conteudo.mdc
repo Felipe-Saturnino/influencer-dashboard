@@ -1,28 +1,22 @@
 ---
-description: Regras específicas para todas as páginas da seção Conteúdo. Complementa global.mdc, brand-css-variables.mdc, operacoes.mdc e lives.mdc.
+description: Regras específicas para todas as páginas da seção Conteúdo. Complementa global.mdc e brand-css-variables.mdc.
 globs:
   - src/pages/conteudo/**/*.tsx
   - src/pages/conteudo/**/*.ts
 alwaysApply: false
 ---
 
-# Seção Conteúdo — Regras Específicas
+# Seção Conteúdo
 
-**Escopo (Cursor):** globs cobrem tudo em `src/pages/conteudo/`. Páginas atuais: **LinksMateriais** · **PlaybookInfluencers**. **Roteiro de Mesa** está em `src/pages/estudio/RoteiroMesa/` (menu Estúdio) — regras de UI densas em `operacoes.mdc`.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-**Perfil de uso:** fluxos críticos — emissão de link de rastreamento (gate de aquisição), confirmação de ciência do Playbook (gate de transmissão), e gestão de roteiros de mesa por bloco e operadora.
+**Escopo:** `src/pages/conteudo/` — LinksMateriais, PlaybookInfluencers, SpinNaRede, PortalRh. **Roteiro de Mesa** está em `estudio/` → `estudio.mdc`.
 
-**Marca / operadora (whitelabel):** alinhado a `operacoes.mdc` e `lives.mdc`.
+**Marca / filtros / headers:** Brand MDC. Portal RH usa **Família B** (`PageHeader` 28/22). Playbook/Links: Família A (32/18) até decisão de produto.
 
-- Chamar `useDashboardBrand()` em cada página (e em modais com bloco de marca).
-- Usar `brand.primary`, `brand.accent`, `brand.blockBg`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, e `brand.secondary` quando fizer sentido.
-- Com `brand.useBrand === true` (operador + `operadoraBrand`), o hook resolve para `var(--brand-*)` via `aplicarBrandguide()` — ver `global.mdc` e `brand-css-variables.mdc`.
-- **Gradientes de CTA** (“Salvar”, “Emitir”, primários): `brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : linear-gradient Spin` e texto **`#fff`**.
-- **Estado ativo / chip:** `color-mix(in srgb, var(--brand-accent) 15%, transparent)` quando `useBrand`; senão equivalente roxo Spin do código.
-- **Semântica** (estado de produto, erro, alerta, progresso com faixa vermelho→azul legada): não trocar por `--brand-primary` só por whitelabel quando o significado for universal — ver secções por página e barra de progresso brand-aware abaixo.
-- **Spinners (`Loader2`):** fora de botão, fundo neutro → `color="var(--brand-primary, #7c3aed)"` / `app-lucide-spin`. **Dentro de CTA com gradiente** → spinner **`#fff`** (`brand-css-variables.mdc`).
+**Semântica:** barra de progresso Playbook (vermelho→azul legado), estados de ciência — não trocar por `--brand-primary` só por whitelabel.
 
-**Paleta semântica local:** não declarar `const BRAND = { ... }` com hex duplicados — importar **`BRAND_SEMANTIC as BRAND`** de `constants/theme` **ou** `BRAND` de `lib/dashboardConstants`, conforme o módulo já usa na página.
+**`BRAND`:** importar `BRAND_SEMANTIC` ou `dashboardConstants` — não objeto local duplicado.
 
 ---
 
@@ -32,37 +26,45 @@ alwaysApply: false
 |---|---|---|
 | LinksMateriais | Influencer / Gestor | Gerar link UTM de rastreamento e baixar QR Code branded |
 | PlaybookInfluencers | Influencer (leitura + ciência) / Gestor (auditoria) | Garantir leitura e confirmação das seções obrigatórias antes de transmitir |
+| SpinNaRede | Todos (leitura) | Vitrine de menções públicas à Spin via RSS |
+| PortalRh | Colaborador (leitura) / Gestor RH (CRUD + aprovação) | Comunicados, políticas, RH Talks e gerenciamento |
 | RoteiroMesa | Gestor / Admin | CRUD de roteiros e campanhas de mesa por bloco e operadora |
 
 ---
 
-## Header de Página — Padrão da Seção
+## Header de Página — título, subtítulo e família visual
 
-**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** — diferente de páginas com **`PageHeader`** no Estúdio / marketing / financeiro (28×28 + título 22). Até unificação explícita de produto, **manter 18 / 32 nesta seção**.
+Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.mdc`).
+
+**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** (Família A) — diferente de **`PageHeader`** 28/22 (Família B). Até unificação explícita de produto, **manter 18 / 32** nas páginas desta secção que já usam Família A.
+
+**Subtítulo obrigatório:** `<p>` sob o bloco ícone + `h1`, `fontSize: 13`, `t.textMuted`, `FONT.body`, tipicamente `paddingLeft: 40` para alinhar ao ícone.
+
+| PageKey | h1 (menu) | Subtítulo canónico | Notas |
+|---|---|---|---|
+| `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | Título visual legado `Playbook — Influencers` até unificação com menu |
+| `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
+| `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
+| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
 
 ```tsx
-// Padrão atual de Conteúdo (e várias Lives)
+// Família A — ícone + h1 + subtítulo
 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-  <span style={{
-    width: 32, height: 32, borderRadius: 9,
-    background: brand.primaryIconBg,
-    border: brand.primaryIconBorder,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    color: brand.primaryIconColor, flexShrink: 0,
-  }}>
-    <IconeDoComponente size={16} aria-hidden="true" />
+  <span style={{ width: 32, height: 32, borderRadius: 9, /* brand.primaryIcon* */ }}>
+    <Icone size={16} aria-hidden="true" />
   </span>
-  <h1 style={{
-    fontSize: 18, fontWeight: 800, color: brand.primary,
-    fontFamily: FONT_TITLE, margin: 0,
-    letterSpacing: "0.05em", textTransform: "uppercase",
-  }}>
-    Título da Página
+  <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+    Links e Materiais
   </h1>
 </div>
+<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", paddingLeft: 40, lineHeight: 1.45 }}>
+  Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
+</p>
 ```
 
-*Opcional:* se a página for só título + ações e quiseres alinhar ao padrão Estúdio/marketing, podes usar `PageHeader` — aceita o padrão 28/22 e já inclui `useDashboardBrand`.
+**Playbook:** o subtítulo curto **não** substitui `PLAYBOOK_SUBTITULO_PARAGRAFOS` (corpo introdutório) — evoluir parágrafos em handoff separado.
+
+*Opcional:* página só com título + ações pode usar `PageHeader` (Família B) — já inclui slot de `subtitle`.
 
 ---
 
@@ -81,16 +83,19 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
 
 **LinksMateriais:** manter `primaryTransparent*` em strips e secções conforme implementação atual.
 
+**RoteiroMesa:** filtro de lista de operadoras via **`FiltroOperadoraSelect`** (`pill` na direita da barra) — agregadora **Todas Operadoras**; ver Global § Filtro de operadora.
+
 ---
 
 ## Abas (Tab Panels) — ARIA Obrigatório
 
-**PlaybookInfluencers** e páginas futuras com abas: semântica ARIA completa.
+**PlaybookInfluencers** e páginas futuras com abas: semântica ARIA completa **e** teclado.
 
 ```tsx
 <div
   role="tablist"
   aria-label="Descrição do grupo de abas"
+  onKeyDown={(e) => onTabsKeyDown(e, abaAtiva, setAbaAtiva)} // ArrowLeft / ArrowRight + focus no tab
   style={{ display: "flex", gap: 4, overflowX: "auto", scrollbarWidth: "none" }}
 >
   {ABAS.map((aba) => (
@@ -101,6 +106,7 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
       id={`tab-${aba.key}`}
       aria-selected={abaAtiva === aba.key}
       aria-controls={`panel-${aba.key}`}
+      tabIndex={abaAtiva === aba.key ? 0 : -1}
       onClick={() => setAbaAtiva(aba.key)}
       style={{ ... }}
     >
@@ -113,10 +119,15 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
   role="tabpanel"
   id={`panel-${abaConfig.key}`}
   aria-labelledby={`tab-${abaConfig.key}`}
+  tabIndex={0}
+  style={{ padding: "clamp(14px, 4vw, 28px)", ... }}
 >
   {/* conteúdo */}
 </div>
 ```
+
+- Dots de status em abas obrigatórias: círculo com `aria-hidden`; texto em `<span className="sr-only">` (`item obrigatório pendente` / `confirmado`).
+- Classe **`.sr-only`** em `src/styles/global.css` — não recriar inline.
 
 ### Indicador de overflow em abas com scroll horizontal
 
@@ -167,7 +178,7 @@ Não usar `<input type="checkbox">` sem estilização completa.
 
 ## Exclusão em Lista — Nunca `window.confirm()`
 
-Dois cliques + `onBlur` cancel (como `operacoes.mdc` / `lives.mdc`).
+Dois cliques + `onBlur` cancel — padrão Global (confirmação sem `window.confirm`).
 
 ```tsx
 const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
@@ -300,9 +311,32 @@ Em contentores com proporção fixa (ex. pré-visualização QR), não deixar s�
 
 ## Permissões, vazio e erros
 
-- `usePermission("roteiro_mesa" | "playbook_influencers" | "links_materiais")` conforme `PageKey`; mensagem sem permissão alinhada a `global.mdc`.
+- `usePermission("roteiro_mesa" | "playbook_influencers" | "links_materiais")` conforme `PageKey`.
+- Sem permissão de visualização: string exata **`"Você não tem permissão para visualizar esta página."`**
 - Dados ligados a **período:** **"Sem dados para o período selecionado."** quando couber.
-- Evitar `alert()` — estado + `role="alert"` ou UI inline.
+- Evitar `alert()` — estado + `role="alert"` + `aria-live="polite"` em erros de operação.
+- Erros Supabase/RPC: `console.error("[Página] …", error)`; **nunca** `error.message` / `res?.error` no DOM — mensagem fixa PT-BR ao usuário.
+
+## `isDark` e iconografia de header
+
+```tsx
+const { theme: t } = useApp();
+const dark = t.isDark ?? false;
+// NUNCA: const { isDark } = useApp();
+```
+
+- Badge do header (32×32): **Lucide** (`BookOpen`, `Share2`, …) com `aria-hidden="true"`.
+- **Proibido** `GiShare` ou outro GameIcon no badge — GameIcons só no menu lateral.
+- `strokeWidth` default (2) em Lucide — não customizar sem documentar.
+
+## Loading
+
+| Contexto | Padrão |
+|---|---|
+| Fundo neutro (auditoria, alias, página) | `Loader2` + `app-lucide-spin` + `var(--brand-primary, #7c3aed)` |
+| CTA com gradiente (Emitir, Confirmar Ciência) | `Loader2` **`#fff`** + microcopy (`Emitindo…`, `Confirmando…`, …) |
+| `BlocoCiencia` em `loadingCheck` | placeholder ~88px + `aria-hidden` — **nunca** `return null` |
+| QR previews | `aspectRatio: "600 / 760"` + `app-skeleton-pulse` |
 
 ---
 
@@ -316,18 +350,46 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ### LinksMateriais (`src/pages/conteudo/LinksMateriais/index.tsx`)
 
-- Botão **Emitir:** `aria-disabled` além de `disabled`; `title` contextual quando bloqueado; não remover o botão por permissão — desabilitar + aviso.
-- **Previews QR:** manter `aspectRatio: "600 / 760"` durante loading; placeholder com mesma proporção; `aria-label` nos downloads.
-- **Lucide:** default `strokeWidth` (2), salvo exceção documentada.
-- **Strip URL:** `brand.primaryTransparentBorder/Bg` no exterior; divisor interno `t.cardBorder` ou `primaryTransparentBorder`; input UTM `aria-label="Valor do utm_source"`.
+- Header: `Share2` (Lucide), `h1` **18px**.
+- Botão **Emitir:** gradiente `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-secondary)) : linear-gradient(135deg, #4a2082, #1e36f8)`; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
+- Erro de emissão ao usuário: `"Não foi possível emitir o link. Se o problema persistir, contate o suporte."`
+- Aviso parcial (canView sem editar): manter bloco amarelo com `AlertCircle` — não confundir com sem permissão total.
+- **Previews QR:** `aspectRatio: "600 / 760"`; skeleton com `app-skeleton-pulse`; `aria-label` específico por variante de download; `Loader2` em "Gerando…".
+- **Strip URL:** `brand.primaryTransparentBorder/Bg`; input UTM `aria-label="Valor do utm_source"`.
+- Gate `verificarElegibilidadeAgendaLive`: manter antes do RPC para `roleParidadeInfluencer` — não remover por permissão.
 
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 
-- Abas: `role="tablist"` / `tab` / `aria-selected` / `aria-controls` / `id`; fade de overflow em mobile; dots de status nas abas — manter.
-- **BlocoCiencia:** sem checkbox nativo; `aria-live` na transição; feedback de data ao confirmar.
-- **PainelAuditoria:** filtro ativos via `influencerPerfilEstaAtivo()`; painéis confirmados/pendentes com verde/vermelho semânticos.
-- Imagens: `width`/`height` no `<img>`.
-- Barra de progresso: branch `brand.useBrand` obrigatória.
+- Header: `BookOpen`, `h1` **18px**; `BRAND_SEMANTIC as BRAND` de `constants/theme` — sem `const BRAND` local.
+- Abas: ARIA completa + `onKeyDown` ArrowLeft/Right + `tabIndex` roving + fade de overflow; `tabpanel` com `tabIndex={0}` e `padding: clamp(14px, 4vw, 28px)`.
+- **BlocoCiencia:** `role="checkbox"` customizado; `key={itemKey}` para remount; `aria-live` na transição; erro upsert: `"Não foi possível registrar a confirmação. Tente novamente."`; `Loader2` branco em Confirmar Ciência.
+- **PainelAuditoria:** `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
+- **Fun Facts:** `value: "Sim"` — proibido `"✓"`.
+- Imagens em `ConteudoAcesso`: `width`/`height` + `loading="lazy"`.
+- Barra de progresso: `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-accent)) : vermelho→azul`.
+
+### SpinNaRede (`src/pages/conteudo/SpinNaRede/index.tsx`)
+
+- Header: `Radio` (Lucide), `h1` **18px**; somente leitura.
+- Lista: `<ul>` / `<li>`; cards com `t.cardBg`, `t.cardBorder`, `cardShadow` via `t.isDark`.
+- Loading: `"Carregando menções…"` (PT-BR — nunca `"A carregar"`).
+- Link externo: `var(--brand-primary, #7c3aed)` — não `brand.accent`; `target="_blank"` + `rel="noopener noreferrer"`.
+- Miniatura: `<a tabIndex={-1} aria-hidden>` quando o link de texto cobre o mesmo destino; `<img width={160} height={90} alt="" />` decorativa.
+- Erro: `role="alert"`; mensagem fixa ao usuário.
+
+### Portal de RH (`src/pages/conteudo/PortalRh/`)
+
+- **Header:** `PageHeader` (28×22) — exceção documentada desta página operacional; demais páginas densas de conteúdo usam badge 32×32 + `h1` 18px.
+- **`useDashboardBrand()`** obrigatório no `index.tsx` (tabs, filtros transparentes).
+- **CTA gradiente:** importar `ctaGradientPortalRh` de `src/lib/portalRhUi.ts` — nunca local; fallback Spin `#4a2082` → `#1e36f8` (nunca `--brand-action` / `--brand-contrast` fora de dashboards).
+- **Modais** (`ModalCriarPostagem`, `ModalHistoricoPostagem`, leitura): `useApp()` + `useDashboardBrand()` internos — **nunca** props `t` ou `brand`.
+- **Tabs principais + Gerenciamento:** `onKeyDown` ArrowLeft/Right, `tabIndex` roving, `tabpanel` com `tabIndex={0}`.
+- **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
+- **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** (sem filtro de mês).
+- **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
+- **Gerenciamento:** todas as postagens (incl. arquivadas); carrossel e Histórico também em `published_at`; filtros na linha 3 — tipo (`FiltroBarCampoSelect`, `Newspaper`, agregadora **Todas Postagens**) e status (`FilterBarIcons.status` / `ShieldAlert`, **Todos Status**).
+- **ComunicadoCard:** `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido.
+- **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 
 ### RoteiroMesa (`src/pages/estudio/RoteiroMesa/index.tsx`)
 
@@ -341,7 +403,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ## Referência cruzada
 
-- Tabelas alinhadas a dashboards → `dashboards.mdc` e `lib/tableStyles`.
+- Tabelas: Global (`tableStyles`, `SortTableTh` quando aplicável).
 - Acessibilidade geral → `global.mdc`.
 
 ---
@@ -353,7 +415,11 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Nunca `backdropFilter: blur()` em overlays de modal.
 - Nunca hardcodar cor no **botão primário** do modal sem ramo `brand.useBrand` / vars CSS.
 - Nunca `<input type="checkbox">` sem padrão acessível completo — botão com `role="checkbox"`.
-- Nunca abas sem `role="tablist"`, `role="tab"`, `aria-selected`, ids e `tabpanel` ligados.
+- Nunca abas sem `role="tablist"`, `role="tab"`, `aria-selected`, `tabIndex` roving, `onKeyDown` com setas, ids e `tabpanel` com `tabIndex={0}`.
+- Nunca `const { isDark } = useApp()` — usar `t.isDark`.
+- Nunca GameIcon no badge de header de Conteúdo.
+- Nunca `error.message` em estado de erro visível ao usuário.
+- Nunca `"✓"` em Fun Facts — usar `"Sim"` ou ícone Lucide.
 - Nunca `overflowX: auto` em abas sem indicador de overflow (fade).
 - Nunca só texto solto em contentor com proporção fixa durante loading — skeleton.
 - Nunca `<img>` sem `width` e `height` quando evitável — CLS.
@@ -364,3 +430,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Nunca barra de progresso só com hex legado sem alternativa `brand.useBrand`.
 - Nunca novos ecrãs com header/filtros de marca **sem** `useDashboardBrand()`.
 - Nunca `window.alert()` para erros — padrão inline/modal do resto da app.
+- Nunca `"A carregar"` — usar `"Carregando…"`.
+- Nunca `ctaGradient` local no Portal RH — usar `ctaGradientPortalRh` em `portalRhUi.ts`.
+- Nunca modal do Portal RH recebendo `t` ou `brand` por prop.
+- Nunca Arquivar com um único clique na tabela de gerenciamento.

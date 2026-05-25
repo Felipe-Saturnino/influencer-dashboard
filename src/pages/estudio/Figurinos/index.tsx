@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Plus, ScanLine, Shirt, Wrench, XCircle } from "lucide-react";
-import { GiShield } from "react-icons/gi";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Shirt, Trash2, Wrench, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,9 +10,21 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroFigurinosCategoriaSelect,
+  FiltroFigurinosTamanhoSelect,
+  FiltroBarTabButton,
+  FiltroOperadoraSelect,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -45,44 +56,19 @@ type Aba = RhFigurinoStatus;
 
 const FIGURINOS_ABAS: Aba[] = ["available", "borrowed", "maintenance", "discarded"];
 
+const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
+  available: <Package {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  borrowed: <HandHelping {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  maintenance: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 const SECTION_LABEL_STYLE: CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.08em",
   margin: 0,
 };
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, #4a2082, #1e36f8)";
-}
-
-function focusTabButton(id: string) {
-  document.getElementById(id)?.focus();
-}
-
-function onTabsKeyDown<A extends string>(
-  e: KeyboardEvent,
-  tabs: readonly A[],
-  active: A,
-  setActive: (v: A) => void,
-  tabId: (a: A) => string,
-) {
-  const idx = tabs.indexOf(active);
-  if (idx < 0) return;
-  if (e.key === "ArrowRight") {
-    e.preventDefault();
-    const next = tabs[(idx + 1) % tabs.length];
-    setActive(next);
-    focusTabButton(tabId(next));
-  } else if (e.key === "ArrowLeft") {
-    e.preventDefault();
-    const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
-    setActive(prev);
-    focusTabButton(tabId(prev));
-  }
-}
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
@@ -586,61 +572,7 @@ export default function FigurinosPage() {
       <PageHeader
         icon={<Shirt size={14} aria-hidden />}
         title="Figurinos"
-        subtitle="Controle de peças, etiquetas, empréstimos e devoluções por operadora."
-        actions={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setErroGlobal(null);
-                setModalScanner(true);
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <ScanLine size={16} aria-hidden />
-              Bipar código
-            </button>
-            {podeCriar ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setErroGlobal(null);
-                  setModalCadastro(true);
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradient(brand),
-                  color: "#fff",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                <Plus size={16} aria-hidden />
-                Cadastrar peça
-              </button>
-            ) : null}
-          </div>
-        }
+        subtitle="Controle o inventário de peças com retiradas, devoluções e manutenções."
       />
 
       {erroGlobal ? (
@@ -665,150 +597,7 @@ export default function FigurinosPage() {
         </div>
       ) : null}
 
-      <div style={{ marginBottom: 20 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          FILTROS
-        </h2>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              width: "100%",
-            }}
-          >
-            {operadorasVisiveis.length > 0 ? (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    pointerEvents: "none",
-                    color: t.textMuted,
-                  }}
-                >
-                  <GiShield size={13} aria-hidden />
-                </span>
-                <select
-                  value={filtroOp}
-                  onChange={(e) => setFiltroOp(e.target.value)}
-                  aria-label="Filtrar por operadora"
-                  style={{
-                    padding: "6px 14px 6px 30px",
-                    borderRadius: 999,
-                    border: `1px solid ${filtroOp !== "todas" ? brand.accent : t.cardBorder}`,
-                    background:
-                      filtroOp !== "todas"
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                          : "#4a208222"
-                        : (t.inputBg ?? t.cardBg),
-                    color: filtroOp !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13,
-                    fontWeight: filtroOp !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    outline: "none",
-                    appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasVisiveis.map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            <select
-              value={filtroCat}
-              onChange={(e) => setFiltroCat(e.target.value)}
-              aria-label="Filtrar por categoria"
-              style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.textMuted,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              <option value="todas">Todas as categorias</option>
-              {CATEGORIAS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filtroTam}
-              onChange={(e) => setFiltroTam(e.target.value)}
-              aria-label="Filtrar por tamanho"
-              style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.textMuted,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              <option value="todas">Todos os tamanhos</option>
-              {TAMANHOS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <input
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
-            aria-label="Buscar peças na aba atual"
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-      </div>
-
+      {/* Bloco 1: Consolidado */}
       <div style={{ marginBottom: 20 }}>
         <h2
           style={{
@@ -848,57 +637,150 @@ export default function FigurinosPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
+      {/* Bloco 2: Filtros */}
+      <div style={{ marginBottom: 20 }}>
         <h2
           style={{
             ...SECTION_LABEL_STYLE,
             color: t.textMuted,
             fontFamily: FONT.body,
-            marginBottom: 10,
+            marginBottom: 8,
           }}
         >
-          INVENTÁRIO
+          FILTROS
         </h2>
-      </div>
-
-      <div
-        role="tablist"
-        aria-label="Status do inventário"
-        style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
-        onKeyDown={(e) => onTabsKeyDown(e, FIGURINOS_ABAS, aba, setAba, (a) => `tab-fig-${a}`)}
-      >
-        {FIGURINOS_ABAS.map((a) => (
-          <button
-            key={a}
-            type="button"
-            role="tab"
-            aria-selected={aba === a}
-            id={`tab-fig-${a}`}
-            aria-controls={`panel-fig-${a}`}
-            tabIndex={aba === a ? 0 : -1}
-            onClick={() => setAba(a)}
+        <div
+          style={{
+            borderRadius: 14,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
+            padding: "12px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div
             style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: `1px solid ${aba === a ? brand.accent : t.cardBorder}`,
-              background:
-                aba === a
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
-                  : "transparent",
-              color: aba === a ? brand.accent : t.textMuted,
-              fontWeight: aba === a ? 700 : 500,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
             }}
           >
-            {labelAba(a)}
-          </button>
-        ))}
+            {operadorasVisiveis.length > 0 ? (
+              <FiltroOperadoraSelect
+                pill
+                minWidth={200}
+                value={filtroOp}
+                onChange={setFiltroOp}
+                operadoras={operadorasVisiveis}
+              />
+            ) : null}
+            <FiltroFigurinosCategoriaSelect
+              pill
+              minWidth={200}
+              value={filtroCat}
+              onChange={setFiltroCat}
+              categorias={CATEGORIAS}
+            />
+            <FiltroFigurinosTamanhoSelect
+              pill
+              minWidth={200}
+              value={filtroTam}
+              onChange={setFiltroTam}
+              tamanhos={TAMANHOS}
+            />
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
+            }}
+          >
+            <BarraPesquisaPagina
+              value={busca}
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.figurinos}
+              aria-label="Buscar peças na aba atual"
+              wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setErroGlobal(null);
+                setModalScanner(true);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <ScanLine size={16} aria-hidden />
+              Bipar código
+            </button>
+            {podeCriar ? (
+              <CtaCriarButton
+                type="button"
+                onClick={() => {
+                  setErroGlobal(null);
+                  setModalCadastro(true);
+                }}
+              >
+                Cadastrar peça
+              </CtaCriarButton>
+            ) : null}
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Status do inventário"
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              justifyContent: "center",
+              width: "100%",
+              paddingTop: 12,
+              marginTop: 4,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, FIGURINOS_ABAS, setAba, (a) => `tab-fig-${a}`)}
+          >
+            {FIGURINOS_ABAS.map((a) => (
+              <FiltroBarTabButton
+                key={a}
+                id={`tab-fig-${a}`}
+                active={aba === a}
+                aria-controls={`panel-fig-${a}`}
+                onClick={() => setAba(a)}
+                icon={FIGURINOS_TAB_ICONS[a]}
+              >
+                {labelAba(a)}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {/* Bloco 3: Tabela */}
       <div role="tabpanel" id={`panel-fig-${aba}`} aria-labelledby={`tab-fig-${aba}`} tabIndex={0}>
         {loading || (perm.canView === "proprios" && loadingRhPrestadorMatch) ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280, gap: 10, color: t.textMuted }}>
@@ -1257,7 +1139,7 @@ export default function FigurinosPage() {
               padding: "10px 16px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -1343,7 +1225,7 @@ export default function FigurinosPage() {
                 padding: 12,
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,
@@ -1671,7 +1553,7 @@ function ModalCadastroPeca({
               padding: 12,
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -1736,7 +1618,7 @@ function ModalSucessoCadastro({
               padding: "12px 16px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontFamily: FONT.body,
@@ -1997,27 +1879,14 @@ function ModalRetirada({
           </div>
         ) : (
           <>
-            <input
-              ref={buscaRef}
-              type="search"
+            <BarraPesquisaPagina
+              inputRef={buscaRef}
               value={buscaPrestador}
-              onChange={(e) => setBuscaPrestador(e.target.value)}
+              onChange={setBuscaPrestador}
               disabled={loadingPrestadores || !!erroCargaPrestadores || prestadores.length === 0}
-              placeholder="Digite para filtrar…"
+              placeholder={FILTER_SEARCH_STAFF}
               aria-label="Filtrar prestadores por nome ou setor"
-              aria-required="true"
-              autoComplete="off"
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: 8,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-              }}
+              wrapperStyle={{ width: "100%", marginBottom: 8 }}
             />
             <div
               role="listbox"
@@ -2140,7 +2009,7 @@ function ModalRetirada({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2383,7 +2252,7 @@ function ModalDevolucao({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2546,7 +2415,7 @@ function ModalManutencaoPeca({
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: ctaGradient(brand),
+            background: getCtaCriarGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -2692,6 +2561,16 @@ type AbaDetalheFig = "detalhes" | "historico";
 
 const DETALHE_ABAS: AbaDetalheFig[] = ["detalhes", "historico"];
 
+const DETALHE_TAB_ICONS: Record<AbaDetalheFig, ReactNode> = {
+  detalhes: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const DETALHE_TAB_LABELS: Record<AbaDetalheFig, string> = {
+  detalhes: "Detalhes",
+  historico: "Histórico",
+};
+
 function ModalDetalhe({
   peca,
   operadorasTexto,
@@ -2746,37 +2625,19 @@ function ModalDetalhe({
         role="tablist"
         aria-label="Seções do detalhe"
         style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}
-        onKeyDown={(e) => onTabsKeyDown(e, DETALHE_ABAS, abaDet, setAbaDet, (a) => `tab-fig-detalhe-${a}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, DETALHE_ABAS, setAbaDet, (a) => `tab-fig-detalhe-${a}`)}
       >
         {DETALHE_ABAS.map((a) => (
-          <button
+          <FiltroBarTabButton
             key={a}
-            type="button"
-            role="tab"
-            aria-selected={abaDet === a}
             id={`tab-fig-detalhe-${a}`}
+            active={abaDet === a}
             aria-controls={`panel-fig-detalhe-${a}`}
-            tabIndex={abaDet === a ? 0 : -1}
             onClick={() => setAbaDet(a)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: `1px solid ${abaDet === a ? brand.accent : t.cardBorder}`,
-              background:
-                abaDet === a
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
-                  : "transparent",
-              color: abaDet === a ? brand.accent : t.textMuted,
-              fontWeight: abaDet === a ? 700 : 500,
-            }}
+            icon={DETALHE_TAB_ICONS[a]}
           >
-            {a === "detalhes" ? "Detalhes" : "Histórico"}
-          </button>
+            {DETALHE_TAB_LABELS[a]}
+          </FiltroBarTabButton>
         ))}
       </div>
 
@@ -2813,7 +2674,7 @@ function ModalDetalhe({
                 padding: "10px 18px",
                 borderRadius: 10,
                 border: "none",
-                background: ctaGradient(brand),
+                background: getCtaCriarGradient(brand),
                 color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,

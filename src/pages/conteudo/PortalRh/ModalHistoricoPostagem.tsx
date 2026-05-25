@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
+import { useApp } from "../../../context/AppContext";
 import { fmtDataHoraPt, type RhPostagemContentType } from "../../../lib/portalRhWorkflow";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-
-type Theme = { text: string; textMuted: string; cardBorder: string };
 
 type HistRow = {
   id: string;
@@ -15,21 +14,22 @@ type HistRow = {
   autor?: { name: string | null } | null;
 };
 
+const ERRO_HISTORICO = "Não foi possível carregar o histórico. Tente novamente.";
+
 export function ModalHistoricoPostagem({
   open,
   assunto,
   contentType,
   contentId,
   onClose,
-  t,
 }: {
   open: boolean;
   assunto: string;
   contentType: RhPostagemContentType | null;
   contentId: string | null;
   onClose: () => void;
-  t: Theme;
 }) {
+  const { theme: t } = useApp();
   const [itens, setItens] = useState<HistRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -47,7 +47,8 @@ export function ModalHistoricoPostagem({
 
     setLoading(false);
     if (error) {
-      setErro(error.message);
+      console.error("[ModalHistoricoPostagem] carregar:", error);
+      setErro(ERRO_HISTORICO);
       setItens([]);
       return;
     }
@@ -89,7 +90,7 @@ export function ModalHistoricoPostagem({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
       ) : erro ? (
-        <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
+        <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
           {erro}
         </div>
       ) : itens.length === 0 ? (

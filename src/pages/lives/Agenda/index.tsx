@@ -1,36 +1,34 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { ViewMes, ViewSemana, ViewDia, type ViewMode } from "./AgendaCalendarViews";
-// Dívida técnica (B5): migrar para InfluencerDropdown em refatoração de filtros.
-import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
-import { PlatLogo } from "../../../components/PlatLogo";
 import {
-  CalendarDays,
-  CalendarRange,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  X,
-  Loader2,
-  Plus,
-  Shield,
-} from "lucide-react";
+  FiltroHojeButton,
+  FiltroInfluencerSelect,
+  FiltroModoVisualizacaoSelect,
+} from "../../../components/dashboard";
+import { CalendarRange, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroOperadoraSelect,
+  FiltroPlataformaSemanticoPill,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -63,107 +61,15 @@ function toISO(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-// ─── SINGLE DROPDOWN (Visualização) ──────────────────────────────────────────
-interface SingleDropdownTheme {
-  cardBg: string;
-  cardBorder: string;
-  text: string;
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-interface SingleDropdownProps {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  icon?: React.ReactNode;
-  t: SingleDropdownTheme;
-}
-
-function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDropdownProps & { accent?: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const accentColor = accent ?? BRAND.roxoVivo;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const current = options.find(o => o.value === value);
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Modo de visualização: ${current?.label ?? value}`}
-        style={{
-          padding: "6px 14px", borderRadius: 999,
-          border: `1px solid ${accentColor}`,
-          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)" : `${accentColor}22`,
-          color: accentColor,
-          fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
-          cursor: "pointer", outline: "none",
-          display: "flex", alignItems: "center", gap: 6,
-          whiteSpace: "nowrap" as const,
-          lineHeight: 1,
-        }}
-      >
-        {icon && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>{icon}</span>}
-        <span style={{ display: "inline-flex", alignItems: "center" }}>{current?.label}</span>
-        {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" /> : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          style={{
-            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
-            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12, padding: 8, minWidth: 130,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}
-        >
-          {options.map(opt => {
-            const selected = opt.value === value;
-            return (
-              <button
-                type="button"
-                role="menuitem"
-                key={opt.value}
-                onClick={() => { onChange(opt.value); setOpen(false); }}
-                style={{
-                  width: "100%", padding: "8px 12px", borderRadius: 8,
-                  border: "none",
-                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)" : `${accentColor}22`) : "transparent",
-                  color: selected ? accentColor : t.text,
-                  fontSize: 12, fontFamily: FONT.body,
-                  cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "center", gap: 8,
-                  fontWeight: selected ? 700 : 400,
-                }}
-              >
-                <span style={{
-                  width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
-                  background: selected ? accentColor : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {selected ? <Check size={9} color="#fff" aria-hidden="true" /> : null}
-                </span>
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
+  { value: "mes", label: "Mês" },
+  { value: "semana", label: "Semana" },
+  { value: "dia", label: "Dia" },
+] as const;
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
@@ -250,7 +156,12 @@ export default function Agenda() {
     if (view === "dia")    d.setDate(d.getDate() + 1);
     setCurrent(d);
   }
-  function goToday() { setCurrent(new Date()); }
+  const filtroHojeAtivo = view === "dia" && isSameCalendarDay(current, new Date());
+
+  function aplicarFiltroHoje() {
+    setCurrent(new Date());
+    setView("dia");
+  }
 
   function headerTitle() {
     if (view === "mes")    return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
@@ -261,6 +172,7 @@ export default function Agenda() {
     return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
+
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const card: React.CSSProperties = {
     background: brand.blockBg,
@@ -270,7 +182,6 @@ export default function Agenda() {
     boxShadow: cardShadow,
   };
 
-  const DEFAULT_CHIP_COLOR = "var(--brand-primary, #7c3aed)";
   const calendarViewProps = {
     current,
     livesForDay,
@@ -281,34 +192,6 @@ export default function Agenda() {
     setView,
     onOpenLive: (live: Live) => setModal({ open: true, live }),
   };
-  function chipActiveBg(color: string): string {
-    if (color.startsWith("var(")) return `color-mix(in srgb, ${color} 14%, transparent)`;
-    return `${color}22`;
-  }
-
-  const btnNav: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent", color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
-  const chipBase = (active: boolean, color: string = DEFAULT_CHIP_COLOR): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 999, fontSize: 13,
-    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
-    background: active ? chipActiveBg(color) : "transparent",
-    color: active ? color : t.textMuted,
-    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
-    transition: "all 0.15s",
-    display: "flex", alignItems: "center", gap: 6,
-    lineHeight: 1,
-  });
-
-  const VIEW_OPTIONS = [
-    { value: "mes",    label: "Mês"    },
-    { value: "semana", label: "Semana" },
-    { value: "dia",    label: "Dia"    },
-  ];
 
   async function tentarAbrirNovaLive() {
     if (!user) return;
@@ -340,107 +223,59 @@ export default function Agenda() {
 
       <DashboardPageHeader
         icon={<CalendarRange size={14} aria-hidden="true" />}
-        title="Agenda de Lives"
-        subtitle="Calendário central de lives — visualize, agende e acompanhe lives de todos os influencers."
+        title="Agenda"
+        subtitle="Visualize, agende e acompanhe as lives dos influencers."
         brand={brand}
         t={t}
-        right={
-          perm.canCriarOk ? (
-            <button
-              type="button"
-              onClick={() => void tentarAbrirNovaLive()}
-              disabled={checandoNovaLive}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "10px 20px", borderRadius: 10, border: "none",
-                cursor: checandoNovaLive ? "not-allowed" : "pointer",
-                opacity: checandoNovaLive ? 0.75 : 1,
-                background: brand.useBrand
-                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                  : "linear-gradient(135deg, #4a2082, #1e36f8)",
-                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-              }}
-            >
-              {checandoNovaLive ? (
-                <>
-                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
-                  Verificando...
-                </>
-              ) : (
-                <>
-                  <Plus size={14} aria-hidden="true" />
-                  Nova Live
-                </>
-              )}
-            </button>
-          ) : undefined
-        }
       />
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
-          {/* Linha principal — centralizada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" onClick={prev} style={btnNav} aria-label="Período anterior">
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div style={getFilterBarRowStyle()}>
+            <button
+              type="button"
+              onClick={prev}
+              style={getCarouselBtnNavStyle(t, false)}
+              aria-label="Período anterior"
+            >
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
-              {headerTitle()}
-            </span>
-            <button type="button" onClick={next} style={btnNav} aria-label="Próximo período">
+            <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
+            <button
+              type="button"
+              onClick={next}
+              style={getCarouselBtnNavStyle(t, false)}
+              aria-label="Próximo período"
+            >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button type="button" onClick={goToday} style={chipBase(false)}>Hoje</button>
+            <FiltroHojeButton active={filtroHojeAtivo} onClick={aplicarFiltroHoje} />
 
-            <SingleDropdown
+            <FiltroModoVisualizacaoSelect
               value={view}
-              options={VIEW_OPTIONS}
-              onChange={v => setView(v as ViewMode)}
-              icon={<CalendarDays size={13} aria-hidden="true" />}
-              t={t}
-              accent={brand.accent}
+              defaultValue="mes"
+              options={AGENDA_MODO_VISUALIZACAO_OPTIONS}
+              onChange={(v) => setView(v as ViewMode)}
             />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-              <InfluencerMultiSelect
-                selected={filterInfluencers}
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
-                t={t}
               />
             )}
 
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <SelectComIcone
-                pill
-                icon={<Shield size={13} aria-hidden="true" />}
-                label="Filtrar por operadora"
+              <FiltroOperadoraSelect
                 value={filterOperadora}
                 onChange={setFilterOperadora}
-                minWidth={200}
-                style={{
-                  border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                  background:
-                    filterOperadora !== "todas"
-                      ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                  fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </SelectComIcone>
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
             )}
           </div>
 
@@ -448,58 +283,28 @@ export default function Agenda() {
           <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
-              {Object.entries(STATUS_COLOR).map(([status, color]) => {
-                const active = filterStatus === status;
-                return (
-                  <button
-                    type="button"
-                    key={status}
-                    aria-pressed={active}
-                    onClick={() => setFilterStatus(prev => prev === status ? null : status)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : "transparent",
-                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[status]}</span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {Object.entries(STATUS_COLOR).map(([status, color]) => (
+                <FiltroStatusSemanticoPill
+                  key={status}
+                  label={STATUS_LABEL[status]}
+                  semanticColor={color}
+                  active={filterStatus === status}
+                  onClick={() => setFilterStatus((prev) => (prev === status ? null : status))}
+                />
+              ))}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Plataforma</span>
-              {Object.entries(PLAT_COLOR).map(([plat, color]) => {
-                const active = filterPlat === plat;
-                return (
-                  <button
-                    type="button"
-                    key={plat}
-                    aria-pressed={active}
-                    onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : `${color}11`,
-                      color: active ? color : color + "cc",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                      lineHeight: 1,
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>{plat}</span>
-                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                  </button>
-                );
-              })}
+              {Object.entries(PLAT_COLOR).map(([plat, color]) => (
+                <FiltroPlataformaSemanticoPill
+                  key={plat}
+                  plataforma={plat}
+                  semanticColor={color}
+                  active={filterPlat === plat}
+                  isDark={isDark ?? false}
+                  onClick={() => setFilterPlat((prev) => (prev === plat ? null : plat))}
+                />
+              ))}
             </div>
             {hasActiveFilters && (
               <button
@@ -525,6 +330,17 @@ export default function Agenda() {
 
       {/* ── CALENDÁRIO ── */}
       <div style={card}>
+        {perm.canCriarOk && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+            <CtaCriarButton
+              onClick={() => void tentarAbrirNovaLive()}
+              loading={checandoNovaLive}
+              loadingLabel="Verificando..."
+            >
+              Nova Live
+            </CtaCriarButton>
+          </div>
+        )}
         {loading ? (
           <div
             role="status"

@@ -49,8 +49,10 @@ Stack principal: React, TypeScript, Vite, Supabase; deploy típico em **Cloudfla
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Build para produção |
 | `npm run preview` | Preview do build local |
-| `npm run lint` | ESLint (o CI de PR/push também roda lint + build nas branches configuradas) |
+| `npm run lint` | ESLint em todo o projeto — **correr antes de commit** (ver [Setup § Pre-commit](docs/SETUP.md)) |
 | `npm run lint:fix` | Aplica correções automáticas do ESLint onde possível |
+| `npm run precommit` | Lint só dos ficheiros em stage (igual ao hook Git) |
+| `npm run ci` | Lint + testes + build (espelha o CI) |
 
 ## Documentação adicional
 

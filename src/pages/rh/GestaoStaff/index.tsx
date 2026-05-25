@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, StickyNote, Trash2, Upload, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { BRAND } from "../../../lib/dashboardConstants";
 import {
   isGamePresenterTimeNome,
   readStaffDealerBioForUi,
@@ -29,7 +31,18 @@ import {
   textoHorarioTurnoSomenteOperadora,
 } from "../../../lib/rhStaffHorarioTurno";
 import type { Operadora } from "../../../types";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import {
+  FiltroOperadoraSelect,
+  FiltroTodosTimesButton,
+  FiltroTurnoSelect,
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
+  GESTAO_STAFF_TURNO_FILTRO_OPCOES,
+} from "../../../components/dashboard";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
@@ -37,7 +50,7 @@ import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
-type StaffSkillKey = "baccarat" | "blackjack" | "vip" | "roleta" | "futebol_studio";
+type StaffSkillKey = "baccarat" | "blackjack" | "vip" | "roleta" | "futebol_brasileiro";
 type StaffSkillStatus = "ativo" | "treinamento" | "inativo";
 
 const STAFF_SKILL_KEYS: { key: StaffSkillKey; label: string }[] = [
@@ -45,7 +58,7 @@ const STAFF_SKILL_KEYS: { key: StaffSkillKey; label: string }[] = [
   { key: "blackjack", label: "Blackjack" },
   { key: "vip", label: "VIP" },
   { key: "roleta", label: "Roleta" },
-  { key: "futebol_studio", label: "Futebol Studio" },
+  { key: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
 const SKILL_STATUS_OPTS: { value: StaffSkillStatus; label: string }[] = [
@@ -118,9 +131,14 @@ function textoHorarioTurnoStaffEmTabela(row: RhFuncionario, opBySlug: Record<str
 }
 
 function normalizarSkills(raw: Record<string, unknown> | null | undefined): Record<StaffSkillKey, StaffSkillStatus> {
+  const legacy = raw ?? {};
+  const merged: Record<string, unknown> = { ...legacy };
+  if (merged.futebol_brasileiro == null && legacy.futebol_studio != null) {
+    merged.futebol_brasileiro = legacy.futebol_studio;
+  }
   const out: Record<string, StaffSkillStatus> = {};
   for (const { key } of STAFF_SKILL_KEYS) {
-    const v = String(raw?.[key] ?? "inativo").toLowerCase();
+    const v = String(merged[key] ?? "inativo").toLowerCase();
     out[key] =
       v === "ativo" || v === "treinamento" || v === "inativo" ? (v as StaffSkillStatus) : "inativo";
   }
@@ -177,6 +195,32 @@ function labelCampoHistorico(campo: string): string {
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 type EditarAba = "funcao" | "skills" | "dealer";
+
+const STAFF_VER_TAB_ICONS: Record<VerAba, ReactNode> = {
+  pessoal: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  skills: <Star {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const STAFF_VER_TAB_LABELS: Record<VerAba, string> = {
+  pessoal: "Dados pessoais",
+  funcao: "Dados de função",
+  skills: "Dados de skills",
+  historico: "Histórico",
+};
+
+const STAFF_EDITAR_TAB_ICONS: Record<EditarAba, ReactNode> = {
+  funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  skills: <Star {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  dealer: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const STAFF_EDITAR_TAB_LABELS: Record<EditarAba, string> = {
+  funcao: "Dados de função",
+  skills: "Dados de skills",
+  dealer: "Gestão de dealer",
+};
 
 const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
   feminino: "Feminino",
@@ -710,21 +754,6 @@ export default function RhGestaoStaffPage() {
   const podeTimeAnterior = !todosTimes && times.length > 0 && idxTime > 0;
   const podeTimeProximo = !todosTimes && times.length > 0 && idxTime < times.length - 1;
 
-  const btnNavStyle: CSSProperties = {
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
     borderRadius: 8,
@@ -784,38 +813,28 @@ export default function RhGestaoStaffPage() {
         <div
           style={{
             borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
-            boxShadow: cardShadow,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={getFilterBarRowStyle()}>
             <button
               type="button"
               onClick={() => setIdxTime((i) => Math.max(0, i - 1))}
               disabled={!podeTimeAnterior}
               aria-label="Time anterior"
-              style={{
-                ...btnNavStyle,
-                opacity: podeTimeAnterior ? 1 : 0.35,
-                cursor: podeTimeAnterior ? "pointer" : "not-allowed",
-              }}
+              style={getCarouselBtnNavStyle(t, !podeTimeAnterior)}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
             <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT_TITLE,
+              style={getCarouselPeriodLabelStyle(t, {
                 minWidth: "clamp(140px, 36vw, 260px)",
-                textAlign: "center",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-              }}
+              })}
               title={!todosTimes && times[idxTime] ? `${times[idxTime]!.gerencia_nome} — ${times[idxTime]!.nome}` : undefined}
             >
               {todosTimes ? "Todos os times" : timeLabelCentro}
@@ -825,45 +844,18 @@ export default function RhGestaoStaffPage() {
               onClick={() => setIdxTime((i) => Math.min(times.length - 1, i + 1))}
               disabled={!podeTimeProximo}
               aria-label="Próximo time"
-              style={{
-                ...btnNavStyle,
-                opacity: podeTimeProximo ? 1 : 0.35,
-                cursor: podeTimeProximo ? "pointer" : "not-allowed",
-              }}
+              style={getCarouselBtnNavStyle(t, !podeTimeProximo)}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button
-              type="button"
-              aria-label={todosTimes ? "Filtrar por um time" : "Ver todos os times"}
-              aria-pressed={todosTimes}
+            <FiltroTodosTimesButton
+              active={todosTimes}
               onClick={() => {
                 setTodosTimes((v) => !v);
                 setIdxTime(0);
               }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                minHeight: 44,
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: todosTimes ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: todosTimes
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: todosTimes ? brand.accent : t.textMuted,
-                fontWeight: todosTimes ? 700 : 400,
-              }}
-            >
-              Todos os Times
-            </button>
+            />
 
             {loadingTimes ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
@@ -880,108 +872,51 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <p
-              id="staff-filtros-legenda"
-              style={{
-                textAlign: "center",
-                fontSize: 12,
-                fontWeight: 600,
-                color: t.textMuted,
-                margin: "0 0 10px",
-                fontFamily: FONT.body,
-              }}
-            >
-              Pesquisar / Operadora / Turno
-            </p>
             <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
               <div
                 role="group"
-                aria-labelledby="staff-filtros-legenda"
+                aria-label="Filtros de pesquisa, operadora e turno"
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 12,
-                  rowGap: 14,
+                  gap: 10,
+                  rowGap: 10,
                   maxWidth: "100%",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
-                  <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
-                  <input
-                    id="staff-busca-nome-nick"
-                    type="search"
-                    value={buscaNomeNickname}
-                    onChange={(e) => setBuscaNomeNickname(e.target.value)}
-                    placeholder="Nome ou nickname"
-                    autoComplete="off"
-                    aria-label="Pesquisar por nome ou nickname"
-                    style={{
-                      width: "clamp(200px, 50vw, 320px)",
-                      maxWidth: "100%",
-                      boxSizing: "border-box",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      outline: "none",
-                    }}
+                <BarraPesquisaPagina
+                  id="staff-busca-nome-nick"
+                  value={buscaNomeNickname}
+                  onChange={setBuscaNomeNickname}
+                  placeholder={PAGE_SEARCH.nomeNickname}
+                  aria-label="Pesquisar por nome ou nickname"
+                  wrapperStyle={{
+                    flex: "0 0 auto",
+                    width: "clamp(200px, 50vw, 320px)",
+                    maxWidth: "100%",
+                  }}
+                />
+                <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
+                  <FiltroOperadoraSelect
+                    id="staff-filtro-operadora"
+                    value={filtroOperadoraStaff}
+                    onChange={setFiltroOperadoraStaff}
+                    operadoras={operadorasFiltroOpts}
+                    todasValue={FILTRO_STAFF_OPERADORA_TODAS}
+                    extraOptions={[{ value: FILTRO_STAFF_OPERADORA_NENHUMA, label: "Nenhuma" }]}
+                    minWidth={200}
                   />
                 </div>
                 <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
-                  <select
-                    id="staff-filtro-operadora"
-                    aria-label="Filtrar por operadora"
-                    value={filtroOperadoraStaff}
-                    onChange={(e) => setFiltroOperadoraStaff(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <option value={FILTRO_STAFF_OPERADORA_TODAS}>Todas</option>
-                    <option value={FILTRO_STAFF_OPERADORA_NENHUMA}>Nenhuma</option>
-                    {operadorasFiltroOpts.map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: "0 0 auto", width: 168, minWidth: 140, maxWidth: "100%" }}>
-                  <select
+                  <FiltroTurnoSelect
                     id="staff-filtro-turno"
-                    aria-label="Filtrar por turno"
                     value={filtroTurnoStaff}
-                    onChange={(e) => setFiltroTurnoStaff(e.target.value as FiltroTurnoStaffTabela)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <option value="todos">Todos</option>
-                    <option value="nenhum">Nenhum</option>
-                    <option value="manha">Manhã</option>
-                    <option value="tarde">Tarde</option>
-                    <option value="noite">Noite</option>
-                    <option value="comercial">Comercial</option>
-                  </select>
+                    onChange={(v) => setFiltroTurnoStaff(v as FiltroTurnoStaffTabela)}
+                    options={GESTAO_STAFF_TURNO_FILTRO_OPCOES}
+                    minWidth={200}
+                  />
                 </div>
               </div>
             </div>
@@ -1196,7 +1131,6 @@ export default function RhGestaoStaffPage() {
           }
           onClose={() => setModalVer(null)}
           t={t}
-          brand={brand}
         />
       ) : null}
 
@@ -1243,7 +1177,6 @@ function ModalStaffVer({
   dadosFuncaoOcultarBioFotos = false,
   onClose,
   t,
-  brand,
 }: {
   row: RhFuncionario;
   operadorasNome: Record<string, string>;
@@ -1253,7 +1186,6 @@ function ModalStaffVer({
   dadosFuncaoOcultarBioFotos?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
-  brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const [aba, setAba] = useState<VerAba>("pessoal");
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
@@ -1321,44 +1253,26 @@ function ModalStaffVer({
     };
   }, [opSlug, row.escala]);
 
-  const tabBtn = (key: VerAba, label: string) => {
-    const ativo = aba === key;
-    return (
-      <button
-        key={key}
-        type="button"
-        role="tab"
-        aria-selected={ativo}
-        onClick={() => setAba(key)}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 10,
-          fontWeight: 700,
-          fontFamily: FONT.body,
-          fontSize: 12,
-          cursor: "pointer",
-          border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-          background: ativo
-            ? brand.useBrand
-              ? "color-mix(in srgb, var(--brand-accent) 14%, transparent)"
-              : "rgba(124,58,237,0.14)"
-            : (t.inputBg ?? "transparent"),
-          color: ativo ? brand.accent : t.textMuted,
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Prestador — ${row.nome}`} onClose={onClose} />
-      <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {tabBtn("pessoal", "Dados pessoais")}
-        {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {tabBtn("historico", "Histórico")}
+      <div
+        role="tablist"
+        aria-label="Seções do prestador"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, (["pessoal", "funcao", "skills", "historico"] as VerAba[]), setAba, (k) => `staff-ver-tab-${k}`)}
+      >
+        {(["pessoal", "funcao", "skills", "historico"] as VerAba[]).map((key) => (
+          <FiltroBarTabButton
+            key={key}
+            id={`staff-ver-tab-${key}`}
+            active={aba === key}
+            onClick={() => setAba(key)}
+            icon={STAFF_VER_TAB_ICONS[key]}
+          >
+            {STAFF_VER_TAB_LABELS[key]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "pessoal" && (
@@ -1838,43 +1752,31 @@ function ModalStaffEditar({
     setSaving(false);
   };
 
-  const tabBtn = (key: EditarAba, label: string) => {
-    const ativo = aba === key;
-    return (
-      <button
-        key={key}
-        type="button"
-        role="tab"
-        aria-selected={ativo}
-        onClick={() => setAba(key)}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 10,
-          fontWeight: 700,
-          fontFamily: FONT.body,
-          fontSize: 12,
-          cursor: "pointer",
-          border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-          background: ativo
-            ? brand.useBrand
-              ? "color-mix(in srgb, var(--brand-accent) 14%, transparent)"
-              : "rgba(124,58,237,0.14)"
-            : (t.inputBg ?? "transparent"),
-          color: ativo ? brand.accent : t.textMuted,
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
+  const editarTabKeys = useMemo(
+    () => (staffEhGamePresenter ? (["funcao", "skills", "dealer"] as EditarAba[]) : (["funcao", "skills"] as EditarAba[])),
+    [staffEhGamePresenter],
+  );
 
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
-      <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
+      <div
+        role="tablist"
+        aria-label="Seções editáveis"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, editarTabKeys, setAba, (k) => `staff-edit-tab-${k}`)}
+      >
+        {editarTabKeys.map((key) => (
+          <FiltroBarTabButton
+            key={key}
+            id={`staff-edit-tab-${key}`}
+            active={aba === key}
+            onClick={() => setAba(key)}
+            icon={STAFF_EDITAR_TAB_ICONS[key]}
+          >
+            {STAFF_EDITAR_TAB_LABELS[key]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "funcao" && (

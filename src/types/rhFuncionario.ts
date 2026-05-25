@@ -11,7 +11,10 @@ export type RhHistoricoAcaoTipo =
   | "rh_talks"
   | "anotacao_rh"
   | "staff_gestao_edicao"
-  | "dados_cadastro_self";
+  | "dados_cadastro_self"
+  | "atualizacao_cadastral_sem_alteracao";
+
+export type RhCadastroRevisaoTipo = "alteracao" | "sem_alteracao";
 
 /** Histórico da ação «Término da Prestação» (`detalhes.tipo_termino`). */
 export type RhTipoTerminoPrestacao = "voluntario" | "nao_voluntario";
@@ -100,7 +103,7 @@ export interface RhFuncionario {
   staff_turno?: string | null;
   /** Intervalo do turno (chave, ex. 07-15) para escalas 3x3 e 5x2; 4x2/5x1 usam operadoras. */
   staff_horario_turno?: string | null;
-  /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
+  /** JSON: baccarat | blackjack | vip | roleta | futebol_brasileiro → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
   /** Data da live no estúdio (Gestão de Staff > Dados de skills). */
   staff_live_no_estudio?: string | null;
@@ -112,6 +115,12 @@ export interface RhFuncionario {
   staff_dealer_bio?: string | null;
   /** URLs das fotos do dealer (JSON array). */
   staff_dealer_fotos?: unknown;
+  /**
+   * Última revisão/atualização cadastral pelo prestador (ciclo 6 meses).
+   * NULL: prazo conta desde `created_at`; após a primeira revisão, só este campo define o próximo ciclo.
+   */
+  cadastro_revisado_em?: string | null;
+  cadastro_revisao_tipo?: RhCadastroRevisaoTipo | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

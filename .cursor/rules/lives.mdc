@@ -6,15 +6,15 @@ globs:
 alwaysApply: false
 ---
 
-# Seção Lives — Regras Específicas
+# Seção Lives
 
-**Escopo (Cursor):** globs cobrem **tudo** em `src/pages/lives/` (Agenda com modais, Resultados, Feedback, Influencers, Scout). Influencers e Scout estão em `lives/` (não em `estudio/`).
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
-Páginas: Agenda · Resultados · Feedback · Influencers · Scout
+**Escopo:** `src/pages/lives/` — Agenda, Resultados, Feedback, Influencers, Scout.
 
-**Marca / operadora:** usar `useDashboardBrand()` como nas dashboards — `primaryTransparentBg`, `primaryTransparentBorder`, `accent`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, `blockBg` onde aplicável. Com `brand.useBrand`, o hook já resolve para `var(--brand-*)`. Destaques institucionais: `color-mix(in srgb, var(--brand-accent) X%, transparent)` em vez de RGBA fixo da Spin. **Não** substituir cores **semânticas** de status (live realizada/agendada, erro, alerta de produto) por cor de marca só por whitelabel — manter `BRAND.*` ou tons acordados. Spinners: fora de botão CTA, preferir cor da marca com `var(--brand-primary, #7c3aed)` (ver `brand-css-variables.mdc`); dentro de CTA com gradiente, spinner branco.
+**Marca / filtros / headers:** Brand MDC. **Status de live** (agendada, realizada, etc.): semântica fixa — não trocar por whitelabel.
 
-**Tokens:** `t.*` via `useApp()` para fundo de página, texto, bordas neutras e cards quando não for bloco “da operadora”.
+**Ajuda:** textos em `geral/Ajuda` — ver `geral.mdc`; não documentar glossário neste ficheiro.
 
 ---
 
@@ -36,13 +36,13 @@ Páginas: Agenda · Resultados · Feedback · Influencers · Scout
 // Logo de plataforma com fallback gracioso
 import { PlatLogo } from "../../../components/PlatLogo";
 
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 ```
 
 **`PlatLogo`** recebe `{ plataforma: string; size?: number; isDark: boolean }`.
 Nunca declarar localmente. Nunca usar `●` como único fallback sem o componente.
 
-**`InfluencerDropdown`** recebe `{ items, selected, onChange, accent? }` — usar em **Feedback** e em telas novas; `accent={brand.accent}` reflete operadora. **Legado:** **Agenda** e **Resultados** ainda usam `InfluencerMultiSelect` no código atual; ao refatorar filtros, preferir migrar para `InfluencerDropdown` para alinhar UX (checkbox, "Limpar", acento).
+**Filtro de influencer na barra:** **`FiltroInfluencerSelect`** (`mode="multiple"` em Agenda, Resultados, Feedback) — Global + Brand. Agregadora **Todos Influencers**; pesquisa no painel quando >5 nomes; ícone `User` 15px sempre no trigger.
 
 ---
 
@@ -59,77 +59,72 @@ Todo bloco de filtros desta seção usa fundo transparente de marca.
     background: brand.primaryTransparentBg,
     padding: "12px 20px",
   }}>
-    {/* conteúdo dos filtros */}
+    {/* conteúdo dos filtros — linhas de chips/selects: justifyContent center + width 100% (Global § Alinhamento) */}
   </div>
 </div>
 ```
 
-### Botões de navegação de período / semana
+**Alinhamento:** chips de Status, Plataforma e a linha principal da barra (carrossel, `FiltroHojeButton`, selects) centralizados no bloco; ver **Global** § Alinhamento no bloco de filtros e **Brand** §5.
+
+### Carrossel de período / semana
+
+Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselPeriodLabelStyle`) — ver Brand MDC §7. Não redeclarar `btnNav` local.
+
+- **Agenda:** `aria-label` `Período anterior` / `Próximo período`; rótulo = título da vista (mês/semana/dia).
+- **Feedback:** `Semana anterior` / `Próxima semana`; rótulo da semana ou `Todo o período` em Histórico.
+
+### Barra da Agenda — linha principal (obrigatório)
+
+**Layout:** `getFilterBarWrapperStyle` + `getFilterBarRowStyle` (`gap: 10`). **Hoje**, **Mês/Semana/Dia**, Influencer e Operadora: pill 999 + `getFiltroBarPillStateStyle` (referência **Overview Influencer**).
+
+Ordem típica no strip `primaryTransparent*`:
+
+1. Carrossel de período (`carouselNavStyles`)
+2. **`FiltroHojeButton`** — atalho para hoje + modo Dia (`aria-pressed` quando dia corrente em vista Dia)
+3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia
+4. **`FiltroInfluencerSelect`** (`mode="multiple"`) quando `showFiltroInfluencer`
+5. **`FiltroOperadoraSelect`** quando `showFiltroOperadora`
 
 ```tsx
-const btnNav: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: "50%",
-  border: `1px solid ${t.cardBorder}`,
-  background: "transparent", color: t.text,
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.35 : 1,
-  display: "flex", alignItems: "center", justifyContent: "center",
-};
-
-// Sempre com aria-label:
-<button onClick={prev} style={btnNav} aria-label="Período anterior">
-  <ChevronLeft size={14} aria-hidden="true" />
-</button>
-<button onClick={next} style={btnNav} aria-label="Próximo período">
-  <ChevronRight size={14} aria-hidden="true" />
-</button>
-
-// Para semanas (Feedback):
-aria-label="Semana anterior" / aria-label="Próxima semana"
+import {
+  FiltroHojeButton,
+  FiltroModoVisualizacaoSelect,
+  FiltroInfluencerSelect,
+  FiltroOperadoraSelect,
+} from "../../../components/dashboard";
 ```
 
-### Badges de filtro ativo
+**Proibido na Agenda:** dropdown local de visualização (`SingleDropdown` duplicado); botão Hoje com `borderRadius: 10` ou ícone `Calendar`; usar `FiltroHistoricoButton` (modo acumulado de dashboards — Agenda não tem Histórico na barra).
+
+Segunda linha: chips **Status** e **Plataforma** — **`FiltroStatusSemanticoPill`** e **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos). Cores de `STATUS_COLOR` / `PLAT_COLOR` da página; **não** redeclarar pill 999 inline.
 
 ```tsx
-// Sempre usar <X> do Lucide — nunca "✕" unicode
-import { X } from "lucide-react";
-
-<button
-  onClick={() => setFiltro(ativo ? null : valor)}
-  role="button"
-  aria-pressed={ativo}
-  style={{ ... }}
->
-  <span style={{ width: 8, height: 8, borderRadius: "50%", background: cor }} />
-  {label}
-  {ativo && <X size={9} aria-hidden="true" />}
-</button>
+import { FiltroStatusSemanticoPill, FiltroPlataformaSemanticoPill } from "../../../components/dashboard";
 ```
+
+- **Agenda:** status (toggle `null` \| valor) + plataforma (sem contagem).
+- **Feedback:** status inclui opção **Todos** — `showClearIcon={false}` em `todos` se ativo único; sem plataforma na barra.
+- **Influencers / Scout:** plataforma com prop **`count`** (`porPlat`) após separador vertical (mantido no componente).
+
+### Filtro de operadora (Agenda, Resultados, Feedback, Influencers)
+
+- **`FiltroOperadoraSelect`** na mesma linha dos outros controles (Global + Brand).
+- Opção agregadora: **`Todas Operadoras`** — nunca “Todas as operadoras” nem “Operadoras” só.
+- **Sem** prefixo textual “Operadora” antes do select (remover padrão legado em Influencers).
+- Defaults do componente (`pill` 999, `minWidth` 200) — não omitir agregadora **Todas Operadoras**.
+
+### Badges de filtro ativo (Status / Plataforma)
+
+Usar **`FiltroStatusSemanticoPill`** / **`FiltroPlataformaSemanticoPill`** — o `<X size={9}>` ao desmarcar já vem do componente (`showClearIcon`). **Não** duplicar markup de chip na barra.
 
 ### Botão Histórico (páginas com carrossel de semanas)
 
-**Exceção global:** o botão Histórico em Feedback usa `--brand-action` (não `--brand-accent`), alinhado à Regra Global 10 dos dashboards — ver snippet abaixo.
+Usar **`FiltroHistoricoButton`** (`components/dashboard`) — mesmo padrão visual que **Overview Influencer** (Global § Botão Histórico). Em **Feedback:** carrossel de semana; rótulo central **`Todo o período`** quando histórico ativo.
 
 ```tsx
-<button
-  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
-  aria-pressed={historico}
-  onClick={toggleHistorico}
-  style={{
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-    fontFamily: FONT.body, fontSize: 13,
-    border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-    background: historico
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "transparent",
-    color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-    fontWeight: historico ? 700 : 400,
-    transition: "all 0.15s",
-  }}
->
-  <GiCalendar size={15} aria-hidden="true" /> Histórico
-</button>
+import { FiltroHistoricoButton } from "../../../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 ```
 
 ---
@@ -372,6 +367,8 @@ Toda string visível ao usuário deve estar em português do Brasil.
 
 ### Agenda
 
+**Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
+
 **Calendário — `gridAutoRows`:**
 ```tsx
 // Modo Mês — nunca altura fixa:
@@ -490,11 +487,9 @@ const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
 
 ### Feedback
 
-**`InfluencerDropdown` — usar sempre o componente compartilhado:**
+**Filtro de influencer na barra:** `FiltroInfluencerSelect` com `mode="multiple"` — Global § Filtro de influencer. Agregadora **Todos Influencers**; não declarar dropdown local.
 ```tsx
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-
-// Nunca declarar InfluencerDropdown localmente nesta ou em qualquer outra página
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
 ```
 
 **`ModalFeedbackEdit` — usar `useDashboardBrand()` internamente:**
@@ -564,6 +559,8 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 ---
 
 ### Scout
+
+- CTA novo prospecto: **`CtaCriarButton`** na barra de filtros — rótulo **`Novo Influencer`** (`Plus` 14px no componente; Brand §3).
 
 **`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 
@@ -699,21 +696,19 @@ const STATUS_SCOUT_COLOR = {
 
 ---
 
-## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
-
-Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga. Glossário: `glossarioData.ts`.
-
 ---
 
 ## O Que Nunca Fazer Nesta Seção
 
 - Nunca declarar `PlatLogo` localmente — importar de `src/components/PlatLogo`
-- Nunca declarar `InfluencerDropdown` localmente — importar de `src/components/InfluencerDropdown`
+- Nunca filtro de influencer na barra fora de `FiltroInfluencerSelect` (agregadora **Todos Influencers**)
+- Nunca modo Mês/Semana/Dia ou botão Hoje na Agenda fora de `FiltroModoVisualizacaoSelect` / `FiltroHojeButton`
 - Nunca usar `window.confirm()` — padrão de dois cliques com estado inline
 - Nunca usar `window.alert()` — `setError()` com bloco vermelho inline
 - Nunca usar `▼ ▲ ✕ ✓ ⚠ ℹ 🗑 🕐 ✨ 🔒` como ícones — usar Lucide equivalente
 - Nunca usar `"Average Viewers"`, `"Followers"` ou qualquer string em inglês na UI
 - Nunca usar fundo sólido no bloco de filtros — sempre `primaryTransparentBg/Border`
+- Nunca filtro de operadora com label lateral ou agregadora fora de **Todas Operadoras** — usar `FiltroOperadoraSelect`
 - Nunca fazer update optimista sem rollback visual em caso de erro
 - Nunca inicializar slider de range em `0` — usar valor de placeholder para evitar CLS
 - Nunca passar `brand` como prop para modais — usar `useDashboardBrand()` internamente

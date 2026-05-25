@@ -4,15 +4,21 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import {
-  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, Shield, MessageSquare,
+  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, MessageSquare,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { FiltroInfluencerSelect } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroHistoricoButton,
+  FiltroOperadoraSelect,
+  FiltroStatusSemanticoPill,
+} from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -457,13 +463,6 @@ export default function Feedback() {
     ? Math.round(realizadasComRes.reduce((acc, l) => acc + (resultadosAll[l.id]?.media_views ?? 0), 0) / realizadasComRes.length)
     : 0;
 
-  // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
-  const btnNav: CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent", color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
   const isPrimeiro = idxSemana === 0;
   const isUltimo = idxSemana === semanasDisponiveis.length - 1;
 
@@ -483,8 +482,8 @@ export default function Feedback() {
 
       <DashboardPageHeader
         icon={<MessageSquare size={14} aria-hidden="true" />}
-        title="Feedback de Lives"
-        subtitle="Resultado final das lives validadas em Resultados."
+        title="Feedback"
+        subtitle="Consulte o histórico validado de lives com KPIs e dados de resultado."
         brand={brand}
         t={t}
       />
@@ -501,29 +500,27 @@ export default function Feedback() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
-              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.max(0, i - 1)); }}
               disabled={historico || isPrimeiro}
               aria-label="Semana anterior"
             >
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(140px, 45vw, 200px)", textAlign: "center" }}>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(140px, 45vw, 200px)" })}>
               {historico ? "Todo o período" : semanaSelecionada?.label}
             </span>
             <button
               type="button"
-              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.min(semanasDisponiveis.length - 1, i + 1)); }}
               disabled={historico || isUltimo}
               aria-label="Próxima semana"
             >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-pressed={historico}
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+            <FiltroHistoricoButton
+              active={historico}
               onClick={() => {
                 if (historico) {
                   setHistorico(false);
@@ -532,86 +529,43 @@ export default function Feedback() {
                   setHistorico(true);
                 }
               }}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", minHeight: 44, borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico ? "1px solid var(--brand-action, #7c3aed)" : `1px solid ${t.cardBorder}`,
-                background: historico ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : "transparent",
-                color: historico ? "var(--brand-action, #7c3aed)" : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-                lineHeight: 1,
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>
-                <Calendar size={15} aria-hidden="true" />
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center" }}>Histórico</span>
-            </button>
+            />
 
             {showFiltroInfluencer && influencers.length > 0 && (
-              <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />
+              <FiltroInfluencerSelect
+                mode="multiple"
+                value={influencerFiltros}
+                onChange={setInfluencerFiltros}
+                influencers={influencers}
+              />
             )}
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <SelectComIcone
+              <FiltroOperadoraSelect
                 pill
-                icon={<Shield size={15} aria-hidden="true" />}
-                label="Filtrar por operadora"
+                minWidth={200}
                 value={filterOperadora}
                 onChange={setFilterOperadora}
-                minWidth={200}
-                style={{
-                  border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                  background:
-                    filterOperadora !== "todas"
-                      ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                  fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => (
-                    <option key={o.slug} value={o.slug}>
-                      {o.nome}
-                    </option>
-                  ))}
-              </SelectComIcone>
+                operadoras={operadorasList}
+                podeVerOperadora={(slug) =>
+                  escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(slug)
+                }
+              />
             )}
           </div>
 
           {/* Linha 2: Status (padrão Agenda — legenda + cores) */}
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
-            {(["realizada", "nao_realizada", "todos"] as const).map((status) => {
-              const active = statusFiltro === status;
-              const color = STATUS_COLOR[status];
-              return (
-                <button
-                  type="button"
-                  key={status}
-                  aria-pressed={active}
-                  onClick={() => setStatusFiltro(status)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                    lineHeight: 1,
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
-                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[status]}</span>
-                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
-                </button>
-              );
-            })}
+            {(["realizada", "nao_realizada", "todos"] as const).map((status) => (
+              <FiltroStatusSemanticoPill
+                key={status}
+                label={STATUS_LABEL[status]}
+                semanticColor={STATUS_COLOR[status]}
+                active={statusFiltro === status}
+                onClick={() => setStatusFiltro(status)}
+                showClearIcon={status !== "todos"}
+              />
+            ))}
           </div>
         </div>
       </div>

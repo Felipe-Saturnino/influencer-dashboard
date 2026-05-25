@@ -23,13 +23,17 @@ export default defineConfig(({ mode }) => {
         output: {
           codeSplitting: {
             groups: [
-              { name: "vendor-react", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },
+              /**
+               * lucide + react-icons no mesmo chunk que React — chunk isolado `vendor-icons` /
+               * `vendor-ui-icons` falha com HTTP 500 (corpo vazio) no Cloudflare Pages em deploys novos;
+               * `vendor-react` sobe normalmente (~+85 KB gzip ~34).
+               */
+              {
+                name: "vendor-react",
+                test: /[\\/]node_modules[\\/](react|react-dom|lucide-react|react-icons)[\\/]/,
+              },
               { name: "vendor-supabase", test: /[\\/]node_modules[\\/]@supabase[\\/]supabase-js[\\/]/ },
               { name: "vendor-charts", test: /[\\/]node_modules[\\/]recharts[\\/]/ },
-              {
-                name: "vendor-icons",
-                test: /[\\/]node_modules[\\/](react-icons|lucide-react)[\\/]/,
-              },
               /** PDF / etiquetas RH — isolado para não diluir o chunk principal ao navegar noutras áreas */
               { name: "vendor-jspdf", test: /[\\/]node_modules[\\/]jspdf[\\/]/ },
               /** QR em Links & Materiais e exports */

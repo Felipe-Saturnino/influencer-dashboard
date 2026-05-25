@@ -1,49 +1,512 @@
 ---
-description: Cores de marca via CSS variables (--brand-*) para white label operadoras
+description: MDC Brand — whitelabel, tokens CSS, cabeçalhos, filtros com ícone, carrossel de período, ações em ícone e CTAs. Complementa global.mdc; secções citam este ficheiro para detalhes de marca (não duplicar).
 alwaysApply: true
 ---
 
-# Brandguide e variáveis CSS
+# MDC Brand — Whitelabel e padrões de UI de marca
 
-O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` variáveis de marca. Em `src/styles/global.css` o `:root` define **dois conjuntos** coexistentes:
+**Escopo:** identidade visual da operadora, componentes de filtro com ícone, navegação de período, cabeçalhos de página, **toolbars com botões em texto**, ações em ícone em tabela/lista e CTAs primários. **Não** cobre regras de negócio por página (ver MDCs de secção), **semântica de dados** (ver `global.mdc`) nem **build Vite / chunks / deploy Cloudflare** (ver `global.mdc` § Build Vite — ex.: `lucide`/`react-icons` em `vendor-react`, sem chunk `vendor-icons`).
 
-1. **Conjunto canónico (dashboards e UI nova):** `--brand-action`, `--brand-contrast`, `--brand-bg`, `--brand-text`, `--brand-icon-color`, derivadas `--brand-action-12`, `--brand-action-border`, `--brand-surface`, etc.
-2. **Conjunto legado (app ampla):** `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, `--brand-extra1`… — ainda usados em login, menus e páginas fora de `src/pages/dashboards/`.
+**Relação com outros MDCs**
 
-## Regra geral (fora dos dashboards)
+| Origem | Pode citar |
+|--------|------------|
+| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca >5) |
+| **Brand (este)** | Global (limite semântica vs marca); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
+| **Secções** (`dashboards`, `lives`, `estudio`, …) | **Global** + **Brand** — sem citar outras secções para marca |
 
-Elementos que devem refletir a **cor de marca** da operadora podem usar `var(--brand-primary, #7c3aed)`, `var(--brand-accent, #1e36f8)`, `var(--brand-icon, …)` com fallback, conforme o componente já existente.
+**Antes de codar:** ler Global → Brand → MDC da secção (ordem detalhada no Global).
 
-- Preferir variáveis com **fallback** explícito quando o estilo for crítico para contraste.
-- **Não** substituir cores de **semântica de dado** (verde/vermelho/amarelo de KPIs acordados) por `--brand-primary` só por uniformidade — ver `global.mdc` e `.cursor/rules/dashboards.mdc`.
+---
 
-## Regra específica — `src/pages/dashboards/**`
+## 1. Whitelabel — mecanismo
 
-Nos dashboards, o hook `useDashboardBrand()` e o handoff de UI usam **`--brand-action`**, **`--brand-contrast`** e **`--brand-icon-color`** (com fallbacks) para CTAs, FilterBar, comparativos A/B, funil e pills ativas.
+- `AppContext` chama `aplicarBrandguide()` / reset e injeta variáveis em `document.documentElement`.
+- **Ativo:** perfil **operador** + `operadoraBrand` → `brand.useBrand === true` em `useDashboardBrand()`.
+- **Inativo:** defaults Spin em `src/styles/global.css` (`:root`); fallbacks nos `var(--brand-*, #…)` garantem identidade sem `if` por página.
+- **Fonte:** `--brand-fontFamily` + `@font-face` quando houver `font_url` da operadora.
+- **Logo:** `operadoraBrand` na Sidebar — não reimplementar fetch aqui.
 
-- **Preferir** `var(--brand-action, #7c3aed)` e `color-mix(in srgb, var(--brand-action, #7c3aed) …)` em vez de `rgba(124,58,237,…)` fixo ou `--brand-primary` em **código novo** desta pasta.
-- **KpiCard:** `accentVar` apenas `"--brand-action" | "--brand-contrast" | "--brand-icon-color"` — detalhes em `dashboards.mdc`.
+### Dois conjuntos de tokens (`:root` + injeção)
 
-## Spinners (`Loader2` e afins)
+| Conjunto | Tokens principais | Onde usar |
+|----------|-------------------|-----------|
+| **Canónico** | `--brand-action`, `--brand-contrast`, `--brand-bg`, `--brand-text`, `--brand-icon-color`, `--brand-action-12`, `--brand-action-border`, `--brand-surface`, `--brand-surface-hi`, `--brand-contrast-12/30` | `src/pages/dashboards/**` e código novo analítico |
+| **Legado** | `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-background`, `--brand-success`, `--brand-extra1…4`, `--brand-danger` | Login, menus, páginas fora de `dashboards/` |
 
-A cor **não** é única globalmente: depende do fundo.
+Aliases no contexto: ao aplicar brandguide, `--brand-primary` = `--brand-action`, `--brand-secondary` / `--brand-accent` = `--brand-contrast`.
 
-1. **Dentro de botão CTA** com fundo colorido ou **gradiente** (Login, Trocar senha obrigatória, Configurações, etc.) → cor do spinner **`#fff`**. Garante contraste sobre qualquer combinação de gradiente whitelabel; se `--brand-primary` for clara, `var(--brand-primary)` no botão quebraria o contraste — o branco é a âncora segura no CTA.
+**Tokens de gráfico** (`--brand-extra1…4`, `--brand-danger`, `--brand-success`): mapeados a semântica de chart no `AppContext` — **não** substituir KPIs de GGR/ROI pela paleta semântica fixa do Global; ver `dashboards.mdc` para uso em gráficos.
 
-2. **Fora de botão**, sobre fundo neutro (área da página, fullscreen de boot — ex.: `PageLoadingFallback` e estado `checking` em `App.tsx`) → **`var(--brand-primary, #7c3aed)`** (ou `var(--brand-action, #7c3aed)` se o componente já tiver migrado — ambos existem no `:root`).
+### Mapa pasta → tokens
 
-## Contexto sem operador logado
+| Pasta | Tokens preferidos | Hook |
+|-------|-------------------|------|
+| `src/pages/dashboards/**` | `--brand-action`, `--brand-contrast`, `--brand-icon-color` | `useDashboardBrand()` |
+| Demais `src/pages/**` | Legado + hook (`primary` → action quando `useBrand`) | `useDashboardBrand()` em toda página com filtro/header/CTA de marca |
 
-Fora do perfil operador, as variáveis permanecem nos defaults do `:root` — o fallback garante a identidade Spin sem lógica extra no componente.
+**Proibido em código novo fora de `dashboards/`:** usar `--brand-action` / `--brand-contrast` como fallback principal em páginas operacionais — usar `--brand-primary` / `--brand-accent` ou o hook.
 
-## color-mix — estados ativos e transparências
+**Dentro de `dashboards/`:** não usar `--brand-primary` em código novo; não usar `rgba(124,58,237,…)` fixo.
 
-Em `dashboards/`: usar `color-mix(in srgb, var(--brand-action, #7c3aed) X%, transparent)`.
+---
 
-Fora de dashboards: `color-mix(in srgb, var(--brand-accent) X%, transparent)` quando `brand.useBrand`; `rgba(124,58,237,0.15)` como fallback quando `!brand.useBrand`.
+## 2. Hook `useDashboardBrand()`
 
-Nunca `rgba(124,58,237,0.15)` fixo dentro de `src/pages/dashboards/**`.
+Import: `import { useDashboardBrand } from "../hooks/useDashboardBrand"` (ajustar `../`).
 
-## --brand-secondary em dashboards/
+Obrigatório em páginas com header de marca, barra de filtros transparente, CTA primário ou tabela com ações brand-aware.
 
-`--brand-secondary` é token legado válido fora de `dashboards/`. Dentro de `dashboards/`, usar `--brand-contrast` para o papel de cor de suporte (zebras, lado B em comparativos, etc.).
+| Propriedade | Uso |
+|-------------|-----|
+| `useBrand` | Ramo whitelabel vs Spin default |
+| `primary` | Título `h1`, ênfase de texto de marca |
+| `secondary` / `accent` | Destaque secundário, chip ativo, borda de filtro selecionado |
+| `blockBg` | Fundo de **cards/modais** — **não** na barra de filtros |
+| `primaryIconBg` / `primaryIconBorder` / `primaryIconColor` | Badge 28×28 ou 32×32 do header |
+| `primaryTransparentBg` / `primaryTransparentBorder` | **Barra de filtros** (strip transparente) |
+
+Helpers partilhados: `getCtaCriarGradient` / `CtaCriarButton` (`lib/ctaCriarStyles.ts`, `components/CtaCriarButton.tsx`).
+
+---
+
+## 3. CTAs, chips e `color-mix`
+
+### CTA de criação na página (`CtaCriarButton`)
+
+**Componente obrigatório:** `CtaCriarButton` — ícone **`Plus` 14px** (Lucide) **sempre** à esquerda do texto (implementado no componente; **não** repetir `+` no `children` nem `<Plus>` manual ao lado).
+
+| Propriedade | Valor |
+|-------------|--------|
+| `borderRadius` | **10** (mesmo raio das **abas** Overview Spin — não pill 999 dos filtros) |
+| `padding` | **10px 20px** (referência Nova Live / Agenda) |
+| `fontSize` / `fontWeight` | **13** / **700** |
+| `gap` ícone–texto | **6** |
+| Cor do texto | **`#fff`** |
+| Gradiente **Spin** (todos os perfis sem whitelabel) | `linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))` — referência Scout |
+| Gradiente **operadora** (`useBrand`) | `linear-gradient(135deg, var(--brand-action), var(--brand-contrast))` |
+| `data-cta-surface` | **`page`** (inventário / varredura) |
+
+**Rótulos (`children` = texto visível):** preferir **Novo/Nova** + entidade — catálogo em `docs/PADRAO-CTA-CRIAR.md`. Exemplos: `Nova Live`, `Novo Influencer`, `Solicitar Banca`, `Nova Postagem`, `Nova Rede`.
+
+```tsx
+import { CtaCriarButton } from "../components/CtaCriarButton";
+
+<CtaCriarButton onClick={abrirModal}>Nova Live</CtaCriarButton>
+```
+
+- `loading` + `loadingLabel` quando houver verificação assíncrona (ex.: Agenda — **Verificando...**).
+- `aria-label` igual ao texto visível quando o botão for só ícone+texto (default: usar o mesmo `children`).
+- `disabledBackground` só quando o domínio exigir cinza em `disabled` (ex.: Status Técnico).
+- **Salvar** em modais e outros CTAs secundários: fora deste contrato até migração explícita.
+
+### Gradiente CTA genérico (legado / modais)
+
+```tsx
+import { getCtaCriarGradient } from "../lib/ctaCriarStyles";
+
+background: getCtaCriarGradient(brand);
+```
+
+- Fallback Spin nos `var()`: **#4a2082** → **#1e36f8** (alinhado ao Scout).
+- Botão primário **sólido** (sem gradiente): só quando o layout exigir.
+
+### Chip / pill ativo e inativo na barra
+
+Estados partilhados em `lib/filterBarStyles.ts` (`getFiltroCampoInativoStyle`, `getFiltroCampoAtivoStyle`, `getFiltroBarPillStateStyle`) — usados por **Operadora**, **Influencer**, **Histórico** e **Hoje**.
+
+| Contexto | Token no `color-mix` (outros chips/selects ativos) | Borda/texto ativo |
+|----------|------------------------------------------------------|-------------------|
+| `src/pages/dashboards/**` | `var(--brand-action, #7c3aed)` 15% | `brand.accent` ou `--brand-action` |
+| Demais secções | `var(--brand-accent, #1e36f8)` ou `var(--brand-primary, #7c3aed)` 12–15% | `brand.accent` ou `brand.primary` |
+
+Fallback Spin quando `!brand.useBrand`: `color-mix` com `var(--brand-primary, #7c3aed)` nos pills ativos (via `getFiltroCampoAtivoStyle`).
+
+### Links de marca (não semânticos)
+
+Preferir `var(--brand-primary, #7c3aed)` — evitar `brand.accent` do hook em links externos (contraste whitelabel).
+
+### Spinners (`Loader2`)
+
+1. **Dentro de CTA com gradiente** → `#fff`.
+2. **Fora de botão**, fundo neutro → `var(--brand-primary, #7c3aed)` ou `var(--brand-action, #7c3aed)` se o ficheiro já estiver migrado.
+
+Indicador secundário na FilterBar: `<Clock size={12} aria-hidden />` + texto “Carregando…” — ver Global.
+
+---
+
+## 4. Cabeçalho — título, subtítulo e famílias visuais
+
+### Regra de conteúdo (obrigatória em toda página logada)
+
+1. **Título (`h1`):** texto **idêntico** ao `label` do item no menu (`src/constants/menu.ts`) para a `key` da página — mesma grafia e capitalização (ex.: menu “Resultados” → título “Resultados”, não “Resultado de Lives”; menu “Agenda” → “Agenda”, não “Agenda de Lives”).
+2. **Subtítulo:** **uma linha** fixa sob o `h1`, `color: t.textMuted`, `fontSize: 13`, `margin: "5px 0 0"`, `fontFamily: FONT.body`, descrevendo o propósito da página em linguagem de produto (não regras técnicas). **Obrigatório** em páginas novas e ao alterar cabeçalho em legado.
+3. **Ícone do header:** **Lucide** (ou ícone já usado no menu da mesma página), `aria-hidden="true"`, `strokeWidth` default **2**. **GameIcons só no menu lateral** — não repetir Gi* no badge do header.
+
+**Páginas novas — checklist de implementação:**
+
+| Passo | O quê |
+|-------|--------|
+| 1 | Copiar `label` de `menu.ts` para `title` / `h1` |
+| 2 | Definir subtítulo canónico (tabela da secção em `dashboards.mdc`, `lives.mdc`, etc., ou handoff aprovado) |
+| 3 | Usar `PageHeader`, `DashboardPageHeader` ou header inline da secção **com** subtítulo no mesmo bloco visual do título |
+| 4 | Atualizar Ajuda: `titulo` em `CONTEUDO_*` = mesmo nome do menu — ver `geral.mdc` |
+
+**Exceções ao subtítulo único:**
+
+| Caso | Padrão |
+|------|--------|
+| **Influencers / Afiliados** | Subtítulo condicional: gestão vs perfil próprio (textos canónicos no MDC da secção) |
+| **Central de Notificações** | Subtítulo **fixo** no `PageHeader`; contador ou mensagem contextual num **segundo** `<p>` abaixo do header (formato dinâmico evolui depois) |
+| **Playbook Influencers** | Subtítulo curto sob o `h1`; parágrafos introdutórios longos (`PLAYBOOK_SUBTITULO_PARAGRAFOS`) são corpo — não substituem o subtítulo |
+
+**Anti-patterns de subtítulo:** janela técnica no lugar de valor (“após 5 h” só no texto de Ajuda se necessário); nome de tabela/RPC; duplicar o subtítulo no `subtitle` do `PageHeader` **e** num parágrafo igual logo abaixo; título com sufixo “de Lives” quando o menu não usa.
+
+### Implementação — preferir componentes
+
+| Família | Componente | Badge | `h1` | Onde |
+|---------|------------|-------|------|------|
+| **B — Operacional** | `PageHeader` ou `DashboardPageHeader` | 28×28, ícone 14px | 22px, `FONT_TITLE`, uppercase | Estúdio, Aquisição, Marketing, Plataforma, RH, Dashboards, Lives (maioria) |
+| **A — Conteúdo compacto** | Header inline ou evoluir para `PageHeader` | 32×32, ícone 16px | 18px, `FONT_TITLE`, uppercase | Conteúdo (Playbook, Links), algumas vitrines |
+
+**Exceções documentadas:** Portal RH (`conteudo/`) usa **Família B** (`PageHeader` 28/22) por alinhamento com gestão operacional.
+
+Props mínimas:
+
+```tsx
+<PageHeader
+  icon={<Icone size={14} aria-hidden="true" />}
+  title="Gestão de Links"   // = menu.ts label
+  subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
+  actions={...}
+/>
+```
+
+**Dashboards (parágrafo sob `h1`, mesmo estilo):**
+
+```tsx
+<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+  Acompanhe performance, conversão e financeiro do canal de influencers.
+</p>
+```
+
+**Conteúdo Família A (32/18):** subtítulo no `<p>` com `paddingLeft: 40` alinhado ao ícone, ou `PageHeader` se a página migrar para Família B.
+
+**Nunca:** emoji no `h1`; ícone sem wrapper; `fontSize: 26` no título; página logada de produto **sem** subtítulo.
+
+---
+
+## 5. Barra de filtros
+
+### Pill `borderRadius: 999` (padrão de controles na barra)
+
+Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defeito — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
+
+- **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
+- **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
+- `SelectComIcone` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B, domínios que não sejam filtro de lista na strip).
+
+Wrapper obrigatório (dentro de `marginBottom` ~14–20):
+
+```tsx
+<div style={{
+  borderRadius: 14,
+  border: brand.primaryTransparentBorder,
+  background: brand.primaryTransparentBg,
+  padding: "12px 20px",
+}}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
+    {/* carrossel, chips, selects, Histórico, loading secundário */}
+  </div>
+</div>
+```
+
+- **Alinhamento:** `justifyContent: "center"` + `width: "100%"` em cada linha de filtros do bloco (chips, carrossel, selects) — ver **Global** § Alinhamento no bloco de filtros. Alinhar à esquerda só com pedido explícito de produto.
+- **Nunca** `brand.blockBg`, `t.cardBg` ou fundo sólido no strip.
+- **Nunca** select de operadora/influencer **fora** deste wrapper.
+- **Nunca** `justifyContent: "flex-start"` em fileiras de chips/status/plataforma na barra salvo exceção documentada no Global.
+
+### CTA de criação **dentro** do bloco de filtros
+
+Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filtros (ex.: Scout, Network, Figurinos, Gerenciamento Portal RH):
+
+| Regra | Valor |
+|-------|--------|
+| Componente | **`CtaCriarButton`** — ver §3 (não montar `<button>` inline na barra) |
+| Forma / tamanho | **`borderRadius: 10`** (abas Overview Spin), **`padding: 10px 20px`**, `Plus` **14px** — **não** usar pill **999** nem padding **`6px 14px`** dos filtros |
+| Posição | Na linha do bloco, `gap: 10` com carrossel, selects e toggles; centralização da fileira conforme Global § Alinhamento |
+| Visual | Gradiente cheio (§3) — distinto do `color-mix` dos filtros **ativos** |
+
+**Proibido na barra:** CTA de criação com `borderRadius: 999` (pill de filtro), label com `+` no texto em vez de ícone, ou gradiente inline duplicado.
+
+**Fora do bloco** (card da Agenda, `PageHeader`, toolbar de tabela): mesmo **`CtaCriarButton`** — §3; só muda o wrapper pai, não o contrato do botão.
+
+---
+
+## 6. Iconografia em filtros e controles da barra
+
+**Regra:** todo filtro ou controlo repetível na barra deve ter **ícone à esquerda** (Lucide, `aria-hidden`), com `aria-label` no controlo nativo. Preferir componentes partilhados em vez de markup duplicado.
+
+### Componentes
+
+| Componente | Caminho | Quando usar |
+|------------|---------|-------------|
+| **`FiltroOperadoraSelect`** | `src/components/FiltroOperadoraSelect.tsx` | **Único** padrão para filtro de **lista de operadoras** na barra (ver tabela e snippet abaixo) |
+| **`FiltroHistoricoButton`** | `src/components/dashboard/FiltroHistoricoButton.tsx` | **Único** padrão para botão **Histórico** na barra (Overview Influencer) |
+| **`FiltroInfluencerSelect`** | `src/components/FiltroInfluencerSelect.tsx` | **Único** padrão para filtro de **influencer(s)** na barra (`mode` single \| multiple) |
+| **`FiltroModoVisualizacaoSelect`** | `src/components/FiltroModoVisualizacaoSelect.tsx` | Modo de vista de calendário na barra (Mês / Semana / Dia) — ícone `CalendarRange` 15px |
+| **`FiltroHojeButton`** | `src/components/dashboard/FiltroHojeButton.tsx` | Atalho **Hoje** na Agenda — ícone `History` 15px (não confundir com Histórico) |
+| **`FiltroStatusSemanticoPill`** | `src/components/FiltroStatusSemanticoPill.tsx` | Chips de **status** na barra (bolinha 8px + cor semântica ativa) — Lives, Afiliados |
+| **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
+| **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
+| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
+| `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
+| **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
+| **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Multi na barra (ex.: tipos de denúncia) — ícone via catálogo ou domínio |
+| `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
+| Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
+
+**Catálogo de ícones (código):** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). **Sempre** importar daqui em componentes partilhados e em filtros novos; ícones só de domínio (ex.: `Newspaper` no Portal RH) ficam na página com o mesmo tamanho e documentados abaixo.
+
+### Abas de navegação (`role="tab"`) — obrigatório
+
+Referência visual: **Organograma** (`OrgFiltroBarDiretorias` — Visualização / Gerenciamento).
+
+| Regra | Valor |
+|-------|--------|
+| Componente | **`FiltroBarTabButton`** (`src/components/dashboard/FiltroBarTabButton.tsx`) |
+| Estilos | `getFiltroBarTabButtonStyle` / constantes `FILTRO_BAR_TAB_BUTTON` em `src/lib/filterBarStyles.ts` |
+| Ícone | **Lucide 16px**, `strokeWidth` 2, `aria-hidden` — usar `FILTRO_BAR_TAB_ICON_PROPS` ou `<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />` |
+| Layout | `padding: 10px 18px`, `minHeight: 44`, `borderRadius: **10**`, `gap: 8`, ícone **à esquerda** do rótulo |
+| Ativo (marca) | Borda/texto `brand.accent`; fundo `color-mix` 15% com `--brand-contrast` (whitelabel) ou `--brand-action` (Spin) |
+| Ativo (cor de domínio) | Prop `activeColor` — ex.: categoria Portal RH, perfil em Permissões |
+| Teclado | `role="tablist"` no wrapper; setas ← → via `onFiltroBarTabsKeyDown` (ou `handleFiltroBarTabsArrowKeyDown` por aba) |
+| Proibido | Pills `borderRadius: 20` ou `999` para **navegação de aba**; markup inline duplicado; aba **sem** ícone |
+
+```tsx
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../components/dashboard";
+import { Network, LayoutList } from "lucide-react";
+
+<div role="tablist" aria-label="Modo do organograma" onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabs, setModo, (k) => `tab-org-${k}`)}>
+  <FiltroBarTabButton
+    id="tab-org-visual"
+    active={modo === "visual"}
+    aria-controls="panel-org-visual"
+    onClick={() => setModo("visual")}
+    icon={<Network {...FILTRO_BAR_TAB_ICON_PROPS} />}
+  >
+    Visualização
+  </FiltroBarTabButton>
+</div>
+```
+
+**Exceção:** `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` / `FiltroSemanticoTabPill` são **filtros** com cor semântica — não substituem `FiltroBarTabButton` para troca de módulo/painel.
+
+`SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
+
+### Filtro de operadora — contrato visual (obrigatório)
+
+Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes `OPERADORA_FILTRO_TODAS_VALUE`, `OPERADORA_FILTRO_TODAS_LABEL`).
+
+- Ícone **Shield** Lucide 15px dentro do campo (via `SelectComIcone` interno).
+- Primeira opção do select: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
+- `aria-label` do controlo: **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`).
+- **Sem** rótulo de texto ao lado (“Operadora”, “Filtrar por operadora”).
+- Destaque quando slug específica selecionada: `highlightWhenFiltered` (default `true`) — `color-mix` com `--brand-action`.
+- **`pill` default `true`** em `FiltroOperadoraSelect` / `SelectComIcone` na barra (referência: **Overview Influencer**); estado inativo: `t.text`, fundo `t.inputBg`, borda `t.cardBorder`.
+
+```tsx
+<FiltroOperadoraSelect
+  value={filtroOperadora}
+  onChange={setFiltroOperadora}
+  operadoras={operadorasList}
+  podeVerOperadora={podeVerOperadora}
+/>
+```
+
+Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operadora.
+
+### Catálogo de ícones por tipo de filtro
+
+**Implementação:** `FilterBarIcons.*` em `src/lib/filterBarIconCatalog.tsx` (15px, `strokeWidth` 2, `aria-hidden`). Não repetir `size={15}` solto em componentes canónicos.
+
+| Tipo de filtro | Ícone (Lucide) | `FilterBarIcons` | Componente / agregadora típica |
+|----------------|----------------|------------------|-------------------------------|
+| Operadora | `Shield` | `.operadora` | **`FiltroOperadoraSelect`** — **Todas Operadoras** |
+| Influencer | `User` | `.influencer` | **`FiltroInfluencerSelect`** — **Todos Influencers** |
+| Status (`<select>` pill) | **`ShieldAlert`** | `.status` | **`FiltroBarCampoSelect`** — **Todos Status** (Gestão Prestadores, Vagas, Portal RH Gerenciamento, Central de Denúncias) |
+| Time | `UsersRound` | `.time` | **`FiltroCalendarioTimeSelect`**, **`FiltroTodosTimesButton`** (Staff) |
+| Staff | `IdCard` | `.staff` | **`FiltroCalendarioStaffSelect`** |
+| Turno | `Clock` | `.turno` | **`FiltroTurnoSelect`** (Gestão de Staff) |
+| Diretoria | `Building2` | `.diretoria` | **`FiltroBarCampoSelect`** / pill Organograma **Todas as diretorias** |
+| Histórico (toggle) | `Calendar` | `.historico` | **`FiltroHistoricoButton`** |
+| Hoje (Agenda) | `History` | `.hoje` | **`FiltroHojeButton`** |
+| Modo Mês/Semana/Dia | `CalendarRange` | `.modoVisualizacao` | **`FiltroModoVisualizacaoSelect`** |
+| Ação (Solicitações / Marketplace) | `ListChecks` | `.acaoSolicitacao` | **`FiltroSolicitacoesTipoAcaoSelect`** — **Todas Ações** |
+| Figurino categoria | `Tags` | `.figurinoCategoria` | **`FiltroFigurinosCategoriaSelect`** |
+| Figurino tamanho | `Ruler` | `.figurinoTamanho` | **`FiltroFigurinosTamanhoSelect`** |
+
+**Ícones de domínio (exceção documentada na secção)** — mesmo tamanho 15px; **não** reutilizar para Operadora/Time/Status canónicos:
+
+| Domínio | Ícone | Página / filtro |
+|---------|-------|-----------------|
+| Tipo de denúncia (multi) | `TriangleAlert` | Central de Denúncias |
+| Tipo de postagem | `Newspaper` | Portal RH Gerenciamento |
+| Tipo / vagas (contrato) | `ClipboardType` | Vagas Candidaturas |
+| Gerência / contrato (RH) | `Layers` / `FileSignature` | Gestão de Prestadores |
+| Meu Calendário | `CalendarCheck` | Calendário RH (`FiltroMeuCalendarioButton`) |
+
+| Tipo (outro padrão) | Ícone / UI | Componente / notas |
+|---------------------|------------|-------------------|
+| Status (chip semântico) | Bolinha 8px + cor | **`FiltroStatusSemanticoPill`** — Lives, Afiliados; **não** `ShieldAlert` |
+| Plataforma (chip) | `PlatLogo` 13px | **`FiltroPlataformaSemanticoPill`** |
+| Campanha / UTM (legado) | `Megaphone` / `Link2` | `SelectComIcone` fora da barra canónica |
+| Busca (página) | `Search` 16px | **`BarraPesquisaPagina`** |
+| Busca (painel dropdown) | `Search` 14px | **`BarraPesquisaFiltroPainel`** |
+| Carregando | `Clock` 12px | Texto “Carregando…” na barra |
+
+**Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.
+
+Estado ativo do select (valor ≠ agregador): em **operadoras**, preferir `FiltroOperadoraSelect` (já aplica destaque com `--brand-action`). Outros filtros (`SelectComIcone` manual): borda/fundo marca conforme chip ativo da página.
+
+---
+
+## 7. Carrossel de período
+
+Incluir quando a página filtra por período navegável (mês, semana, dia, turno, diretoria, time, etc.). Integrar **dentro** da barra de filtros (secção 5), salvo layout de escala que use `MesCarrosselPeriodo` isolado.
+
+**Implementação única:** `src/lib/carouselNavStyles.ts` — não duplicar estilos inline de setas/rótulo.
+
+```tsx
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../lib/carouselNavStyles";
+
+<button
+  type="button"
+  aria-label="Mês anterior" // adaptar: Semana anterior, Turno anterior, Diretoria anterior, Período anterior…
+  disabled={desabilitado}
+  style={getCarouselBtnNavStyle(t, desabilitado)}
+>
+  <ChevronLeft size={14} aria-hidden="true" />
+</button>
+
+<span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 /* ou clamp se nome longo */ })}>
+  {labelPeriodo} {/* conteúdo do domínio — nunca hardcodar formato no helper */}
+</span>
+
+<button type="button" aria-label="Próximo mês" disabled={desabilitado} style={getCarouselBtnNavStyle(t, desabilitado)}>
+  <ChevronRight size={14} aria-hidden="true" />
+</button>
+```
+
+| Dimensão | Valor |
+|----------|--------|
+| Botões seta | 32×32, `Chevron` 14px, opacidade **0.35** quando `disabled` |
+| Rótulo central | 18px / peso 800 / `FONT.body` / `minWidth` 180 (ajustar só se ellipsis necessário) |
+
+| Contexto | `aria-label` setas | Rótulo central (exemplos) |
+|----------|-------------------|---------------------------|
+| Mês | `Mês anterior` / `Próximo mês` | Label do mês; modo Histórico → **`Todo o período`** |
+| Semana | `Semana anterior` / `Próxima semana` | Label da semana |
+| Período genérico (Agenda) | `Período anterior` / `Próximo período` | Título conforme vista (mês/semana/dia) |
+| Turno | `Turno anterior` / `Próximo turno` | Label do turno |
+| Diretoria / time | `Diretoria anterior` / `Próxima diretoria` (ou time) | Nome da diretoria/time ou agregador |
+
+**Modo Histórico:** setas `disabled` + `getCarouselBtnNavStyle(t, true)`; botão Histórico com `aria-pressed={true}`.
+
+**Referências:** `PortalRhBlocoFiltros`, Streamers FilterBar, Financeiro, Agenda, Feedback, `MesCarrosselPeriodo` (escala — card com `blockBg`, exceção de wrapper).
+
+---
+
+## 8. Ações — toolbar vs linha
+
+Dois contextos distintos; **não** misturar o padrão de um no outro.
+
+### Toolbar de página ou de bloco (ex.: barra acima da grade, canto do `SectionTitle`)
+
+Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sugestão de Escala**, **Aprovar**, **Gerar**, **Exportar**, **+ Criar**): botão **com texto visível** — **não** converter para somente ícone.
+
+- Labels curtas e verbosas no botão (ex.: “Salvar Alterações”, não só “Salvar” se o contexto exigir clareza).
+- **`aria-label`** pode repetir ou detalhar o texto visível quando o rótulo for ambíguo.
+- **`title`** opcional; não substitui o texto do botão.
+- CTAs primários de criação: preferir **gradiente** canónico (secção 3) + texto branco; secundários: borda `t.cardBorder` ou tint `color-mix` com `brand.accent` / `brand.primary`.
+- Spinner em toolbar: dentro de CTA com gradiente → `#fff`; em botão tintado/neutro → cor do texto do botão ou `var(--brand-primary, #7c3aed)` no `Loader2` fora de gradiente.
+
+**Referência:** toolbar da Escala Diária em `GestaoEscala` (Nova Escala, Salvar, Aprovar, Sugestão).
+
+### Linha de tabela, card ou lista densa
+
+Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
+
+- **`aria-label` descritivo** obrigatório (ex.: `` `Editar ${nome}` ``).
+- **`title`** com o mesmo texto (ou rótulo curto) para tooltip no hover.
+- Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px**.
+- Estilo base: quadrado ~28–32px, `borderRadius: 8`, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `btnIconTabela` em RH.
+
+### Catálogo de ações comuns (Lucide) — uso em **linha**
+
+| Ação | Ícone | `aria-label` (padrão) |
+|------|-------|------------------------|
+| Editar | `Pencil` | `Editar {identificador}` |
+| Ver / Visualizar | `Eye` | `Ver {identificador}` |
+| Histórico / thread | `Clock` ou `History` | `Histórico de {identificador}` |
+| Aprovar | `Check` | `Aprovar {identificador}` |
+| Arquivar | `Archive` | `Arquivar {identificador}` — 2º clique: incluir “Confirmar arquivamento” no label |
+| Excluir | `Trash2` | `Excluir {identificador}` — 2º clique: “Confirmar exclusão” |
+| Link externo | `ExternalLink` | `Abrir {destino} em nova aba` |
+| Expandir linha | `ChevronRight` rotacionado | Nunca `▶` textual |
+
+**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques pode mostrar microtexto “Confirmar?” ao lado do ícone (Portal RH Arquivar).
+
+**Legado a migrar (linha):** botões com texto “Ver”, “Editar”, “Aprovar” em células de tabela (ex. Afiliados) → ícone + `aria-label` + `title`. **Não** migrar toolbars de fluxo para ícone.
+
+**Legado a migrar (toolbar):** ícone sem texto em ações de fluxo (Nova Escala, Aprovar bloco, etc.) → restaurar **texto visível**.
+
+**Ações semânticas de negócio** (Pago, Recusado, Liberar banca): podem manter cor semântica (`#22c55e`, `#e84025`) — não confundir com token de marca; ver Global.
+
+---
+
+## 9. O que não é marca (permanece no Global)
+
+- Paleta semântica de dados (verde = bom, vermelho = ruim, amarelo, roxo FTD/Hora).
+- `useApp()` / `t.*` para superfícies neutras.
+- `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, `SortTableTh`, ordenação default, permissões (Gestão de Usuários / admin irrestrito), filtros (`Todos` default, busca se >5 opções), strings de vazio/loading.
+- Título alinhado ao menu + subtítulo: regra de conteúdo no Global; implementação visual neste MDC (secção 4).
+
+---
+
+## 10. Anti-patterns (marca)
+
+- `rgba(124,58,237,…)` fixo em `dashboards/` ou quando `brand.useBrand`.
+- `brand.accent` em links externos.
+- `GiShare` / GameIcons no header de página.
+- Gradiente fallback com `#7c3aed` no início (usar `CtaCriarButton` / `getCtaCriarGradient`).
+- CTA de criação inline sem `CtaCriarButton`; label com `+` em vez de ícone `Plus`.
+- Filtro sem ícone quando existe entrada no catálogo (secção 6).
+- Aba de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone 16px dedicado, ou com estilo pill 20/999 em vez do layout Organograma (secção 6 — Abas).
+- Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
+- Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
+- Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
+- Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
+- Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
+- Ação de **linha** só com texto, sem ícone (código novo).
+- Ação de **toolbar** só com ícone, sem texto (fluxo da página).
+- Título diferente do menu ou página sem subtítulo.
+- `blockBg` na barra de filtros.
+- Substituir verde/vermelho de GGR/ROI por `--brand-primary` por estética.
+
+---
+
+## 11. Checklist rápido (página nova)
+
+- [ ] `useDashboardBrand()` + header com título = `menu.ts` + subtítulo
+- [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
+- [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
+- [ ] Filtro de influencer(s): `FiltroInfluencerSelect` + agregadora **Todos Influencers** + pill 999
+- [ ] Modo Mês/Semana/Dia (se aplicável): `FiltroModoVisualizacaoSelect` + `CalendarRange` 15px
+- [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
+- [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
+- [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
+- [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
+- [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
+- [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
+- [ ] Semântica de dado intacta (Global)

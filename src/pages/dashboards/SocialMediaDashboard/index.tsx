@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import {
@@ -13,7 +14,8 @@ import {
   zebraStripe,
   zebraStripeBrandContrast,
 } from "../../../lib/tableStyles";
-import { SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, FiltroBarTabButton, type SortDir } from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -22,7 +24,6 @@ import {
   ArrowUpFromLine,
   BarChart2,
   Bookmark,
-  Calendar,
   CalendarDays,
   Clock,
   Filter,
@@ -36,6 +37,7 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  GitCompare,
   Share2,
   TrendingDown,
   Target,
@@ -84,6 +86,12 @@ const TAB_LABELS: Record<SocialMediaTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
   alcance: "Alcance",
+};
+
+const TAB_ICONS: Record<SocialMediaTab, typeof BarChart2> = {
+  overview: BarChart2,
+  conversao: GitCompare,
+  alcance: Share2,
 };
 
 const COR_FUNIL_A = {
@@ -998,16 +1006,6 @@ export default function SocialMediaDashboard() {
     boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
   };
 
-  const btnNavStyle = (disabled: boolean): React.CSSProperties => ({
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.3 : 1,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  });
-
   const thStyle = brand.useBrand ? getThStyleBrandAction(t) : getThStyle(t);
   const zebraTabelaMidias = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
   const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
@@ -1072,7 +1070,7 @@ export default function SocialMediaDashboard() {
               Mídias sociais
             </h1>
             <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.
+              Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas.
             </p>
           </div>
         </div>
@@ -1098,42 +1096,26 @@ export default function SocialMediaDashboard() {
               marginBottom: 12,
             }}
           >
-            <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} aria-hidden />
-            </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 220, textAlign: "center" }}>
-              {label}
-            </span>
-            <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} aria-hidden />
-            </button>
             <button
               type="button"
-              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-              aria-pressed={historico}
-              onClick={toggleHistorico}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                minHeight: 44,
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
-                fontWeight: historico ? 700 : 400,
-                transition: "all 0.15s",
-              }}
+              aria-label="Mês anterior"
+              style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
             >
-              <Calendar size={15} aria-hidden />
-              Histórico
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: 220 })}>{label}</span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              style={getCarouselBtnNavStyle(t, historico || isUltimo)}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
@@ -1144,51 +1126,19 @@ export default function SocialMediaDashboard() {
 
           <div role="tablist" aria-label="Seções Mídias sociais" style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             {tabIds.map((key) => {
-              const ativo = aba === key;
+              const TabIcon = TAB_ICONS[key];
               return (
-                <button
+                <FiltroBarTabButton
                   key={key}
-                  type="button"
-                  role="tab"
                   id={`tab-midias-${key}`}
-                  tabIndex={ativo ? 0 : -1}
-                  aria-selected={ativo}
+                  active={aba === key}
                   aria-controls={`panel-midias-${key}`}
                   onClick={() => setAba(key)}
-                  onKeyDown={(e) => {
-                    const current = tabIds.indexOf(key);
-                    if (e.key === "ArrowRight") {
-                      e.preventDefault();
-                      const next = tabIds[(current + 1) % tabIds.length];
-                      setAba(next);
-                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
-                    }
-                    if (e.key === "ArrowLeft") {
-                      e.preventDefault();
-                      const next = tabIds[(current - 1 + tabIds.length) % tabIds.length];
-                      setAba(next);
-                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
-                    }
-                  }}
-                  style={{
-                    padding: "10px 18px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.accent : t.textMuted,
-                    fontWeight: ativo ? 700 : 500,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                  }}
+                  onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-midias-")}
+                  icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
                 >
                   {TAB_LABELS[key]}
-                </button>
+                </FiltroBarTabButton>
               );
             })}
           </div>

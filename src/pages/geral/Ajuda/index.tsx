@@ -1,85 +1,19 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
+import { MENU } from "../../../constants/menu";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { ClipboardList, HelpCircle, Users, Network, Megaphone, Link2 } from "lucide-react";
-import {
-  GiTv,
-  GiCalendar,
-  GiConversation,
-  GiPerson,
-  GiBinoculars,
-  GiCash,
-  GiPokerHand,
-  GiMicrophone,
-  GiShare,
-  GiCardRandom,
-  GiRingingBell,
-  GiShirt,
-  GiNotebook,
-} from "react-icons/gi";
+import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
-// ─── Menu estrutura ───────────────────────────────────────────────────────────
-const MENU_AJUDA = [
-  {
-    section: "Dashboards",
-    items: [
-      { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
-      { key: "mesas_spin" as PageKey, label: "Overview Spin", Icon: GiPokerHand },
-      { key: "dash_midias_sociais" as PageKey, label: "Mídias Sociais", Icon: GiShare },
-      {
-        key: "dash_overview_influencer" as PageKey,
-        label: "Overview Influencer",
-        Icon: GiMicrophone,
-      },
-    ],
-  },
-  {
-    section: "Lives",
-    items: [
-      { key: "agenda" as PageKey, label: "Agenda", Icon: GiCalendar },
-      { key: "resultados" as PageKey, label: "Resultados", Icon: ClipboardList },
-      { key: "feedback" as PageKey, label: "Feedback", Icon: GiConversation },
-      { key: "influencers" as PageKey, label: "Influencers", Icon: GiPerson },
-      { key: "scout" as PageKey, label: "Scout", Icon: GiBinoculars },
-    ],
-  },
-  {
-    section: "Aquisição",
-    items: [
-      { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
-      { key: "banca_jogo" as PageKey, label: "Banca de Jogo", Icon: GiPokerHand },
-    ],
-  },
-  {
-    section: "Afiliados",
-    items: [
-      { key: "afiliados" as PageKey, label: "Afiliados", Icon: Users },
-      { key: "afiliados_network" as PageKey, label: "Network", Icon: Network },
-    ],
-  },
-  {
-    section: "Marketing",
-    items: [
-      { key: "campanhas" as PageKey, label: "Campanhas", Icon: Megaphone },
-      { key: "gestao_links" as PageKey, label: "Gestão de Links", Icon: Link2 },
-    ],
-  },
-  {
-    section: "Estúdio",
-    items: [
-      { key: "gestao_dealers" as PageKey, label: "Gestão de Dealers", Icon: GiCardRandom },
-      { key: "central_notificacoes" as PageKey, label: "Central de Notificações", Icon: GiRingingBell },
-      { key: "rh_figurinos" as PageKey, label: "Figurinos", Icon: GiShirt },
-      { key: "roteiro_mesa" as PageKey, label: "Roteiro de Mesa", Icon: GiNotebook },
-    ],
-  },
-];
+function podeVerPaginaNoMenu(cv: string | null | undefined): boolean {
+  return cv === "sim" || cv === "proprios";
+}
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 // Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
@@ -119,12 +53,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo — Baccarat, Roleta e Blackjack. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das plataformas parceiras.",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das operadoras parceiras.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por plataforma (ex.: Blaze, Casa de Apostas). No perfil 'Todas as operadoras', os valores financeiros são somados entre plataformas.",
+          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora (ex.: Blaze, Casa de Apostas). Com **Todas Operadoras** selecionado no filtro, os valores financeiros são somados entre operadoras.",
       },
       {
         subtitulo: "KPIs Consolidados",
@@ -134,12 +68,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") ou por mês no modo Histórico (subtítulo \"mês a mês\"). No modo 'Todas as operadoras', cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
+          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") ou por mês no modo Histórico (subtítulo \"mês a mês\"). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
       },
       {
         subtitulo: "Comparativo de Jogo",
         texto:
-          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo) e Baccarat (ciano). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período.\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
+          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo), Baccarat (ciano) e Futebol Brasileiro (laranja). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
@@ -147,9 +81,9 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Disponível apenas quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.",
       },
       {
-        subtitulo: "Dados por Mesa (Baccarat e Roleta)",
+        subtitulo: "Dados por Mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos.",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos. Na Casa de Apostas, uma segunda linha mostra Futebol Brasileiro em largura total.",
       },
       {
         subtitulo: "Aba Posicionamento",
@@ -227,7 +161,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   agenda: {
-    titulo: "Agenda de Lives",
+    titulo: "Agenda",
     blocos: [
       {
         texto:
@@ -236,12 +170,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Modos de Visualização",
         texto:
-          "A agenda oferece três modos, selecionáveis no seletor de período:\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: sete colunas com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
+          "A agenda oferece três modos, selecionáveis no filtro em pill (ícone de calendário em intervalo — Mês, Semana ou Dia):\n\n— Mês: grid completo do calendário. As células variam de cor conforme o estado do dia — azul para hoje, verde para dias futuros e vermelho para dias passados. Cada célula exibe até 8 lives; quando há mais, um link '+N mais' abre a visualização Dia automaticamente.\n— Semana: sete colunas com as lives de cada dia. O número do dia aparece em destaque com a mesma codificação de cores do modo Mês.\n— Dia: lista detalhada de todas as lives do dia selecionado, com logo da plataforma, nome do influencer, badges de plataforma e status, horário e link clicável abaixo de cada item.",
       },
       {
         subtitulo: "Navegação e Filtros",
         texto:
-          "Use as setas para avançar ou recuar no período, ou clique em Hoje para voltar à data atual.\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo da navegação de período. Para perfis com acesso a múltiplos influencers, o seletor de Influencers aparece na linha principal. Para perfis com acesso a múltiplas operadoras, o seletor de Operadora também aparece na linha principal.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
+          "Use as setas para avançar ou recuar no período conforme o modo (mês, semana ou dia). O botão **Hoje** (pill alinhado aos outros filtros da barra, ícone distinto do Histórico dos dashboards) volta para a data atual e abre a visualização Dia — fica destacado quando você já está no dia de hoje nesse modo.\n\nO seletor **Mês / Semana / Dia** usa o mesmo estilo de pill: **Mês** é o padrão (aparência neutra); **Semana** e **Dia** aparecem destacados quando selecionados.\n\nNa mesma linha, para perfis com escopo amplo: **Influencers** (**Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) e **Operadoras** (**Todas Operadoras**).\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma ficam numa segunda linha abaixo.\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo.",
       },
       {
         subtitulo: "Criando uma Nova Live",
@@ -266,7 +200,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   resultados: {
-    titulo: "Resultado de Lives",
+    titulo: "Resultados",
     blocos: [
       {
         texto:
@@ -300,7 +234,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     ],
   },
   feedback: {
-    titulo: "Feedback de Lives",
+    titulo: "Feedback",
     blocos: [
       {
         texto:
@@ -309,7 +243,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Navegação e Período",
         texto:
-          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
+          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer (multi-seleção; agregadora **Todos Influencers**; pesquisa no painel quando há mais de cinco nomes) e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
       },
       {
         subtitulo: "Filtro de Status",
@@ -348,7 +282,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos influencers parceiros.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
+          "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
       },
       {
         subtitulo: "Quadros de Resumo",
@@ -407,7 +341,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Clique em + Adicionar para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação com botão 'Adicionar Anotação' e histórico de todas as anotações anteriores com usuário e data de registro",
+          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação com botão 'Adicionar Anotação' e histórico de todas as anotações anteriores com usuário e data de registro",
       },
       {
         subtitulo: "Fechando uma Parceria",
@@ -431,7 +365,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
       },
       {
         subtitulo: "Cards de Dealers",
@@ -543,7 +477,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e operadora",
         texto:
-          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
       },
       {
         subtitulo: "Campanhas",
@@ -562,6 +496,137 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       },
     ],
   },
+  playbook_influencers: {
+    titulo: "Playbook — Influencers",
+    blocos: [
+      {
+        texto:
+          "O Playbook reúne todas as diretrizes que orientam o criador durante suas transmissões ao vivo com a Spin Gaming. O objetivo é garantir alinhamento com a operação, posicionamento correto de marca e a melhor experiência para o público.\n\nAs seções são divididas entre leitura livre e itens obrigatórios, que exigem confirmação formal de ciência antes de transmitir.",
+      },
+      {
+        subtitulo: "Navegação por Abas",
+        texto:
+          "O conteúdo está organizado em oito abas: Posicionamento, Dealers, Agendamento, Jogos, Side Bets, Situações Técnicas, Fun Facts e Acesso aos Jogos.\n\nAs abas marcadas como OBRIGATÓRIO exigem confirmação de leitura. As abas sem marcação são de leitura livre e não bloqueiam nenhuma funcionalidade.\n\nCom o foco na lista de abas, use as setas ← → do teclado para alternar entre as seções.",
+      },
+      {
+        subtitulo: "Itens Obrigatórios e Confirmação de Ciência",
+        texto:
+          "Dealers, Agendamento e Jogos são os três itens obrigatórios. Cada um apresenta um bloco de confirmação ao final do conteúdo.\n\nPara confirmar: marque a caixa declarando que leu e compreendeu as regras, depois clique em Confirmar Ciência. A confirmação é registrada com data e hora e não pode ser desfeita.\n\nUma barra de progresso no topo da página indica quantos dos três itens foram confirmados. Quando todos forem concluídos, a página exibe um banner de conclusão e o status muda para Playbook concluído.",
+      },
+      {
+        subtitulo: "Barra de Progresso",
+        texto:
+          "A barra abaixo do cabeçalho mostra o avanço nas confirmações obrigatórias. Ela só aparece para influencers com confirmações pendentes. Quando todos os itens estiverem confirmados, a barra é substituída pelo banner de conclusão.",
+      },
+      {
+        subtitulo: "Dots de Status nas Abas",
+        texto:
+          "Abas obrigatórias exibem um pequeno círculo colorido ao lado do label:\n— Vermelho: item ainda não confirmado\n— Verde: confirmação já registrada\n\nEsses indicadores somem quando todos os itens obrigatórios estão confirmados.",
+      },
+      {
+        subtitulo: "Painel de Auditoria (Gestores)",
+        texto:
+          "Gestores, administradores e executivos visualizam um painel adicional em cada aba obrigatória, logo abaixo do conteúdo.\n\nO painel lista quais influencers já confirmaram a ciência daquele item e quais ainda estão pendentes, com data e hora de cada confirmação. Apenas influencers ativos com perfil cadastrado aparecem na listagem.",
+      },
+      {
+        subtitulo: "Badge de Status no Cabeçalho",
+        texto:
+          "No canto superior direito do cabeçalho:\n— Para gestores: exibe quantos influencers confirmaram todos os itens obrigatórios (ex: 31 de 34 influencers confirmaram tudo).\n— Para influencers: exibe o progresso próprio (ex: 2 de 3 itens obrigatórios confirmados) ou o badge verde Playbook concluído quando tudo estiver confirmado.",
+      },
+    ],
+  },
+  links_materiais: {
+    titulo: "Links e Materiais",
+    blocos: [
+      {
+        texto:
+          "A página Links e Materiais é onde o influencer gera o seu link de rastreamento exclusivo para a Casa de Apostas. O link é único por influencer e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+      },
+      {
+        subtitulo: "Link de Rastreamento",
+        texto:
+          "O link é formado por uma URL base fixa seguida de um parâmetro UTM personalizado com o nome artístico do influencer.\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o nome artístico cadastrado no perfil.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
+      },
+      {
+        subtitulo: "QR Code do Link",
+        texto:
+          "Após emitir o link, três formatos de QR Code ficam disponíveis para download:\n— Apenas o QR Code: imagem limpa do código, fundo branco.\n— Gradiente escuro: QR Code no quadro Spin Gaming com fundo escuro em gradiente azul/roxo.\n— Gradiente claro: QR Code no quadro Spin Gaming com fundo claro em gradiente roxo/vermelho.\n\nTodos os formatos são exportados em PNG de alta resolução, prontos para uso em redes sociais, stream e materiais impressos.",
+      },
+      {
+        subtitulo: "Emissão por Gestores",
+        texto:
+          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer. Para isso, selecione o influencer no campo que aparece acima do UTM antes de clicar em Emitir.\n\nSe o influencer já tiver um link emitido, ele será exibido automaticamente ao selecionar o nome na lista.",
+      },
+      {
+        subtitulo: "Requisitos para Emissão",
+        texto:
+          "O influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
+      },
+    ],
+  },
+  spin_na_rede: {
+    titulo: "Spin na Rede",
+    blocos: [
+      {
+        texto:
+          "A página Spin na Rede reúne citações e menções públicas à Spin Gaming em notícias, portais e feeds indexados automaticamente. É uma vitrine das aparições da marca na mídia, atualizada pelo agregador de RSS configurado pela equipe.",
+      },
+      {
+        subtitulo: "Como funciona",
+        texto:
+          "Os itens aparecem automaticamente quando o agregador RSS capta uma publicação que menciona a Spin Gaming e ela passa pelo filtro de relevância. Cada cartão exibe o título da matéria, um trecho do conteúdo, a data de publicação, a fonte e um link direto para o artigo original.\n\nAs miniaturas são carregadas a partir da imagem da própria matéria quando disponível — se a imagem não carregar, o cartão aparece sem ela.",
+      },
+      {
+        subtitulo: "Navegação",
+        texto:
+          "Os itens são exibidos do mais recente ao mais antigo. Não há filtros por período — toda a listagem disponível é mostrada de uma vez.\n\nPara acessar a matéria completa, clique em Ir para a matéria, que abre o artigo original em uma nova aba.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "A visualização da Spin na Rede está disponível para todos os perfis que têm acesso à seção Conteúdo. Não há ações de escrita nesta página — é exclusivamente de leitura.",
+      },
+    ],
+  },
+  rh_portal: {
+    titulo: "Portal de RH",
+    blocos: [
+      {
+        texto:
+          "O Portal de RH centraliza os comunicados oficiais, as políticas e normativas internas e as atas das RH Talks. É o canal oficial da equipe de RH para comunicação com todos os colaboradores da Spin Gaming.",
+      },
+      {
+        subtitulo: "Comunicados",
+        texto:
+          "Reúne avisos oficiais publicados pelo RH, organizados por categoria: Urgente, Geral, Pagamento e Eventos.\n\nComunicados marcados como Novo indicam que ainda não foram lidos. Clique em Lido para registrar a leitura — o badge desaparece após o clique.\n\nUm comunicado pode ser fixado no topo da lista para maior visibilidade. Quando fixado, aparece antes dos demais com o indicador Fixado.",
+      },
+      {
+        subtitulo: "Filtros e Navegação de Comunicados",
+        texto:
+          "Use o carrossel de meses para navegar por período com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe todas as postagens publicadas de todos os meses (Todo o período) — o carrossel de mês fica desabilitado nesse modo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
+      },
+      {
+        subtitulo: "Políticas e Normativas",
+        texto:
+          "Lista documentos oficiais como códigos de conduta, políticas de segurança, normas de bonificação e folha de pagamento.\n\nClique em Ler Política/Normativa para abrir o documento completo. No modal, você pode ler a introdução, a descrição completa e acessar anexos. Ao clicar em Lido e Ciente, a plataforma registra a sua confirmação de leitura. O badge Novo some após isso.",
+      },
+      {
+        subtitulo: "RH Talks",
+        texto:
+          "Reúne as atas das reuniões periódicas do RH com colaboradores.\n\nCada RH Talk tem um número sequencial, título e uma introdução. Clique em Ver Ata para abrir o conteúdo completo. Algumas atas são restritas a participantes: se você não estava na reunião, o botão Ver Ata estará desabilitado e um aviso informará a restrição.",
+      },
+      {
+        subtitulo: "Gerenciamento de Postagens (Gestores)",
+        texto:
+          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (dois cliques para confirmar)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra todas as postagens de todos os meses; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+      },
+      {
+        subtitulo: "Criar e Publicar Postagens",
+        texto:
+          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).\n\nÉ possível anexar uma imagem e um arquivo a qualquer tipo de postagem.",
+      },
+    ],
+  },
   banca_jogo: {
     titulo: "Banca de Jogo",
     blocos: [
@@ -572,12 +637,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
         texto:
-          "A tabela de Solicitações lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão + Solicitar. Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
+          "A tabela de Solicitações lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão Solicitar Banca (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
       },
       {
         subtitulo: "Consolidado de Bancas",
@@ -640,7 +705,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Lista de Prospectos",
         texto:
-          "Cada card exibe nome, status do funil e uma prévia do campo Operação (truncado em 2 linhas). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
+          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil e uma prévia do campo Operação (truncado em 2 linhas). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
       },
       {
         subtitulo: "Cadastro e Edição",
@@ -669,7 +734,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
+          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
@@ -713,7 +778,103 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Criando uma Campanha",
         texto:
-          "Clique em + Nova Campanha para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+          "Clique em Nova Campanha (botão pill com ícone +) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+      },
+    ],
+  },
+  gestao_operadoras: {
+    titulo: "Gestão de Operadoras",
+    blocos: [
+      {
+        texto:
+          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide), status de operação e horários de turno.",
+      },
+      {
+        subtitulo: "Lista de operadoras",
+        texto:
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. A tabela permite ordenação por qualquer coluna.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar operadora",
+        texto:
+          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Mesas. Novas operadoras são criadas como inativas.",
+      },
+      {
+        subtitulo: "Excluir operadora",
+        texto:
+          "A exclusão permanente só é possível quando não existirem registros vinculados (mesas, escalas, RH). Para remover o acesso sem perder histórico, desative a operadora em vez de excluir.",
+      },
+    ],
+  },
+  gestao_mesas: {
+    titulo: "Gestão de Mesas",
+    blocos: [
+      {
+        texto:
+          "Cadastro e manutenção das mesas físicas de cada operadora. As mesas cadastradas aqui são referência para a programação de lives, escalas de dealers e relatórios de performance.",
+      },
+      {
+        subtitulo: "Filtros e navegação",
+        texto:
+          "O filtro de operadora no topo permite visualizar mesas de uma operadora específica ou de todas simultaneamente (**Todas Operadoras**). A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar mesa",
+        texto:
+          "Cada mesa exige: operadora, nome, tipo de jogo, número da mesa, ID interno Spin e ID da mesa no catálogo da operadora. O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto. Para tipos de jogo não listados, selecione 'Outro' e especifique.",
+      },
+    ],
+  },
+  status_tecnico: {
+    titulo: "Status Técnico",
+    blocos: [
+      {
+        texto:
+          "Página restrita a administradores. Centraliza o monitoramento das integrações de dados da plataforma, exibe alertas automáticos, logs de erro recentes e gerencia as redes autorizadas para check-in de prestadores.",
+      },
+      {
+        subtitulo: "Painel de integrações",
+        texto:
+          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails) com o horário do último sync, volume de registros processados hoje e contagem de erros. Administradores podem disparar sincronizações manuais diretamente pela tabela — todas as ações exigem confirmação antes de executar.",
+      },
+      {
+        subtitulo: "Fluxo de dados",
+        texto:
+          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados. Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
+      },
+      {
+        subtitulo: "Alertas automáticos",
+        texto:
+          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. Alertas em vermelho indicam falha; em amarelo, atenção.",
+      },
+      {
+        subtitulo: "Redes permitidas — Check-in de prestadores",
+        texto:
+          "Gerencia os prefixos de rede CIDR autorizados para registro de ponto dos prestadores. O check-in fica bloqueado para qualquer IP que não esteja coberto por pelo menos um CIDR configurado. Administradores podem adicionar prefixos com o botão **Nova Rede** (ícone + e gradiente de criação) ou remover prefixos na tabela.",
+      },
+    ],
+  },
+  gestao_usuarios: {
+    titulo: "Gestão de Usuários",
+    blocos: [
+      {
+        texto:
+          "Página de acesso restrito a administradores. Centraliza o cadastro de usuários, a configuração de permissões por perfil e a definição de quais páginas cada grupo pode acessar no menu.",
+      },
+      {
+        subtitulo: "Aba Usuários",
+        texto:
+          "Lista todos os usuários cadastrados. Permite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários, editar dados e escopos, redefinir senhas para o padrão e desativar acessos.",
+      },
+      {
+        subtitulo: "Aba Permissões",
+        texto:
+          "Define, por perfil, o que cada papel pode Ver, Criar, Editar e Excluir em cada página da plataforma. O perfil Administrador não é configurado aqui — mantém acesso total fixo. As alterações entram em vigor no próximo carregamento de página do usuário afetado.",
+      },
+      {
+        subtitulo: "Abas Operadora, Gestores e Prestadores",
+        texto:
+          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Gestores: define o menu por tipo de gestor (ex.: Estúdio, Marketing).\n— Prestadores: define o menu por área de atuação (ex.: Game Presenter, Customer Service).\nO acesso efetivo é sempre o cruzamento destas marcações com a matriz de Permissões.",
       },
     ],
   },
@@ -732,7 +893,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtro de Operadora",
         texto:
-          "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione Todas as operadoras para ver tudo junto.",
+          "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione **Todas Operadoras** no filtro para ver tudo junto.",
       },
       {
         subtitulo: "Tabela de Links",
@@ -791,17 +952,17 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "Os KPIs aparecem como '—' mesmo com o mês selecionado?",
         texto:
-          "Causa mais provável: não há dados carregados para o período. Verifique se o filtro de operadora está correto — se uma operadora específica estiver selecionada mas não tiver dados naquele mês, todos os KPIs exibem '—'. Tente selecionar 'Todas as operadoras' para confirmar se existem dados consolidados. Se o problema persistir para o mês atual, pode ser que o processamento diário ainda não tenha sido executado.",
+          "Causa mais provável: não há dados carregados para o período. Verifique se o filtro de operadora está correto — se uma operadora específica estiver selecionada mas não tiver dados naquele mês, todos os KPIs exibem '—'. Tente selecionar **Todas Operadoras** no filtro para confirmar se existem dados consolidados. Se o problema persistir para o mês atual, pode ser que o processamento diário ainda não tenha sido executado.",
       },
       {
         subtitulo: "O Comparativo de Mesa não aparece mesmo com dados no mês?",
         texto:
-          "O Comparativo de Mesa só é exibido quando uma operadora específica está selecionada (não no modo 'Todas as operadoras'). Selecione uma operadora no filtro e verifique se há dados de mesa individuais cadastrados para o período. Se não houver registros de mesas individuais (somente resumo diário), a seção permanece vazia.",
+          "O Comparativo de Mesa só é exibido quando uma operadora específica está selecionada (não com **Todas Operadoras** no filtro). Selecione uma operadora no filtro e verifique se há dados de mesa individuais cadastrados para o período. Se não houver registros de mesas individuais (somente resumo diário), a seção permanece vazia.",
       },
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe dados do dia atual. Se o monitoramento automático ainda não executou hoje (acontece em horários específicos ao longo do dia), os dados podem não estar disponíveis. Verifique o horário exibido em 'Última atualização' — se indicar um horário de ontem, aguarde a próxima execução. Se o campo não aparecer, selecione uma operadora específica no filtro: o modo 'Todas as operadoras' na aba Posicionamento exibe ambas simultaneamente (Blaze e Casa de Apostas).",
+          "O Posicionamento exibe dados do dia atual. Se o monitoramento automático ainda não executou hoje (acontece em horários específicos ao longo do dia), os dados podem não estar disponíveis. Verifique o horário exibido em 'Última atualização' — se indicar um horário de ontem, aguarde a próxima execução. Se o campo não aparecer, selecione uma operadora específica no filtro: **Todas Operadoras** na aba Posicionamento exibe ambas simultaneamente (Blaze e Casa de Apostas).",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -881,7 +1042,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   agenda: {
-    titulo: "Agenda de Lives",
+    titulo: "Agenda",
     blocos: [
       {
         subtitulo: "Uma live não aparece no calendário?",
@@ -931,7 +1092,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   resultados: {
-    titulo: "Resultado de Lives",
+    titulo: "Resultados",
     blocos: [
       {
         subtitulo: "Uma live não aparece na lista?",
@@ -976,7 +1137,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     ],
   },
   feedback: {
-    titulo: "Feedback de Lives",
+    titulo: "Feedback",
     blocos: [
       {
         subtitulo: "Nenhuma live aparece na lista?",
@@ -1141,7 +1302,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "A listagem está vazia mas sei que há solicitações em aberto?",
         texto:
-          "Verifique o período selecionado na barra de navegação. O filtro de período afeta as solicitações resolvidas exibidas, mas solicitações abertas (pendente ou em andamento) aparecem independentemente do mês selecionado — elas sempre são buscadas sem corte de data.\n\nSe os filtros de operadora estiverem ativos, tente mudar para 'Todas as operadoras' para confirmar se os dados existem em outro escopo.\n\nPara perfis Operador, apenas solicitações da operadora do escopo aparecem — isso é comportamento esperado.",
+          "Verifique o período selecionado na barra de navegação. O filtro de período afeta as solicitações resolvidas exibidas, mas solicitações abertas (pendente ou em andamento) aparecem independentemente do mês selecionado — elas sempre são buscadas sem corte de data.\n\nSe os filtros de operadora estiverem ativos, tente selecionar **Todas Operadoras** no filtro para confirmar se os dados existem em outro escopo.\n\nPara perfis Operador, apenas solicitações da operadora do escopo aparecem — isso é comportamento esperado.",
       },
       {
         subtitulo: "O badge de contagem na aba não reflete o número correto?",
@@ -1201,7 +1362,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
         texto:
-          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em 'Todas as operadoras', 'Todas as categorias' e 'Todos os tamanhos' para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
+          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em **Todas Operadoras**, **Todas as categorias** e **Todos os tamanhos** para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
       },
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
@@ -1242,6 +1403,151 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
           "A exclusão exige permissão can_excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+      },
+    ],
+  },
+  playbook_influencers: {
+    titulo: "Playbook — Influencers",
+    blocos: [
+      {
+        subtitulo: "O bloco de confirmação não aparece na aba?",
+        texto:
+          "O bloco de ciência só aparece para usuários com perfil de influencer ativo. Verifique se o seu usuário está cadastrado com o papel correto na plataforma. Se o perfil estiver correto e o bloco ainda não aparecer, recarregue a página. Caso persista, contate o administrador para verificar as permissões da sua conta.",
+      },
+      {
+        subtitulo: "Cliquei em Confirmar Ciência mas nada aconteceu?",
+        texto:
+          "Verifique se a caixa de confirmação foi marcada antes de clicar no botão — o botão fica inativo enquanto a caixa não estiver selecionada. Se a caixa estava marcada e o botão não respondeu, pode ter ocorrido uma falha temporária de conexão. Aguarde alguns segundos e tente novamente. Se o erro persistir, recarregue a página.",
+      },
+      {
+        subtitulo: "A barra de progresso não avança mesmo após confirmar?",
+        texto:
+          "Após confirmar, a barra deve atualizar imediatamente. Se não atualizar, recarregue a página para sincronizar o estado. Verifique também se a aba que você confirmou é realmente uma das três obrigatórias (Dealers, Agendamento e Jogos).",
+      },
+      {
+        subtitulo: "O Painel de Auditoria não aparece para mim?",
+        texto:
+          "O painel de auditoria é visível apenas para gestores, administradores, executivos e demais papéis com permissão de editar. Influencers não visualizam o painel de outros — apenas o próprio bloco de confirmação. Se você tem papel de gestor e o painel não aparece, verifique se a sua permissão de Editar no Playbook Influencers está ativa em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Um influencer aparece como pendente mas já me disse que confirmou?",
+        texto:
+          "A listagem do painel exibe apenas influencers ativos com perfil cadastrado. Se o influencer foi marcado como inativo após confirmar, pode não aparecer na contagem de confirmados. Verifique o status do influencer em Gestão de Influencers. Se o status estiver ativo e o nome ainda aparecer como pendente, a confirmação pode não ter sido gravada — peça ao influencer que repita o processo.",
+      },
+      {
+        subtitulo: "A página não carrega ou aparece em branco?",
+        texto:
+          "Verifique a sua conexão com a internet. Se o problema persistir, recarregue a página ou faça logout e login novamente. Se o acesso ao Playbook Influencers sumir completamente do menu, o seu perfil pode ter tido a permissão de visualização removida — contate o administrador.",
+      },
+    ],
+  },
+  links_materiais: {
+    titulo: "Links e Materiais",
+    blocos: [
+      {
+        subtitulo: "O botão Emitir está desabilitado?",
+        texto:
+          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer na lista.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, contate o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
+        texto:
+          "O link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
+      },
+      {
+        subtitulo: "O UTM foi preenchido automaticamente com um nome errado?",
+        texto:
+          "O UTM é gerado a partir do nome artístico cadastrado no perfil do influencer. Se o nome artístico estiver desatualizado, atualize-o em Influencers (área de perfil) e volte para emitir. Você também pode editar o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
+      },
+      {
+        subtitulo: "O link já foi emitido mas não aparece na tela?",
+        texto:
+          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar o influencer na lista.",
+      },
+      {
+        subtitulo: "O QR Code não aparece após emitir?",
+        texto:
+          "As prévias dos QR Codes são geradas automaticamente após a emissão do link. Se o quadro de prévia mostrar apenas o placeholder por mais de 10 segundos, pode ter havido uma falha na geração da imagem. Recarregue a página — o link já estará salvo e as prévias serão geradas novamente.",
+      },
+      {
+        subtitulo: "Não consigo baixar o PNG do QR Code?",
+        texto:
+          "Verifique se o seu navegador está bloqueando downloads automáticos. Na maioria dos navegadores, um ícone aparece na barra de endereço quando um download é bloqueado — clique nele e permita o download desta página. Se o botão mostrar Gerando… por mais de 15 segundos sem baixar, recarregue a página e tente novamente.",
+      },
+      {
+        subtitulo: "Como gestor, não vejo nenhum influencer na lista?",
+        texto:
+          "A lista exibe apenas influencers dentro do seu escopo de visibilidade configurado na Gestão de Usuários. Se a lista estiver vazia, o seu escopo pode não incluir nenhum influencer ativo. Contate o administrador para revisar o seu escopo de acesso.",
+      },
+    ],
+  },
+  spin_na_rede: {
+    titulo: "Spin na Rede",
+    blocos: [
+      {
+        subtitulo: "A página não carrega ou fica em branco?",
+        texto:
+          "Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, faça logout e login novamente. Caso a Spin na Rede não apareça mais no menu, seu acesso à seção Conteúdo pode ter sido removido — contate o administrador.",
+      },
+      {
+        subtitulo: "Não aparece nenhuma menção mesmo com o agregador ativo?",
+        texto:
+          "A ausência de itens pode significar que nenhuma publicação passou pelo filtro de relevância ainda, ou que o agregador RSS ainda não foi configurado para o ambiente de produção. A mensagem na tela indica exatamente isso. Se você espera ver publicações recentes e elas não aparecem, informe o time técnico para verificar o status do agregador.",
+      },
+      {
+        subtitulo: "As miniaturas das matérias não aparecem?",
+        texto:
+          "Miniaturas são carregadas diretamente do site de origem e dependem da disponibilidade do servidor externo. Se a imagem não aparecer, o cartão continua funcional com título, texto e link — a miniatura é apenas visual e não afeta o acesso à matéria.",
+      },
+      {
+        subtitulo: "O link 'Ir para a matéria' não abre nada?",
+        texto:
+          "Verifique se o seu navegador está bloqueando popups ou novas abas desta página. Procure um ícone na barra de endereço indicando popup bloqueado e permita para este site. Se o link continuar sem resposta, a matéria original pode ter sido removida ou o URL alterado.",
+      },
+    ],
+  },
+  rh_portal: {
+    titulo: "Portal de RH",
+    blocos: [
+      {
+        subtitulo: "O portal não carrega os comunicados ou aparece em branco?",
+        texto:
+          "Verifique a conexão com a internet e recarregue a página. Se o erro persistir, faça logout e login novamente. Se a mensagem de erro aparecer em português indicando que não foi possível carregar, aguarde alguns minutos e tente novamente — pode ser uma instabilidade temporária do banco de dados.",
+      },
+      {
+        subtitulo: "Não consigo ver a aba Gerenciamento de Postagens?",
+        texto:
+          "A aba de Gerenciamento aparece apenas para usuários com permissão de Editar no Portal de RH. Se você precisa dessa permissão, contate o administrador para ativá-la em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "O botão 'Ver Ata' está desabilitado numa RH Talk?",
+        texto:
+          "Essa ata tem acesso restrito a participantes da reunião. Se você esteve presente na reunião mas não consegue ver, pode ser que o registro de participação não tenha sido feito. Informe ao RH para que adicionem seu usuário como participante.",
+      },
+      {
+        subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",
+        texto:
+          "O badge Novo desaparece após o clique quando a operação é registrada com sucesso. Se voltou após recarregar a página, pode ter ocorrido uma falha no registro. Tente clicar em Lido novamente. Se o problema persistir, contate o suporte.",
+      },
+      {
+        subtitulo: "Tentei publicar uma postagem mas deu erro?",
+        texto:
+          "Verifique se todos os campos obrigatórios (marcados com asterisco vermelho) estão preenchidos. Se todos estão preenchidos e o erro persiste, pode ser uma instabilidade temporária. Aguarde alguns segundos e tente novamente. Rascunhos são salvos mesmo que a publicação falhe — verifique na aba Gerenciamento se o rascunho foi salvo.",
+      },
+      {
+        subtitulo: "Uma postagem que aprovar não aparece na lista de publicados?",
+        texto:
+          "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, verifique o filtro de mês ativo — ela pode ter sido publicada em um mês diferente do selecionado. Mude o carrossel para o mês de publicação ou use a aba Gerenciamento com filtro Status: Publicado.",
+      },
+      {
+        subtitulo: "Não consigo arquivar uma postagem publicada?",
+        texto:
+          "O botão Arquivar exige dois cliques: o primeiro destaca o botão e exibe Confirmar?; o segundo executa a ação. Se você clicou fora do botão antes de confirmar, repita o processo.",
+      },
+      {
+        subtitulo: "O anexo ou imagem não abre ao clicar?",
+        texto:
+          "Os arquivos são abertos em uma nova aba. Verifique se o navegador está bloqueando novas abas desta página e permita o popup. Se o link mostrar 'Carregando…' por mais de 10 segundos, pode ser que o arquivo tenha sido removido do armazenamento. Informe ao responsável pela postagem.",
       },
     ],
   },
@@ -1396,7 +1702,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "Não consigo criar ou editar campanhas?",
         texto:
-          "Os botões + Nova Campanha e Editar dependem de permissão de criação e edição, respectivamente. Se os botões não aparecem, seu perfil não tem acesso a essas ações. Entre em contato com o gestor responsável para solicitar a permissão adequada.",
+          "Os botões Nova Campanha e Editar dependem de permissão de criação e edição, respectivamente. Se os botões não aparecem, seu perfil não tem acesso a essas ações. Entre em contato com o gestor responsável para solicitar a permissão adequada.",
       },
       {
         subtitulo: "Excluí uma campanha mas os dados nos dashboards sumiram?",
@@ -1412,6 +1718,91 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
           "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  gestao_operadoras: {
+    titulo: "Gestão de Operadoras",
+    blocos: [
+      {
+        subtitulo: "Não consigo ativar uma operadora?",
+        texto:
+          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Mesas. Cadastre as mesas primeiro e tente novamente.",
+      },
+      {
+        subtitulo: "Erro ao excluir uma operadora?",
+        texto:
+          "A exclusão falha quando existem registros vinculados à operadora (mesas, escalas, figurinos, etc.). Remova todos os vínculos primeiro, ou desative a operadora sem excluir para preservar o histórico.",
+      },
+      {
+        subtitulo: "As cores do brandguide não aparecem para o operador?",
+        texto:
+          "Verifique se as quatro cores estão preenchidas em formato #RRGGBB e se o logo foi enviado. O operador precisa fazer logout e login novamente para que o brandguide atualizado seja carregado.",
+      },
+    ],
+  },
+  gestao_mesas: {
+    titulo: "Gestão de Mesas",
+    blocos: [
+      {
+        subtitulo: "Erro ao cadastrar uma mesa — 'já existe uma mesa com este ID'?",
+        texto:
+          "O ID Spin e o ID da operadora são únicos por operadora. Verifique se já existe uma mesa com os mesmos identificadores na lista. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
+      },
+      {
+        subtitulo: "A lista aparece vazia mesmo havendo mesas cadastradas?",
+        texto:
+          "Verifique se o filtro de operadora está selecionado em **Todas Operadoras**. Se um filtro específico estiver ativo, apenas as mesas daquela operadora serão exibidas.",
+      },
+    ],
+  },
+  status_tecnico: {
+    titulo: "Status Técnico",
+    blocos: [
+      {
+        subtitulo: "Uma integração aparece como 'Falha' — o que fazer?",
+        texto:
+          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Se o erro persistir após corrigir a causa, use o botão Sync para forçar uma nova tentativa.",
+      },
+      {
+        subtitulo: "O botão Sync não aparece para uma integração?",
+        texto:
+          "Apenas as integrações CDA, Social Media KPIs e Spin na Rede RSS possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+      },
+      {
+        subtitulo: "Um prestador não consegue fazer check-in?",
+        texto:
+          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.",
+      },
+      {
+        subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
+        texto:
+          "Os alertas são calculados com base nos registros de email_envios do dia corrente (UTC). Se o envio foi feito muito cedo ou próximo da meia-noite, pode haver defasagem de fuso horário. Verifique nos Logs Recentes se o envio aparece registrado.",
+      },
+    ],
+  },
+  gestao_usuarios: {
+    titulo: "Gestão de Usuários",
+    blocos: [
+      {
+        subtitulo: "Um usuário diz que não vê determinada página no menu após alteração?",
+        texto:
+          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Operadora, Gestores ou Prestadores, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
+      },
+      {
+        subtitulo: "As abas Permissões, Operadora, Gestores e Prestadores não aparecem?",
+        texto:
+          "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
+      },
+      {
+        subtitulo: "Erro ao salvar permissões ou páginas?",
+        texto:
+          "Verifique sua conexão com a internet. Se o erro persistir, recarregue a página antes de tentar novamente — isso evita salvar um estado inconsistente. Em caso de erro contínuo, contate o suporte técnico.",
+      },
+      {
+        subtitulo: "Não consigo criar um novo usuário?",
+        texto:
+          "O botão Novo Usuário (pill com ícone +) só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
       },
     ],
   },
@@ -1456,17 +1847,46 @@ const LABELS_ABA: Record<Aba, string> = {
   glossario: "Glossário",
 };
 
+const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
+  conheca: <BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  troubleshooting: <LifeBuoy {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  glossario: <BookMarked {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
 export default function Ajuda() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
   const [aba, setAba] = useState<Aba>("conheca");
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
 
+  const menuAjudaVisivel = useMemo(
+    () =>
+      MENU.map((sec) => ({
+        ...sec,
+        items: sec.items.filter((item) => podeVerPaginaNoMenu(permissions[item.key])),
+      })).filter((sec) => sec.items.length > 0),
+    [permissions],
+  );
+
+  const primeiroPageKeyVisivel = useMemo((): PageKey | null => {
+    const first = menuAjudaVisivel[0]?.items[0];
+    return first?.key ?? null;
+  }, [menuAjudaVisivel]);
+
+  const paginaAtualVisivel = useMemo(
+    () => menuAjudaVisivel.some((sec) => sec.items.some((item) => item.key === paginaSelecionada)),
+    [menuAjudaVisivel, paginaSelecionada],
+  );
+
+  useEffect(() => {
+    if (!primeiroPageKeyVisivel) return;
+    if (!paginaAtualVisivel) {
+      setPaginaSelecionada(primeiroPageKeyVisivel);
+    }
+  }, [primeiroPageKeyVisivel, paginaAtualVisivel]);
+
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const pillActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 18%, transparent)"
-    : `${BRAND_SEMANTIC.roxoVivo}22`;
   const navActiveBg = brand.useBrand
     ? "color-mix(in srgb, var(--brand-primary) 12%, transparent)"
     : `${BRAND_SEMANTIC.roxo}18`;
@@ -1532,35 +1952,20 @@ export default function Ajuda() {
         role="tablist"
         aria-label="Seções de ajuda"
         style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS, setAba, (k) => `tab-ajuda-${k}`)}
       >
-        {ABAS.map((a) => {
-          const ativo = aba === a;
-          return (
-            <button
-              key={a}
-              type="button"
-              role="tab"
-              id={`tab-ajuda-${a}`}
-              aria-selected={ativo}
-              aria-controls={`panel-ajuda-${a}`}
-              onClick={() => setAba(a)}
-              style={{
-                padding: "8px 20px",
-                borderRadius: 20,
-                border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                background: ativo ? pillActiveBg : (t.inputBg ?? t.cardBg),
-                color: ativo ? brand.accent : t.textMuted,
-                transition: "all 0.2s",
-              }}
-            >
-              {LABELS_ABA[a]}
-            </button>
-          );
-        })}
+        {ABAS.map((a) => (
+          <FiltroBarTabButton
+            key={a}
+            id={`tab-ajuda-${a}`}
+            active={aba === a}
+            aria-controls={`panel-ajuda-${a}`}
+            onClick={() => setAba(a)}
+            icon={AJUDA_TAB_ICONS[a]}
+          >
+            {LABELS_ABA[a]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "glossario" ? (
@@ -1578,8 +1983,61 @@ export default function Ajuda() {
               boxShadow: cardShadow,
             }}
           >
-            <AbaGlossario dark={isDark} t={t} brand={brand} />
+            <AbaGlossario dark={isDark} t={t} />
           </div>
+        </div>
+      ) : menuAjudaVisivel.length === 0 ? (
+        <div
+          role="tabpanel"
+          id={`panel-ajuda-${aba}`}
+          aria-labelledby={`tab-ajuda-${aba}`}
+          style={{
+            background: t.cardBg,
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 18,
+            padding: "48px 32px",
+            boxShadow: cardShadow,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: navActiveBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+            }}
+          >
+            <HelpCircle size={22} color={brand.primary} aria-hidden="true" />
+          </div>
+          <p
+            style={{
+              fontSize: 14,
+              lineHeight: 1.65,
+              color: t.text,
+              fontFamily: FONT.body,
+              margin: "0 auto 8px",
+              maxWidth: 420,
+            }}
+          >
+            Você não tem acesso às páginas da plataforma.
+          </p>
+          <p
+            style={{
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              margin: "0 auto",
+              maxWidth: 420,
+            }}
+          >
+            Procure o administrador para solicitar as permissões necessárias em Gestão de Usuários.
+          </p>
         </div>
       ) : (
         <div
@@ -1602,7 +2060,7 @@ export default function Ajuda() {
             }}
           >
             <nav>
-              {MENU_AJUDA.map((sec) => (
+              {menuAjudaVisivel.map((sec) => (
                 <div key={sec.section} style={{ marginBottom: 20 }}>
                   <div style={{
                     fontSize: 10,
@@ -1616,7 +2074,7 @@ export default function Ajuda() {
                   }}>
                     {sec.section}
                   </div>
-                  {sec.items.map(({ key, label, Icon }) => {
+                  {sec.items.map(({ key, label, icon: Icon }) => {
                     const ativo = paginaSelecionada === key;
                     return (
                       <button

@@ -1,14 +1,16 @@
 ---
-description: Regras específicas para todas as páginas da seção de Dashboards. Complementa global.mdc.
+description: Regras específicas para todas as páginas da seção Dashboards. Complementa global.mdc e brand-css-variables.mdc.
 globs:
   - src/pages/dashboards/**/*.tsx
   - src/pages/dashboards/**/*.ts
 alwaysApply: false
 ---
 
-# Seção Dashboards — Regras Específicas
+# Seção Dashboards
 
-**Escopo (Cursor):** não é preciso listar cada página à mão — o frontmatter usa **globs**. Qualquer arquivo novo em `src/pages/dashboards/` (incluindo subpastas) entra no escopo ao você editar esse caminho; vale para **todas** as páginas atuais e futuras da seção Dashboards.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Escopo (Cursor):** globs em `src/pages/dashboards/**` — páginas atuais e futuras da secção.
 
 **Páginas (referência de pastas):**
 
@@ -19,27 +21,13 @@ alwaysApply: false
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` (rota `mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
-**Marca:** estrutura e FilterBar usam `useDashboardBrand()`. **`BRAND`** (hex de leitura analítica e fallbacks) vem de `src/lib/dashboardConstants.ts` — import centralizado; **não** duplicar objeto `BRAND` local nas páginas.
+**Marca / FilterBar:** `useDashboardBrand()` + tokens canónicos `--brand-action` / `--brand-contrast` / `--brand-icon-color` — detalhes em **Brand MDC** e tabela abaixo só onde for **analítico**.
 
-**Tokens CSS de marca (nomes canônicos em código novo de dashboard — com fallback):**
+**`BRAND`:** import de `lib/dashboardConstants.ts` — não duplicar objeto local.
 
-| Token | Papel |
-|---|---|
-| `var(--brand-action, #7c3aed)` | Cor de ação principal: CTAs, títulos de seção, item ativo no menu, bordas de destaque |
-| `var(--brand-contrast, #1e36f8)` | Cor de suporte: comparativos A/B, badges secundários |
-| `var(--brand-bg, #ffffff)` | Fundo da aplicação (tema claro padrão; dark ajusta via brandguide) |
-| `var(--brand-text, #18181b)` | Texto e ícones principais |
-| `var(--brand-icon-color, #70cae4)` | Ícones estruturais |
-| `var(--brand-action-12)` / `var(--brand-action-20)` / `var(--brand-action-30)` | Transparências derivadas de ação |
-| `var(--brand-action-border)` | Borda de destaque |
-| `var(--brand-contrast-12)` / `var(--brand-contrast-30)` | Transparências derivadas de contraste |
-| `var(--brand-surface)` / `var(--brand-surface-hi)` | Superfícies de card e hover |
+**`KpiCard` (`accentVar`):** apenas `"--brand-action"` | `"--brand-contrast"` | `"--brand-icon-color"`. Proibido `--brand-primary`, `--brand-accent`, `--brand-extra*` em código novo de dashboard.
 
-**Tokens legados (`:root` ainda expõe):** `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, `--brand-extra1`… — **fora dos dashboards** continuam válidos (login, shell). **Dentro de `src/pages/dashboards/**`**, em KPIs, funil, comparativos A/B e pills ativas, **preferir sempre** `action` / `contrast` / `icon-color` com fallback em vez de `primary`/`accent` soltos, para alinhar ao `useDashboardBrand()` e ao whitelabel operador.
-
-**Em `KpiCard` (`accentVar`):** usar apenas `"--brand-action"` | `"--brand-contrast"` | `"--brand-icon-color"` quando precisar de token whitelabel. **Proibido:** `--brand-extra*`, `--brand-primary`, `--brand-accent`, `--brand-icon` (sem `-color`), `--brand-secondary`, `--brand-success` — inconsistentes ou inexistentes no resolver de accent.
-
-Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçadores de Bônus) usam hex fixos definidos em `BRAND` ou na tabela deste ficheiro — não substituir por `--brand-*` só por consistência visual.
+**Semântica de dados** (Rentável, GGR, ROI, funil): hex em `BRAND` / Global — **não** substituir por `--brand-*` por estética.
 
 ---
 
@@ -85,14 +73,16 @@ Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçado
 </div>
 ```
 
-**Referência de títulos e subtítulos canônicos:**
+**Referência de títulos e subtítulos canônicos** (`h1` = `label` em `menu.ts`):
 
-| Página | h1 | Subtítulo |
+| PageKey | h1 | Subtítulo |
 |---|---|---|
-| Overview Spin | `Overview Spin` | `Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.` |
-| Streamers | `Streamers` | `Performance do canal de influencers — financeiro, conversão e operação.` |
-| Mídias Sociais | `Mídias Sociais` | `Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.` |
-| Overview Influencer | `Overview Influencer` | `Visão executiva da performance do canal de influencers.` |
+| `streamers` | Streamers | Acompanhe performance, conversão e financeiro do canal de influencers. |
+| `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
+| `dash_midias_sociais` | Mídias Sociais | Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas. |
+| `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+
+**Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
 
 **Exceção — Overview Spin:** cabeçalho com badge 28×28 à esquerda (ícone + h1 + subtítulo em linha), não o bloco centralizado acima. Motivo: página híbrida com abas Overview + Posicionamento operacional.
 
@@ -100,6 +90,7 @@ Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçado
 
 ## Overview Spin — Padrões Específicos
 
+- **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
 - **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
@@ -213,44 +204,27 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
 
 ## FilterBar — Navegação de Período
 
+Importar de `src/lib/carouselNavStyles.ts` — **único** padrão de setas e rótulo (Brand MDC §7).
+
 ```tsx
-{/* Botões de navegação */}
-<button type="button" aria-label="Mês anterior" /* ... */ disabled={historico || isPrimeiro}>
-  <ChevronLeft size={14} aria-hidden />
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+
+<button type="button" aria-label="Mês anterior" disabled={historico || isPrimeiro} style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}>
+  <ChevronLeft size={14} aria-hidden="true" />
 </button>
 
-{/* Label do período — FONT.body (não FONT_TITLE) */}
-<span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
+<span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
   {historico ? "Todo o período" : mesSelecionado?.label}
 </span>
 
-{/* Botão Histórico — fundo ativo com token de ação, nunca rgba(124,58,237,0.15) fixo */}
-<button
-  type="button"
-  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
-  aria-pressed={historico}
-  style={{
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-    fontFamily: FONT.body, fontSize: 13,
-    border: historico
-      ? `1px solid ${brand.useBrand ? "var(--brand-action)" : "var(--brand-action, #7c3aed)"}`
-      : `1px solid ${t.cardBorder}`,
-    background: historico
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-      : "transparent",
-    color: historico ? brand.primary : t.textMuted,
-    fontWeight: historico ? 700 : 400,
-    transition: "all 0.15s",
-  }}
->
-  <GiCalendar size={15} aria-hidden /> Histórico
-</button>
+import { FiltroHistoricoButton } from "../../../components/dashboard";
+
+<FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 ```
 
-`Calendar` (Lucide) é preferível; **`GiCalendar`** (`react-icons/gi`) permanece aceite **apenas** neste botão Histórico.
+Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, estados `getFiltroBarPillStateStyle` (igual Operadora/Influencer). **Proibido** markup inline, fundo transparente/`textMuted` no inativo, ou `GiCalendar`.
 
-**Selects na FilterBar:** sempre via `SelectComIcone` de `src/components/dashboard/`. Nunca `<div style="relative"> + <span>ícone + <select>` inline.
+**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
 
 **Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 
@@ -355,7 +329,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | **Impressões Totais** | `Sparkles` | `import { Sparkles }` |
 | **Engajamento Médio** | `Percent` | — |
 
-**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`). A única exceção de GameIcons na seção Dashboards é **`GiCalendar`** no botão Histórico da FilterBar (ou equivalente Lucide `Calendar`).
+**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`), incluindo `GiCalendar` no botão Histórico — usar **`FiltroHistoricoButton`** (Lucide `Calendar`).
 
 **Ícones de SectionTitle:**
 
@@ -602,7 +576,9 @@ Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(
 
 ## Ajuda (`src/pages/geral/Ajuda/index.tsx`)
 
-Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender subtítulos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`: `streamers`, `mesas_spin`, `dash_midias_sociais`, `dash_overview_influencer`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga.
+Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteúdo legado com o proposto no handoff (estender blocos em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` por `PageKey`: `streamers`, `mesas_spin`, `dash_midias_sociais`, `dash_overview_influencer`), sem duplicar blocos nem descartar o handoff só porque a página Ajuda é antiga.
+
+**Nomenclatura:** o campo `titulo` de cada entrada e o `label` em `MENU_AJUDA` devem usar o **mesmo nome do menu** (`menu.ts`) — ex.: “Mídias Sociais”, “Overview Spin”, nunca sufixos inventados (“Feedback de Lives”) salvo exceção documentada em `geral.mdc`.
 
 ---
 
@@ -623,15 +599,16 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca listas enormes sem virtualização quando > 50 itens
 - Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
-- Nunca `--brand-contrast` no background ativo do botão Histórico — usar `--brand-action`
+- Nunca botão Histórico na FilterBar sem **`FiltroHistoricoButton`** (markup inline / `GiCalendar`)
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
 - Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
 - Nunca `GiXxx` no badge do header de página — apenas `Tv`, `Video`, `BarChart2` etc. de Lucide. GameIcons só no menu lateral.
-- Nunca `GiXxx` em KPI cards ou SectionTitle — exceto `GiCalendar` no Histórico (ou Lucide `Calendar`) e ícones decorativos do pódio FTD/Hora
+- Nunca `GiXxx` em KPI cards, SectionTitle ou botão Histórico — usar `FiltroHistoricoButton`; exceção decorativa: pódio FTD/Hora
 - Nunca `↑`/`↓` / `✕` / `✓` / `▲▼` Unicode em JSX — usar Lucide `ArrowUp`, `ArrowDown`, `X`, `Check`, `TrendingUp`, `TrendingDown`
 - Nunca `background: brand.blockBg` na FilterBar — usar `brand.primaryTransparentBg`
 - Nunca `size={14}` em ícones de `KpiCard` compartilhado — usar `size={16}`
 - Nunca `FONT_TITLE` no label do mês na FilterBar — usar `FONT.body`
+- Nunca filtro de operadora com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) ou sem `FiltroOperadoraSelect`
 - Nunca `useEffect` de loading antes da declaração `useState(loading)` — ordem dos hooks
 - Nunca declarar `fmtBRL` ou `getMesesDisponiveis` localmente — importar de `lib/dashboardHelpers`
 - Nunca usar `--brand-secondary` em componentes dentro de `dashboards/` — usar `--brand-contrast` para cor de suporte

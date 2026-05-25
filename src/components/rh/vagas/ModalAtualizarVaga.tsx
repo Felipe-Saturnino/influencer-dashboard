@@ -15,7 +15,9 @@ import { SimNaoField } from "./SimNaoField";
 import { TipoVagaField } from "./TipoVagaField";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
+import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
+import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
@@ -199,6 +201,11 @@ export function ModalAtualizarVaga({
     if (q) list = list.filter((f) => normalizarBuscaVaga(f.nome).includes(q));
     return list.slice(0, 500);
   }, [funcionarios, buscaHc]);
+
+  const candidatoSelecionadoHc = useMemo(
+    () => funcionarios.find((f) => f.id === candidatoId) ?? null,
+    [funcionarios, candidatoId],
+  );
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -554,38 +561,109 @@ export function ModalAtualizarVaga({
                 </div>
               ) : null}
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-busca-hc", "Pesquisar candidato (HC)")}
-                <input
-                  id="atv-busca-hc"
-                  type="search"
-                  value={buscaHc}
-                  onChange={(e) => setBuscaHc(e.target.value)}
-                  placeholder="Nome do funcionário…"
-                  autoComplete="off"
-                  aria-label="Filtrar lista de funcionários por nome"
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ marginBottom: 14 }}>
                 {lblReq("atv-cand", "Candidato selecionado")}
-                <select
-                  id="atv-cand"
-                  value={candidatoId}
-                  onChange={(e) => setCandidatoId(e.target.value)}
-                  aria-label="Selecionar candidato na lista HC"
-                  size={Math.min(10, Math.max(3, filtradosHc.length + 1))}
-                  style={{ ...inputStyle, height: "auto", minHeight: 120 }}
-                >
-                  <option value="">— Selecione —</option>
-                  {filtradosHc.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.nome}
-                    </option>
-                  ))}
-                </select>
-                {funcionarios.length > 500 && filtradosHc.length >= 500 ? (
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6 }}>Mostrando até 500 resultados. Refine a pesquisa.</div>
-                ) : null}
+                {candidatoSelecionadoHc ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      marginBottom: 10,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      color: t.text,
+                    }}
+                  >
+                    <span>{candidatoSelecionadoHc.nome}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCandidatoId("");
+                        setBuscaHc("");
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: "transparent",
+                        color: t.text,
+                        fontSize: 12,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Trocar candidato
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <BarraPesquisaPagina
+                      id="atv-busca-hc"
+                      value={buscaHc}
+                      onChange={setBuscaHc}
+                      placeholder={FILTER_SEARCH_STAFF}
+                      aria-label="Filtrar lista de funcionários por nome"
+                      disabled={carregandoHc}
+                      wrapperStyle={{ width: "100%", marginBottom: 8 }}
+                    />
+                    <div
+                      role="listbox"
+                      aria-label="Funcionários para conclusão da vaga"
+                      style={{
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg ?? t.cardBg,
+                      }}
+                    >
+                      {filtradosHc.length === 0 ? (
+                        <div style={{ padding: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                          Nenhum resultado para a pesquisa.
+                        </div>
+                      ) : (
+                        filtradosHc.map((f, i) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            role="option"
+                            aria-selected={candidatoId === f.id}
+                            onClick={() => {
+                              setCandidatoId(f.id);
+                              setBuscaHc("");
+                            }}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "10px 12px",
+                              border: "none",
+                              borderTop: i > 0 ? `1px solid ${t.cardBorder}` : "none",
+                              background: "transparent",
+                              color: t.text,
+                              fontSize: 13,
+                              fontFamily: FONT.body,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {f.nome}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    {funcionarios.length > 500 && filtradosHc.length >= 500 ? (
+                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                        Mostrando até 500 resultados. Refine a pesquisa.
+                      </div>
+                    ) : null}
+                  </>
+                )}
                 {fieldErr.candidato ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.candidato}</div> : null}
               </div>
               <div style={{ marginBottom: 18 }}>

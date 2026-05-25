@@ -21,7 +21,7 @@
 ### O que foi feito
 
 - **Lazy loading das páginas**: Login e TrocarSenha continuam carregados no início; demais páginas são carregadas sob demanda ao navegar.
-- **Manual chunks no Vite**: `vendor-react`, `vendor-supabase`, `vendor-charts`, `vendor-icons` — melhora cache do navegador.
+- **Manual chunks no Vite**: `vendor-react` (inclui lucide + react-icons), `vendor-supabase`, `vendor-charts`, `vendor-jspdf`, `vendor-qrcode` — melhora cache do navegador.
 - **Preconnect** no `index.html` para `fonts.googleapis.com` e `fonts.gstatic.com`.
 
 ### Efeito esperado
@@ -29,16 +29,25 @@
 - **Antes**: ~320 KB em um único chunk na carga inicial.
 - **Depois**: carregamento inicial menor; chunks de cada página carregados apenas quando o usuário acessa a tela.
 
-### ChunkLoadError — tela em branco após deploy
+### ChunkLoadError — tela em branco após deploy (404)
 
-Com lazy loading + manualChunks, cada página gera chunks com hash no nome (ex.: `index-XbYaTWD5.js`). Após um novo deploy:
+Com lazy loading + `codeSplitting.groups`, cada página gera chunks com hash no nome (ex.: `index-XbYaTWD5.js`). Após um novo deploy:
+
 - Os hashes mudam e os chunks antigos são removidos.
-- Usuários com a app aberta (cache antigo) tentam carregar chunks que não existem mais → 404 → erro.
+- Usuários com a app aberta (cache antigo) tentam carregar chunks que não existem mais → **404** → erro.
 
 **Solução implementada:**
+
 - `ErrorBoundary` detecta ChunkLoadError e recarrega a página automaticamente.
 - Listener global em `main.tsx` para `unhandledrejection` de chunk também dispara reload.
-- O usuário recebe a nova versão sem precisar recarregar manualmente.
+
+### HTTP 500 em chunk estático — Cloudflare Pages (ícones)
+
+Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js` / `vendor-ui-icons-*.js`) retorna **500** com corpo vazio; `vendor-react`, `index`, CSS etc. respondem **200**. Retry e renomear o chunk **não** corrigem de forma confiável.
+
+**Correção no projeto (definitiva):** `lucide-react` e `react-icons` no grupo **`vendor-react`** em `vite.config.ts` — sem chunk isolado de ícones. Ver também **`.cursor/rules/global.mdc`** (§ Build Vite) e **`docs/SETUP.md`** (conferência pós-deploy).
+
+**Se voltar com outro chunk:** rollback no Cloudflare → fundir o chunk num vendor que já sobe (ex.: `vendor-react`) → novo deploy.
 
 ### Dependência pesada
 

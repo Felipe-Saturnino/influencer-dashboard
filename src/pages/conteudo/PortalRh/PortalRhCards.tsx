@@ -8,6 +8,7 @@ import { linhaMetaAutorPortalRh, type PortalRhAutorInfo } from "../../../lib/por
 import { PortalRhAssetLink } from "./PortalRhAssetLink";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 
 const PREVIEW_LEN = 200;
@@ -48,18 +49,12 @@ function ctaOutline(t: ReturnType<typeof useApp>["theme"]): CSSProperties {
   };
 }
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
-
 function btnCtaPrimario(brand: ReturnType<typeof useDashboardBrand>): CSSProperties {
   return {
     padding: "8px 14px",
     borderRadius: 10,
     border: "none",
-    background: ctaGradient(brand),
+    background: ctaGradientPortalRh(brand),
     color: "#fff",
     fontWeight: 800,
     fontSize: 12,
@@ -153,7 +148,12 @@ export function ComunicadoCard({
           ) : null}
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 14 }}>
             {isNovo ? (
-              <button type="button" onClick={onMarcarLido} style={btnCtaPrimario(brand)}>
+              <button
+                type="button"
+                onClick={onMarcarLido}
+                aria-label={`Marcar como lido: ${titulo}`}
+                style={btnCtaPrimario(brand)}
+              >
                 Lido
               </button>
             ) : null}

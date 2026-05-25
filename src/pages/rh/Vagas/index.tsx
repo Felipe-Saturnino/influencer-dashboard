@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, CheckCircle2, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import type { FiltroBarCampoOption } from "../../../components/FiltroBarCampoSelect";
+import { Briefcase, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -16,7 +17,15 @@ import {
 } from "../../../lib/rhVagasFormat";
 import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasCandidaturasPainel";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
+import type { RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
 import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import {
+  VAGA_FILTRO_TODAS_VAGAS_VALUE,
+  VAGA_FILTRO_TODOS_STATUS_VALUE,
+  VAGA_FILTRO_TODOS_TIPOS_VALUE,
+} from "../../../lib/rhVagasFiltroConstants";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
@@ -43,11 +52,6 @@ const RH_VAGAS_SELECT = `
   candidato:rh_funcionarios ( id, nome )
 `.trim();
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 function textoMultilinha(s: string): string {
   const t = (s ?? "").trim();
@@ -55,22 +59,6 @@ function textoMultilinha(s: string): string {
 }
 
 type ModalStub = { titulo: string; vagaTitulo?: string } | null;
-
-const STATUS_GESTAO_FILTRO: Array<RhVagaStatus | "todos"> = [
-  "todos",
-  "aberta",
-  "em_andamento",
-  "concluida",
-  "cancelada",
-];
-
-const LABEL_STATUS_FILTRO: Record<RhVagaStatus | "todos", string> = {
-  todos: "Todos os status",
-  aberta: "Aberta",
-  em_andamento: "Em andamento",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
-};
 
 function CampoVaga({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
@@ -91,7 +79,11 @@ export default function RhVagasPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [aba, setAba] = useState<RhVagasAba>("abertas");
   const [busca, setBusca] = useState("");
-  const [filtroStatusGestao, setFiltroStatusGestao] = useState<RhVagaStatus | "todos">("todos");
+  const [filtroStatusGestao, setFiltroStatusGestao] = useState<RhVagaStatus | "todos">(VAGA_FILTRO_TODOS_STATUS_VALUE);
+  const [filtroTipoCand, setFiltroTipoCand] = useState<RhVagasCandidaturasFiltroTipo>(VAGA_FILTRO_TODOS_TIPOS_VALUE);
+  const [filtroStatusCand, setFiltroStatusCand] = useState<RhVagaStatus | "todos">(VAGA_FILTRO_TODOS_STATUS_VALUE);
+  const [vagaIdFiltroCand, setVagaIdFiltroCand] = useState<string>(VAGA_FILTRO_TODAS_VAGAS_VALUE);
+  const [opcoesVagaCandFiltro, setOpcoesVagaCandFiltro] = useState<FiltroBarCampoOption[]>([]);
   const [modalStub, setModalStub] = useState<ModalStub>(null);
   const [modalNovaVagaAberto, setModalNovaVagaAberto] = useState(false);
   const [vagaAtualizar, setVagaAtualizar] = useState<RhVagaRow | null>(null);
@@ -186,6 +178,43 @@ export default function RhVagasPage() {
     }
   };
 
+  const handleOpcoesVagaCandChange = useCallback((opcoes: FiltroBarCampoOption[]) => {
+    setOpcoesVagaCandFiltro(opcoes);
+  }, []);
+
+  const resetVagaIdFiltroCand = useCallback(() => {
+    setVagaIdFiltroCand(VAGA_FILTRO_TODAS_VAGAS_VALUE);
+  }, []);
+
+  const buscaConfig = useMemo(() => {
+    if (aba === "candidaturas") {
+      return {
+        id: "busca-candidaturas",
+        placeholder: PAGE_SEARCH.vagaCandidato,
+        ariaLabel: "Pesquisar por nome da vaga, nome do candidato ou e-mail do candidato",
+      };
+    }
+    if (aba === "em_andamento") {
+      return {
+        id: "busca-vagas-andamento",
+        placeholder: PAGE_SEARCH.vaga,
+        ariaLabel: "Pesquisar vagas em andamento por nome ou diretoria",
+      };
+    }
+    if (aba === "gerenciamento") {
+      return {
+        id: "busca-vagas-gestao",
+        placeholder: PAGE_SEARCH.vaga,
+        ariaLabel: "Pesquisar vagas por nome ou diretoria",
+      };
+    }
+    return {
+      id: "busca-vagas-abertas",
+      placeholder: PAGE_SEARCH.vaga,
+      ariaLabel: "Pesquisar vagas abertas por nome ou diretoria",
+    };
+  }, [aba]);
+
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
@@ -201,44 +230,6 @@ export default function RhVagasPage() {
       </div>
     );
   }
-
-  const inputBusca = (id: string, ariaLabel: string) => (
-    <div style={{ position: "relative", maxWidth: 480, marginBottom: 16 }}>
-      <Search
-        size={16}
-        aria-hidden
-        style={{
-          position: "absolute",
-          left: 12,
-          top: "50%",
-          transform: "translateY(-50%)",
-          color: t.textMuted,
-          pointerEvents: "none",
-        }}
-      />
-      <input
-        id={id}
-        type="search"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Nome da vaga ou diretoria…"
-        autoComplete="off"
-        aria-label={ariaLabel}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "10px 12px 10px 38px",
-          borderRadius: 10,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg,
-          color: t.text,
-          fontSize: 14,
-          fontFamily: FONT.body,
-          outline: "none",
-        }}
-      />
-    </div>
-  );
 
   const renderCardBase = (v: RhVagaRow, extras?: ReactNode, opts?: { statusLabel?: string }) => (
     <article
@@ -297,7 +288,7 @@ export default function RhVagasPage() {
         padding: "8px 14px",
         borderRadius: 10,
         border: "none",
-        background: ctaGradient(brand),
+        background: getCtaCriarGradient(brand),
         color: "#fff",
         fontWeight: 700,
         fontSize: 13,
@@ -412,7 +403,22 @@ export default function RhVagasPage() {
         mostrarGerenciamento={mostrarAbaGerenciamento}
         mostrarCandidaturas={mostrarAbaCandidaturas}
         t={t}
-        brand={{ blockBg: brand.blockBg, accent: brand.accent, useBrand: brand.useBrand }}
+        busca={busca}
+        onBuscaChange={setBusca}
+        buscaId={buscaConfig.id}
+        buscaPlaceholder={buscaConfig.placeholder}
+        buscaAriaLabel={buscaConfig.ariaLabel}
+        filtroStatusGestao={filtroStatusGestao}
+        onFiltroStatusGestao={setFiltroStatusGestao}
+        podeCriarVaga={podeCriarVaga}
+        onNovaVaga={() => setModalNovaVagaAberto(true)}
+        filtroStatusCandidaturas={filtroStatusCand}
+        onFiltroStatusCandidaturas={setFiltroStatusCand}
+        filtroTipoCandidaturas={filtroTipoCand}
+        onFiltroTipoCandidaturas={setFiltroTipoCand}
+        opcoesVagaCandidaturas={opcoesVagaCandFiltro}
+        vagaIdFiltroCandidaturas={vagaIdFiltroCand}
+        onVagaIdFiltroCandidaturas={setVagaIdFiltroCand}
       />
 
       <div
@@ -433,14 +439,6 @@ export default function RhVagasPage() {
           </div>
         ) : aba === "abertas" ? (
           <>
-            <header style={{ marginBottom: 16 }}>
-              <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Vagas Abertas</h2>
-              <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>Vagas abertas para candidatura.</p>
-              <label htmlFor="busca-vagas-abertas" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-                Pesquisar por nome da vaga ou diretoria
-              </label>
-              {inputBusca("busca-vagas-abertas", "Pesquisar vagas abertas por nome ou diretoria")}
-            </header>
             {vagasAbertas.length === 0 ? (
               <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
                 Nenhuma vaga aberta para exibir.
@@ -465,16 +463,6 @@ export default function RhVagasPage() {
           </>
         ) : aba === "em_andamento" ? (
           <>
-            <header style={{ marginBottom: 16 }}>
-              <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Vagas em Andamento</h2>
-              <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-                Vagas com inscrição encerradas mas que estão em andamento de processo seletivo.
-              </p>
-              <label htmlFor="busca-vagas-andamento" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-                Pesquisar por nome da vaga ou diretoria
-              </label>
-              {inputBusca("busca-vagas-andamento", "Pesquisar vagas em andamento por nome ou diretoria")}
-            </header>
             {vagasEmAndamento.length === 0 ? (
               <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
                 Nenhuma vaga em andamento para exibir.
@@ -484,80 +472,18 @@ export default function RhVagasPage() {
             )}
           </>
         ) : aba === "candidaturas" ? (
-          <RhVagasCandidaturasPainel t={t} cardShadow={cardShadow} podeEditarEtapa={perm.canEditarOk} />
+          <RhVagasCandidaturasPainel
+            t={t}
+            busca={busca}
+            filtroTipo={filtroTipoCand}
+            filtroStatusVaga={filtroStatusCand}
+            vagaIdFiltro={vagaIdFiltroCand}
+            onOpcoesVagaChange={handleOpcoesVagaCandChange}
+            onVagaIdFiltroReset={resetVagaIdFiltroCand}
+            podeEditarEtapa={perm.canEditarOk}
+          />
         ) : (
           <>
-            <header style={{ marginBottom: 16 }}>
-              <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Gerenciamento de Vagas</h2>
-              <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-                Abertura de vagas e acompanhamento das inscrições.
-              </p>
-              <label htmlFor="busca-vagas-gestao" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-                Pesquisar por nome da vaga ou diretoria
-              </label>
-              {inputBusca("busca-vagas-gestao", "Pesquisar vagas por nome ou diretoria")}
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  alignItems: "center",
-                  marginBottom: 18,
-                }}
-              >
-                <div>
-                  <label htmlFor="filtro-status-vaga" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-                    Status da vaga
-                  </label>
-                  <select
-                    id="filtro-status-vaga"
-                    value={filtroStatusGestao}
-                    onChange={(e) => setFiltroStatusGestao(e.target.value as RhVagaStatus | "todos")}
-                    aria-label="Filtrar por status da vaga"
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      color: t.text,
-                      fontSize: 14,
-                      fontFamily: FONT.body,
-                      minWidth: 200,
-                    }}
-                  >
-                    {STATUS_GESTAO_FILTRO.map((s) => (
-                      <option key={s} value={s}>
-                        {LABEL_STATUS_FILTRO[s]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }} />
-                {podeCriarVaga ? (
-                  <button
-                    type="button"
-                    onClick={() => setModalNovaVagaAberto(true)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "10px 16px",
-                      borderRadius: 12,
-                      border: "none",
-                      cursor: "pointer",
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      background: ctaGradient(brand),
-                    }}
-                  >
-                    <Plus size={16} aria-hidden />
-                    Nova vaga
-                  </button>
-                ) : null}
-              </div>
-            </header>
             {vagasGestaoLista.length === 0 ? (
               <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
                 Nenhuma vaga para os filtros atuais.
@@ -747,7 +673,7 @@ export default function RhVagasPage() {
               padding: "10px 18px",
               borderRadius: 10,
               border: "none",
-              background: ctaGradient(brand),
+              background: getCtaCriarGradient(brand),
               color: "#fff",
               fontWeight: 700,
               fontSize: 13,

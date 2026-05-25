@@ -1,0 +1,97 @@
+---
+description: Regras para a secção Escala (menu). Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/escala/**/*.tsx
+  - src/pages/escala/**/*.ts
+  - src/pages/rh/GestaoEscala/**/*.tsx
+  - src/pages/rh/GestaoEscala/**/*.ts
+  - src/pages/rh/GestaoStaff/**/*.tsx
+  - src/pages/rh/GestaoStaff/**/*.ts
+  - src/pages/rh/Calendario/**/*.tsx
+  - src/pages/rh/Calendario/**/*.ts
+alwaysApply: false
+---
+
+# Seção Escala
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC. **`PageHeader`:** `title` = `menu.ts` + `subtitle` obrigatório (Brand §4). **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
+
+**Nota de repo:** pastas `rh/GestaoEscala`, `rh/GestaoStaff`, `rh/Calendario` serão renomeadas para `escala/` num refactor futuro (incl. GestaoStaff). `PageKey` pode manter prefixo `rh_`.
+
+---
+
+## Identificação
+
+| PageKey | Label menu | Caminho atual |
+|---------|------------|---------------|
+| `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
+| `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
+| `rh_calendario` | Calendário | `rh/Calendario/` |
+| `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
+| `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
+
+Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel via `lib/carouselNavStyles.ts`; exceção Brand: card com `blockBg` quando isolado (não strip transparente).
+
+---
+
+## Exceções globais nesta secção
+
+- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha; ordenação não se aplica.
+- **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
+- Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
+
+---
+
+## Gestão de Escala (`rh_gestao_escala`)
+
+- Grade mensal por área (time): chips de área, **`FiltroOperadoraSelect`** (opção **Todas Operadoras** + `extraOptions` “Nenhuma” se aplicável), carrossel de mês.
+- Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
+- Vínculo com Calendário: escala aprovada alimenta presença/agenda.
+- RPCs: `rh_gestao_escala_grade_*`.
+- **Handoff:** regras de sugestão CS, aprovação, áreas (customer_service, shift_leader, etc.).
+
+---
+
+## Gestão de Staff (`rh_staff`)
+
+- `PageHeader`; tabelas com ações em ícone (Global + Brand).
+- **Linha superior de filtros:** carrossel de time (`carouselNavStyles` — setas 32×32, rótulo `getCarouselPeriodLabelStyle`) + **`FiltroTodosTimesButton`** (pill igual **Histórico** via `FiltroBarPillButton`; rótulo **Todos os Times**; ícone **`UsersRound`** 15px; `aria-label` alternado conforme estado). Textos e toggle `todosTimes` / `idxTime` **inalterados**.
+- Segunda linha: turno, operadora, pesquisa — **`FiltroOperadoraSelect`** (Todas Operadoras / Nenhuma), **`FiltroTurnoSelect`**.
+- **Handoff:** CRUD staff, organograma operacional.
+
+---
+
+## Calendário (`rh_calendario`)
+
+- Compromissos, presença, reuniões; modais dedicados.
+- Depende de escala aprovada para mensagens de “sem escala hoje”.
+- **Barra superior (Compromissos e Presença):** carrossel de mês (`carouselNavStyles`) + **`FiltroMeuCalendarioButton`** (`CalendarCheck`, pill Histórico) **antes** de Time/Staff — Compromissos: «Meu Calendário»; Presença: «Meu Controle» (mesmo componente/ícone/posição); **`FiltroCalendarioTimeSelect`** (`UsersRound`); **`FiltroCalendarioStaffSelect`** (`IdCard`, busca se >5). **Não** `FiltroEntidadeMultiSelect` legado na barra.
+- **CTAs na barra:** Compromissos — **`CtaCriarButton`** «Nova Agenda» (abre modal agendar; mesma regra `solicitanteAgendarId`). Presença — gradiente `getCtaCriarButtonStyle` **sem** ícone `Plus`: «Fazer Check-in» / «Fazer Check-out» (`onPrestadorPontoRegistrar`, `disabled`/`title` inalterados).
+- **Handoff:** chips por dia, filtros de time, integração escala.
+
+---
+
+## Marketplace (`escala_marketplace_turnos`)
+
+- Turnos disponíveis / candidaturas.
+- **Barra de filtros:** linha 1 — carrossel + **`FiltroHistoricoButton`** + **`FiltroSolicitacoesTipoAcaoSelect`** (+ **`FiltroCalendarioTimeSelect`** em «Todas as Ofertas»); em «Minhas Ofertas» o CTA **Ofertar** na mesma linha (`marginLeft: auto`). Linha 2 — tablist «Todas as Ofertas» / «Minhas Ofertas». Período por `dataOfertaIso`; Histórico = todo o período.
+- **Handoff:** fluxo marketplace, permissões prestador.
+
+---
+
+## Solicitações (`escala_solicitacoes`)
+
+- Pedidos de escala/troca.
+- **Barra única** (acima dos painéis): linha 1 carrossel + Histórico; linha 2 tipo/time/staff; **linha 3 tablist** («Em Aberto» / «Arquivadas») **abaixo dos filtros**. Período por **`dataAberturaIso`** (fallback `dataOfertaIso`); coluna **Data de Abertura**. Histórico = todo o período nas duas abas.
+- **Handoff:** estados, aprovação, thread se aplicável.
+
+---
+
+## Anti-patterns (Escala)
+
+- Converter toolbar de escala para só ícone.
+- Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
+- Filtro de operadora sem `FiltroOperadoraSelect`, sem ícone Shield no campo, label lateral “Operadora” ou agregadora diferente de **Todas Operadoras**.
+- Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.

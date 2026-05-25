@@ -1,12 +1,19 @@
-import { useState, Suspense, lazy, type CSSProperties } from "react";
-import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Shield, Tv, User } from "lucide-react";
+import { useState, Suspense, lazy } from "react";
+import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Tv, Wallet } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { SelectComIcone } from "../../../components/dashboard";
+import {
+  FiltroBarTabButton,
+  FiltroHistoricoButton,
+  FiltroInfluencerSelect,
+  FiltroOperadoraSelect,
+} from "../../../components/dashboard";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -21,6 +28,12 @@ const TAB_LABELS: Record<StreamersTab, string> = {
   financeiro: "Financeiro",
 };
 
+const TAB_ICONS: Record<StreamersTab, typeof BarChart2> = {
+  overview: BarChart2,
+  conversao: GitCompare,
+  financeiro: Wallet,
+};
+
 function StreamersFiltrosEUAbas({
   aba,
   setAba,
@@ -32,21 +45,6 @@ function StreamersFiltrosEUAbas({
   const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerOperadora } = useDashboardFiltros();
   const sf = useStreamersFiltros();
-
-  const btnNavStyle: CSSProperties = {
-    minWidth: 44,
-    minHeight: 44,
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent",
-    color: t.text,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   const tabIds: StreamersTab[] = ["overview", "conversao", "financeiro"];
 
@@ -74,108 +72,46 @@ function StreamersFiltrosEUAbas({
             <button
               type="button"
               aria-label="Mês anterior"
-              style={{
-                ...btnNavStyle,
-                opacity: sf.historico || sf.isPrimeiro ? 0.35 : 1,
-                cursor: sf.historico || sf.isPrimeiro ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, sf.historico || sf.isPrimeiro)}
               onClick={sf.irMesAnterior}
               disabled={sf.historico || sf.isPrimeiro}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
 
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: "clamp(120px, 40vw, 180px)",
-                textAlign: "center",
-              }}
-            >
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "clamp(120px, 40vw, 180px)" })}>
               {sf.historico ? "Todo o período" : sf.mesSelecionado?.label}
             </span>
 
             <button
               type="button"
               aria-label="Próximo mês"
-              style={{
-                ...btnNavStyle,
-                opacity: sf.historico || sf.isUltimo ? 0.35 : 1,
-                cursor: sf.historico || sf.isUltimo ? "not-allowed" : "pointer",
-              }}
+              style={getCarouselBtnNavStyle(t, sf.historico || sf.isUltimo)}
               onClick={sf.irMesProximo}
               disabled={sf.historico || sf.isUltimo}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
-          <button
-            type="button"
-            aria-label={
-              sf.historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"
-            }
-            aria-pressed={sf.historico}
-            onClick={sf.toggleHistorico}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              minHeight: 44,
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              border: sf.historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: sf.historico
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-              color: sf.historico ? brand.accent : t.textMuted,
-              fontWeight: sf.historico ? 700 : 400,
-              transition: "all 0.15s",
-            }}
-          >
-            <Calendar size={15} aria-hidden />
-            Histórico
-          </button>
+          <FiltroHistoricoButton active={sf.historico} onClick={sf.toggleHistorico} />
 
           {showFiltroInfluencer && (
-            <SelectComIcone
-              icon={<User size={15} aria-hidden />}
-              label="Filtrar por influencer"
+            <FiltroInfluencerSelect
+              mode="single"
               value={sf.filtroInfluencer}
               onChange={sf.setFiltroInfluencer}
-            >
-              <option value="todos">Todos os influencers</option>
-              {sf.influencerOptions.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
-                </option>
-              ))}
-            </SelectComIcone>
+              influencers={sf.influencerOptions.map((r) => ({ id: r.id, name: r.nome }))}
+            />
           )}
 
           {showFiltroOperadora && (
-            <SelectComIcone
-              icon={<Shield size={15} aria-hidden />}
-              label="Filtrar por operadora"
+            <FiltroOperadoraSelect
               value={sf.filtroOperadora}
               onChange={sf.setFiltroOperadora}
-            >
-              <option value="todas">Todas as operadoras</option>
-              {sf.operadorasList
-                .filter((o) => podeVerOperadora(o.slug))
-                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                .map((o) => (
-                  <option key={o.slug} value={o.slug}>
-                    {o.nome}
-                  </option>
-                ))}
-            </SelectComIcone>
+              operadoras={sf.operadorasList}
+              podeVerOperadora={podeVerOperadora}
+            />
           )}
           {sf.isLoading && (
             <span
@@ -201,56 +137,19 @@ function StreamersFiltrosEUAbas({
           style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
         >
           {tabIds.map((key) => {
-            const ativo = aba === key;
+            const TabIcon = TAB_ICONS[key];
             return (
-              <button
+              <FiltroBarTabButton
                 key={key}
-                type="button"
-                role="tab"
                 id={`tab-streamers-${key}`}
-                tabIndex={ativo ? 0 : -1}
-                aria-selected={ativo}
+                active={aba === key}
                 aria-controls={`panel-streamers-${key}`}
                 onClick={() => setAba(key)}
-                onKeyDown={(e) => {
-                  const tabs: StreamersTab[] = ["overview", "conversao", "financeiro"];
-                  const current = tabs.indexOf(key);
-                  if (e.key === "ArrowRight") {
-                    e.preventDefault();
-                    const next = tabs[(current + 1) % tabs.length];
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-streamers-${next}`)?.focus();
-                    });
-                  }
-                  if (e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    const next = tabs[(current - 1 + tabs.length) % tabs.length];
-                    setAba(next);
-                    requestAnimationFrame(() => {
-                      document.getElementById(`tab-streamers-${next}`)?.focus();
-                    });
-                  }
-                }}
-                style={{
-                  padding: "10px 18px",
-                  minHeight: 44,
-                  borderRadius: 10,
-                  border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                  background: ativo
-                    ? brand.useBrand
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                    : (t.inputBg ?? t.cardBg),
-                  color: ativo ? brand.accent : t.textMuted,
-                  fontWeight: ativo ? 700 : 500,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                }}
+                onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-streamers-")}
+                icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
               >
                 {TAB_LABELS[key]}
-              </button>
+              </FiltroBarTabButton>
             );
           })}
         </div>
@@ -301,7 +200,7 @@ function StreamersAutorizado() {
                   Streamers
                 </h1>
                 <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-                  Performance do canal de influencers — financeiro, conversão e operação.
+                  Acompanhe performance, conversão e financeiro do canal de influencers.
                 </p>
               </div>
             </div>
