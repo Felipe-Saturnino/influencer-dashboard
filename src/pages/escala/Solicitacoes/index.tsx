@@ -556,13 +556,6 @@ export default function EscalaSolicitacoesPage() {
     </>
   );
 
-  const blocoBarraFiltrosAba = (
-    <div style={getFilterBarWrapperStyle(brand)}>
-      <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
-      <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
-    </div>
-  );
-
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>
@@ -591,7 +584,9 @@ export default function EscalaSolicitacoesPage() {
 
       <div style={{ marginBottom: 18 }}>
         <div style={getFilterBarWrapperStyle(brand)}>
-          <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(false)}>
+          <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
+          <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
+          <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
             <button
               type="button"
               role="tab"
@@ -620,7 +615,6 @@ export default function EscalaSolicitacoesPage() {
 
       {aba === "aberto" && (
         <div role="tabpanel" id="panel-sol-aberto" aria-labelledby="tab-sol-aberto">
-          <div style={{ marginBottom: 14 }}>{blocoBarraFiltrosAba}</div>
           <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
           {renderTabelaSolicitacoes(linhasAberto, false)}
         </div>
@@ -628,7 +622,6 @@ export default function EscalaSolicitacoesPage() {
 
       {aba === "arquivadas" && (
         <div role="tabpanel" id="panel-sol-arq" aria-labelledby="tab-sol-arq">
-          <div style={{ marginBottom: 14 }}>{blocoBarraFiltrosAba}</div>
           <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
           {renderTabelaSolicitacoes(linhasArquivadas, true)}
         </div>

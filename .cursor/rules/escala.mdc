@@ -83,7 +83,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Solicitações (`escala_solicitacoes`)
 
 - Pedidos de escala/troca.
-- **Tablist** acima dos painéis; **barra completa em cada aba** (linha 1 carrossel + Histórico; linha 2 tipo/time/staff). Período por **`dataAberturaIso`** (fallback `dataOfertaIso`); coluna **Data de Abertura**. Histórico = todo o período nas duas abas.
+- **Barra única** (acima dos painéis): linha 1 carrossel + Histórico; linha 2 tipo/time/staff; **linha 3 tablist** («Em Aberto» / «Arquivadas») **abaixo dos filtros**. Período por **`dataAberturaIso`** (fallback `dataOfertaIso`); coluna **Data de Abertura**. Histórico = todo o período nas duas abas.
 - **Handoff:** estados, aprovação, thread se aplicável.
 
 ---
