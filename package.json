@@ -24,7 +24,7 @@
     "*.{ts,tsx}": "eslint --max-warnings 0"
   },
   "dependencies": {
-    "@sentry/react": "^9.47.1",
+    "@sentry/react": "^10.53.1",
     "@supabase/supabase-js": "^2.39.0",
     "@zxing/library": "^0.21.3",
     "jsbarcode": "^3.12.3",
