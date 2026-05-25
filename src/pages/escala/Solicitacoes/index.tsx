@@ -1,15 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardList, Loader2, MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, ClipboardList, Loader2, MoreHorizontal } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { DashboardPageHeader, SectionTitle } from "../../../components/dashboard";
-import FiltroEntidadeMultiSelect from "../../../components/FiltroEntidadeMultiSelect";
+import {
+  DashboardPageHeader,
+  FiltroCalendarioStaffSelect,
+  FiltroCalendarioTimeSelect,
+  FiltroHistoricoButton,
+  FiltroSolicitacoesTipoAcaoSelect,
+  SectionTitle,
+} from "../../../components/dashboard";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
-  ESCALA_ACAO_TIPO_OPCOES_TODAS,
-  ESCALA_TIME_OPCOES,
   ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
@@ -22,10 +28,10 @@ import {
   getMesesDisponiveisEscalaCarrossel,
   idxMesInicialEscalaCarrossel,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-import { MesCarrosselPeriodo } from "../components/MesCarrosselPeriodo";
 import { supabase } from "../../../lib/supabase";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
+  CALENDARIO_TIMES_FILTRO_ORDEM,
   normalizarSelecaoUnica,
   TREINAMENTO_FILTRO_ID,
   normalizarNomeCalFiltro,
@@ -56,8 +62,17 @@ function dataIsoNoMes(dataIso: string, ano: number, mes0: number): boolean {
   return s >= ini && s <= fim;
 }
 
-function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: number): LinhaOfertaMarketplace[] {
-  return rows.filter((r) => dataIsoNoMes(r.dataOfertaIso, ano, mes0));
+/** Data de abertura da solicitação (ISO) — distinta da data da oferta quando ambas existirem. */
+function dataAberturaSolicitacaoIso(row: LinhaOfertaMarketplace): string {
+  return (row.dataAberturaIso ?? row.dataOfertaIso).slice(0, 10);
+}
+
+function filtrarPorMesAberturaSolicitacao(
+  rows: LinhaOfertaMarketplace[],
+  ano: number,
+  mes0: number,
+): LinhaOfertaMarketplace[] {
+  return rows.filter((r) => dataIsoNoMes(dataAberturaSolicitacaoIso(r), ano, mes0));
 }
 
 function passaFiltroTipo(row: LinhaOfertaMarketplace, filtro: EscalaAcaoFiltro): boolean {
@@ -86,6 +101,12 @@ export default function EscalaSolicitacoesPage() {
   const hoje = useMemo(() => new Date(), []);
   const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
   const [idxMes, setIdxMes] = useState(() => idxMesInicialEscalaCarrossel(getMesesDisponiveisEscalaCarrossel(new Date()), new Date()));
+  const [historico, setHistorico] = useState(false);
+
+  const idxMesInicial = useMemo(
+    () => idxMesInicialEscalaCarrossel(mesesDisponiveis, hoje),
+    [mesesDisponiveis, hoje],
+  );
 
   useEffect(() => {
     setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
@@ -93,7 +114,7 @@ export default function EscalaSolicitacoesPage() {
 
   const [aba, setAba] = useState<"aberto" | "arquivadas">("aberto");
   const [filtroTipo, setFiltroTipo] = useState<EscalaAcaoFiltro>("todos");
-  const [filtroTime, setFiltroTime] = useState<EscalaTimeFiltro>("todos");
+  const [filtroTimeIds, setFiltroTimeIds] = useState<string[]>([]);
   const [filtroStaffIds, setFiltroStaffIds] = useState<string[]>([]);
 
   const carregarTimes = useCallback(async () => {
@@ -225,21 +246,48 @@ export default function EscalaSolicitacoesPage() {
     };
   }, [perm.loading, perm.canView, times, treinamentoGerenciaId]);
 
-  const filtroTimeCompIds = useMemo(() => {
-    if (filtroTime === "todos") return [];
-    if (filtroTime === "treinamento") return [TREINAMENTO_FILTRO_ID];
-    const rotulo = ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO[filtroTime];
-    const row = timeRowPorRotuloCanonica(times, rotulo);
-    return row ? [row.id] : [];
-  }, [filtroTime, times]);
+  const filtroTimeSlug = useMemo((): EscalaTimeFiltro => {
+    if (filtroTimeIds.length === 0) return "todos";
+    if (filtroTimeIds.includes(TREINAMENTO_FILTRO_ID)) return "treinamento";
+    const id = filtroTimeIds[0];
+    for (const slug of Object.keys(ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO) as Exclude<
+      EscalaTimeFiltro,
+      "todos"
+    >[]) {
+      const row = timeRowPorRotuloCanonica(times, ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO[slug]);
+      if (row?.id === id) return slug;
+    }
+    return "todos";
+  }, [filtroTimeIds, times]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(filtroTimeCompIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
-  }, [filtroTimeCompIds, timeIds]);
+    return new Set(filtroTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+  }, [filtroTimeIds, timeIds]);
 
-  const treinamentoSelecionado = filtroTimeCompIds.includes(TREINAMENTO_FILTRO_ID);
-  const filtroTimeAtivo = filtroTime !== "todos";
+  const treinamentoSelecionado = filtroTimeIds.includes(TREINAMENTO_FILTRO_ID);
+  const filtroTimeAtivo = filtroTimeIds.length > 0;
+
+  const timeMultiselectItems = useMemo(() => {
+    const items: { id: string; name: string }[] = [];
+    for (const rotulo of CALENDARIO_TIMES_FILTRO_ORDEM) {
+      if (rotulo === "Treinamento") {
+        if (treinamentoGerenciaId) items.push({ id: TREINAMENTO_FILTRO_ID, name: "Treinamento" });
+        continue;
+      }
+      const row = timeRowPorRotuloCanonica(times, rotulo);
+      if (row) items.push({ id: row.id, name: rotulo });
+    }
+    return items;
+  }, [times, treinamentoGerenciaId]);
+
+  useEffect(() => {
+    const valid = new Set(timeMultiselectItems.map((x) => x.id));
+    setFiltroTimeIds((prev) => {
+      const next = prev.filter((id) => valid.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [timeMultiselectItems]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
@@ -269,7 +317,7 @@ export default function EscalaSolicitacoesPage() {
       const next = prev.filter((id) => allowedStaff.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, filtroTimeCompIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, filtroTimeIds]);
 
   useEffect(() => {
     const allowedIds = new Set(staffMultiselectItems.map((x) => x.id));
@@ -284,39 +332,62 @@ export default function EscalaSolicitacoesPage() {
 
   const staffFiltroId = filtroStaffIds[0];
 
+  const linhasNoPeriodoCarrossel = useMemo(() => {
+    if (historico) return linhasBase;
+    const m = mesesDisponiveis[idxMes];
+    if (!m) return [];
+    return filtrarPorMesAberturaSolicitacao(linhasBase, m.ano, m.mes);
+  }, [linhasBase, mesesDisponiveis, idxMes, historico]);
+
   const linhasAberto = useMemo(() => {
-    return linhasBase.filter(
+    return linhasNoPeriodoCarrossel.filter(
       (r) =>
         r.status === "em_analise" &&
         passaFiltroTipo(r, filtroTipo) &&
-        passaFiltroTime(r, filtroTime) &&
+        passaFiltroTime(r, filtroTimeSlug) &&
         (!staffFiltroId || r.solicitanteStaffId === staffFiltroId),
     );
-  }, [linhasBase, filtroTipo, filtroTime, staffFiltroId]);
+  }, [linhasNoPeriodoCarrossel, filtroTipo, filtroTimeSlug, staffFiltroId]);
 
   const linhasArquivadas = useMemo(() => {
-    const m = mesesDisponiveis[idxMes];
-    const noMes = m ? filtrarPorMesEscala(linhasBase, m.ano, m.mes) : [];
-    return noMes.filter(
+    return linhasNoPeriodoCarrossel.filter(
       (r) =>
         (r.status === "cancelada" || r.status === "aprovada" || r.status === "recusada") &&
         passaFiltroTipo(r, filtroTipo) &&
-        passaFiltroTime(r, filtroTime) &&
+        passaFiltroTime(r, filtroTimeSlug) &&
         (!staffFiltroId || r.solicitanteStaffId === staffFiltroId),
     );
-  }, [linhasBase, mesesDisponiveis, idxMes, filtroTipo, filtroTime, staffFiltroId]);
+  }, [linhasNoPeriodoCarrossel, filtroTipo, filtroTimeSlug, staffFiltroId]);
 
-  const selectStyle = {
-    padding: "8px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
+  const mesSelecionado = mesesDisponiveis[idxMes];
+  const carrosselPrimeiro = idxMes === 0;
+  const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
+  const showTimeFilter = !soProprios && timeMultiselectItems.length > 0;
+  const showStaffFilter = !soProprios && staffMultiselectItems.length > 0;
+
+  const tabBtnStyle = (ativo: boolean): CSSProperties => ({
+    padding: "10px 18px",
+    borderRadius: 12,
+    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+    background: ativo
+      ? brand.accent.startsWith("var(")
+        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
+        : `${String(brand.accent)}20`
+      : t.inputBg,
+    color: ativo ? brand.accent : t.textMuted,
     fontSize: 13,
+    fontWeight: ativo ? 800 : 600,
     fontFamily: FONT.body,
-    minWidth: 160,
-    cursor: "pointer" as const,
-  };
+    cursor: "pointer",
+  });
+
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder
+      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+      : {}),
+  });
 
   function renderTabelaSolicitacoes(rows: LinhaOfertaMarketplace[], comStatus: boolean) {
     if (rows.length === 0) {
@@ -327,7 +398,7 @@ export default function EscalaSolicitacoesPage() {
       );
     }
     const headers = [
-      "Data da Oferta",
+      "Data de Abertura",
       "Tipo de Ação",
       "Turno da Oferta",
       "Operadora",
@@ -361,7 +432,9 @@ export default function EscalaSolicitacoesPage() {
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.dataOfertaIso}</td>
+                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
+                  {dataAberturaSolicitacaoIso(r)}
+                </td>
                 <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
                   {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
                 </td>
@@ -401,7 +474,7 @@ export default function EscalaSolicitacoesPage() {
     );
   }
 
-  const blocoStaff = loadingStaff ? (
+  const blocoFiltrosLinha = loadingStaff ? (
     <span
       style={{
         display: "inline-flex",
@@ -418,51 +491,76 @@ export default function EscalaSolicitacoesPage() {
   ) : erroStaff ? (
     <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
   ) : (
-    <div style={{ flex: "1 1 260px", minWidth: 220 }}>
-      <FiltroEntidadeMultiSelect
-        selected={filtroStaffIds}
-        onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
-        items={staffMultiselectItems}
-        t={t}
-        triggerEmptyLabel="Staff"
-        ariaFilterPrefix="Filtrar por staff"
-        listboxAriaLabel="Selecionar membro do staff"
-        enableSearch
-      />
-    </div>
+    <>
+      <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
+      {showTimeFilter ? (
+        <FiltroCalendarioTimeSelect
+          selected={filtroTimeIds}
+          onChange={(ids) => {
+            setFiltroTimeIds(ids);
+            setFiltroStaffIds([]);
+          }}
+          items={timeMultiselectItems}
+        />
+      ) : null}
+      {showStaffFilter ? (
+        <FiltroCalendarioStaffSelect
+          selected={filtroStaffIds}
+          onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
+          items={staffMultiselectItems}
+        />
+      ) : null}
+    </>
   );
 
-  const blocoFiltrosComum = (
+  const blocoCarrosselHistorico = (
     <>
-      <select
-        aria-label="Filtrar por tipo de ação"
-        value={filtroTipo}
-        onChange={(e) => setFiltroTipo(e.target.value as EscalaAcaoFiltro)}
-        style={selectStyle}
-      >
-        {ESCALA_ACAO_TIPO_OPCOES_TODAS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Filtrar por time"
-        value={filtroTime}
-        onChange={(e) => {
-          setFiltroTime(e.target.value as EscalaTimeFiltro);
-          setFiltroStaffIds([]);
+      <button
+        type="button"
+        aria-label="Mês anterior"
+        style={getCarouselBtnNavStyle(t, historico || carrosselPrimeiro)}
+        onClick={() => {
+          setHistorico(false);
+          setIdxMes((i) => Math.max(0, i - 1));
         }}
-        style={selectStyle}
+        disabled={historico || carrosselPrimeiro}
       >
-        {ESCALA_TIME_OPCOES.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      {blocoStaff}
+        <ChevronLeft size={14} aria-hidden="true" />
+      </button>
+      <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
+        {historico ? "Todo o período" : (mesSelecionado?.label ?? "—")}
+      </span>
+      <button
+        type="button"
+        aria-label="Próximo mês"
+        style={getCarouselBtnNavStyle(t, historico || carrosselUltimo)}
+        onClick={() => {
+          setHistorico(false);
+          setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1));
+        }}
+        disabled={historico || carrosselUltimo}
+      >
+        <ChevronRight size={14} aria-hidden="true" />
+      </button>
+      <FiltroHistoricoButton
+        active={historico}
+        onClick={() => {
+          if (historico) {
+            setHistorico(false);
+            setIdxMes(idxMesInicial >= 0 ? idxMesInicial : Math.max(0, mesesDisponiveis.length - 1));
+          } else {
+            setHistorico(true);
+          }
+        }}
+      />
     </>
+  );
+
+  const blocoBarraFiltrosAba = (
+    <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
+      <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
+    </div>
   );
 
   if (perm.loading) {
@@ -491,78 +589,38 @@ export default function EscalaSolicitacoesPage() {
         t={t}
       />
 
-      <div role="tablist" aria-label="Estado das solicitações" style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          role="tab"
-          id="tab-sol-aberto"
-          aria-selected={aba === "aberto"}
-          aria-controls="panel-sol-aberto"
-          onClick={() => setAba("aberto")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${aba === "aberto" ? brand.accent : t.cardBorder}`,
-            background:
-              aba === "aberto"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: aba === "aberto" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: aba === "aberto" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Solicitações em Aberto
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="tab-sol-arq"
-          aria-selected={aba === "arquivadas"}
-          aria-controls="panel-sol-arq"
-          onClick={() => setAba("arquivadas")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${aba === "arquivadas" ? brand.accent : t.cardBorder}`,
-            background:
-              aba === "arquivadas"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: aba === "arquivadas" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: aba === "arquivadas" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Solicitações Arquivadas
-        </button>
+      <div style={{ marginBottom: 18 }}>
+        <div style={getFilterBarWrapperStyle(brand)}>
+          <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(false)}>
+            <button
+              type="button"
+              role="tab"
+              id="tab-sol-aberto"
+              aria-selected={aba === "aberto"}
+              aria-controls="panel-sol-aberto"
+              onClick={() => setAba("aberto")}
+              style={tabBtnStyle(aba === "aberto")}
+            >
+              Solicitações em Aberto
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-sol-arq"
+              aria-selected={aba === "arquivadas"}
+              aria-controls="panel-sol-arq"
+              onClick={() => setAba("arquivadas")}
+              style={tabBtnStyle(aba === "arquivadas")}
+            >
+              Solicitações Arquivadas
+            </button>
+          </div>
+        </div>
       </div>
 
       {aba === "aberto" && (
         <div role="tabpanel" id="panel-sol-aberto" aria-labelledby="tab-sol-aberto">
-          <div
-            style={{
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: brand.blockBg,
-              padding: "14px 18px",
-              marginBottom: 18,
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 14,
-              alignItems: "flex-end",
-            }}
-          >
-            {blocoFiltrosComum}
-          </div>
+          <div style={{ marginBottom: 14 }}>{blocoBarraFiltrosAba}</div>
           <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
           {renderTabelaSolicitacoes(linhasAberto, false)}
         </div>
@@ -570,28 +628,7 @@ export default function EscalaSolicitacoesPage() {
 
       {aba === "arquivadas" && (
         <div role="tabpanel" id="panel-sol-arq" aria-labelledby="tab-sol-arq">
-          <div
-            style={{
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: brand.blockBg,
-              padding: "14px 18px",
-              marginBottom: 18,
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 14,
-              alignItems: "center",
-            }}
-          >
-            <MesCarrosselPeriodo
-              mesesDisponiveis={mesesDisponiveis}
-              idxMes={idxMes}
-              onIdxMesChange={setIdxMes}
-              t={t}
-              brand={{ blockBg: brand.blockBg, cardBorder: t.cardBorder }}
-            />
-            {blocoFiltrosComum}
-          </div>
+          <div style={{ marginBottom: 14 }}>{blocoBarraFiltrosAba}</div>
           <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
           {renderTabelaSolicitacoes(linhasArquivadas, true)}
         </div>

@@ -1,21 +1,24 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { CalendarCheck } from "lucide-react";
 import { FiltroBarPillButton } from "./dashboard/FiltroBarPillButton";
 
 export interface FiltroMeuCalendarioButtonProps {
   active: boolean;
   onClick: () => void;
+  /** Rótulo visível; default «Meu Calendário». */
+  children?: ReactNode;
   ariaLabelActive?: string;
   ariaLabelInactive?: string;
   style?: CSSProperties;
 }
 
 /**
- * Toggle «Meu Calendário» — pill igual ao Histórico, ícone `CalendarCheck` (distinto de `Calendar` do Histórico).
+ * Toggle pill (Histórico) com `CalendarCheck` — «Meu Calendário», «Meu Controle», etc.
  */
 export function FiltroMeuCalendarioButton({
   active,
   onClick,
+  children = "Meu Calendário",
   ariaLabelActive = "Mostrar calendário geral de todos os prestadores",
   ariaLabelInactive = "Filtrar calendário apenas para o meu registo de prestador",
   style,
@@ -28,7 +31,7 @@ export function FiltroMeuCalendarioButton({
       aria-label={active ? ariaLabelActive : ariaLabelInactive}
       style={style}
     >
-      Meu Calendário
+      {children}
     </FiltroBarPillButton>
   );
 }

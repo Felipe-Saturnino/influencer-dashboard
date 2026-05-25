@@ -67,7 +67,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 - Compromissos, presença, reuniões; modais dedicados.
 - Depende de escala aprovada para mensagens de “sem escala hoje”.
-- **Barra superior (Compromissos e Presença):** carrossel de mês (`carouselNavStyles`) + **`FiltroMeuCalendarioButton`** (`CalendarCheck`, pill Histórico) **antes** de Time/Staff quando vista completa; **`FiltroCalendarioTimeSelect`** (`UsersRound`, pill Influencer/Operadora); **`FiltroCalendarioStaffSelect`** (`IdCard`, busca no painel se >5). **Não** `FiltroEntidadeMultiSelect` legado na barra.
+- **Barra superior (Compromissos e Presença):** carrossel de mês (`carouselNavStyles`) + **`FiltroMeuCalendarioButton`** (`CalendarCheck`, pill Histórico) **antes** de Time/Staff — Compromissos: «Meu Calendário»; Presença: «Meu Controle» (mesmo componente/ícone/posição); **`FiltroCalendarioTimeSelect`** (`UsersRound`); **`FiltroCalendarioStaffSelect`** (`IdCard`, busca se >5). **Não** `FiltroEntidadeMultiSelect` legado na barra.
 - **CTAs na barra:** Compromissos — **`CtaCriarButton`** «Nova Agenda» (abre modal agendar; mesma regra `solicitanteAgendarId`). Presença — gradiente `getCtaCriarButtonStyle` **sem** ícone `Plus`: «Fazer Check-in» / «Fazer Check-out» (`onPrestadorPontoRegistrar`, `disabled`/`title` inalterados).
 - **Handoff:** chips por dia, filtros de time, integração escala.
 
@@ -83,7 +83,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Solicitações (`escala_solicitacoes`)
 
 - Pedidos de escala/troca.
-- Filtro **Staff** na barra: `FiltroEntidadeMultiSelect` (legado em Solicitações) — Calendário usa **`FiltroCalendarioStaffSelect`**.
+- **Tablist** acima dos painéis; **barra completa em cada aba** (linha 1 carrossel + Histórico; linha 2 tipo/time/staff). Período por **`dataAberturaIso`** (fallback `dataOfertaIso`); coluna **Data de Abertura**. Histórico = todo o período nas duas abas.
 - **Handoff:** estados, aprovação, thread se aplicável.
 
 ---

@@ -1983,6 +1983,24 @@ export default function RhCalendarioPage() {
                   <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
                 ) : (
                   <>
+                    {mostrarBotaoMeuControle ? (
+                      <FiltroMeuCalendarioButton
+                        active={meuControleAtivo}
+                        onClick={() => {
+                          if (meuControleAtivo) {
+                            setPresencaFilterStaffIds([]);
+                            setPresencaFilterTimeIds([]);
+                          } else {
+                            setPresencaFilterTimeIds([]);
+                            setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
+                          }
+                        }}
+                        ariaLabelActive="Mostrar lista geral de staff"
+                        ariaLabelInactive="Filtrar controle de presença apenas para o meu utilizador"
+                      >
+                        Meu Controle
+                      </FiltroMeuCalendarioButton>
+                    ) : null}
                     {showTimeFilterPresenca ? (
                       <FiltroCalendarioTimeSelect
                         selected={presencaFilterTimeIds}
@@ -1996,44 +2014,6 @@ export default function RhCalendarioPage() {
                         onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
                         items={staffPresencaMultiselectItems}
                       />
-                    ) : null}
-                    {mostrarBotaoMeuControle ? (
-                      <button
-                        type="button"
-                        aria-pressed={meuControleAtivo}
-                        onClick={() => {
-                          if (meuControleAtivo) {
-                            setPresencaFilterStaffIds([]);
-                            setPresencaFilterTimeIds([]);
-                          } else {
-                            setPresencaFilterTimeIds([]);
-                            setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
-                          }
-                        }}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 20,
-                          border: `1.5px solid ${meuControleAtivo ? brand.accent : t.cardBorder}`,
-                          background: meuControleAtivo
-                            ? brand.accent.startsWith("var(")
-                              ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                              : `${String(brand.accent)}22`
-                            : t.inputBg,
-                          color: meuControleAtivo ? brand.accent : t.textMuted,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          fontFamily: FONT.body,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                        aria-label={
-                          meuControleAtivo
-                            ? "Mostrar lista geral de staff"
-                            : "Filtrar controle de presença apenas para o meu utilizador"
-                        }
-                      >
-                        Meu Controle
-                      </button>
                     ) : null}
                   </>
                 )}

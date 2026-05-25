@@ -3,8 +3,17 @@ import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 /** Tipos de ação no Marketplace / Solicitações (subset do calendário + «todos» na UI). */
 export type EscalaAcaoFiltro = RhCalendarioAcaoTipo | "todos";
 
+/** Valor canónico da opção agregadora de tipo de ação. */
+export const ESCALA_ACAO_FILTRO_TODAS_VALUE = "todos";
+
+/** Rótulo visível da opção agregadora — Solicitações / filtros de ação. */
+export const ESCALA_ACAO_FILTRO_TODAS_LABEL = "Todas Ações";
+
+/** aria-label do controlo (nome do filtro). */
+export const ESCALA_ACAO_FILTRO_ARIA_LABEL = "Tipo de ação";
+
 export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: string }[] = [
-  { value: "todos", label: "Todos" },
+  { value: "todos", label: ESCALA_ACAO_FILTRO_TODAS_LABEL },
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
@@ -12,7 +21,7 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
 ];
 
 export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: string }[] = [
-  { value: "todos", label: "Todos" },
+  { value: "todos", label: ESCALA_ACAO_FILTRO_TODAS_LABEL },
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
@@ -78,7 +87,10 @@ export const RH_CALENDARIO_ACAO_LABEL_FORMAL: Record<RhCalendarioAcaoTipo, strin
 
 export type LinhaOfertaMarketplace = {
   id: string;
+  /** Data da oferta (marketplace / turno ofertado). */
   dataOfertaIso: string;
+  /** Data de abertura da solicitação — filtro de período em Solicitações; se omitida, usa `dataOfertaIso`. */
+  dataAberturaIso?: string;
   tipo: RhCalendarioAcaoTipo;
   turnoOferta: string;
   operadora: string;

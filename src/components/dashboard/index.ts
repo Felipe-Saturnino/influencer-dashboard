@@ -43,6 +43,10 @@ export {
   type FiltroCalendarioStaffSelectProps,
 } from "../FiltroCalendarioStaffSelect";
 export {
+  FiltroSolicitacoesTipoAcaoSelect,
+  type FiltroSolicitacoesTipoAcaoSelectProps,
+} from "../FiltroSolicitacoesTipoAcaoSelect";
+export {
   FiltroMeuCalendarioButton,
   type FiltroMeuCalendarioButtonProps,
 } from "../FiltroMeuCalendarioButton";
