@@ -71,6 +71,53 @@
 }
 
 /* ─── Shell das páginas logadas (padding fluido + largura segura no mobile) ─── */
+/* Marketplace — Minhas Ofertas: carrossel/filtros centrados; CTA Ofertar à direita (desktop) */
+.app-marketplace-filtro-minhas {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 10px;
+}
+.app-marketplace-filtro-minhas__spacer {
+  display: block;
+  min-height: 1px;
+}
+.app-marketplace-filtro-minhas__centro {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.app-marketplace-filtro-minhas__cta {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .app-marketplace-filtro-minhas {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .app-marketplace-filtro-minhas__spacer {
+    display: none;
+  }
+  .app-marketplace-filtro-minhas__centro {
+    grid-column: 1;
+    justify-content: center;
+  }
+  .app-marketplace-filtro-minhas__cta {
+    grid-column: 1;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 .app-page-shell {
   box-sizing: border-box;
   width: 100%;

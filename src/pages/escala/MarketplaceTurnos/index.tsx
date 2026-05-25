@@ -230,24 +230,22 @@ export default function EscalaMarketplaceTurnosPage() {
         />
       </>
     ) : (
-      <>
-        {blocoCarrosselHistorico}
-        <FiltroSolicitacoesTipoAcaoSelect
-          value={filtroTipoMinhas}
-          onChange={setFiltroTipoMinhas}
-          opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
-        />
-        <button
-          type="button"
-          aria-label="Ofertar"
-          style={{
-            ...getCtaCriarButtonStyle(brand),
-            marginLeft: "auto",
-          }}
-        >
-          Ofertar
-        </button>
-      </>
+      <div className="app-marketplace-filtro-minhas">
+        <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+        <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
+          {blocoCarrosselHistorico}
+          <FiltroSolicitacoesTipoAcaoSelect
+            value={filtroTipoMinhas}
+            onChange={setFiltroTipoMinhas}
+            opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
+          />
+        </div>
+        <div className="app-marketplace-filtro-minhas__cta">
+          <button type="button" aria-label="Ofertar" style={getCtaCriarButtonStyle(brand)}>
+            Ofertar
+          </button>
+        </div>
+      </div>
     );
 
   function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
