@@ -258,6 +258,7 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroHojeButton`** | `src/components/dashboard/FiltroHojeButton.tsx` | Atalho **Hoje** na Agenda — ícone `History` 15px (não confundir com Histórico) |
 | **`FiltroStatusSemanticoPill`** | `src/components/FiltroStatusSemanticoPill.tsx` | Chips de **status** na barra (bolinha 8px + cor semântica ativa) — Lives, Afiliados |
 | **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
+| **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
@@ -266,6 +267,40 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
 
 **Catálogo de ícones (código):** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). **Sempre** importar daqui em componentes partilhados e em filtros novos; ícones só de domínio (ex.: `Newspaper` no Portal RH) ficam na página com o mesmo tamanho e documentados abaixo.
+
+### Abas de navegação (`role="tab"`) — obrigatório
+
+Referência visual: **Organograma** (`OrgFiltroBarDiretorias` — Visualização / Gerenciamento).
+
+| Regra | Valor |
+|-------|--------|
+| Componente | **`FiltroBarTabButton`** (`src/components/dashboard/FiltroBarTabButton.tsx`) |
+| Estilos | `getFiltroBarTabButtonStyle` / constantes `FILTRO_BAR_TAB_BUTTON` em `src/lib/filterBarStyles.ts` |
+| Ícone | **Lucide 16px**, `strokeWidth` 2, `aria-hidden` — usar `FILTRO_BAR_TAB_ICON_PROPS` ou `<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />` |
+| Layout | `padding: 10px 18px`, `minHeight: 44`, `borderRadius: **10**`, `gap: 8`, ícone **à esquerda** do rótulo |
+| Ativo (marca) | Borda/texto `brand.accent`; fundo `color-mix` 15% com `--brand-contrast` (whitelabel) ou `--brand-action` (Spin) |
+| Ativo (cor de domínio) | Prop `activeColor` — ex.: categoria Portal RH, perfil em Permissões |
+| Teclado | `role="tablist"` no wrapper; setas ← → via `onFiltroBarTabsKeyDown` (ou `handleFiltroBarTabsArrowKeyDown` por aba) |
+| Proibido | Pills `borderRadius: 20` ou `999` para **navegação de aba**; markup inline duplicado; aba **sem** ícone |
+
+```tsx
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../components/dashboard";
+import { Network, LayoutList } from "lucide-react";
+
+<div role="tablist" aria-label="Modo do organograma" onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabs, setModo, (k) => `tab-org-${k}`)}>
+  <FiltroBarTabButton
+    id="tab-org-visual"
+    active={modo === "visual"}
+    aria-controls="panel-org-visual"
+    onClick={() => setModo("visual")}
+    icon={<Network {...FILTRO_BAR_TAB_ICON_PROPS} />}
+  >
+    Visualização
+  </FiltroBarTabButton>
+</div>
+```
+
+**Exceção:** `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` / `FiltroSemanticoTabPill` são **filtros** com cor semântica — não substituem `FiltroBarTabButton` para troca de módulo/painel.
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
@@ -447,6 +482,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Gradiente fallback com `#7c3aed` no início (usar `CtaCriarButton` / `getCtaCriarGradient`).
 - CTA de criação inline sem `CtaCriarButton`; label com `+` em vez de ícone `Plus`.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
+- Aba de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone 16px dedicado, ou com estilo pill 20/999 em vez do layout Organograma (secção 6 — Abas).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
 - Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
 - Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
@@ -469,6 +505,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] Modo Mês/Semana/Dia (se aplicável): `FiltroModoVisualizacaoSelect` + `CalendarRange` 15px
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
+- [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA

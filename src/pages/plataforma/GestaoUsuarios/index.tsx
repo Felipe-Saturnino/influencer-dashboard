@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Briefcase, Building2, KeyRound, Shield, User, UserCog, Users } from "lucide-react";
+import { Briefcase, Building2, KeyRound, Shield, User, UserCog } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -11,7 +11,11 @@ import { AbaOperadora } from "./AbaOperadora";
 import { AbaGestores } from "./AbaGestores";
 import { AbaPrestadores } from "./AbaPrestadores";
 import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
-import { handleGestaoTabsArrowKeyDown, tabAtivaPrincipalStyle } from "./gestaoUsuariosHelpers";
+import {
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
+} from "../../../components/dashboard";
 
 type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestadores";
 
@@ -30,20 +34,28 @@ export default function GestaoUsuarios() {
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
   }, [isAdmin, perm.canEditarOk, aba]);
 
+  const GESTAO_TAB_ICONS: Record<AbaGestao, React.ReactNode> = {
+    usuarios: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    permissoes: <KeyRound {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    operadora: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    gestores: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    prestadores: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  };
+
   const abasConfigPlataforma = useMemo(
-    (): { key: Exclude<AbaGestao, "usuarios">; label: string; icon: React.ReactNode }[] => [
-      { key: "permissoes", label: "Permissões", icon: <KeyRound size={13} aria-hidden="true" /> },
-      { key: "operadora", label: "Operadora", icon: <Building2 size={13} aria-hidden="true" /> },
-      { key: "gestores", label: "Gestores", icon: <Briefcase size={13} aria-hidden="true" /> },
-      { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden="true" /> },
+    (): { key: Exclude<AbaGestao, "usuarios">; label: string }[] => [
+      { key: "permissoes", label: "Permissões" },
+      { key: "operadora", label: "Operadora" },
+      { key: "gestores", label: "Gestores" },
+      { key: "prestadores", label: "Prestadores" },
     ],
     [],
   );
 
-  const ABAS = useMemo((): { key: AbaGestao; label: string; icon: React.ReactNode }[] => {
-    if (!isAdmin) return [{ key: "usuarios", label: "Usuários", icon: <Users size={13} aria-hidden="true" /> }];
+  const ABAS = useMemo((): { key: AbaGestao; label: string }[] => {
+    if (!isAdmin) return [{ key: "usuarios", label: "Usuários" }];
     return [
-      { key: "usuarios", label: "Usuários", icon: <User size={13} aria-hidden="true" /> },
+      { key: "usuarios", label: "Usuários" },
       ...(perm.canEditarOk ? abasConfigPlataforma : []),
     ];
   }, [isAdmin, perm.canEditarOk, abasConfigPlataforma]);
@@ -121,45 +133,20 @@ export default function GestaoUsuarios() {
           role="tablist"
           aria-label="Seções de gestão de usuários"
           style={{ display: "flex", gap: 8, flexWrap: "wrap", overflowX: "auto", scrollbarWidth: "thin" }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abaKeys, setAba, (k) => `tab-gestao-${k}`)}
         >
-          {ABAS.map((a) => {
-            const ativa = aba === a.key;
-            const tabStyle = tabAtivaPrincipalStyle(ativa, t.cardBorder, t.inputBg ?? t.bg);
-            return (
-              <button
-                key={a.key}
-                type="button"
-                role="tab"
-                id={`tab-gestao-${a.key}`}
-                tabIndex={ativa ? 0 : -1}
-                aria-selected={ativa}
-                aria-controls={`panel-gestao-${a.key}`}
-                onClick={() => setAba(a.key)}
-                onKeyDown={(e) =>
-                  handleGestaoTabsArrowKeyDown(e, abaKeys, a.key, setAba, "tab-gestao-")
-                }
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: tabStyle.background,
-                  border: tabStyle.border,
-                  color: ativa ? tabStyle.color : t.textMuted,
-                  borderRadius: 20,
-                  padding: "7px 18px",
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: tabStyle.fontWeight,
-                  transition: "all 0.18s",
-                  flexShrink: 0,
-                }}
-              >
-                {a.icon}
-                {a.label}
-              </button>
-            );
-          })}
+          {ABAS.map((a) => (
+            <FiltroBarTabButton
+              key={a.key}
+              id={`tab-gestao-${a.key}`}
+              active={aba === a.key}
+              aria-controls={`panel-gestao-${a.key}`}
+              onClick={() => setAba(a.key)}
+              icon={GESTAO_TAB_ICONS[a.key]}
+            >
+              {a.label}
+            </FiltroBarTabButton>
+          ))}
         </div>
       )}
 

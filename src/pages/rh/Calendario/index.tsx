@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Clock,
   Loader2,
   MessageSquare,
@@ -42,11 +43,16 @@ import {
 import {
   CtaCriarButton,
   DashboardPageHeader,
+  FiltroBarTabButton,
   FiltroCalendarioStaffSelect,
   FiltroCalendarioTimeSelect,
   FiltroMeuCalendarioButton,
 } from "../../../components/dashboard";
-import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import {
+  FILTRO_BAR_TAB_ICON_PROPS,
+  getFilterBarRowStyle,
+  onFiltroBarTabsKeyDown,
+} from "../../../lib/filterBarStyles";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
@@ -1646,55 +1652,28 @@ export default function RhCalendarioPage() {
         role="tablist"
         aria-label="Secção do calendário"
         style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}
+        onKeyDown={(e) =>
+          onFiltroBarTabsKeyDown(e, ["compromissos", "presenca"] as const, setAbaPrincipal, (k) => `tab-cal-${k}`)
+        }
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={abaPrincipal === "compromissos"}
+        <FiltroBarTabButton
+          id="tab-cal-compromissos"
+          active={abaPrincipal === "compromissos"}
+          aria-controls="panel-cal-compromissos"
           onClick={() => setAbaPrincipal("compromissos")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${abaPrincipal === "compromissos" ? brand.accent : t.cardBorder}`,
-            background:
-              abaPrincipal === "compromissos"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: abaPrincipal === "compromissos" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: abaPrincipal === "compromissos" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
+          icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
         >
           Compromissos
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={abaPrincipal === "presenca"}
+        </FiltroBarTabButton>
+        <FiltroBarTabButton
+          id="tab-cal-presenca"
+          active={abaPrincipal === "presenca"}
+          aria-controls="panel-cal-presenca"
           onClick={() => setAbaPrincipal("presenca")}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 12,
-            border: `1px solid ${abaPrincipal === "presenca" ? brand.accent : t.cardBorder}`,
-            background:
-              abaPrincipal === "presenca"
-                ? brand.accent.startsWith("var(")
-                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-                  : `${String(brand.accent)}20`
-                : t.inputBg,
-            color: abaPrincipal === "presenca" ? brand.accent : t.textMuted,
-            fontSize: 13,
-            fontWeight: abaPrincipal === "presenca" ? 800 : 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
+          icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
         >
           Controle de Presença
-        </button>
+        </FiltroBarTabButton>
       </div>
 
       {abaPrincipal === "compromissos" ? (

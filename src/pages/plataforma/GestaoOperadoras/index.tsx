@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { supabase } from "../../../lib/supabase";
 import { validarBrandguide } from "../../../lib/brandguideValidation";
 import { useApp } from "../../../context/AppContext";
@@ -6,18 +6,17 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2 } from "lucide-react";
+import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2, Palette, Layers } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import {
   ctaGradientSalvar,
   handleGestaoTabsArrowKeyDown,
-  tabAtivaPrincipalStyle,
 } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
@@ -770,35 +769,10 @@ function ModalOperadora({
 
   const tabIds = useMemo(() => tabs.map((x) => x.id), [tabs]);
 
-  const tabBtn = (id: ModalTabId, label: string) => {
-    const sel = aba === id;
-    const tabStyle = tabAtivaPrincipalStyle(sel, t.cardBorder, t.inputBg ?? t.bg);
-    return (
-      <button
-        key={id}
-        type="button"
-        role="tab"
-        id={`tab-op-${id}`}
-        tabIndex={sel ? 0 : -1}
-        aria-selected={sel}
-        aria-controls={`panel-op-${id}`}
-        onClick={() => setAba(id)}
-        onKeyDown={(e) => handleGestaoTabsArrowKeyDown(e, tabIds, id, setAba, "tab-op-")}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 10,
-          border: tabStyle.border,
-          background: tabStyle.background,
-          color: sel ? tabStyle.color : t.textMuted,
-          fontFamily: FONT.body,
-          fontSize: 12,
-          fontWeight: tabStyle.fontWeight,
-          cursor: "pointer",
-        }}
-      >
-        {label}
-      </button>
-    );
+  const modalTabIcons: Record<ModalTabId, ReactNode> = {
+    dados: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    brand: <Palette {...FILTRO_BAR_TAB_ICON_PROPS} />,
+    operacoes: <Layers {...FILTRO_BAR_TAB_ICON_PROPS} />,
   };
 
   const slugInputStyle: React.CSSProperties = {
@@ -931,7 +905,19 @@ function ModalOperadora({
       />
 
       <div role="tablist" aria-label="Seções do cadastro da operadora" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-        {tabs.map((x) => tabBtn(x.id, x.label))}
+        {tabs.map((x) => (
+          <FiltroBarTabButton
+            key={x.id}
+            id={`tab-op-${x.id}`}
+            active={aba === x.id}
+            aria-controls={`panel-op-${x.id}`}
+            onClick={() => setAba(x.id)}
+            onKeyDown={(e) => handleGestaoTabsArrowKeyDown(e, tabIds, x.id, setAba, "tab-op-")}
+            icon={modalTabIcons[x.id]}
+          >
+            {x.label}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "dados" && (

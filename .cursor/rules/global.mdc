@@ -153,7 +153,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, `FiltroBarCampoSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, **`FiltroBarTabButton`** (abas `role="tab"` — Brand §6), `FiltroBarCampoSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
 
 **Ícones na barra de filtros:** catálogo canónico `src/lib/filterBarIconCatalog.tsx` (`FilterBarIcons`, `FILTRO_BAR_ICON_PROPS`) — tabela completa e exceções de domínio em **Brand MDC §6** e `docs/PADRAO-FILTROS-DASHBOARD.md`. Status em `<select>` pill: **`ShieldAlert`** via `FilterBarIcons.status` (**Todos Status**).
 
@@ -702,6 +702,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- Abas de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone Lucide 16px por aba, ou com `borderRadius` 20/999 (padrão Organograma: radius 10 — Brand §6).
 - Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.
 - Modo **Mês/Semana/Dia** na barra sem `FiltroModoVisualizacaoSelect` ou com ícone `Calendar` no lugar de `CalendarRange`.
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.

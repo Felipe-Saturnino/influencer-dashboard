@@ -1,6 +1,7 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
-import { FONT } from "../../../constants/theme";
+import { FiltroBarTabButton } from "../../dashboard/FiltroBarTabButton";
+import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -183,63 +184,33 @@ export function OrgFiltroBarDiretorias({
             role="tablist"
             aria-label="Modo de visualização do organograma"
             onKeyDown={(e) => {
-              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
               if (tabsVisiveis.length < 2) return;
               const el = e.target as HTMLElement;
               if (el.getAttribute("role") !== "tab") return;
-              e.preventDefault();
-              const currentId = el.id;
-              const currentKey = tabsVisiveis.find((k) => `tab-org-${k}` === currentId);
+              const currentKey = tabsVisiveis.find((k) => `tab-org-${k}` === el.id);
               if (!currentKey) return;
-              const idx = tabsVisiveis.indexOf(currentKey);
-              const next =
-                e.key === "ArrowRight"
-                  ? tabsVisiveis[(idx + 1) % tabsVisiveis.length]!
-                  : tabsVisiveis[(idx - 1 + tabsVisiveis.length) % tabsVisiveis.length]!;
-              setModo(next);
-              requestAnimationFrame(() => {
-                document.getElementById(`tab-org-${next}`)?.focus();
-              });
+              handleFiltroBarTabsArrowKeyDown(e, tabsVisiveis, currentKey, setModo, "tab-org-");
             }}
             style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 12 }}
           >
-            {tabsVisiveis.map((key) => {
-              const ativo = modo === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  id={`tab-org-${key}`}
-                  tabIndex={ativo ? 0 : -1}
-                  aria-selected={ativo}
-                  aria-controls={`panel-org-${key}`}
-                  onClick={() => setModo(key)}
-                  style={{
-                    padding: "10px 18px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                      : (t.inputBg ?? t.cardBg ?? "transparent"),
-                    color: ativo ? brand.accent : t.textMuted,
-                    fontWeight: ativo ? 700 : 500,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  {key === "visual" ? <Network size={16} strokeWidth={2} aria-hidden /> : <LayoutList size={16} strokeWidth={2} aria-hidden />}
-                  {tabLabels[key]}
-                </button>
-              );
-            })}
+            {tabsVisiveis.map((key) => (
+              <FiltroBarTabButton
+                key={key}
+                id={`tab-org-${key}`}
+                active={modo === key}
+                aria-controls={`panel-org-${key}`}
+                onClick={() => setModo(key)}
+                icon={
+                  key === "visual" ? (
+                    <Network size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />
+                  ) : (
+                    <LayoutList size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />
+                  )
+                }
+              >
+                {tabLabels[key]}
+              </FiltroBarTabButton>
+            ))}
           </div>
         ) : null}
       </div>

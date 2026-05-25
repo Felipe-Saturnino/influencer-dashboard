@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { Loader2 } from "lucide-react";
+import { ClipboardList, GitBranch, Loader2, StickyNote } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../dashboard";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -22,6 +23,12 @@ import { ModalBase, ModalHeader } from "../../OperacoesModal";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg?: string; isDark?: boolean };
 type TabVer = "candidatura" | "anotacoes" | "etapas";
+
+const CANDIDATURA_TAB_ICONS = {
+  candidatura: <ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  anotacoes: <StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  etapas: <GitBranch {...FILTRO_BAR_TAB_ICON_PROPS} />,
+} as const;
 
 type AnotacaoRow = { id: string; conteudo: string; created_at: string; created_by: string | null; autor?: { name: string | null } | null };
 type AnexoRow = {
@@ -142,28 +149,6 @@ export function ModalCandidaturaVer({
   };
 
   const readOnlyStyle: CSSProperties = { ...inputStyle, opacity: 0.92, cursor: "not-allowed" };
-
-  const tabBtn = (id: TabVer, label: string) => (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={tab === id}
-      onClick={() => setTab(id)}
-      style={{
-        padding: "8px 14px",
-        borderRadius: 10,
-        border: `1px solid ${tab === id ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-        background: tab === id ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : t.inputBg,
-        color: tab === id ? t.text : t.textMuted,
-        fontWeight: tab === id ? 700 : 600,
-        fontSize: 13,
-        fontFamily: FONT.body,
-        cursor: "pointer",
-      }}
-    >
-      {label}
-    </button>
-  );
 
   async function baixarCurriculo() {
     if (!c?.curriculo_storage_path) return;
@@ -292,16 +277,32 @@ export function ModalCandidaturaVer({
 
   const subtitulo = c?.vaga ? labelVagaComCodigo(c.vaga) : "—";
   const mostrarEtapas = c ? mostrarAbaEtapasNoModal(c.etapa) : false;
+  const tabsVisiveis: TabVer[] = mostrarEtapas
+    ? ["candidatura", "anotacoes", "etapas"]
+    : ["candidatura", "anotacoes"];
 
   return (
     <ModalBase maxWidth={640} onClose={onClose} zIndex={1101}>
       <ModalHeader title={c ? c.nome_completo.toUpperCase() : "Candidatura"} onClose={onClose} />
       <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{subtitulo}</p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }} role="tablist">
-        {tabBtn("candidatura", "Candidatura")}
-        {tabBtn("anotacoes", "Anotações")}
-        {mostrarEtapas ? tabBtn("etapas", "Etapas") : null}
+      <div
+        role="tablist"
+        aria-label="Seções da candidatura"
+        style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabsVisiveis, setTab, (k) => `tab-cand-${k}`)}
+      >
+        {tabsVisiveis.map((id) => (
+          <FiltroBarTabButton
+            key={id}
+            id={`tab-cand-${id}`}
+            active={tab === id}
+            onClick={() => setTab(id)}
+            icon={CANDIDATURA_TAB_ICONS[id]}
+          >
+            {id === "candidatura" ? "Candidatura" : id === "anotacoes" ? "Anotações" : "Etapas"}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {loading ? (

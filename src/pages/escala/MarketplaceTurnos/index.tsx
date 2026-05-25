@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, List, MoreHorizontal, Store } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, MoreHorizontal, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -7,12 +7,13 @@ import { FONT } from "../../../constants/theme";
 import {
   DashboardPageHeader,
   FiltroCalendarioTimeSelect,
+  FiltroBarTabButton,
   FiltroHistoricoButton,
   FiltroSolicitacoesTipoAcaoSelect,
   SectionTitle,
 } from "../../../components/dashboard";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
@@ -130,22 +131,6 @@ export default function EscalaMarketplaceTurnosPage() {
   }, [linhasMes, filtroTipoMinhas]);
 
   const porStatus = (s: OfertaStatusUi) => minhasBase.filter((r) => r.status === s);
-
-  const tabBtnStyle = (ativo: boolean): CSSProperties => ({
-    padding: "10px 18px",
-    borderRadius: 12,
-    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-    background: ativo
-      ? brand.accent.startsWith("var(")
-        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-        : `${String(brand.accent)}20`
-      : t.inputBg,
-    color: ativo ? brand.accent : t.textMuted,
-    fontSize: 13,
-    fontWeight: ativo ? 800 : 600,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-  });
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
@@ -572,28 +557,24 @@ export default function EscalaMarketplaceTurnosPage() {
         <div style={getFilterBarWrapperStyle(brand)}>
           <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
           <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
-            <button
-              type="button"
-              role="tab"
+            <FiltroBarTabButton
               id="tab-mkt-todas"
-              aria-selected={aba === "todas"}
+              active={aba === "todas"}
               aria-controls="panel-mkt-todas"
               onClick={() => setAba("todas")}
-              style={tabBtnStyle(aba === "todas")}
+              icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
             >
               Todas as Ofertas
-            </button>
-            <button
-              type="button"
-              role="tab"
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
               id="tab-mkt-minhas"
-              aria-selected={aba === "minhas"}
+              active={aba === "minhas"}
               aria-controls="panel-mkt-minhas"
               onClick={() => setAba("minhas")}
-              style={tabBtnStyle(aba === "minhas")}
+              icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
             >
               Minhas Ofertas
-            </button>
+            </FiltroBarTabButton>
           </div>
         </div>
       </div>

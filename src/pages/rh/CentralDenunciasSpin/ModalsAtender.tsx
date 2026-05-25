@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, type CSSProperties } from "react";
-import { X, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, Loader2, FileText, StickyNote } from "lucide-react";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
@@ -34,20 +35,6 @@ function LinhaInfo({ label, valor, t }: { label: string; valor: string; t: Theme
       <div style={{ fontSize: 14, color: t.text, lineHeight: 1.45 }}>{valor}</div>
     </div>
   );
-}
-
-function tabStyle(ativo: boolean, t: Theme): CSSProperties {
-  return {
-    padding: "10px 14px",
-    borderRadius: 10,
-    border: `1px solid ${ativo ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-    color: t.text,
-    fontWeight: 600,
-    fontSize: 13,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-  };
 }
 
 export function ModalAtenderDenuncia({
@@ -231,13 +218,28 @@ export function ModalAtenderDenuncia({
             <X size={20} />
           </button>
         </div>
-        <div style={{ padding: "12px 20px 0", display: "flex", gap: 8 }}>
-          <button type="button" role="tab" aria-selected={aba === "dados"} onClick={() => setAba("dados")} style={tabStyle(aba === "dados", t)}>
+        <div
+          role="tablist"
+          aria-label="Seções do atendimento"
+          style={{ padding: "12px 20px 0", display: "flex", gap: 8 }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ["dados", "anotacoes"] as const, setAba, (k) => `tab-atender-den-${k}`)}
+        >
+          <FiltroBarTabButton
+            id="tab-atender-den-dados"
+            active={aba === "dados"}
+            onClick={() => setAba("dados")}
+            icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
             Dados da denúncia
-          </button>
-          <button type="button" role="tab" aria-selected={aba === "anotacoes"} onClick={() => setAba("anotacoes")} style={tabStyle(aba === "anotacoes", t)}>
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-atender-den-anotacoes"
+            active={aba === "anotacoes"}
+            onClick={() => setAba("anotacoes")}
+            icon={<StickyNote {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
             Anotações
-          </button>
+          </FiltroBarTabButton>
         </div>
 
         <div style={{ padding: "16px 20px" }}>

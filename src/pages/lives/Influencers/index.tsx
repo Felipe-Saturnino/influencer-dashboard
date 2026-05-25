@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -10,13 +10,9 @@ import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
   Eye, EyeOff, Pencil, X, ChevronDown, Loader2,
   Mic, Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
+  Contact, Share2, History,
 } from "lucide-react";
-
-function livesTabActiveBg(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent, #7c3aed) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-}
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import OperadoraTag from "../../../components/OperadoraTag";
 import {
   influencerElegivelQuadroPerfilIncompleto,
@@ -38,6 +34,56 @@ import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../..
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
+
+type InfluencerModalTab = "cadastral" | "canais" | "financeiro" | "operadoras" | "historico";
+
+const INFLUENCER_TAB_ICONS: Record<InfluencerModalTab, ReactNode> = {
+  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  canais: <Share2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  financeiro: <Coins {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operadoras: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+function InfluencerModalTabs<T extends InfluencerModalTab>({
+  tabs,
+  tab,
+  setTab,
+  tabIdPrefix,
+  panelIdPrefix,
+  wrapStyle,
+}: {
+  tabs: { key: T; label: string }[];
+  tab: T;
+  setTab: (k: T) => void;
+  tabIdPrefix: string;
+  panelIdPrefix: string;
+  wrapStyle?: CSSProperties;
+}) {
+  const tabKeys = tabs.map((tb) => tb.key);
+  return (
+    <div
+      role="tablist"
+      aria-label="Seções do influencer"
+      style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2, ...wrapStyle }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
+    >
+      {tabs.map((tb) => (
+        <FiltroBarTabButton
+          key={tb.key}
+          id={`${tabIdPrefix}${tb.key}`}
+          active={tab === tb.key}
+          aria-controls={`${panelIdPrefix}${tb.key}`}
+          onClick={() => setTab(tb.key)}
+          icon={INFLUENCER_TAB_ICONS[tb.key]}
+          style={{ flexShrink: 0 }}
+        >
+          {tb.label}
+        </FiltroBarTabButton>
+      ))}
+    </div>
+  );
+}
 
 // ─── BLUR EM DADOS SENSÍVEIS ──────────────────────────────────────────────────
 function SensitiveField({
@@ -828,7 +874,6 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
   const row: CSSProperties = { marginBottom: 14 };
-  const tabActiveBg = livesTabActiveBg(brand);
   const val = (v?: string | number) => (
     <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>
       {v || "—"}
@@ -875,27 +920,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
-        <div role="tablist" aria-label="Seções do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`inf-viz-tab-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`inf-viz-panel-${tb.key}`}
-              onClick={() => setTab(tb.key)}
-              style={{
-                padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
-                background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <InfluencerModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="inf-viz-tab-" panelIdPrefix="inf-viz-panel-" />
 
         {tab === "cadastral" && (
           <>
@@ -1012,7 +1037,6 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
   const existing = influencer.perfil;
-  const tabActiveBg = livesTabActiveBg(brand);
   const ctaSalvar = "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))";
 
   useEffect(() => {
@@ -1163,27 +1187,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
           </button>
         </div>
 
-        <div role="tablist" aria-label="Seções do perfil do influencer" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {tabs.map((tb) => (
-            <button
-              key={tb.key}
-              type="button"
-              role="tab"
-              id={`inf-edit-tab-${tb.key}`}
-              aria-selected={tab === tb.key}
-              aria-controls={`inf-edit-panel-${tb.key}`}
-              onClick={() => setTab(tb.key)}
-              style={{
-                padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
-                background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
-              }}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        <InfluencerModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="inf-edit-tab-" panelIdPrefix="inf-edit-panel-" />
 
         {error && (
           <div

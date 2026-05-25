@@ -1,5 +1,20 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, AlertCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  Crown,
+  Handshake,
+  IdCard,
+  LineChart,
+  Mic,
+  Network,
+  Shirt,
+  ShieldCheck,
+  UserCog,
+  Users,
+  Flag,
+  Headphones,
+} from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
@@ -7,7 +22,24 @@ import { FONT } from "../../../constants/theme";
 import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../types";
 import { BRAND, PAGES, ROLES_PERMISSOES, PERM_OPCOES, roleLabel, roleBadgeColor } from "./constants";
 import { SalvarCtaContent } from "./gestaoUsuariosUi";
-import { ctaGradientSalvar, handleGestaoTabsArrowKeyDown } from "./gestaoUsuariosHelpers";
+import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+
+const ROLE_PERM_TAB_ICONS: Record<Role, React.ReactNode> = {
+  admin: null,
+  executivo: <Crown {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  gestor: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  figurino: <Shirt {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  service_manager: <Headphones {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  shift_leader: <Flag {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  prestador: <IdCard {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operador: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  agencia: <Network {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  influencer: <Mic {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  afiliado: <Handshake {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  investidor: <LineChart {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
 
 /** Verde #22c55e / vermelho #e84025 — paleta semântica global; leve tinte nos selects da matriz. */
 function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { background: string; borderColor: string } {
@@ -255,40 +287,25 @@ export function AbaPermissoes() {
           <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Prestadores.
         </p>
       ) : null}
-      <div role="tablist" aria-label="Perfil de permissões" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {ROLES_PERMISSOES.map((r) => {
-          const ativo = roleAtivo === r;
-          const cor = roleBadgeColor(r);
-          return (
-            <button
-              key={r}
-              type="button"
-              role="tab"
-              id={`tab-perm-${r}`}
-              tabIndex={ativo ? 0 : -1}
-              aria-selected={ativo}
-              aria-controls="panel-permissoes-matriz"
-              onClick={() => setRoleAtivo(r)}
-              onKeyDown={(e) =>
-                handleGestaoTabsArrowKeyDown(e, ROLES_PERMISSOES, r, setRoleAtivo, "tab-perm-")
-              }
-              style={{
-                border: `${ativo ? "1.5px" : "1px"} solid ${ativo ? cor : t.cardBorder}`,
-                background: ativo ? `${cor}30` : t.inputBg ?? "transparent",
-                color: ativo ? cor : t.textMuted,
-                borderRadius: 20,
-                padding: "7px 16px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: ativo ? 700 : 400,
-                transition: "all 0.18s",
-              }}
-            >
-              {roleLabel(r)}
-            </button>
-          );
-        })}
+      <div
+        role="tablist"
+        aria-label="Perfil de permissões"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ROLES_PERMISSOES, setRoleAtivo, (k) => `tab-perm-${k}`)}
+      >
+        {ROLES_PERMISSOES.map((r) => (
+          <FiltroBarTabButton
+            key={r}
+            id={`tab-perm-${r}`}
+            active={roleAtivo === r}
+            aria-controls="panel-permissoes-matriz"
+            onClick={() => setRoleAtivo(r)}
+            activeColor={roleBadgeColor(r)}
+            icon={ROLE_PERM_TAB_ICONS[r]}
+          >
+            {roleLabel(r)}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       <div

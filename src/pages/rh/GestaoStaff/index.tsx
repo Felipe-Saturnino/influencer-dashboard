@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -38,6 +38,9 @@ import {
   FiltroOperadoraSelect,
   FiltroTodosTimesButton,
   FiltroTurnoSelect,
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,
 } from "../../../components/dashboard";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
@@ -192,6 +195,32 @@ function labelCampoHistorico(campo: string): string {
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 type EditarAba = "funcao" | "skills" | "dealer";
+
+const STAFF_VER_TAB_ICONS: Record<VerAba, ReactNode> = {
+  pessoal: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  skills: <Star {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const STAFF_VER_TAB_LABELS: Record<VerAba, string> = {
+  pessoal: "Dados pessoais",
+  funcao: "Dados de função",
+  skills: "Dados de skills",
+  historico: "Histórico",
+};
+
+const STAFF_EDITAR_TAB_ICONS: Record<EditarAba, ReactNode> = {
+  funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  skills: <Star {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  dealer: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+const STAFF_EDITAR_TAB_LABELS: Record<EditarAba, string> = {
+  funcao: "Dados de função",
+  skills: "Dados de skills",
+  dealer: "Gestão de dealer",
+};
 
 const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
   feminino: "Feminino",
@@ -1102,7 +1131,6 @@ export default function RhGestaoStaffPage() {
           }
           onClose={() => setModalVer(null)}
           t={t}
-          brand={brand}
         />
       ) : null}
 
@@ -1149,7 +1177,6 @@ function ModalStaffVer({
   dadosFuncaoOcultarBioFotos = false,
   onClose,
   t,
-  brand,
 }: {
   row: RhFuncionario;
   operadorasNome: Record<string, string>;
@@ -1159,7 +1186,6 @@ function ModalStaffVer({
   dadosFuncaoOcultarBioFotos?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
-  brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const [aba, setAba] = useState<VerAba>("pessoal");
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
@@ -1227,44 +1253,26 @@ function ModalStaffVer({
     };
   }, [opSlug, row.escala]);
 
-  const tabBtn = (key: VerAba, label: string) => {
-    const ativo = aba === key;
-    return (
-      <button
-        key={key}
-        type="button"
-        role="tab"
-        aria-selected={ativo}
-        onClick={() => setAba(key)}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 10,
-          fontWeight: 700,
-          fontFamily: FONT.body,
-          fontSize: 12,
-          cursor: "pointer",
-          border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-          background: ativo
-            ? brand.useBrand
-              ? "color-mix(in srgb, var(--brand-accent) 14%, transparent)"
-              : "rgba(124,58,237,0.14)"
-            : (t.inputBg ?? "transparent"),
-          color: ativo ? brand.accent : t.textMuted,
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Prestador — ${row.nome}`} onClose={onClose} />
-      <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {tabBtn("pessoal", "Dados pessoais")}
-        {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {tabBtn("historico", "Histórico")}
+      <div
+        role="tablist"
+        aria-label="Seções do prestador"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, (["pessoal", "funcao", "skills", "historico"] as VerAba[]), setAba, (k) => `staff-ver-tab-${k}`)}
+      >
+        {(["pessoal", "funcao", "skills", "historico"] as VerAba[]).map((key) => (
+          <FiltroBarTabButton
+            key={key}
+            id={`staff-ver-tab-${key}`}
+            active={aba === key}
+            onClick={() => setAba(key)}
+            icon={STAFF_VER_TAB_ICONS[key]}
+          >
+            {STAFF_VER_TAB_LABELS[key]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "pessoal" && (
@@ -1744,43 +1752,31 @@ function ModalStaffEditar({
     setSaving(false);
   };
 
-  const tabBtn = (key: EditarAba, label: string) => {
-    const ativo = aba === key;
-    return (
-      <button
-        key={key}
-        type="button"
-        role="tab"
-        aria-selected={ativo}
-        onClick={() => setAba(key)}
-        style={{
-          padding: "8px 14px",
-          borderRadius: 10,
-          fontWeight: 700,
-          fontFamily: FONT.body,
-          fontSize: 12,
-          cursor: "pointer",
-          border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-          background: ativo
-            ? brand.useBrand
-              ? "color-mix(in srgb, var(--brand-accent) 14%, transparent)"
-              : "rgba(124,58,237,0.14)"
-            : (t.inputBg ?? "transparent"),
-          color: ativo ? brand.accent : t.textMuted,
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
+  const editarTabKeys = useMemo(
+    () => (staffEhGamePresenter ? (["funcao", "skills", "dealer"] as EditarAba[]) : (["funcao", "skills"] as EditarAba[])),
+    [staffEhGamePresenter],
+  );
 
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
-      <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
+      <div
+        role="tablist"
+        aria-label="Seções editáveis"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, editarTabKeys, setAba, (k) => `staff-edit-tab-${k}`)}
+      >
+        {editarTabKeys.map((key) => (
+          <FiltroBarTabButton
+            key={key}
+            id={`staff-edit-tab-${key}`}
+            active={aba === key}
+            onClick={() => setAba(key)}
+            icon={STAFF_EDITAR_TAB_ICONS[key]}
+          >
+            {STAFF_EDITAR_TAB_LABELS[key]}
+          </FiltroBarTabButton>
+        ))}
       </div>
 
       {aba === "funcao" && (

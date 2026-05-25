@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, ClipboardList, Loader2, MoreHorizontal } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, ClipboardList, Inbox, Loader2, MoreHorizontal } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -8,12 +8,13 @@ import {
   DashboardPageHeader,
   FiltroCalendarioStaffSelect,
   FiltroCalendarioTimeSelect,
+  FiltroBarTabButton,
   FiltroHistoricoButton,
   FiltroSolicitacoesTipoAcaoSelect,
   SectionTitle,
 } from "../../../components/dashboard";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO,
@@ -365,22 +366,6 @@ export default function EscalaSolicitacoesPage() {
   const showTimeFilter = !soProprios && timeMultiselectItems.length > 0;
   const showStaffFilter = !soProprios && staffMultiselectItems.length > 0;
 
-  const tabBtnStyle = (ativo: boolean): CSSProperties => ({
-    padding: "10px 18px",
-    borderRadius: 12,
-    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-    background: ativo
-      ? brand.accent.startsWith("var(")
-        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)"
-        : `${String(brand.accent)}20`
-      : t.inputBg,
-    color: ativo ? brand.accent : t.textMuted,
-    fontSize: 13,
-    fontWeight: ativo ? 800 : 600,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-  });
-
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
     width: "100%",
@@ -587,28 +572,24 @@ export default function EscalaSolicitacoesPage() {
           <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
           <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
           <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
-            <button
-              type="button"
-              role="tab"
+            <FiltroBarTabButton
               id="tab-sol-aberto"
-              aria-selected={aba === "aberto"}
+              active={aba === "aberto"}
               aria-controls="panel-sol-aberto"
               onClick={() => setAba("aberto")}
-              style={tabBtnStyle(aba === "aberto")}
+              icon={<Inbox size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
             >
               Solicitações em Aberto
-            </button>
-            <button
-              type="button"
-              role="tab"
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
               id="tab-sol-arq"
-              aria-selected={aba === "arquivadas"}
+              active={aba === "arquivadas"}
               aria-controls="panel-sol-arq"
               onClick={() => setAba("arquivadas")}
-              style={tabBtnStyle(aba === "arquivadas")}
+              icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
             >
               Solicitações Arquivadas
-            </button>
+            </FiltroBarTabButton>
           </div>
         </div>
       </div>
