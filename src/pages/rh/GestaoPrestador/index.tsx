@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertCircle,
-  Building2,
   CheckCircle2,
   ClipboardList,
   Eye,
@@ -11,12 +10,10 @@ import {
   Layers,
   Loader2,
   Pencil,
-  ShieldEllipsis,
   StickyNote,
   Trash2,
   UserCircle2,
   Users,
-  UsersRound,
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -87,6 +84,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
 
@@ -102,8 +100,6 @@ const PRESTADOR_STATUS_FILTRO_EXTRA = [
   { value: "indisponivel", label: "Indisponíveis" },
   { value: "encerrado", label: "Encerrado" },
 ] as const;
-
-const FILTRO_ICON = { size: 15, strokeWidth: 2, "aria-hidden": true as const };
 
 type FiltroTipoAcaoHistoricoPrestador =
   | "todos"
@@ -2525,7 +2521,7 @@ export default function RhPrestadoresPage() {
               value={filtroDiretoria}
               onChange={setFiltroDiretoria}
               options={opcoesFiltroDiretoria}
-              icon={<Building2 {...FILTRO_ICON} />}
+              icon={FilterBarIcons.diretoria}
               ariaLabel="Diretorias"
               todasLabel="Todas Diretorias"
             />
@@ -2534,7 +2530,7 @@ export default function RhPrestadoresPage() {
               value={filtroGerencia}
               onChange={setFiltroGerencia}
               options={opcoesFiltroGerencia}
-              icon={<Layers {...FILTRO_ICON} />}
+              icon={<Layers size={15} strokeWidth={2} aria-hidden="true" />}
               ariaLabel="Gerências"
               todasLabel="Todas Gerências"
             />
@@ -2543,7 +2539,7 @@ export default function RhPrestadoresPage() {
               value={filtroSetor}
               onChange={setFiltroSetor}
               options={opcoesFiltroSetor}
-              icon={<UsersRound {...FILTRO_ICON} />}
+              icon={FilterBarIcons.time}
               ariaLabel="Setores"
               todasLabel="Todos Setores"
             />
@@ -2552,7 +2548,7 @@ export default function RhPrestadoresPage() {
               value={filtroContrato}
               onChange={(v) => setFiltroContrato(v as typeof filtroContrato)}
               options={TIPOS_CONTRATO}
-              icon={<FileSignature {...FILTRO_ICON} />}
+              icon={<FileSignature size={15} strokeWidth={2} aria-hidden="true" />}
               ariaLabel="Tipos de contrato"
               todasValue="todos"
               todasLabel="Todos Contratos"
@@ -2563,7 +2559,7 @@ export default function RhPrestadoresPage() {
               onChange={(v) => setFiltroStatus(v as FiltroStatusPrestador)}
               options={[]}
               extraOptions={PRESTADOR_STATUS_FILTRO_EXTRA}
-              icon={<ShieldEllipsis {...FILTRO_ICON} />}
+              icon={FilterBarIcons.status}
               ariaLabel="Status"
               todasValue="disponiveis"
               todasLabel="Todos Status"

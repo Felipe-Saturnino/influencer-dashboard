@@ -260,8 +260,12 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
+| **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
+| **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Multi na barra (ex.: tipos de denúncia) — ícone via catálogo ou domínio |
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
 | Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
+
+**Catálogo de ícones (código):** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). **Sempre** importar daqui em componentes partilhados e em filtros novos; ícones só de domínio (ex.: `Newspaper` no Portal RH) ficam na página com o mesmo tamanho e documentados abaixo.
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
@@ -289,21 +293,42 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 
 ### Catálogo de ícones por tipo de filtro
 
-| Tipo de filtro | Ícone (Lucide) | Tamanho ref. | Componente / notas |
-|----------------|----------------|--------------|-------------------|
-| Operadora | `Shield` | 15 | **`FiltroOperadoraSelect`** (envolve `SelectComIcone`); opção agregadora **Todas Operadoras**; legado `GiShield` / markup duplicado proibido em código novo |
-| Influencer (único ou múltiplo) | `User` | **15** no trigger | **`FiltroInfluencerSelect`** — agregadora **Todos Influencers**; pill 999 |
-| Campanha / UTM | `Megaphone` ou `Link2` | 13–15 | `SelectComIcone` conforme domínio |
-| Perfil / role (plataforma) | `UserCog` ou `Shield` | 13–14 | Preferir Lucide; legado `GiPerson` / `GiShield` em Gestão de Usuários |
-| Status (chip semântico na barra) | Bolinha 8px (`semanticColor`) | — | **`FiltroStatusSemanticoPill`** — Lives, Afiliados; não pill 999 |
-| Plataforma (chip semântico na barra) | **`PlatLogo`** | 13 | **`FiltroPlataformaSemanticoPill`** — Agenda, Influencers, Scout |
-| Status de workflow (`<select>`) | `ListFilter` ou `CircleDot` | 13–15 | `SelectComIcone` — **não** substituir chips semânticos acima |
-| Busca textual (página) | `Search` | **16** | **`BarraPesquisaPagina`** — ícone absoluto à esquerda; borda no `input` (padrão Scout). Ver Global § Barras de pesquisa |
-| Busca no painel do filtro | `Search` | **14** | **`BarraPesquisaFiltroPainel`** — placeholder `Pesquisar [Nome do filtro]...` |
-| Modo Histórico (toggle) | `Calendar` | 15 | **`FiltroHistoricoButton`** — pill 999 + texto “Histórico”; ver Global § Botão Histórico |
-| Modo de vista (Mês/Semana/Dia) | `CalendarRange` | 15 | **`FiltroModoVisualizacaoSelect`** — `getFiltroBarPillStateStyle`; inativo no `defaultValue` |
-| Atalho Hoje (Agenda) | `History` | 15 | **`FiltroHojeButton`** — `getFiltroBarPillStateStyle`; ver Global § Botão Hoje |
-| Carregando (secundário) | `Clock` | 12 | Texto “Carregando…” — não é filtro |
+**Implementação:** `FilterBarIcons.*` em `src/lib/filterBarIconCatalog.tsx` (15px, `strokeWidth` 2, `aria-hidden`). Não repetir `size={15}` solto em componentes canónicos.
+
+| Tipo de filtro | Ícone (Lucide) | `FilterBarIcons` | Componente / agregadora típica |
+|----------------|----------------|------------------|-------------------------------|
+| Operadora | `Shield` | `.operadora` | **`FiltroOperadoraSelect`** — **Todas Operadoras** |
+| Influencer | `User` | `.influencer` | **`FiltroInfluencerSelect`** — **Todos Influencers** |
+| Status (`<select>` pill) | **`ShieldAlert`** | `.status` | **`FiltroBarCampoSelect`** — **Todos Status** (Gestão Prestadores, Vagas, Portal RH Gerenciamento, Central de Denúncias) |
+| Time | `UsersRound` | `.time` | **`FiltroCalendarioTimeSelect`**, **`FiltroTodosTimesButton`** (Staff) |
+| Staff | `IdCard` | `.staff` | **`FiltroCalendarioStaffSelect`** |
+| Turno | `Clock` | `.turno` | **`FiltroTurnoSelect`** (Gestão de Staff) |
+| Diretoria | `Building2` | `.diretoria` | **`FiltroBarCampoSelect`** / pill Organograma **Todas as diretorias** |
+| Histórico (toggle) | `Calendar` | `.historico` | **`FiltroHistoricoButton`** |
+| Hoje (Agenda) | `History` | `.hoje` | **`FiltroHojeButton`** |
+| Modo Mês/Semana/Dia | `CalendarRange` | `.modoVisualizacao` | **`FiltroModoVisualizacaoSelect`** |
+| Ação (Solicitações / Marketplace) | `ListChecks` | `.acaoSolicitacao` | **`FiltroSolicitacoesTipoAcaoSelect`** — **Todas Ações** |
+| Figurino categoria | `Tags` | `.figurinoCategoria` | **`FiltroFigurinosCategoriaSelect`** |
+| Figurino tamanho | `Ruler` | `.figurinoTamanho` | **`FiltroFigurinosTamanhoSelect`** |
+
+**Ícones de domínio (exceção documentada na secção)** — mesmo tamanho 15px; **não** reutilizar para Operadora/Time/Status canónicos:
+
+| Domínio | Ícone | Página / filtro |
+|---------|-------|-----------------|
+| Tipo de denúncia (multi) | `TriangleAlert` | Central de Denúncias |
+| Tipo de postagem | `Newspaper` | Portal RH Gerenciamento |
+| Tipo / vagas (contrato) | `ClipboardType` | Vagas Candidaturas |
+| Gerência / contrato (RH) | `Layers` / `FileSignature` | Gestão de Prestadores |
+| Meu Calendário | `CalendarCheck` | Calendário RH (`FiltroMeuCalendarioButton`) |
+
+| Tipo (outro padrão) | Ícone / UI | Componente / notas |
+|---------------------|------------|-------------------|
+| Status (chip semântico) | Bolinha 8px + cor | **`FiltroStatusSemanticoPill`** — Lives, Afiliados; **não** `ShieldAlert` |
+| Plataforma (chip) | `PlatLogo` 13px | **`FiltroPlataformaSemanticoPill`** |
+| Campanha / UTM (legado) | `Megaphone` / `Link2` | `SelectComIcone` fora da barra canónica |
+| Busca (página) | `Search` 16px | **`BarraPesquisaPagina`** |
+| Busca (painel dropdown) | `Search` 14px | **`BarraPesquisaFiltroPainel`** |
+| Carregando | `Clock` 12px | Texto “Carregando…” na barra |
 
 **Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.
 

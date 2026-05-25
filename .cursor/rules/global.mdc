@@ -153,7 +153,9 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
-**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+**Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, `FiltroBarCampoSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
+
+**Ícones na barra de filtros:** catálogo canónico `src/lib/filterBarIconCatalog.tsx` (`FilterBarIcons`, `FILTRO_BAR_ICON_PROPS`) — tabela completa e exceções de domínio em **Brand MDC §6** e `docs/PADRAO-FILTROS-DASHBOARD.md`. Status em `<select>` pill: **`ShieldAlert`** via `FilterBarIcons.status` (**Todos Status**).
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 

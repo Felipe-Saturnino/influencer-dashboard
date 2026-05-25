@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Calendar } from "lucide-react";
+import { FilterBarIcons } from "../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "./FiltroBarPillButton";
 
 /** aria-label quando o modo histórico está desligado (ativar). */
@@ -31,7 +31,7 @@ export function FiltroHistoricoButton({
     <FiltroBarPillButton
       active={active}
       onClick={onClick}
-      icon={<Calendar size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.historico}
       aria-label={active ? ariaLabelActive : ariaLabelInactive}
       style={style}
     >

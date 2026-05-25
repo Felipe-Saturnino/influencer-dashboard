@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Check, Clock, Loader2, Pencil } from "lucide-react";
+import { Archive, Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   fmtDataColunaGerenciamento,
@@ -11,11 +11,13 @@ import {
   labelPoliticaFromSlug,
   registrarHistoricoStatus,
   RH_POSTAGEM_STATUS_LABEL,
+  RH_POSTAGEM_TIPO_UI_LABEL,
   stripHtmlText,
   type RhPostagemContentType,
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -76,14 +78,17 @@ const ERRO_APROVAR =
 const ERRO_ARQUIVAR =
   "Não foi possível arquivar a postagem. Se o problema persistir, contate o suporte.";
 
-const SELECT_FILTRO_GER_STYLE_BASE = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  fontSize: 12,
-  fontFamily: FONT.body,
-  cursor: "pointer",
-  minWidth: 0,
-} as const;
+const POSTAGEM_TIPO_FILTRO_OPCOES = (["comunicado", "politica", "rh_talk"] as const).map((value) => ({
+  value,
+  label: RH_POSTAGEM_TIPO_UI_LABEL[value],
+}));
+
+const POSTAGEM_STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "aprovacao", "arquivado"] as const).map(
+  (value) => ({
+    value,
+    label: RH_POSTAGEM_STATUS_LABEL[value],
+  }),
+);
 
 /** Filtros de tipo e status — renderizados no bloco de filtros da página (linha 3). */
 export function GerenciamentoPostagensFiltrosTipoStatus({
@@ -97,39 +102,28 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
   filtroStatus: "todos" | RhPostagemStatus;
   onFiltroStatusChange: (v: "todos" | RhPostagemStatus) => void;
 }) {
-  const { theme: t } = useApp();
-  const selectStyle = {
-    ...SELECT_FILTRO_GER_STYLE_BASE,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-  } as const;
-
   return (
     <>
-      <select
+      <FiltroBarCampoSelect
+        id="filtro-tipo-postagem-portal-rh"
         value={filtroTipo}
-        onChange={(e) => onFiltroTipoChange(e.target.value as typeof filtroTipo)}
-        aria-label="Filtrar por tipo de postagem"
-        style={selectStyle}
-      >
-        <option value="todos">Todos</option>
-        <option value="comunicado">Comunicados</option>
-        <option value="politica">Políticas e Normativas</option>
-        <option value="rh_talk">RH Talks</option>
-      </select>
-      <select
+        onChange={(v) => onFiltroTipoChange(v as typeof filtroTipo)}
+        options={POSTAGEM_TIPO_FILTRO_OPCOES}
+        icon={<Newspaper size={15} strokeWidth={2} aria-hidden="true" />}
+        ariaLabel="Tipos de postagem"
+        todasValue="todos"
+        todasLabel="Todas Postagens"
+      />
+      <FiltroBarCampoSelect
+        id="filtro-status-postagem-portal-rh"
         value={filtroStatus}
-        onChange={(e) => onFiltroStatusChange(e.target.value as typeof filtroStatus)}
-        aria-label="Filtrar por status da postagem"
-        style={selectStyle}
-      >
-        <option value="todos">Todos</option>
-        <option value="publicado">Publicado</option>
-        <option value="rascunho">Rascunho</option>
-        <option value="aprovacao">Aprovação</option>
-        <option value="arquivado">Arquivado</option>
-      </select>
+        onChange={(v) => onFiltroStatusChange(v as typeof filtroStatus)}
+        options={POSTAGEM_STATUS_FILTRO_OPCOES}
+        icon={FilterBarIcons.status}
+        ariaLabel="Status da postagem"
+        todasValue="todos"
+        todasLabel="Todos Status"
+      />
     </>
   );
 }

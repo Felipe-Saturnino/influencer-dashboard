@@ -1,7 +1,8 @@
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
-import { Briefcase, ClipboardList, ClipboardType, ShieldEllipsis, SlidersHorizontal, Users } from "lucide-react";
+import { Briefcase, ClipboardList, ClipboardType, SlidersHorizontal, Users } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import {
   VAGA_FILTRO_STATUS_ARIA_LABEL,
@@ -23,8 +24,6 @@ import { FiltroBarCampoSelect } from "../../FiltroBarCampoSelect";
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { CtaCriarButton } from "../../CtaCriarButton";
 import type { RhVagasAba } from "../../../types/rhVaga";
-
-const FILTRO_ICON = { size: 15, strokeWidth: 2, "aria-hidden": true as const };
 
 const TAB_BASE: RhVagasAba[] = ["abertas", "em_andamento", "gerenciamento"];
 const TAB_LABELS: Record<RhVagasAba, string> = {
@@ -110,7 +109,7 @@ export function RhVagasFiltroBar({
         value={filtroStatusGestao}
         onChange={(v) => onFiltroStatusGestao(v as VagaFiltroStatusValue)}
         options={VAGA_STATUS_FILTRO_OPCOES}
-        icon={<ShieldEllipsis {...FILTRO_ICON} />}
+        icon={FilterBarIcons.status}
         ariaLabel={VAGA_FILTRO_STATUS_ARIA_LABEL}
         todasValue={VAGA_FILTRO_TODOS_STATUS_VALUE}
         todasLabel={VAGA_FILTRO_TODOS_STATUS_LABEL}
@@ -127,7 +126,7 @@ export function RhVagasFiltroBar({
           value={filtroStatusCandidaturas}
           onChange={(v) => onFiltroStatusCandidaturas(v as VagaFiltroStatusValue)}
           options={VAGA_STATUS_FILTRO_OPCOES}
-          icon={<ShieldEllipsis {...FILTRO_ICON} />}
+          icon={FilterBarIcons.status}
           ariaLabel={VAGA_FILTRO_STATUS_ARIA_LABEL}
           todasValue={VAGA_FILTRO_TODOS_STATUS_VALUE}
           todasLabel={VAGA_FILTRO_TODOS_STATUS_LABEL}
@@ -142,7 +141,7 @@ export function RhVagasFiltroBar({
           value={filtroTipoCandidaturas}
           onChange={(v) => onFiltroTipoCandidaturas(v as VagaFiltroTipoCandidaturasValue)}
           options={VAGA_TIPO_FILTRO_OPCOES}
-          icon={<ClipboardType {...FILTRO_ICON} />}
+          icon={<ClipboardType size={15} strokeWidth={2} aria-hidden="true" />}
           ariaLabel={VAGA_FILTRO_TIPO_ARIA_LABEL}
           todasValue={VAGA_FILTRO_TODOS_TIPOS_VALUE}
           todasLabel={VAGA_FILTRO_TODOS_TIPOS_LABEL}
@@ -157,7 +156,7 @@ export function RhVagasFiltroBar({
           value={vagaIdFiltroCandidaturas}
           onChange={onVagaIdFiltroCandidaturas}
           options={opcoesVagaCandidaturas ?? []}
-          icon={<ClipboardType {...FILTRO_ICON} />}
+          icon={<ClipboardType size={15} strokeWidth={2} aria-hidden="true" />}
           ariaLabel={VAGA_FILTRO_VAGAS_ARIA_LABEL}
           todasValue={VAGA_FILTRO_TODAS_VAGAS_VALUE}
           todasLabel={VAGA_FILTRO_TODAS_VAGAS_LABEL}

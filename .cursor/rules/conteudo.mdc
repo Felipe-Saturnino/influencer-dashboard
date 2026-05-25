@@ -387,7 +387,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
 - **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** (sem filtro de mês).
 - **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
-- **Gerenciamento:** todas as postagens (incl. arquivadas); filtro **Status da postagem**; carrossel e Histórico também em `published_at`.
+- **Gerenciamento:** todas as postagens (incl. arquivadas); carrossel e Histórico também em `published_at`; filtros na linha 3 — tipo (`FiltroBarCampoSelect`, `Newspaper`, agregadora **Todas Postagens**) e status (`FilterBarIcons.status` / `ShieldAlert`, **Todos Status**).
 - **ComunicadoCard:** `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido.
 - **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Tags } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import {
@@ -51,7 +51,7 @@ export function FiltroFigurinosCategoriaSelect({
     <SelectComIcone
       id={id}
       disabled={disabled}
-      icon={<Tags size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.figurinoCategoria}
       label={label}
       value={value}
       onChange={onChange}

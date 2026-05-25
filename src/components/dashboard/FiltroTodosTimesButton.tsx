@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { UsersRound } from "lucide-react";
+import { FilterBarIcons } from "../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "./FiltroBarPillButton";
 
 export interface FiltroTodosTimesButtonProps {
@@ -29,7 +29,7 @@ export function FiltroTodosTimesButton({
     <FiltroBarPillButton
       active={active}
       onClick={onClick}
-      icon={<UsersRound size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.time}
       aria-label={active ? ariaLabelActive : ariaLabelInactive}
       style={style}
     >

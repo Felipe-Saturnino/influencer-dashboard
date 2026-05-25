@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect, useMemo, useId, useCallback, type CSSProperties } from "react";
-import { CalendarRange, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
@@ -127,7 +128,7 @@ export function FiltroModoVisualizacaoSelect({
           ...stateStyle,
         }}
       >
-        <CalendarRange size={15} strokeWidth={2} aria-hidden="true" />
+        {FilterBarIcons.modoVisualizacao}
         {triggerLabel}
         {open ? <ChevronUp size={9} aria-hidden="true" /> : <ChevronDown size={9} aria-hidden="true" />}
       </button>

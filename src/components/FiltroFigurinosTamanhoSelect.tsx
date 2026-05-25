@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Ruler } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import {
@@ -51,7 +51,7 @@ export function FiltroFigurinosTamanhoSelect({
     <SelectComIcone
       id={id}
       disabled={disabled}
-      icon={<Ruler size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.figurinoTamanho}
       label={label}
       value={value}
       onChange={onChange}

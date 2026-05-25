@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { History } from "lucide-react";
+import { FilterBarIcons } from "../../lib/filterBarIconCatalog";
 import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
@@ -54,7 +54,7 @@ export function FiltroHojeButton({
         ...style,
       }}
     >
-      <History size={15} aria-hidden="true" /> Hoje
+      {FilterBarIcons.hoje} Hoje
     </button>
   );
 }

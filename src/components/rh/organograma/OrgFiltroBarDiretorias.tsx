@@ -1,6 +1,7 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
-import { Building2, ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
 import { FONT } from "../../../constants/theme";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
@@ -151,7 +152,7 @@ export function OrgFiltroBarDiretorias({
           <FiltroBarPillButton
             active={todas}
             onClick={toggleTodasDiretorias}
-            icon={<Building2 size={15} strokeWidth={2} aria-hidden="true" />}
+            icon={FilterBarIcons.diretoria}
             aria-label={
               todas ? "Ver uma diretoria de cada vez" : "Ver todas as diretorias de uma vez"
             }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Shield, ShieldAlert, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Shield, Trash2, TriangleAlert } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { FiltroBarCampoSelect, FiltroEntidadeBarSelect, FiltroHistoricoButton } from "../../../components/dashboard";
 import {
@@ -48,8 +49,6 @@ function buildMesesDenuncias(): MesDenunciaEntry[] {
   }
   return out;
 }
-
-const FILTRO_ICON = { size: 15, strokeWidth: 2, "aria-hidden": true as const };
 
 const DENUNCIA_TIPO_FILTRO_ITENS = TIPOS_DENUNCIA.map((item) => ({
   id: item.key,
@@ -263,7 +262,7 @@ export default function CentralDenunciasSpin() {
               selected={filtroTipos}
               onChange={(ids) => setFiltroTipos(ids as TipoDenunciaKey[])}
               items={DENUNCIA_TIPO_FILTRO_ITENS}
-              icon={<TriangleAlert {...FILTRO_ICON} />}
+              icon={<TriangleAlert size={15} strokeWidth={2} aria-hidden="true" />}
               triggerEmptyLabel="Todos Tipos"
               ariaFilterPrefix="Tipos de denúncia"
               listboxAriaLabel="Tipos de denúncia"
@@ -275,7 +274,7 @@ export default function CentralDenunciasSpin() {
               value={filtroStatus}
               onChange={setFiltroStatus}
               options={STATUS_OPTIONS}
-              icon={<ShieldAlert {...FILTRO_ICON} />}
+              icon={FilterBarIcons.status}
               ariaLabel="Status da denúncia"
               todasValue="todos"
               todasLabel="Todos Status"

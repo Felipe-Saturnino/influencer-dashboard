@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Shield } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import { SelectComIcone } from "./dashboard/SelectComIcone";
@@ -72,7 +72,7 @@ export function FiltroOperadoraSelect({
     <SelectComIcone
       id={id}
       disabled={disabled}
-      icon={<Shield size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.operadora}
       label={label}
       value={value}
       onChange={onChange}

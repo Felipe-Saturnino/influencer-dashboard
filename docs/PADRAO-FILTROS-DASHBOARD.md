@@ -28,15 +28,23 @@ Este documento define o padrão visual e de ícones que **toda página** deve se
 
 ## Ícones (obrigatório: Lucide React)
 
-| Controlo | Ícone | Tamanho | Componente |
-|----------|-------|---------|------------|
-| **Histórico** (acumulado) | `Calendar` | 15px | `FiltroHistoricoButton` |
-| **Influencer(s)** | `User` | 15px | `FiltroInfluencerSelect` |
-| **Operadora(s)** | `Shield` | 15px | `FiltroOperadoraSelect` |
-| **Modo Mês / Semana / Dia** | `CalendarRange` | 15px | `FiltroModoVisualizacaoSelect` |
-| **Hoje** (Agenda) | `History` | 15px | `FiltroHojeButton` |
+**Fonte de verdade:** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). Brand MDC §6 tem a tabela completa e exceções de domínio.
 
-**Não usar** `GiCalendar`, `GiShield`, etc. nesta barra.
+| Controlo | Ícone | `FilterBarIcons` | Componente |
+|----------|-------|------------------|------------|
+| **Histórico** (acumulado) | `Calendar` | `.historico` | `FiltroHistoricoButton` |
+| **Influencer(s)** | `User` | `.influencer` | `FiltroInfluencerSelect` |
+| **Operadora(s)** | `Shield` | `.operadora` | `FiltroOperadoraSelect` |
+| **Status** (`<select>`) | **`ShieldAlert`** | `.status` | `FiltroBarCampoSelect` — agregadora **Todos Status** |
+| **Time** | `UsersRound` | `.time` | `FiltroCalendarioTimeSelect`, `FiltroTodosTimesButton` |
+| **Staff** | `IdCard` | `.staff` | `FiltroCalendarioStaffSelect` |
+| **Turno** | `Clock` | `.turno` | `FiltroTurnoSelect` |
+| **Modo Mês / Semana / Dia** | `CalendarRange` | `.modoVisualizacao` | `FiltroModoVisualizacaoSelect` |
+| **Hoje** (Agenda) | `History` | `.hoje` | `FiltroHojeButton` |
+
+**Não usar** `GiCalendar`, `GiShield`, `ListFilter` / `CircleDot` / `ShieldEllipsis` para status em `<select>` na barra.
+
+**Status semântico (chips):** `FiltroStatusSemanticoPill` com bolinha 8px — **não** `ShieldAlert` (Lives, Afiliados, etc.).
 
 ---
 

@@ -1,4 +1,4 @@
-import { IdCard } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { FiltroEntidadeBarSelect, type FiltroEntidadeBarSelectProps } from "./FiltroEntidadeBarSelect";
 
 export type FiltroCalendarioStaffSelectProps = Omit<
@@ -12,7 +12,7 @@ export type FiltroCalendarioStaffSelectProps = Omit<
 export function FiltroCalendarioStaffSelect({ enableSearch = true, ...props }: FiltroCalendarioStaffSelectProps) {
   return (
     <FiltroEntidadeBarSelect
-      icon={<IdCard size={15} strokeWidth={2} aria-hidden="true" />}
+      icon={FilterBarIcons.staff}
       triggerEmptyLabel="Staff"
       ariaFilterPrefix="Filtrar por staff"
       listboxAriaLabel="Selecionar membro do staff"

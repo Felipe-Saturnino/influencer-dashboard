@@ -1,4 +1,4 @@
-import { UsersRound } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { FiltroEntidadeBarSelect, type FiltroEntidadeBarSelectProps } from "./FiltroEntidadeBarSelect";
 
 export type FiltroCalendarioTimeSelectProps = Omit<
@@ -10,7 +10,7 @@ export type FiltroCalendarioTimeSelectProps = Omit<
 export function FiltroCalendarioTimeSelect(props: FiltroCalendarioTimeSelectProps) {
   return (
     <FiltroEntidadeBarSelect
-      icon={<UsersRound size={15} strokeWidth={2} aria-hidden="true" />}
+      icon={FilterBarIcons.time}
       triggerEmptyLabel="Time"
       ariaFilterPrefix="Filtrar por time"
       listboxAriaLabel="Selecionar time"

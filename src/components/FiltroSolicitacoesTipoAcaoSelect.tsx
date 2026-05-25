@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ListChecks } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import {
@@ -42,7 +42,7 @@ export function FiltroSolicitacoesTipoAcaoSelect({
     <SelectComIcone
       id={id}
       disabled={disabled}
-      icon={<ListChecks size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.acaoSolicitacao}
       label={ESCALA_ACAO_FILTRO_ARIA_LABEL}
       value={value}
       onChange={(v) => onChange(v as EscalaAcaoFiltro)}

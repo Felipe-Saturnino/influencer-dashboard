@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useMemo, useId, useCallback, type CSSProperties } from "react";
-import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
@@ -256,7 +257,7 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
           ...activeStyle,
         }}
       >
-        <User size={15} strokeWidth={2} aria-hidden="true" />
+        {FilterBarIcons.influencer}
         {triggerLabel}
         {open ? <ChevronUp size={9} aria-hidden="true" /> : <ChevronDown size={9} aria-hidden="true" />}
       </button>

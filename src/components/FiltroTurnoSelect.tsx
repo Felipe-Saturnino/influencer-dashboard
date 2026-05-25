@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Clock } from "lucide-react";
+import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { getFiltroCampoAtivoStyle } from "../lib/filterBarStyles";
 import {
@@ -55,7 +55,7 @@ export function FiltroTurnoSelect({
     <SelectComIcone
       id={id}
       disabled={disabled}
-      icon={<Clock size={15} aria-hidden="true" />}
+      icon={FilterBarIcons.turno}
       label={label}
       value={value}
       onChange={onChange}
