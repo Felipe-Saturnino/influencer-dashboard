@@ -76,6 +76,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Marketplace (`escala_marketplace_turnos`)
 
 - Turnos disponíveis / candidaturas.
+- **Barra de filtros:** linha 1 — carrossel + **`FiltroHistoricoButton`** + **`FiltroSolicitacoesTipoAcaoSelect`** (+ **`FiltroCalendarioTimeSelect`** em «Todas as Ofertas»); em «Minhas Ofertas» o CTA **Ofertar** na mesma linha (`marginLeft: auto`). Linha 2 — tablist «Todas as Ofertas» / «Minhas Ofertas». Período por `dataOfertaIso`; Histórico = todo o período.
 - **Handoff:** fluxo marketplace, permissões prestador.
 
 ---

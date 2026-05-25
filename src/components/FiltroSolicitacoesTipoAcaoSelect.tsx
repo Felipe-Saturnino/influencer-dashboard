@@ -9,9 +9,13 @@ import {
 } from "../lib/escalaTurnosUiConstants";
 import { SelectComIcone } from "./dashboard/SelectComIcone";
 
+export type FiltroTipoAcaoOpcao = { value: EscalaAcaoFiltro; label: string };
+
 export interface FiltroSolicitacoesTipoAcaoSelectProps {
   value: EscalaAcaoFiltro;
   onChange: (value: EscalaAcaoFiltro) => void;
+  /** Lista de opções; default `ESCALA_ACAO_TIPO_OPCOES_TODAS` (Marketplace «Minhas» pode passar `ESCALA_ACAO_TIPO_OPCOES_MINHAS`). */
+  opcoes?: readonly FiltroTipoAcaoOpcao[];
   minWidth?: number;
   disabled?: boolean;
   style?: CSSProperties;
@@ -24,6 +28,7 @@ export interface FiltroSolicitacoesTipoAcaoSelectProps {
 export function FiltroSolicitacoesTipoAcaoSelect({
   value,
   onChange,
+  opcoes = ESCALA_ACAO_TIPO_OPCOES_TODAS,
   minWidth = 200,
   disabled = false,
   style,
@@ -45,7 +50,7 @@ export function FiltroSolicitacoesTipoAcaoSelect({
       minWidth={minWidth}
       style={{ ...filteredStyle, ...style }}
     >
-      {ESCALA_ACAO_TIPO_OPCOES_TODAS.map((o) => (
+      {opcoes.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
