@@ -264,16 +264,16 @@ export default function CanalDenunciasSpinPage() {
         onClick={() => setAba(id)}
         style={{
           padding: "12px 18px",
-          borderRadius: ativo ? "12px 12px 0 0" : 10,
+          borderRadius: 10,
           border: `1px solid ${ativo ? "rgba(124,58,237,0.45)" : "rgba(255,255,255,0.12)"}`,
-          borderBottom: ativo ? "none" : undefined,
-          background: ativo ? "rgba(20,12,40,0.95)" : "rgba(0,0,0,0.2)",
-          color: ativo ? "#fff" : "#c4b5d4",
+          background: ativo
+            ? `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`
+            : "rgba(255,255,255,0.95)",
+          color: ativo ? "#fff" : "#1a1028",
           fontWeight: 700,
           fontSize: 13,
           fontFamily: FONT.body,
           cursor: "pointer",
-          marginBottom: ativo ? -1 : 0,
         }}
       >
         {label}
@@ -361,7 +361,11 @@ export default function CanalDenunciasSpinPage() {
           ))}
         </div>
 
-        <div role="tablist" aria-label="Formulário do canal de denúncias" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div
+          role="tablist"
+          aria-label="Formulário do canal de denúncias"
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
+        >
           {tabBtn("denunciar", "Realizar denúncia")}
           {tabBtn("consultar", "Consultar denúncia")}
         </div>
@@ -373,7 +377,7 @@ export default function CanalDenunciasSpinPage() {
             aria-labelledby="tab-canal-denunciar"
             style={{
               border: "1px solid rgba(124,58,237,0.35)",
-              borderRadius: "0 16px 16px 16px",
+              borderRadius: 16,
               padding: "clamp(18px, 4vw, 28px)",
               background: "rgba(15,15,26,0.88)",
             }}
@@ -608,7 +612,7 @@ export default function CanalDenunciasSpinPage() {
             aria-labelledby="tab-canal-consultar"
             style={{
               border: "1px solid rgba(124,58,237,0.35)",
-              borderRadius: "0 16px 16px 16px",
+              borderRadius: 16,
               padding: "clamp(18px, 4vw, 28px)",
               background: "rgba(15,15,26,0.88)",
             }}
