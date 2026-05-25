@@ -24,6 +24,11 @@ export {
   HISTORICO_FILTRO_ARIA_LABEL_INACTIVE,
   type FiltroHistoricoButtonProps,
 } from "./FiltroHistoricoButton";
+export { FiltroBarPillButton, type FiltroBarPillButtonProps } from "./FiltroBarPillButton";
+export {
+  FiltroTodosTimesButton,
+  type FiltroTodosTimesButtonProps,
+} from "./FiltroTodosTimesButton";
 export {
   FiltroHojeButton,
   HOJE_FILTRO_ARIA_LABEL,

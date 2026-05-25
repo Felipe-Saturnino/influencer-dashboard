@@ -6,6 +6,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import {
   isGamePresenterTimeNome,
@@ -35,6 +36,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import {
   FiltroOperadoraSelect,
+  FiltroTodosTimesButton,
   FiltroTurnoSelect,
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,
 } from "../../../components/dashboard";
@@ -787,7 +789,7 @@ export default function RhGestaoStaffPage() {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={getFilterBarRowStyle()}>
             <button
               type="button"
               onClick={() => setIdxTime((i) => Math.max(0, i - 1))}
@@ -818,36 +820,13 @@ export default function RhGestaoStaffPage() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button
-              type="button"
-              aria-label={todosTimes ? "Filtrar por um time" : "Ver todos os times"}
-              aria-pressed={todosTimes}
+            <FiltroTodosTimesButton
+              active={todosTimes}
               onClick={() => {
                 setTodosTimes((v) => !v);
                 setIdxTime(0);
               }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-                minHeight: 44,
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                border: todosTimes ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: todosTimes
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                  : "transparent",
-                color: todosTimes ? brand.accent : t.textMuted,
-                fontWeight: todosTimes ? 700 : 400,
-              }}
-            >
-              Todos os Times
-            </button>
+            />
 
             {loadingTimes ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>

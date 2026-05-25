@@ -1,13 +1,6 @@
 import type { CSSProperties } from "react";
 import { Calendar } from "lucide-react";
-import { FONT } from "../../constants/theme";
-import { useApp } from "../../context/AppContext";
-import { useDashboardBrand } from "../../hooks/useDashboardBrand";
-import {
-  FILTRO_BAR_PILL_GAP,
-  FILTRO_BAR_PILL_PADDING,
-  getFiltroBarPillStateStyle,
-} from "../../lib/filterBarStyles";
+import { FiltroBarPillButton } from "./FiltroBarPillButton";
 
 /** aria-label quando o modo histórico está desligado (ativar). */
 export const HISTORICO_FILTRO_ARIA_LABEL_INACTIVE =
@@ -34,33 +27,15 @@ export function FiltroHistoricoButton({
   ariaLabelInactive = HISTORICO_FILTRO_ARIA_LABEL_INACTIVE,
   style,
 }: FiltroHistoricoButtonProps) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const stateStyle = getFiltroBarPillStateStyle(t, brand, active);
-
   return (
-    <button
-      type="button"
-      aria-label={active ? ariaLabelActive : ariaLabelInactive}
-      aria-pressed={active}
+    <FiltroBarPillButton
+      active={active}
       onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: FILTRO_BAR_PILL_GAP,
-        padding: FILTRO_BAR_PILL_PADDING,
-        borderRadius: 999,
-        cursor: "pointer",
-        fontFamily: FONT.body,
-        fontSize: 13,
-        lineHeight: 1.25,
-        whiteSpace: "nowrap",
-        transition: "all 0.15s",
-        ...stateStyle,
-        ...style,
-      }}
+      icon={<Calendar size={15} aria-hidden="true" />}
+      aria-label={active ? ariaLabelActive : ariaLabelInactive}
+      style={style}
     >
-      <Calendar size={15} aria-hidden="true" /> Histórico
-    </button>
+      Histórico
+    </FiltroBarPillButton>
   );
 }
