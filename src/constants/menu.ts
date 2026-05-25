@@ -146,6 +146,7 @@ export const MENU: MenuSection[] = [
       { key: "links_materiais", label: "Links e Materiais", icon: GiShare },
       { key: "spin_na_rede", label: "Spin na Rede", icon: IconSpinNaRedeMenu },
       { key: "rh_portal", label: "Portal de RH", icon: GiNewspaper },
+      { key: "informativos", label: "Informativos", icon: GiRingingBell },
     ],
   },
   {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
-import { Bold, Italic, List, Underline } from "lucide-react";
+import { Bold, Italic, Link2, List, Underline } from "lucide-react";
 import { FONT } from "../../constants/theme";
 
 type ThemePick = {
@@ -41,6 +41,14 @@ export function EditorTextoFormatado({
     sync();
   };
 
+  const inserirLink = () => {
+    const url = window.prompt("URL do link (https://…)");
+    if (!url?.trim()) return;
+    const trimmed = url.trim();
+    const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    exec("createLink", href);
+  };
+
   const btnTool = (label: string, onClick: () => void, icon: ReactNode) => (
     <button
       type="button"
@@ -72,6 +80,7 @@ export function EditorTextoFormatado({
         {btnTool("Negrito", () => exec("bold"), <Bold size={14} aria-hidden />)}
         {btnTool("Itálico", () => exec("italic"), <Italic size={14} aria-hidden />)}
         {btnTool("Sublinhado", () => exec("underline"), <Underline size={14} aria-hidden />)}
+        {btnTool("Hiperlink", inserirLink, <Link2 size={14} aria-hidden />)}
         {btnTool("Lista com marcadores", () => exec("insertUnorderedList"), <List size={14} aria-hidden />)}
       </div>
       <div

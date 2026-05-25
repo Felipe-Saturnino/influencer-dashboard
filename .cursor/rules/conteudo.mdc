@@ -46,6 +46,7 @@ Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.
 | `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
 | `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
 | `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
+| `informativos` | Informativos | Comunicados e avisos para a Home de cada Perfil. | **Família B** · abas Informativos + Gerenciamento de Informativos (esta só com `canEditarOk`) · CTA **`Novo Informativo`** |
 
 ```tsx
 // Família A — ícone + h1 + subtítulo
@@ -376,6 +377,16 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Link externo: `var(--brand-primary, #7c3aed)` — não `brand.accent`; `target="_blank"` + `rel="noopener noreferrer"`.
 - Miniatura: `<a tabIndex={-1} aria-hidden>` quando o link de texto cobre o mesmo destino; `<img width={160} height={90} alt="" />` decorativa.
 - Erro: `role="alert"`; mensagem fixa ao usuário.
+
+### Informativos (`src/pages/conteudo/Informativos/`)
+
+- **Header:** `PageHeader` — título **Informativos**, subtítulo canónico acima.
+- **`useDashboardBrand()`** + `ctaGradientInformativos` em `src/lib/informativosUi.ts`.
+- **Abas:** `FiltroBarTabButton` — Informativos | Gerenciamento de Informativos (gerenciamento só com `canEditarOk`).
+- **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do utilizador.
+- **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; excluir com `canExcluirOk` (dois cliques).
+- **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); Publicar grava `published_at` / `published_by`.
+- **Sem** categorias, fixado nem marcar como lido.
 
 ### Portal de RH (`src/pages/conteudo/PortalRh/`)
 

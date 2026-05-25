@@ -37,6 +37,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "escala_solicitacoes",
   "rh_central_denuncias",
   "rh_portal",
+  "informativos",
   "configuracoes", "ajuda",
 ];
 

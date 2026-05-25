@@ -588,6 +588,30 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       },
     ],
   },
+  informativos: {
+    titulo: "Informativos",
+    blocos: [
+      {
+        texto:
+          "A página Informativos permite criar avisos direcionados a um ou mais perfis da plataforma. O conteúdo publicado é exibido na Home dos utilizadores cujo perfil foi selecionado na postagem.",
+      },
+      {
+        subtitulo: "Aba Informativos",
+        texto:
+          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (todo o período) e busca por palavras-chave no assunto ou na descrição.",
+      },
+      {
+        subtitulo: "Gerenciamento de Informativos",
+        texto:
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Ver, criar, editar e excluir são configurados em Gestão de Usuários para a página Informativos. Sem permissão de visualização, a página não aparece no menu.",
+      },
+    ],
+  },
   rh_portal: {
     titulo: "Portal de RH",
     blocos: [
@@ -1503,6 +1527,21 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "O link 'Ir para a matéria' não abre nada?",
         texto:
           "Verifique se o seu navegador está bloqueando popups ou novas abas desta página. Procure um ícone na barra de endereço indicando popup bloqueado e permita para este site. Se o link continuar sem resposta, a matéria original pode ter sido removida ou o URL alterado.",
+      },
+    ],
+  },
+  informativos: {
+    titulo: "Informativos",
+    blocos: [
+      {
+        subtitulo: "Não vejo a aba Gerenciamento de Informativos?",
+        texto:
+          "A aba só aparece para utilizadores com permissão de Editar em Informativos na Gestão de Usuários. Peça ao administrador para liberar Ver e Editar (e Criar/Excluir, se necessário).",
+      },
+      {
+        subtitulo: "Publiquei um informativo mas não aparece na Home?",
+        texto:
+          "Confirme que o status está Publicado e que o perfil do utilizador foi marcado no campo Perfil ao criar o informativo. A integração na Home depende do perfil logado corresponder a um dos perfis selecionados.",
       },
     ],
   },
