@@ -2555,7 +2555,7 @@ export default function RhPrestadoresPage() {
               icon={<FileSignature {...FILTRO_ICON} />}
               ariaLabel="Tipos de contrato"
               todasValue="todos"
-              todasLabel="Todos Contrato"
+              todasLabel="Todos Contratos"
             />
             <FiltroBarCampoSelect
               id="rh-func-status"
