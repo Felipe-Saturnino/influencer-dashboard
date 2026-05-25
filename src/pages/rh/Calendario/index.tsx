@@ -39,8 +39,15 @@ import {
   formatarHoraInicioOperadora,
   labelHorarioTurnoStaffPorValor,
 } from "../../../lib/rhStaffHorarioTurno";
-import { DashboardPageHeader } from "../../../components/dashboard";
-import FiltroEntidadeMultiSelect from "../../../components/FiltroEntidadeMultiSelect";
+import {
+  CtaCriarButton,
+  DashboardPageHeader,
+  FiltroCalendarioStaffSelect,
+  FiltroCalendarioTimeSelect,
+  FiltroMeuCalendarioButton,
+} from "../../../components/dashboard";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -1566,7 +1573,8 @@ export default function RhCalendarioPage() {
 
   const mostrarBotaoPontoCalendario =
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
-  const labelBotaoPonto = pontoEstado?.proximoTipo === "check_out" ? "Check-out" : "Check-in";
+  const labelBotaoPonto =
+    pontoEstado?.proximoTipo === "check_out" ? "Fazer Check-out" : "Fazer Check-in";
   const pontoBotaoHabilitado =
     mostrarBotaoPontoCalendario &&
     !pontoEstadoLoading &&
@@ -1708,16 +1716,7 @@ export default function RhCalendarioPage() {
                 width: "100%",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 18,
-                  flex: "1 1 280px",
-                  justifyContent: "center",
-                }}
-              >
+              <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
                 <button
                   type="button"
                   onClick={prev}
@@ -1790,33 +1789,9 @@ export default function RhCalendarioPage() {
                   <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
                 ) : (
                   <>
-                    {showTimeFilter ? (
-                      <FiltroEntidadeMultiSelect
-                        selected={compFilterTimeIds}
-                        onChange={setCompFilterTimeIds}
-                        items={timeMultiselectItems}
-                        t={t}
-                        triggerEmptyLabel="Time"
-                        ariaFilterPrefix="Filtrar por time"
-                        listboxAriaLabel="Selecionar time"
-                      />
-                    ) : null}
-                    {showStaffFilter ? (
-                      <FiltroEntidadeMultiSelect
-                        selected={compFilterStaffIds}
-                        onChange={setCompFilterStaffIds}
-                        items={staffMultiselectItems}
-                        t={t}
-                        triggerEmptyLabel="Staff"
-                        ariaFilterPrefix="Filtrar por staff"
-                        listboxAriaLabel="Selecionar membro do staff"
-                        enableSearch
-                      />
-                    ) : null}
                     {mostrarBotaoMeuCalendario ? (
-                      <button
-                        type="button"
-                        aria-pressed={calendarioSoMeuAtivo}
+                      <FiltroMeuCalendarioButton
+                        active={calendarioSoMeuAtivo}
                         onClick={() => {
                           if (calendarioSoMeuAtivo) {
                             setCompFilterStaffIds([]);
@@ -1825,30 +1800,21 @@ export default function RhCalendarioPage() {
                             setCompFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
                           }
                         }}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 20,
-                          border: `1.5px solid ${calendarioSoMeuAtivo ? brand.accent : t.cardBorder}`,
-                          background: calendarioSoMeuAtivo
-                            ? brand.accent.startsWith("var(")
-                              ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                              : `${String(brand.accent)}22`
-                            : t.inputBg,
-                          color: calendarioSoMeuAtivo ? brand.accent : t.textMuted,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          fontFamily: FONT.body,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                        aria-label={
-                          calendarioSoMeuAtivo
-                            ? "Mostrar calendário geral de todos os prestadores"
-                            : "Filtrar calendário apenas para o meu registo de prestador"
-                        }
-                      >
-                        Meu Calendário
-                      </button>
+                      />
+                    ) : null}
+                    {showTimeFilter ? (
+                      <FiltroCalendarioTimeSelect
+                        selected={compFilterTimeIds}
+                        onChange={setCompFilterTimeIds}
+                        items={timeMultiselectItems}
+                      />
+                    ) : null}
+                    {showStaffFilter ? (
+                      <FiltroCalendarioStaffSelect
+                        selected={compFilterStaffIds}
+                        onChange={setCompFilterStaffIds}
+                        items={staffMultiselectItems}
+                      />
                     ) : null}
                   </>
                 )}
@@ -1856,27 +1822,9 @@ export default function RhCalendarioPage() {
 
               <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
                 {solicitanteAgendarId ? (
-                  <button
-                    type="button"
-                    onClick={() => setModalAgendarAberto(true)}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 999,
-                      border: `1px solid ${brand.accent}`,
-                      background: brand.accent.startsWith("var(")
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
-                        : `${String(brand.accent)}18`,
-                      color: brand.accent,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      lineHeight: 1,
-                    }}
-                    aria-label="Agendar reunião"
-                  >
-                    Agendar
-                  </button>
+                  <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
+                    Nova Agenda
+                  </CtaCriarButton>
                 ) : null}
               </div>
             </div>
@@ -1983,16 +1931,7 @@ export default function RhCalendarioPage() {
                 width: "100%",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 18,
-                  flex: "1 1 280px",
-                  justifyContent: "center",
-                }}
-              >
+              <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
                 <button
                   type="button"
                   onClick={prev}
@@ -2045,26 +1984,17 @@ export default function RhCalendarioPage() {
                 ) : (
                   <>
                     {showTimeFilterPresenca ? (
-                      <FiltroEntidadeMultiSelect
+                      <FiltroCalendarioTimeSelect
                         selected={presencaFilterTimeIds}
                         onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
                         items={timeMultiselectItems}
-                        t={t}
-                        triggerEmptyLabel="Time"
-                        ariaFilterPrefix="Filtrar por time"
-                        listboxAriaLabel="Selecionar time"
                       />
                     ) : null}
                     {showStaffFilterPresenca ? (
-                      <FiltroEntidadeMultiSelect
+                      <FiltroCalendarioStaffSelect
                         selected={presencaFilterStaffIds}
                         onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
                         items={staffPresencaMultiselectItems}
-                        t={t}
-                        triggerEmptyLabel="Staff"
-                        ariaFilterPrefix="Filtrar por staff"
-                        listboxAriaLabel="Selecionar membro do staff"
-                        enableSearch
                       />
                     ) : null}
                     {mostrarBotaoMeuControle ? (
@@ -2114,37 +2044,28 @@ export default function RhCalendarioPage() {
                   <button
                     type="button"
                     onClick={() => void onPrestadorPontoRegistrar()}
-                    disabled={!pontoBotaoHabilitado}
+                    disabled={!pontoBotaoHabilitado || pontoEstadoLoading || pontoSubmitting}
                     title={pontoBotaoTitle}
-                    style={{
-                      padding: "8px 18px",
-                      borderRadius: 999,
-                      border: `1px solid ${brand.accent}`,
-                      background: pontoBotaoHabilitado
-                        ? brand.accent.startsWith("var(")
-                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 22%, transparent)"
-                          : `${String(brand.accent)}28`
-                        : t.cardBorder,
-                      color: pontoBotaoHabilitado ? brand.accent : t.textMuted,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      cursor: pontoBotaoHabilitado ? "pointer" : "not-allowed",
-                      lineHeight: 1,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      opacity: pontoBotaoHabilitado ? 1 : 0.72,
-                    }}
                     aria-label={labelBotaoPonto}
+                    style={getCtaCriarButtonStyle(
+                      brand,
+                      {
+                        cursor:
+                          pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting
+                            ? "pointer"
+                            : "not-allowed",
+                        opacity:
+                          pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting ? 1 : 0.75,
+                        color: pontoBotaoHabilitado ? "#fff" : t.textMuted,
+                      },
+                      {
+                        disabled: !pontoBotaoHabilitado,
+                        disabledBackground: t.inputBg,
+                      },
+                    )}
                   >
                     {(pontoEstadoLoading || pontoSubmitting) && (
-                      <Loader2
-                        size={14}
-                        className="app-lucide-spin"
-                        aria-hidden="true"
-                        color={pontoBotaoHabilitado ? "#fff" : "var(--brand-primary, #7c3aed)"}
-                      />
+                      <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden="true" />
                     )}
                     {labelBotaoPonto}
                   </button>

@@ -30,6 +30,23 @@ export {
   type FiltroTodosTimesButtonProps,
 } from "./FiltroTodosTimesButton";
 export {
+  FiltroEntidadeBarSelect,
+  type FiltroEntidadeBarSelectProps,
+  type FiltroEntidadeBarOption,
+} from "../FiltroEntidadeBarSelect";
+export {
+  FiltroCalendarioTimeSelect,
+  type FiltroCalendarioTimeSelectProps,
+} from "../FiltroCalendarioTimeSelect";
+export {
+  FiltroCalendarioStaffSelect,
+  type FiltroCalendarioStaffSelectProps,
+} from "../FiltroCalendarioStaffSelect";
+export {
+  FiltroMeuCalendarioButton,
+  type FiltroMeuCalendarioButtonProps,
+} from "../FiltroMeuCalendarioButton";
+export {
   FiltroHojeButton,
   HOJE_FILTRO_ARIA_LABEL,
   type FiltroHojeButtonProps,
