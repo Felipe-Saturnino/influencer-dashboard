@@ -1,5 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
 import { Building2, ChevronLeft, ChevronRight, LayoutList, Loader2, Network } from "lucide-react";
+import { FONT } from "../../../constants/theme";
 import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
