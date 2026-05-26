@@ -11,18 +11,13 @@ import { Pencil, AlertCircle, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
-import {
-  PAGE_CONTENT_BOX_GAP,
-  getPageContentBoxShellStyle,
-  getPageKpiSectionGapStyle,
-} from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -95,6 +90,8 @@ export default function Campanhas() {
   const th = getThStyle(t);
   const td = getTdStyle(t);
   const mostrarColunaAcoes = perm.canEditarOk || perm.canExcluirOk;
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const contentBox = getPageContentBoxStyle(brand, t, { overflow: "hidden" });
 
   const confirmarExcluirCampanha = async () => {
     if (!campanhaParaExcluir?.id) return;
@@ -134,40 +131,43 @@ export default function Campanhas() {
         subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 
-      <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
+      <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
         {[
-          { label: "Total", valor: campanhas.length, cor: brand.accent },
-          { label: "Ativas", valor: ativas, cor: "#059669" },
-          { label: "Inativas", valor: campanhas.length - ativas, cor: COR.cinza },
+          { label: "TOTAL", valor: campanhas.length, cor: "var(--brand-primary, #7c3aed)" },
+          { label: "ATIVAS", valor: ativas, cor: "#22c55e" },
+          { label: "INATIVAS", valor: campanhas.length - ativas, cor: COR.cinza },
         ].map((c) => (
           <div
             key={c.label}
+            aria-label={`${c.label}: ${c.valor}`}
             style={{
-              ...getPageContentBoxShellStyle(brand, t),
-              borderTop: `3px solid ${c.cor}`,
-              padding: "16px 20px",
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${c.cor}`,
+              background: brand.blockBg,
+              padding: "16px 18px",
+              boxShadow: cardShadow,
             }}
           >
             <div
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: "1.4px",
-                textTransform: "uppercase",
                 color: t.textMuted,
                 fontFamily: FONT.body,
-                marginBottom: 6,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
               }}
             >
               {c.label}
             </div>
             <div
               style={{
-                fontSize: 28,
-                fontWeight: 900,
+                fontSize: 26,
+                fontWeight: 800,
                 color: c.cor,
                 fontFamily: FONT_TITLE,
-                lineHeight: 1,
+                marginTop: 6,
               }}
             >
               {c.valor}
@@ -176,19 +176,19 @@ export default function Campanhas() {
         ))}
       </div>
 
-      <div style={getPageContentBoxShellStyle(brand, t, { overflow: "hidden", marginBottom: PAGE_CONTENT_BOX_GAP })}>
-        <div style={{ padding: "16px 20px 0" }}>
-          <BlocoLabel label="Campanhas cadastradas" />
-        </div>
-        {perm.canCriarOk && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              padding: "12px 20px 16px",
-            }}
-          >
+      <div style={contentBox}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Campanhas cadastradas</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -198,8 +198,8 @@ export default function Campanhas() {
             >
               Nova Campanha
             </CtaCriarButton>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {loading ? (
           <div
@@ -208,7 +208,7 @@ export default function Campanhas() {
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
-              padding: "40px 20px",
+              padding: "40px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
             }}
@@ -219,7 +219,7 @@ export default function Campanhas() {
         ) : campanhas.length === 0 ? (
           <div
             style={{
-              padding: "48px 20px",
+              padding: "48px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
               textAlign: "center",

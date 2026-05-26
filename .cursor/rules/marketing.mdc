@@ -41,7 +41,8 @@ Perfis: Gestor (operação interna).
 ## Campanhas (`campanhas`)
 
 - Sem FilterBar de período/operadora.
-- KPI cards: `borderTop: 3px solid` (não `borderLeft`); sombra Global.
+- **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — layout igual Financeiro/Banca de Jogo (`borderLeft` 3px, rótulo em caixa alta acima: **TOTAL**, **ATIVAS**, **INATIVAS**; `brand.blockBg`; sem caixa pai).
+- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`.
 - Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
 - `autoFocus` em modal: ref + `setTimeout(100)`.
 - Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
