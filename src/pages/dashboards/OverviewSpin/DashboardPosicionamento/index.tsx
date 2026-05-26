@@ -34,6 +34,11 @@ import {
   SEMANTIC,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
+import {
+  getOverviewSpinBoxRadius,
+  getOverviewSpinBoxShellStyle,
+  getOverviewSpinContentBoxStyle,
+} from "../overviewSpinBoxStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -76,9 +81,7 @@ function KpiPosCard({
   return (
     <div
       style={{
-        borderRadius: 14,
-        border: `1px solid ${t.cardBorder}`,
-        background: brand.blockBg,
+        ...getOverviewSpinBoxShellStyle(brand, t),
         overflow: "hidden",
       }}
     >
@@ -701,7 +704,7 @@ function DashboardPosicionamentoOperadora({
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              borderRadius: 14,
+              borderRadius: getOverviewSpinBoxRadius(t.isDark),
               fontFamily: FONT.body,
               fontSize: 12,
             }}
@@ -828,7 +831,7 @@ function DashboardPosicionamentoOperadora({
                 width: "100%",
                 borderCollapse: "separate",
                 borderSpacing: 0,
-                borderRadius: 14,
+                borderRadius: getOverviewSpinBoxRadius(t.isDark),
                 overflow: "hidden",
                 fontFamily: FONT.body,
                 fontSize: 12,
@@ -889,14 +892,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate, slugTo
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
-  const card: CSSProperties = {
-    borderRadius: 18,
-    border: `1px solid ${t.cardBorder}`,
-    background: brand.blockBg,
-    padding: 20,
-    marginBottom: 14,
-    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card: CSSProperties = getOverviewSpinContentBoxStyle(brand, t);
 
   const resolveNome = slugToNome ?? ((slug: string) => slug);
 

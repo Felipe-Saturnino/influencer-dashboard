@@ -11,6 +11,11 @@ import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
+import {
+  getOverviewSpinBoxRadius,
+  getOverviewSpinContentBoxStyle,
+  getOverviewSpinFilterBoxStyle,
+} from "./overviewSpinBoxStyles";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -1334,7 +1339,7 @@ function mergeMonthlyUapArpuAgregadoTodas(
 }
 
 export default function OverviewSpin() {
-  const { theme: t, isDark, escoposVisiveis } = useApp();
+  const { theme: t, escoposVisiveis } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
@@ -2243,13 +2248,7 @@ export default function OverviewSpin() {
     textAlign: "center",
   };
 
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const contentBox = getOverviewSpinContentBoxStyle(brand, t);
 
   const thStyle = brand.useBrand
     ? getThStyleBrandAction(t, { verticalAlign: "middle" })
@@ -3078,7 +3077,10 @@ export default function OverviewSpin() {
       </div>
 
       {modoVisualizacao === "tabela" ? (
-        <div className="app-table-wrap" style={{ borderRadius: 14, overflow: "hidden" }}>
+        <div
+          className="app-table-wrap"
+          style={{ borderRadius: getOverviewSpinBoxRadius(t.isDark), overflow: "hidden" }}
+        >
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
@@ -3473,15 +3475,7 @@ export default function OverviewSpin() {
         t={t}
       />
 
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getOverviewSpinFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -3576,13 +3570,12 @@ export default function OverviewSpin() {
               );
             })}
           </div>
-        </div>
       </div>
 
       <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
       {aba === "overview" && (
       <>
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={contentBox}>
           <SectionTitle
             icon={<BarChart2 size={15} aria-hidden />}
             sub={
@@ -3784,7 +3777,7 @@ export default function OverviewSpin() {
           )}
         </div>
 
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={contentBox}>
         <SectionTitle icon={<CalendarDays size={15} aria-hidden />} sub={historico ? "mês a mês" : "dia a dia"}>
           {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
         </SectionTitle>
@@ -3817,7 +3810,7 @@ export default function OverviewSpin() {
         <>
           {loading ? (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
@@ -3838,7 +3831,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -3857,7 +3850,7 @@ export default function OverviewSpin() {
                       <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
@@ -3881,7 +3874,7 @@ export default function OverviewSpin() {
             </>
           ) : porTabelaRows.length === 0 ? (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
@@ -3891,7 +3884,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -3901,7 +3894,7 @@ export default function OverviewSpin() {
                       {MSG_SEM_DADOS_FILTRO}
                     </div>
                   </div>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
@@ -3916,7 +3909,7 @@ export default function OverviewSpin() {
             </>
           ) : (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
@@ -3931,7 +3924,7 @@ export default function OverviewSpin() {
 
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -4056,7 +4049,7 @@ export default function OverviewSpin() {
                 )}
               </div>
 
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                   Dados por mesa
                 </SectionTitle>
@@ -4102,7 +4095,7 @@ export default function OverviewSpin() {
         <>
           {loading ? (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
@@ -4123,7 +4116,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -4142,7 +4135,7 @@ export default function OverviewSpin() {
                       <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
@@ -4166,7 +4159,7 @@ export default function OverviewSpin() {
             </>
           ) : porTabelaHistAll.length === 0 ? (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
@@ -4176,7 +4169,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -4186,7 +4179,7 @@ export default function OverviewSpin() {
                       {MSG_SEM_DADOS_FILTRO}
                     </div>
                   </div>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
@@ -4201,7 +4194,7 @@ export default function OverviewSpin() {
             </>
           ) : (
             <>
-              <div style={{ ...card, marginBottom: 14 }}>
+              <div style={contentBox}>
                 <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
@@ -4216,7 +4209,7 @@ export default function OverviewSpin() {
 
               {!modoAgregadoTodasOperadoras && (
                 <>
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
@@ -4343,7 +4336,7 @@ export default function OverviewSpin() {
                     )}
                   </div>
 
-                  <div style={{ ...card, marginBottom: 14 }}>
+                  <div style={contentBox}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
