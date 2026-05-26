@@ -1007,6 +1007,7 @@ interface BlocoFiltros {
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
 
@@ -1089,84 +1090,75 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   }, [carregar]);
 
   const kpiSkeletonStyle: React.CSSProperties = {
-    height: 32,
+    height: 28,
     width: "65%",
     borderRadius: 8,
     background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-    marginBottom: 6,
   };
 
-  const innerCard = (accent: string): React.CSSProperties => ({
-    background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)",
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: "12px",
-    padding: "20px 22px",
-    borderTop: `3px solid ${accent}`,
-    flex: 1,
-    minWidth: "180px",
-  });
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const kpis = [
+    {
+      label: "R$ PAGO",
+      color: "var(--brand-primary, #7c3aed)",
+      display: loading ? null : fmtBRL(totalPago),
+    },
+    {
+      label: "R$ PENDENTE",
+      color: "#f59e0b",
+      display: loading ? null : fmtBRL(pendente),
+    },
+    {
+      label: "HORAS REALIZADAS",
+      color: "#22c55e",
+      display: loading ? null : fmtHorasTotal(horas),
+    },
+  ] as const;
 
   return (
-    <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), gap: "12px" }}>
-        <div style={innerCard("var(--brand-primary, #7c3aed)")}>
+    <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+      {kpis.map((k) => (
+        <div
+          key={k.label}
+          aria-label={k.display ? `${k.label}: ${k.display}` : k.label}
+          style={{
+            borderRadius: 14,
+            border: `1px solid ${t.cardBorder}`,
+            borderLeft: `3px solid ${k.color}`,
+            background: brand.blockBg,
+            padding: "16px 18px",
+            boxShadow: cardShadow,
+          }}
+        >
           <div
             style={{
-              fontFamily: FONT_TITLE,
-              fontSize: "26px",
-              fontWeight: 900,
-              color: "var(--brand-primary, #7c3aed)",
-              lineHeight: 1,
-              marginBottom: "6px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minHeight: 32,
+              fontSize: 11,
+              fontWeight: 700,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
             }}
           >
-            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtBRL(totalPago)}
+            {k.label}
           </div>
-          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total pago</div>
-        </div>
-
-        <div style={innerCard("#f59e0b")}>
           <div
             style={{
+              fontSize: 26,
+              fontWeight: 800,
+              color: k.color,
               fontFamily: FONT_TITLE,
-              fontSize: "26px",
-              fontWeight: 900,
-              color: "#f59e0b",
-              lineHeight: 1,
-              marginBottom: "6px",
+              marginTop: 6,
+              minHeight: 32,
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              minHeight: 32,
             }}
           >
-            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtBRL(pendente)}
+            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : k.display}
           </div>
-          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Pendente</div>
         </div>
-
-        <div style={innerCard("#22c55e")}>
-          <div
-            style={{
-              fontFamily: FONT_TITLE,
-              fontSize: "26px",
-              fontWeight: 900,
-              color: "#22c55e",
-              lineHeight: 1,
-              marginBottom: "6px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minHeight: 32,
-            }}
-          >
-            {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : fmtHorasTotal(horas)}
-          </div>
-          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
-        </div>
+      ))}
     </div>
   );
 }
