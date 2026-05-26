@@ -351,7 +351,9 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ### LinksMateriais (`src/pages/conteudo/LinksMateriais/index.tsx`)
 
-- Header: `Share2` (Lucide), `h1` **18px**.
+- Header: `PageHeader` + subtítulo canónico.
+- Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).
+- Header legado doc: `Share2` (Lucide), `h1` **18px** — migrado para `PageHeader` Família B onde aplicável.
 - Botão **Emitir:** gradiente `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-secondary)) : linear-gradient(135deg, #4a2082, #1e36f8)`; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
 - Erro de emissão ao usuário: `"Não foi possível emitir o link. Se o problema persistir, contate o suporte."`
 - Aviso parcial (canView sem editar): manter bloco amarelo com `AlertCircle` — não confundir com sem permissão total.
@@ -384,7 +386,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **`useDashboardBrand()`** + `ctaGradientInformativos` em `src/lib/informativosUi.ts`.
 - **Abas:** `FiltroBarTabButton` — Informativos | Gerenciamento de Informativos (gerenciamento só com `canEditarOk`).
 - **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do utilizador.
-- **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; excluir com `canExcluirOk` (dois cliques).
+- **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; excluir com `canExcluirOk` (dois cliques). Linha de busca: filtro status + **`CtaCriarButton` Novo Informativo** à direita (`marginLeft: auto`), mesma fileira.
 - **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); Publicar grava `published_at` / `published_by`.
 - **Aprovação (`lib/informativosWorkflow.ts`):** perfis Admin/Executivo/Operador/Agência/Influencer/Afiliado/Investidor → só «Enviar para aprovação»; demais perfis → «Publicar» direto. Aprovar: alvo com Admin/Executivo/Operador → só perfil Administrador; alvo com Agência/Influencer/Afiliado → Admin, Executivo ou Gestor; autoaprovação só Admin.
 - **Sem** categorias, fixado nem marcar como lido.
@@ -399,7 +401,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
 - **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** (sem filtro de mês).
 - **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
-- **Gerenciamento:** todas as postagens (incl. arquivadas); carrossel e Histórico também em `published_at`; filtros na linha 3 — tipo (`FiltroBarCampoSelect`, `Newspaper`, agregadora **Todas Postagens**) e status (`FilterBarIcons.status` / `ShieldAlert`, **Todos Status**).
+- **Gerenciamento:** todas as postagens (incl. arquivadas); carrossel e Histórico também em `published_at`; linha 3 — busca + tipo + status + **`CtaCriarButton` Nova Postagem** na mesma fileira (sem barra `borderTop` entre abas e busca; sem linha extra só para o CTA).
 - **ComunicadoCard:** `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido.
 - **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 

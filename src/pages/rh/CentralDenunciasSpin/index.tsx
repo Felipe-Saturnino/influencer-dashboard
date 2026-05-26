@@ -5,10 +5,11 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
-import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
+import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { FiltroBarCampoSelect, FiltroEntidadeBarSelect, FiltroHistoricoButton } from "../../../components/dashboard";
 import {
   STATUS_OPTIONS,
@@ -57,6 +58,20 @@ const DENUNCIA_TIPO_FILTRO_ITENS = TIPOS_DENUNCIA.map((item) => ({
   id: item.key,
   name: item.titulo,
 }));
+
+const KPI_STATUS_CORES: Record<DenunciaStatusDb, string> = {
+  relatado: "var(--brand-primary, #7c3aed)",
+  em_avaliacao: "#f59e0b",
+  procedente: "#22c55e",
+  nao_procedente: "#e84025",
+};
+
+const KPI_STATUS_LABEL: Record<DenunciaStatusDb, string> = {
+  relatado: "RELATADO",
+  em_avaliacao: "EM AVALIAÇÃO",
+  procedente: "PROCEDENTE",
+  nao_procedente: "NÃO PROCEDENTE",
+};
 
 function rangeForMonth(ym: string): { start: string; end: string } {
   const [y, m] = ym.split("-").map(Number);
@@ -209,6 +224,14 @@ export default function CentralDenunciasSpin() {
       : {}),
   });
 
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const kpiSkeletonStyle: CSSProperties = {
+    height: 28,
+    width: "65%",
+    borderRadius: 8,
+    background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+  };
+
   if (perm.loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -296,22 +319,54 @@ export default function CentralDenunciasSpin() {
         </div>
 
       {/* Bloco 2 — KPIs por status (mesmo período do filtro acima) */}
-      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
-        {STATUS_OPTIONS.map((s) => (
-          <div
-            key={s.value}
-            style={{
-              ...getPageContentBoxShellStyle(brand, t),
-              padding: "16px 18px",
-              marginBottom: 0,
-            }}
-          >
-            <div style={{ fontSize: 12, color: t.textMuted, fontWeight: 600, marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: t.text, fontVariantNumeric: "tabular-nums", fontFamily: FONT.body }}>
-              {kpis[s.value]}
+      <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+        {STATUS_OPTIONS.map((s) => {
+          const color = KPI_STATUS_CORES[s.value];
+          const valor = kpis[s.value];
+          const labelKpi = KPI_STATUS_LABEL[s.value];
+          return (
+            <div
+              key={s.value}
+              aria-label={loading ? labelKpi : `${labelKpi}: ${valor}`}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${t.cardBorder}`,
+                borderLeft: `3px solid ${color}`,
+                background: brand.blockBg,
+                padding: "16px 18px",
+                boxShadow: cardShadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {labelKpi}
+              </div>
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color,
+                  fontFamily: FONT_TITLE,
+                  marginTop: 6,
+                  minHeight: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : valor}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Bloco 3 — cards */}

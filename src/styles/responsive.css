@@ -118,6 +118,55 @@
   }
 }
 
+/* Barra de filtros — abas centralizadas + CTA contextual à direita (ex.: Gestão de Prestadores) */
+.app-filter-bar-tabs-cta {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 10px;
+}
+.app-filter-bar-tabs-cta__spacer {
+  display: block;
+  min-height: 1px;
+}
+.app-filter-bar-tabs-cta__tabs {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.app-filter-bar-tabs-cta__actions {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 720px) {
+  .app-filter-bar-tabs-cta {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .app-filter-bar-tabs-cta__spacer {
+    display: none;
+  }
+  .app-filter-bar-tabs-cta__tabs {
+    grid-column: 1;
+    justify-content: center;
+  }
+  .app-filter-bar-tabs-cta__actions {
+    grid-column: 1;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 .app-page-shell {
   box-sizing: border-box;
   width: 100%;

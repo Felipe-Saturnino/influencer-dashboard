@@ -27,6 +27,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
@@ -794,13 +795,6 @@ export default function RhOrganogramaPage() {
         icon={<PageMenuIcon pageKey="rh_organograma" />}
         title={getPageMenuLabel("rh_organograma")}
         subtitle="Diretorias, gerências e times"
-        actions={
-          podeEditar && modo === "gerenciar" ? (
-            <CtaCriarButton type="button" onClick={abrirNovaDiretoria}>
-              Nova diretoria
-            </CtaCriarButton>
-          ) : null
-        }
       />
 
       {erroGlobal ? (
@@ -867,7 +861,28 @@ export default function RhOrganogramaPage() {
           <div style={{ textAlign: "center", padding: 40 }}>
             <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
           </div>
-        ) : modo === "visual" ? (
+        ) : (
+          <>
+            {modo === "gerenciar" ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <SectionTitle compact>Gerenciamento</SectionTitle>
+                {podeEditar ? (
+                  <CtaCriarButton type="button" onClick={abrirNovaDiretoria}>
+                    Nova diretoria
+                  </CtaCriarButton>
+                ) : null}
+              </div>
+            ) : null}
+            {modo === "visual" ? (
           filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS ? (
             <OrgChartHierarquico
               arvore={arvore}
@@ -953,6 +968,8 @@ export default function RhOrganogramaPage() {
             onExcluirGerencia={prepararExcluirGerencia}
             onExcluirTime={prepararExcluirTime}
           />
+            )}
+          </>
         )}
       </div>
 

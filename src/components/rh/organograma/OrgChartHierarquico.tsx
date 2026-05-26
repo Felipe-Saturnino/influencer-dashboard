@@ -2,8 +2,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { Users } from "lucide-react";
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import SectionTitle from "../../dashboard/SectionTitle";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
 
@@ -138,22 +138,11 @@ export function OrgChartHierarquico({
   return (
     <div style={{ fontFamily: FONT.body }}>
       <section aria-labelledby="org-hierarquia-titulo">
-        <h2
-          id="org-hierarquia-titulo"
-          style={{
-            margin: "0 0 6px",
-            fontSize: 18,
-            fontWeight: 800,
-            color: t.text,
-            fontFamily: FONT_TITLE,
-            letterSpacing: "0.02em",
-          }}
-        >
-          Diretorias
-        </h2>
-        <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-          Selecione uma diretoria para ver gerências, times e equipe.
-        </p>
+        <div id="org-hierarquia-titulo">
+          <SectionTitle sub="Selecione uma diretoria para ver gerências, times e equipe.">
+            Diretorias
+          </SectionTitle>
+        </div>
         <BarraPesquisaPagina
           id="org-hierarquia-busca"
           value={busca}

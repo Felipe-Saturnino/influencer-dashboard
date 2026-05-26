@@ -39,7 +39,6 @@ export function PortalRhBlocoFiltros({
   buscaAriaLabel = "Pesquisar postagens por palavras-chave",
   linhaAbas,
   linhaSubabas,
-  linhaAposSubabas,
 }: {
   meses: MesCarrosselEntry[];
   idxMes: number;
@@ -54,8 +53,6 @@ export function PortalRhBlocoFiltros({
   linhaAbas?: ReactNode;
   /** Sub-abas de categoria ou filtros de tipo/status (linha 3, ao lado da busca). */
   linhaSubabas?: ReactNode;
-  /** Ex.: botão Nova Postagem no Gerenciamento. */
-  linhaAposSubabas?: ReactNode;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -101,10 +98,11 @@ export function PortalRhBlocoFiltros({
       {/* Linha 2 — abas da página */}
       {linhaAbas ? <div style={{ ...LINHA_FILTRO, ...sep }}>{linhaAbas}</div> : null}
 
-      {/* Linha 3 — busca + sub-abas / filtros de gerenciamento */}
+      {/* Linha 3 — busca + sub-abas / filtros de gerenciamento (sem barra entre abas e busca) */}
       <div
         style={{
-          ...sep,
+          paddingTop: 12,
+          marginTop: 12,
           display: "flex",
           flexWrap: "wrap",
           alignItems: "center",
@@ -136,9 +134,6 @@ export function PortalRhBlocoFiltros({
           </div>
         ) : null}
       </div>
-
-      {/* Ação opcional (ex.: Nova Postagem) */}
-      {linhaAposSubabas ? <div style={{ ...LINHA_FILTRO, ...sep, marginBottom: 0 }}>{linhaAposSubabas}</div> : null}
     </div>
   );
 }

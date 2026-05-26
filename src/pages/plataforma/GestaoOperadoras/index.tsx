@@ -13,6 +13,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -21,7 +22,7 @@ import {
   ctaGradientSalvar,
   handleGestaoTabsArrowKeyDown,
 } from "../GestaoUsuarios/gestaoUsuariosHelpers";
-import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 const ERRO_EXCLUIR_OPERADORA =
@@ -37,6 +38,7 @@ function tableRowHoverBg(isDark: boolean): string {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,15 +162,19 @@ export default function GestaoOperadoras() {
         ))}
       </div>
 
-      {/* ─── Tabela ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 18,
-        boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-        overflow: "hidden",
-      }}>
-        {perm.canCriarOk && (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "18px 20px 16px" }}>
+      <div style={getPageContentBoxStyle(brand, t)}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Operadoras</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -178,13 +184,13 @@ export default function GestaoOperadoras() {
             >
               Nova Operadora
             </CtaCriarButton>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {loading ? (
           <div
             style={{
-              padding: "40px 20px",
+              padding: "40px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
               textAlign: "center",
@@ -198,7 +204,7 @@ export default function GestaoOperadoras() {
             Carregando…
           </div>
         ) : operadoras.length === 0 ? (
-          <div style={{ padding: "48px 20px", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
+          <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
         ) : (
           <div className="app-table-wrap">
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>

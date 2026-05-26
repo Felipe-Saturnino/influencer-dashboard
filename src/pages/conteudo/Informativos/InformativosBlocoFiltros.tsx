@@ -94,7 +94,15 @@ export function InformativosBlocoFiltros({
       ) : null}
 
       <div style={sep} />
-      <div style={{ ...LINHA_FILTRO, alignItems: "stretch" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+        }}
+      >
         <BarraPesquisaPagina
           value={busca}
           onChange={onBuscaChange}
@@ -103,7 +111,11 @@ export function InformativosBlocoFiltros({
           wrapperStyle={{ flex: "1 1 220px", minWidth: 200, maxWidth: 480 }}
         />
         {filtroStatusGerenciamento}
-        {linhaAposSubabas}
+        {linhaAposSubabas ? (
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {linhaAposSubabas}
+          </div>
+        ) : null}
       </div>
     </div>
   );

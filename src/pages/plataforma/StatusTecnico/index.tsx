@@ -7,15 +7,10 @@ import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/th
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
-  Activity,
   AlertCircle,
   AlertTriangle,
-  BarChart2,
-  Bell,
   CheckCircle2,
-  FileText,
   Loader2,
-  Network,
   RefreshCw,
   Trash2,
   XCircle,
@@ -41,70 +36,16 @@ import {
   MSG_SEM_PERMISSAO,
   tableRowHoverBg,
 } from "./statusTecnicoHelpers";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
 import {
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
+import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
-
-// ─── StatusSectionTitle (padrão da plataforma — não colidir com shared SectionTitle) ──
-function StatusSectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: brand.primaryIconBg,
-        border: brand.primaryIconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: brand.primaryIconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-    </div>
-  );
-}
-
-// ─── StatusKpiCard (accent bar — nomenclatura distinta do KpiCard shared) ─────
-function StatusKpiCard({ label, value, accentColor, loading }: {
-  label: string; value: React.ReactNode; accentColor: string; loading?: boolean;
-}) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{
-      background: t.cardBg, borderRadius: 16,
-      border: `1px solid ${t.cardBorder}`, overflow: "hidden",
-    }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
-      <div style={{ padding: "18px 20px" }}>
-        <p style={{
-          fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
-          color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
-          margin: "0 0 10px",
-        }}>
-          {label}
-        </p>
-        <div style={{
-          fontFamily: FONT.body, fontSize: 28, fontWeight: 800,
-          color: t.text, margin: 0, lineHeight: 1.1,
-        }}>
-          {loading ? "—" : value}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface SyncLog {
@@ -1277,6 +1218,36 @@ export default function StatusTecnico() {
     );
   }
 
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const kpiSkeletonStyle: CSSProperties = {
+    height: 28,
+    width: "65%",
+    borderRadius: 8,
+    background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+  };
+  const kpisConsolidados: { label: string; color: string; display: React.ReactNode }[] = [
+    {
+      label: "INTEGRAÇÕES ATIVAS",
+      color: corIntegracoes,
+      display: `${integracoesAtivasCount} / ${totalIntegracoes}`,
+    },
+    {
+      label: "ÚLTIMO SYNC",
+      color: BRAND.ciano,
+      display: ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca",
+    },
+    {
+      label: "REGISTROS HOJE",
+      color: BRAND.roxoVivo,
+      display: registrosHojeTotal.toLocaleString("pt-BR"),
+    },
+    {
+      label: "TAXA DE ERRO",
+      color: corTaxaErro,
+      display: `${taxaErro}%`,
+    },
+  ];
+
   return (
     <div className="app-page-shell">
 
@@ -1286,37 +1257,53 @@ export default function StatusTecnico() {
         subtitle="Monitore integrações, alertas automáticos e sincronizações da plataforma."
       />
 
-      {/* ── KPI Cards — accent bar ── */}
-      <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), gap: 16 }}>
-        <StatusKpiCard
-          label="Integrações Ativas"
-          loading={loading}
-          accentColor={corIntegracoes}
-          value={<span style={{ color: corIntegracoes }}>{integracoesAtivasCount} / {totalIntegracoes}</span>}
-        />
-        <StatusKpiCard
-          label="Último Sync"
-          loading={loading}
-          accentColor={BRAND.ciano}
-          value={<span style={{ fontSize: 20, fontWeight: 700 }}>{ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}</span>}
-        />
-        <StatusKpiCard
-          label="Registros Hoje"
-          loading={loading}
-          accentColor={BRAND.roxoVivo}
-          value={<span style={{ color: BRAND.roxoVivo }}>{registrosHojeTotal.toLocaleString("pt-BR")}</span>}
-        />
-        <StatusKpiCard
-          label="Taxa de Erro"
-          loading={loading}
-          accentColor={corTaxaErro}
-          value={<span style={{ color: corTaxaErro }}>{taxaErro}%</span>}
-        />
+      <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+        {kpisConsolidados.map((k) => (
+          <div
+            key={k.label}
+            aria-label={loading ? k.label : `${k.label}: ${k.display}`}
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${k.color}`,
+              background: dashBrand.blockBg,
+              padding: "16px 18px",
+              boxShadow: cardShadow,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              {k.label}
+            </div>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: k.color,
+                fontFamily: FONT_TITLE,
+                marginTop: 6,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : k.display}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Status das Integrações ── */}
       <div style={pageBox}>
-        <StatusSectionTitle icon={<Activity size={14} aria-hidden="true" />}>Status das Integrações</StatusSectionTitle>
+        <SectionTitle>Status das Integrações</SectionTitle>
         {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
@@ -1477,9 +1464,8 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Fluxo de Dados — sem legenda textual (#5 + remoção legenda) */}
       <div style={pageBox}>
-        <StatusSectionTitle icon={<BarChart2 size={14} aria-hidden="true" />}>Fluxo de Dados (últimos 14 dias)</StatusSectionTitle>
+        <SectionTitle sub="últimos 14 dias">Fluxo de Dados</SectionTitle>
 
         {/* Legenda visual compacta — sem texto explicativo de escala */}
         <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
@@ -1602,9 +1588,8 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Alertas — hierarquia erro vs aviso (#4, #8) */}
       <div style={pageBox}>
-        <StatusSectionTitle icon={<Bell size={14} aria-hidden="true" />}>Alertas</StatusSectionTitle>
+        <SectionTitle>Alertas</SectionTitle>
         {alertas.length === 0 ? (
           <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
@@ -1642,11 +1627,19 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Logs Recentes */}
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
-          <StatusSectionTitle icon={<FileText size={14} aria-hidden="true" />}>Logs Recentes</StatusSectionTitle>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Logs Recentes</SectionTitle>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(["1h", "24h", "48h"] as const).map((f) => {
               const ativo = logFiltro === f;
               const chip = tabAtivaPrincipalStyle(ativo, t.cardBorder, t.inputBg ?? t.bg);
@@ -1745,13 +1738,21 @@ export default function StatusTecnico() {
         })()}
       </div>
 
-      {/* Redes permitidas — check-in de prestadores */}
       <div style={pageBox}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <StatusSectionTitle icon={<Network size={14} aria-hidden="true" />}>
-            Redes permitidas — check-in de prestadores
-          </StatusSectionTitle>
-          {perm.canEditarOk && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="check-in de prestadores">
+            Redes permitidas
+          </SectionTitle>
+          {perm.canEditarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -1761,12 +1762,11 @@ export default function StatusTecnico() {
                 setModalCidrAdicionar(true);
               }}
               disabledBackground={BRAND.cinza}
-              style={{ marginBottom: 20 }}
               aria-label="Nova Rede"
             >
               Nova Rede
             </CtaCriarButton>
-          )}
+          ) : null}
         </div>
         {loading ? (
           <StatusTecnicoLoadingBlock />
@@ -1840,12 +1840,10 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Configuração de Alertas */}
       <div style={pageBox}>
-        <StatusSectionTitle icon={<AlertTriangle size={14} aria-hidden="true" />}>Configuração de Alertas</StatusSectionTitle>
-        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16, marginTop: -12 }}>
-          Condições monitoradas automaticamente. Edição futura via administração.
-        </p>
+        <SectionTitle sub="Condições monitoradas automaticamente">
+          Configuração de Alertas
+        </SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (

@@ -2269,6 +2269,9 @@ export default function RhPrestadoresPage() {
   const preencherAcoesHeadcount = abaPagina === "headcount";
   const tabelaAcoesRh = abaPagina === "acoes_rh";
   const tabelaAnotacoesRh = abaPagina === "anotacoes";
+  const mostrarCtaAbaPaginaRh =
+    (abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis) ||
+    (abaPagina === "anotacoes" && perm.canEditarOk);
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 6 : 7;
   const thStyleSort = getThStyle(t);
@@ -2593,62 +2596,90 @@ export default function RhPrestadoresPage() {
               wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
             />
           </div>
-          <div role="tablist" aria-label="Módulos de gestão de colaboradores" style={filterBarSection(true)}>
-            {ABAS_PAGINA_RH_FUNC.map((tb) => (
-              <FiltroBarTabButton
-                key={tb.key}
-                id={idTabPagina(tb.key)}
-                active={abaPagina === tb.key}
-                aria-controls={panelPaginaRhId}
-                onClick={() => setAbaPagina(tb.key)}
-                onKeyDown={(e) =>
-                  handleFiltroBarTabsArrowKeyDown(
-                    e,
-                    ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                    tb.key,
-                    setAbaPagina,
-                    "rh-gest-func-pag-",
-                  )
-                }
-                icon={iconAbaPagina(tb.key)}
+          <div style={filterBarSection(true)}>
+            {mostrarCtaAbaPaginaRh ? (
+              <div className="app-filter-bar-tabs-cta">
+                <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+                <div
+                  role="tablist"
+                  aria-label="Módulos de gestão de colaboradores"
+                  className="app-filter-bar-tabs-cta__tabs"
+                >
+                  {ABAS_PAGINA_RH_FUNC.map((tb) => (
+                    <FiltroBarTabButton
+                      key={tb.key}
+                      id={idTabPagina(tb.key)}
+                      active={abaPagina === tb.key}
+                      aria-controls={panelPaginaRhId}
+                      onClick={() => setAbaPagina(tb.key)}
+                      onKeyDown={(e) =>
+                        handleFiltroBarTabsArrowKeyDown(
+                          e,
+                          ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                          tb.key,
+                          setAbaPagina,
+                          "rh-gest-func-pag-",
+                        )
+                      }
+                      icon={iconAbaPagina(tb.key)}
+                    >
+                      {tb.label}
+                    </FiltroBarTabButton>
+                  ))}
+                </div>
+                <div className="app-filter-bar-tabs-cta__actions">
+                  {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
+                    <CtaCriarButton type="button" onClick={abrirNovo}>
+                      Novo Prestador
+                    </CtaCriarButton>
+                  ) : null}
+                  {abaPagina === "anotacoes" && perm.canEditarOk ? (
+                    <CtaCriarButton type="button" onClick={() => abrirModalRhTalks()}>
+                      RH Talks
+                    </CtaCriarButton>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div
+                role="tablist"
+                aria-label="Módulos de gestão de colaboradores"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  width: "100%",
+                }}
               >
-                {tb.label}
-              </FiltroBarTabButton>
-            ))}
+                {ABAS_PAGINA_RH_FUNC.map((tb) => (
+                  <FiltroBarTabButton
+                    key={tb.key}
+                    id={idTabPagina(tb.key)}
+                    active={abaPagina === tb.key}
+                    aria-controls={panelPaginaRhId}
+                    onClick={() => setAbaPagina(tb.key)}
+                    onKeyDown={(e) =>
+                      handleFiltroBarTabsArrowKeyDown(
+                        e,
+                        ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                        tb.key,
+                        setAbaPagina,
+                        "rh-gest-func-pag-",
+                      )
+                    }
+                    icon={iconAbaPagina(tb.key)}
+                  >
+                    {tb.label}
+                  </FiltroBarTabButton>
+                ))}
+              </div>
+            )}
           </div>
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-          {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-            <CtaCriarButton type="button" onClick={abrirNovo}>
-              Novo Prestador
-            </CtaCriarButton>
-          ) : null}
-          {abaPagina === "anotacoes" && perm.canEditarOk ? (
-            <button
-              type="button"
-              onClick={() => abrirModalRhTalks()}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              RH Talks
-            </button>
-          ) : null}
-        </div>
-
         <div className="app-table-wrap">
         <div style={tableBoxShell}>
           <table

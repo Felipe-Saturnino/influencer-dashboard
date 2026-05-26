@@ -506,12 +506,17 @@ export default function PortalRhPage() {
     }
     if (aba === "gerenciamento" && perm.canEditarOk) {
       return (
-        <GerenciamentoPostagensFiltrosTipoStatus
-          filtroTipo={filtroTipoGer}
-          onFiltroTipoChange={setFiltroTipoGer}
-          filtroStatus={filtroStatusGer}
-          onFiltroStatusChange={setFiltroStatusGer}
-        />
+        <>
+          <GerenciamentoPostagensFiltrosTipoStatus
+            filtroTipo={filtroTipoGer}
+            onFiltroTipoChange={setFiltroTipoGer}
+            filtroStatus={filtroStatusGer}
+            onFiltroStatusChange={setFiltroStatusGer}
+          />
+          <CtaCriarButton type="button" onClick={() => abrirCriarGerenciamentoRef.current?.()}>
+            Nova Postagem
+          </CtaCriarButton>
+        </>
       );
     }
     return null;
@@ -776,13 +781,6 @@ export default function PortalRhPage() {
           </div>
         }
         linhaSubabas={linhaSubabasFiltro ?? undefined}
-        linhaAposSubabas={
-          aba === "gerenciamento" && perm.canEditarOk ? (
-            <CtaCriarButton type="button" onClick={() => abrirCriarGerenciamentoRef.current?.()}>
-              Nova Postagem
-            </CtaCriarButton>
-          ) : undefined
-        }
       />
 
       {erro ? (

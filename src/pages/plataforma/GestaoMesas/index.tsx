@@ -10,6 +10,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -168,13 +169,28 @@ export default function GestaoMesas() {
       />
 
       <div style={getPageFilterBoxStyle(dashBrand, t)}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 10, width: "100%" }}>
           <FiltroOperadoraSelect
             value={filtroOperadora}
             onChange={setFiltroOperadora}
             operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
           />
-          {perm.canCriarOk && (
+        </div>
+      </div>
+
+      <div style={contentBox}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Mesas</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -182,13 +198,11 @@ export default function GestaoMesas() {
                 setModalOpen(true);
               }}
             >
-              Nova mesa
+              Nova Mesa
             </CtaCriarButton>
-          )}
+          ) : null}
         </div>
-      </div>
 
-      <div style={contentBox}>
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <Loader2 size={20} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />

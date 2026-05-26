@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
@@ -75,19 +74,6 @@ export function OrgAccordion({
 
   return (
     <div style={{ fontFamily: FONT.body }}>
-      <h2
-        style={{
-          margin: "0 0 16px",
-          fontSize: 13,
-          fontWeight: 800,
-          color: t.textMuted,
-          fontFamily: FONT_TITLE,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-        }}
-      >
-        Gerenciamento
-      </h2>
       {arvore.map((d) => {
         const kd = `d-${d.id}`;
         const openD = !!expanded[kd];

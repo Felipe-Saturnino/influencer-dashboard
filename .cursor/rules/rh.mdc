@@ -42,7 +42,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 - `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
 - **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
-- **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `FilterBarIcons.diretoria`; Gerência `Layers`; Setor `FilterBarIcons.time`; Contrato `FileSignature`; Status `FilterBarIcons.status` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`: headcount, ações RH, anotações).
+- **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `FilterBarIcons.diretoria`; Gerência `Layers`; Setor `FilterBarIcons.time`; Contrato `FileSignature`; Status `FilterBarIcons.status` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`) + CTA na mesma fileira quando aplicável (`app-filter-bar-tabs-cta` em `responsive.css`): **Novo Prestador** em Head Count (`perm.canCriarOk` + `podeVerDadosSensiveis`); **RH Talks** em Anotações RH (`perm.canEditarOk`). Aba Ações RH: só abas centralizadas.
 - Sem filtro de operadora nesta página.
 - Tabelas: ações em ícone (`btnIconTabela`); `SortTableTh` onde houver colunas ordenáveis (Global).
 - CTA gradiente em ações primárias de linha quando aplicável.
@@ -61,6 +61,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 - Árvore de times/cargos; componentes de organograma em `lib/`.
 - Barra de diretorias (`OrgFiltroBarDiretorias`): carrossel + pill **Todas as diretorias** via `FiltroBarPillButton` (mesmo contrato que Histórico na barra), ícone `FilterBarIcons.diretoria` (`Building2`); `aria-pressed` quando agregador ativo.
+- Painel (`getPageContentBoxStyle`): **Visualização** — `SectionTitle` «Diretorias» + `sub` em `OrgChartHierarquico`; **Gerenciamento** — `SectionTitle` «Gerenciamento» (`compact`) + `CtaCriarButton` **Nova diretoria** na mesma linha (`perm.canEditarOk`), accordion sem título legado.
 - **Handoff:** edição, filtros, export.
 
 ---
@@ -80,6 +81,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 - Gestão interna de protocolos (distinto do canal público).
 - Barra de filtros (`getFilterBarWrapperStyle`): **Linha 1** — carrossel de mês (`carouselNavStyles`, maio/2026 → atual; rótulo **Todo o período** em Histórico) + `FiltroHistoricoButton` + tipo (`FiltroEntidadeBarSelect`, `TriangleAlert`, agregadora **Todos Tipos**, multi `overlaps`) + status (`FiltroBarCampoSelect`, `FilterBarIcons.status`, **Todos Status**); **Linha 2** — `BarraPesquisaPagina` no relato.
+- **KPIs** (Relatado, Em avaliação, Procedente, Não procedente): formato Financeiro — `app-grid-kpi-4`, `getPageKpiSectionGapStyle`, rótulo caixa alta, `borderLeft` 3px semântico, `brand.blockBg`, valor em `FONT_TITLE` (sem caixa pai).
 - Modais: `ModalsVerHist`, `ModalsAtender` — a11y Global.
 - **Handoff:** SLA, status, atendimento, histórico.
 
