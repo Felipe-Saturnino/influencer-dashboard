@@ -40,6 +40,8 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ## Financeiro (`financeiro`)
 
+- **KPIs do topo (Total pago, Pendente, Total de horas):** grelha `app-grid-kpi-3` com `getPageKpiSectionGapStyle()` — **sem** `getPageContentBoxStyle` nem rótulo de secção (referência: cards consolidados em Afiliados). Cards internos mantêm borda superior colorida e skeleton inline.
+- **Ciclo de pagamento** e **Consolidado de influencers:** `getPageContentBoxStyle` + **`SectionTitle`** (sem ícone; `compact` no cabeçalho do ciclo quando na mesma linha que select/badge/ações).
 - Carrossel de mês + **`FiltroHistoricoButton`** na FilterBar (padrão Overview Influencer); rótulo **`Todo o período`** no modo histórico; KPIs com skeleton inline (sem “Carregando...” dentro do card).
 - **Datas de ciclo** no select: formato legível (`dd/mm – dd/mm/aa`) — nunca ISO cru no label.
 - Empty ciclos: copy para influencer vs gestor; detalhes técnicos só em `<details>` para gestor.

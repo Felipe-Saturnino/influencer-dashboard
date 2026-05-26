@@ -16,9 +16,14 @@ import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroHistoricoButton,
+  FiltroOperadoraSelect,
+  SectionTitle,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   compareInfluencerPerfilStatus,
@@ -31,6 +36,7 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
 import {
   AlertTriangle,
@@ -1001,7 +1007,6 @@ interface BlocoFiltros {
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
 
@@ -1101,15 +1106,8 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     minWidth: "180px",
   });
 
-  const pageBox = getPageContentBoxStyle(brand, t);
-
   return (
-    <div style={pageBox}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-        <BlocoLabel label="KPIs" />
-      </div>
-
-      <div className="app-grid-kpi-3" style={{ gap: "12px" }}>
+    <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), gap: "12px" }}>
         <div style={innerCard("var(--brand-primary, #7c3aed)")}>
           <div
             style={{
@@ -1169,7 +1167,6 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
         </div>
-      </div>
     </div>
   );
 }
@@ -1729,7 +1726,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {/* Cabeçalho */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <BlocoLabel label="Ciclo de pagamento" />
+          <SectionTitle compact>Ciclo de pagamento</SectionTitle>
 
           {ciclo && (
             <span style={{
@@ -2323,8 +2320,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
   return (
     <div style={pageBox}>
-      <div style={{ marginBottom: "18px" }}>
-        <BlocoLabel label="Consolidado de influencers" />
+      <SectionTitle>Consolidado de influencers</SectionTitle>
+      <div style={{ marginBottom: 16 }}>
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
@@ -2332,7 +2329,6 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
           aria-label="Buscar influencer por nome ou e-mail"
           style={{
             width: "100%",
-            marginTop: 12,
             boxSizing: "border-box",
             padding: "8px 14px", borderRadius: "10px",
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,

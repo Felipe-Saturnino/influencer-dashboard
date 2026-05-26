@@ -766,12 +766,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs",
         texto:
-          "Três indicadores resumem o período selecionado:\n\n— Total pago: soma dos pagamentos com status Pago\n— Pendente: soma dos pagamentos Em análise ou Aguardando pagamento\n— Total de horas realizadas: horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
+          "Três cards no topo da página (sem caixa branca em volta — só os cards individuais) resumem o período selecionado:\n\n— Total pago: soma dos pagamentos com status Pago\n— Pendente: soma dos pagamentos Em análise ou Aguardando pagamento\n— Total de horas realizadas: horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",
         texto:
-          "Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
+          "O bloco **Ciclo de pagamento** (título de secção padrão) reúne o seletor de ciclo, ações e a tabela. Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
       },
       {
         subtitulo: "Pagamento de Agente",
@@ -781,7 +781,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Consolidado de Influencers",
         texto:
-          "Lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado. A busca por nome ou e-mail filtra a lista instantaneamente.",
+          "No bloco **Consolidado de influencers**, a busca por nome ou e-mail fica logo abaixo do título. A tabela lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado.",
       },
     ],
   },
