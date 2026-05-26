@@ -1,0 +1,92 @@
+import { useEffect, useState } from "react";
+import { supabase } from "../../../../lib/supabase";
+
+export type HomeInformativoItem = {
+  id: string;
+  assunto: string;
+  descricao: string;
+  published_at: string | null;
+  autorNome: string;
+};
+
+export function useHomeInvestidorInformativos() {
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
+  const [lista, setLista] = useState<HomeInformativoItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      setLoading(true);
+      setErro(false);
+      try {
+        const { data, error } = await supabase
+          .from("conteudo_informativo")
+          .select("id, assunto, descricao, published_at, created_by, published_by, perfis, status")
+          .eq("status", "publicado")
+          .contains("perfis", ["investidor"])
+          .order("published_at", { ascending: false });
+
+        if (cancelled) return;
+        if (error) {
+          console.error("[HomeInvestidor] informativos:", error.message);
+          setErro(true);
+          setLista([]);
+          setLoading(false);
+          return;
+        }
+
+        const rows = (data ?? []) as {
+          id: string;
+          assunto: string;
+          descricao: string;
+          published_at: string | null;
+          created_by: string | null;
+          published_by: string | null;
+        }[];
+
+        const userIds = new Set<string>();
+        for (const r of rows) {
+          const uid = r.created_by ?? r.published_by;
+          if (uid) userIds.add(uid);
+        }
+
+        const nomes: Record<string, string> = {};
+        if (userIds.size > 0) {
+          const { data: profs } = await supabase.from("profiles").select("id, name").in("id", [...userIds]);
+          for (const p of profs ?? []) {
+            const pr = p as { id: string; name: string | null };
+            nomes[pr.id] = pr.name?.trim() ?? "";
+          }
+        }
+
+        if (cancelled) return;
+
+        setLista(
+          rows.map((r) => ({
+            id: r.id,
+            assunto: r.assunto,
+            descricao: r.descricao,
+            published_at: r.published_at,
+            autorNome: nomes[r.created_by ?? r.published_by ?? ""] ?? "",
+          })),
+        );
+      } catch (e) {
+        console.error("[HomeInvestidor] informativos:", e);
+        if (!cancelled) {
+          setErro(true);
+          setLista([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { loading, erro, lista };
+}

@@ -30,6 +30,7 @@ import {
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
+import HomeInvestidor from "./HomeInvestidor";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -345,6 +346,10 @@ export default function Home() {
   }, [user]);
 
   if (!user) return null;
+
+  if (user.role === "investidor") {
+    return <HomeInvestidor />;
+  }
 
   const role = user.role;
   const welcome = ROLE_WELCOME[role];
