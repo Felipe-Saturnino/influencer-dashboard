@@ -47,6 +47,8 @@ import {
   FiltroCalendarioStaffSelect,
   FiltroCalendarioTimeSelect,
   FiltroMeuCalendarioButton,
+  FiltroTipoCompromissoCalendarioSelect,
+  type TipoCompromissoCalFiltroValue,
 } from "../../../components/dashboard";
 import {
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -69,19 +71,6 @@ import {
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
-
-/** Tipos de compromisso (filtro único na UI; `todos` = default). */
-type ChaveTipoCompromissoCal = "eventos" | "reunioes" | "treinamentos" | "feedback" | "turnos";
-type FiltroTipoCompromissoUi = "todos" | ChaveTipoCompromissoCal;
-
-const OPCOES_TIPO_COMPROMISSO_SELECT: { value: FiltroTipoCompromissoUi; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "eventos", label: "Eventos" },
-  { value: "reunioes", label: "Reuniões" },
-  { value: "treinamentos", label: "Treinamentos" },
-  { value: "feedback", label: "Feedback" },
-  { value: "turnos", label: "Turnos" },
-];
 
 const MONTHS = [
   "Janeiro",
@@ -541,7 +530,7 @@ export default function RhCalendarioPage() {
 
   const [current, setCurrent] = useState(() => mesInicialCalendarioRhNaEntrada());
   const [abaPrincipal, setAbaPrincipal] = useState<"compromissos" | "presenca">("compromissos");
-  const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<FiltroTipoCompromissoUi>("todos");
+  const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<TipoCompromissoCalFiltroValue>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
 
@@ -1618,6 +1607,15 @@ export default function RhCalendarioPage() {
     presencaFilterStaffIds[0] === meuIdParaBotoesMeu;
   const showTimeFilterPresenca = !soPropriosCal && timeMultiselectItems.length > 0;
   const showStaffFilterPresenca = !soPropriosCal && staffPresencaMultiselectItems.length > 0;
+  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    ...(withTopBorder ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` } : {}),
+  });
+
+  const temLimparFiltrosCompromissos =
+    hasStaffFilterComp || hasTimeFilterComp || filtroTipoCompromisso !== "todos";
+
   const podeRetrocederMes = podeRetrocederMesCalendario(current);
   const podeAvancarMes = podeAvancarMesCalendario(current);
 
@@ -1648,392 +1646,260 @@ export default function RhCalendarioPage() {
         t={t}
       />
 
-      <div
-        role="tablist"
-        aria-label="Secção do calendário"
-        style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}
-        onKeyDown={(e) =>
-          onFiltroBarTabsKeyDown(e, ["compromissos", "presenca"] as const, setAbaPrincipal, (k) => `tab-cal-${k}`)
-        }
-      >
-        <FiltroBarTabButton
-          id="tab-cal-compromissos"
-          active={abaPrincipal === "compromissos"}
-          aria-controls="panel-cal-compromissos"
-          onClick={() => setAbaPrincipal("compromissos")}
-          icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
+      <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            borderRadius: 14,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
+            padding: "12px 20px",
+          }}
         >
-          Compromissos
-        </FiltroBarTabButton>
-        <FiltroBarTabButton
-          id="tab-cal-presenca"
-          active={abaPrincipal === "presenca"}
-          aria-controls="panel-cal-presenca"
-          onClick={() => setAbaPrincipal("presenca")}
-          icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
-        >
-          Controle de Presença
-        </FiltroBarTabButton>
-      </div>
-
-      {abaPrincipal === "compromissos" ? (
-        <div style={{ marginBottom: 14 }}>
           <div
             style={{
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: brand.blockBg,
-              padding: "12px 20px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              width: "100%",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 16,
-                width: "100%",
-              }}
-            >
-              <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
-                <button
-                  type="button"
-                  onClick={prev}
-                  disabled={!podeRetrocederMes}
-                  style={getCarouselBtnNavStyle(t, !podeRetrocederMes)}
-                  aria-label={
-                    podeRetrocederMes
-                      ? "Mês anterior"
-                      : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
-                  }
-                >
-                  <ChevronLeft size={14} aria-hidden="true" />
-                </button>
-                <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
-                <button
-                  type="button"
-                  onClick={next}
-                  disabled={!podeAvancarMes}
-                  style={getCarouselBtnNavStyle(t, !podeAvancarMes)}
-                  aria-label={
-                    podeAvancarMes
-                      ? "Próximo mês"
-                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
-                  }
-                >
-                  <ChevronRight size={14} aria-hidden="true" />
-                </button>
-
-                {loadingEscala && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      color: t.textMuted,
-                      fontSize: 12,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <Loader2
-                      size={14}
-                      className="app-lucide-spin"
-                      aria-hidden="true"
-                      color="var(--brand-primary, #7c3aed)"
-                    />
-                    Atualizando escala…
-                  </span>
-                )}
-
-                {loadingStaff ? (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      color: t.textMuted,
-                      fontSize: 12,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <Loader2
-                      size={14}
-                      className="app-lucide-spin"
-                      aria-hidden="true"
-                      color="var(--brand-primary, #7c3aed)"
-                    />
-                    {soPropriosCal ? "Carregando…" : "Carregando staff…"}
-                  </span>
-                ) : erroStaff ? (
-                  <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-                ) : (
-                  <>
-                    {mostrarBotaoMeuCalendario ? (
-                      <FiltroMeuCalendarioButton
-                        active={calendarioSoMeuAtivo}
-                        onClick={() => {
-                          if (calendarioSoMeuAtivo) {
-                            setCompFilterStaffIds([]);
-                          } else {
-                            setCompFilterTimeIds([]);
-                            setCompFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
-                          }
-                        }}
-                      />
-                    ) : null}
-                    {showTimeFilter ? (
-                      <FiltroCalendarioTimeSelect
-                        selected={compFilterTimeIds}
-                        onChange={setCompFilterTimeIds}
-                        items={timeMultiselectItems}
-                      />
-                    ) : null}
-                    {showStaffFilter ? (
-                      <FiltroCalendarioStaffSelect
-                        selected={compFilterStaffIds}
-                        onChange={setCompFilterStaffIds}
-                        items={staffMultiselectItems}
-                      />
-                    ) : null}
-                  </>
-                )}
-              </div>
-
-              <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
-                {solicitanteAgendarId ? (
-                  <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
-                    Nova Agenda
-                  </CtaCriarButton>
-                ) : null}
-              </div>
-            </div>
-
-            <div
-              style={{
-                paddingTop: 12,
-                marginTop: 12,
-                borderTop: `1px solid ${t.cardBorder}`,
-                width: "100%",
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 12,
-                justifyContent: "center",
-              }}
-            >
-              <label
-                htmlFor="cal-filtro-tipo-compromisso"
-                style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body }}
+            <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
+              <button
+                type="button"
+                onClick={prev}
+                disabled={!podeRetrocederMes}
+                style={getCarouselBtnNavStyle(t, !podeRetrocederMes)}
+                aria-label={
+                  podeRetrocederMes
+                    ? "Mês anterior"
+                    : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
+                }
               >
-                Tipo de compromisso
-              </label>
-              <select
-                id="cal-filtro-tipo-compromisso"
-                aria-label="Filtrar por tipo de compromisso"
-                value={filtroTipoCompromisso}
-                onChange={(e) => setFiltroTipoCompromisso(e.target.value as FiltroTipoCompromissoUi)}
-                style={{
-                  minWidth: 200,
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                }}
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
+              <button
+                type="button"
+                onClick={next}
+                disabled={!podeAvancarMes}
+                style={getCarouselBtnNavStyle(t, !podeAvancarMes)}
+                aria-label={
+                  podeAvancarMes
+                    ? "Próximo mês"
+                    : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                }
               >
-                {OPCOES_TIPO_COMPROMISSO_SELECT.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
 
-            {(hasStaffFilterComp || hasTimeFilterComp || filtroTipoCompromisso !== "todos") && (
-              <div
-                style={{
-                  paddingTop: 12,
-                  marginTop: 12,
-                  borderTop: `1px solid ${t.cardBorder}`,
-                  display: "flex",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                  gap: 10,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCompFilterTimeIds([]);
-                    setCompFilterStaffIds([]);
-                    setFiltroTipoCompromisso("todos");
-                  }}
+              {abaPrincipal === "compromissos" && loadingEscala ? (
+                <span
                   style={{
-                    padding: "5px 14px",
-                    borderRadius: 999,
-                    border: `1px solid ${BRAND.vermelho}44`,
-                    background: `${BRAND.vermelho}11`,
-                    color: BRAND.vermelho,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
+                    color: t.textMuted,
+                    fontSize: 12,
+                    fontFamily: FONT.body,
                   }}
                 >
-                  <X size={12} aria-hidden="true" /> Limpar filtros
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div style={{ marginBottom: 14 }}>
-          <div
-            style={{
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: brand.blockBg,
-              padding: "12px 20px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 16,
-                width: "100%",
-              }}
-            >
-              <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
-                <button
-                  type="button"
-                  onClick={prev}
-                  disabled={!podeRetrocederMes}
-                  style={getCarouselBtnNavStyle(t, !podeRetrocederMes)}
-                  aria-label={
-                    podeRetrocederMes
-                      ? "Mês anterior"
-                      : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
-                  }
-                >
-                  <ChevronLeft size={14} aria-hidden="true" />
-                </button>
-                <span style={getCarouselPeriodLabelStyle(t)}>{headerTitle()}</span>
-                <button
-                  type="button"
-                  onClick={next}
-                  disabled={!podeAvancarMes}
-                  style={getCarouselBtnNavStyle(t, !podeAvancarMes)}
-                  aria-label={
-                    podeAvancarMes
-                      ? "Próximo mês"
-                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
-                  }
-                >
-                  <ChevronRight size={14} aria-hidden="true" />
-                </button>
+                  <Loader2
+                    size={14}
+                    className="app-lucide-spin"
+                    aria-hidden="true"
+                    color="var(--brand-primary, #7c3aed)"
+                  />
+                  Atualizando escala…
+                </span>
+              ) : null}
 
-                {loadingStaff ? (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      color: t.textMuted,
-                      fontSize: 12,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <Loader2
-                      size={14}
-                      className="app-lucide-spin"
-                      aria-hidden="true"
-                      color="var(--brand-primary, #7c3aed)"
+              {loadingStaff ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    color: t.textMuted,
+                    fontSize: 12,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <Loader2
+                    size={14}
+                    className="app-lucide-spin"
+                    aria-hidden="true"
+                    color="var(--brand-primary, #7c3aed)"
+                  />
+                  {soPropriosCal ? "Carregando…" : "Carregando staff…"}
+                </span>
+              ) : erroStaff ? (
+                <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+              ) : abaPrincipal === "compromissos" ? (
+                <>
+                  {mostrarBotaoMeuCalendario ? (
+                    <FiltroMeuCalendarioButton
+                      active={calendarioSoMeuAtivo}
+                      onClick={() => {
+                        if (calendarioSoMeuAtivo) {
+                          setCompFilterStaffIds([]);
+                        } else {
+                          setCompFilterTimeIds([]);
+                          setCompFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                        }
+                      }}
                     />
-                    {soPropriosCal ? "Carregando…" : "Carregando staff…"}
-                  </span>
-                ) : erroStaff ? (
-                  <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-                ) : (
-                  <>
-                    {mostrarBotaoMeuControle ? (
-                      <FiltroMeuCalendarioButton
-                        active={meuControleAtivo}
-                        onClick={() => {
-                          if (meuControleAtivo) {
-                            setPresencaFilterStaffIds([]);
-                            setPresencaFilterTimeIds([]);
-                          } else {
-                            setPresencaFilterTimeIds([]);
-                            setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
-                          }
-                        }}
-                        ariaLabelActive="Mostrar lista geral de staff"
-                        ariaLabelInactive="Filtrar controle de presença apenas para o meu utilizador"
-                      >
-                        Meu Controle
-                      </FiltroMeuCalendarioButton>
-                    ) : null}
-                    {showTimeFilterPresenca ? (
-                      <FiltroCalendarioTimeSelect
-                        selected={presencaFilterTimeIds}
-                        onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                        items={timeMultiselectItems}
-                      />
-                    ) : null}
-                    {showStaffFilterPresenca ? (
-                      <FiltroCalendarioStaffSelect
-                        selected={presencaFilterStaffIds}
-                        onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                        items={staffPresencaMultiselectItems}
-                      />
-                    ) : null}
-                  </>
-                )}
-              </div>
+                  ) : null}
+                  {showTimeFilter ? (
+                    <FiltroCalendarioTimeSelect
+                      selected={compFilterTimeIds}
+                      onChange={setCompFilterTimeIds}
+                      items={timeMultiselectItems}
+                    />
+                  ) : null}
+                  {showStaffFilter ? (
+                    <FiltroCalendarioStaffSelect
+                      selected={compFilterStaffIds}
+                      onChange={setCompFilterStaffIds}
+                      items={staffMultiselectItems}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {mostrarBotaoMeuControle ? (
+                    <FiltroMeuCalendarioButton
+                      active={meuControleAtivo}
+                      onClick={() => {
+                        if (meuControleAtivo) {
+                          setPresencaFilterStaffIds([]);
+                          setPresencaFilterTimeIds([]);
+                        } else {
+                          setPresencaFilterTimeIds([]);
+                          setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
+                        }
+                      }}
+                      ariaLabelActive="Mostrar lista geral de staff"
+                      ariaLabelInactive="Filtrar controle de presença apenas para o meu utilizador"
+                    >
+                      Meu Controle
+                    </FiltroMeuCalendarioButton>
+                  ) : null}
+                  {showTimeFilterPresenca ? (
+                    <FiltroCalendarioTimeSelect
+                      selected={presencaFilterTimeIds}
+                      onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      items={timeMultiselectItems}
+                    />
+                  ) : null}
+                  {showStaffFilterPresenca ? (
+                    <FiltroCalendarioStaffSelect
+                      selected={presencaFilterStaffIds}
+                      onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      items={staffPresencaMultiselectItems}
+                    />
+                  ) : null}
+                </>
+              )}
+            </div>
 
-              <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
-                {mostrarBotaoPontoCalendario ? (
-                  <button
-                    type="button"
-                    onClick={() => void onPrestadorPontoRegistrar()}
-                    disabled={!pontoBotaoHabilitado || pontoEstadoLoading || pontoSubmitting}
-                    title={pontoBotaoTitle}
-                    aria-label={labelBotaoPonto}
-                    style={getCtaCriarButtonStyle(
-                      brand,
-                      {
-                        cursor:
-                          pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting
-                            ? "pointer"
-                            : "not-allowed",
-                        opacity:
-                          pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting ? 1 : 0.75,
-                        color: pontoBotaoHabilitado ? "#fff" : t.textMuted,
-                      },
-                      {
-                        disabled: !pontoBotaoHabilitado,
-                        disabledBackground: t.inputBg,
-                      },
-                    )}
-                  >
-                    {(pontoEstadoLoading || pontoSubmitting) && (
-                      <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden="true" />
-                    )}
-                    {labelBotaoPonto}
-                  </button>
-                ) : null}
-              </div>
+            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              {abaPrincipal === "compromissos" && solicitanteAgendarId ? (
+                <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
+                  Nova Agenda
+                </CtaCriarButton>
+              ) : null}
+              {abaPrincipal === "presenca" && mostrarBotaoPontoCalendario ? (
+                <button
+                  type="button"
+                  onClick={() => void onPrestadorPontoRegistrar()}
+                  disabled={!pontoBotaoHabilitado || pontoEstadoLoading || pontoSubmitting}
+                  title={pontoBotaoTitle}
+                  aria-label={labelBotaoPonto}
+                  style={getCtaCriarButtonStyle(
+                    brand,
+                    {
+                      cursor:
+                        pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting
+                          ? "pointer"
+                          : "not-allowed",
+                      opacity:
+                        pontoBotaoHabilitado && !pontoEstadoLoading && !pontoSubmitting ? 1 : 0.75,
+                      color: pontoBotaoHabilitado ? "#fff" : t.textMuted,
+                    },
+                    {
+                      disabled: !pontoBotaoHabilitado,
+                      disabledBackground: t.inputBg,
+                    },
+                  )}
+                >
+                  {(pontoEstadoLoading || pontoSubmitting) && (
+                    <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden="true" />
+                  )}
+                  {labelBotaoPonto}
+                </button>
+              ) : null}
             </div>
           </div>
+
+          {abaPrincipal === "compromissos" && temLimparFiltrosCompromissos ? (
+            <div style={filterBarSection(true)}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCompFilterTimeIds([]);
+                  setCompFilterStaffIds([]);
+                  setFiltroTipoCompromisso("todos");
+                }}
+                style={{
+                  padding: "5px 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${BRAND.vermelho}44`,
+                  background: `${BRAND.vermelho}11`,
+                  color: BRAND.vermelho,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <X size={12} aria-hidden="true" /> Limpar filtros
+              </button>
+            </div>
+          ) : null}
+
+          <div
+            role="tablist"
+            aria-label="Secção do calendário"
+            style={filterBarSection(true)}
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(e, ["compromissos", "presenca"] as const, setAbaPrincipal, (k) => `tab-cal-${k}`)
+            }
+          >
+            <FiltroBarTabButton
+              id="tab-cal-compromissos"
+              active={abaPrincipal === "compromissos"}
+              aria-controls="panel-cal-compromissos"
+              onClick={() => setAbaPrincipal("compromissos")}
+              icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Compromissos
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-cal-presenca"
+              active={abaPrincipal === "presenca"}
+              aria-controls="panel-cal-presenca"
+              onClick={() => setAbaPrincipal("presenca")}
+              icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Controle de Presença
+            </FiltroBarTabButton>
+          </div>
         </div>
-      )}
+      </div>
 
       {soPropriosCal && !loadingStaff && !meuRhFuncionarioId && (
         <div
@@ -2056,6 +1922,12 @@ export default function RhCalendarioPage() {
 
       {abaPrincipal === "compromissos" ? (
         <div style={card}>
+          <div style={{ ...getFilterBarRowStyle(), marginBottom: 16, width: "100%" }}>
+            <FiltroTipoCompromissoCalendarioSelect
+              value={filtroTipoCompromisso}
+              onChange={setFiltroTipoCompromisso}
+            />
+          </div>
           {loadingStaff ? (
             <div
               style={{
@@ -2299,7 +2171,7 @@ export default function RhCalendarioPage() {
           <div aria-label="Compromissos do dia">
             {(() => {
               const iso = toISO(modalDia);
-              const mostrarTipo = (ch: FiltroTipoCompromissoUi) =>
+              const mostrarTipo = (ch: Exclude<TipoCompromissoCalFiltroValue, "todos">) =>
                 filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
               const ev = eventosAgendaDoDia(iso);
               const r = obterReunioesDiaIso(iso);

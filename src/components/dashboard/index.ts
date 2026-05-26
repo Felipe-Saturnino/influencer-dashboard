@@ -58,6 +58,14 @@ export {
   type FiltroMeuCalendarioButtonProps,
 } from "../FiltroMeuCalendarioButton";
 export {
+  FiltroTipoCompromissoCalendarioSelect,
+  TIPO_COMPROMISSO_CAL_ARIA_LABEL,
+  TIPO_COMPROMISSO_CAL_TODOS_LABEL,
+  TIPO_COMPROMISSO_CAL_TODOS_VALUE,
+  type FiltroTipoCompromissoCalendarioSelectProps,
+  type TipoCompromissoCalFiltroValue,
+} from "../FiltroTipoCompromissoCalendarioSelect";
+export {
   FiltroHojeButton,
   HOJE_FILTRO_ARIA_LABEL,
   type FiltroHojeButtonProps,

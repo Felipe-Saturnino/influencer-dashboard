@@ -67,7 +67,8 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 - Compromissos, presença, reuniões; modais dedicados.
 - Depende de escala aprovada para mensagens de “sem escala hoje”.
-- **Barra superior (Compromissos e Presença):** carrossel de mês (`carouselNavStyles`) + **`FiltroMeuCalendarioButton`** (`CalendarCheck`, pill Histórico) **antes** de Time/Staff — Compromissos: «Meu Calendário»; Presença: «Meu Controle» (mesmo componente/ícone/posição); **`FiltroCalendarioTimeSelect`** (`UsersRound`); **`FiltroCalendarioStaffSelect`** (`IdCard`, busca se >5). **Não** `FiltroEntidadeMultiSelect` legado na barra.
+- **Barra de filtros (única, ambas as secções):** **linha 1** — carrossel de mês (`carouselNavStyles`) + filtros da aba ativa + CTA; **linha 2** — tablist **`FiltroBarTabButton`** («Compromissos» / «Controle de Presença»), com `borderTop` como Marketplace/Solicitações. Compromissos: **`FiltroMeuCalendarioButton`** + **`FiltroCalendarioTimeSelect`** + **`FiltroCalendarioStaffSelect`**; Presença: «Meu Controle» + Time/Staff (seleção única). **Não** `FiltroEntidadeMultiSelect` legado na barra.
+- **Tipo de compromisso (aba Compromissos):** no **topo do card do calendário** (não na barra), **`FiltroTipoCompromissoCalendarioSelect`** — pill + ícone **`CalendarHeart`** (`FilterBarIcons.tipoCompromisso`, exclusivo desta página); agregadora **`Todos Compromissos`**; `aria-label` **Compromissos**; sem rótulo de texto ao lado.
 - **CTAs na barra:** Compromissos — **`CtaCriarButton`** «Nova Agenda» (abre modal agendar; mesma regra `solicitanteAgendarId`). Presença — gradiente `getCtaCriarButtonStyle` **sem** ícone `Plus`: «Fazer Check-in» / «Fazer Check-out» (`onPrestadorPontoRegistrar`, `disabled`/`title` inalterados).
 - **Handoff:** chips por dia, filtros de time, integração escala.
 
