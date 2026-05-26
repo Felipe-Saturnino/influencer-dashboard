@@ -1,45 +1,17 @@
 import { useState, useEffect } from "react";
-import {
-  AlertCircle,
-  Building2,
-  Crown,
-  Handshake,
-  IdCard,
-  LineChart,
-  Mic,
-  Network,
-  Shirt,
-  ShieldCheck,
-  UserCog,
-  Users,
-  Flag,
-  Headphones,
-} from "lucide-react";
+import { AlertCircle, ShieldCheck } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../types";
-import { BRAND, PAGES, ROLES_PERMISSOES, PERM_OPCOES, roleLabel, roleBadgeColor } from "./constants";
+import { BRAND, PAGES, PERM_OPCOES, roleLabel } from "./constants";
 import { SalvarCtaContent } from "./gestaoUsuariosUi";
-import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { ctaGradientSalvar } from "./gestaoUsuariosHelpers";
 
-const ROLE_PERM_TAB_ICONS: Record<Role, React.ReactNode> = {
-  admin: null,
-  executivo: <Crown {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  gestor: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  figurino: <Shirt {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  service_manager: <Headphones {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  shift_leader: <Flag {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  prestador: <IdCard {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  operador: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  agencia: <Network {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  influencer: <Mic {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  afiliado: <Handshake {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  investidor: <LineChart {...FILTRO_BAR_TAB_ICON_PROPS} />,
-};
+interface AbaPermissoesProps {
+  roleAtivo: Role;
+}
 
 /** Verde #22c55e / vermelho #e84025 — paleta semântica global; leve tinte nos selects da matriz. */
 function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { background: string; borderColor: string } {
@@ -61,10 +33,9 @@ function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { b
   };
 }
 
-export function AbaPermissoes() {
+export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
   const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
@@ -288,31 +259,7 @@ export function AbaPermissoes() {
         </p>
       ) : null}
       <div
-        role="tablist"
-        aria-label="Perfil de permissões"
-        style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ROLES_PERMISSOES, setRoleAtivo, (k) => `tab-perm-${k}`)}
-      >
-        {ROLES_PERMISSOES.map((r) => (
-          <FiltroBarTabButton
-            key={r}
-            id={`tab-perm-${r}`}
-            active={roleAtivo === r}
-            aria-controls="panel-permissoes-matriz"
-            onClick={() => setRoleAtivo(r)}
-            activeColor={roleBadgeColor(r)}
-            icon={ROLE_PERM_TAB_ICONS[r]}
-          >
-            {roleLabel(r)}
-          </FiltroBarTabButton>
-        ))}
-      </div>
-
-      <div
-        role="tabpanel"
         id="panel-permissoes-matriz"
-        aria-labelledby={`tab-perm-${roleAtivo}`}
-        tabIndex={0}
         style={{
           borderRadius: 12,
           border: `1px solid ${t.cardBorder}`,

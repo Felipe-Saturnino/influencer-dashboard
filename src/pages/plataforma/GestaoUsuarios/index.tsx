@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Briefcase, Building2, KeyRound, User, UserCog } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -13,18 +12,33 @@ import { AbaGestores } from "./AbaGestores";
 import { AbaPrestadores } from "./AbaPrestadores";
 import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import {
-  FiltroBarTabButton,
-  FILTRO_BAR_TAB_ICON_PROPS,
-  onFiltroBarTabsKeyDown,
-} from "../../../components/dashboard";
+  GestaoUsuariosFiltroBar,
+  type AbaGestaoEscopo,
+  type AbaGestaoPrincipal,
+  type ContagensFiltroUsuarios,
+} from "./GestaoUsuariosFiltroBar";
+import type { Role } from "../../../types";
+import type { FiltroStatusUsuarios } from "./constants";
 
-type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestadores";
+const CONTAGENS_VAZIAS: ContagensFiltroUsuarios = {
+  qtdAtivos: 0,
+  qtdDesativados: 0,
+  qtdPorPerfil: {} as Record<Role, number>,
+};
 
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
   const perm = usePermission("gestao_usuarios");
-  const [aba, setAba] = useState<AbaGestao>("usuarios");
+  const [aba, setAba] = useState<AbaGestaoPrincipal>("usuarios");
+  const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
+  const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatusUsuarios>("ativo");
+  const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(() => new Set());
+  const [contagensFiltro, setContagensFiltro] = useState<ContagensFiltroUsuarios>(CONTAGENS_VAZIAS);
+
   const isAdmin = user?.role === "admin";
+  const mostrarAbasAdmin = isAdmin && perm.canEditarOk;
 
   useEffect(() => {
     if (!isAdmin && aba !== "usuarios") setAba("usuarios");
@@ -34,33 +48,30 @@ export default function GestaoUsuarios() {
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
   }, [isAdmin, perm.canEditarOk, aba]);
 
-  const GESTAO_TAB_ICONS: Record<AbaGestao, React.ReactNode> = {
-    usuarios: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
-    permissoes: <KeyRound {...FILTRO_BAR_TAB_ICON_PROPS} />,
-    operadora: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
-    gestores: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
-    prestadores: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  };
-
-  const abasConfigPlataforma = useMemo(
-    (): { key: Exclude<AbaGestao, "usuarios">; label: string }[] => [
-      { key: "permissoes", label: "Permissões" },
-      { key: "operadora", label: "Operadora" },
-      { key: "gestores", label: "Gestores" },
-      { key: "prestadores", label: "Prestadores" },
-    ],
-    [],
+  const cardShadow = useMemo(
+    () => (t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)"),
+    [t.isDark],
   );
 
-  const ABAS = useMemo((): { key: AbaGestao; label: string }[] => {
-    if (!isAdmin) return [{ key: "usuarios", label: "Usuários" }];
-    return [
-      { key: "usuarios", label: "Usuários" },
-      ...(perm.canEditarOk ? abasConfigPlataforma : []),
-    ];
-  }, [isAdmin, perm.canEditarOk, abasConfigPlataforma]);
+  const card: React.CSSProperties = useMemo(
+    () => ({
+      background: t.cardBg,
+      borderRadius: 18,
+      padding: 28,
+      border: `1px solid ${t.cardBorder}`,
+      boxShadow: cardShadow,
+    }),
+    [t.cardBg, t.cardBorder, cardShadow],
+  );
 
-  const abaKeys = useMemo(() => ABAS.map((a) => a.key), [ABAS]);
+  const toggleFiltroPerfil = (role: Role) => {
+    setFiltroPerfilSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(role)) next.delete(role);
+      else next.add(role);
+      return next;
+    });
+  };
 
   if (perm.loading) {
     return (
@@ -78,14 +89,12 @@ export default function GestaoUsuarios() {
     );
   }
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const card: React.CSSProperties = {
-    background: t.cardBg,
-    borderRadius: 18,
-    padding: 28,
-    border: `1px solid ${t.cardBorder}`,
-    boxShadow: cardShadow,
-  };
+  const panelId =
+    aba === "escopos"
+      ? `panel-gestao-${escopoSubAba}`
+      : aba === "permissoes"
+        ? "panel-permissoes-matriz"
+        : "panel-gestao-usuarios";
 
   return (
     <div className="app-page-shell">
@@ -95,35 +104,35 @@ export default function GestaoUsuarios() {
         subtitle="Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma."
       />
 
-      {isAdmin && (
-        <div
-          role="tablist"
-          aria-label="Seções de gestão de usuários"
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", overflowX: "auto", scrollbarWidth: "thin" }}
-          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abaKeys, setAba, (k) => `tab-gestao-${k}`)}
-        >
-          {ABAS.map((a) => (
-            <FiltroBarTabButton
-              key={a.key}
-              id={`tab-gestao-${a.key}`}
-              active={aba === a.key}
-              aria-controls={`panel-gestao-${a.key}`}
-              onClick={() => setAba(a.key)}
-              icon={GESTAO_TAB_ICONS[a.key]}
-            >
-              {a.label}
-            </FiltroBarTabButton>
-          ))}
-        </div>
-      )}
+      <GestaoUsuariosFiltroBar
+        aba={aba}
+        onAbaChange={setAba}
+        mostrarAbasAdmin={mostrarAbasAdmin}
+        busca={busca}
+        onBuscaChange={setBusca}
+        filtroStatus={filtroStatus}
+        onFiltroStatusChange={setFiltroStatus}
+        filtroPerfilSet={filtroPerfilSet}
+        onTogglePerfil={toggleFiltroPerfil}
+        contagens={contagensFiltro}
+        roleAtivo={roleAtivo}
+        onRoleAtivoChange={setRoleAtivo}
+        escopoSubAba={escopoSubAba}
+        onEscopoSubAbaChange={setEscopoSubAba}
+      />
 
       <div
         style={card}
-        {...(isAdmin
+        {...(mostrarAbasAdmin
           ? {
               role: "tabpanel" as const,
-              id: `panel-gestao-${aba}`,
-              "aria-labelledby": `tab-gestao-${aba}`,
+              id: panelId,
+              "aria-labelledby":
+                aba === "escopos"
+                  ? `tab-escopo-${escopoSubAba}`
+                  : aba === "permissoes"
+                    ? `tab-perm-${roleAtivo}`
+                    : `tab-gestao-usuarios`,
               tabIndex: 0,
             }
           : { role: "region" as const, "aria-label": "Usuários da plataforma" })}
@@ -134,12 +143,16 @@ export default function GestaoUsuarios() {
             podeCriarUsuario={perm.canCriarOk}
             podeEditarUsuario={perm.canEditarOk}
             podeExcluirUsuario={perm.canExcluirOk}
+            busca={busca}
+            filtroStatus={filtroStatus}
+            filtroPerfilSet={filtroPerfilSet}
+            onContagensChange={setContagensFiltro}
           />
         )}
-        {aba === "permissoes" && <AbaPermissoes />}
-        {aba === "operadora" && <AbaOperadora />}
-        {aba === "gestores" && <AbaGestores />}
-        {aba === "prestadores" && <AbaPrestadores />}
+        {aba === "permissoes" && <AbaPermissoes roleAtivo={roleAtivo} />}
+        {aba === "escopos" && escopoSubAba === "operadora" && <AbaOperadora />}
+        {aba === "escopos" && escopoSubAba === "gestores" && <AbaGestores />}
+        {aba === "escopos" && escopoSubAba === "prestadores" && <AbaPrestadores />}
       </div>
     </div>
   );

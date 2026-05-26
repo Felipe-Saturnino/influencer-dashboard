@@ -156,6 +156,23 @@ export const ROLES_PERMISSOES: Role[] = [
   "investidor",
 ];
 
+/** Linhas de perfil na aba Permissões (sem Administrador — acesso total fixo). */
+export const FILTROS_PERFIL_LINHAS_PERMISSOES: { titulo: string; roles: Role[] }[] = FILTROS_PERFIL_LINHAS.map(
+  ({ titulo, roles }) => ({
+    titulo,
+    roles: roles.filter((r) => ROLES_PERMISSOES.includes(r)),
+  }),
+).filter((linha) => linha.roles.length > 0);
+
+export type FiltroStatusUsuarios = "todos" | "ativo" | "desativado";
+
+export const STATUS_USUARIO_CARROSSEL: { key: Exclude<FiltroStatusUsuarios, "todos">; label: string }[] = [
+  { key: "ativo", label: "Ativo" },
+  { key: "desativado", label: "Desativado" },
+];
+
+export const STATUS_USUARIO_TODOS_LABEL = "Todos os Status";
+
 export const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim", label: "Sim" },
   { value: "nao", label: "Não" },

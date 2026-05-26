@@ -872,13 +872,10 @@ export default function PlaybookInfluencers() {
           marginBottom: 20,
         }}
       >
-        <p style={{ margin: "0 0 10px 0" }}>
+        <p style={{ margin: 0 }}>
           O material abaixo tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo
           alinhamento com a operação, posicionamento de marca e melhor experiência para o público.
         </p>
-        {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
-          <p key={i} style={{ margin: i < PLAYBOOK_SUBTITULO_PARAGRAFOS.length - 1 ? "0 0 10px 0" : 0 }}>{texto}</p>
-        ))}
       </div>
 
       {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
