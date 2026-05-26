@@ -75,7 +75,8 @@ alwaysApply: false
 
 ## Figurinos (`rh_figurinos`)
 
-- Seções com `<h2>` estilo label (FILTROS, CONSOLIDADO).
+- **Consolidado (topo):** grelha `app-grid-kpi-5` + `getPageKpiSectionGapStyle()` — cards no formato Financeiro (`borderLeft` 3px, rótulo em caixa alta acima do valor: **TOTAL DE PEÇAS**, **DISPONÍVEIS**, etc.); **sem** título de secção nem caixa pai.
+- **Filtros:** só `getPageFilterBoxStyle` (operadora, categoria, tamanho, busca, abas) — **sem** título **FILTROS**.
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
 - Tabelas 4 abas: hover, tablist ARIA completo.

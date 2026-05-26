@@ -27,11 +27,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
-import {
-  getPageContentBoxShellStyle,
-  getPageFilterBoxStyle,
-  getPageKpiSectionGapStyle,
-} from "../../../lib/pageContentBoxStyles";
+import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -68,13 +64,6 @@ const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
   borrowed: <HandHelping {...FILTRO_BAR_TAB_ICON_PROPS} />,
   maintenance: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
   discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
-};
-
-const SECTION_LABEL_STYLE: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  margin: 0,
 };
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
@@ -602,62 +591,54 @@ export default function FigurinosPage() {
         </div>
       ) : null}
 
-      {/* Bloco 1: Consolidado */}
-      <div style={getPageKpiSectionGapStyle()}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          CONSOLIDADO
-        </h2>
-        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
-          {[
-            { label: "Total de peças", value: kpis.tot, cor: t.text },
-            { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
-            { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
-            { label: "Fixos", value: kpis.fx, cor: "#0ea5e9" },
-            { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
-          ].map((k) => (
+      {/* Bloco 1: Consolidado (KPIs — formato Financeiro) */}
+      <div className="app-grid-kpi-5" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+        {[
+          { label: "TOTAL DE PEÇAS", value: kpis.tot, cor: "var(--brand-primary, #7c3aed)" },
+          { label: "DISPONÍVEIS", value: kpis.av, cor: "#22c55e" },
+          { label: "EMPRESTADAS", value: kpis.bo, cor: "#f59e0b" },
+          { label: "FIXOS", value: kpis.fx, cor: "#0ea5e9" },
+          { label: "EM MANUTENÇÃO", value: kpis.ma, cor: "#a78bfa" },
+        ].map((k) => (
+          <div
+            key={k.label}
+            aria-label={`${k.label}: ${k.value}`}
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${k.cor}`,
+              background: brand.blockBg,
+              padding: "16px 18px",
+              boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+            }}
+          >
             <div
-              key={k.label}
-              aria-label={`${k.label}: ${k.value}`}
               style={{
-                ...getPageContentBoxShellStyle(brand, t),
-                padding: "16px 18px",
+                fontSize: 11,
+                fontWeight: 700,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
-                {k.label.toUpperCase()}
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
+              {k.label}
             </div>
-          ))}
-        </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>
+              {k.value}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Bloco 2: Filtros */}
-      <div style={getPageKpiSectionGapStyle()}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          FILTROS
-        </h2>
-        <div
-          style={getPageFilterBoxStyle(brand, t, {
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          })}
-        >
+      <div
+        style={getPageFilterBoxStyle(brand, t, {
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        })}
+      >
           <div
             style={{
               display: "flex",
@@ -775,7 +756,6 @@ export default function FigurinosPage() {
               </FiltroBarTabButton>
             ))}
           </div>
-        </div>
       </div>
 
       {/* Bloco 3: Tabela */}

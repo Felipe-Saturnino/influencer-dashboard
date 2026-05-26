@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, ChevronLeft, ChevronRight, ClipboardList, Inbox, Loader2, MoreHorizontal } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2, MoreHorizontal } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -44,6 +44,7 @@ import {
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { BRAND } from "../../../lib/dashboardConstants";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 const MOCK_SOLICITACOES: LinhaOfertaMarketplace[] = [];
 
@@ -461,45 +462,6 @@ export default function EscalaSolicitacoesPage() {
     );
   }
 
-  const blocoFiltrosLinha = loadingStaff ? (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        color: t.textMuted,
-        fontSize: 12,
-        fontFamily: FONT.body,
-      }}
-    >
-      <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-      {soProprios ? "Carregando…" : "Carregando staff…"}
-    </span>
-  ) : erroStaff ? (
-    <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-  ) : (
-    <>
-      <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
-      {showTimeFilter ? (
-        <FiltroCalendarioTimeSelect
-          selected={filtroTimeIds}
-          onChange={(ids) => {
-            setFiltroTimeIds(ids);
-            setFiltroStaffIds([]);
-          }}
-          items={timeMultiselectItems}
-        />
-      ) : null}
-      {showStaffFilter ? (
-        <FiltroCalendarioStaffSelect
-          selected={filtroStaffIds}
-          onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
-          items={staffMultiselectItems}
-        />
-      ) : null}
-    </>
-  );
-
   const blocoCarrosselHistorico = (
     <>
       <button
@@ -543,6 +505,52 @@ export default function EscalaSolicitacoesPage() {
     </>
   );
 
+  const blocoFiltrosLinha1 = (
+    <>
+      {blocoCarrosselHistorico}
+      {loadingStaff ? (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+          {soProprios ? "Carregando…" : "Carregando staff…"}
+        </span>
+      ) : erroStaff ? (
+        <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+      ) : (
+        <>
+          <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
+          {showTimeFilter ? (
+            <FiltroCalendarioTimeSelect
+              selected={filtroTimeIds}
+              onChange={(ids) => {
+                setFiltroTimeIds(ids);
+                setFiltroStaffIds([]);
+              }}
+              items={timeMultiselectItems}
+            />
+          ) : null}
+          {showStaffFilter ? (
+            <FiltroCalendarioStaffSelect
+              selected={filtroStaffIds}
+              onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
+              items={staffMultiselectItems}
+            />
+          ) : null}
+        </>
+      )}
+    </>
+  );
+
+  const contentBox = getPageContentBoxStyle(brand, t);
+
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>
@@ -570,8 +578,7 @@ export default function EscalaSolicitacoesPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
-          <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
+          <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
           <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
             <FiltroBarTabButton
               id="tab-sol-aberto"
@@ -596,15 +603,19 @@ export default function EscalaSolicitacoesPage() {
 
       {aba === "aberto" && (
         <div role="tabpanel" id="panel-sol-aberto" aria-labelledby="tab-sol-aberto">
-          <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
-          {renderTabelaSolicitacoes(linhasAberto, false)}
+          <div style={contentBox}>
+            <SectionTitle>Solicitações</SectionTitle>
+            {renderTabelaSolicitacoes(linhasAberto, false)}
+          </div>
         </div>
       )}
 
       {aba === "arquivadas" && (
         <div role="tabpanel" id="panel-sol-arq" aria-labelledby="tab-sol-arq">
-          <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
-          {renderTabelaSolicitacoes(linhasArquivadas, true)}
+          <div style={contentBox}>
+            <SectionTitle>Solicitações</SectionTitle>
+            {renderTabelaSolicitacoes(linhasArquivadas, true)}
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -383,6 +383,11 @@ const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
 const STICKY_LEFT_NICK_SEM_NOME = 0;
 const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
 const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
+
+/** Consolidado: coluna Turno fixa ao rolar horizontalmente. */
+const CONSOLIDADO_COL_TURNO_W = 168;
+const Z_CONSOLIDADO_STICKY_HEAD = 25;
+const Z_CONSOLIDADO_STICKY_ROW = 24;
 
 /** Navegação e escala consideram a partir de abril de 2026 (sem escala antes). */
 const ESCALA_ANO_MIN = 2026;
@@ -1046,6 +1051,25 @@ export default function RhGestaoEscalaPage() {
 
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
+  const fundoStickyConsolidadoTurno = brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff";
+
+  const thConsolidadoTurnoSticky = (zIndex: number, bg: string, extra?: CSSProperties): CSSProperties => ({
+    ...getThStyle(t),
+    textAlign: "left",
+    position: "sticky",
+    left: 0,
+    zIndex,
+    boxSizing: "border-box",
+    minWidth: CONSOLIDADO_COL_TURNO_W,
+    maxWidth: 200,
+    width: CONSOLIDADO_COL_TURNO_W,
+    background: bg,
+    borderRight: `1px solid ${t.cardBorder}`,
+    boxShadow: sombraColFixa,
+    verticalAlign: "middle",
+    ...extra,
+  });
+
   const tdDia: CSSProperties = {
     ...getTdStyle(t, {
       textAlign: "center",
@@ -1353,17 +1377,14 @@ export default function RhGestaoEscalaPage() {
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
                 style={contentBox}
               >
-                <SectionTitle
-                  icon={<Users size={15} aria-hidden />}
-                  sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária"
-                >
+                <SectionTitle sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária">
                   Consolidado
                 </SectionTitle>
                 <div className="app-table-wrap">
                 <table
                   style={{
                     width: "100%",
-                    minWidth: 168 + dias.length * 44,
+                    minWidth: CONSOLIDADO_COL_TURNO_W + dias.length * 44,
                     borderCollapse: "separate",
                     borderSpacing: 0,
                     borderRadius: 14,
@@ -1381,16 +1402,7 @@ export default function RhGestaoEscalaPage() {
                   </caption>
                   <thead>
                     <tr>
-                      <th
-                        scope="col"
-                        style={{
-                          ...getThStyle(t),
-                          textAlign: "left",
-                          minWidth: 168,
-                          maxWidth: 200,
-                          verticalAlign: "middle",
-                        }}
-                      >
+                      <th scope="col" style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_HEAD, fundoStickyConsolidadoTurno)}>
                         Turno
                       </th>
                       {dias.map((dia) => (
@@ -1410,7 +1422,10 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          padding: 0,
+                        })}
                       >
                         <button
                           type="button"
@@ -1448,7 +1463,10 @@ export default function RhGestaoEscalaPage() {
                       <tr>
                         <th
                           scope="row"
-                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            padding: 0,
+                          })}
                         >
                           <button
                             type="button"
@@ -1486,7 +1504,10 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          padding: 0,
+                        })}
                       >
                         <button
                           type="button"
@@ -1524,7 +1545,10 @@ export default function RhGestaoEscalaPage() {
                       <tr>
                         <th
                           scope="row"
-                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            padding: 0,
+                          })}
                         >
                           <button
                             type="button"
@@ -1562,15 +1586,11 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{
-                          ...getThStyle(t),
-                          textAlign: "left",
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, TOTAL_ROW_BG, {
                           fontWeight: 800,
                           borderTop: `2px solid ${t.cardBorder}`,
-                          background: TOTAL_ROW_BG,
                           padding: 0,
-                          verticalAlign: "middle",
-                        }}
+                        })}
                       >
                         <button
                           type="button"
@@ -1628,7 +1648,7 @@ export default function RhGestaoEscalaPage() {
               aria-label="Escala Diária - Definição de status diário por Prestador"
               style={contentBox}
             >
-              <SectionTitle icon={<Calendar size={15} aria-hidden />} sub="definição de status diário por Prestador">
+              <SectionTitle sub="definição de status diário por Prestador">
                 Escala Diária
               </SectionTitle>
               <div

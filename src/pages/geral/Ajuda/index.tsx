@@ -436,7 +436,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Consolidado",
         texto:
-          "Use os filtros de operadora, categoria e tamanho para restringir o inventário visualizado. O painel Consolidado exibe em tempo real a contagem de peças por status: disponíveis (verde), emprestadas (amarelo), fixas (azul) e em manutenção (roxo). Esses números refletem os filtros ativos.",
+          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de secção) reúne operadora, categoria, tamanho, pesquisa, bipagem e abas de status.",
       },
       {
         subtitulo: "Abas de Inventário",

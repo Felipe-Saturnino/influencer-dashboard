@@ -47,6 +47,7 @@ import {
   FiltroCalendarioTimeSelect,
   FiltroMeuCalendarioButton,
   FiltroTipoCompromissoCalendarioSelect,
+  SectionTitle,
   type TipoCompromissoCalFiltroValue,
 } from "../../../components/dashboard";
 import {
@@ -55,7 +56,6 @@ import {
   onFiltroBarTabsKeyDown,
 } from "../../../lib/filterBarStyles";
 import {
-  getPageContentBoxShellStyle,
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
   getPageKpiSectionGapStyle,
@@ -1253,7 +1253,7 @@ export default function RhCalendarioPage() {
   }
 
   const contentBox = getPageContentBoxStyle(brand, t);
-  const kpiTileShell = getPageContentBoxShellStyle(brand, t);
+  const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
   function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
@@ -1943,29 +1943,55 @@ export default function RhCalendarioPage() {
         </div>
       ) : (
         <>
-          <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
-            {(["Trabalhados", "Pendentes", "Aprovados"] as const).map((label) => (
+          <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+            {(
+              [
+                { label: "TRABALHADOS", display: "—", cor: "#22c55e" },
+                { label: "PENDENTES", display: "—", cor: "#f59e0b" },
+                { label: "APROVADOS", display: "—", cor: "var(--brand-primary, #7c3aed)" },
+              ] as const
+            ).map((k) => (
               <div
-                key={label}
+                key={k.label}
+                aria-label={`${k.label}: ${k.display}`}
                 style={{
-                  ...kpiTileShell,
+                  borderRadius: 14,
+                  border: `1px solid ${t.cardBorder}`,
+                  borderLeft: `3px solid ${k.cor}`,
+                  background: brand.blockBg,
                   padding: "16px 18px",
-                  marginBottom: 0,
+                  boxShadow: cardShadow,
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 800, color: t.textMuted, fontFamily: FONT_TITLE, marginBottom: 8 }}>
-                  {label}
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {k.label}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>—</div>
-                <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 6 }}>Valores em definição</div>
+                <div
+                  style={{
+                    fontSize: 26,
+                    fontWeight: 800,
+                    color: k.cor,
+                    fontFamily: FONT_TITLE,
+                    marginTop: 6,
+                  }}
+                >
+                  {k.display}
+                </div>
               </div>
             ))}
           </div>
 
           <div style={contentBox}>
-            <div style={{ fontFamily: FONT_TITLE, fontSize: 16, fontWeight: 800, color: t.text, marginBottom: 14 }}>
-              Controle de Presença
-            </div>
+            <SectionTitle>Controle de Presença</SectionTitle>
             {presencaFilterStaffIds.length === 0 ? (
               <div
                 style={{

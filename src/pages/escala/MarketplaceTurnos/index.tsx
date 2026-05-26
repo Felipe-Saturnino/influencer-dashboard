@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, List, MoreHorizontal, Store, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -17,6 +17,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
@@ -217,23 +218,24 @@ export default function EscalaMarketplaceTurnosPage() {
         />
       </>
     ) : (
-      <div className="app-marketplace-filtro-minhas">
-        <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
-        <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
-          {blocoCarrosselHistorico}
-          <FiltroSolicitacoesTipoAcaoSelect
-            value={filtroTipoMinhas}
-            onChange={setFiltroTipoMinhas}
-            opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
-          />
-        </div>
-        <div className="app-marketplace-filtro-minhas__cta">
-          <button type="button" aria-label="Ofertar" style={getCtaCriarButtonStyle(brand)}>
-            Ofertar
-          </button>
-        </div>
-      </div>
+      <>
+        {blocoCarrosselHistorico}
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoMinhas}
+          onChange={setFiltroTipoMinhas}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
+        />
+        <button
+          type="button"
+          aria-label="Ofertar"
+          style={{ ...getCtaCriarButtonStyle(brand), marginLeft: "auto" }}
+        >
+          Ofertar
+        </button>
+      </>
     );
+
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
     if (rows.length === 0) {
@@ -581,35 +583,35 @@ export default function EscalaMarketplaceTurnosPage() {
 
       {aba === "todas" && (
         <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
-          <SectionTitle icon={<List size={14} aria-hidden="true" />}>Ofertas de Vendas</SectionTitle>
-          {renderTabelaVendas(linhasVendasTodas)}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />}>Ofertas de Troca</SectionTitle>
-          {renderTabelaTrocaTodas(linhasTrocaTodas)}
+          <div style={contentBox}>
+            <SectionTitle>Ofertas de Vendas</SectionTitle>
+            {renderTabelaVendas(linhasVendasTodas)}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas de Troca</SectionTitle>
+            {renderTabelaTrocaTodas(linhasTrocaTodas)}
+          </div>
         </div>
       )}
 
       {aba === "minhas" && (
         <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Interessado">
-            Ofertas em análise
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Em análise">
-            Ofertas em aprovação
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Aberto">
-            Ofertas abertas
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="Aprovada ou Recusada">
-            Ofertas encerradas
-          </SectionTitle>
-          {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+          <div style={contentBox}>
+            <SectionTitle>Ofertas em análise</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas em aprovação</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas abertas</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas encerradas</SectionTitle>
+            {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+          </div>
         </div>
       )}
     </div>
