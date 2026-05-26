@@ -3,7 +3,7 @@ import { Users } from "lucide-react";
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import SectionTitle from "../../dashboard/SectionTitle";
-import { FONT } from "../../../constants/theme";
+import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
 
