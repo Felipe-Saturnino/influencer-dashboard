@@ -42,7 +42,7 @@ Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.
 
 | PageKey | h1 (menu) | Subtítulo canónico | Notas |
 |---|---|---|---|
-| `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | Título visual legado `Playbook — Influencers` até unificação com menu |
+| `playbook_influencers` | Playbook Influencers | O material abaixo tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo alinhamento com a operação, posicionamento de marca e melhor experiência para o público. | Título visual legado `Playbook — Influencers` até unificação com menu |
 | `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
 | `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
 | `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
@@ -386,6 +386,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do utilizador.
 - **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; excluir com `canExcluirOk` (dois cliques).
 - **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); Publicar grava `published_at` / `published_by`.
+- **Aprovação (`lib/informativosWorkflow.ts`):** perfis Admin/Executivo/Operador/Agência/Influencer/Afiliado/Investidor → só «Enviar para aprovação»; demais perfis → «Publicar» direto. Aprovar: alvo com Admin/Executivo/Operador → só perfil Administrador; alvo com Agência/Influencer/Afiliado → Admin, Executivo ou Gestor; autoaprovação só Admin.
 - **Sem** categorias, fixado nem marcar como lido.
 
 ### Portal de RH (`src/pages/conteudo/PortalRh/`)

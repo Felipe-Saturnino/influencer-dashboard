@@ -15,12 +15,6 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_SIZE } from "../../../lib/filterBarStyles";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
-/** Texto introdutório fixo abaixo do título (visível em todas as abas). */
-const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
-  "Este material tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo alinhamento com a operação, posicionamento de marca e melhor experiência para o público.",
-  "As diretrizes abaixo devem ser aplicadas de forma natural e autêntica, respeitando o estilo de cada criador.",
-] as const;
-
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
   "admin",
@@ -872,26 +866,8 @@ export default function PlaybookInfluencers() {
             lineHeight: 1.45,
           }}
         >
-          Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.
+          O material abaixo tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo alinhamento com a operação, posicionamento de marca e melhor experiência para o público.
         </p>
-
-        <div style={{
-          marginTop: 12,
-          paddingLeft: 40,
-          width: "100%",
-          maxWidth: "100%",
-          boxSizing: "border-box",
-          fontFamily: FONT.body,
-          fontSize: 13,
-          lineHeight: 1.65,
-          color: t.textMuted,
-        }}>
-          {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
-            <p key={i} style={{ margin: i === 0 ? "0 0 10px 0" : 0 }}>
-              {texto}
-            </p>
-          ))}
-        </div>
       </div>
 
       {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
