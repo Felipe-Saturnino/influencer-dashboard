@@ -13,9 +13,14 @@ import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroHistoricoButton,
+  FiltroOperadoraSelect,
+  SectionTitle,
+  SortTableTh,
+  type SortDir,
+} from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import {
   compareAtivoBoolean,
@@ -809,8 +814,8 @@ function BlocoSolicitacoes({
 
   return (
     <div style={pageBox}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
-        <BlocoLabel label="Solicitações" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <SectionTitle compact>Solicitações</SectionTitle>
         {podeSolicitar ? (
           <CtaCriarButton type="button" onClick={() => void aoClicarSolicitar()}>
             Solicitar Banca
@@ -1418,8 +1423,8 @@ function BlocoConsolidadoBanca({
 
   return (
     <div style={pageBox}>
-      <div style={{ marginBottom: 18 }}>
-        <BlocoLabel label="Consolidado de bancas" />
+      <SectionTitle>Consolidado de bancas</SectionTitle>
+      <div style={{ marginBottom: 16 }}>
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
@@ -1427,7 +1432,6 @@ function BlocoConsolidadoBanca({
           aria-label="Buscar influencer por nome ou e-mail"
           style={{
             width: "100%",
-            marginTop: 12,
             boxSizing: "border-box",
             padding: "8px 14px", borderRadius: 10,
             border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
