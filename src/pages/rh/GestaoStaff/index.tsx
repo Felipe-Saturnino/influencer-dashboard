@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import {
   isGamePresenterTimeNome,
@@ -811,15 +812,7 @@ export default function RhGestaoStaffPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={getFilterBarRowStyle()}>
             <button
               type="button"
@@ -923,7 +916,6 @@ export default function RhGestaoStaffPage() {
               </div>
             </div>
           </div>
-        </div>
       </div>
 
       {loadingPrestadores || loadingTimes ? (

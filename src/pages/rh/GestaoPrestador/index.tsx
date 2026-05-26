@@ -95,6 +95,7 @@ import {
   getFilterBarWrapperStyle,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
+import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
@@ -1000,7 +1001,8 @@ export default function RhPrestadoresPage() {
   const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
   const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const tableBoxShell = { ...getPageContentBoxShellStyle(brand, t), overflow: "hidden" as const, padding: 0, marginBottom: 0 };
+  const kpiTileShell = getPageContentBoxShellStyle(brand, t);
 
   useEffect(() => {
     if (permOrg.loading || permOrg.canView === "nao") {
@@ -2121,7 +2123,7 @@ export default function RhPrestadoresPage() {
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
+        <div style={tableBoxShell}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
@@ -2348,14 +2350,12 @@ export default function RhPrestadoresPage() {
         </div>
       ) : null}
 
-      <div className="app-grid-3" style={{ gap: 16, marginBottom: 16 }}>
+      <div className="app-grid-3" style={{ gap: 16, ...getPageKpiSectionGapStyle() }}>
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 18,
+            ...kpiTileShell,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2407,11 +2407,10 @@ export default function RhPrestadoresPage() {
 
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            ...kpiTileShell,
             border: "1px solid rgba(232, 64, 37, 0.25)",
-            borderRadius: 18,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2482,11 +2481,10 @@ export default function RhPrestadoresPage() {
 
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            ...kpiTileShell,
             border: "1px solid rgba(245, 158, 11, 0.35)",
-            borderRadius: 18,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2534,8 +2532,7 @@ export default function RhPrestadoresPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>
             <FiltroBarCampoSelect
               id="rh-filtro-dir"
@@ -2619,7 +2616,6 @@ export default function RhPrestadoresPage() {
               </FiltroBarTabButton>
             ))}
           </div>
-        </div>
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
@@ -2654,7 +2650,7 @@ export default function RhPrestadoresPage() {
         </div>
 
         <div className="app-table-wrap">
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
+        <div style={tableBoxShell}>
           <table
             style={{
               width: "100%",

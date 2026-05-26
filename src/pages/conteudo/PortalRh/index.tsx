@@ -33,6 +33,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
+import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
 
@@ -285,7 +286,7 @@ export default function PortalRhPage() {
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const cardShadow = getPageContentBoxShadow(t.isDark);
 
   useEffect(() => {
     const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);

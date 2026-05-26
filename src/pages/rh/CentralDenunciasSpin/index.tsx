@@ -8,6 +8,7 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { FiltroBarCampoSelect, FiltroEntidadeBarSelect, FiltroHistoricoButton } from "../../../components/dashboard";
 import {
   STATUS_OPTIONS,
@@ -233,8 +234,7 @@ export default function CentralDenunciasSpin() {
         subtitle="Canal de denúncias Spin"
       />
 
-      <div style={{ marginBottom: 22 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               <button
@@ -294,19 +294,16 @@ export default function CentralDenunciasSpin() {
             />
           </div>
         </div>
-      </div>
 
       {/* Bloco 2 — KPIs por status (mesmo período do filtro acima) */}
-      <div className="app-grid-kpi-4" style={{ marginBottom: 24 }}>
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
         {STATUS_OPTIONS.map((s) => (
           <div
             key={s.value}
             style={{
+              ...getPageContentBoxShellStyle(brand, t),
               padding: "16px 18px",
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.cardBg,
-              boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+              marginBottom: 0,
             }}
           >
             <div style={{ fontSize: 12, color: t.textMuted, fontWeight: 600, marginBottom: 6 }}>{s.label}</div>

@@ -19,6 +19,7 @@ import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { ctaGradientSalvar } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import { BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 const ERRO_EXCLUIR_MESA = "Não foi possível excluir a mesa. Verifique se não há registros vinculados.";
@@ -156,13 +157,7 @@ export default function GestaoMesas() {
     );
   }
 
-  const card: React.CSSProperties = {
-    background: t.cardBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const contentBox = getPageContentBoxStyle(dashBrand, t);
 
   return (
     <div className="app-page-shell">
@@ -172,15 +167,7 @@ export default function GestaoMesas() {
         subtitle="Cadastre e gerencie as mesas disponíveis por operadora."
       />
 
-      <div
-        style={{
-          marginBottom: 16,
-          padding: "12px 20px",
-          borderRadius: 14,
-          background: dashBrand.primaryTransparentBg,
-          border: dashBrand.primaryTransparentBorder,
-        }}
-      >
+      <div style={getPageFilterBoxStyle(dashBrand, t)}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <FiltroOperadoraSelect
             value={filtroOperadora}
@@ -201,7 +188,7 @@ export default function GestaoMesas() {
         </div>
       </div>
 
-      <div style={card}>
+      <div style={contentBox}>
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <Loader2 size={20} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />

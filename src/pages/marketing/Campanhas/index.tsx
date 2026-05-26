@@ -18,6 +18,11 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
+import {
+  PAGE_CONTENT_BOX_GAP,
+  getPageContentBoxShellStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -121,8 +126,6 @@ export default function Campanhas() {
     );
   }
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-
   return (
     <div className="app-page-shell">
       <PageHeader
@@ -131,7 +134,7 @@ export default function Campanhas() {
         subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 
-      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
         {[
           { label: "Total", valor: campanhas.length, cor: brand.accent },
           { label: "Ativas", valor: ativas, cor: "#059669" },
@@ -140,12 +143,9 @@ export default function Campanhas() {
           <div
             key={c.label}
             style={{
-              background: brand.blockBg,
-              border: `1px solid ${t.cardBorder}`,
+              ...getPageContentBoxShellStyle(brand, t),
               borderTop: `3px solid ${c.cor}`,
-              borderRadius: 18,
               padding: "16px 20px",
-              boxShadow: cardShadow,
             }}
           >
             <div
@@ -176,15 +176,7 @@ export default function Campanhas() {
         ))}
       </div>
 
-      <div
-        style={{
-          background: brand.blockBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18,
-          boxShadow: cardShadow,
-          overflow: "hidden",
-        }}
-      >
+      <div style={getPageContentBoxShellStyle(brand, t, { overflow: "hidden", marginBottom: PAGE_CONTENT_BOX_GAP })}>
         <div style={{ padding: "16px 20px 0" }}>
           <BlocoLabel label="Campanhas cadastradas" />
         </div>

@@ -33,6 +33,10 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
+import {
   getThStyle,
   getThStyleBrandAction,
   getTdStyle,
@@ -463,7 +467,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, isDark, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -947,13 +951,7 @@ export default function DashboardOverviewInfluencer() {
     ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
   const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
   const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
   const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
@@ -977,13 +975,7 @@ export default function DashboardOverviewInfluencer() {
       />
 
       {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
@@ -1041,7 +1033,6 @@ export default function DashboardOverviewInfluencer() {
               </span>
             )}
           </div>
-        </div>
       </div>
 
       {filtroResetado && (
@@ -1066,7 +1057,7 @@ export default function DashboardOverviewInfluencer() {
       )}
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
           icon={<BarChart2 size={14} aria-hidden="true" />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
@@ -1210,7 +1201,7 @@ export default function DashboardOverviewInfluencer() {
       </div>
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle icon={<Filter size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
@@ -1218,7 +1209,7 @@ export default function DashboardOverviewInfluencer() {
       </div>
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle icon={<Gauge size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
           Eficiência
         </SectionTitle>
@@ -1238,7 +1229,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
-        <div style={{ ...card, marginBottom: 14 }}>
+        <div style={card}>
           <SectionTitle
             icon={<CalendarDays size={14} aria-hidden="true" />}
             sub={historico ? "mês a mês" : undefined}

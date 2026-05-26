@@ -6,6 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
@@ -471,7 +472,7 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
 }
 
 export default function RhGestaoEscalaPage() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_gestao_escala");
 
@@ -993,14 +994,7 @@ export default function RhGestaoEscalaPage() {
     [gerarPorFiltro, linhasPorFiltroGerar, dias],
   );
 
-  /** Mesmo bloco de conteúdo que `OverviewSpin` (Detalhamento Diário): `card` + `SectionTitle`. */
-  const card: CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
-  };
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   const thBase = getThStyle(t);
 
@@ -1218,15 +1212,7 @@ export default function RhGestaoEscalaPage() {
         subtitle="Gere a escala por área (time), colaborador e dia do mês."
       />
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1316,7 +1302,6 @@ export default function RhGestaoEscalaPage() {
               </div>
             </>
           ) : null}
-        </div>
       </div>
 
       {erroPrestadores && (
@@ -1366,7 +1351,7 @@ export default function RhGestaoEscalaPage() {
             {resumoTurnoDias && mostrarFiltroArea ? (
               <section
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
-                style={{ ...card, marginBottom: 14 }}
+                style={contentBox}
               >
                 <SectionTitle
                   icon={<Users size={15} aria-hidden />}
@@ -1641,7 +1626,7 @@ export default function RhGestaoEscalaPage() {
             ) : null}
             <section
               aria-label="Escala Diária - Definição de status diário por Prestador"
-              style={{ ...card, marginBottom: 14 }}
+              style={contentBox}
             >
               <SectionTitle icon={<Calendar size={15} aria-hidden />} sub="definição de status diário por Prestador">
                 Escala Diária

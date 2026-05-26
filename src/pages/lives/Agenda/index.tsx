@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
@@ -175,14 +176,7 @@ export default function Agenda() {
   }
 
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: cardShadow,
-  };
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   const calendarViewProps = {
     current,
@@ -232,8 +226,7 @@ export default function Agenda() {
       />
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={getFilterBarRowStyle()}>
             <button
               type="button"
@@ -328,10 +321,9 @@ export default function Agenda() {
             )}
           </div>
         </div>
-      </div>
 
       {/* ── CALENDÁRIO ── */}
-      <div style={card}>
+      <div style={contentBox}>
         {perm.canCriarOk && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
             <CtaCriarButton

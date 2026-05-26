@@ -21,6 +21,7 @@ import type {
   RhOrgGerenciaComFilhos,
   RhOrgTime,
 } from "../../../types/rhOrganograma";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -137,7 +138,7 @@ export default function RhOrganogramaPage() {
 
   const [sobreGerencia, setSobreGerencia] = useState("");
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const orgPanelBox = getPageContentBoxStyle(brand, t, { marginBottom: 0 });
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -860,13 +861,7 @@ export default function RhOrganogramaPage() {
         role={podeEditar ? "tabpanel" : "region"}
         id={`panel-org-${modo}`}
         {...(podeEditar ? { "aria-labelledby": `tab-org-${modo}` } : { "aria-label": "Organograma" })}
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          padding: 20,
-          boxShadow: cardShadow,
-          minHeight: 200,
-        }}
+        style={{ ...orgPanelBox, minHeight: 200 }}
       >
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>

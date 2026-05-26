@@ -28,6 +28,11 @@ import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { Role } from "../../../types";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 type BancaStatus = "solicitado" | "aprovado" | "liberado";
 type BancaStatusConta = "liberada" | "bloqueada";
@@ -800,8 +805,10 @@ function BlocoSolicitacoes({
 
   const podeSolicitar = user && (roleParidadeInfluencer(user.role) || user.role === "agencia");
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+
   return (
-    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={pageBox}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
         <BlocoLabel label="Solicitações" />
         {podeSolicitar ? (
@@ -1407,8 +1414,10 @@ function BlocoConsolidadoBanca({
     return { label: "Bloqueada", color: "#ef4444" };
   };
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+
   return (
-    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={pageBox}>
       <div style={{ marginBottom: 18 }}>
         <BlocoLabel label="Consolidado de bancas" />
         <input
@@ -1909,13 +1918,7 @@ export default function BancaJogo() {
         subtitle="Solicite, aprove e libere bancas de jogo por parceiro e operadora."
       />
 
-      <div style={{ marginBottom: 20 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -1963,11 +1966,9 @@ export default function BancaJogo() {
               />
             )}
           </div>
-        </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <div className="app-grid-kpi-3" style={{ width: "100%", gap: 14 }}>
+      <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
           {[
             { label: "R$ Solicitado", total: kpisBanca.solicitado, color: STATUS_BANCA.solicitado.color },
             { label: "R$ Aprovado", total: kpisBanca.aprovado, color: STATUS_BANCA.aprovado.color },
@@ -2010,7 +2011,6 @@ export default function BancaJogo() {
               </div>
             </div>
           ))}
-        </div>
       </div>
 
       <BlocoSolicitacoes

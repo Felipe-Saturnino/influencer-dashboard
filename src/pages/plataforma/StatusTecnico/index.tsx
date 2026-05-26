@@ -42,6 +42,10 @@ import {
   tableRowHoverBg,
 } from "./statusTecnicoHelpers";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
+import {
+  getPageContentBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
@@ -204,12 +208,7 @@ export default function StatusTecnico() {
   const [cidrExcluir, setCidrExcluir] = useState<PrestadorPontoCidrRow | null>(null);
   const [cidrExcluindo, setCidrExcluindo] = useState(false);
   const [cidrErroExcluir, setCidrErroExcluir] = useState<string | null>(null);
-  const card: React.CSSProperties = {
-    background: t.cardBg,
-    borderRadius: 16,
-    padding: 24,
-    border: `1px solid ${t.cardBorder}`,
-  };
+  const pageBox = getPageContentBoxStyle(dashBrand, t);
   const cidrInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = useCallback(async () => {
@@ -1288,7 +1287,7 @@ export default function StatusTecnico() {
       />
 
       {/* ── KPI Cards — accent bar ── */}
-      <div className="app-grid-kpi-4" style={{ gap: 16 }}>
+      <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), gap: 16 }}>
         <StatusKpiCard
           label="Integrações Ativas"
           loading={loading}
@@ -1316,7 +1315,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* ── Status das Integrações ── */}
-      <div style={card}>
+      <div style={pageBox}>
         <StatusSectionTitle icon={<Activity size={14} aria-hidden="true" />}>Status das Integrações</StatusSectionTitle>
         {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -1479,7 +1478,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* Fluxo de Dados — sem legenda textual (#5 + remoção legenda) */}
-      <div style={card}>
+      <div style={pageBox}>
         <StatusSectionTitle icon={<BarChart2 size={14} aria-hidden="true" />}>Fluxo de Dados (últimos 14 dias)</StatusSectionTitle>
 
         {/* Legenda visual compacta — sem texto explicativo de escala */}
@@ -1604,7 +1603,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* Alertas — hierarquia erro vs aviso (#4, #8) */}
-      <div style={card}>
+      <div style={pageBox}>
         <StatusSectionTitle icon={<Bell size={14} aria-hidden="true" />}>Alertas</StatusSectionTitle>
         {alertas.length === 0 ? (
           <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1644,7 +1643,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* Logs Recentes */}
-      <div style={card}>
+      <div style={pageBox}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
           <StatusSectionTitle icon={<FileText size={14} aria-hidden="true" />}>Logs Recentes</StatusSectionTitle>
           <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -1747,7 +1746,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* Redes permitidas — check-in de prestadores */}
-      <div style={card}>
+      <div style={pageBox}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <StatusSectionTitle icon={<Network size={14} aria-hidden="true" />}>
             Redes permitidas — check-in de prestadores
@@ -1842,7 +1841,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* Configuração de Alertas */}
-      <div style={card}>
+      <div style={pageBox}>
         <StatusSectionTitle icon={<AlertTriangle size={14} aria-hidden="true" />}>Configuração de Alertas</StatusSectionTitle>
         <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16, marginTop: -12 }}>
           Condições monitoradas automaticamente. Edição futura via administração.

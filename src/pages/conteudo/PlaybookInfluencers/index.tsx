@@ -17,6 +17,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_HEADER_SUBTITLE_PADDING_LEFT } from "../../../lib/pageHeaderStyles";
+import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
@@ -869,7 +870,7 @@ export default function PlaybookInfluencers() {
           fontSize: 13,
           lineHeight: 1.65,
           color: t.textMuted,
-          marginBottom: 20,
+          ...getPageKpiSectionGapStyle(),
         }}
       >
         <p style={{ margin: 0 }}>
@@ -880,7 +881,7 @@ export default function PlaybookInfluencers() {
 
       {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
         <div style={{
-          marginBottom: 20, padding: "16px 20px", borderRadius: 12,
+          ...getPageKpiSectionGapStyle(), padding: "16px 20px", borderRadius: 12,
           background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
           border: "1.5px solid rgba(34,197,94,0.30)",
           display: "flex", alignItems: "center", gap: 12,
@@ -900,7 +901,7 @@ export default function PlaybookInfluencers() {
       )}
 
       {roleParidadeInfluencer(user?.role) && !tudoConfirmado && totalOb > 0 && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={getPageKpiSectionGapStyle()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Progresso
@@ -999,7 +1000,7 @@ export default function PlaybookInfluencers() {
         boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
       }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, ...getPageKpiSectionGapStyle() }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 4, height: 22, borderRadius: 2, background: abaConfig.accentColor, flexShrink: 0 }} />
             <h2 style={{

@@ -28,6 +28,7 @@ import {
   VAGA_FILTRO_TODOS_TIPOS_VALUE,
 } from "../../../lib/rhVagasFiltroConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { getPageContentBoxShellStyle, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
@@ -98,7 +99,7 @@ export default function RhVagasPage() {
   const podeCriarVaga = perm.canCriarOk;
   const mostrarAbaGerenciamento = perm.canCriarOk || perm.canExcluirOk;
   const mostrarAbaCandidaturas = perm.canCriarOk;
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const vagaCardShell = getPageContentBoxShellStyle(brand, t);
 
   const carregar = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -233,17 +234,12 @@ export default function RhVagasPage() {
     );
   }
 
+  const vagaArticleStyle = { ...vagaCardShell, padding: 18, marginBottom: 14 };
+
   const renderCardBase = (v: RhVagaRow, extras?: ReactNode, opts?: { statusLabel?: string }) => (
     <article
       key={v.id}
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${t.cardBorder}`,
-        padding: 18,
-        marginBottom: 14,
-        boxShadow: cardShadow,
-        background: t.cardBg ?? t.inputBg,
-      }}
+      style={vagaArticleStyle}
     >
       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
       <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
@@ -427,13 +423,7 @@ export default function RhVagasPage() {
         role="tabpanel"
         id={`panel-rh-vagas-${aba}`}
         aria-labelledby={`tab-rh-vagas-${aba}`}
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          padding: 20,
-          boxShadow: cardShadow,
-          minHeight: 200,
-        }}
+        style={{ ...getPageContentBoxStyle(brand, t), minHeight: 200 }}
       >
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
@@ -498,14 +488,7 @@ export default function RhVagasPage() {
                   return (
                     <article
                       key={v.id}
-                      style={{
-                        borderRadius: 14,
-                        border: `1px solid ${t.cardBorder}`,
-                        padding: 18,
-                        marginBottom: 14,
-                        boxShadow: cardShadow,
-                        background: t.cardBg ?? t.inputBg,
-                      }}
+                      style={vagaArticleStyle}
                     >
                       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
                       <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />
@@ -526,14 +509,7 @@ export default function RhVagasPage() {
                   return (
                     <article
                       key={v.id}
-                      style={{
-                        borderRadius: 14,
-                        border: `1px solid ${t.cardBorder}`,
-                        padding: 18,
-                        marginBottom: 14,
-                        boxShadow: cardShadow,
-                        background: t.cardBg ?? t.inputBg,
-                      }}
+                      style={vagaArticleStyle}
                     >
                       <h3 style={{ margin: "0 0 14px", fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{v.titulo}</h3>
                       <CampoVaga k="Código da vaga" v={v.codigo_vaga?.trim() || "—"} t={t} />

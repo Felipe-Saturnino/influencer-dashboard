@@ -21,6 +21,7 @@ import {
   ctaGradientSalvar,
   handleGestaoTabsArrowKeyDown,
 } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 const ERRO_EXCLUIR_OPERADORA =
@@ -137,7 +138,7 @@ export default function GestaoOperadoras() {
       />
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
-      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
         {[
           { label: "Total", valor: loading ? "—" : operadoras.length, cor: BRAND.roxoVivo },
           { label: "Ativas", valor: loading ? "—" : ativas, cor: "#059669" },

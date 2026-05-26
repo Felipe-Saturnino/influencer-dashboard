@@ -29,6 +29,10 @@ import {
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
+import {
   AlertTriangle,
   Banknote,
   CheckCircle2,
@@ -1097,14 +1101,10 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     minWidth: "180px",
   });
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+
   return (
-    <div style={{
-      background: brand.blockBg,
-      border: `1px solid ${t.cardBorder}`,
-      borderRadius: "16px",
-      padding: "22px",
-      marginBottom: "24px",
-    }}>
+    <div style={pageBox}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
         <BlocoLabel label="KPIs" />
       </div>
@@ -1721,8 +1721,10 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     label: `${fmtCicloDatas(c.data_inicio, c.data_fim)}${cicloAberto(c) ? " (atual)" : ""}`,
   }));
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+
   return (
-    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={pageBox}>
 
       {/* Cabeçalho */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
@@ -2317,8 +2319,10 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const tdCons = getTdStyle(t);
   const tdNumCons = getTdNumStyle(t);
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+
   return (
-    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={pageBox}>
       <div style={{ marginBottom: "18px" }}>
         <BlocoLabel label="Consolidado de influencers" />
         <input
@@ -2888,7 +2892,7 @@ export default function Financeiro() {
           title={getPageMenuLabel("financeiro")}
           subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
         />
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
+        <div style={getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" })}>
           <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
             {roleParidadeInfluencer(user?.role) ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
           </p>
@@ -2937,13 +2941,7 @@ export default function Financeiro() {
       />
 
       {/* Bloco de filtros (similar Agenda) */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -2991,7 +2989,6 @@ export default function Financeiro() {
               />
             )}
           </div>
-        </div>
       </div>
 
       <BlocoKpis filtros={filtros} />

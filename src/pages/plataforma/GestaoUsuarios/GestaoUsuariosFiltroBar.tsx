@@ -131,8 +131,8 @@ function LinhasPerfis({
   const { theme: t } = useApp();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-      {linhas.map(({ titulo, roles }, idx) => (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: 10 }}>
+      {linhas.map(({ titulo, roles }) => (
         <div
           key={titulo}
           {...(modo === "single"
@@ -150,13 +150,6 @@ function LinhasPerfis({
             flexWrap: "wrap",
             justifyContent: "center",
             width: "100%",
-            ...(idx > 0
-              ? {
-                  paddingTop: 12,
-                  marginTop: 12,
-                  borderTop: `1px solid ${t.cardBorder}`,
-                }
-              : {}),
           }}
         >
           <span style={rotuloSecaoFiltroStyle(t)}>{rotuloCurtoPerfil(titulo)}</span>
@@ -250,7 +243,7 @@ export function GestaoUsuariosFiltroBar({
   const pillTodos = getFiltroBarTabButtonStyle(t, brand, todosStatusAtivo, BRAND.cinza);
 
   return (
-    <div style={{ ...getFilterBarWrapperStyle(brand), marginBottom: 18 }}>
+    <div style={getFilterBarWrapperStyle(brand, t)}>
       {mostrarAbasAdmin ? (
         <div
           role="tablist"
@@ -279,9 +272,7 @@ export function GestaoUsuariosFiltroBar({
             display: "flex",
             flexDirection: "column",
             width: "100%",
-            ...(mostrarAbasAdmin
-              ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
-              : {}),
+            ...(mostrarAbasAdmin ? { paddingTop: 12, marginTop: 12 } : {}),
           }}
         >
           <div style={getFilterBarRowStyle()}>

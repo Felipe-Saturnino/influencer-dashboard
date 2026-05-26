@@ -36,6 +36,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import {
   MESES_CICLO_REVISAO_CADASTRO,
   payloadMarcarRevisaoCadastral,
@@ -750,7 +751,7 @@ export default function RhDadosCadastroPage() {
         <section
           aria-labelledby="revisao-cadastral-titulo"
           style={{
-            marginBottom: 18,
+            marginBottom: PAGE_CONTENT_BOX_GAP,
             padding: "16px 18px",
             borderRadius: 14,
             border: "1px solid rgba(232, 64, 37, 0.28)",
@@ -877,7 +878,7 @@ export default function RhDadosCadastroPage() {
         style={{
           display: "flex",
           gap: 8,
-          marginBottom: 18,
+          marginBottom: PAGE_CONTENT_BOX_GAP,
           flexWrap: "nowrap",
           overflowX: "auto",
           WebkitOverflowScrolling: "touch",

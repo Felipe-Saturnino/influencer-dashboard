@@ -4,6 +4,7 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroHistoricoButton } from "../../../components/dashboard";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
@@ -59,15 +60,7 @@ export function InformativosBlocoFiltros({
   const sep = linhaSeparador(t);
 
   return (
-    <div
-      style={{
-        borderRadius: 14,
-        border: brand.primaryTransparentBorder,
-        background: brand.primaryTransparentBg,
-        padding: "12px 20px",
-        marginBottom: 16,
-      }}
-    >
+    <div style={getPageFilterBoxStyle(brand, t)}>
       <div style={LINHA_FILTRO}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button

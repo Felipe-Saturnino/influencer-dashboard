@@ -10,6 +10,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
+import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
@@ -71,7 +72,7 @@ export default function InformativosPage() {
 
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const cardShadow = getPageContentBoxShadow(t.isDark);
 
   const filtroCarrossel = useMemo(() => {
     const meses = aba === "gerenciamento" ? mesesGer : mesesCarrossel;

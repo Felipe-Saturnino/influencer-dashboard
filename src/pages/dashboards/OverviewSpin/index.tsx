@@ -12,10 +12,10 @@ import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers"
 import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
 import {
-  getOverviewSpinBoxRadius,
-  getOverviewSpinContentBoxStyle,
-  getOverviewSpinFilterBoxStyle,
-} from "./overviewSpinBoxStyles";
+  getPageContentBoxRadius,
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -2248,7 +2248,7 @@ export default function OverviewSpin() {
     textAlign: "center",
   };
 
-  const contentBox = getOverviewSpinContentBoxStyle(brand, t);
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   const thStyle = brand.useBrand
     ? getThStyleBrandAction(t, { verticalAlign: "middle" })
@@ -3079,7 +3079,7 @@ export default function OverviewSpin() {
       {modoVisualizacao === "tabela" ? (
         <div
           className="app-table-wrap"
-          style={{ borderRadius: getOverviewSpinBoxRadius(t.isDark), overflow: "hidden" }}
+          style={{ borderRadius: getPageContentBoxRadius(t.isDark), overflow: "hidden" }}
         >
           <div style={{ overflowX: "auto" }}>
             <table
@@ -3475,7 +3475,7 @@ export default function OverviewSpin() {
         t={t}
       />
 
-      <div style={getOverviewSpinFilterBoxStyle(brand, t)}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",

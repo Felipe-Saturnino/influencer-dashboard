@@ -26,6 +26,12 @@ import {
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import {
+  PAGE_CONTENT_BOX_GAP,
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
@@ -1008,14 +1014,7 @@ export default function SocialMediaDashboard() {
   }, [campanhasPerf, sortTaxCmp]);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 14,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
   const thStyle = brand.useBrand ? getThStyleBrandAction(t) : getThStyle(t);
   const zebraTabelaMidias = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
@@ -1057,15 +1056,7 @@ export default function SocialMediaDashboard() {
       />
 
       {/* Período + abas */}
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1122,7 +1113,6 @@ export default function SocialMediaDashboard() {
               );
             })}
           </div>
-        </div>
       </div>
 
       <div role="tabpanel" id={`panel-midias-${aba}`} aria-labelledby={`tab-midias-${aba}`}>
@@ -1137,7 +1127,7 @@ export default function SocialMediaDashboard() {
               ))}
             </div>
           </div>
-          <div style={{ ...card, marginTop: 14 }}>
+          <div style={{ ...card, marginTop: PAGE_CONTENT_BOX_GAP }}>
             <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
           </div>
         </>
@@ -1680,7 +1670,7 @@ export default function SocialMediaDashboard() {
           </div>
 
           {/* Cards por canal */}
-          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
+          <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
             {channelConfig.map((cfg) => {
               const byCh   = totais.byChannel[cfg.channel] ?? [];
               const stats  = cfg.stats(byCh);

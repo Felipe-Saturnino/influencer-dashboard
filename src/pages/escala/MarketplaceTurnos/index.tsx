@@ -555,8 +555,7 @@ export default function EscalaMarketplaceTurnosPage() {
         t={t}
       />
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
           <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
             <FiltroBarTabButton
@@ -578,7 +577,6 @@ export default function EscalaMarketplaceTurnosPage() {
               Minhas Ofertas
             </FiltroBarTabButton>
           </div>
-        </div>
       </div>
 
       {aba === "todas" && (

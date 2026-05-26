@@ -203,23 +203,24 @@ Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defe
 - **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
 - `SelectComIcone` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B, domínios que não sejam filtro de lista na strip).
 
-Wrapper obrigatório (dentro de `marginBottom` ~14–20):
+Wrapper obrigatório — moldura de página + **gap 14px** até o próximo bloco (**Global** § Blocos de página):
 
 ```tsx
-<div style={{
-  borderRadius: 14,
-  border: brand.primaryTransparentBorder,
-  background: brand.primaryTransparentBg,
-  padding: "12px 20px",
-}}>
+import { getPageFilterBoxStyle } from "../lib/pageContentBoxStyles";
+// ou: getFilterBarWrapperStyle(brand, t) em filterBarStyles.ts (delega ao mesmo helper)
+
+<div style={getPageFilterBoxStyle(brand, t)}>
   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
     {/* carrossel, chips, selects, Histórico, loading secundário */}
   </div>
 </div>
 ```
 
+- **Spin, light:** strip branca (`#ffffff`) com borda/sombra — não depender só de `primaryTransparent*` sem o helper.
+- **Operadora:** `primaryTransparentBg` / `primaryTransparentBorder` via `getPageFilterBoxStyle` quando `brand.useBrand`.
 - **Alinhamento:** `justifyContent: "center"` + `width: "100%"` em cada linha de filtros do bloco (chips, carrossel, selects) — ver **Global** § Alinhamento no bloco de filtros. Alinhar à esquerda só com pedido explícito de produto.
-- **Nunca** `brand.blockBg`, `t.cardBg` ou fundo sólido no strip.
+- **Nunca** wrapper duplicado com `marginBottom: 14` **e** helper que já inclui `PAGE_CONTENT_BOX_GAP`.
+- **Nunca** `brand.blockBg`, `t.cardBg` ou fundo sólido no strip **em código novo** fora do helper (whitelabel usa tokens no helper).
 - **Nunca** select de operadora/influencer **fora** deste wrapper.
 - **Nunca** `justifyContent: "flex-start"` em fileiras de chips/status/plataforma na barra salvo exceção documentada no Global.
 

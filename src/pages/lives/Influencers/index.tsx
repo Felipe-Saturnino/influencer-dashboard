@@ -33,6 +33,11 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
@@ -475,7 +480,7 @@ export default function Influencers() {
 
       {/* Quadros resumo (quem gerencia múltiplos) */}
       {showManagementUI && (
-        <div className="app-grid-2" style={{ gap: "16px", marginBottom: "20px" }}>
+        <div className="app-grid-2" style={{ ...getPageKpiSectionGapStyle(), gap: "16px" }}>
           <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: cardShadow }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: brand.secondary, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
               <Users size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Total de Influencers
@@ -525,13 +530,7 @@ export default function Influencers() {
 
       {/* Bloco de filtros consolidado (estilo Agenda, sem carrossel) */}
       {showManagementUI && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}>
+        <div style={getPageFilterBoxStyle(brand, t)}>
             {/* Linha 1: Status / Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
@@ -645,7 +644,6 @@ export default function Influencers() {
                 </button>
               </div>
             )}
-          </div>
         </div>
       )}
 
@@ -696,7 +694,7 @@ export default function Influencers() {
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, boxShadow: cardShadow }}>
+        <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>
           Nenhum influencer encontrado.
         </div>
       ) : (

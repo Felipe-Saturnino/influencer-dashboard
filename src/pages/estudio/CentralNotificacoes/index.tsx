@@ -19,6 +19,10 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroHistoricoButton, FiltroOperadoraSelect, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 const JOGO_ROTEIRO_LABEL: Record<string, string> = {
   todos: "Todos os Jogos",
@@ -630,20 +634,11 @@ export default function CentralNotificacoes() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
-  const cardShell: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 14,
-    padding: 16,
-    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const cardShell: React.CSSProperties = getPageContentBoxStyle(brand, t, { padding: 16 });
 
-  const blocoCampanhasEnvelope: React.CSSProperties = {
-    borderRadius: 14,
-    border: brand.primaryTransparentBorder,
-    background: brand.primaryTransparentBg,
+  const blocoCampanhasEnvelope: React.CSSProperties = getPageFilterBoxStyle(brand, t, {
     padding: "16px 20px",
-  };
+  });
 
   const badgeTroca = solicTroca.filter(
     (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
@@ -1011,15 +1006,7 @@ export default function CentralNotificacoes() {
         title={getPageMenuLabel("central_notificacoes")}
         subtitle="Gerencie solicitações entre operadoras e estúdio com histórico de conversas."
       />
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1142,7 +1129,6 @@ export default function CentralNotificacoes() {
           ) : null}
             </div>
           ) : null}
-        </div>
       </div>
 
       {verInboxEstudio ? (

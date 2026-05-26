@@ -5,6 +5,8 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { getPageContentBoxShellStyle } from "../../../lib/pageContentBoxStyles";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 
@@ -102,6 +104,7 @@ type ThumbLoadPhase = "a" | "b" | "dead";
 
 export default function SpinNaRede() {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("spin_na_rede");
 
   const [loading, setLoading] = useState(true);
@@ -154,7 +157,8 @@ export default function SpinNaRede() {
     );
   }
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const listItemBox = getPageContentBoxShellStyle(brand, t, { padding: "14px 16px", marginBottom: 0 });
 
   return (
     <div className="app-page-shell app-page-shell--pb64" style={{ fontFamily: FONT.body }}>
@@ -205,13 +209,7 @@ export default function SpinNaRede() {
             return (
               <li
                 key={row.id}
-                style={{
-                  borderRadius: 14,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.cardBg,
-                  boxShadow: cardShadow,
-                  padding: "14px 16px",
-                }}
+                style={listItemBox}
               >
                 <div
                   style={{

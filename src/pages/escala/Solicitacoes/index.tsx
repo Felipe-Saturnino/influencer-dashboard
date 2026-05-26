@@ -569,8 +569,7 @@ export default function EscalaSolicitacoesPage() {
         t={t}
       />
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
           <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
           <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
@@ -593,7 +592,6 @@ export default function EscalaSolicitacoesPage() {
               Solicitações Arquivadas
             </FiltroBarTabButton>
           </div>
-        </div>
       </div>
 
       {aba === "aberto" && (

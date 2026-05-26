@@ -18,6 +18,7 @@ import { Link2, Copy, Check, AlertCircle, QrCode, Download, Loader2 } from "luci
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { ReactNode } from "react";
@@ -438,14 +439,7 @@ export default function LinksMateriais() {
 
       <section
         aria-labelledby={LINK_SECTION_TITLE_ID}
-        style={{
-          boxSizing: "border-box",
-          width: "100%",
-          background: brand.blockBg,
-          border: brand.primaryTransparentBorder,
-          borderRadius: 14,
-          padding: "16px 20px",
-        }}
+        style={{ ...getPageContentBoxStyle(brand, t, { padding: "16px 20px" }), boxSizing: "border-box", width: "100%" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <span style={{

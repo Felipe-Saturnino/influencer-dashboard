@@ -14,6 +14,11 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
 
 type NetworkModalTab = "contato" | "operacao" | "anotacoes";
@@ -242,7 +247,7 @@ export default function AfiliadosNetwork() {
       />
 
       {!loading && (
-        <div style={{ marginBottom: 24, width: "100%" }}>
+        <div style={{ ...getPageKpiSectionGapStyle(), width: "100%" }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
             Funil de Prospecção
           </div>
@@ -271,15 +276,7 @@ export default function AfiliadosNetwork() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           {/* Linha 1: Status */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
@@ -347,7 +344,6 @@ export default function AfiliadosNetwork() {
               </button>
             </div>
           )}
-        </div>
       </div>
 
       {!loading && (
@@ -374,11 +370,7 @@ export default function AfiliadosNetwork() {
       ) : filtered.length === 0 ? (
         <div
           style={{
-            background: brand.blockBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 18,
-            padding: 48,
-            textAlign: "center",
+            ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }),
             color: t.textMuted,
             fontFamily: FONT.body,
           }}

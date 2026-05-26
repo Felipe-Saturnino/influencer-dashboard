@@ -27,6 +27,11 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
+import {
+  getPageContentBoxShellStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -239,8 +244,6 @@ export default function FigurinosPage() {
 
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [histErro, setHistErro] = useState<string | null>(null);
-
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -600,7 +603,7 @@ export default function FigurinosPage() {
       ) : null}
 
       {/* Bloco 1: Consolidado */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={getPageKpiSectionGapStyle()}>
         <h2
           style={{
             ...SECTION_LABEL_STYLE,
@@ -623,11 +626,8 @@ export default function FigurinosPage() {
               key={k.label}
               aria-label={`${k.label}: ${k.value}`}
               style={{
-                borderRadius: 14,
-                border: `1px solid ${t.cardBorder}`,
-                background: brand.blockBg,
+                ...getPageContentBoxShellStyle(brand, t),
                 padding: "16px 18px",
-                boxShadow: cardShadow,
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
@@ -640,7 +640,7 @@ export default function FigurinosPage() {
       </div>
 
       {/* Bloco 2: Filtros */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={getPageKpiSectionGapStyle()}>
         <h2
           style={{
             ...SECTION_LABEL_STYLE,
@@ -652,15 +652,11 @@ export default function FigurinosPage() {
           FILTROS
         </h2>
         <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
+          style={getPageFilterBoxStyle(brand, t, {
             display: "flex",
             flexDirection: "column",
             gap: 12,
-          }}
+          })}
         >
           <div
             style={{

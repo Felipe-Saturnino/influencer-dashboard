@@ -35,10 +35,11 @@ import {
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
 import {
-  getOverviewSpinBoxRadius,
-  getOverviewSpinBoxShellStyle,
-  getOverviewSpinContentBoxStyle,
-} from "../overviewSpinBoxStyles";
+  getPageContentBoxRadius,
+  getPageContentBoxShellStyle,
+  getPageContentBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../../lib/pageContentBoxStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -81,7 +82,7 @@ function KpiPosCard({
   return (
     <div
       style={{
-        ...getOverviewSpinBoxShellStyle(brand, t),
+        ...getPageContentBoxShellStyle(brand, t),
         overflow: "hidden",
       }}
     >
@@ -411,7 +412,7 @@ function DashboardPosicionamentoTodas({
 
   return (
     <>
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
@@ -546,7 +547,7 @@ function DashboardPosicionamentoOperadora({
 
   if (loading) {
     return (
-      <div className="app-grid-kpi-4" style={{ marginBottom: 14 }}>
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonKpiCard key={i} />
         ))}
@@ -575,7 +576,7 @@ function DashboardPosicionamentoOperadora({
 
   return (
     <>
-      <div className="app-grid-kpi-4" style={{ marginBottom: 14 }}>
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
         <KpiPosCard
           label="Visibilidade na vitrine"
           value={visAtual != null ? `${visAtual.toFixed(0)}%` : "—"}
@@ -611,7 +612,7 @@ function DashboardPosicionamentoOperadora({
         />
       </div>
 
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo="Posição atual das mesas"
           loading={false}
@@ -656,7 +657,7 @@ function DashboardPosicionamentoOperadora({
         </div>
       </div>
 
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <div
           style={{
             display: "flex",
@@ -704,7 +705,7 @@ function DashboardPosicionamentoOperadora({
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              borderRadius: getOverviewSpinBoxRadius(t.isDark),
+              borderRadius: getPageContentBoxRadius(t.isDark),
               fontFamily: FONT.body,
               fontSize: 12,
             }}
@@ -760,7 +761,7 @@ function DashboardPosicionamentoOperadora({
         </div>
       </div>
 
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
           <SectionTitle icon={<Trophy size={15} aria-hidden="true" />}>Ranking de concorrentes</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
@@ -831,7 +832,7 @@ function DashboardPosicionamentoOperadora({
                 width: "100%",
                 borderCollapse: "separate",
                 borderSpacing: 0,
-                borderRadius: getOverviewSpinBoxRadius(t.isDark),
+                borderRadius: getPageContentBoxRadius(t.isDark),
                 overflow: "hidden",
                 fontFamily: FONT.body,
                 fontSize: 12,
@@ -892,7 +893,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate, slugTo
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
-  const card: CSSProperties = getOverviewSpinContentBoxStyle(brand, t);
+  const card: CSSProperties = getPageContentBoxStyle(brand, t);
 
   const resolveNome = slugToNome ?? ((slug: string) => slug);
 

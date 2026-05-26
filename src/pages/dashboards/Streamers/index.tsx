@@ -16,6 +16,7 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -51,15 +52,7 @@ function StreamersFiltrosEUAbas({
   const tabIds: StreamersTab[] = ["overview", "conversao", "financeiro"];
 
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}
-      >
+    <div style={getPageFilterBoxStyle(brand, t)}>
         <div
           style={{
             display: "flex",
@@ -155,7 +148,6 @@ function StreamersFiltrosEUAbas({
             );
           })}
         </div>
-      </div>
     </div>
   );
 }

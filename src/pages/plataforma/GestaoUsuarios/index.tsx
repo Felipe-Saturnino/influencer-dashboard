@@ -3,7 +3,9 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../constants/theme";
 import { AbaUsuarios } from "./AbaUsuarios";
 import { AbaPermissoes } from "./AbaPermissoes";
@@ -28,6 +30,7 @@ const CONTAGENS_VAZIAS: ContagensFiltroUsuarios = {
 
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<AbaGestaoPrincipal>("usuarios");
   const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
@@ -48,20 +51,9 @@ export default function GestaoUsuarios() {
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
   }, [isAdmin, perm.canEditarOk, aba]);
 
-  const cardShadow = useMemo(
-    () => (t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)"),
-    [t.isDark],
-  );
-
-  const card: React.CSSProperties = useMemo(
-    () => ({
-      background: t.cardBg,
-      borderRadius: 18,
-      padding: 28,
-      border: `1px solid ${t.cardBorder}`,
-      boxShadow: cardShadow,
-    }),
-    [t.cardBg, t.cardBorder, cardShadow],
+  const card = useMemo(
+    () => getPageContentBoxStyle(brand, t, { padding: 28 }),
+    [brand, t],
   );
 
   const toggleFiltroPerfil = (role: Role) => {

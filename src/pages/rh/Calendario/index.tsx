@@ -54,6 +54,12 @@ import {
   getFilterBarRowStyle,
   onFiltroBarTabsKeyDown,
 } from "../../../lib/filterBarStyles";
+import {
+  getPageContentBoxShellStyle,
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
@@ -1246,13 +1252,8 @@ export default function RhCalendarioPage() {
     return isDark ? "rgba(34,197,94,0.75)" : "rgba(34,197,94,0.85)";
   }
 
-  const card: CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-  };
+  const contentBox = getPageContentBoxStyle(brand, t);
+  const kpiTileShell = getPageContentBoxShellStyle(brand, t);
 
   /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
   function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
@@ -1647,15 +1648,7 @@ export default function RhCalendarioPage() {
         t={t}
       />
 
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1899,7 +1892,6 @@ export default function RhCalendarioPage() {
               Controle de Presença
             </FiltroBarTabButton>
           </div>
-        </div>
       </div>
 
       {soPropriosCal && !loadingStaff && !meuRhFuncionarioId && (
@@ -1922,7 +1914,7 @@ export default function RhCalendarioPage() {
       )}
 
       {abaPrincipal === "compromissos" ? (
-        <div style={card}>
+        <div style={contentBox}>
           <div style={{ ...getFilterBarRowStyle(), marginBottom: 16, width: "100%" }}>
             <FiltroTipoCompromissoCalendarioSelect
               value={filtroTipoCompromisso}
@@ -1951,16 +1943,14 @@ export default function RhCalendarioPage() {
         </div>
       ) : (
         <>
-          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
+          <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
             {(["Trabalhados", "Pendentes", "Aprovados"] as const).map((label) => (
               <div
                 key={label}
                 style={{
-                  background: brand.blockBg,
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 18,
+                  ...kpiTileShell,
                   padding: "16px 18px",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                  marginBottom: 0,
                 }}
               >
                 <div style={{ fontSize: 11, fontWeight: 800, color: t.textMuted, fontFamily: FONT_TITLE, marginBottom: 8 }}>
@@ -1972,7 +1962,7 @@ export default function RhCalendarioPage() {
             ))}
           </div>
 
-          <div style={{ ...card, marginBottom: 14 }}>
+          <div style={contentBox}>
             <div style={{ fontFamily: FONT_TITLE, fontSize: 16, fontWeight: 800, color: t.text, marginBottom: 14 }}>
               Controle de Presença
             </div>

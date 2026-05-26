@@ -23,6 +23,11 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
 
@@ -426,7 +431,7 @@ export default function Scout() {
 
       {/* Bloco 1: Cards Consolidados */}
       {!loading && (
-        <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
+        <div style={{ ...getPageKpiSectionGapStyle(), display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Funil de Prospecção</div>
             <div className="app-grid-kpi-4" style={{ width: "100%" }}>
@@ -442,13 +447,7 @@ export default function Scout() {
       )}
 
       {/* Bloco 2: Filtros (estilo Agenda / Influencers) */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           {/* Linha 1: Status */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
@@ -592,7 +591,6 @@ export default function Scout() {
               </button>
             </div>
           )}
-        </div>
       </div>
 
       {/* Bloco 3: Lista */}
@@ -635,7 +633,7 @@ export default function Scout() {
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
+        <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
       ) : (
         filtered.map((s) => {
           const plats = s.plataformas ?? [];

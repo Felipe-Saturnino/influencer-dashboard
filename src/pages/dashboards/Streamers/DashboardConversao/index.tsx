@@ -6,6 +6,10 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../../lib/pageContentBoxStyles";
 import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
@@ -415,7 +419,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
@@ -669,13 +673,7 @@ export default function DashboardConversao() {
   const brand = useDashboardBrand();
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
   const thStyle = getThStyle(t);
   const tdStyle = getTdStyle(t);
@@ -710,13 +708,7 @@ export default function DashboardConversao() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {!embed && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             <button
@@ -771,12 +763,11 @@ export default function DashboardConversao() {
               </span>
             )}
           </div>
-        </div>
       </div>
       )}
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
           icon={<Filter size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
@@ -851,7 +842,7 @@ export default function DashboardConversao() {
       </div>
 
       {/* ══ BLOCO 3: PÓDIO FTD/HORA ═════════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle icon={<Trophy size={14} aria-hidden />}>
           Ranking FTD/Hora — Eficiência por Influencer
         </SectionTitle>

@@ -6,6 +6,10 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../../lib/pageContentBoxStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
@@ -191,7 +195,7 @@ function PieTooltip({ active, payload, total }: {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
@@ -583,11 +587,7 @@ export default function DashboardFinanceiro() {
   const brand = useDashboardBrand();
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18, padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
   const thStyle = getThStyle(t);
   const thGroup = getThStyle(t, { textAlign: "center", borderBottom: "none" });
@@ -606,13 +606,7 @@ export default function DashboardFinanceiro() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {!embed && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -661,12 +655,11 @@ export default function DashboardFinanceiro() {
               </span>
             )}
           </div>
-        </div>
       </div>
       )}
 
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
           icon={<BarChart2 size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
@@ -737,7 +730,7 @@ export default function DashboardFinanceiro() {
       </div>
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle icon={<Coins size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
           Investimento por Influencer
         </SectionTitle>

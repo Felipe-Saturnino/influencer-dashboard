@@ -19,6 +19,7 @@ import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
   return !!role && ROLES_STAFF_OPERACOES_LIVES.includes(role as Role);
@@ -1089,8 +1090,7 @@ export default function RoteiroMesa() {
       />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
           <div
             style={{
@@ -1170,7 +1170,6 @@ export default function RoteiroMesa() {
             />
           ) : null}
           </div>
-        </div>
       </div>
 
       {/* ── ESTADO: SEM OPERADORA ── */}

@@ -600,13 +600,51 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - **Zebra:** `zebraStripe(i)` ou equivalente tema — não `rgba(124,58,237,…)` fixo.
 - Listas de conteúdo gerado pelo usuário: queries com **`.limit()`** — ver regra na secção se o volume for alto.
 
-### Sombra de cards
+### Blocos de página (caixas de conteúdo)
+
+**Escopo:** apenas a **moldura** dos contentores de primeiro nível (filtro, secção KPI consolidado, tabela, gráfico) e o **espaço entre eles** — **não** o layout interno (mini-cards KPI, células, badges, linhas de lista).
+
+**Helper:** `src/lib/pageContentBoxStyles.ts` + `useDashboardBrand()` / `useApp().theme`.
+
+| Propriedade | Valor |
+|-------------|--------|
+| Gap entre blocos | **`PAGE_CONTENT_BOX_GAP` = 14px** (`marginBottom` no bloco ou `getPageKpiSectionGapStyle` na grelha KPI sem caixa pai) |
+| Borda | `1px solid t.cardBorder` |
+| `borderRadius` | **14** (light) · **18** (dark) — `getPageContentBoxRadius(t.isDark)` |
+| `boxShadow` | `getPageContentBoxShadow(t.isDark)` |
+| Fundo conteúdo — Spin, light | **`#ffffff`** |
+| Fundo conteúdo — dark / whitelabel | `brand.blockBg` |
+| Barra de filtros — operadora | `primaryTransparentBg` / `primaryTransparentBorder` — `getPageFilterBoxStyle` ou `getFilterBarWrapperStyle(brand, t)` |
+| Barra de filtros — Spin, light | caixa branca (mesma moldura que conteúdo) |
+| Padding do bloco de secção | **20px** — `getPageContentBoxStyle` |
 
 ```typescript
-const cardShadow = t.isDark
-  ? "0 4px 20px rgba(0,0,0,0.25)"
-  : "0 2px 8px rgba(0,0,0,0.07)";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+  getPageContentBoxShellStyle,
+  getPageContentBoxRadius,
+} from "../lib/pageContentBoxStyles";
+
+const pageBox = getPageContentBoxStyle(brand, t);
+
+<div style={getPageFilterBoxStyle(brand, t)}>{/* filtros */}</div>
+<div style={pageBox}>{/* secção */}</div>
+
+{/* Opção A — KPIs no topo ainda sem caixa “KPIs Consolidados”: só gap 14 até o próximo bloco */}
+<div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle({ gap: 12 })} />
 ```
+
+**Secção “KPIs Consolidados” (fase seguinte):** um único `pageBox` com `SectionTitle` + grelha `app-grid-kpi-*` **dentro** — cards internos (`KpiCard`, etc.) padronizam depois; não duplicar sombra no filho.
+
+**Exclusões (não usar `pageBox`):** Login, Trocar senha, canal público, modais, sidebar, **Home**, **Configurações**, **Ajuda**.
+
+**Proibido em código novo:** `marginBottom: 20` / `24` entre blocos de página; `borderRadius: 16` fixo em bloco de secção; `const card` duplicado com `blockBg` + sombra inline — usar o helper.
+
+### Sombra de cards (legado interno)
+
+Preferir `getPageContentBoxShadow(t.isDark)` em blocos de página. Mini-cards e itens de lista podem manter sombra local até migração de `KpiCard`.
 
 Não usar sombra única em light e dark.
 
@@ -726,3 +764,5 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Emoji no `h1` ou em `BlocoLabel`.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
+- Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).
+- Wrapper de filtro com `marginBottom: 14` **extra** quando `getPageFilterBoxStyle` já aplica `PAGE_CONTENT_BOX_GAP`.

@@ -24,6 +24,10 @@ import {
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -106,8 +110,6 @@ export default function GestaoLinks() {
     | "visitas"
     | "registros";
   const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "primeiro", dir: "desc" });
-
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   function fecharModalLimpo() {
     setModalAberto(false);
@@ -403,8 +405,7 @@ export default function GestaoLinks() {
         }
       />
 
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
             <div
               style={{
@@ -501,7 +502,6 @@ export default function GestaoLinks() {
               />
             ) : null}
           </div>
-        </div>
       </div>
 
       <div
@@ -526,17 +526,16 @@ export default function GestaoLinks() {
           Carregando links...
         </div>
       ) : aliases.length === 0 ? (
-        <div style={{
-          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18, padding: 60,
-          textAlign: "center", color: t.textMuted,
-          fontFamily: FONT.body, fontSize: 14,
-          boxShadow: cardShadow,
-        }}>
+        <div style={getPageContentBoxStyle(brand, t, {
+          padding: 60,
+          textAlign: "center",
+          color: t.textMuted,
+          fontSize: 14,
+        })}>
           {emptyMessages[aba]}
         </div>
       ) : (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, boxShadow: cardShadow, overflow: "hidden" }}>
+        <div style={getPageContentBoxStyle(brand, t, { padding: 0, overflow: "hidden" })}>
           <div className="app-table-wrap">
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13, tableLayout: "fixed" }}>
             <caption
