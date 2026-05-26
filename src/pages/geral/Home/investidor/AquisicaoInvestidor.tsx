@@ -5,13 +5,8 @@ import { fmtBRL, fmtHorasTotal } from "../../../../lib/dashboardHelpers";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
 import { useHomeInvestidorAquisicao } from "../hooks/useHomeInvestidorAquisicao";
-import { HomeInvestidorKpiCard } from "./HomeInvestidorKpiCard";
-import {
-  homeInvestidorSectionTitleStyle,
-  HOME_INVESTIDOR_BODY_MUTED,
-  HOME_INVESTIDOR_FOOTER_HINT,
-  HOME_INVESTIDOR_LINK_BUTTON,
-} from "./homeInvestidorUi";
+import { HomeKpiCard } from "../shared/HomeKpiCard";
+import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 export function AquisicaoInvestidor() {
   const { theme: t, setActivePage } = useApp();
@@ -23,7 +18,7 @@ export function AquisicaoInvestidor() {
 
   return (
     <section style={box} aria-labelledby="home-investidor-aquisicao-title">
-      <h2 id="home-investidor-aquisicao-title" style={homeInvestidorSectionTitleStyle(t.sectionTitle)}>
+      <h2 id="home-investidor-aquisicao-title" style={homeSectionTitleStyle(t.sectionTitle)}>
         Ações de Aquisição
       </h2>
 
@@ -33,13 +28,13 @@ export function AquisicaoInvestidor() {
           <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
         </div>
       ) : erro || !data ? (
-        <p style={{ ...HOME_INVESTIDOR_BODY_MUTED, color: t.textMuted }}>
+        <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
           Não foi possível carregar os dados de aquisição. Se o problema persistir, contate o suporte.
         </p>
       ) : (
         <>
           <div className="app-grid-2">
-            <HomeInvestidorKpiCard
+            <HomeKpiCard
               label="Streamers"
               icon={<Tv size={16} aria-hidden />}
               accentVar="--brand-primary"
@@ -49,7 +44,7 @@ export function AquisicaoInvestidor() {
                 { label: "Depósitos", value: fmtBRL(data.streamers.depositosTotal) },
               ]}
             />
-            <HomeInvestidorKpiCard
+            <HomeKpiCard
               label="Mídias Sociais"
               icon={<Share2 size={16} aria-hidden />}
               accentVar="--brand-secondary"
@@ -60,17 +55,13 @@ export function AquisicaoInvestidor() {
               ]}
             />
           </div>
-          <p style={{ ...HOME_INVESTIDOR_FOOTER_HINT, color: t.textMuted }}>
+          <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>
             Quer saber mais? Acessa o Dashboard de{" "}
-            <button type="button" onClick={() => setActivePage("streamers")} style={HOME_INVESTIDOR_LINK_BUTTON}>
+            <button type="button" onClick={() => setActivePage("streamers")} style={HOME_LINK_BUTTON}>
               Streamers
             </button>{" "}
             e de{" "}
-            <button
-              type="button"
-              onClick={() => setActivePage("dash_midias_sociais")}
-              style={HOME_INVESTIDOR_LINK_BUTTON}
-            >
+            <button type="button" onClick={() => setActivePage("dash_midias_sociais")} style={HOME_LINK_BUTTON}>
               Mídias Sociais
             </button>
           </p>

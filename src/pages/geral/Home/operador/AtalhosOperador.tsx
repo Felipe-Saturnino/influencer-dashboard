@@ -1,4 +1,4 @@
-import { ArrowRight, Calendar, Dices, HelpCircle, Tv } from "lucide-react";
+import { ArrowRight, Dices, HelpCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
@@ -9,30 +9,28 @@ import { FONT } from "../../../../constants/theme";
 import type { PageKey } from "../../../../types";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "../shared/homeSharedUi";
 
-const ATALHOS_INVESTIDOR: { key: PageKey; icon: LucideIcon }[] = [
-  { key: "agenda", icon: Calendar },
+const ATALHOS_OPERADOR: { key: PageKey; icon: LucideIcon }[] = [
   { key: "mesas_spin", icon: Dices },
-  { key: "streamers", icon: Tv },
   { key: "ajuda", icon: HelpCircle },
 ];
 
-export function AtalhosInvestidor() {
+export function AtalhosOperador() {
   const { theme: t, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const box = getPageContentBoxStyle(brand, t);
-  const accentColor = "var(--brand-primary, #7c3aed)";
+  const accentColor = brand.useBrand ? "var(--brand-primary)" : "var(--brand-primary, #7c3aed)";
 
   return (
-    <section style={box} aria-labelledby="home-investidor-atalhos-title">
-      <h2 id="home-investidor-atalhos-title" style={homeSectionTitleStyle(t.sectionTitle)}>
+    <section style={box} aria-labelledby="home-operador-atalhos-title">
+      <h2 id="home-operador-atalhos-title" style={homeSectionTitleStyle(t.sectionTitle)}>
         Acesso rápido
       </h2>
       <p style={{ ...HOME_BODY_MUTED, color: t.textMuted, marginBottom: 16 }}>
         Clique em um atalho abaixo para ir diretamente à página desejada.
       </p>
 
-      <div className="app-grid-atalhos-investidor">
-        {ATALHOS_INVESTIDOR.map(({ key, icon: Icon }) => {
+      <div className="app-grid-atalhos-operador">
+        {ATALHOS_OPERADOR.map(({ key, icon: Icon }) => {
           const subtitle = getPageCanonicalSubtitle(key) ?? "";
           return (
             <button
@@ -62,7 +60,9 @@ export function AtalhosInvestidor() {
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    background: "rgba(74, 32, 130, 0.2)",
+                    background: brand.useBrand
+                      ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)"
+                      : "rgba(74, 32, 130, 0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

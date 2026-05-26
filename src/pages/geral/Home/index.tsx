@@ -31,6 +31,7 @@ import {
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
+import HomeOperador from "./HomeOperador";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -349,6 +350,10 @@ export default function Home() {
 
   if (user.role === "investidor") {
     return <HomeInvestidor />;
+  }
+
+  if (user.role === "operador") {
+    return <HomeOperador />;
   }
 
   const role = user.role;

@@ -766,7 +766,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs",
         texto:
-          "Três cards no topo da página (sem caixa branca em volta — só os cards individuais) resumem o período selecionado:\n\n— Total pago: soma dos pagamentos com status Pago\n— Pendente: soma dos pagamentos Em análise ou Aguardando pagamento\n— Total de horas realizadas: horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
+          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguardando pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",

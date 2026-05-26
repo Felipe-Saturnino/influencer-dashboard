@@ -3,33 +3,40 @@ import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
 import { resolveWhitelabelAccentCss } from "../../../../lib/whitelabelAccent";
-import {
-  HOME_INVESTIDOR_OPERADORA_LIST,
-  HOME_INVESTIDOR_OPERADORA_ROW,
-} from "./homeInvestidorUi";
+import { HOME_KPI_BREAKDOWN_LIST, HOME_KPI_BREAKDOWN_ROW } from "./homeSharedUi";
 
-export type HomeInvestidorKpiBreakdownItem = {
+export type HomeKpiBreakdownItem = {
   label: string;
   value: string;
 };
 
-export function HomeInvestidorKpiCard({
+export type HomeKpiComparativoMensal = {
+  anteriorFmt: string;
+  pctLabel: string;
+  up: boolean;
+};
+
+export function HomeKpiCard({
   label,
   value,
   icon,
   accentVar = "--brand-primary",
   breakdown,
+  comparativoMensal,
 }: {
   label: string;
-  /** Omitir quando o card exibe só o detalhamento (ex.: Aquisição). */
   value?: string;
   icon: ReactNode;
   accentVar?: string;
-  breakdown?: HomeInvestidorKpiBreakdownItem[];
+  breakdown?: HomeKpiBreakdownItem[];
+  comparativoMensal?: HomeKpiComparativoMensal | null;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const token = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : `var(${accentVar}, #7c3aed)`;
+
+  const corPositivo = "var(--brand-success, #22c55e)";
+  const corNegativo = "var(--brand-danger, #e84025)";
 
   return (
     <div
@@ -77,10 +84,40 @@ export function HomeInvestidorKpiCard({
             {value}
           </div>
         ) : null}
+        {comparativoMensal ? (
+          <div
+            style={{
+              marginTop: value != null && value !== "" ? 12 : 4,
+              paddingTop: 10,
+              borderTop: `1px solid ${t.cardBorder}`,
+              fontFamily: FONT.body,
+              fontSize: 11,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+              <span style={{ color: t.textMuted }}>Mês anterior</span>
+              <span style={{ color: t.text, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                {comparativoMensal.anteriorFmt}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  color: comparativoMensal.up ? corPositivo : corNegativo,
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+              >
+                {comparativoMensal.up ? "↑" : "↓"} {comparativoMensal.pctLabel}
+              </span>
+              <span style={{ color: t.textMuted, fontSize: 10 }}>vs mês anterior</span>
+            </div>
+          </div>
+        ) : null}
         {breakdown && breakdown.length > 0 ? (
-          <ul style={{ ...HOME_INVESTIDOR_OPERADORA_LIST, marginTop: value != null && value !== "" ? 12 : 4 }}>
+          <ul style={{ ...HOME_KPI_BREAKDOWN_LIST, marginTop: value != null && value !== "" ? 12 : 4 }}>
             {breakdown.map((item) => (
-              <li key={item.label} style={HOME_INVESTIDOR_OPERADORA_ROW}>
+              <li key={item.label} style={HOME_KPI_BREAKDOWN_ROW}>
                 <span style={{ color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                 <span
                   style={{

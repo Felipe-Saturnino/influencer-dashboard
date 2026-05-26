@@ -201,6 +201,20 @@
   }
 }
 
+/* Home Operador — dois atalhos lado a lado */
+.app-grid-atalhos-operador {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .app-grid-atalhos-operador {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Três colunas iguais (filtros etc.) */
 .app-grid-3 {
   display: grid;
