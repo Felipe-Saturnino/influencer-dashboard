@@ -1,6 +1,5 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Briefcase, Building2, ChevronLeft, ChevronRight, KeyRound, User, UserCog } from "lucide-react";
-import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -9,7 +8,6 @@ import {
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import {
   getFilterBarRowStyle,
   getFilterBarWrapperStyle,
@@ -23,11 +21,10 @@ import {
   FILTROS_PERFIL_LINHAS_PERMISSOES,
   STATUS_USUARIO_CARROSSEL,
   STATUS_USUARIO_TODOS_LABEL,
-  roleBadgeColor,
   roleLabel,
   type FiltroStatusUsuarios,
 } from "./constants";
-import { rolePermTabIcon } from "./gestaoUsuariosRoleIcons";
+import { GestaoUsuariosPerfilPill } from "./GestaoUsuariosPerfilPill";
 
 export type AbaGestaoPrincipal = "usuarios" | "permissoes" | "escopos";
 export type AbaGestaoEscopo = "operadora" | "gestores" | "prestadores";
@@ -42,18 +39,13 @@ interface GestaoUsuariosFiltroBarProps {
   aba: AbaGestaoPrincipal;
   onAbaChange: (aba: AbaGestaoPrincipal) => void;
   mostrarAbasAdmin: boolean;
-  /** Aba Usuários */
-  busca: string;
-  onBuscaChange: (v: string) => void;
   filtroStatus: FiltroStatusUsuarios;
   onFiltroStatusChange: (v: FiltroStatusUsuarios) => void;
   filtroPerfilSet: Set<Role>;
   onTogglePerfil: (role: Role) => void;
   contagens: ContagensFiltroUsuarios;
-  /** Aba Permissões */
   roleAtivo: Role;
   onRoleAtivoChange: (role: Role) => void;
-  /** Aba Escopos */
   escopoSubAba: AbaGestaoEscopo;
   onEscopoSubAbaChange: (aba: AbaGestaoEscopo) => void;
 }
@@ -82,57 +74,37 @@ const ESCOPO_TAB_ICONS: Record<AbaGestaoEscopo, React.ReactNode> = {
   prestadores: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
-function linhaTituloStyle(t: { textMuted: string }): CSSProperties {
+function tituloLinhaPerfilStyle(t: { textMuted: string }): CSSProperties {
   return {
     fontSize: 10,
     fontWeight: 700,
     color: t.textMuted,
     fontFamily: FONT.body,
     textTransform: "uppercase",
-    letterSpacing: "0.08em",
+    letterSpacing: "0.1em",
     flexShrink: 0,
-    width: "100%",
-    textAlign: "center",
-    marginBottom: 2,
+    minWidth: 132,
+    textAlign: "left",
+    alignSelf: "center",
   };
 }
 
-function PerfilFiltroToggle({
-  role,
-  active,
-  count,
-  onClick,
-  idPrefix,
-}: {
-  role: Role;
-  active: boolean;
-  count: number;
-  onClick: () => void;
-  idPrefix: string;
-}) {
+function FiltroBarSecaoSeparada({ children }: { children: ReactNode }) {
   const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const cor = roleBadgeColor(role);
-  const label = roleLabel(role);
-  const tabStyle = getFiltroBarTabButtonStyle(t, brand, active, cor);
-
   return (
-    <button
-      type="button"
-      id={`${idPrefix}-${role}`}
-      aria-pressed={active}
-      aria-label={`Filtrar por perfil ${label}${active ? " — ativo" : ""}`}
-      onClick={onClick}
+    <div
       style={{
-        ...tabStyle,
-        fontFamily: FONT.body,
-        transition: "all 0.15s",
+        paddingTop: 12,
+        marginTop: 12,
+        borderTop: `1px solid ${t.cardBorder}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        width: "100%",
       }}
     >
-      {rolePermTabIcon(role)}
-      {label}
-      <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{count}</span>
-    </button>
+      {children}
+    </div>
   );
 }
 
@@ -141,7 +113,6 @@ function LinhasPerfis({
   filtroPerfilSet,
   onTogglePerfil,
   contagens,
-  idPrefix,
   roleAtivo,
   onRoleSelect,
   modo,
@@ -150,7 +121,6 @@ function LinhasPerfis({
   filtroPerfilSet?: Set<Role>;
   onTogglePerfil?: (role: Role) => void;
   contagens?: ContagensFiltroUsuarios;
-  idPrefix: string;
   roleAtivo?: Role;
   onRoleSelect?: (role: Role) => void;
   modo: "multi" | "single";
@@ -160,45 +130,59 @@ function LinhasPerfis({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
       {linhas.map(({ titulo, roles }) => (
-        <div key={titulo} style={{ width: "100%" }}>
-          <div style={linhaTituloStyle(t)}>{titulo}</div>
+        <div
+          key={titulo}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            width: "100%",
+          }}
+        >
+          <span style={tituloLinhaPerfilStyle(t)}>{titulo}</span>
           <div
             {...(modo === "single"
               ? {
                   role: "tablist" as const,
                   "aria-label": titulo,
                   onKeyDown: (e: React.KeyboardEvent) =>
-                    onFiltroBarTabsKeyDown(e, roles, onRoleSelect!, (k) => `tab-${idPrefix}-${k}`),
+                    onFiltroBarTabsKeyDown(e, roles, onRoleSelect!, (k) => `tab-perm-${k}`),
                 }
               : {})}
-            style={getFilterBarRowStyle()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              flex: "1 1 200px",
+              justifyContent: "center",
+            }}
           >
             {roles.map((roleVal) => {
+              const count = contagens?.qtdPorPerfil[roleVal] ?? 0;
               if (modo === "single" && roleAtivo != null && onRoleSelect) {
                 return (
-                  <FiltroBarTabButton
+                  <GestaoUsuariosPerfilPill
                     key={roleVal}
-                    id={`tab-${idPrefix}-${roleVal}`}
+                    role={roleVal}
                     active={roleAtivo === roleVal}
-                    aria-controls="panel-permissoes-matriz"
                     onClick={() => onRoleSelect(roleVal)}
-                    activeColor={roleBadgeColor(roleVal)}
-                    icon={rolePermTabIcon(roleVal)}
-                  >
-                    {roleLabel(roleVal)}
-                  </FiltroBarTabButton>
+                    count={count}
+                    showClearIcon={false}
+                    aria-label={`Permissões do perfil ${roleLabel(roleVal)}`}
+                  />
                 );
               }
               const sel = filtroPerfilSet?.has(roleVal) ?? false;
-              const count = contagens?.qtdPorPerfil[roleVal] ?? 0;
               return (
-                <PerfilFiltroToggle
+                <GestaoUsuariosPerfilPill
                   key={roleVal}
                   role={roleVal}
                   active={sel}
-                  count={count}
                   onClick={() => onTogglePerfil?.(roleVal)}
-                  idPrefix={idPrefix}
+                  count={count}
+                  showClearIcon
                 />
               );
             })}
@@ -213,8 +197,6 @@ export function GestaoUsuariosFiltroBar({
   aba,
   onAbaChange,
   mostrarAbasAdmin,
-  busca,
-  onBuscaChange,
   filtroStatus,
   onFiltroStatusChange,
   filtroPerfilSet,
@@ -273,7 +255,7 @@ export function GestaoUsuariosFiltroBar({
         <div
           role="tablist"
           aria-label="Seções de gestão de usuários"
-          style={getFilterBarRowStyle({ marginBottom: 12 })}
+          style={getFilterBarRowStyle({ marginBottom: aba === "permissoes" || aba === "escopos" ? 0 : undefined })}
           onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abaKeys, onAbaChange, (k) => `tab-gestao-${k}`)}
         >
           {abasVisiveis.map((a) => (
@@ -292,7 +274,7 @@ export function GestaoUsuariosFiltroBar({
       ) : null}
 
       {aba === "usuarios" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
           <div style={getFilterBarRowStyle()}>
             <button
               type="button"
@@ -338,60 +320,54 @@ export function GestaoUsuariosFiltroBar({
             </button>
           </div>
 
-          <div style={getFilterBarRowStyle()}>
-            <BarraPesquisaPagina
-              value={busca}
-              onChange={onBuscaChange}
-              placeholder={PAGE_SEARCH.nomeEmail}
-              aria-label="Buscar usuários por nome ou e-mail"
-              wrapperStyle={{ flex: "1 1 280px", minWidth: 200, maxWidth: 560 }}
-              inputStyle={{ fontSize: 13 }}
+          <FiltroBarSecaoSeparada>
+            <LinhasPerfis
+              linhas={FILTROS_PERFIL_LINHAS}
+              filtroPerfilSet={filtroPerfilSet}
+              onTogglePerfil={onTogglePerfil}
+              contagens={contagens}
+              modo="multi"
             />
-          </div>
-
-          <LinhasPerfis
-            linhas={FILTROS_PERFIL_LINHAS}
-            filtroPerfilSet={filtroPerfilSet}
-            onTogglePerfil={onTogglePerfil}
-            contagens={contagens}
-            idPrefix="usu-perfil"
-            modo="multi"
-          />
+          </FiltroBarSecaoSeparada>
         </div>
       ) : null}
 
       {aba === "permissoes" ? (
-        <LinhasPerfis
-          linhas={FILTROS_PERFIL_LINHAS_PERMISSOES}
-          roleAtivo={roleAtivo}
-          onRoleSelect={onRoleAtivoChange}
-          idPrefix="perm"
-          modo="single"
-        />
+        <FiltroBarSecaoSeparada>
+          <LinhasPerfis
+            linhas={FILTROS_PERFIL_LINHAS_PERMISSOES}
+            roleAtivo={roleAtivo}
+            onRoleSelect={onRoleAtivoChange}
+            contagens={contagens}
+            modo="single"
+          />
+        </FiltroBarSecaoSeparada>
       ) : null}
 
       {aba === "escopos" ? (
-        <div
-          role="tablist"
-          aria-label="Escopos de acesso"
-          style={getFilterBarRowStyle()}
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(e, ABAS_ESCOPO.map((a) => a.key), onEscopoSubAbaChange, (k) => `tab-escopo-${k}`)
-          }
-        >
-          {ABAS_ESCOPO.map((a) => (
-            <FiltroBarTabButton
-              key={a.key}
-              id={`tab-escopo-${a.key}`}
-              active={escopoSubAba === a.key}
-              aria-controls={`panel-gestao-${a.key}`}
-              onClick={() => onEscopoSubAbaChange(a.key)}
-              icon={ESCOPO_TAB_ICONS[a.key]}
-            >
-              {a.label}
-            </FiltroBarTabButton>
-          ))}
-        </div>
+        <FiltroBarSecaoSeparada>
+          <div
+            role="tablist"
+            aria-label="Escopos de acesso"
+            style={getFilterBarRowStyle()}
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(e, ABAS_ESCOPO.map((a) => a.key), onEscopoSubAbaChange, (k) => `tab-escopo-${k}`)
+            }
+          >
+            {ABAS_ESCOPO.map((a) => (
+              <FiltroBarTabButton
+                key={a.key}
+                id={`tab-escopo-${a.key}`}
+                active={escopoSubAba === a.key}
+                aria-controls={`panel-gestao-${a.key}`}
+                onClick={() => onEscopoSubAbaChange(a.key)}
+                icon={ESCOPO_TAB_ICONS[a.key]}
+              >
+                {a.label}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+        </FiltroBarSecaoSeparada>
       ) : null}
     </div>
   );

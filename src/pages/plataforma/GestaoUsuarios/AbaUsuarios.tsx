@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { KeyRound } from "lucide-react";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
@@ -23,6 +25,7 @@ interface AbaUsuariosProps {
   /** Excluir: desativar utilizador. */
   podeExcluirUsuario: boolean;
   busca: string;
+  onBuscaChange: (v: string) => void;
   filtroStatus: FiltroStatusUsuarios;
   filtroPerfilSet: Set<Role>;
   onContagensChange: (c: ContagensFiltroUsuarios) => void;
@@ -93,6 +96,7 @@ export function AbaUsuarios({
   podeEditarUsuario,
   podeExcluirUsuario,
   busca,
+  onBuscaChange,
   filtroStatus,
   filtroPerfilSet,
   onContagensChange,
@@ -206,13 +210,29 @@ export function AbaUsuarios({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {modoAdmin && podeCriarUsuario ? (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <CtaCriarButton type="button" onClick={abrirNovo}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <BarraPesquisaPagina
+          value={busca}
+          onChange={onBuscaChange}
+          placeholder={PAGE_SEARCH.nomeEmail}
+          aria-label="Buscar usuários por nome ou e-mail"
+          wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
+          inputStyle={{ fontSize: 14 }}
+        />
+        {modoAdmin && podeCriarUsuario ? (
+          <CtaCriarButton type="button" onClick={abrirNovo} style={{ flexShrink: 0 }}>
             Novo Usuário
           </CtaCriarButton>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {feedbackAcao && (
         <div

@@ -108,8 +108,6 @@ export default function GestaoUsuarios() {
         aba={aba}
         onAbaChange={setAba}
         mostrarAbasAdmin={mostrarAbasAdmin}
-        busca={busca}
-        onBuscaChange={setBusca}
         filtroStatus={filtroStatus}
         onFiltroStatusChange={setFiltroStatus}
         filtroPerfilSet={filtroPerfilSet}
@@ -144,6 +142,7 @@ export default function GestaoUsuarios() {
             podeEditarUsuario={perm.canEditarOk}
             podeExcluirUsuario={perm.canExcluirOk}
             busca={busca}
+            onBuscaChange={setBusca}
             filtroStatus={filtroStatus}
             filtroPerfilSet={filtroPerfilSet}
             onContagensChange={setContagensFiltro}
