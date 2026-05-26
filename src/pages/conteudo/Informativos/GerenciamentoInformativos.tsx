@@ -10,6 +10,7 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
   fmtDataColunaGerenciamento,
   INFORMATIVO_STATUS_LABEL,
+  podeUsuarioAprovarInformativo,
   registrarHistoricoStatus,
   stripHtmlText,
   type InformativoStatus,
@@ -23,7 +24,9 @@ export type InformativoGerenciamentoRow = {
   id: string;
   assunto: string;
   autorNome: string;
+  perfis: string[];
   perfisLabel: string;
+  createdBy: string | null;
   createdAt: string;
   status: InformativoStatus;
   approvedAt: string | null;
@@ -48,6 +51,8 @@ const STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "aprovacao", "arquivado"
 
 const ERRO_CARREGAR = "Não foi possível carregar os informativos. Se o problema persistir, contate o suporte.";
 const ERRO_APROVAR = "Não foi possível aprovar o informativo. Se o problema persistir, contate o suporte.";
+const ERRO_APROVAR_SEM_PERMISSAO =
+  "Você não tem permissão para aprovar este informativo ou não pode aprovar a própria postagem.";
 const ERRO_ARQUIVAR = "Não foi possível arquivar o informativo. Se o problema persistir, contate o suporte.";
 const ERRO_EXCLUIR = "Não foi possível excluir o informativo. Se o problema persistir, contate o suporte.";
 
@@ -197,7 +202,9 @@ export function GerenciamentoInformativos({
         id: row.id,
         assunto: row.assunto,
         autorNome: "",
+        perfis: row.perfis ?? [],
         perfisLabel: labelPerfisInformativo(row.perfis ?? []),
+        createdBy: row.created_by,
         createdAt: row.created_at,
         status: row.status,
         approvedAt: row.approved_at,
@@ -296,6 +303,10 @@ export function GerenciamentoInformativos({
 
   async function aprovar(row: InformativoGerenciamentoRow) {
     if (!user?.id) return;
+    if (!podeUsuarioAprovarInformativo(user.role, user.id, row.createdBy, row.perfis)) {
+      setErro(ERRO_APROVAR_SEM_PERMISSAO);
+      return;
+    }
     setAcaoLoading(row.id);
     const now = new Date().toISOString();
     const { error } = await supabase
@@ -386,9 +397,13 @@ export function GerenciamentoInformativos({
             </thead>
             <tbody>
               {rowsOrdenadas.map((row, i) => {
-                const acoes = acoesPorStatus(row.status).filter(
-                  (a) => a !== "excluir" || perm.canExcluirOk === true,
-                );
+                const acoes = acoesPorStatus(row.status).filter((a) => {
+                  if (a === "excluir") return perm.canExcluirOk === true;
+                  if (a === "aprovar") {
+                    return podeUsuarioAprovarInformativo(user?.role, user?.id, row.createdBy, row.perfis);
+                  }
+                  return true;
+                });
                 const busy = acaoLoading === row.id;
                 const zebraBg = zebraStripe(i);
                 return (

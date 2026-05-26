@@ -8,9 +8,13 @@ import { ctaGradientInformativos } from "../../../lib/informativosUi";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
+import { InformativoPerfilMultiSelect } from "../../../components/conteudo/InformativoPerfilMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
+  acaoEnvioPermitida,
   diffEdicaoRascunho,
+  perfisRequeremFluxoAprovacao,
+  podePublicarDiretoInformativo,
   registrarHistoricoEdicoesRascunho,
   registrarHistoricoStatus,
   sanitizeInformativoHtml,
@@ -18,10 +22,10 @@ import {
   type InformativoStatus,
   type SnapshotInformativoEdicao,
 } from "../../../lib/informativosWorkflow";
-import { INFORMATIVO_PERFIL_OPCOES } from "../../../lib/informativosRoles";
-
 const ERRO_CARREGAR = "Não foi possível carregar o informativo para edição.";
 const ERRO_SALVAR = "Não foi possível salvar o informativo. Se o problema persistir, contate o suporte.";
+const ERRO_ACAO_PERFIL =
+  "A combinação de perfis selecionada não permite esta ação. Ajuste os perfis ou escolha outra forma de envio.";
 
 const labelStyle: CSSProperties = {
   display: "block",
@@ -104,10 +108,6 @@ export function ModalCriarInformativo({
     else resetForm();
   }, [open, modo, editId, carregarEdicao, resetForm]);
 
-  function togglePerfil(role: Role) {
-    setPerfis((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]));
-  }
-
   const persistir = async (acao: "salvar" | "aprovacao" | "publicar") => {
     if (!user?.id) return;
     const novoStatus: InformativoStatus =
@@ -117,6 +117,10 @@ export function ModalCriarInformativo({
       const errs = validarPublicarInformativo({ assunto, descricao, perfis });
       setFieldErr(errs);
       if (Object.keys(errs).length > 0) return;
+      if (!acaoEnvioPermitida(acao, perfis)) {
+        setErro(ERRO_ACAO_PERFIL);
+        return;
+      }
     } else {
       setFieldErr({});
     }
@@ -199,6 +203,9 @@ export function ModalCriarInformativo({
     boxSizing: "border-box" as const,
   };
 
+  const mostrarEnviarAprovacao = perfisRequeremFluxoAprovacao(perfis);
+  const mostrarPublicar = podePublicarDiretoInformativo(perfis);
+
   if (!open) return null;
 
   return (
@@ -255,43 +262,12 @@ export function ModalCriarInformativo({
               <span style={labelStyle}>
                 Perfil <CampoObrigatorioMark />
               </span>
-              <div
-                role="group"
-                aria-label="Perfis que verão o informativo na Home"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                  gap: 8,
-                }}
-              >
-                {INFORMATIVO_PERFIL_OPCOES.map(({ value, label }) => {
-                  const checked = perfis.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={checked}
-                      aria-label={label}
-                      onClick={() => togglePerfil(value)}
-                      style={{
-                        padding: "8px 10px",
-                        borderRadius: 10,
-                        border: `1px solid ${checked ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-                        background: checked ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : t.inputBg,
-                        color: t.text,
-                        fontSize: 12,
-                        fontWeight: checked ? 700 : 500,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              <InformativoPerfilMultiSelect
+                selected={perfis}
+                onChange={setPerfis}
+                t={t}
+                hasError={!!fieldErr.perfis}
+              />
               {fieldErr.perfis ? (
                 <div style={{ color: "#e84025", fontSize: 11, marginTop: 4 }}>{fieldErr.perfis}</div>
               ) : null}
@@ -334,52 +310,56 @@ export function ModalCriarInformativo({
               >
                 {salvando ? "Salvando…" : "Salvar rascunho"}
               </button>
-              <button
-                type="button"
-                disabled={salvando}
-                onClick={() => void persistir("aprovacao")}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-                  color: t.text,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                }}
-              >
-                Enviar para aprovação
-              </button>
-              <button
-                type="button"
-                disabled={salvando}
-                onClick={() => void persistir("publicar")}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: ctaGradientInformativos(brand),
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {salvando ? (
-                  <>
-                    <Loader2 size={14} color="#fff" className="app-lucide-spin" aria-hidden />
-                    Publicando…
-                  </>
-                ) : (
-                  "Publicar"
-                )}
-              </button>
+              {mostrarEnviarAprovacao ? (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => void persistir("aprovacao")}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+                    color: t.text,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  {salvando ? "Enviando…" : "Enviar para aprovação"}
+                </button>
+              ) : null}
+              {mostrarPublicar ? (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => void persistir("publicar")}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: ctaGradientInformativos(brand),
+                    color: "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {salvando ? (
+                    <>
+                      <Loader2 size={14} color="#fff" className="app-lucide-spin" aria-hidden />
+                      Publicando…
+                    </>
+                  ) : (
+                    "Publicar"
+                  )}
+                </button>
+              ) : null}
             </div>
           </>
         )}

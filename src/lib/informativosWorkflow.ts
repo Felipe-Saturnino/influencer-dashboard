@@ -1,6 +1,81 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Role } from "../types";
 
 export type InformativoStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
+
+/** Destinos que não permitem publicação direta — só «Enviar para aprovação». */
+export const PERFIS_INFORMATIVO_FLUXO_APROVACAO: readonly Role[] = [
+  "admin",
+  "executivo",
+  "operador",
+  "agencia",
+  "influencer",
+  "afiliado",
+  "investidor",
+] as const;
+
+/** Se o informativo incluir algum destes perfis, só Administrador pode aprovar. */
+export const PERFIS_INFORMATIVO_APROVACAO_SOMENTE_ADMIN: readonly Role[] = [
+  "admin",
+  "executivo",
+  "operador",
+] as const;
+
+/** Se o informativo incluir algum destes (e nenhum de aprovação restrita a admin), Admin/Executivo/Gestor aprovam. */
+export const PERFIS_INFORMATIVO_APROVACAO_GESTAO: readonly Role[] = [
+  "agencia",
+  "influencer",
+  "afiliado",
+] as const;
+
+
+/** Pelo menos um perfil alvo exige fluxo de aprovação (sem botão Publicar). */
+export function perfisRequeremFluxoAprovacao(perfis: string[]): boolean {
+  return perfis.some((p) => PERFIS_INFORMATIVO_FLUXO_APROVACAO.includes(p as Role));
+}
+
+/** Todos os perfis alvo permitem publicação direta (ex.: só Gestor, RH, Prestadores…). */
+export function podePublicarDiretoInformativo(perfis: string[]): boolean {
+  return perfis.length > 0 && !perfisRequeremFluxoAprovacao(perfis);
+}
+
+/** Administrador pode aprovar a própria postagem; demais precisam de outro aprovador. */
+export function podeAutoAprovarInformativo(role: Role | undefined | null): boolean {
+  return role === "admin";
+}
+
+/**
+ * Quem pode aprovar conforme os perfis alvo do informativo.
+ * Regra mais restritiva prevalece (admin/executivo/operador → só admin).
+ */
+export function rolePodeAprovarInformativo(role: Role | undefined | null, perfisAlvo: string[]): boolean {
+  if (!role) return false;
+  if (!perfisAlvo.length) return false;
+
+  const exigeAdmin = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_SOMENTE_ADMIN.includes(p as Role));
+  if (exigeAdmin) return role === "admin";
+
+  const exigeGestao = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_GESTAO.includes(p as Role));
+  if (exigeGestao) return role === "admin" || role === "executivo" || role === "gestor";
+
+  return false;
+}
+
+export function podeUsuarioAprovarInformativo(
+  userRole: Role | undefined | null,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+  perfisAlvo: string[],
+): boolean {
+  if (!userId || !rolePodeAprovarInformativo(userRole, perfisAlvo)) return false;
+  if (podeAutoAprovarInformativo(userRole)) return true;
+  return !!createdBy && createdBy !== userId;
+}
+
+export function acaoEnvioPermitida(acao: "publicar" | "aprovacao", perfis: string[]): boolean {
+  if (acao === "publicar") return podePublicarDiretoInformativo(perfis);
+  return perfisRequeremFluxoAprovacao(perfis);
+}
 
 export const INFORMATIVO_STATUS_LABEL: Record<InformativoStatus, string> = {
   rascunho: "Rascunho",
