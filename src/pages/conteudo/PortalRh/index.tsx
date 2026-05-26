@@ -29,6 +29,8 @@ import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 
@@ -727,8 +729,8 @@ export default function PortalRhPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
-        icon={<Megaphone size={14} aria-hidden strokeWidth={2.2} />}
-        title="Portal de RH"
+        icon={<PageMenuIcon pageKey="rh_portal" />}
+        title={getPageMenuLabel("rh_portal")}
         subtitle="Comunicados oficiais, políticas internas e atas das RH Talks."
       />
 

@@ -14,7 +14,10 @@ import {
   type SpinQrFrameVariant,
 } from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
-import { Link2, Copy, Check, AlertCircle, QrCode, Download, Share2, Loader2 } from "lucide-react";
+import { Link2, Copy, Check, AlertCircle, QrCode, Download, Loader2 } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { ReactNode } from "react";
@@ -427,40 +430,11 @@ export default function LinksMateriais() {
 
   return (
     <div className="app-page-shell">
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <Share2 size={16} aria-hidden />
-          </span>
-          <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
-            fontFamily: FONT_TITLE, margin: 0,
-            letterSpacing: "0.05em", textTransform: "uppercase",
-          }}>
-            Links e Materiais
-          </h1>
-        </div>
-        <div style={{
-          marginTop: 4,
-          paddingLeft: 40,
-          maxWidth: "100%",
-          boxSizing: "border-box",
-          fontFamily: FONT.body,
-          fontSize: 13,
-          lineHeight: 1.65,
-          color: t.textMuted,
-        }}>
-          <p style={{ margin: 0 }}>
-            Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="links_materiais" />}
+        title={getPageMenuLabel("links_materiais")}
+        subtitle="Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação."
+      />
 
       <section
         aria-labelledby={LINK_SECTION_TITLE_ID}

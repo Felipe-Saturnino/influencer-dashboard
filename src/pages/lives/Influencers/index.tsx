@@ -9,7 +9,7 @@ import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
   Eye, EyeOff, Pencil, X, ChevronDown, Loader2,
-  Mic, Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
+  Users, AlertCircle, CheckCircle, Coins, Building2, ExternalLink,
   Contact, Share2, History,
 } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
@@ -29,6 +29,8 @@ import {
   FiltroPlataformaSemanticoPill,
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
@@ -464,8 +466,8 @@ export default function Influencers() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<Mic size={14} aria-hidden="true" />}
-        title="Influencers"
+        icon={<PageMenuIcon pageKey="influencers" />}
+        title={getPageMenuLabel("influencers")}
         subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}

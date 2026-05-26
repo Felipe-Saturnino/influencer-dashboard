@@ -7,8 +7,10 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { Campanha } from "../../../types";
-import { Pencil, AlertCircle, Trash2, Megaphone, Loader2 } from "lucide-react";
+import { Pencil, AlertCircle, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -124,8 +126,8 @@ export default function Campanhas() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Megaphone size={14} aria-hidden />}
-        title="Campanhas"
+        icon={<PageMenuIcon pageKey="campanhas" />}
+        title={getPageMenuLabel("campanhas")}
         subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 

@@ -17,12 +17,14 @@ import {
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
 
 type ScoutModalTab = "contato" | "canais" | "anotacoes";
 
@@ -415,8 +417,8 @@ export default function Scout() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<Search size={14} aria-hidden="true" />}
-        title="Scout"
+        icon={<PageMenuIcon pageKey="scout" />}
+        title={getPageMenuLabel("scout")}
         subtitle="Registre prospectos e acompanhe o funil do primeiro contato ao fechamento."
         brand={brand}
         t={t}

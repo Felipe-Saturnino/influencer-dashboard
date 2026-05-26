@@ -11,12 +11,21 @@ import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, S
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock, Filter, Gauge, Trophy, X } from "lucide-react";
 import {
-  GiTrophy, GiMedal, GiLaurelsTrophy,
-  GiArcheryTarget,
-  GiCheckMark, GiShare, GiGamepad,
-} from "react-icons/gi";
+  Award,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Filter,
+  Gamepad2,
+  Gauge,
+  Medal,
+  Share2,
+  Target,
+  Trophy,
+  X,
+} from "lucide-react";
 
 const COR_A = {
   accent: "var(--brand-action, #7c3aed)",
@@ -104,12 +113,12 @@ type AcaoInfo = { label: string; icon: React.ReactNode; cor: string; bg: string;
 
 function getAcao(row: ConversaoRow): AcaoInfo {
   if (row.pctViewAcesso !== null && row.pctViewAcesso < 10)
-    return { label: "Divulgar o link",  icon: <GiShare size={11} />,          cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" };
+    return { label: "Divulgar o link",  icon: <Share2 size={11} aria-hidden />,          cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" };
   if (row.pctAcessoReg !== null && row.pctAcessoReg < 10)
-    return { label: "Converter visita", icon: <GiGamepad size={11} />,         cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" };
+    return { label: "Converter visita", icon: <Gamepad2 size={11} aria-hidden />,         cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" };
   if (row.pctRegFTD !== null && row.pctRegFTD < 60)
-    return { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} />,   cor: BRAND.azul,    bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  };
-  return { label: "Em dia",            icon: <GiCheckMark size={11} />,       cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
+    return { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />,   cor: BRAND.azul,    bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  };
+  return { label: "Em dia",            icon: <Check size={11} aria-hidden />,       cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
 }
 
 // ─── FUNIL SVG (mesmo padrão do Overview, adaptado para 1 influencer) ─────────
@@ -275,9 +284,9 @@ function ItemLista({
 // ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
 const PODIO_H    = [130, 90, 70];
 const PODIO_ICONS = [
-  <GiTrophy key="1" size={28} aria-hidden />,
-  <GiMedal key="2" size={24} aria-hidden />,
-  <GiLaurelsTrophy key="3" size={22} aria-hidden />,
+  <Trophy key="1" size={28} aria-hidden />,
+  <Medal key="2" size={24} aria-hidden />,
+  <Award key="3" size={22} aria-hidden />,
 ];
 
 function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
@@ -603,10 +612,10 @@ export default function DashboardConversao() {
   const rankingFtdHora = rowsFiltradosEscopo.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
   const acoesDisponiveis = [
-    { label: "Divulgar o link",  icon: <GiShare size={11} aria-hidden />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
-    { label: "Converter visita", icon: <GiGamepad size={11} aria-hidden />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
-    { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
-    { label: "Em dia",           icon: <GiCheckMark size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
+    { label: "Divulgar o link",  icon: <Share2 size={11} aria-hidden />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
+    { label: "Converter visita", icon: <Gamepad2 size={11} aria-hidden />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
+    { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
+    { label: "Em dia",           icon: <Check size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 

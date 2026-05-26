@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
-  MonitorCheck,
   Network,
   RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -1277,28 +1279,13 @@ export default function StatusTecnico() {
   }
 
   return (
-    <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="app-page-shell">
 
-      {/* ── Header — padrão da plataforma ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: dashBrand.primaryIconBg,
-          border: dashBrand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: dashBrand.primaryIconColor, flexShrink: 0,
-        }}>
-          <MonitorCheck size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: dashBrand.primary, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Status Técnico
-          </h1>
-          <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
-            Monitore integrações, alertas automáticos e sincronizações da plataforma.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="status_tecnico" />}
+        title={getPageMenuLabel("status_tecnico")}
+        subtitle="Monitore integrações, alertas automáticos e sincronizações da plataforma."
+      />
 
       {/* ── KPI Cards — accent bar ── */}
       <div className="app-grid-kpi-4" style={{ gap: 16 }}>

@@ -9,7 +9,7 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import {
-  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, MessageSquare,
+  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
@@ -19,6 +19,8 @@ import {
   FiltroOperadoraSelect,
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -481,8 +483,8 @@ export default function Feedback() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<MessageSquare size={14} aria-hidden="true" />}
-        title="Feedback"
+        icon={<PageMenuIcon pageKey="feedback" />}
+        title={getPageMenuLabel("feedback")}
         subtitle="Consulte o histórico validado de lives com KPIs e dados de resultado."
         brand={brand}
         t={t}

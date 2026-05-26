@@ -1,7 +1,12 @@
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
-import { FONT } from "../constants/theme";
-import { FONT_TITLE } from "../lib/dashboardConstants";
+import {
+  getPageHeaderIconBoxStyle,
+  getPageHeaderOuterStyle,
+  getPageHeaderSubtitleStyle,
+  getPageHeaderTitleRowStyle,
+  getPageHeaderTitleStyle,
+} from "../lib/pageHeaderStyles";
 
 export interface PageHeaderProps {
   icon: React.ReactNode;
@@ -10,71 +15,21 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
 }
 
-/**
- * Cabeçalho padrão de páginas operacionais (28×28 + h1 22px), alinhado a Campanhas / Gestão de Dealers.
- */
+/** Cabeçalho canónico de páginas logadas — ícone 32×32 + título 18px + subtítulo 13px. */
 export function PageHeader({ icon, title, subtitle, actions }: PageHeaderProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 14,
-        marginBottom: 24,
-        flexWrap: "wrap",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            color: brand.primaryIconColor,
-          }}
-        >
-          {icon}
+    <div style={getPageHeaderOuterStyle(!!actions)}>
+      <div style={{ minWidth: 0, flex: actions ? "1 1 240px" : undefined }}>
+        <div style={getPageHeaderTitleRowStyle(!!actions)}>
+          <div style={getPageHeaderIconBoxStyle(brand)}>{icon}</div>
+          <h1 style={getPageHeaderTitleStyle(brand)}>{title}</h1>
         </div>
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: brand.primary,
-              fontFamily: FONT_TITLE,
-              margin: 0,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-            }}
-          >
-            {title}
-          </h1>
-          {subtitle ? (
-            <p
-              style={{
-                color: t.textMuted,
-                marginTop: 5,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                margin: "5px 0 0",
-              }}
-            >
-              {subtitle}
-            </p>
-          ) : null}
-        </div>
+        {subtitle ? <p style={getPageHeaderSubtitleStyle(t)}>{subtitle}</p> : null}
       </div>
       {actions ? (
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{actions}</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>{actions}</div>
       ) : null}
     </div>
   );

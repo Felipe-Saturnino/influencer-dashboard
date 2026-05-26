@@ -6,7 +6,10 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2, Palette, Layers } from "lucide-react";
+import { Pencil, AlertCircle, Upload, Check, Trash2, Loader2, Palette, Layers } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -33,7 +36,6 @@ function tableRowHoverBg(isDark: boolean): string {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
   const { theme: t } = useApp();
-  const dashBrand = useDashboardBrand();
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,27 +130,11 @@ export default function GestaoOperadoras() {
   return (
     <div className="app-page-shell">
 
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <span style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: dashBrand.primaryIconBg,
-          border: dashBrand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: dashBrand.primaryIconColor,
-          flexShrink: 0, marginTop: 3,
-        }}>
-          <Building2 size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: dashBrand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-            Gestão de Operadoras
-          </h1>
-          <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-            Gerencie operadoras parceiras, identidade visual e configurações de integração.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="gestao_operadoras" />}
+        title={getPageMenuLabel("gestao_operadoras")}
+        subtitle="Gerencie operadoras parceiras, identidade visual e configurações de integração."
+      />
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
       <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>

@@ -14,7 +14,18 @@ import {
   zebraStripe,
   zebraStripeBrandContrast,
 } from "../../../lib/tableStyles";
-import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, FiltroBarTabButton, type SortDir } from "../../../components/dashboard";
+import {
+  DashboardPageHeader,
+  FiltroHistoricoButton,
+  SectionTitle,
+  SkeletonKpiCard,
+  KpiCardDepositos,
+  SortTableTh,
+  FiltroBarTabButton,
+  type SortDir,
+} from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
@@ -1037,44 +1048,13 @@ export default function SocialMediaDashboard() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text, paddingBottom: 12 }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              color: brand.primaryIconColor,
-            }}
-          >
-            <Share2 size={14} aria-hidden />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: brand.primary,
-                fontFamily: FONT_TITLE,
-                margin: 0,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Mídias sociais
-            </h1>
-            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas.
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<PageMenuIcon pageKey="dash_midias_sociais" />}
+        title={getPageMenuLabel("dash_midias_sociais")}
+        subtitle="Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas."
+        brand={brand}
+        t={t}
+      />
 
       {/* Período + abas */}
       <div style={{ marginBottom: 14 }}>

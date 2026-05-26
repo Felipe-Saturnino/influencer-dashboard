@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Bell, Layers, MessageSquare } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Layers, MessageSquare } from "lucide-react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -14,6 +14,8 @@ import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroHistoricoButton, FiltroOperadoraSelect, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
@@ -1005,8 +1007,8 @@ export default function CentralNotificacoes() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
-        icon={<Bell size={14} aria-hidden />}
-        title="Central de Notificações"
+        icon={<PageMenuIcon pageKey="central_notificacoes" />}
+        title={getPageMenuLabel("central_notificacoes")}
         subtitle="Gerencie solicitações entre operadoras e estúdio com histórico de conversas."
       />
       <div style={{ marginBottom: 14 }}>

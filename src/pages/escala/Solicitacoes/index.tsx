@@ -13,6 +13,8 @@ import {
   FiltroSolicitacoesTipoAcaoSelect,
   SectionTitle,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -560,8 +562,8 @@ export default function EscalaSolicitacoesPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Solicitações"
+        icon={<PageMenuIcon pageKey="escala_solicitacoes" />}
+        title={getPageMenuLabel("escala_solicitacoes")}
         subtitle="Acompanhe solicitações em aberto e o histórico arquivado por período, time e colaborador."
         brand={brand}
         t={t}

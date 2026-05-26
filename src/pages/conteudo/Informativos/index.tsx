@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Bell, LayoutList, Loader2, SlidersHorizontal } from "lucide-react";
+import { LayoutList, Loader2, SlidersHorizontal } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
@@ -166,8 +168,8 @@ export default function InformativosPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
-        icon={<Bell size={14} aria-hidden strokeWidth={2} />}
-        title="Informativos"
+        icon={<PageMenuIcon pageKey="informativos" />}
+        title={getPageMenuLabel("informativos")}
         subtitle="Comunicados e avisos para a Home de cada Perfil"
       />
 

@@ -8,6 +8,8 @@ import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
 import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -603,7 +605,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Gerenciamento de Informativos",
         texto:
-          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home.",
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro utilizador.",
       },
       {
         subtitulo: "Permissões",
@@ -1955,37 +1957,11 @@ export default function Ajuda() {
   return (
     <div className="app-page-shell" style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-        <span style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: brand.primaryIconColor,
-          flexShrink: 0,
-        }}>
-          <HelpCircle size={14} aria-hidden="true" />
-        </span>
-        <h1 style={{
-          fontSize: 22,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT_TITLE,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          margin: 0,
-        }}>
-          Ajuda
-        </h1>
-      </div>
-
-      <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 24px 40px" }}>
-        Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.
-      </p>
+      <PageHeader
+        icon={<HelpCircle {...PAGE_HEADER_ICON_PROPS} />}
+        title="Ajuda"
+        subtitle="Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns."
+      />
 
       <div
         role="tablist"

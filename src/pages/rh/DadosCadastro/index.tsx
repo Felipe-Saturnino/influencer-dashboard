@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertTriangle, Briefcase, CheckCircle2, Contact, Download, FileText, Files, History, Loader2, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, Briefcase, CheckCircle2, Contact, Download, FileText, History, Loader2, Trash2, Upload } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -33,6 +33,8 @@ import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import {
   MESES_CICLO_REVISAO_CADASTRO,
@@ -696,7 +698,7 @@ export default function RhDadosCadastroPage() {
   if (!row || !form) {
     return (
       <div className="app-page-shell">
-        <PageHeader icon={<Files size={16} aria-hidden />} title="Dados de Cadastro" subtitle="Atualização cadastral" />
+        <PageHeader icon={<PageMenuIcon pageKey="rh_dados_cadastro" />} title={getPageMenuLabel("rh_dados_cadastro")} subtitle="Atualização cadastral" />
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
         </div>
@@ -717,7 +719,7 @@ export default function RhDadosCadastroPage() {
 
   return (
     <div className="app-page-shell app-page-shell--pb64">
-      <PageHeader icon={<Files size={16} aria-hidden />} title="Dados de Cadastro" subtitle="Atualização cadastral — apenas o seu cadastro" />
+      <PageHeader icon={<PageMenuIcon pageKey="rh_dados_cadastro" />} title={getPageMenuLabel("rh_dados_cadastro")} subtitle="Atualização cadastral — apenas o seu cadastro" />
 
       {erroGlobal ? (
         <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: `1px solid #e84025`, color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>

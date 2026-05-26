@@ -8,11 +8,13 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { DashboardPageHeader, FiltroBarTabButton, FiltroStatusSemanticoPill, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { Network, X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
+import { X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
 
 type NetworkModalTab = "contato" | "operacao" | "anotacoes";
 
@@ -232,8 +234,8 @@ export default function AfiliadosNetwork() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<Network size={14} aria-hidden="true" />}
-        title="Network"
+        icon={<PageMenuIcon pageKey="afiliados_network" />}
+        title={getPageMenuLabel("afiliados_network")}
         subtitle="Funil de prospecção e conversão de prospectos em afiliados cadastrados."
         brand={brand}
         t={t}

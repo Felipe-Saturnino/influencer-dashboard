@@ -26,6 +26,8 @@ import {
 import OperadoraTag from "../../../components/OperadoraTag";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -232,8 +234,8 @@ export default function GestaoDealers() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <PageHeader
-        icon={<Users size={14} aria-hidden />}
-        title="Gestão de Dealers"
+        icon={<PageMenuIcon pageKey="gestao_dealers" />}
+        title={getPageMenuLabel("gestao_dealers")}
         subtitle="Catálogo do elenco com especialidades, turnos e solicitações das operadoras."
       />
 

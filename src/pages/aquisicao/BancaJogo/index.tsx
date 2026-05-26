@@ -11,6 +11,8 @@ import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaG
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -21,7 +23,7 @@ import {
   compareLocaleTexto,
   compareNumber,
 } from "../../../lib/classificacaoSort";
-import { ChevronLeft, ChevronRight, Coins, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { Role } from "../../../types";
@@ -1902,8 +1904,8 @@ export default function BancaJogo() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Coins size={14} aria-hidden />}
-        title="Banca de Jogo"
+        icon={<PageMenuIcon pageKey="banca_jogo" />}
+        title={getPageMenuLabel("banca_jogo")}
         subtitle="Solicite, aprove e libere bancas de jogo por parceiro e operadora."
       />
 

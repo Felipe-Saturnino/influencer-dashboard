@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { FiltroBarCampoOption } from "../../../components/FiltroBarCampoSelect";
-import { Briefcase, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -19,6 +19,8 @@ import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasC
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
 import type { RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import {
   VAGA_FILTRO_TODAS_VAGAS_VALUE,
@@ -357,7 +359,7 @@ export default function RhVagasPage() {
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
-      <PageHeader icon={<Briefcase size={16} aria-hidden />} title="Vagas" subtitle="Candidaturas e processos seletivos" />
+      <PageHeader icon={<PageMenuIcon pageKey="rh_vagas" />} title={getPageMenuLabel("rh_vagas")} subtitle="Candidaturas e processos seletivos" />
 
       {erro ? (
         <div

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -9,6 +9,8 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
@@ -1211,8 +1213,8 @@ export default function RhGestaoEscalaPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<CalendarRange size={14} aria-hidden />}
-        title="Gestão de Escala"
+        icon={<PageMenuIcon pageKey="rh_gestao_escala" />}
+        title={getPageMenuLabel("rh_gestao_escala")}
         subtitle="Gere a escala por área (time), colaborador e dia do mês."
       />
 

@@ -14,6 +14,8 @@ import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroHistoricoButton, FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -36,7 +38,6 @@ import {
   Loader2,
   Plus,
   RotateCcw,
-  Wallet,
 } from "lucide-react";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
@@ -2883,8 +2884,8 @@ export default function Financeiro() {
     return (
       <div className="app-page-shell">
         <PageHeader
-          icon={<Wallet size={14} aria-hidden />}
-          title="Financeiro"
+          icon={<PageMenuIcon pageKey="financeiro" />}
+          title={getPageMenuLabel("financeiro")}
           subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
         />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
@@ -2930,8 +2931,8 @@ export default function Financeiro() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Wallet size={14} aria-hidden />}
-        title="Financeiro"
+        icon={<PageMenuIcon pageKey="financeiro" />}
+        title={getPageMenuLabel("financeiro")}
         subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
       />
 

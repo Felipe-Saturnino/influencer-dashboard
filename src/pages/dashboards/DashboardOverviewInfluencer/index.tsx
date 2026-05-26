@@ -9,7 +9,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -20,6 +20,7 @@ import {
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import {
+  DashboardPageHeader,
   SectionTitle,
   KpiCard,
   FunilVisual,
@@ -29,6 +30,8 @@ import {
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   getThStyle,
   getThStyleBrandAction,
@@ -965,44 +968,13 @@ export default function DashboardOverviewInfluencer() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              color: brand.primaryIconColor,
-            }}
-          >
-            <BarChart2 size={14} aria-hidden="true" />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: brand.primary,
-                fontFamily: FONT_TITLE,
-                margin: 0,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Overview Influencer
-            </h1>
-            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resumo executivo de financeiro, operação e conversão do canal de influencers.
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<PageMenuIcon pageKey="dash_overview_influencer" />}
+        title={getPageMenuLabel("dash_overview_influencer")}
+        subtitle="Resumo executivo de financeiro, operação e conversão do canal de influencers."
+        brand={brand}
+        t={t}
+      />
 
       {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
       <div style={{ marginBottom: 14 }}>

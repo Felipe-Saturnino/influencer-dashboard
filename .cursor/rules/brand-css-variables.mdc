@@ -141,7 +141,7 @@ Indicador secundário na FilterBar: `<Clock size={12} aria-hidden />` + texto �
 
 1. **Título (`h1`):** texto **idêntico** ao `label` do item no menu (`src/constants/menu.ts`) para a `key` da página — mesma grafia e capitalização (ex.: menu “Resultados” → título “Resultados”, não “Resultado de Lives”; menu “Agenda” → “Agenda”, não “Agenda de Lives”).
 2. **Subtítulo:** **uma linha** fixa sob o `h1`, `color: t.textMuted`, `fontSize: 13`, `margin: "5px 0 0"`, `fontFamily: FONT.body`, descrevendo o propósito da página em linguagem de produto (não regras técnicas). **Obrigatório** em páginas novas e ao alterar cabeçalho em legado.
-3. **Ícone do header:** **Lucide** (ou ícone já usado no menu da mesma página), `aria-hidden="true"`, `strokeWidth` default **2**. **GameIcons só no menu lateral** — não repetir Gi* no badge do header.
+3. **Ícone do header:** **Lucide** — preferir o **mesmo componente** de `menu.ts` via `PageMenuIcon` (`src/components/PageMenuIcon.tsx`) / `getMenuItem`. `PAGE_HEADER_ICON_PROPS` (`size` 16, `aria-hidden`). Badge **32×32**, `borderRadius` 9, **na mesma linha** do `h1`; subtítulo na linha seguinte com `paddingLeft` 40 (constantes em `src/lib/pageHeaderStyles.ts`).
 
 **Páginas novas — checklist de implementação:**
 
@@ -162,37 +162,34 @@ Indicador secundário na FilterBar: `<Clock size={12} aria-hidden />` + texto �
 
 **Anti-patterns de subtítulo:** janela técnica no lugar de valor (“após 5 h” só no texto de Ajuda se necessário); nome de tabela/RPC; duplicar o subtítulo no `subtitle` do `PageHeader` **e** num parágrafo igual logo abaixo; título com sufixo “de Lives” quando o menu não usa.
 
-### Implementação — preferir componentes
+### Implementação — componentes canónicos
 
-| Família | Componente | Badge | `h1` | Onde |
-|---------|------------|-------|------|------|
-| **B — Operacional** | `PageHeader` ou `DashboardPageHeader` | 28×28, ícone 14px | 22px, `FONT_TITLE`, uppercase | Estúdio, Aquisição, Marketing, Plataforma, RH, Dashboards, Lives (maioria) |
-| **A — Conteúdo compacto** | Header inline ou evoluir para `PageHeader` | 32×32, ícone 16px | 18px, `FONT_TITLE`, uppercase | Conteúdo (Playbook, Links), algumas vitrines |
-
-**Exceções documentadas:** Portal RH (`conteudo/`) usa **Família B** (`PageHeader` 28/22) por alinhamento com gestão operacional.
-
-Props mínimas:
+| Item | Valor |
+|------|--------|
+| Componentes | **`PageHeader`** (`src/components/PageHeader.tsx`) ou **`DashboardPageHeader`** (alias do mesmo layout) |
+| `h1` | **18px**, `FONT_TITLE`, uppercase, `brand.primary` |
+| Subtítulo | **13px**, `t.textMuted`, `FONT.body`, `margin: "5px 0 0"`, `paddingLeft: 40` |
+| Espaço até o próximo bloco | **`marginBottom: 18`** no wrapper do cabeçalho (referência: Afiliados). O “próximo bloco” pode ser filtros, KPIs, **abas**, etc. |
+| Ícone menu + página | `PageMenuIcon pageKey="…"` ou `getMenuItem(key).icon` com `PAGE_HEADER_ICON_PROPS` (`src/lib/pageHeaderStyles.ts`) |
 
 ```tsx
+import { PageHeader } from "../components/PageHeader";
+import { PageMenuIcon } from "../components/PageMenuIcon";
+import { getPageMenuLabel } from "../lib/pageHeaderMenu";
+
 <PageHeader
-  icon={<Icone size={14} aria-hidden="true" />}
-  title="Gestão de Links"   // = menu.ts label
+  icon={<PageMenuIcon pageKey="gestao_links" />}
+  title={getPageMenuLabel("gestao_links")}
   subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
   actions={...}
 />
 ```
 
-**Dashboards (parágrafo sob `h1`, mesmo estilo):**
+`DashboardPageHeader` mantém props `brand` e `t` por compatibilidade; o layout delega a `PageHeader`.
 
-```tsx
-<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-  Acompanhe performance, conversão e financeiro do canal de influencers.
-</p>
-```
+**Exceções (não aplicar este bloco):** **Home**, **Configurações**, **Login** / **Trocar senha obrigatória**.
 
-**Conteúdo Família A (32/18):** subtítulo no `<p>` com `paddingLeft: 40` alinhado ao ícone, ou `PageHeader` se a página migrar para Família B.
-
-**Nunca:** emoji no `h1`; ícone sem wrapper; `fontSize: 26` no título; página logada de produto **sem** subtítulo.
+**Nunca:** emoji no `h1`; ícone sem wrapper 32×32; `fontSize: 22` ou `26` no título de página de produto; página logada **sem** subtítulo; header inline duplicado quando `PageHeader` bastar.
 
 ---
 
@@ -478,7 +475,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 
 - `rgba(124,58,237,…)` fixo em `dashboards/` ou quando `brand.useBrand`.
 - `brand.accent` em links externos.
-- `GiShare` / GameIcons no header de página.
+- `GiShare` / GameIcons no header de página ou no menu (`menu.ts` usa Lucide).
 - Gradiente fallback com `#7c3aed` no início (usar `CtaCriarButton` / `getCtaCriarGradient`).
 - CTA de criação inline sem `CtaCriarButton`; label com `+` em vez de ícone `Plus`.
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).

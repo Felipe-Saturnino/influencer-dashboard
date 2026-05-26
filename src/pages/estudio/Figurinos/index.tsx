@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Shirt, Trash2, Wrench, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Trash2, Wrench, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -12,6 +12,8 @@ import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
@@ -570,8 +572,8 @@ export default function FigurinosPage() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Shirt size={14} aria-hidden />}
-        title="Figurinos"
+        icon={<PageMenuIcon pageKey="rh_figurinos" />}
+        title={getPageMenuLabel("rh_figurinos")}
         subtitle="Controle o inventário de peças com retiradas, devoluções e manutenções."
       />
 

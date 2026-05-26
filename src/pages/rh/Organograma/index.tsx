@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Network } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -23,6 +23,8 @@ import type {
 } from "../../../types/rhOrganograma";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -788,8 +790,8 @@ export default function RhOrganogramaPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<Network size={16} aria-hidden />}
-        title="Organograma"
+        icon={<PageMenuIcon pageKey="rh_organograma" />}
+        title={getPageMenuLabel("rh_organograma")}
         subtitle="Diretorias, gerências e times"
         actions={
           podeEditar && modo === "gerenciar" ? (

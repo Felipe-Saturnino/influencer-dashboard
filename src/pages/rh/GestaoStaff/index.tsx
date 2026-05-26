@@ -33,6 +33,8 @@ import {
 import type { Operadora } from "../../../types";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import {
   FiltroOperadoraSelect,
@@ -787,8 +789,8 @@ export default function RhGestaoStaffPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<Users size={14} aria-hidden />}
-        title="Gestão de Staff"
+        icon={<PageMenuIcon pageKey="rh_staff" />}
+        title={getPageMenuLabel("rh_staff")}
         subtitle="Prestadores dos times de Game Floor e Operation Management."
       />
 

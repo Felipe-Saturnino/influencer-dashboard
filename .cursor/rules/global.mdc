@@ -550,7 +550,7 @@ fmtHorasTotal(h)          // 24:30
 
 - Ícones **decorativos** em células/badges: `aria-hidden="true"`.
 - Botões só ícone (linha de tabela): `aria-label` + `title` — ver Brand sec. 8.
-- Preferir **Lucide** em UI de página; GameIcons restritos ao menu lateral (`menu.ts`).
+- Preferir **Lucide** em UI de página e no **menu lateral** (`menu.ts` — `LucideIcon` por item). Cabeçalho de página: `PageMenuIcon` alinhado ao mesmo ícone do menu.
 
 Lista estendida (modais, tabelas clicáveis, abas):
 

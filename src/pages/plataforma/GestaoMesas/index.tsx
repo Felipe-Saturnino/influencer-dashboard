@@ -3,9 +3,12 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { Pencil, Trash2, Loader2, AlertCircle, LayoutGrid } from "lucide-react";
+import { Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
@@ -163,43 +166,11 @@ export default function GestaoMesas() {
 
   return (
     <div className="app-page-shell">
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <span
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: dashBrand.primaryIconBg,
-            border: dashBrand.primaryIconBorder,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: dashBrand.primaryIconColor,
-            flexShrink: 0,
-            marginTop: 3,
-          }}
-        >
-          <LayoutGrid size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: dashBrand.primary,
-              fontFamily: FONT_TITLE,
-              margin: 0,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-            }}
-          >
-            Gestão de Mesas
-          </h1>
-          <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", maxWidth: 560, lineHeight: 1.45 }}>
-            Cadastre e gerencie as mesas disponíveis por operadora.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="gestao_mesas" />}
+        title={getPageMenuLabel("gestao_mesas")}
+        subtitle="Cadastre e gerencie as mesas disponíveis por operadora."
+      />
 
       <div
         style={{

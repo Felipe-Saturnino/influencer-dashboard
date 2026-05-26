@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Shield, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -23,6 +23,8 @@ import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
 import { ModalAtenderDenuncia, ModalConfirmarExclusao } from "./ModalsAtender";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
@@ -226,8 +228,8 @@ export default function CentralDenunciasSpin() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Shield size={22} aria-hidden />}
-        title="Central de Denúncias"
+        icon={<PageMenuIcon pageKey="rh_central_denuncias" />}
+        title={getPageMenuLabel("rh_central_denuncias")}
         subtitle="Canal de denúncias Spin"
       />
 

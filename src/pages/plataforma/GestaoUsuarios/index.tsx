@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { Briefcase, Building2, KeyRound, Shield, User, UserCog } from "lucide-react";
+import { Briefcase, Building2, KeyRound, User, UserCog } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "./constants";
 import { AbaUsuarios } from "./AbaUsuarios";
 import { AbaPermissoes } from "./AbaPermissoes";
 import { AbaOperadora } from "./AbaOperadora";
@@ -21,7 +22,6 @@ type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestad
 
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
-  const brand = useDashboardBrand();
   const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<AbaGestao>("usuarios");
   const isAdmin = user?.role === "admin";
@@ -88,45 +88,12 @@ export default function GestaoUsuarios() {
   };
 
   return (
-    <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: brand.primaryIconColor,
-              flexShrink: 0,
-            }}
-          >
-            <Shield size={14} aria-hidden="true" />
-          </span>
-          <div>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: brand.primary,
-                fontFamily: FONT_TITLE,
-                margin: 0,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Gestão de Usuários
-            </h1>
-            <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
-              Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="app-page-shell">
+      <PageHeader
+        icon={<PageMenuIcon pageKey="gestao_usuarios" />}
+        title={getPageMenuLabel("gestao_usuarios")}
+        subtitle="Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma."
+      />
 
       {isAdmin && (
         <div

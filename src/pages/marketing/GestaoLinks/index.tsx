@@ -9,6 +9,8 @@ import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
 import { Ban, CheckCircle2, Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import {
@@ -389,8 +391,8 @@ export default function GestaoLinks() {
     <div className="app-page-shell">
 
       <PageHeader
-        icon={<Link2 size={14} aria-hidden />}
-        title="Gestão de Links"
+        icon={<PageMenuIcon pageKey="gestao_links" />}
+        title={getPageMenuLabel("gestao_links")}
         subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
         actions={
           totalPendentes > 0 ? (

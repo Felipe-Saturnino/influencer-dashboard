@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## Cabeçalho — título e subtítulo
 
-`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+`PageHeader` + `PageMenuIcon` (Global / Brand §4). **`title`** = `getPageMenuLabel` / `label` em `menu.ts`.
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|

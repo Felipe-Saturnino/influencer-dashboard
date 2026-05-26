@@ -6,10 +6,12 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2, NotebookPen } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
@@ -1081,8 +1083,8 @@ export default function RoteiroMesa() {
       ) : null}
 
       <PageHeader
-        icon={<NotebookPen size={14} aria-hidden />}
-        title="Roteiro de Mesa"
+        icon={<PageMenuIcon pageKey="roteiro_mesa" />}
+        title={getPageMenuLabel("roteiro_mesa")}
         subtitle="Scripts e orientações de live por operadora para o dealer usar em mesa."
       />
 

@@ -11,11 +11,12 @@ import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   AlertTriangle,
   Check,
   CheckCircle,
-  ClipboardList,
   Info,
   Loader2,
   Trash2,
@@ -666,8 +667,8 @@ export default function Resultados() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Resultados"
+        icon={<PageMenuIcon pageKey="resultados" />}
+        title={getPageMenuLabel("resultados")}
         subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
         brand={brand}
         t={t}

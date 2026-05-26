@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   BookOpen,
-  CalendarRange,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -55,6 +54,8 @@ import {
   getFilterBarRowStyle,
   onFiltroBarTabsKeyDown,
 } from "../../../lib/filterBarStyles";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
@@ -1639,8 +1640,8 @@ export default function RhCalendarioPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<CalendarRange size={14} aria-hidden="true" />}
-        title="Calendário"
+        icon={<PageMenuIcon pageKey="rh_calendario" />}
+        title={getPageMenuLabel("rh_calendario")}
         subtitle="Organize a rotina operacional com visibilidade completa de turnos, trocas e compromissos."
         brand={brand}
         t={t}

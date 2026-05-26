@@ -77,6 +77,8 @@ import {
 } from "../../../lib/rhCadastroRevisao";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
@@ -2299,8 +2301,8 @@ export default function RhPrestadoresPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<UserCircle2 size={16} aria-hidden />}
-        title="Gestão de Prestadores"
+        icon={<PageMenuIcon pageKey="rh_funcionarios" />}
+        title={getPageMenuLabel("rh_funcionarios")}
         subtitle="Cadastro, head count e fluxos de RH."
       />
 

@@ -18,7 +18,7 @@ import {
   FiltroInfluencerSelect,
   FiltroModoVisualizacaoSelect,
 } from "../../../components/dashboard";
-import { CalendarRange, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
@@ -29,6 +29,8 @@ import {
   FiltroPlataformaSemanticoPill,
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -222,8 +224,8 @@ export default function Agenda() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<CalendarRange size={14} aria-hidden="true" />}
-        title="Agenda"
+        icon={<PageMenuIcon pageKey="agenda" />}
+        title={getPageMenuLabel("agenda")}
         subtitle="Visualize, agende e acompanhe as lives dos influencers."
         brand={brand}
         t={t}

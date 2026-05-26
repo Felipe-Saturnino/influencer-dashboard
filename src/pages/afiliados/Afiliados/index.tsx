@@ -16,6 +16,8 @@ import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influence
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
@@ -284,7 +286,7 @@ export default function Afiliados() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <DashboardPageHeader icon={<Users size={14} aria-hidden="true" />} title="Afiliados" subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
+      <DashboardPageHeader icon={<PageMenuIcon pageKey="afiliados" />} title={getPageMenuLabel("afiliados")} subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
 
       {showManagementUI && (
         <div className="app-grid-2" style={{ gap: 16, marginBottom: 20 }}>
