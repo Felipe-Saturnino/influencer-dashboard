@@ -91,6 +91,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
+- **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Heatmap de Posicionamento:** `zebraBgHistLinha` com `--brand-contrast` (nunca `--brand-secondary`). Nunca hardcodar hex de fundo na zebra.

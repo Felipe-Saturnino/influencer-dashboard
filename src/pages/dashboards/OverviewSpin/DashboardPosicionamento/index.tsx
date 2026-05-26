@@ -284,10 +284,7 @@ function PosicaoAtualMesasBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle>{titulo}</SectionTitle>
-      <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-        {fmtUltimaAtualizacao(ultimaExecutadoEm)}
-      </p>
+      <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {mesasOrdenadas.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
@@ -621,10 +618,9 @@ function DashboardPosicionamentoOperadora({
         />
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle>Concorrentes à frente</SectionTitle>
-          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
-          </p>
+          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+            Concorrentes à frente
+          </SectionTitle>
           {concorrentesJogo.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
@@ -760,10 +756,9 @@ function DashboardPosicionamentoOperadora({
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle>Ranking de concorrentes</SectionTitle>
-          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
-          </p>
+          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+            Ranking de concorrentes
+          </SectionTitle>
           {rankingJogos.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
