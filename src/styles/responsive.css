@@ -181,6 +181,26 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
+/* Home Investidor — quatro atalhos na mesma fileira (desktop) */
+.app-grid-atalhos-investidor {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-grid-atalhos-investidor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .app-grid-atalhos-investidor {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Três colunas iguais (filtros etc.) */
 .app-grid-3 {
   display: grid;

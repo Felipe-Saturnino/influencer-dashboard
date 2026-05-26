@@ -21,7 +21,8 @@ export function HomeInvestidorKpiCard({
   breakdown,
 }: {
   label: string;
-  value: string;
+  /** Omitir quando o card exibe só o detalhamento (ex.: Aquisição). */
+  value?: string;
   icon: ReactNode;
   accentVar?: string;
   breakdown?: HomeInvestidorKpiBreakdownItem[];
@@ -71,11 +72,13 @@ export function HomeInvestidorKpiCard({
             {label}
           </span>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, lineHeight: 1.1 }}>
-          {value}
-        </div>
+        {value != null && value !== "" ? (
+          <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, lineHeight: 1.1 }}>
+            {value}
+          </div>
+        ) : null}
         {breakdown && breakdown.length > 0 ? (
-          <ul style={HOME_INVESTIDOR_OPERADORA_LIST}>
+          <ul style={{ ...HOME_INVESTIDOR_OPERADORA_LIST, marginTop: value != null && value !== "" ? 12 : 4 }}>
             {breakdown.map((item) => (
               <li key={item.label} style={HOME_INVESTIDOR_OPERADORA_ROW}>
                 <span style={{ color: t.textMuted, overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>

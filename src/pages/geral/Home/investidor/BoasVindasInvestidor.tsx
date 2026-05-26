@@ -3,12 +3,14 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT_TITLE } from "../../../../lib/dashboardConstants";
 import { HOME_INVESTIDOR_BODY_MUTED } from "./homeInvestidorUi";
 
+const SUBTITULO_BOAS_VINDAS =
+  "Acesso privilegiado. Parceria real.\nVocê enxerga a operação de onde ela acontece. Dashboards e métricas calibrados com a profundidade de quem faz parte do resultado.";
+
 export function BoasVindasInvestidor({ nome }: { nome: string }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
-  const cardBg =
-    brand.useBrand && brand.blockBg ? brand.blockBg : t.cardBg;
+  const cardBg = brand.useBrand && brand.blockBg ? brand.blockBg : t.cardBg;
 
   return (
     <div
@@ -43,15 +45,9 @@ export function BoasVindasInvestidor({ nome }: { nome: string }) {
           lineHeight: 1.25,
         }}
       >
-        Olá {nome}!
+        Olá, {nome}!
       </h1>
-      <p style={{ ...HOME_INVESTIDOR_BODY_MUTED, color: t.text, marginBottom: 10 }}>
-        Acesso privilegiado. Parceria real.
-      </p>
-      <p style={{ ...HOME_INVESTIDOR_BODY_MUTED, color: t.textMuted }}>
-        Você enxerga a operação de onde ela acontece. Dashboards e métricas calibrados com a profundidade de quem faz
-        parte do resultado.
-      </p>
+      <p style={{ ...HOME_INVESTIDOR_BODY_MUTED, color: t.textMuted, whiteSpace: "pre-line" }}>{SUBTITULO_BOAS_VINDAS}</p>
     </div>
   );
 }

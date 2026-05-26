@@ -1,81 +1,20 @@
-import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Share2, Tv } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { fmtBRL, fmtHorasTotal } from "../../../../lib/dashboardHelpers";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
 import { useHomeInvestidorAquisicao } from "../hooks/useHomeInvestidorAquisicao";
-import { homeInvestidorSectionTitleStyle, HOME_INVESTIDOR_BODY_MUTED } from "./homeInvestidorUi";
-
-function MetricaLinha({ label, value }: { label: string; value: string }) {
-  const { theme: t } = useApp();
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "baseline",
-        gap: 10,
-        fontSize: 13,
-        fontFamily: FONT.body,
-      }}
-    >
-      <span style={{ color: t.textMuted }}>{label}</span>
-      <span style={{ color: t.text, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</span>
-    </div>
-  );
-}
-
-function CardAquisicao({
-  titulo,
-  children,
-  loading,
-}: {
-  titulo: string;
-  children: ReactNode;
-  loading: boolean;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-
-  return (
-    <div
-      style={{
-        flex: "1 1 280px",
-        borderRadius: 14,
-        border: `1px solid ${t.cardBorder}`,
-        background: brand.blockBg,
-        padding: "16px 18px",
-      }}
-    >
-      <h3
-        style={{
-          margin: "0 0 14px",
-          fontSize: 12,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT.body,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-        }}
-      >
-        {titulo}
-      </h3>
-      {loading ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Loader2 className="app-lucide-spin" size={18} color="var(--brand-primary, #7c3aed)" aria-hidden />
-          <span style={{ color: t.textMuted, fontSize: 12 }}>Carregando…</span>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{children}</div>
-      )}
-    </div>
-  );
-}
+import { HomeInvestidorKpiCard } from "./HomeInvestidorKpiCard";
+import {
+  homeInvestidorSectionTitleStyle,
+  HOME_INVESTIDOR_BODY_MUTED,
+  HOME_INVESTIDOR_FOOTER_HINT,
+  HOME_INVESTIDOR_LINK_BUTTON,
+} from "./homeInvestidorUi";
 
 export function AquisicaoInvestidor() {
-  const { theme: t } = useApp();
+  const { theme: t, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const { loading, erro, data } = useHomeInvestidorAquisicao();
   const box = getPageContentBoxStyle(brand, t);
@@ -88,42 +27,54 @@ export function AquisicaoInvestidor() {
         Ações de Aquisição
       </h2>
 
-      {erro && !loading ? (
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0" }}>
+          <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+        </div>
+      ) : erro || !data ? (
         <p style={{ ...HOME_INVESTIDOR_BODY_MUTED, color: t.textMuted }}>
           Não foi possível carregar os dados de aquisição. Se o problema persistir, contate o suporte.
         </p>
       ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <CardAquisicao titulo="Streamers" loading={loading}>
-            <MetricaLinha
-              label="Lives realizadas"
-              value={data ? fmtNum(data.streamers.lives) : "—"}
+        <>
+          <div className="app-grid-2">
+            <HomeInvestidorKpiCard
+              label="Streamers"
+              icon={<Tv size={16} aria-hidden />}
+              accentVar="--brand-primary"
+              breakdown={[
+                { label: "Lives realizadas", value: fmtNum(data.streamers.lives) },
+                { label: "Horas realizadas", value: fmtHorasTotal(data.streamers.horas) },
+                { label: "Depósitos", value: fmtBRL(data.streamers.depositosTotal) },
+              ]}
             />
-            <MetricaLinha
-              label="Horas realizadas"
-              value={data ? fmtHorasTotal(data.streamers.horas) : "—"}
+            <HomeInvestidorKpiCard
+              label="Mídias Sociais"
+              icon={<Share2 size={16} aria-hidden />}
+              accentVar="--brand-secondary"
+              breakdown={[
+                { label: "Postagens", value: fmtNum(data.social.postagens) },
+                { label: "Seguidores totais", value: fmtNum(data.social.seguidores) },
+                { label: "Impressões totais", value: fmtNum(data.social.impressoes) },
+              ]}
             />
-            <MetricaLinha
-              label="Depósitos"
-              value={data ? fmtBRL(data.streamers.depositosTotal) : "—"}
-            />
-          </CardAquisicao>
-
-          <CardAquisicao titulo="Mídias Sociais" loading={loading}>
-            <MetricaLinha
-              label="Postagens"
-              value={data ? fmtNum(data.social.postagens) : "—"}
-            />
-            <MetricaLinha
-              label="Seguidores totais"
-              value={data ? fmtNum(data.social.seguidores) : "—"}
-            />
-            <MetricaLinha
-              label="Impressões totais"
-              value={data ? fmtNum(data.social.impressoes) : "—"}
-            />
-          </CardAquisicao>
-        </div>
+          </div>
+          <p style={{ ...HOME_INVESTIDOR_FOOTER_HINT, color: t.textMuted }}>
+            Quer saber mais? Acessa o Dashboard de{" "}
+            <button type="button" onClick={() => setActivePage("streamers")} style={HOME_INVESTIDOR_LINK_BUTTON}>
+              Streamers
+            </button>{" "}
+            e de{" "}
+            <button
+              type="button"
+              onClick={() => setActivePage("dash_midias_sociais")}
+              style={HOME_INVESTIDOR_LINK_BUTTON}
+            >
+              Mídias Sociais
+            </button>
+          </p>
+        </>
       )}
     </section>
   );

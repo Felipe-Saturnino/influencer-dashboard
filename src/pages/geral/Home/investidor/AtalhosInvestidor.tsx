@@ -31,13 +31,7 @@ export function AtalhosInvestidor() {
         Clique em um atalho abaixo para ir diretamente à página desejada.
       </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
-          gap: 12,
-        }}
-      >
+      <div className="app-grid-atalhos-investidor">
         {ATALHOS_INVESTIDOR.map(({ key, icon: Icon }) => {
           const subtitle = getPageCanonicalSubtitle(key) ?? "";
           return (
@@ -59,6 +53,7 @@ export function AtalhosInvestidor() {
                 cursor: "pointer",
                 textAlign: "left",
                 width: "100%",
+                minWidth: 0,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
@@ -76,8 +71,8 @@ export function AtalhosInvestidor() {
                 >
                   <Icon size={18} color={accentColor} aria-hidden />
                 </span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{getPageMenuLabel(key)}</span>
-                <ArrowRight size={14} color={t.textMuted} aria-hidden />
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0 }}>{getPageMenuLabel(key)}</span>
+                <ArrowRight size={14} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
               </div>
               {subtitle ? (
                 <p style={{ margin: 0, fontSize: 12, color: t.textMuted, lineHeight: 1.5, paddingLeft: 48 }}>

@@ -40,3 +40,23 @@ export const HOME_INVESTIDOR_OPERADORA_ROW: CSSProperties = {
   fontSize: 12,
   fontFamily: FONT.body,
 };
+
+export const HOME_INVESTIDOR_LINK_BUTTON: CSSProperties = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  margin: 0,
+  font: "inherit",
+  fontWeight: 700,
+  color: "var(--brand-primary, #7c3aed)",
+  textDecoration: "underline",
+  cursor: "pointer",
+};
+
+export const HOME_INVESTIDOR_FOOTER_HINT: CSSProperties = {
+  margin: "16px 0 0",
+  fontSize: 13,
+  color: "inherit",
+  fontFamily: FONT.body,
+  lineHeight: 1.5,
+};

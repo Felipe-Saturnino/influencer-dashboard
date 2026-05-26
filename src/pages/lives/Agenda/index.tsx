@@ -29,6 +29,7 @@ import {
   FiltroOperadoraSelect,
   FiltroPlataformaSemanticoPill,
   FiltroStatusSemanticoPill,
+  SectionTitle,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -325,8 +326,20 @@ export default function Agenda() {
 
       {/* ── CALENDÁRIO ── */}
       <div style={contentBox}>
-        {perm.canCriarOk && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Data e hora das lives dos influencers">
+            Calendário
+          </SectionTitle>
+          {perm.canCriarOk && (
             <CtaCriarButton
               onClick={() => void tentarAbrirNovaLive()}
               loading={checandoNovaLive}
@@ -334,8 +347,8 @@ export default function Agenda() {
             >
               Nova Live
             </CtaCriarButton>
-          </div>
-        )}
+          )}
+        </div>
         {loading ? (
           <div
             role="status"

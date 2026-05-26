@@ -7,14 +7,16 @@ interface Props {
   icon?: React.ReactNode;
   children: React.ReactNode;
   sub?: React.ReactNode;
+  /** Sem margem inferior — toolbar na mesma linha que CTA (ex.: Agenda). */
+  compact?: boolean;
 }
 
-export default function SectionTitle({ icon, children, sub }: Props) {
+export default function SectionTitle({ icon, children, sub, compact }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: icon ? 8 : 0, marginBottom: 16, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: icon ? 8 : 0, marginBottom: compact ? 0 : 16, flexWrap: "wrap" }}>
       {icon ? (
         <span
           style={{
