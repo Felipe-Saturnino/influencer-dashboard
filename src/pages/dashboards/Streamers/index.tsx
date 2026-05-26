@@ -15,6 +15,7 @@ import {
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
@@ -164,7 +165,7 @@ function StreamersAutorizado() {
           <DashboardPageHeader
             icon={<PageMenuIcon pageKey="streamers" />}
             title={getPageMenuLabel("streamers")}
-            subtitle="Acompanhe performance, conversão e financeiro do canal de influencers."
+            subtitle={getPageCanonicalSubtitle("streamers")}
             brand={brand}
             t={t}
           />

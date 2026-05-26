@@ -21,9 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Filter,
   Gamepad2,
-  Gauge,
   Medal,
   Share2,
   Target,
@@ -769,7 +767,6 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          icon={<Filter size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           Comparativo de Funil
@@ -843,12 +840,9 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 3: PÓDIO FTD/HORA ═════════════════════════════════════════════ */}
       <div style={card}>
-        <SectionTitle icon={<Trophy size={14} aria-hidden />}>
-          Ranking FTD/Hora — Eficiência por Influencer
+        <SectionTitle sub="FTDs gerados por hora de live">
+          Ranking FTD/Hora
         </SectionTitle>
-        <p style={{ margin: "-8px 0 20px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          FTDs gerados por hora de live — influencers sem horas registradas omitidos.
-        </p>
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
         ) : (
@@ -859,7 +853,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<Gauge size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Comparativo de Taxas
           </SectionTitle>
 

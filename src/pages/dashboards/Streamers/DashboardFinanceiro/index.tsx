@@ -20,14 +20,11 @@ import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  BarChart2,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   Clock,
-  Coins,
   Gauge,
-  ListOrdered,
   Scale,
   Trophy,
   User,
@@ -661,7 +658,6 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
@@ -731,7 +727,7 @@ export default function DashboardFinanceiro() {
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
       <div style={card}>
-        <SectionTitle icon={<Coins size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Investimento por Influencer
         </SectionTitle>
 
@@ -788,7 +784,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<ListOrdered size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Ranking Financeiro
           </SectionTitle>
           {/* Legenda de perfis */}

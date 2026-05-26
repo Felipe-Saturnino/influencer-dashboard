@@ -48,7 +48,6 @@ import {
   Coins,
   Receipt,
   Wallet,
-  Filter,
   TrendingUp,
   Trophy,
   UserPlus,
@@ -640,7 +639,6 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={15} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
@@ -728,7 +726,7 @@ export default function DashboardOverview() {
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
       <div style={card}>
-        <SectionTitle icon={<Filter size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual
@@ -740,7 +738,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<Trophy size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Ranking de Influencers
           </SectionTitle>
 

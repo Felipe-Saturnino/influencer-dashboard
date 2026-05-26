@@ -42,6 +42,7 @@ import {
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import {
   getThStyle,
@@ -54,20 +55,16 @@ import {
 } from "../../../lib/tableStyles";
 import {
   ArrowUpDown,
-  BarChart2,
-  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   Clock,
-  Dice6,
   Hash,
   LayoutDashboard,
   Loader2,
   MapPin,
   Table2,
-  Target,
   TrendingUp,
   Percent,
   ChartColumnBig,
@@ -3470,7 +3467,7 @@ export default function OverviewSpin() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="mesas_spin" />}
         title={getPageMenuLabel("mesas_spin")}
-        subtitle="Resultados financeiros e operacionais das mesas ao vivo por operadora."
+        subtitle={getPageCanonicalSubtitle("mesas_spin")}
         brand={brand}
         t={t}
       />
@@ -3577,11 +3574,10 @@ export default function OverviewSpin() {
       <>
       <div style={contentBox}>
           <SectionTitle
-            icon={<BarChart2 size={15} aria-hidden />}
             sub={
               historico
                 ? "acumulado"
-                : "comparativo MTD vs mesmo período do mês anterior"
+                : "· comparativo MTD vs mesmo período do mês anterior"
             }
           >
             KPIs Consolidados
@@ -3778,7 +3774,7 @@ export default function OverviewSpin() {
         </div>
 
       <div style={contentBox}>
-        <SectionTitle icon={<CalendarDays size={15} aria-hidden />} sub={historico ? "mês a mês" : "dia a dia"}>
+        <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>
           {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
         </SectionTitle>
 
@@ -3811,7 +3807,7 @@ export default function OverviewSpin() {
           {loading ? (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                <SectionTitle sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
                 <div
@@ -3832,7 +3828,7 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
                     <div
@@ -3851,7 +3847,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -3875,7 +3871,7 @@ export default function OverviewSpin() {
           ) : porTabelaRows.length === 0 ? (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                <SectionTitle sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -3885,7 +3881,7 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
                     <div
@@ -3895,7 +3891,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -3910,7 +3906,7 @@ export default function OverviewSpin() {
           ) : (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                <SectionTitle sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
@@ -3925,20 +3921,9 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
-                    <p
-                      style={{
-                        margin: "0 0 16px",
-                        fontSize: 12,
-                        color: t.textMuted,
-                        fontFamily: FONT.body,
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      Escolha duas mesas para ver os resultados.
-                    </p>
 
                     {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -4050,7 +4035,7 @@ export default function OverviewSpin() {
               </div>
 
               <div style={contentBox}>
-                <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                   Dados por mesa
                 </SectionTitle>
 
@@ -4096,7 +4081,7 @@ export default function OverviewSpin() {
           {loading ? (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                <SectionTitle sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
                 <div
@@ -4117,7 +4102,7 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
                     <div
@@ -4136,7 +4121,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -4160,7 +4145,7 @@ export default function OverviewSpin() {
           ) : porTabelaHistAll.length === 0 ? (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                <SectionTitle sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -4170,7 +4155,7 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
                     <div
@@ -4180,7 +4165,7 @@ export default function OverviewSpin() {
                     </div>
                   </div>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
                     <div
@@ -4195,7 +4180,7 @@ export default function OverviewSpin() {
           ) : (
             <>
               <div style={contentBox}>
-                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                <SectionTitle sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
@@ -4210,20 +4195,9 @@ export default function OverviewSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={contentBox}>
-                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                    <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
                     </SectionTitle>
-                    <p
-                      style={{
-                        margin: "0 0 16px",
-                        fontSize: 12,
-                        color: t.textMuted,
-                        fontFamily: FONT.body,
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      Escolha duas mesas para ver os resultados.
-                    </p>
 
                     {mesasOpcoesBlackjack.length === 0 ? (
                       <div
@@ -4337,7 +4311,7 @@ export default function OverviewSpin() {
                   </div>
 
                   <div style={contentBox}>
-                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat, Roleta e Futebol Brasileiro">
+                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
                       Dados por mesa
                     </SectionTitle>
 

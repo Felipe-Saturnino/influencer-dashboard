@@ -66,8 +66,10 @@ Ao renomear item no menu, atualizar em cascata: `menu.ts`, `h1` da página, `tit
 
 ## Home (`geral/Home/`)
 
-- Ponto de entrada após login; cards/links para módulos conforme permissões.
-- **Handoff:** detalhar KPIs/cards e permissões por perfil.
+- Ponto de entrada após login.
+- **`investidor`:** layout dedicado em `HomeInvestidor.tsx` — boas-vindas (sem avatar), KPIs mesas MTD (`relatorio_daily_summary` + lista por operadora), aquisição Streamers/Mídias, Spin na Rede (MTD, oculto se vazio), informativos publicados (`perfis` contém `investidor`, HTML integral), atalhos fixos com subtítulo de `lib/pageCanonicalCopy.ts`.
+- **Dados na Home Investidor:** não dependem de `usePermission` das páginas fonte; RLS dedicado em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` (aplicar no Supabase).
+- **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu + blocos influencer/agência.
 
 ---
 

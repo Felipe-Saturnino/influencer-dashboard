@@ -41,23 +41,18 @@ import {
   ArrowUpFromLine,
   BarChart2,
   Bookmark,
-  CalendarDays,
   Clock,
-  Filter,
   Heart,
-  Layers,
   MessageCircle,
   Mic,
   Percent,
   Play,
   Sparkles,
-  Video,
   ChevronLeft,
   ChevronRight,
   GitCompare,
   Share2,
   TrendingDown,
-  Target,
   Trophy,
   TrendingUp,
   CircleDollarSign,
@@ -1120,7 +1115,7 @@ export default function SocialMediaDashboard() {
       {loading ? (
         <>
           <div style={card}>
-            <SectionTitle icon={<BarChart2 size={14} aria-hidden />}>Carregando…</SectionTitle>
+            <SectionTitle>Carregando…</SectionTitle>
             <div className="app-grid-kpi-6">
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <SkeletonKpiCard key={i} />
@@ -1137,10 +1132,9 @@ export default function SocialMediaDashboard() {
             <>
               <div style={card}>
                 <SectionTitle
-                  icon={<BarChart2 size={14} aria-hidden />}
-                  sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+                  sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
                 >
-                  KPIs consolidados
+                  KPIs Consolidados
                 </SectionTitle>
                 <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
                   <SocialKpiCard
@@ -1218,8 +1212,7 @@ export default function SocialMediaDashboard() {
 
               <div style={card}>
                 <SectionTitle
-                  icon={<CalendarDays size={14} aria-hidden />}
-                  sub={historico ? "Mês a mês (Jan/2026 em diante)" : "dia a dia"}
+                  sub={historico ? "mês a mês" : "dia a dia"}
                 >
                   Detalhamento {historico ? "mensal" : "diário"}
                 </SectionTitle>
@@ -1292,7 +1285,7 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Target size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de campanha
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
@@ -1370,7 +1363,7 @@ export default function SocialMediaDashboard() {
           {aba === "conversao" && (
             <>
               <div style={card}>
-                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Funil de conversão
                 </SectionTitle>
                 {(funilTotais?.visitas ?? 0) + (funilTotais?.registros ?? 0) + (funilTotais?.ftds ?? 0) > 0 ? (
@@ -1391,7 +1384,7 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de funil
                 </SectionTitle>
                 <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
@@ -1527,7 +1520,7 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<TrendingUp size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de taxas
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
@@ -1596,8 +1589,7 @@ export default function SocialMediaDashboard() {
           {/* KPIs GERAIS */}
           <div style={card}>
             <SectionTitle
-              icon={<BarChart2 size={14} aria-hidden />}
-              sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+              sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
             </SectionTitle>
@@ -1704,7 +1696,7 @@ export default function SocialMediaDashboard() {
 
           {/* Engajamento por formato */}
           <div style={card}>
-            <SectionTitle icon={<Layers size={14} aria-hidden />}>Engajamento por formato</SectionTitle>
+            <SectionTitle>Engajamento por formato</SectionTitle>
             {formatos.length > 0 ? (
               formatos.map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
@@ -1736,7 +1728,7 @@ export default function SocialMediaDashboard() {
 
           {/* Carrossel postagens */}
           <div style={card}>
-            <SectionTitle icon={<Video size={14} aria-hidden />}>Postagens recentes</SectionTitle>
+            <SectionTitle>Postagens recentes</SectionTitle>
             {posts.length > 0 ? (
               <>
                 <div

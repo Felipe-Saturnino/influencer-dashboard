@@ -48,15 +48,12 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
-  CalendarDays,
   ChartColumnBig,
   ChevronLeft,
   ChevronRight,
   Clock,
   Coins,
   Eye,
-  Filter,
-  Gauge,
   Table2,
   TrendingUp,
   Trophy,
@@ -1059,7 +1056,6 @@ export default function DashboardOverviewInfluencer() {
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={14} aria-hidden="true" />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
@@ -1202,7 +1198,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
       <div style={card}>
-        <SectionTitle icon={<Filter size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
@@ -1210,7 +1206,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <div style={card}>
-        <SectionTitle icon={<Gauge size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Eficiência
         </SectionTitle>
         <div style={{
@@ -1230,10 +1226,7 @@ export default function DashboardOverviewInfluencer() {
       {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
         <div style={card}>
-          <SectionTitle
-            icon={<CalendarDays size={14} aria-hidden="true" />}
-            sub={historico ? "mês a mês" : undefined}
-          >
+          <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>
             {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
           </SectionTitle>
 

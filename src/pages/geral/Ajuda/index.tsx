@@ -10,6 +10,7 @@ import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -1960,7 +1961,7 @@ export default function Ajuda() {
       <PageHeader
         icon={<HelpCircle {...PAGE_HEADER_ICON_PROPS} />}
         title="Ajuda"
-        subtitle="Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns."
+        subtitle={getPageCanonicalSubtitle("ajuda")}
       />
 
       <div

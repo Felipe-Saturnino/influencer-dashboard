@@ -53,25 +53,23 @@ alwaysApply: false
 
 ---
 
+## Hierarquia visual — Dashboards (3 níveis)
+
+Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a página** na secção; código legado pode divergir até migração.
+
+| Nível | O quê | Implementação |
+|-------|--------|----------------|
+| **1 — Página** | Ícone + título + subtítulo de produto | `DashboardPageHeader` / `PageHeader` + `PageMenuIcon` — Brand §4 |
+| **2 — Filtro** | Filtros e abas, **sem** título de secção | `getPageFilterBoxStyle` no container Streamers / Overview Spin / página com strip |
+| **3 — Bloco de informação** | Título + `sub` + conteúdo | `getPageContentBoxStyle` + **`SectionTitle` sem `icon`** |
+
+**Fora do nível 3 (manter como hoje até regra própria):** rótulos “Financeiro” / “Operação” / “Conversão” (10px) dentro de KPIs Executivos; `tituloMesa*` (13px) em Overview Spin; labels de `KpiPosCard` na aba Posicionamento.
+
+---
+
 ## Cabeçalho de Página — Obrigatório em Todas as Páginas
 
-**Toda** página de dashboard exibe um bloco de cabeçalho **antes** da FilterBar, com ícone (Lucide, coerente com a página) + **h1** em uppercase com `FONT_TITLE` + parágrafo descritivo com `FONT.body`. Nunca omitir.
-
-```tsx
-<div style={{ marginBottom: 18, textAlign: "center" }}>
-  <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-    <span style={{ color: brand.primary, display: "flex" }} aria-hidden>
-      <BarChart2 size={28} />
-    </span>
-    <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-      Nome da Página
-    </h1>
-  </div>
-  <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0, maxWidth: 560, marginLeft: "auto", marginRight: "auto", lineHeight: 1.45 }}>
-    Descrição curta do propósito da página.
-  </p>
-</div>
-```
+**Toda** página de dashboard: **`DashboardPageHeader`** ou **`PageHeader`** com `PageMenuIcon` + `getPageMenuLabel(pageKey)` + subtítulo canónico (Brand §4). Nunca omitir o nível 1.
 
 **Referência de títulos e subtítulos canônicos** (`h1` = `label` em `menu.ts`):
 
@@ -136,10 +134,7 @@ alwaysApply: false
   puramente visuais (não em SectionTitle, KpiCard ou ação). Não estender o uso para outros contextos.
 - **`PODIO_CORES`:** paleta semântica fixa do pódio (ouro/ciano/roxo) — não substituir por brand tokens.
 - **`ItemLista`:** deve ser declarado em escopo de módulo (fora de `PodioFTDHora`).
-- **SectionTitles canônicos nesta aba:**
-  - "Comparativo de Funil" → `Filter`
-  - "Ranking FTD/Hora" → `Trophy`
-  - "Comparativo de Taxas" → `Gauge`
+- **Títulos de bloco nesta aba (sem ícone no `SectionTitle`):** ver checklist de migração § SectionTitle — cópias acordadas para Ranking FTD/Hora e Comparativo de mesa (Blackjack).
 
 ---
 
@@ -292,13 +287,13 @@ isBRL        // boolean — formata referência MoM como BRL
 </div>
 ```
 
-Ícones Lucide: usar o **`strokeWidth` por defeito (2)** — não passar `strokeWidth` explícito nos KPIs/`SectionTitle`, salvo exceção pontual do cabeçalho de página (ícone maior).
+Ícones Lucide: usar o **`strokeWidth` por defeito (2)** — não passar `strokeWidth` explícito nos KPIs, salvo exceção pontual do cabeçalho de página (ícone maior). **`SectionTitle` de bloco não leva ícone** (nível 3).
 
 ---
 
 ## Dicionário Canônico de Ícones — KPI Cards
 
-Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas e abas. Lucide; **`size={16}`** nos cards, **`size={15}`** nos `SectionTitle`; **`aria-hidden`** nos decorativos.
+Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas e abas. Lucide; **`size={16}`** nos **KPI cards** (`KpiCard`, `KpiCardDepositos`, `SocialKpiCard`); **`aria-hidden`** nos decorativos. **Não** aplicar esta tabela ao cabeçalho de bloco (`SectionTitle` sem ícone).
 
 | Conceito | Ícone Lucide | Import |
 |---|---|---|
@@ -329,28 +324,9 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | **Impressões Totais** | `Sparkles` | `import { Sparkles }` |
 | **Engajamento Médio** | `Percent` | — |
 
-**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`), incluindo `GiCalendar` no botão Histórico — usar **`FiltroHistoricoButton`** (Lucide `Calendar`).
+**Proibido em KPI cards:** qualquer ícone de `react-icons/gi` (`GiXxx`), incluindo `GiCalendar` no botão Histórico — usar **`FiltroHistoricoButton`** (Lucide `Calendar`).
 
-**Ícones de SectionTitle:**
-
-| Seção | Ícone |
-|---|---|
-| KPIs Executivos / KPIs Consolidados / KPIs Financeiros / KPIs de Mídias Sociais | `BarChart2` |
-| Detalhamento Diário / Detalhamento Mensal | `CalendarDays` |
-| Funil de Conversão | `Filter` |
-| Comparativo de Funil | `Filter` |
-| Eficiência | `Gauge` |
-| Ranking de Influencers / Ranking FTD/Hora | `Trophy` |
-| Comparativo de Jogo | `Dice6` |
-| Comparativo de Mesa | `Target` |
-| Dados por Mesa | `Table2` |
-| Investimento por Influencer | `Coins` |
-| Ranking Financeiro | `ListOrdered` |
-| Comparativo de Taxas | `TrendingUp` |
-| Engajamento por Formato | `Layers` |
-| Postagens Recentes | `Video` |
-
-**Critérios de aceite (ícones):** GGR → `TrendingUp`; ROI → `BarChart2` (nunca `Trophy`/`TrendingUp`); FTDs → `Trophy`; Depósitos/Saques → `ArrowDownToLine` / `ArrowUpFromLine` (nunca `PlayCircle`, `GiCardPlay`, `GiCash`, `Banknote`, `Landmark`); Registros → `UserPlus` (nunca `GiPlayerNext`/`GiPerson`).
+**Critérios de aceite (ícones em KPI cards):** GGR → `TrendingUp`; ROI → `BarChart2` (nunca `Trophy`/`TrendingUp`); FTDs → `Trophy`; Depósitos/Saques → `ArrowDownToLine` / `ArrowUpFromLine` (nunca `PlayCircle`, `GiCardPlay`, `GiCash`, `Banknote`, `Landmark`); Registros → `UserPlus` (nunca `GiPlayerNext`/`GiPerson`).
 
 ---
 
@@ -382,27 +358,63 @@ Usar **exatamente** estas strings no prop `label` de `KpiCard` e nos headers de 
 
 ---
 
-## SectionTitle
+## SectionTitle — Título de bloco (nível 3)
 
-Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar componente local duplicado nas páginas. Mesmo para Mídias Sociais.
+Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar componente local duplicado.
 
----
-
-## SectionTitle — Sub-títulos Padronizados
+| Parte | Valor |
+|-------|--------|
+| Título (`children`) | `14px`, peso `800`, `FONT_TITLE`, uppercase, `brand.primary` |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, mesma linha (`marginLeft: 4`) |
+| Ícone | **Omitir** — `icon` não é usado em blocos de informação (migração: remover props `icon` legadas) |
 
 ```tsx
-// Bloco com comparativo MoM:
+<SectionTitle sub={historico ? "acumulado" : undefined}>KPIs Executivos</SectionTitle>
+```
+
+**Proibido:** `icon={<BarChart2 … />}` no cabeçalho do bloco; `<p fontSize={12}>` como subtítulo do bloco.
+
+### Sub-títulos (`sub`) — padrões
+
+```tsx
+// Comparativo MoM (não histórico):
 sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
 
-// Bloco com período específico (Comparativo de Jogo):
+// Período do comparativo de jogo:
 sub={historico ? "mês a mês" : mesSelecionado?.label}
 
-// Bloco com granularidade temporal (Detalhamento):
+// Detalhamento temporal:
 sub={historico ? "mês a mês" : "dia a dia"}
 
-// Bloco sem variação de período:
+// Modo histórico genérico:
 sub={historico ? "acumulado" : undefined}
 ```
+
+### Cópias acordadas (exceções de texto)
+
+| Bloco | Título | `sub` |
+|-------|--------|-------|
+| Streamers → Conversão | Ranking FTD/Hora | FTDs gerados por hora de live |
+| Overview Spin | Comparativo de mesa | Escolha duas mesas de Blackjack para ver os resultados |
+
+(Antigo título longo “Ranking FTD/Hora — Eficiência por Influencer” passa a só o título; nota sobre horas omitidas pode ir para Ajuda ou corpo do bloco, não no `sub`.)
+
+### Checklist de migração — secção Dashboards
+
+Implementar **ficheiro a ficheiro** (remover `icon`, alinhar `sub`, apagar `<p>` subtítulo). Ordem sugerida: Overview Influencer → Streamers (3 abas) → Mídias Sociais → Overview Spin (+ Posicionamento).
+
+| Ficheiro | Blocos `SectionTitle` | Notas |
+|----------|----------------------|--------|
+| `DashboardOverviewInfluencer/index.tsx` | 4 | KPIs Executivos, Funil, Eficiência, Detalhamento |
+| `Streamers/DashboardOverview/index.tsx` | 3 | KPIs Executivos, Funil, Ranking |
+| `Streamers/DashboardConversao/index.tsx` | 3 | Comparativo de Funil; **Ranking FTD/Hora** + copy; Comparativo de Taxas |
+| `Streamers/DashboardFinanceiro/index.tsx` | 3 | KPIs Financeiros, Investimento por Influencer, Ranking Financeiro |
+| `SocialMediaDashboard/index.tsx` | 10+ | 3 abas; alinhar MoM com `·`; skeleton “Carregando…” |
+| `OverviewSpin/index.tsx` | 1 + N aninhados | KPIs Consolidados; Detalhamento; comparativos/mesas — **Comparativo de mesa** copy |
+| `OverviewSpin/DashboardPosicionamento/index.tsx` | 8 | KPIs dinâmicos + alertas, ranking, histórico, visibilidade |
+| `Streamers/index.tsx` | 0 | Só nível 1 + filtro (nível 2) |
+
+**Componente partilhado (antes ou com 1.ª página):** tornar `icon` opcional em `SectionTitle.tsx` e não renderizar o badge 28×28 quando ausente.
 
 ---
 
@@ -603,7 +615,9 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
 - Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
 - Nunca `GiXxx` no badge do header de página — apenas `Tv`, `Video`, `BarChart2` etc. de Lucide. GameIcons só no menu lateral.
-- Nunca `GiXxx` em KPI cards, SectionTitle ou botão Histórico — usar `FiltroHistoricoButton`; exceção decorativa: pódio FTD/Hora
+- Nunca `GiXxx` em KPI cards ou botão Histórico — usar `FiltroHistoricoButton`; exceção decorativa: pódio FTD/Hora
+- Nunca `icon` em `SectionTitle` de bloco de informação — só ícone no cabeçalho de página (nível 1)
+- Nunca subtítulo de bloco em `<p>` 12px — usar prop `sub` do `SectionTitle`
 - Nunca `↑`/`↓` / `✕` / `✓` / `▲▼` Unicode em JSX — usar Lucide `ArrowUp`, `ArrowDown`, `X`, `Check`, `TrendingUp`, `TrendingDown`
 - Nunca `background: brand.blockBg` na FilterBar — usar `brand.primaryTransparentBg`
 - Nunca `size={14}` em ícones de `KpiCard` compartilhado — usar `size={16}`

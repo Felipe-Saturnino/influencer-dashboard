@@ -32,6 +32,7 @@ import {
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -220,7 +221,7 @@ export default function Agenda() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="agenda" />}
         title={getPageMenuLabel("agenda")}
-        subtitle="Visualize, agende e acompanhe as lives dos influencers."
+        subtitle={getPageCanonicalSubtitle("agenda")}
         brand={brand}
         t={t}
       />

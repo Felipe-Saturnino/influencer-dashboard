@@ -3,7 +3,8 @@ import { FONT, FONT_TITLE } from "../../constants/theme";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {
-  icon: React.ReactNode;
+  /** Omitir em blocos de informação (nível 3) — ícone só no cabeçalho de página. */
+  icon?: React.ReactNode;
   children: React.ReactNode;
   sub?: React.ReactNode;
 }
@@ -13,23 +14,25 @@ export default function SectionTitle({ icon, children, sub }: Props) {
   const brand = useDashboardBrand();
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-      <span
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: brand.primaryIconColor,
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </span>
+    <div style={{ display: "flex", alignItems: "center", gap: icon ? 8 : 0, marginBottom: 16, flexWrap: "wrap" }}>
+      {icon ? (
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: brand.primaryIconColor,
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
+      ) : null}
       <span
         style={{
           fontSize: 14,
@@ -42,7 +45,7 @@ export default function SectionTitle({ icon, children, sub }: Props) {
       >
         {children}
       </span>
-      {sub && (
+      {sub ? (
         <span
           style={{
             fontSize: 11,
@@ -54,7 +57,7 @@ export default function SectionTitle({ icon, children, sub }: Props) {
         >
           {sub}
         </span>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -137,6 +137,8 @@ Indicador secundário na FilterBar: `<Clock size={12} aria-hidden />` + texto �
 
 ## 4. Cabeçalho — título, subtítulo e famílias visuais
 
+**Hierarquia (3 níveis):** página (este §4 + `PageHeader`) → bloco de filtro (§5, **sem** `SectionTitle`) → bloco de informação (`SectionTitle` sem ícone no título — tipografia em **Global** § Hierarquia visual). Ícones em `KpiCard`, botões e CTAs **dentro** do bloco não são título de bloco.
+
 ### Regra de conteúdo (obrigatória em toda página logada)
 
 1. **Título (`h1`):** texto **idêntico** ao `label` do item no menu (`src/constants/menu.ts`) para a `key` da página — mesma grafia e capitalização (ex.: menu “Resultados” → título “Resultados”, não “Resultado de Lives”; menu “Agenda” → “Agenda”, não “Agenda de Lives”).

@@ -3,14 +3,11 @@ import {
   ArrowDown,
   ArrowUp,
   Eye,
-  LayoutList,
-  ListOrdered,
   Loader2,
   MapPin,
   Minus,
   TrendingDown,
   Trophy,
-  AlertTriangle,
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
@@ -255,7 +252,7 @@ function PosicaoAtualMesasBlock({
   if (loading) {
     return (
       <div style={cardStyle}>
-        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <SectionTitle>{titulo}</SectionTitle>
         <div
           style={{
             display: "flex",
@@ -277,7 +274,7 @@ function PosicaoAtualMesasBlock({
   if (semDados) {
     return (
       <div style={cardStyle}>
-        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <SectionTitle>{titulo}</SectionTitle>
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: "12px 0 0" }}>
           Sem dados para o período selecionado.
         </p>
@@ -287,7 +284,7 @@ function PosicaoAtualMesasBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+      <SectionTitle>{titulo}</SectionTitle>
       <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
         {fmtUltimaAtualizacao(ultimaExecutadoEm)}
       </p>
@@ -356,7 +353,7 @@ function AlertasPeriodoBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle icon={<AlertTriangle size={15} aria-hidden="true" />}>Alertas do período</SectionTitle>
+      <SectionTitle>Alertas do período</SectionTitle>
       {alertas.length === 0 ? (
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
           Nenhum alerta automático para o período.
@@ -624,7 +621,7 @@ function DashboardPosicionamentoOperadora({
         />
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Concorrentes à frente</SectionTitle>
+          <SectionTitle>Concorrentes à frente</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
             {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
@@ -668,7 +665,7 @@ function DashboardPosicionamentoOperadora({
             marginBottom: 12,
           }}
         >
-          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Histórico de posicionamento</SectionTitle>
+          <SectionTitle>Histórico de posicionamento</SectionTitle>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {HISTORICO_MODOS.map((m) => {
               const ativo = historicoModo === m.id;
@@ -763,7 +760,7 @@ function DashboardPosicionamentoOperadora({
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<Trophy size={15} aria-hidden="true" />}>Ranking de concorrentes</SectionTitle>
+          <SectionTitle>Ranking de concorrentes</SectionTitle>
           <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
             {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
           </p>
@@ -825,7 +822,7 @@ function DashboardPosicionamentoOperadora({
         </div>
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<Eye size={15} aria-hidden="true" />}>Visibilidade por categoria</SectionTitle>
+          <SectionTitle>Visibilidade por categoria</SectionTitle>
           <div className="app-table-wrap">
             <table
               style={{

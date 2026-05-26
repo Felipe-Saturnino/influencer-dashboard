@@ -600,6 +600,29 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - **Zebra:** `zebraStripe(i)` ou equivalente tema — não `rgba(124,58,237,…)` fixo.
 - Listas de conteúdo gerado pelo usuário: queries com **`.limit()`** — ver regra na secção se o volume for alto.
 
+### Hierarquia visual da página (3 níveis)
+
+Padrão transversal para páginas logadas de produto (dashboards e demais secções). **Não** confundir com títulos internos de KPI, mesa ou grupo dentro de um bloco.
+
+| Nível | Superfície | Conteúdo | Título / subtítulo | Ícone decorativo |
+|-------|------------|----------|-------------------|------------------|
+| **1 — Página** | `PageHeader` / `DashboardPageHeader` | Propósito da rota | `h1` = label do menu · subtítulo **13px** uma linha (`pageHeaderStyles`) | **Sim** — ícone do menu (32×16 no badge) |
+| **2 — Filtro** | `getPageFilterBoxStyle` / `getFilterBarWrapperStyle` | Carrossel, Histórico, Operadora, Influencer, abas `FiltroBarTabButton`, CTAs na strip | **Sem** título de bloco · **sem** `SectionTitle` | Só nos **controlos** (pills, tabs, ícones de filtro — Brand §6) |
+| **3 — Informação** | `getPageContentBoxStyle` | KPIs, tabelas, gráficos, funis | **Título de bloco** + **`sub`** (ver abaixo) | **Não** no cabeçalho do bloco |
+
+**Título de bloco (nível 3)** — componente `SectionTitle` (`src/components/dashboard/SectionTitle.tsx`):
+
+| Parte | Valor |
+|-------|--------|
+| Título | `14px`, peso `800`, `FONT_TITLE`, `textTransform: uppercase`, cor `brand.primary` |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, **mesma linha** que o título (`marginLeft: 4`) |
+
+**Proibido no cabeçalho do bloco de informação:** badge 28×28 com ícone Lucide; `<p>` separado como subtítulo do bloco (usar prop `sub`). **Permitido dentro do bloco:** ícones em `KpiCard`, botões, CTAs, pills de filtro de secção, badges — não são “título de bloco”.
+
+**Subníveis dentro do bloco** (não são título de bloco — regras da secção, ex. `dashboards.mdc`): rótulos de grupo KPI 10px, títulos de mesa 13px, legendas de funil 9px.
+
+**Gap vertical entre níveis 1 → 2 → 3:** ver § Blocos de página (`PAGE_CONTENT_BOX_GAP` = 14px entre filtro e blocos de informação).
+
 ### Blocos de página (caixas de conteúdo)
 
 **Escopo:** apenas a **moldura** dos contentores de primeiro nível (filtro, secção KPI consolidado, tabela, gráfico) e o **espaço entre eles** — **não** o layout interno (mini-cards KPI, células, badges, linhas de lista).
@@ -636,7 +659,7 @@ const pageBox = getPageContentBoxStyle(brand, t);
 <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle({ gap: 12 })} />
 ```
 
-**Secção “KPIs Consolidados” (fase seguinte):** um único `pageBox` com `SectionTitle` + grelha `app-grid-kpi-*` **dentro** — cards internos (`KpiCard`, etc.) padronizam depois; não duplicar sombra no filho.
+**Secção “KPIs Consolidados” (fase seguinte):** um único `pageBox` com `SectionTitle` (sem ícone no título) + grelha `app-grid-kpi-*` **dentro** — cards internos (`KpiCard`, etc.) padronizam depois; não duplicar sombra no filho.
 
 **Exclusões (não usar `pageBox`):** Login, Trocar senha, canal público, modais, sidebar, **Home**, **Configurações**, **Ajuda**.
 
@@ -766,3 +789,5 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
 - Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).
 - Wrapper de filtro com `marginBottom: 14` **extra** quando `getPageFilterBoxStyle` já aplica `PAGE_CONTENT_BOX_GAP`.
+- `SectionTitle` com prop `icon` no **cabeçalho do bloco de informação** — ícone só no nível 1 (página).
+- Subtítulo de bloco em `<p>` fora do `SectionTitle` em vez da prop `sub` (11px inline).
