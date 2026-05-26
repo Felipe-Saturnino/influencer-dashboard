@@ -383,12 +383,6 @@ export default function Afiliados() {
         </div>
       )}
 
-      {!loading && showManagementUI && (
-        <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> afiliado(s)
-        </div>
-      )}
-
       {statusError && (
         <div role="alert" aria-live="polite" style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {statusError}

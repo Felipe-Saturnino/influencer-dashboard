@@ -625,18 +625,6 @@ export default function Feedback() {
         </div>
       )}
 
-      {/* Contador */}
-      {!loading && livesFiltered.length > 0 && (
-        <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-          {livesFiltered.length} live(s) encontrada(s)
-          {influencerFiltros.length > 0 && (
-            <span style={{ marginLeft: 8, color: brand.accent, fontWeight: 600 }}>
-              · {influencerFiltros.length} influencer(s) selecionado(s)
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Lista */}
       {loading ? (
         <div

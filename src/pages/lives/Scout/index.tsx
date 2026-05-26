@@ -594,7 +594,6 @@ export default function Scout() {
       </div>
 
       {/* Bloco 3: Lista */}
-      {!loading && <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}><span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "prospecto" : "prospectos"}</div>}
       {statusError && (
         <div
           style={{

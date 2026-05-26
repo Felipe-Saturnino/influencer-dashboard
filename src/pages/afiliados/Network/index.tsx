@@ -346,12 +346,6 @@ export default function AfiliadosNetwork() {
           )}
       </div>
 
-      {!loading && (
-        <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "afiliado" : "afiliados"}
-        </div>
-      )}
-
       {loading ? (
         <div
           style={{

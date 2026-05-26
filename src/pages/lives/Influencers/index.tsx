@@ -647,13 +647,6 @@ export default function Influencers() {
         </div>
       )}
 
-      {/* Contador */}
-      {!loading && showManagementUI && (
-        <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> influencer(s)
-        </div>
-      )}
-
       {statusError && (
         <div
           style={{
