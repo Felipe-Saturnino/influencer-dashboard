@@ -415,17 +415,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               ...inputStyle,
               borderColor: error.includes("link") ? BRAND.vermelho : linkAutoPreenchido ? brand.primary : (t.inputBorder ?? t.cardBorder),
             }}
-            placeholder={`https://${form.plataforma.toLowerCase()}.com/...`}
+            placeholder={
+              form.influencer_id
+                ? `https://${form.plataforma.toLowerCase()}.com/...`
+                : "Ao selecionar influencer será pré-preenchido com o link do perfil do influencer."
+            }
           />
-          {linkAutoPreenchido ? (
-            <span style={{ fontSize: 11, color: brand.primary, fontFamily: FONT.body, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-              Pré-preenchido com o link do perfil do influencer.
-            </span>
-          ) : (
-            <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-              Obrigatório para salvar a live.
-            </span>
-          )}
         </div>
 
         {/* Botões de ação */}
