@@ -385,9 +385,9 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Header:** `PageHeader` — título **Informativos**, subtítulo canónico acima.
 - **`useDashboardBrand()`** + `ctaGradientInformativos` em `src/lib/informativosUi.ts`.
 - **Abas:** `FiltroBarTabButton` — Informativos | Gerenciamento de Informativos (gerenciamento só com `canEditarOk`).
-- **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do utilizador.
+- **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do utilizador; perfil **Operador** também por `operador_escopo` (`todos` ou slug de operadora **ativa** em Gestão de Operadoras × `user_scopes`).
 - **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; excluir com `canExcluirOk` (dois cliques). Linha de busca: filtro status + **`CtaCriarButton` Novo Informativo** à direita (`marginLeft: auto`), mesma fileira.
-- **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); Publicar grava `published_at` / `published_by`.
+- **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); com **Operador** selecionado, campo obrigatório **Operadora** (`InformativoOperadorEscopoSelect` — opção **Todos** ou slug ativa); coluna `operador_escopo` em `conteudo_informativo`; Publicar grava `published_at` / `published_by`.
 - **Aprovação (`lib/informativosWorkflow.ts`):** perfis Admin/Executivo/Operador/Agência/Influencer/Afiliado/Investidor → só «Enviar para aprovação»; demais perfis → «Publicar» direto. Aprovar: alvo com Admin/Executivo/Operador → só perfil Administrador; alvo com Agência/Influencer/Afiliado → Admin, Executivo ou Gestor; autoaprovação só Admin.
 - **Sem** categorias, fixado nem marcar como lido.
 

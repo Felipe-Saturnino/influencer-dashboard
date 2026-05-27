@@ -1,0 +1,69 @@
+# Verifica jobs diários da manhã (BRT) e re-dispara os que não tiveram schedule com sucesso hoje.
+# Roda às 12:30 UTC (~9h30 BRT), após a janela dos crons 7h/9h UTC.
+name: Daily jobs watchdog (9h30 BRT)
+
+on:
+  schedule:
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  recover-missing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-disparar workflows sem sucesso agendado hoje (Brasília)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TZ = "America/Sao_Paulo";
+            const hojeBr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+
+            const workflows = [
+              { id: "sync-metricas-daily.yml", label: "Sync Métricas CDA" },
+              { id: "relatorio-diario-diretoria.yml", label: "Relatório Diretoria" },
+              { id: "email-agenda-diaria.yml", label: "E-mail Agenda" },
+              { id: "sync-spin-na-rede-rss-daily.yml", label: "Spin RSS" },
+              { id: "sync-social-kpis-daily.yml", label: "Social KPIs" },
+            ];
+
+            const { owner, repo } = context.repo;
+            const dispatched = [];
+            const skipped = [];
+
+            for (const w of workflows) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: w.id,
+                event: "schedule",
+                status: "completed",
+                per_page: 10,
+              });
+
+              const okHoje = data.workflow_runs.some((run) => {
+                if (run.conclusion !== "success") return false;
+                const dia = new Date(run.created_at).toLocaleDateString("en-CA", { timeZone: TZ });
+                return dia === hojeBr;
+              });
+
+              if (okHoje) {
+                skipped.push(w.label);
+                continue;
+              }
+
+              await github.rest.actions.createWorkflowDispatch({
+                owner,
+                repo,
+                workflow_id: w.id,
+                ref: "main",
+              });
+              dispatched.push(w.label);
+            }
+
+            core.summary.add(`### Watchdog ${hojeBr} (${TZ})`);
+            core.summary.add(`- Re-disparados: ${dispatched.length ? dispatched.join(", ") : "nenhum"}`);
+            core.summary.add(`- Já OK hoje: ${skipped.length ? skipped.join(", ") : "nenhum"}`);

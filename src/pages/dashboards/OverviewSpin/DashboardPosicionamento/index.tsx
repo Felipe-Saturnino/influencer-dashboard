@@ -12,7 +12,7 @@ import {
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { getThStyle, getTdStyle, getTdNumStyle } from "../../../../lib/tableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
@@ -32,11 +32,11 @@ import {
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
 import {
-  getPageContentBoxRadius,
   getPageContentBoxShellStyle,
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../../lib/pageContentBoxStyles";
+import { createOverviewSpinStickyCol, getOverviewSpinTableStyle } from "../overviewSpinTableStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -53,6 +53,7 @@ const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
 ];
 
 type CatVisSortCol = "categoria" | "top3" | "top10";
+type HistMesaSortCol = "mesa";
 
 function KpiPosCard({
   label,
@@ -447,6 +448,10 @@ function DashboardPosicionamentoOperadora({
     col: "top10",
     dir: "desc",
   });
+  const [sortHistMesa, setSortHistMesa] = useState<{ col: HistMesaSortCol; dir: SortDir }>({
+    col: "mesa",
+    dir: "asc",
+  });
 
   const data = useLobbyPosicionamentoData(operadoraSlug, refDate);
   const {
@@ -476,6 +481,24 @@ function DashboardPosicionamentoOperadora({
   );
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
 
+  const nomeMesaHist = useCallback(
+    (mid: string) => snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid,
+    [snapshotAtual],
+  );
+
+  const heatMesasOrdenadas = useMemo(() => {
+    const arr = [...heatMesas];
+    arr.sort((a, b) => compareLocaleTexto(nomeMesaHist(a), nomeMesaHist(b), sortHistMesa.dir));
+    return arr;
+  }, [heatMesas, nomeMesaHist, sortHistMesa.dir]);
+
+  const onSortHistMesa = useCallback((col: HistMesaSortCol) => {
+    setSortHistMesa((s) => ({
+      col,
+      dir: s.col === col && s.dir === "asc" ? "desc" : "asc",
+    }));
+  }, []);
+
   const onSortCatVis = useCallback((col: CatVisSortCol) => {
     setSortCatVis((s) => ({
       col,
@@ -502,39 +525,16 @@ function DashboardPosicionamentoOperadora({
   }, [cats, sortCatVis]);
 
   const thCatVis = getThStyle(t);
-
-  const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
-
-  const histMesaColBg = brand.blockBg ?? t.cardBg;
-
-  /** Fundo opaco na coluna Mesa fixa — color-mix com transparent deixa ver colunas no scroll horizontal. */
-  const zebraBgHistLinha = (i: number) =>
-    i % 2 === 1
-      ? `color-mix(in srgb, ${histMesaColBg} 92%, var(--brand-contrast, #1e36f8) 8%)`
-      : histMesaColBg;
+  const spinTable = useMemo(() => createOverviewSpinStickyCol(t, brand), [t, brand]);
 
   const thHistMesa: CSSProperties = {
-    ...getThStyle(t),
-    position: "sticky",
-    left: 0,
-    zIndex: 3,
-    minWidth: 140,
+    ...spinTable.thSticky(140),
     maxWidth: 180,
-    background: histMesaColBg,
-    boxShadow: sombraColMesaHist,
   };
 
   const tdHistMesa = (i: number): CSSProperties => ({
-    ...getTdStyle(t),
-    position: "sticky",
-    left: 0,
-    zIndex: 2,
-    minWidth: 140,
+    ...spinTable.tdSticky({ rowIndex: i, minWidth: 140 }),
     maxWidth: 160,
-    fontWeight: 600,
-    textAlign: "left",
-    background: zebraBgHistLinha(i),
-    boxShadow: sombraColMesaHist,
     overflow: "hidden",
     textOverflow: "ellipsis",
   });
@@ -693,22 +693,19 @@ function DashboardPosicionamentoOperadora({
           </div>
         </div>
         <div className="app-table-wrap">
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              borderRadius: getPageContentBoxRadius(t.isDark),
-              fontFamily: FONT.body,
-              fontSize: 12,
-            }}
-          >
+          <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
             <thead>
               <tr>
-                <th scope="col" style={thHistMesa}>
-                  Mesa
-                </th>
+                <SortTableTh<HistMesaSortCol>
+                  label="Mesa"
+                  col="mesa"
+                  sortCol={sortHistMesa.col}
+                  sortDir={sortHistMesa.dir}
+                  thStyle={thHistMesa}
+                  align="left"
+                  onSort={onSortHistMesa}
+                />
                 {heatCols.map((c) => (
                   <th key={c.key} scope="col" style={{ ...getThStyle(t), textAlign: "center" }}>
                     {c.label}
@@ -717,10 +714,10 @@ function DashboardPosicionamentoOperadora({
               </tr>
             </thead>
             <tbody>
-              {heatMesas.map((mid, rowIdx) => {
-                const nome = snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
+              {heatMesasOrdenadas.map((mid, rowIdx) => {
+                const nome = nomeMesaHist(mid);
                 return (
-                  <tr key={mid} style={{ background: zebraStripe(rowIdx) }}>
+                  <tr key={mid} style={{ background: spinTable.opaqueZebra(rowIdx) }}>
                     <td style={tdHistMesa(rowIdx)} title={nome}>
                       {nome}
                     </td>
@@ -819,17 +816,7 @@ function DashboardPosicionamentoOperadora({
         <div style={{ ...card, marginBottom: 0 }}>
           <SectionTitle>Visibilidade por categoria</SectionTitle>
           <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: getPageContentBoxRadius(t.isDark),
-                overflow: "hidden",
-                fontFamily: FONT.body,
-                fontSize: 12,
-              }}
-            >
+            <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>
                 <tr>
@@ -864,7 +851,7 @@ function DashboardPosicionamentoOperadora({
               </thead>
               <tbody>
                 {catsOrdenadas.map((c, i) => (
-                  <tr key={c.categoria} style={{ background: zebraStripe(i) }}>
+                  <tr key={c.categoria} style={{ background: spinTable.opaqueZebra(i) }}>
                     <td style={getTdStyle(t)}>{c.categoria}</td>
                     <td style={getTdNumStyle(t)}>{c.pctTop3.toFixed(0)}%</td>
                     <td style={getTdNumStyle(t)}>{c.pctTop10.toFixed(0)}%</td>

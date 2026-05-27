@@ -12,7 +12,6 @@ import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers"
 import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
 import {
-  getPageContentBoxRadius,
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
@@ -49,10 +48,9 @@ import {
   getThStyleBrandAction,
   getTdStyle,
   getTdNumStyle,
-  zebraStripe,
-  zebraStripeBrandContrast,
   TOTAL_ROW_BG,
 } from "../../../lib/tableStyles";
+import { createOverviewSpinStickyCol, getOverviewSpinTableStyle } from "./overviewSpinTableStyles";
 import {
   ArrowUpDown,
   ChevronDown,
@@ -2250,7 +2248,6 @@ export default function OverviewSpin() {
   const thStyle = brand.useBrand
     ? getThStyleBrandAction(t, { verticalAlign: "middle" })
     : getThStyle(t, { verticalAlign: "middle" });
-  const zebraTabelaSpin = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
   const stripeMesaLinha = brand.useBrand
     ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)"
     : null;
@@ -2311,6 +2308,7 @@ export default function OverviewSpin() {
 
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
+  const spinTable = useMemo(() => createOverviewSpinStickyCol(t, brand), [t, brand]);
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -2397,18 +2395,18 @@ export default function OverviewSpin() {
 
   const renderMesaDiaTabela = (
     linhas: LinhaMesaPorDia[],
-    rowStripe: string,
+    _rowStripe: string,
     colTempo: "Data" | "Mês" = "Data",
     tituloTabela = "Mesa",
   ) => (
     <div className="app-table-wrap">
-      <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 560 }}>
+      <table style={getOverviewSpinTableStyle({ minWidth: 560 })}>
         <caption style={{ display: "none" }}>
           {`Resultados de ${tituloTabela} — ${colTempo === "Mês" ? "histórico" : mesSelecionado?.label ?? ""}`}
         </caption>
         <thead>
           <tr>
-            <th style={thStyle}>{colTempo}</th>
+            <th scope="col" style={spinTable.thSticky()}>{colTempo}</th>
             <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
             <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
@@ -2433,12 +2431,21 @@ export default function OverviewSpin() {
                   <tr
                     key={tot.dataIso}
                     style={{
-                      background: TOTAL_ROW_BG,
+                      background: spinTable.totalRowBg,
                       fontWeight: 700,
                       borderBottom: `2px solid ${t.cardBorder}`,
                     }}
                   >
-                    <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary, fontFamily: FONT.body }}>
+                    <td
+                      style={{
+                        ...spinTable.tdSticky({
+                          background: spinTable.totalRowBg,
+                          fontWeight: 700,
+                        }),
+                        color: brand.primary,
+                        fontFamily: FONT.body,
+                      }}
+                    >
                       {tot.labelData}
                     </td>
                     <td
@@ -2466,8 +2473,8 @@ export default function OverviewSpin() {
               {linhas.map((row, i) => {
               const ggr = row.ggr ?? 0;
               return (
-                <tr key={row.dataIso} style={{ background: i % 2 === 1 ? rowStripe : "transparent" }}>
-                  <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
+                <tr key={row.dataIso} style={{ background: spinTable.opaqueZebra(i) }}>
+                  <td style={spinTable.tdSticky({ rowIndex: i })}>{row.labelData}</td>
                   <td
                     style={{
                       ...tdNum,
@@ -2501,31 +2508,6 @@ export default function OverviewSpin() {
     textTransform: "none",
     fontWeight: 600,
   };
-
-  const thStickyComparativo: React.CSSProperties = {
-    ...thStyle,
-    position: "sticky",
-    left: 0,
-    zIndex: 3,
-    background: brand.useBrand
-      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
-      : brand.blockBg,
-    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
-  };
-
-  const tdStickyComparativo = (i: number): React.CSSProperties => ({
-    ...tdStyle,
-    position: "sticky",
-    left: 0,
-    zIndex: 2,
-    fontWeight: 600,
-    background: brand.useBrand
-      ? zebraStripeBrandContrast(i)
-      : i % 2 === 1
-        ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-contrast, #4a2082) 8%)`
-        : brand.blockBg,
-    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
-  });
 
   const renderDetalhamentoInterativo = (colTempoLabel: "Data" | "Mês") => (
     <>
@@ -2639,13 +2621,13 @@ export default function OverviewSpin() {
 
       {modoVisualizacaoDetalhe === "tabela" ? (
         <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 720 }}>
+          <table style={getOverviewSpinTableStyle({ minWidth: 720 })}>
             <caption style={{ display: "none" }}>
               {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
             </caption>
             <thead>
               <tr>
-                <th style={thStyle}>{colTempoLabel}</th>
+                <th scope="col" style={spinTable.thSticky()}>{colTempoLabel}</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
@@ -2674,10 +2656,10 @@ export default function OverviewSpin() {
                   <Fragment key={rowKey}>
                     <tr
                       style={{
-                        background: zebraTabelaSpin(i),
+                        background: spinTable.opaqueZebra(i),
                       }}
                     >
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>
+                      <td style={spinTable.tdSticky({ rowIndex: i })}>
                         {isDrillParent ? (
                           <button
                             type="button"
@@ -2750,22 +2732,19 @@ export default function OverviewSpin() {
                           <tr
                             key={`${rowKey}-${sl.operadora_slug}`}
                             style={{
-                              background: brand.useBrand
-                                ? zebraStripeBrandContrast(j)
-                                : j % 2 === 1
-                                  ? "color-mix(in srgb, var(--brand-contrast, #4a2082) 4%, transparent)"
-                                  : "color-mix(in srgb, var(--brand-contrast, #4a2082) 2%, transparent)",
+                              background: spinTable.opaqueZebra(i + j + 1, "action"),
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
                             }}
                           >
                             <th
                               scope="row"
                               style={{
-                                ...tdStyle,
-                                fontWeight: 600,
-                                paddingLeft: 32,
-                                boxShadow:
-                                  "inset 3px 0 0 color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+                                ...spinTable.tdSticky({
+                                  rowIndex: i + j + 1,
+                                  paddingLeft: 32,
+                                  stripeAccent: "action",
+                                }),
+                                boxShadow: `${spinTable.shadow}, inset 3px 0 0 color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)`,
                               }}
                             >
                               {slugToNome(sl.operadora_slug)}
@@ -3074,25 +3053,15 @@ export default function OverviewSpin() {
       </div>
 
       {modoVisualizacao === "tabela" ? (
-        <div
-          className="app-table-wrap"
-          style={{ borderRadius: getPageContentBoxRadius(t.isDark), overflow: "hidden" }}
-        >
+        <div className="app-table-wrap">
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                minWidth: minWidthTabelaComparativoJogo,
-              }}
-            >
+            <table style={getOverviewSpinTableStyle({ minWidth: minWidthTabelaComparativoJogo })}>
               <caption style={{ display: "none" }}>
                 Comparativo de jogo {colTempoLabel === "Mês" ? "histórico" : (mesSelecionado?.label ?? "")}
               </caption>
               <thead>
                 <tr>
-                  <th rowSpan={2} scope="col" style={thStickyComparativo}>
+                  <th rowSpan={2} scope="col" style={spinTable.thSticky()}>
                     {colTempoLabel}
                   </th>
                   {kpisAtivosComparativo.map((kpi) => (
@@ -3162,13 +3131,10 @@ export default function OverviewSpin() {
                       <th
                         scope="row"
                         style={{
-                          ...tdStyle,
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 2,
-                          fontWeight: 700,
-                          background: TOTAL_ROW_BG,
-                          boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+                          ...spinTable.tdSticky({
+                            background: spinTable.totalRowBg,
+                            fontWeight: 700,
+                          }),
                           color: brand.primary,
                           fontFamily: FONT.body,
                         }}
@@ -3246,10 +3212,10 @@ export default function OverviewSpin() {
                     <tr
                       key={row.dataIso}
                       style={{
-                        background: zebraTabelaSpin(i),
+                        background: spinTable.opaqueZebra(i),
                       }}
                     >
-                      <th scope="row" style={tdStickyComparativo(i)}>
+                      <th scope="row" style={spinTable.tdSticky({ rowIndex: i })}>
                         {row.labelData}
                       </th>
                       {kpisAtivosComparativo.map((kpi) => (
