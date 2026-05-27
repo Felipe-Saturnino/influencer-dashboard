@@ -366,7 +366,7 @@ Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar
 | Parte | Valor |
 |-------|--------|
 | Título (`children`) | `14px`, peso `800`, `FONT_TITLE`, uppercase, `brand.primary` |
-| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, mesma linha; prefixo automático **` — `** (`SECTION_TITLE_SUB_SEPARATOR` em `lib/sectionTitleSub.ts`) |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, mesma linha; travessão **`—`** com gap **`12px`** após o título (`SECTION_TITLE_SUB_GAP_PX` em `lib/sectionTitleSub.ts`) |
 | Ícone | **Omitir** — `icon` não é usado em blocos de informação (migração: remover props `icon` legadas) |
 
 ```tsx
@@ -377,7 +377,7 @@ Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar
 
 ### Sub-títulos (`sub`) — padrões
 
-O componente **`SectionTitle`** insere **` — `** entre o título e o `sub`. Passar só o texto do subtítulo — **sem** `·`, `—` ou `-` no início (normalização em `normalizeSectionTitleSub`).
+O componente **`SectionTitle`** insere travessão **`—`** entre o título e o `sub`, com espaçamento de layout (não colar no título). Passar só o texto do subtítulo — **sem** `·`, `—` ou `-` no início (normalização em `normalizeSectionTitleSub`).
 
 ```tsx
 // Comparativo MoM (não histórico):

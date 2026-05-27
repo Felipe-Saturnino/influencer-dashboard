@@ -28,6 +28,21 @@ export function inicioDiaBrasilUtcIso(isoDate: string): string {
   return new Date(Date.UTC(y, m - 1, d, 3, 0, 0)).toISOString();
 }
 
+/** Hora atual (0–23) em America/Sao_Paulo. */
+export function horaAtualBrasil(): number {
+  const h = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE_BRASIL,
+    hour: "numeric",
+    hour12: false,
+  }).format(new Date());
+  return parseInt(h, 10);
+}
+
+/** Já passou do horário agendado no dia civil de Brasília (ex.: 4 = 4h). */
+export function passouHorarioAgendadoBr(horaAgendada: number): boolean {
+  return horaAtualBrasil() >= horaAgendada;
+}
+
 /** Rótulo curto pt-BR para data civil YYYY-MM-DD (sem deslocar o dia). */
 export function fmtDataBrasilCurta(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);

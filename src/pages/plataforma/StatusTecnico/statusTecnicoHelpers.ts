@@ -1,4 +1,34 @@
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { isoDateBrasilFromInstant } from "../../../lib/dateBrasil";
+
+/** Horários agendados no GitHub Actions (America/Sao_Paulo) — ver `.github/workflows/*.yml`. */
+export const HORARIO_AGENDADO_BR = {
+  cda: 4,
+  social: 6,
+  spinRss: 6,
+  emailDiretoria: 6,
+  emailAgenda: 6,
+} as const;
+
+export function syncLogOkNoDia(
+  logs: { status: string; executado_em?: string | null }[],
+  isoDia: string,
+): boolean {
+  return logs.some(
+    (l) => l.status === "ok" && isoDateBrasilFromInstant(l.executado_em) === isoDia,
+  );
+}
+
+export function pipelineSucessoNoDia(
+  runs: { status: string; run_date?: string; created_at?: string }[],
+  isoDia: string,
+): boolean {
+  return runs.some(
+    (r) =>
+      r.status === "success" &&
+      (r.run_date === isoDia || isoDateBrasilFromInstant(r.created_at) === isoDia),
+  );
+}
 
 export const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 

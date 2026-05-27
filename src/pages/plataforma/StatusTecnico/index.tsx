@@ -32,8 +32,11 @@ import {
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
+  HORARIO_AGENDADO_BR,
   MODAL_OVERLAY_BG,
   MSG_SEM_PERMISSAO,
+  pipelineSucessoNoDia,
+  syncLogOkNoDia,
   tableRowHoverBg,
 } from "./statusTecnicoHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
@@ -47,6 +50,7 @@ import {
   hojeIsoBrasil,
   inicioDiaBrasilUtcIso,
   isoDateBrasilFromInstant,
+  passouHorarioAgendadoBr,
   subDiasIso,
 } from "../../../lib/dateBrasil";
 import type { CSSProperties } from "react";
@@ -796,12 +800,21 @@ export default function StatusTecnico() {
   // KPIs derivados
   const hojeIsoKpi = hojeIsoBrasil();
 
-  // Integrações Ativas: CDA, Social, e-mails — OK = último sync/execução com sucesso
-  const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
-  const cdaStatusOk = ultimoSyncCdaLog?.status === "ok";
+  const passouHorarioCda = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.cda);
+  const passouHorarioSocial = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.social);
 
-  const ultimoSyncSpinRssLog = syncLogs.find((l) => l.integracao_slug === "spin_na_rede_rss");
-  const spinNaRedeRssStatusOk = ultimoSyncSpinRssLog?.status === "ok";
+  // Integrações Ativas: jobs diários — OK se executou com sucesso hoje (SP); antes do horário, aceita último OK
+  const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
+  const ultimoSyncCdaLog = syncLogsCdaKpi[0];
+  const cdaOkHoje = syncLogOkNoDia(syncLogsCdaKpi, hojeIsoKpi);
+  const cdaStatusOk =
+    cdaOkHoje || (!passouHorarioCda && ultimoSyncCdaLog?.status === "ok");
+
+  const syncLogsSpinRssKpi = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
+  const ultimoSyncSpinRssLog = syncLogsSpinRssKpi[0];
+  const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
+  const spinNaRedeRssStatusOk =
+    spinRssOkHoje || (!passouHorarioSocial && ultimoSyncSpinRssLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
   const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
@@ -813,7 +826,9 @@ export default function StatusTecnico() {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
   }, null);
-  const socialStatusOk = ultimoPipelineRun?.status === "success";
+  const socialOkHoje = pipelineSucessoNoDia(pipelineRuns, hojeIsoKpi);
+  const socialStatusOk =
+    socialOkHoje || (!passouHorarioSocial && ultimoPipelineRun?.status === "success");
 
   const ultimoTechLogDiretoria = techLogs
     .filter((l) => l.tipo === "relatorio_diretoria")
@@ -827,12 +842,20 @@ export default function StatusTecnico() {
       if (!max) return l.created_at;
       return l.created_at > max ? l.created_at : max;
     }, null);
+  const emailDiretoriaHoje =
+    (fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.relatorio_diretoria ?? 0) > 0;
+  const emailAgendaHoje =
+    (fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.email_agenda_diaria ?? 0) > 0;
   const emailStatusDiretoriaOk =
-    !!emailUltimoDiretoria &&
-    (!ultimoTechLogDiretoria || emailUltimoDiretoria >= ultimoTechLogDiretoria);
+    emailDiretoriaHoje ||
+    (!passouHorarioSocial &&
+      !!emailUltimoDiretoria &&
+      (!ultimoTechLogDiretoria || emailUltimoDiretoria >= ultimoTechLogDiretoria));
   const emailStatusAgendaOk =
-    !!emailUltimoAgenda &&
-    (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda);
+    emailAgendaHoje ||
+    (!passouHorarioSocial &&
+      !!emailUltimoAgenda &&
+      (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda));
 
   const integracoesAtivasCount = [
     cdaStatusOk,
@@ -884,29 +907,26 @@ export default function StatusTecnico() {
   const alertas: Array<{ nivel: "erro" | "aviso"; msg: string }> = [];
   const vinteQuatroHoras = new Date();
   vinteQuatroHoras.setHours(vinteQuatroHoras.getHours() - 24);
-  const trintaSeisHoras = new Date();
-  trintaSeisHoras.setHours(trintaSeisHoras.getHours() - 36);
 
-  // ── Sync CDA (Casa de Apostas) ──
-  const syncLogsCda = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
+  // ── Sync CDA (Casa de Apostas) — Actions 4h BRT ──
+  const syncLogsCda = syncLogsCdaKpi;
   const ultimoSyncCdaOk = syncLogsCda.find((l) => l.status === "ok");
   const ultimoSyncCdaFalha = syncLogsCda.find((l) => l.status === "falha");
+  const cdaTeveHistorico = syncLogsCda.some((l) => l.status === "ok") || fluxoDados.some((f) => f.cda > 0);
   const taxaErroCda = syncLogsCda.length > 0
     ? ((syncLogsCda.filter((l) => l.status === "falha").length / syncLogsCda.length) * 100).toFixed(1)
     : "0";
 
   if (!ultimoSyncCdaOk && ultimoSyncCdaFalha) {
     alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA com sucesso" });
-  } else if (ultimoSyncCdaOk) {
-    const exec = new Date(ultimoSyncCdaOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Sync CDA atrasado" });
-    }
+  }
+  if (passouHorarioCda && !cdaOkHoje && cdaTeveHistorico) {
+    alertas.push({ nivel: "erro", msg: "Sync CDA não executou hoje (agendado 4h)" });
   }
   if (parseFloat(taxaErroCda) > 5) {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA (${taxaErroCda}%)` });
   }
-  if (registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
+  if (passouHorarioCda && registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
     alertas.push({ nivel: "aviso", msg: "Sync CDA sem dados recentes" });
   }
 
@@ -919,7 +939,6 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return ["instagram", "facebook", "youtube", "linkedin"].includes(l.tipo) && created >= vinteQuatroHoras;
   });
-  const ultimoPipelineOk = pipelineRuns.find((r) => r.status === "success");
   const ontemIso = subDiasIso(hojeIso, 1);
   const anteontemIso = subDiasIso(hojeIso, 2);
   const socialTemDadosRecentes = fluxoDados.some((f) => (f.data === hojeIso || f.data === ontemIso || f.data === anteontemIso) && f.social > 0);
@@ -933,16 +952,10 @@ export default function StatusTecnico() {
     const canais = [...new Set(techLogsSocial24h.map((l) => l.tipo))].join(", ");
     alertas.push({ nivel: "erro", msg: `Sync Social Media com erro${canais ? ` (${canais})` : ""}` });
   }
-  if (socialTeveDadosAntes && !socialTemDadosRecentes) {
+  if (passouHorarioSocial && socialTeveDadosAntes && !socialOkHoje) {
+    alertas.push({ nivel: "erro", msg: "Sync Social Media não executou hoje (agendado 6h)" });
+  } else if (socialTeveDadosAntes && !socialTemDadosRecentes) {
     alertas.push({ nivel: "aviso", msg: "Sync Social Media sem dados recentes" });
-  }
-  if (ultimoPipelineOk) {
-    const exec = new Date(ultimoPipelineOk.created_at);
-    if (exec < trintaSeisHoras) {
-      alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
-    }
-  } else if (pipelineRuns.length > 0 && socialTeveDadosAntes) {
-    alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
   }
 
   // ── E-mail para diretoria ──
@@ -950,14 +963,11 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return l.tipo === "relatorio_diretoria" && created >= vinteQuatroHoras;
   });
-  const emailEnviadoHojeDir =
-    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.relatorio_diretoria ?? 0) > 0;
-
   if (techLogsEmailDir24h.length > 0) {
     alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Relatório de Influencers (Resend)" });
   }
-  if (!emailEnviadoHojeDir) {
-    alertas.push({ nivel: "aviso", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje" });
+  if (passouHorarioSocial && !emailDiretoriaHoje) {
+    alertas.push({ nivel: "erro", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)" });
   }
 
   // ── E-mail agenda (operacional) ──
@@ -965,31 +975,28 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return l.tipo === "email_agenda_diaria" && created >= vinteQuatroHoras;
   });
-  const emailEnviadoHojeAgenda =
-    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.email_agenda_diaria ?? 0) > 0;
-
   if (techLogsEmailAgenda24h.length > 0) {
     alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Agenda do dia (Resend)" });
   }
-  if (!emailEnviadoHojeAgenda) {
-    alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
+  if (passouHorarioSocial && !emailAgendaHoje) {
+    alertas.push({ nivel: "erro", msg: "E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)" });
   }
 
-  // ── Ingest Spin na Rede (RSS) ──
-  const syncLogsSpinRss = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
+  // ── Ingest Spin na Rede (RSS) — Actions 6h BRT ──
+  const syncLogsSpinRss = syncLogsSpinRssKpi;
   const ultimoSyncSpinRssOk = syncLogsSpinRss.find((l) => l.status === "ok");
   const ultimoSyncSpinRssFalha = syncLogsSpinRss.find((l) => l.status === "falha");
+  const spinRssTeveHistorico =
+    syncLogsSpinRss.some((l) => l.status === "ok") || fluxoDados.some((f) => f.spinRss > 0);
   const taxaErroSpinRss = syncLogsSpinRss.length > 0
     ? ((syncLogsSpinRss.filter((l) => l.status === "falha").length / syncLogsSpinRss.length) * 100).toFixed(1)
     : "0";
 
   if (syncLogsSpinRss.length > 0 && !ultimoSyncSpinRssOk && ultimoSyncSpinRssFalha) {
     alertas.push({ nivel: "erro", msg: "Nenhum ingest Spin na Rede (RSS) com sucesso" });
-  } else if (ultimoSyncSpinRssOk) {
-    const exec = new Date(ultimoSyncSpinRssOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Ingest Spin na Rede (RSS) atrasada (> 24h sem execução OK)" });
-    }
+  }
+  if (passouHorarioSocial && spinRssTeveHistorico && !spinRssOkHoje) {
+    alertas.push({ nivel: "erro", msg: "Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)" });
   }
   if (parseFloat(taxaErroSpinRss) > 5 && syncLogsSpinRss.length > 0) {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no ingest Spin na Rede RSS (${taxaErroSpinRss}%)` });
@@ -1080,7 +1087,11 @@ export default function StatusTecnico() {
     ultimoSync: ultimoPipelineRun?.created_at ?? null,
     registrosHoje: fluxoHojeSocial?.social ?? 0,
     erros: pipelineRuns.filter((r) => r.status === "error").length,
-    status: (ultimoPipelineRun?.status === "success" ? "ok" : ultimoPipelineRun?.status === "error" ? "falha" : "warning") as "ok" | "warning" | "falha",
+    status: (socialOkHoje || ultimoPipelineRun?.status === "success"
+      ? "ok"
+      : ultimoPipelineRun?.status === "error"
+        ? "falha"
+        : "warning") as "ok" | "warning" | "falha",
     syncTipo: "social" as const,
   };
   // Linha E-mail para diretoria — dados de email_envios e tech_logs
@@ -1865,8 +1876,8 @@ export default function StatusTecnico() {
                   <td style={getTdStyle(t)}>Último sync com falha, nenhum OK</td>
                 </tr>
                 <tr>
-                  <td style={getTdStyle(t)}>Sync CDA atrasado</td>
-                  <td style={getTdStyle(t)}>&gt; 24h sem sync OK</td>
+                  <td style={getTdStyle(t)}>Sync CDA não executou hoje (agendado 4h)</td>
+                  <td style={getTdStyle(t)}>Após 4h BRT, sem sync_logs OK na data civil de hoje (SP)</td>
                 </tr>
                 <tr>
                   <td style={getTdStyle(t)}>Taxa de erro alta no Sync CDA</td>
@@ -1889,32 +1900,32 @@ export default function StatusTecnico() {
                   <td style={getTdStyle(t)}>Sem kpi_daily em 3 dias (com histórico)</td>
                 </tr>
                 <tr>
-                  <td style={getTdStyle(t)}>Sync Social Media atrasado</td>
-                  <td style={getTdStyle(t)}>&gt; 36h sem pipeline success</td>
+                  <td style={getTdStyle(t)}>Sync Social Media não executou hoje (agendado 6h)</td>
+                  <td style={getTdStyle(t)}>Após 6h BRT, sem pipeline_runs success na data de hoje (SP)</td>
                 </tr>
                 <tr>
                   <td style={getTdStyle(t)}>Erro ao enviar E-mail - Relatório de Influencers (Resend)</td>
                   <td style={getTdStyle(t)}>tech_logs relatorio_diretoria (24h)</td>
                 </tr>
                 <tr>
-                  <td style={getTdStyle(t)}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
-                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo relatorio_diretoria)</td>
+                  <td style={getTdStyle(t)}>E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)</td>
+                  <td style={getTdStyle(t)}>Após 6h BRT, sem email_envios na data civil de hoje (tipo relatorio_diretoria)</td>
                 </tr>
                 <tr>
                   <td style={getTdStyle(t)}>Erro ao enviar E-mail - Agenda do dia (Resend)</td>
                   <td style={getTdStyle(t)}>tech_logs email_agenda_diaria (24h)</td>
                 </tr>
                 <tr>
-                  <td style={getTdStyle(t)}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
-                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
+                  <td style={getTdStyle(t)}>E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)</td>
+                  <td style={getTdStyle(t)}>Após 6h BRT, sem email_envios na data civil de hoje (tipo email_agenda_diaria)</td>
                 </tr>
                 <tr>
                   <td style={getTdStyle(t)}>Nenhum ingest Spin na Rede (RSS) com sucesso</td>
                   <td style={getTdStyle(t)}>Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)</td>
                 </tr>
                 <tr>
-                  <td style={getTdStyle(t)}>Ingest Spin na Rede (RSS) atrasada</td>
-                  <td style={getTdStyle(t)}>&gt; 24h sem sync_logs OK</td>
+                  <td style={getTdStyle(t)}>Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)</td>
+                  <td style={getTdStyle(t)}>Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)</td>
                 </tr>
                 <tr>
                   <td style={getTdStyle(t)}>Taxa de erro alta no ingest Spin na Rede RSS</td>

@@ -615,7 +615,7 @@ Padrão transversal para páginas logadas de produto (dashboards e demais secç�
 | Parte | Valor |
 |-------|--------|
 | Título | `14px`, peso `800`, `FONT_TITLE`, `textTransform: uppercase`, cor `brand.primary` |
-| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, **mesma linha**; separador **` — `** automático antes do texto (`lib/sectionTitleSub.ts`) — não prefixar `sub` com `·` / `—` |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, **mesma linha**; travessão **`—`** com **`12px`** entre título e subtítulo + **`6px`** entre travessão e texto (`lib/sectionTitleSub.ts`) — não prefixar `sub` com `·` / `—` |
 
 **Proibido no cabeçalho do bloco de informação:** badge 28×28 com ícone Lucide; `<p>` separado como subtítulo do bloco (usar prop `sub`). **Permitido dentro do bloco:** ícones em `KpiCard`, botões, CTAs, pills de filtro de secção, badges — não são “título de bloco”.
 

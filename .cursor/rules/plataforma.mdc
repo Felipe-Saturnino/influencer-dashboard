@@ -262,7 +262,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - `useDashboardBrand()` em header, KPIs, blocos (`getPageContentBoxStyle`), CTAs e ações brand-aware.
 - **KPIs consolidados:** formato **Financeiro** — `app-grid-kpi-4` + `getPageKpiSectionGapStyle`, `borderLeft` 3px semântico, `brand.blockBg`, rótulo caixa alta 11px, valor 26px `FONT_TITLE`, skeleton no loading (sem `StatusKpiCard` local).
 - **Blocos de conteúdo:** `getPageContentBoxStyle` + **`SectionTitle`** partilhado (**sem** ícone no bloco). CTA na mesma linha: `SectionTitle compact` + `CtaCriarButton` (Redes permitidas — **Nova Rede**).
-- **Títulos com subtítulo inline (`sub`):** Fluxo de Dados + `sub` «últimos 14 dias»; Redes permitidas + `sub` «check-in de prestadores»; Configuração de Alertas + `sub` «Condições monitoradas automaticamente» (sem legenda extra abaixo do título). O `SectionTitle` insere **` — `** antes do `sub` — não repetir separador no texto.
+- **Títulos com subtítulo inline (`sub`):** Fluxo de Dados + `sub` «últimos 14 dias»; Redes permitidas + `sub` «check-in de prestadores»; Configuração de Alertas + `sub` «Condições monitoradas automaticamente» (sem legenda extra abaixo do título). O `SectionTitle` formata o `sub` com travessão e gap canónico (`sectionTitleSub.ts`) — não repetir separador no texto do `sub`.
 - Status de integração e alertas: Lucide + cores semânticas — **sem emoji** (`XCircle` / `AlertTriangle`).
 - Funções de sync/email: `console.error(e)` + fallback PT-BR nos `catch`; **`resData.erro`** / `resData.error` da edge function permitidos no `try`.
 - Confirmações antes de ações externas (sync/email) — manter; overlay mínimo **`rgba(0,0,0,0.65)`**.

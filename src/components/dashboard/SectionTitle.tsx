@@ -4,6 +4,8 @@ import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 import {
   hasSectionTitleSub,
   normalizeSectionTitleSub,
+  SECTION_TITLE_SUB_DASH_GAP_PX,
+  SECTION_TITLE_SUB_GAP_PX,
   SECTION_TITLE_SUB_SEPARATOR,
 } from "../../lib/sectionTitleSub";
 
@@ -43,29 +45,42 @@ export default function SectionTitle({ icon, children, sub, compact }: Props) {
       ) : null}
       <span
         style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT_TITLE,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase" as const,
+          display: "inline-flex",
+          alignItems: "baseline",
+          flexWrap: "wrap",
+          columnGap: SECTION_TITLE_SUB_GAP_PX,
+          rowGap: 4,
         }}
       >
-        {children}
-      </span>
-      {subContent != null && subContent !== "" ? (
         <span
           style={{
-            fontSize: 11,
-            fontWeight: 400,
-            color: t.textMuted,
-            fontFamily: FONT.body,
+            fontSize: 14,
+            fontWeight: 800,
+            color: brand.primary,
+            fontFamily: FONT_TITLE,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase" as const,
           }}
         >
-          {SECTION_TITLE_SUB_SEPARATOR}
-          {subContent}
+          {children}
         </span>
-      ) : null}
+        {subContent != null && subContent !== "" ? (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: SECTION_TITLE_SUB_DASH_GAP_PX,
+              fontSize: 11,
+              fontWeight: 400,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+            }}
+          >
+            <span aria-hidden="true">{SECTION_TITLE_SUB_SEPARATOR}</span>
+            <span>{subContent}</span>
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 }

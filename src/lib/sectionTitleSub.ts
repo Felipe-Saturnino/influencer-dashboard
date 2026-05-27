@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 
-/** Separador canónico entre título de bloco (nível 3) e subtítulo — mesmo padrão dos dashboards. */
-export const SECTION_TITLE_SUB_SEPARATOR = " — ";
+/** Travessão entre título e subtítulo (espaçamento via `SECTION_TITLE_SUB_GAP_PX` no layout). */
+export const SECTION_TITLE_SUB_SEPARATOR = "—";
+
+/** Espaço entre o título do bloco e o grupo subtítulo (travessão + texto). */
+export const SECTION_TITLE_SUB_GAP_PX = 12;
+
+/** Espaço entre o travessão e o texto do subtítulo. */
+export const SECTION_TITLE_SUB_DASH_GAP_PX = 6;
 
 /** Remove separadores duplicados no início do texto passado em `sub`. */
 const SUB_LEADING_SEP_RE = /^[\s·•—–-]+/;
