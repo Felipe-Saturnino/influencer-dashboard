@@ -126,14 +126,16 @@ export function createDataTableBlockStyles(t: DataTableTheme, brand: DataTableBr
   const tdSticky = (opts?: {
     rowIndex?: number;
     fontWeight?: number;
+    background?: string;
     paddingLeft?: number;
     stripeAccent?: "secondary" | "contrast" | "action";
     minWidth?: number;
   }): CSSProperties => {
     const bg =
-      opts?.rowIndex != null
+      opts?.background ??
+      (opts?.rowIndex != null
         ? zebraRowBg(t, brand, colBg, opts.rowIndex, opts.stripeAccent ?? (brand.useBrand ? "contrast" : "secondary"))
-        : colBg;
+        : colBg);
     return {
       ...tdCenter,
       position: "sticky",
