@@ -295,7 +295,7 @@
   max-width: 100%;
 }
 
-/* 1ª coluna position:sticky — scroll só neste wrapper; sem overflow:hidden na table */
+/* Padrão dataTableStyles — 1ª coluna sticky; scroll único; sem overflow:hidden na <table> */
 .app-table-wrap--sticky-col {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

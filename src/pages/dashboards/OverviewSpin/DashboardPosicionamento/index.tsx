@@ -37,10 +37,10 @@ import {
   getPageKpiSectionGapStyle,
 } from "../../../../lib/pageContentBoxStyles";
 import {
-  createOverviewSpinStickyCol,
-  getOverviewSpinTableStyle,
-  getOverviewSpinTableWrapStyle,
-} from "../overviewSpinTableStyles";
+  createDataTableStickyCol,
+  getDataTableStyle,
+  getDataTableWrapStyle,
+} from "../../../../lib/dataTableStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -529,7 +529,7 @@ function DashboardPosicionamentoOperadora({
   }, [cats, sortCatVis]);
 
   const thCatVis = getThStyle(t);
-  const spinTable = useMemo(() => createOverviewSpinStickyCol(t, brand), [t, brand]);
+  const spinTable = useMemo(() => createDataTableStickyCol(t, brand), [t, brand]);
 
   const thHistMesa: CSSProperties = {
     ...spinTable.thSticky(140),
@@ -696,8 +696,8 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
-        <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
-          <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
             <thead>
               <tr>
@@ -819,8 +819,8 @@ function DashboardPosicionamentoOperadora({
 
         <div style={{ ...card, marginBottom: 0 }}>
           <SectionTitle>Visibilidade por categoria</SectionTitle>
-          <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
-            <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>
                 <tr>

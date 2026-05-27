@@ -94,7 +94,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -147,6 +147,12 @@ Nunca `@media` inline em componentes.
 
 ```typescript
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../lib/tableStyles";
+import {
+  createDataTableBlockStyles,
+  createDataTableStickyCol,
+  getDataTableStyle,
+  getDataTableWrapStyle,
+} from "../lib/dataTableStyles";
 import { BRAND, FONT_TITLE, STATUS_ORDEM } from "../lib/dashboardConstants";
 import { fmtBRL, fmtHorasTotal, getMesesDisponiveis, getPeriodoComparativoMoM } from "../lib/dashboardHelpers";
 import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../lib/classificacaoSort";
@@ -471,13 +477,61 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 ## Tabelas
 
-### Estrutura e estilo
+### Padrão canónico — tabela de dados em bloco (nível 3)
 
-1. `getThStyle(t)` / `getTdStyle(t)` de `lib/tableStyles`.
+**Referência:** Overview Spin → bloco **Detalhamento Diário** (`createDataTableBlockStyles` em `src/lib/dataTableStyles.ts`).
+
+**Código obrigatório em tabelas novas** dentro de `getPageContentBoxStyle` (padding **20px** — distância tabela ↔ borda do bloco vem daí + `SectionTitle` acima; **não** acrescentar margin horizontal extra no `app-table-wrap`).
+
+```tsx
+const brand = useDashboardBrand();
+const { theme: t } = useApp();
+const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
+
+<div style={contentBox}>
+  <SectionTitle sub="…">Título do bloco</SectionTitle>
+  <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+    <table style={getDataTableStyle({ minWidth: 720 })}>
+      <caption style={{ display: "none" }}>…</caption>
+      <thead>
+        <tr>
+          <th scope="col" style={dataTable.thHeaderSticky}>…</th> {/* só se 1ª coluna fixa */}
+          <th scope="col" style={dataTable.thHeader}>Coluna</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style={{ background: dataTable.zebraRow(i) }}>
+          <td style={dataTable.tdCenter}>…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+| Item | Regra |
+|------|--------|
+| **Bordas arredondadas** | **`borderRadius: 14`** no **wrapper** (`getDataTableWrapStyle` / `DATA_TABLE_RADIUS`). **Não** `getPageContentBoxRadius` na `<table>`. **Não** `overflow: hidden` na `<table>` (quebra coluna sticky). |
+| **Distância tabela ↔ bloco** | Bloco com `getPageContentBoxStyle` → **`padding: 20px`**. Tabela em `width: 100%` dentro do wrapper, sem padding lateral próprio. |
+| **Cores — cabeçalho (fundo da linha)** | Spin **Light:** `color-mix(colBg 86%, --brand-action 14%)`. Spin **Dark:** `color-mix(colBg 82%, --brand-action 18%)`. **Whitelabel:** `color-mix(colBg 86%, --brand-action 14%)`. Texto do cabeçalho: `getThStyle` / `getThStyleBrandAction` (cor do label, não alterar sem pedido de produto). |
+| **Cores — linhas (zebra)** | Fundos **opacos** via `dataTable.zebraRow(i)` — nunca `transparent` na linha par no dark. Spin light: par = `colBg`, ímpar = mix 8% secondary. Spin dark: par 10% / ímpar 18% secondary. Whitelabel: contrast 6% / 12%. Semântica GGR+/− mantém verde/vermelho do Global. |
+| **Tamanho do texto** | Cabeçalho: **`12px`**, **`fontWeight: 700`**, uppercase, `letterSpacing: 0.08em`. Corpo: **`13px`** (`getTdStyle`). |
+| **Alinhamento — corpo** | Valores **`textAlign: "center"`** (`dataTable.tdCenter`); `fontVariantNumeric: "tabular-nums"`. Pills/badges na célula: wrapper `display: flex; justifyContent: center`. |
+| **Cabeçalho** | Todas as colunas: **mesmo fundo** (`thHeader`), labels **centralizados**. 1ª coluna fixa no scroll: `thHeaderSticky` (mesmo visual + `position: sticky; left: 0`). |
+| **Scroll horizontal** | `className="app-table-wrap app-table-wrap--sticky-col"` — um único contentor de scroll; **proibido** `overflow: hidden` na `<table>` e **evitar** dois wrappers com `overflow-x: auto` aninhados. |
+| **Coluna fixa (opcional)** | `createDataTableStickyCol` + `tdSticky` / `thHeaderSticky` — fundo opaco na coluna fixa. Documentar exceção se a tabela não tiver 1ª coluna fixa. |
+
+**Linha Total / sublinhas:** `dataTable.totalRowBgStrong` + `tdTotal` / `tdTotalSticky` (negrito, tom mais forte que zebra). Cabeçalho duplo: `thHeader` (linha 1) + `thHeaderSub` (linha 2), mesma faixa de cor. Exceções (total no topo vs rodapé) no MDC da secção.
+
+**Exceções:** listas operacionais legadas, grades calendário, tabelas densas de gestão (RH, permissões) podem manter o padrão antigo (`getThStyle` + alinhamento esquerda/direita) até migração — **documentar** no MDC da secção o motivo.
+
+### Legado — listas e migração gradual
+
+1. `getThStyle(t)` / `getTdStyle(t)` / `getTdNumStyle(t)` de `lib/tableStyles`.
 2. Wrapper `<div className="app-table-wrap">`.
-3. `borderCollapse: "separate"`, `borderSpacing: 0`, `borderRadius: 14`, `overflow: "hidden"` quando aplicável.
+3. `borderCollapse: "separate"`, `borderSpacing: 0`.
 4. Zebra: `zebraStripe(i)` — não inline.
-5. Texto: `textAlign: left`; valores: `right` + `fontVariantNumeric: "tabular-nums"`.
+5. Texto: `textAlign: left`; valores numéricos: `right` + `fontVariantNumeric: "tabular-nums"`.
 6. Nome longo: `maxWidth: 160`, `overflow: hidden`, `textOverflow: ellipsis`, `title={valor}`.
 
 ### Ordenação por coluna (obrigatória quando aplicável)
@@ -771,6 +825,11 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Lista >5 opções sem busca no painel do filtro.
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
+- Tabela nova em bloco nível 3 sem `createDataTableBlockStyles` / `getDataTableWrapStyle` (usar padrão Detalhamento Diário — § Tabelas padrão canónico).
+- `overflow: hidden` ou `borderRadius` do content box na `<table>` (quebra sticky e raio 14 do wrapper).
+- Dois wrappers `overflow-x: auto` aninhados na mesma tabela.
+- Cabeçalho de bloco com fundos diferentes por coluna (exceto exceção documentada na secção).
+- Zebra de linha com `transparent` no dark em tabela do padrão canónico.
 - Strings de vazio ou sem permissão diferentes das fixas acima.
 - Semântica de KPI invertida manualmente (fora de `isInverso`).
 - Página nova sem atualizar MDC da secção (e Ajuda quando aplicável).

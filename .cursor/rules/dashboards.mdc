@@ -94,8 +94,9 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
-- **Heatmap de Posicionamento:** coluna **Mesa** `position: sticky` + fundo **opaco** (`zebraBgHistLinha` faz `color-mix` com `blockBg`/`cardBg`, nunca com `transparent`). Zebra com `--brand-contrast` (nunca `--brand-secondary`). Nunca hardcodar hex de fundo na zebra.
-- **`renderMesaDiaTabela`:** `borderCollapse: "separate"`, `borderSpacing: 0`, `<caption style={{ display: "none" }}>`. Linha Total no topo do `<tbody>` por decisão de produto (exceção ao padrão de total no rodapé).
+- **Tabelas em bloco:** padrão canónico em **Global** § Tabelas → `src/lib/dataTableStyles.ts`. **Implementado:** Detalhamento Diário + **Comparativo de Jogo** (`thHeader` / `thHeaderSub` nas duas linhas de cabeçalho; linha **Total** com `totalRowBgStrong` + `tdTotal` / `tdTotalSticky`). Mesas por dia: `getDataTableWrapStyle` + sticky — migrar cabeçalho/zebra quando tocar.
+- **Heatmap de Posicionamento:** coluna **Mesa** sticky + fundo opaco; cabeçalho de período ainda `getThStyle` (exceção até migração). Sort só na coluna Mesa.
+- **`renderMesaDiaTabela`:** `getDataTableStyle` + sticky 1ª coluna; linha Total no **topo** do `<tbody>` — exceção documentada.
 
 ---
 
