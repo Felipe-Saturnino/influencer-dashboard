@@ -12,7 +12,7 @@ import {
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
-import { getThStyle, getTdStyle, getTdNumStyle } from "../../../../lib/tableStyles";
+import { createDataTableBlockStyles, getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
@@ -36,11 +36,6 @@ import {
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../../lib/pageContentBoxStyles";
-import {
-  createDataTableStickyCol,
-  getDataTableStyle,
-  getDataTableWrapStyle,
-} from "../../../../lib/dataTableStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -528,19 +523,20 @@ function DashboardPosicionamentoOperadora({
     return arr;
   }, [cats, sortCatVis]);
 
-  const thCatVis = getThStyle(t);
-  const spinTable = useMemo(() => createDataTableStickyCol(t, brand), [t, brand]);
+  const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
 
   const thHistMesa: CSSProperties = {
-    ...spinTable.thSticky(140),
+    ...dataTable.thHeaderSticky,
+    minWidth: 140,
     maxWidth: 180,
   };
 
   const tdHistMesa = (i: number): CSSProperties => ({
-    ...spinTable.tdSticky({ rowIndex: i, minWidth: 140 }),
+    ...dataTable.tdSticky({ rowIndex: i, minWidth: 140 }),
     maxWidth: 160,
     overflow: "hidden",
     textOverflow: "ellipsis",
+    textAlign: "left",
   });
 
   if (loading) {
@@ -707,11 +703,11 @@ function DashboardPosicionamentoOperadora({
                   sortCol={sortHistMesa.col}
                   sortDir={sortHistMesa.dir}
                   thStyle={thHistMesa}
-                  align="left"
+                  align="center"
                   onSort={onSortHistMesa}
                 />
                 {heatCols.map((c) => (
-                  <th key={c.key} scope="col" style={{ ...getThStyle(t), textAlign: "center" }}>
+                  <th key={c.key} scope="col" style={dataTable.thHeader}>
                     {c.label}
                   </th>
                 ))}
@@ -721,7 +717,7 @@ function DashboardPosicionamentoOperadora({
               {heatMesasOrdenadas.map((mid, rowIdx) => {
                 const nome = nomeMesaHist(mid);
                 return (
-                  <tr key={mid} style={{ background: spinTable.opaqueZebra(rowIdx) }}>
+                  <tr key={mid} style={{ background: dataTable.zebraRow(rowIdx) }}>
                     <td style={tdHistMesa(rowIdx)} title={nome}>
                       {nome}
                     </td>
@@ -729,7 +725,7 @@ function DashboardPosicionamentoOperadora({
                       const execIds = execIdsColunaHistorico(historicoModo, col.key, refDate, execucoesAll);
                       const pos = posicaoMediaMesaNoBucket(mid, execIds, posByExec);
                       return (
-                        <td key={col.key} style={{ ...getTdStyle(t), textAlign: "center" }}>
+                        <td key={col.key} style={dataTable.tdCenter}>
                           <span
                             style={{
                               display: "inline-block",
@@ -829,8 +825,8 @@ function DashboardPosicionamentoOperadora({
                     col="categoria"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={thCatVis}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                   <SortTableTh<CatVisSortCol>
@@ -838,8 +834,8 @@ function DashboardPosicionamentoOperadora({
                     col="top3"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                   <SortTableTh<CatVisSortCol>
@@ -847,18 +843,18 @@ function DashboardPosicionamentoOperadora({
                     col="top10"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                 </tr>
               </thead>
               <tbody>
                 {catsOrdenadas.map((c, i) => (
-                  <tr key={c.categoria} style={{ background: spinTable.opaqueZebra(i) }}>
-                    <td style={getTdStyle(t)}>{c.categoria}</td>
-                    <td style={getTdNumStyle(t)}>{c.pctTop3.toFixed(0)}%</td>
-                    <td style={getTdNumStyle(t)}>{c.pctTop10.toFixed(0)}%</td>
+                  <tr key={c.categoria} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdCenter}>{c.categoria}</td>
+                    <td style={dataTable.tdCenter}>{c.pctTop3.toFixed(0)}%</td>
+                    <td style={dataTable.tdCenter}>{c.pctTop10.toFixed(0)}%</td>
                   </tr>
                 ))}
               </tbody>

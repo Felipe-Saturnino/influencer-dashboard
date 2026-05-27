@@ -44,14 +44,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import {
-  getThStyle,
-  getThStyleBrandAction,
-  getTdStyle,
-  getTdNumStyle,
-} from "../../../lib/tableStyles";
-import {
   createDataTableBlockStyles,
-  createDataTableStickyCol,
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
@@ -103,10 +96,6 @@ const COR_MESA_B = {
 } as const;
 
 /** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
-const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-action, #7c3aed) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
-
 interface DailyRow {
   data: string;
   turnover: number | null;
@@ -2249,13 +2238,6 @@ export default function OverviewSpin() {
 
   const contentBox = getPageContentBoxStyle(brand, t);
 
-  const thStyle = brand.useBrand
-    ? getThStyleBrandAction(t, { verticalAlign: "middle" })
-    : getThStyle(t, { verticalAlign: "middle" });
-  const stripeMesaLinha = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)"
-    : null;
-
   const tituloMesaDadosContrasteOp: React.CSSProperties = {
     marginBottom: 10,
     padding: "6px 10px",
@@ -2310,9 +2292,6 @@ export default function OverviewSpin() {
     fontFamily: FONT.body,
   };
 
-  const tdStyle = getTdStyle(t, { padding: "9px 12px" });
-  const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
-  const spinTable = useMemo(() => createDataTableStickyCol(t, brand), [t, brand]);
   const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
 
   const isPrimeiro = idxMes === 0;
@@ -2400,7 +2379,6 @@ export default function OverviewSpin() {
 
   const renderMesaDiaTabela = (
     linhas: LinhaMesaPorDia[],
-    _rowStripe: string,
     colTempo: "Data" | "Mês" = "Data",
     tituloTabela = "Mesa",
   ) => (
@@ -2411,18 +2389,30 @@ export default function OverviewSpin() {
         </caption>
         <thead>
           <tr>
-            <th scope="col" style={spinTable.thSticky()}>{colTempo}</th>
-            <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-            <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-            <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-            <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-            <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+            <th scope="col" style={dataTable.thHeaderSticky}>
+              {colTempo}
+            </th>
+            <th scope="col" style={dataTable.thHeader}>
+              GGR
+            </th>
+            <th scope="col" style={dataTable.thHeader}>
+              Turnover
+            </th>
+            <th scope="col" style={dataTable.thHeader}>
+              Apostas
+            </th>
+            <th scope="col" style={dataTable.thHeader}>
+              Margem
+            </th>
+            <th scope="col" style={dataTable.thHeader}>
+              Aposta média
+            </th>
           </tr>
         </thead>
         <tbody>
           {linhas.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
+              <td colSpan={6} style={{ ...dataTable.tdCenter, color: t.textMuted }}>
                 {MSG_SEM_DADOS_FILTRO}
               </td>
             </tr>
@@ -2436,17 +2426,13 @@ export default function OverviewSpin() {
                   <tr
                     key={tot.dataIso}
                     style={{
-                      background: spinTable.totalRowBg,
-                      fontWeight: 700,
+                      background: dataTable.totalRowBgStrong,
                       borderBottom: `2px solid ${t.cardBorder}`,
                     }}
                   >
                     <td
                       style={{
-                        ...spinTable.tdSticky({
-                          background: spinTable.totalRowBg,
-                          fontWeight: 700,
-                        }),
+                        ...dataTable.tdTotalSticky(),
                         color: brand.primary,
                         fontFamily: FONT.body,
                       }}
@@ -2455,49 +2441,60 @@ export default function OverviewSpin() {
                     </td>
                     <td
                       style={{
-                        ...tdNum,
+                        ...dataTable.tdTotal,
                         color: ggrT > 0 ? BRAND.verde : ggrT < 0 ? BRAND.vermelho : t.text,
-                        fontWeight: 700,
                       }}
                     >
                       {tot.ggr != null ? fmtBRL(tot.ggr) : "—"}
                     </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>{tot.turnover != null ? fmtBRL(tot.turnover) : "—"}</td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                    <td style={dataTable.tdTotal}>
+                      {tot.turnover != null ? fmtBRL(tot.turnover) : "—"}
+                    </td>
+                    <td style={dataTable.tdTotal}>
                       {tot.bets != null ? tot.bets.toLocaleString("pt-BR") : "—"}
                     </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
-                      <MarginBadge value={tot.margin_pct} />
+                    <td style={dataTable.tdTotal}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <MarginBadge value={tot.margin_pct} />
+                      </div>
                     </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                    <td style={dataTable.tdTotal}>
                       {tot.bet_size != null ? fmtBRL(Number(tot.bet_size)) : "—"}
                     </td>
                   </tr>
                 );
               })()}
               {linhas.map((row, i) => {
-              const ggr = row.ggr ?? 0;
-              return (
-                <tr key={row.dataIso} style={{ background: spinTable.opaqueZebra(i) }}>
-                  <td style={spinTable.tdSticky({ rowIndex: i })}>{row.labelData}</td>
-                  <td
-                    style={{
-                      ...tdNum,
-                      color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {row.ggr != null ? fmtBRL(row.ggr) : "—"}
-                  </td>
-                  <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
-                  <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
-                  <td style={{ ...tdNum }}>
-                    <MarginBadge value={row.margin_pct} />
-                  </td>
-                  <td style={tdNum}>{row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}</td>
-                </tr>
-              );
-            })}
+                const ggr = row.ggr ?? 0;
+                return (
+                  <tr key={row.dataIso} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: i })}>{row.labelData}</td>
+                    <td
+                      style={{
+                        ...dataTable.tdCenter,
+                        color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {row.ggr != null ? fmtBRL(row.ggr) : "—"}
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      {row.turnover != null ? fmtBRL(row.turnover) : "—"}
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      {row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <MarginBadge value={row.margin_pct} />
+                      </div>
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      {row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
             </>
           )}
         </tbody>
@@ -3997,14 +3994,14 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Data", labelMesaComparativoA)}
+                        {renderMesaDiaTabela(linhasMesaA, "Data", labelMesaComparativoA)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Data", labelMesaComparativoB)}
+                        {renderMesaDiaTabela(linhasMesaB, "Data", labelMesaComparativoB)}
                       </div>
                     </div>
                   </>
@@ -4021,7 +4018,7 @@ export default function OverviewSpin() {
                     <div style={tituloMesaSpeedBaccarat}>
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Speed Baccarat")}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, "Data", "Speed Baccarat")}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
@@ -4031,18 +4028,13 @@ export default function OverviewSpin() {
                     <div style={tituloMesaRoleta}>
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Data", "Roleta")}
+                    {renderMesaDiaTabela(linhasRoleta, "Data", "Roleta")}
                   </div>
                 </div>
                 {exibirBlocoDadosPorMesaFutebol && (
                   <div style={{ marginTop: 4 }}>
                     <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
-                    {renderMesaDiaTabela(
-                      linhasFutebolBrasileiro,
-                      stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY,
-                      "Data",
-                      LABEL_FUTEBOL_BRASILEIRO,
-                    )}
+                    {renderMesaDiaTabela(linhasFutebolBrasileiro, "Data", LABEL_FUTEBOL_BRASILEIRO)}
                   </div>
                 )}
               </div>
@@ -4273,14 +4265,14 @@ export default function OverviewSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Mês", labelMesaComparativoA)}
+                            {renderMesaDiaTabela(linhasMesaA, "Mês", labelMesaComparativoA)}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Mês", labelMesaComparativoB)}
+                            {renderMesaDiaTabela(linhasMesaB, "Mês", labelMesaComparativoB)}
                           </div>
                         </div>
                       </>
@@ -4297,7 +4289,7 @@ export default function OverviewSpin() {
                         <div style={tituloMesaSpeedBaccarat}>
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Speed Baccarat")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, "Mês", "Speed Baccarat")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
@@ -4307,18 +4299,13 @@ export default function OverviewSpin() {
                         <div style={tituloMesaRoleta}>
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês", "Roleta")}
+                        {renderMesaDiaTabela(linhasRoleta, "Mês", "Roleta")}
                       </div>
                     </div>
                     {exibirBlocoDadosPorMesaFutebol && (
                       <div style={{ marginTop: 4 }}>
                         <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
-                        {renderMesaDiaTabela(
-                          linhasFutebolBrasileiro,
-                          stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY,
-                          "Mês",
-                          LABEL_FUTEBOL_BRASILEIRO,
-                        )}
+                        {renderMesaDiaTabela(linhasFutebolBrasileiro, "Mês", LABEL_FUTEBOL_BRASILEIRO)}
                       </div>
                     )}
                   </div>
