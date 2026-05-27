@@ -24,7 +24,9 @@ export function useHomeInformativos(perfil: Role) {
       try {
         const { data, error } = await supabase
           .from("conteudo_informativo")
-          .select("id, assunto, descricao, published_at, created_by, published_by, perfis, status")
+          .select(
+            "id, assunto, descricao, published_at, created_by, published_by, perfis, operador_escopo, status",
+          )
           .eq("status", "publicado")
           .contains("perfis", [perfil])
           .order("published_at", { ascending: false });

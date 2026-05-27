@@ -16,6 +16,11 @@ import {
   type InformativoStatus,
 } from "../../../lib/informativosWorkflow";
 import { labelPerfisInformativo } from "../../../lib/informativosRoles";
+import {
+  labelOperadorEscopoInformativo,
+  perfisIncluemOperador,
+  type OperadoraAtivaOption,
+} from "../../../lib/informativosOperadorEscopo";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { ModalCriarInformativo } from "./ModalCriarInformativo";
 import { ModalHistoricoInformativo } from "./ModalHistoricoInformativo";
@@ -164,12 +169,19 @@ export function GerenciamentoInformativos({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
-    const { data, error } = await supabase
-      .from("conteudo_informativo")
-      .select(
-        "id, assunto, descricao, perfis, status, created_at, published_at, approved_at, approved_by, created_by, published_by",
-      )
-      .order("created_at", { ascending: false });
+    const [informativosRes, operadorasRes] = await Promise.all([
+      supabase
+        .from("conteudo_informativo")
+        .select(
+          "id, assunto, descricao, perfis, operador_escopo, status, created_at, published_at, approved_at, approved_by, created_by, published_by",
+        )
+        .order("created_at", { ascending: false }),
+      supabase.from("operadoras").select("slug, nome").eq("ativo", true),
+    ]);
+    const { data, error } = informativosRes;
+    const operadorasMap = new Map<string, string>(
+      ((operadorasRes.data ?? []) as OperadoraAtivaOption[]).map((o) => [o.slug, o.nome]),
+    );
 
     if (error) {
       console.error("[GerenciamentoInformativos] carregar:", error);
@@ -187,6 +199,7 @@ export function GerenciamentoInformativos({
         assunto: string;
         descricao: string;
         perfis: string[];
+        operador_escopo: string | null;
         status: InformativoStatus;
         created_at: string;
         published_at: string | null;
@@ -198,12 +211,17 @@ export function GerenciamentoInformativos({
       const autorId = row.created_by ?? row.published_by;
       if (autorId) userIds.add(autorId);
       if (row.approved_by) userIds.add(row.approved_by);
+      const perfisBase = labelPerfisInformativo(row.perfis ?? []);
+      const escopoOp =
+        perfisIncluemOperador(row.perfis ?? []) && row.operador_escopo
+          ? ` · Op.: ${labelOperadorEscopoInformativo(row.operador_escopo, operadorasMap)}`
+          : "";
       built.push({
         id: row.id,
         assunto: row.assunto,
         autorNome: "",
         perfis: row.perfis ?? [],
-        perfisLabel: labelPerfisInformativo(row.perfis ?? []),
+        perfisLabel: `${perfisBase}${escopoOp}`,
         createdBy: row.created_by,
         createdAt: row.created_at,
         status: row.status,

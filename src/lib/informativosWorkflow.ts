@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Role } from "../types";
+import { validarOperadorEscopoInformativo } from "./informativosOperadorEscopo";
 
 export type InformativoStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
 
@@ -214,6 +215,7 @@ export type SnapshotInformativoEdicao = {
   assunto: string;
   descricao: string;
   perfis: string[];
+  operador_escopo: string | null;
 };
 
 function perfisIguais(a: string[], b: string[]): boolean {
@@ -232,6 +234,9 @@ export function diffEdicaoRascunho(antes: SnapshotInformativoEdicao, depois: Sna
   if (antes.assunto.trim() !== depois.assunto.trim()) alteracoes.push("Assunto alterado");
   if (!textoCorpoIgual(antes.descricao, depois.descricao)) alteracoes.push("Descrição alterada");
   if (!perfisIguais(antes.perfis, depois.perfis)) alteracoes.push("Perfis alterados");
+  if ((antes.operador_escopo ?? null) !== (depois.operador_escopo ?? null)) {
+    alteracoes.push("Escopo Operador alterado");
+  }
   return alteracoes;
 }
 
@@ -257,10 +262,25 @@ export function validarPublicarInformativo(f: {
   assunto: string;
   descricao: string;
   perfis: string[];
+  operador_escopo?: string | null;
 }): Record<string, string> {
   const err: Record<string, string> = {};
   if (!f.assunto.trim()) err.assunto = "Informe o assunto.";
   if (isHtmlEmpty(f.descricao)) err.descricao = "Informe a descrição.";
   if (!f.perfis.length) err.perfis = "Selecione ao menos um perfil.";
+  const escopoErr = validarOperadorEscopoInformativo(f.perfis, f.operador_escopo ?? null);
+  if (escopoErr) err.operador_escopo = escopoErr;
+  return err;
+}
+
+/** Validação mínima ao salvar rascunho (inclui escopo Operador quando aplicável). */
+export function validarSalvarInformativo(f: {
+  perfis: string[];
+  operador_escopo?: string | null;
+}): Record<string, string> {
+  const err: Record<string, string> = {};
+  if (!f.perfis.length) err.perfis = "Selecione ao menos um perfil.";
+  const escopoErr = validarOperadorEscopoInformativo(f.perfis, f.operador_escopo ?? null);
+  if (escopoErr) err.operador_escopo = escopoErr;
   return err;
 }

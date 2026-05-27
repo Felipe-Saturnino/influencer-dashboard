@@ -9,6 +9,8 @@ import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
 import { InformativoPerfilMultiSelect } from "../../../components/conteudo/InformativoPerfilMultiSelect";
+import { InformativoOperadorEscopoSelect } from "../../../components/conteudo/InformativoOperadorEscopoSelect";
+import { perfisIncluemOperador } from "../../../lib/informativosOperadorEscopo";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   acaoEnvioPermitida,
@@ -19,6 +21,7 @@ import {
   registrarHistoricoStatus,
   sanitizeInformativoHtml,
   validarPublicarInformativo,
+  validarSalvarInformativo,
   type InformativoStatus,
   type SnapshotInformativoEdicao,
 } from "../../../lib/informativosWorkflow";
@@ -55,6 +58,7 @@ export function ModalCriarInformativo({
   const [assunto, setAssunto] = useState("");
   const [descricao, setDescricao] = useState("");
   const [perfis, setPerfis] = useState<Role[]>([]);
+  const [operadorEscopo, setOperadorEscopo] = useState<string | null>(null);
   const [statusAtual, setStatusAtual] = useState<InformativoStatus>("rascunho");
   const [loadingData, setLoadingData] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -66,6 +70,7 @@ export function ModalCriarInformativo({
     setAssunto("");
     setDescricao("");
     setPerfis([]);
+    setOperadorEscopo(null);
     setStatusAtual("rascunho");
     setFieldErr({});
     setErro(null);
@@ -86,16 +91,19 @@ export function ModalCriarInformativo({
       assunto: string;
       descricao: string;
       perfis: string[];
+      operador_escopo: string | null;
       status: InformativoStatus;
     };
     setAssunto(row.assunto);
     setDescricao(row.descricao);
     setPerfis((row.perfis ?? []) as Role[]);
+    setOperadorEscopo(row.operador_escopo ?? null);
     setStatusAtual(row.status);
     setSnapshotEdicao({
       assunto: row.assunto,
       descricao: row.descricao,
       perfis: [...(row.perfis ?? [])],
+      operador_escopo: row.operador_escopo ?? null,
     });
   }, []);
 
@@ -108,13 +116,26 @@ export function ModalCriarInformativo({
     else resetForm();
   }, [open, modo, editId, carregarEdicao, resetForm]);
 
+  const mostrarEscopoOperador = perfisIncluemOperador(perfis);
+
+  useEffect(() => {
+    if (!mostrarEscopoOperador) setOperadorEscopo(null);
+  }, [mostrarEscopoOperador]);
+
   const persistir = async (acao: "salvar" | "aprovacao" | "publicar") => {
     if (!user?.id) return;
     const novoStatus: InformativoStatus =
       acao === "salvar" ? "rascunho" : acao === "aprovacao" ? "aprovacao" : "publicado";
 
+    const escopoPersistido = mostrarEscopoOperador ? operadorEscopo : null;
+
     if (acao === "publicar" || acao === "aprovacao") {
-      const errs = validarPublicarInformativo({ assunto, descricao, perfis });
+      const errs = validarPublicarInformativo({
+        assunto,
+        descricao,
+        perfis,
+        operador_escopo: escopoPersistido,
+      });
       setFieldErr(errs);
       if (Object.keys(errs).length > 0) return;
       if (!acaoEnvioPermitida(acao, perfis)) {
@@ -122,7 +143,9 @@ export function ModalCriarInformativo({
         return;
       }
     } else {
-      setFieldErr({});
+      const errs = validarSalvarInformativo({ perfis, operador_escopo: escopoPersistido });
+      setFieldErr(errs);
+      if (Object.keys(errs).length > 0) return;
     }
 
     setSalvando(true);
@@ -134,6 +157,7 @@ export function ModalCriarInformativo({
       assunto: assunto.trim() || "Rascunho",
       descricao: descricaoSan,
       perfis,
+      operador_escopo: escopoPersistido,
       status: novoStatus,
     };
     const publishFields =
@@ -158,6 +182,7 @@ export function ModalCriarInformativo({
             assunto: assunto.trim(),
             descricao: descricaoSan,
             perfis: [...perfis],
+            operador_escopo: escopoPersistido,
           };
           const alteracoes = diffEdicaoRascunho(snapshotEdicao, depois);
           await registrarHistoricoEdicoesRascunho(supabase, editId, alteracoes, user.id);
@@ -272,6 +297,23 @@ export function ModalCriarInformativo({
                 <div style={{ color: "#e84025", fontSize: 11, marginTop: 4 }}>{fieldErr.perfis}</div>
               ) : null}
             </div>
+
+            {mostrarEscopoOperador ? (
+              <div style={{ marginBottom: 18 }}>
+                <label htmlFor="informativo-operador-escopo" style={labelStyle}>
+                  Operadora (perfil Operador) <CampoObrigatorioMark />
+                </label>
+                <InformativoOperadorEscopoSelect
+                  value={operadorEscopo}
+                  onChange={setOperadorEscopo}
+                  t={t}
+                  hasError={!!fieldErr.operador_escopo}
+                />
+                {fieldErr.operador_escopo ? (
+                  <div style={{ color: "#e84025", fontSize: 11, marginTop: 4 }}>{fieldErr.operador_escopo}</div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
               <button
