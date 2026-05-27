@@ -116,9 +116,12 @@ export function createOverviewSpinDetalhamentoTable(
   const colBg = brand.blockBg ?? t.cardBg;
   const shadow = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
+  /** Spin light/dark: faixa action (#7c3aed). Whitelabel: inalterado. */
   const headerBgOpaque = brand.useBrand
     ? `color-mix(in srgb, ${colBg} 86%, var(--brand-action, #7c3aed) 14%)`
-    : `color-mix(in srgb, ${colBg} 90%, var(--brand-secondary, #4a2082) 10%)`;
+    : t.isDark
+      ? `color-mix(in srgb, ${colBg} 82%, var(--brand-action, #7c3aed) 18%)`
+      : `color-mix(in srgb, ${colBg} 86%, var(--brand-action, #7c3aed) 14%)`;
 
   const thDetalhamento: CSSProperties = {
     ...(brand.useBrand ? getThStyleBrandAction : getThStyle)(t, { verticalAlign: "middle" }),
