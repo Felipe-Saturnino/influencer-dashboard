@@ -51,6 +51,7 @@ import {
   TOTAL_ROW_BG,
 } from "../../../lib/tableStyles";
 import {
+  createOverviewSpinDetalhamentoTable,
   createOverviewSpinStickyCol,
   getOverviewSpinTableStyle,
   getOverviewSpinTableWrapStyle,
@@ -2313,6 +2314,7 @@ export default function OverviewSpin() {
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
   const spinTable = useMemo(() => createOverviewSpinStickyCol(t, brand), [t, brand]);
+  const detalhamentoTable = useMemo(() => createOverviewSpinDetalhamentoTable(t, brand), [t, brand]);
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -2631,14 +2633,30 @@ export default function OverviewSpin() {
             </caption>
             <thead>
               <tr>
-                <th scope="col" style={spinTable.thSticky()}>{colTempoLabel}</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
+                <th scope="col" style={detalhamentoTable.thDetalhamentoSticky}>
+                  {colTempoLabel}
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  GGR
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  Turnover
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  Apostas
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  Margem
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  Aposta média
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  UAP
+                </th>
+                <th scope="col" style={detalhamentoTable.thDetalhamento}>
+                  ARPU
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -2658,75 +2676,93 @@ export default function OverviewSpin() {
                 const rowKey = drillId ?? `${r.label}-${i}`;
                 return (
                   <Fragment key={rowKey}>
-                    <tr
-                      style={{
-                        background: spinTable.opaqueZebra(i),
-                      }}
-                    >
-                      <td style={spinTable.tdSticky({ rowIndex: i })}>
-                        {isDrillParent ? (
-                          <button
-                            type="button"
-                            aria-expanded={aberto}
-                            aria-label={
-                              aberto
-                                ? `Recolher detalhe por operadora — ${r.label}`
-                                : `Expandir detalhe por operadora — ${r.label}`
-                            }
-                            onClick={() => {
-                              setExpandedDetalhe((prev) => {
-                                const n = new Set(prev);
-                                if (n.has(drillId)) n.delete(drillId);
-                                else n.add(drillId);
-                                return n;
-                              });
-                            }}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: t.text,
-                              fontFamily: FONT.body,
-                              fontWeight: 600,
-                              padding: 0,
-                              textAlign: "left",
-                            }}
-                          >
-                            <ChevronDown
-                              size={16}
-                              aria-hidden
-                              style={{
-                                transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
-                                transition: "transform 0.15s ease",
-                                flexShrink: 0,
+                    <tr style={{ background: detalhamentoTable.zebraRowBg(i) }}>
+                      <td style={detalhamentoTable.tdSticky({ rowIndex: i })}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            width: "100%",
+                          }}
+                        >
+                          {isDrillParent ? (
+                            <button
+                              type="button"
+                              aria-expanded={aberto}
+                              aria-label={
+                                aberto
+                                  ? `Recolher detalhe por operadora — ${r.label}`
+                                  : `Expandir detalhe por operadora — ${r.label}`
+                              }
+                              onClick={() => {
+                                setExpandedDetalhe((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(drillId)) n.delete(drillId);
+                                  else n.add(drillId);
+                                  return n;
+                                });
                               }}
-                            />
-                            {r.label}
-                          </button>
-                        ) : (
-                          r.label
-                        )}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: t.text,
+                                fontFamily: FONT.body,
+                                fontWeight: 600,
+                                padding: 0,
+                                textAlign: "center",
+                              }}
+                            >
+                              <ChevronDown
+                                size={16}
+                                aria-hidden
+                                style={{
+                                  transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
+                                  transition: "transform 0.15s ease",
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {r.label}
+                            </button>
+                          ) : (
+                            r.label
+                          )}
+                        </div>
                       </td>
                       <td
                         style={{
-                          ...tdNum,
+                          ...detalhamentoTable.tdCenter,
                           color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
                           fontWeight: 600,
                         }}
                       >
                         {r.ggr != null ? fmtBRL(r.ggr) : "—"}
                       </td>
-                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={{ ...tdNum }}>
-                        <MarginBadge value={r.margin_pct} />
+                      <td style={detalhamentoTable.tdCenter}>
+                        {r.turnover != null ? fmtBRL(r.turnover) : "—"}
                       </td>
-                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
-                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                      <td style={detalhamentoTable.tdCenter}>
+                        {r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}
+                      </td>
+                      <td style={detalhamentoTable.tdCenter}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <MarginBadge value={r.margin_pct} />
+                        </div>
+                      </td>
+                      <td style={detalhamentoTable.tdCenter}>
+                        {r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}
+                      </td>
+                      <td style={detalhamentoTable.tdCenter}>
+                        {r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}
+                      </td>
+                      <td style={detalhamentoTable.tdCenter}>
+                        {r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}
+                      </td>
                     </tr>
                     {isDrillParent &&
                       aberto &&
@@ -2736,42 +2772,53 @@ export default function OverviewSpin() {
                           <tr
                             key={`${rowKey}-${sl.operadora_slug}`}
                             style={{
-                              background: spinTable.opaqueZebra(i + j + 1, "action"),
+                              background: detalhamentoTable.zebraRowBg(i + j + 1, "action"),
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
                             }}
                           >
                             <th
                               scope="row"
                               style={{
-                                ...spinTable.tdSticky({
+                                ...detalhamentoTable.tdSticky({
                                   rowIndex: i + j + 1,
                                   paddingLeft: 32,
                                   stripeAccent: "action",
                                 }),
-                                boxShadow: `${spinTable.shadow}, inset 3px 0 0 color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)`,
+                                boxShadow: `${detalhamentoTable.shadow}, inset 3px 0 0 color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)`,
+                                textAlign: "center",
                               }}
                             >
                               {slugToNome(sl.operadora_slug)}
                             </th>
                             <td
                               style={{
-                                ...tdNum,
+                                ...detalhamentoTable.tdCenter,
                                 color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
                                 fontWeight: 600,
                               }}
                             >
                               {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
                             </td>
-                            <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
-                            <td style={tdNum}>
+                            <td style={detalhamentoTable.tdCenter}>
+                              {sl.turnover != null ? fmtBRL(sl.turnover) : "—"}
+                            </td>
+                            <td style={detalhamentoTable.tdCenter}>
                               {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
                             </td>
-                            <td style={{ ...tdNum }}>
-                              <MarginBadge value={sl.margin_pct} />
+                            <td style={detalhamentoTable.tdCenter}>
+                              <div style={{ display: "flex", justifyContent: "center" }}>
+                                <MarginBadge value={sl.margin_pct} />
+                              </div>
                             </td>
-                            <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
-                            <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
-                            <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
+                            <td style={detalhamentoTable.tdCenter}>
+                              {sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}
+                            </td>
+                            <td style={detalhamentoTable.tdCenter}>
+                              {sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}
+                            </td>
+                            <td style={detalhamentoTable.tdCenter}>
+                              {sl.arpu != null ? fmtBRL(sl.arpu) : "—"}
+                            </td>
                           </tr>
                         );
                       })}

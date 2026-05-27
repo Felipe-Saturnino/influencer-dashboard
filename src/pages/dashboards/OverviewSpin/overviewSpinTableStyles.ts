@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { getThStyle, getTdStyle, type TableThemePick } from "../../../lib/tableStyles";
+import { getThStyle, getThStyleBrandAction, getTdStyle, type TableThemePick } from "../../../lib/tableStyles";
 
 /** Raio das tabelas Overview Spin (alinha a Gestão de Mesas / Financeiro — não `getPageContentBoxRadius`). */
 export const OVERVIEW_SPIN_TABLE_RADIUS = 14;
@@ -102,5 +102,101 @@ export function createOverviewSpinStickyCol(
     totalRowBg,
     thSticky,
     tdSticky,
+  };
+}
+
+/**
+ * Detalhamento Diário (Overview) — piloto de padronização:
+ * cabeçalho único (cor do GGR), texto centralizado, zebra opaca (dark distinguível do bloco).
+ */
+export function createOverviewSpinDetalhamentoTable(
+  t: OverviewSpinTableTheme,
+  brand: OverviewSpinTableBrand,
+) {
+  const colBg = brand.blockBg ?? t.cardBg;
+  const shadow = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
+
+  const headerBgOpaque = brand.useBrand
+    ? `color-mix(in srgb, ${colBg} 86%, var(--brand-action, #7c3aed) 14%)`
+    : `color-mix(in srgb, ${colBg} 90%, var(--brand-secondary, #4a2082) 10%)`;
+
+  const thDetalhamento: CSSProperties = {
+    ...(brand.useBrand ? getThStyleBrandAction : getThStyle)(t, { verticalAlign: "middle" }),
+    textAlign: "center",
+    fontSize: 11,
+    letterSpacing: "0.08em",
+    background: headerBgOpaque,
+  };
+
+  const thDetalhamentoSticky: CSSProperties = {
+    ...thDetalhamento,
+    position: "sticky",
+    left: 0,
+    top: 0,
+    zIndex: 4,
+    minWidth: 100,
+    boxShadow: shadow,
+  };
+
+  const zebraRowBg = (
+    i: number,
+    accent: "secondary" | "contrast" | "action" = brand.useBrand ? "contrast" : "secondary",
+  ): string => {
+    const token =
+      accent === "contrast"
+        ? "var(--brand-contrast, #1e36f8)"
+        : accent === "action"
+          ? "var(--brand-action, #7c3aed)"
+          : "var(--brand-secondary, #4a2082)";
+
+    if (brand.useBrand) {
+      return i % 2 === 0
+        ? `color-mix(in srgb, ${colBg} 94%, ${token} 6%)`
+        : `color-mix(in srgb, ${colBg} 88%, ${token} 12%)`;
+    }
+    if (t.isDark) {
+      return i % 2 === 0
+        ? `color-mix(in srgb, ${colBg} 90%, ${token} 10%)`
+        : `color-mix(in srgb, ${colBg} 82%, ${token} 18%)`;
+    }
+    return i % 2 === 0 ? colBg : `color-mix(in srgb, ${colBg} 92%, ${token} 8%)`;
+  };
+
+  const tdCenter: CSSProperties = {
+    ...getTdStyle(t, { padding: "9px 12px", textAlign: "center" }),
+    fontVariantNumeric: "tabular-nums",
+  };
+
+  const tdSticky = (opts?: {
+    rowIndex?: number;
+    fontWeight?: number;
+    paddingLeft?: number;
+    stripeAccent?: "secondary" | "contrast" | "action";
+    minWidth?: number;
+  }): CSSProperties => {
+    const bg =
+      opts?.rowIndex != null
+        ? zebraRowBg(opts.rowIndex, opts.stripeAccent ?? (brand.useBrand ? "contrast" : "secondary"))
+        : colBg;
+    return {
+      ...tdCenter,
+      position: "sticky",
+      left: 0,
+      zIndex: 2,
+      minWidth: opts?.minWidth ?? 100,
+      fontWeight: opts?.fontWeight ?? 600,
+      background: bg,
+      boxShadow: shadow,
+      ...(opts?.paddingLeft != null ? { paddingLeft: opts.paddingLeft } : {}),
+    };
+  };
+
+  return {
+    thDetalhamento,
+    thDetalhamentoSticky,
+    tdCenter,
+    tdSticky,
+    zebraRowBg,
+    shadow,
   };
 }
