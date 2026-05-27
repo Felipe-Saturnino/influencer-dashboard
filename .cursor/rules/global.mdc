@@ -484,9 +484,10 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 **Código obrigatório em tabelas novas** dentro de `getPageContentBoxStyle` (padding **20px** — distância tabela ↔ borda do bloco vem daí + `SectionTitle` acima; **não** acrescentar margin horizontal extra no `app-table-wrap`).
 
 ```tsx
-const brand = useDashboardBrand();
-const { theme: t } = useApp();
-const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
+import { useDataTableBlock } from "../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../lib/dataTableStyles";
+
+const dataTable = useDataTableBlock();
 
 <div style={contentBox}>
   <SectionTitle sub="…">Título do bloco</SectionTitle>
@@ -523,7 +524,18 @@ const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]
 
 **Linha Total / sublinhas:** `dataTable.totalRowBgStrong` + `tdTotal` / `tdTotalSticky` (negrito, tom mais forte que zebra). Cabeçalho duplo: `thHeader` (linha 1) + `thHeaderSub` (linha 2), mesma faixa de cor. Exceções (total no topo vs rodapé) no MDC da secção.
 
-**Exceções:** listas operacionais legadas, grades calendário, tabelas densas de gestão (RH, permissões) podem manter o padrão antigo (`getThStyle` + alinhamento esquerda/direita) até migração — **documentar** no MDC da secção o motivo.
+**Exceções (aguardam decisão de produto — não migrar sem alinhamento):**
+
+| Área | Motivo |
+|------|--------|
+| **Gestão de Usuários** (abas Permissões, Gestores, Prestadores, Operadora) | Matriz de permissões com selects por célula; listas em grelha com layout próprio |
+| **Financeiro** | Tabelas aninhadas (consolidado dentro de linha), múltiplos blocos e linha total com estilos locais |
+| **Banca de Jogo** | Linhas expansíveis com sub-tabela e cabeçalho interno transparente |
+| **Gestão de Escala** | Cabeçalhos dinâmicos por dia/turno e grade operacional misturada com tabela |
+| **Gestão de Prestadores** | Colunas variáveis por aba (head count / ações RH / anotações), salário condicional e ações com texto em célula |
+| **Gestão de Operadoras** (modal Operações) | Sub-tabela de mesas no modal — legado isolado |
+
+Demais listas em bloco nível 3 devem usar `useDataTableBlock()` + `getDataTableWrapStyle` / `getDataTableStyle`. Grades calendário (Agenda dia a dia, etc.) ficam fora do padrão — ver MDC da secção.
 
 ### Legado — listas e migração gradual
 

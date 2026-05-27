@@ -7,7 +7,8 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -65,6 +66,10 @@ const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
   maintenance: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
   discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
+
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+}
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
@@ -177,6 +182,7 @@ function BlocoResumoPecaBasico({
 export default function FigurinosPage() {
   const { theme: t, user, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("rh_figurinos");
 
@@ -453,8 +459,8 @@ export default function FigurinosPage() {
         col={col}
         sortCol={sortFig.col}
         sortDir={sortFig.dir}
-        thStyle={getThStyle(t)}
-        align="left"
+        thStyle={dataTable.thHeader}
+        align="center"
         onSort={(c) =>
           setSortFig((s) => ({
             col: c,
@@ -463,7 +469,7 @@ export default function FigurinosPage() {
         }
       />
     ),
-    [sortFig, t],
+    [sortFig, dataTable],
   );
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
@@ -772,17 +778,8 @@ export default function FigurinosPage() {
               : emptyMsgAba(aba)}
           </div>
         ) : (
-          <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: 14,
-                overflow: "hidden",
-                border: `1px solid ${t.cardBorder}`,
-              }}
-            >
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 900 })}>
               <caption style={{ display: "none" }}>Inventário de figurinos — {labelAba(aba)}</caption>
               <thead>
                 <tr>
@@ -794,7 +791,7 @@ export default function FigurinosPage() {
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Data de aquisição", "data_aqui")}
                       {sortHeader("Classificação", "cond")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ações
                       </th>
                     </>
@@ -810,7 +807,7 @@ export default function FigurinosPage() {
                       {sortHeader("Data de empréstimo", "loaned_at")}
                       {sortHeader("Emprestado para", "borrower")}
                       {sortHeader("Registrado por", "loaned_by")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ação
                       </th>
                     </>
@@ -824,7 +821,7 @@ export default function FigurinosPage() {
                       {sortHeader("Motivo", "motivo")}
                       {sortHeader("Data de envio", "sent_at")}
                       {sortHeader("Registrado por", "entered_by")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ações
                       </th>
                     </>
@@ -845,7 +842,7 @@ export default function FigurinosPage() {
               <tbody>
                 {pecasOrdenadas.map((p, i) => {
                   const emp = empPorItem[p.id];
-                  const zebra = { background: zebraStripe(i) };
+                  const zebra = dataTable.zebraRow(i);
                   const emprestadoPara =
                     emp?.borrower_name != null || emp?.borrower_ref
                       ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
@@ -853,25 +850,26 @@ export default function FigurinosPage() {
                   return (
                     <tr
                       key={p.id}
-                      style={{ borderBottom: `1px solid ${t.cardBorder}`, ...zebra }}
+                      style={{ background: zebra }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = zebra.background ?? "transparent";
+                        e.currentTarget.style.background = zebra;
                       }}
                     >
                       {aba === "available" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{fmtDataSóDia(p.purchase_date)}</td>
-                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataSóDia(p.purchase_date)}</td>
+                          <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <>
                                 <button
@@ -879,7 +877,6 @@ export default function FigurinosPage() {
                                   onClick={() => setEmpPeca(p)}
                                   style={{
                                     padding: "4px 10px",
-                                    marginRight: 6,
                                     borderRadius: 8,
                                     border: `1px solid rgba(34,197,94,0.35)`,
                                     background: "rgba(34,197,94,0.12)",
@@ -913,25 +910,27 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "borrowed" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
-                          <td style={getTdStyle(t)}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(emp?.loaned_at)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
+                          <td style={dataTable.tdCenter}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(emp?.loaned_at)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
                             {emprestadoPara}
                           </td>
-                          <td style={getTdStyle(t)}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <button
                                 type="button"
@@ -953,23 +952,25 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "maintenance" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.maintenance_reason ?? ""}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.maintenance_reason ?? ""}>
                             {p.maintenance_reason ?? "—"}
                           </td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(p.maintenance_entered_at)}</td>
-                          <td style={getTdStyle(t)}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(p.maintenance_entered_at)}</td>
+                          <td style={dataTable.tdCenter}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <>
                                 <button
@@ -977,7 +978,6 @@ export default function FigurinosPage() {
                                   onClick={() => setConcluirManutPeca(p)}
                                   style={{
                                     padding: "4px 10px",
-                                    marginRight: 6,
                                     borderRadius: 8,
                                     border: `1px solid rgba(34,197,94,0.35)`,
                                     background: "rgba(34,197,94,0.12)",
@@ -1011,22 +1011,23 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "discarded" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }} title={p.discard_reason ?? ""}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }} title={p.discard_reason ?? ""}>
                             {p.discard_reason ?? "—"}
                           </td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(p.discarded_at)}</td>
-                          <td style={getTdStyle(t)}>{p.discarded_by?.trim() ? p.discarded_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(p.discarded_at)}</td>
+                          <td style={dataTable.tdCenter}>{p.discarded_by?.trim() ? p.discarded_by : "—"}</td>
                         </>
                       ) : null}
                     </tr>
@@ -2580,6 +2581,7 @@ function ModalDetalhe({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const [pdfLoading, setPdfLoading] = useState(false);
   const [abaDet, setAbaDet] = useState<AbaDetalheFig>("detalhes");
 
@@ -2786,27 +2788,18 @@ function ModalDetalhe({
               Sem histórico de alterações de status.
             </div>
           ) : (
-            <div className="app-table-wrap">
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "separate",
-                  borderSpacing: 0,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: `1px solid ${t.cardBorder}`,
-                }}
-              >
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle()}>
                 <caption style={{ display: "none" }}>Histórico de alterações de status da peça</caption>
                 <thead>
                   <tr>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Data/Hora
                     </th>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Status
                     </th>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Registrado por
                     </th>
                   </tr>
@@ -2814,15 +2807,27 @@ function ModalDetalhe({
                 <tbody>
                   {[...histStatus]
                     .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
-                    .map((h, i) => (
-                      <tr key={h.id} style={{ background: zebraStripe(i), borderBottom: `1px solid ${t.cardBorder}` }}>
-                        <td style={getTdStyle(t)}>{fmtDataHora(h.changed_at)}</td>
-                        <td style={getTdStyle(t)}>
+                    .map((h, i) => {
+                      const zebra = dataTable.zebraRow(i);
+                      return (
+                      <tr
+                        key={h.id}
+                        style={{ background: zebra }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebra;
+                        }}
+                      >
+                        <td style={dataTable.tdCenter}>{fmtDataHora(h.changed_at)}</td>
+                        <td style={dataTable.tdCenter}>
                           {labelStatusHistorico(h.previous_status)} → {labelStatusHistorico(h.new_status)}
                         </td>
-                        <td style={getTdStyle(t)}>{h.changed_by}</td>
+                        <td style={dataTable.tdCenter}>{h.changed_by}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

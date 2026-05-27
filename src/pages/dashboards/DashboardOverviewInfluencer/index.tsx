@@ -36,13 +36,8 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
-import {
-  getThStyle,
-  getThStyleBrandAction,
-  getTdStyle,
-  zebraStripe,
-  zebraStripeBrandContrast,
-} from "../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -949,10 +944,7 @@ export default function DashboardOverviewInfluencer() {
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
   const card = getPageContentBoxStyle(brand, t);
-  const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
-  const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
-  const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
-  const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
+  const dataTable = useDataTableBlock();
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -1334,21 +1326,9 @@ export default function DashboardOverviewInfluencer() {
             </div>
 
           {modoVisualizacaoComparativo === "tabela" ? (
-            <div className="app-table-wrap">
-              <table style={{ width: "100%", minWidth: 900, borderCollapse: "separate", borderSpacing: 0 }}>
-                <caption
-                  style={{
-                    position: "absolute",
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: "hidden",
-                    clip: "rect(0,0,0,0)",
-                    whiteSpace: "nowrap",
-                    border: 0,
-                  }}
-                >
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: 900 })}>
+                <caption style={{ display: "none" }}>
                   {historico
                     ? "Detalhamento mensal — todo o período"
                     : `Detalhamento diário — ${mesSelecionado?.label ?? ""}`}
@@ -1370,7 +1350,7 @@ export default function DashboardOverviewInfluencer() {
                       "R$ Saques",
                       "R$ GGR",
                     ].map((h) => (
-                      <th key={h} scope="col" style={thStyle}>
+                      <th key={h} scope="col" style={dataTable.thHeader}>
                         {h}
                       </th>
                     ))}
@@ -1378,24 +1358,24 @@ export default function DashboardOverviewInfluencer() {
                 </thead>
                 <tbody>
                   {diasDataComparativoExibicao.map((d, i) => (
-                    <tr key={d.data} style={{ background: zebraTabelaDetalhamento(i) }}>
-                      <td style={tdStyle}>
+                    <tr key={d.data} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdCenter}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
-                      <td style={tdStyle}>{d.duracao > 0 ? fmtHorasTotal(d.duracao) : "—"}</td>
-                      <td style={tdStyle}>{cel(d.media_views)}</td>
-                      <td style={tdStyle}>{cel(d.max_views)}</td>
-                      <td style={tdStyle}>{cel(d.acessos)}</td>
-                      <td style={tdStyle}>{cel(d.registros)}</td>
-                      <td style={tdStyle}>{cel(d.ftd_count)}</td>
-                      <td style={tdStyle}>{cel(d.ftd_total, true)}</td>
-                      <td style={tdStyle}>{cel(d.deposit_count)}</td>
-                      <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
-                      <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
-                      <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{d.duracao > 0 ? fmtHorasTotal(d.duracao) : "—"}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.media_views)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.max_views)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.acessos)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.registros)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.ftd_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.ftd_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.deposit_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.deposit_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.withdrawal_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.withdrawal_total, true)}</td>
                       <td
                         style={{
-                          ...tdStyle,
+                          ...dataTable.tdCenter,
                           color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
                           fontWeight: d.ggr !== 0 ? 600 : undefined,
                         }}

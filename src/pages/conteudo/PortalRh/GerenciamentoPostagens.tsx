@@ -4,7 +4,8 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   fmtDataColunaGerenciamento,
   labelComunicadoFromSlug,
@@ -169,6 +170,7 @@ export function GerenciamentoPostagens({
   onRegisterAbrirCriar?: (abrir: () => void) => void;
 }) {
   const { theme: t, user } = useApp();
+  const dataTable = useDataTableBlock();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<PostagemGerenciamentoRow[]>([]);
@@ -510,16 +512,8 @@ export function GerenciamentoPostagens({
           Sem dados para o período selecionado.
         </div>
       ) : (
-        <div className="app-table-wrap">
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              borderRadius: 14,
-              overflow: "hidden",
-            }}
-          >
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal de RH</caption>
             <thead>
               <tr>
@@ -529,8 +523,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Autor"
@@ -538,8 +532,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Tipo de Postagem"
@@ -547,8 +541,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Data da Criação"
@@ -556,8 +550,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Status"
@@ -565,8 +559,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Data de Aprovação"
@@ -574,8 +568,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Aprovador"
@@ -583,8 +577,8 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Data de Postagem"
@@ -592,10 +586,10 @@ export function GerenciamentoPostagens({
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={onSortColuna}
-                  thStyle={getThStyle(t)}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
-                <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
               </tr>
@@ -604,7 +598,7 @@ export function GerenciamentoPostagens({
               {rowsOrdenadas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status);
                 const busy = acaoLoading === row.id;
-                const zebraBg = zebraStripe(i);
+                const zebraBg = dataTable.zebraRow(i);
                 return (
                   <tr
                     key={`${row.contentType}-${row.id}`}
@@ -618,8 +612,7 @@ export function GerenciamentoPostagens({
                   >
                     <td
                       style={{
-                        ...getTdStyle(t),
-                        textAlign: "left",
+                        ...dataTable.tdCenter,
                         maxWidth: 180,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -629,15 +622,15 @@ export function GerenciamentoPostagens({
                     >
                       {row.assunto}
                     </td>
-                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.autorNome}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.tipoPostagemLabel}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{RH_POSTAGEM_STATUS_LABEL[row.status]}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "left" }}>{row.aprovadorNome}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                    <td style={dataTable.tdCenter}>{row.autorNome}</td>
+                    <td style={dataTable.tdCenter}>{row.tipoPostagemLabel}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
+                    <td style={dataTable.tdCenter}>{RH_POSTAGEM_STATUS_LABEL[row.status]}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
+                    <td style={dataTable.tdCenter}>{row.aprovadorNome}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                         {acoes.includes("editar") ? (
                           <button
                             type="button"

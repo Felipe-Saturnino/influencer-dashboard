@@ -4,7 +4,8 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, FONT_TITLE, BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { Pencil, Trash2, Loader2, AlertCircle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -212,6 +213,8 @@ export default function GestaoMesas() {
     return arr;
   }, [rowsFiltradas, sortMesa]);
 
+  const dataTable = useDataTableBlock();
+
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -362,16 +365,8 @@ export default function GestaoMesas() {
                 : "Nenhuma mesa cadastrada."}
           </div>
         ) : (
-          <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: 14,
-                overflow: "hidden",
-              }}
-            >
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Cadastro de mesas por operadora</caption>
               <thead>
                 <tr>
@@ -380,8 +375,8 @@ export default function GestaoMesas() {
                     col="operadora"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -394,8 +389,8 @@ export default function GestaoMesas() {
                     col="nome"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -408,8 +403,8 @@ export default function GestaoMesas() {
                     col="tipo"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(col) =>
                       setSortMesa((s) => ({
                         col,
@@ -422,8 +417,8 @@ export default function GestaoMesas() {
                     col="numero"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -436,8 +431,8 @@ export default function GestaoMesas() {
                     col="ident"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -450,8 +445,8 @@ export default function GestaoMesas() {
                     col="identOp"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -460,7 +455,7 @@ export default function GestaoMesas() {
                     }
                   />
                   {(perm.canEditarOk || perm.canExcluirOk) && (
-                    <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Ações
                     </th>
                   )}
@@ -468,7 +463,7 @@ export default function GestaoMesas() {
               </thead>
               <tbody>
                 {rowsOrdenadas.map((r, i) => {
-                  const zebra = zebraStripe(i);
+                  const zebra = dataTable.zebraRow(i);
                   return (
                   <tr
                     key={r.id}
@@ -480,23 +475,23 @@ export default function GestaoMesas() {
                       e.currentTarget.style.background = zebra;
                     }}
                   >
-                    <td style={getTdStyle(t)} title={r.operadora_slug}>
+                    <td style={dataTable.tdCenter} title={r.operadora_slug}>
                       {nomeOperadoraJoin(r) ?? r.operadora_slug}
                     </td>
-                    <td style={{ ...getTdStyle(t), fontWeight: 600 }}>{r.nome_mesa}</td>
-                    <td style={getTdStyle(t)}>{r.tipo_jogo}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome_mesa}</td>
+                    <td style={dataTable.tdCenter}>{r.tipo_jogo}</td>
+                    <td style={dataTable.tdCenter}>
                       {r.numero_mesa?.trim() ? r.numero_mesa : "—"}
                     </td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
                       {r.mesa_identificacao}
                     </td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
                       {r.mesa_identificacao_operadora?.trim() ? r.mesa_identificacao_operadora : "—"}
                     </td>
                     {(perm.canEditarOk || perm.canExcluirOk) && (
-                      <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                           {perm.canEditarOk && (
                             <button
                               type="button"

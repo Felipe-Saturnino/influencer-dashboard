@@ -12,7 +12,8 @@ import {
 } from "../../../../lib/pageContentBoxStyles";
 import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import {
@@ -673,8 +674,7 @@ export default function DashboardConversao() {
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card = getPageContentBoxStyle(brand, t);
 
-  const thStyle = getThStyle(t);
-  const tdStyle = getTdStyle(t);
+  const dataTable = useDataTableBlock();
 
   const selectStyle: React.CSSProperties = {
     background: t.inputBg ?? t.cardBg,
@@ -908,23 +908,22 @@ export default function DashboardConversao() {
         ) : rowsFiltrados.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div className="app-table-wrap">
-            <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 960 })}>
+              <caption style={{ display: "none" }}>
                 Comparativo de taxas de conversão — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
               </caption>
               <thead>
                 <tr>
-                  <SortTableTh<TaxasConvSortCol> label="Influencer" col="nome" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Views" col="views" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="View→Acesso" col="pctViewAcesso" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Acessos" col="acessos" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Acesso→Reg" col="pctAcessoReg" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Registros" col="registros" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Reg→FTD" col="pctRegFTD" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Ação" col="acao" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh<TaxasConvSortCol> label="Influencer" col="nome" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Views" col="views" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="View→Acesso" col="pctViewAcesso" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Acessos" col="acessos" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Acesso→Reg" col="pctAcessoReg" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Registros" col="registros" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Reg→FTD" col="pctRegFTD" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Ação" col="acao" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
                 </tr>
               </thead>
               <tbody>
@@ -934,40 +933,37 @@ export default function DashboardConversao() {
                   const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;
                   const hl3 = !hl1 && !hl2 && r.pctRegFTD !== null && r.pctRegFTD < 60;
                   return (
-                    <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
-                      <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
+                    <tr key={r.influencer_id} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome}</td>
+                      <td style={dataTable.tdCenter}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl1 ? 700 : 400,
                         color: hl1 ? BRAND.amarelo : t.textMuted,
                         borderLeft: hl1 ? `3px solid rgba(245,158,11,0.7)` : "none",
                         background: hl1 ? "rgba(245,158,11,0.08)" : undefined,
-                        paddingLeft: hl1 ? 9 : 12,
                       }}>{fmtPct(r.pctViewAcesso)}</td>
-                      <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl2 ? 700 : 400,
                         color: hl2 ? "#a855f7" : t.textMuted,
                         borderLeft: hl2 ? `3px solid rgba(168,85,247,0.7)` : "none",
                         background: hl2 ? "rgba(168,85,247,0.08)" : undefined,
-                        paddingLeft: hl2 ? 9 : 12,
                       }}>{fmtPct(r.pctAcessoReg)}</td>
-                      <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl3 ? 700 : 400,
                         color: hl3 ? BRAND.azul : t.textMuted,
                         borderLeft: hl3 ? `3px solid rgba(30,54,248,0.7)` : "none",
                         background: hl3 ? "rgba(30,54,248,0.08)" : undefined,
-                        paddingLeft: hl3 ? 9 : 12,
                       }}>{fmtPct(r.pctRegFTD)}</td>
-                      <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? BRAND.verde : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: r.ftds > 0 ? BRAND.verde : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>
                         <span style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "4px 10px", borderRadius: 999,
@@ -983,7 +979,6 @@ export default function DashboardConversao() {
                 })}
               </tbody>
             </table>
-            </div>
           </div>
         )}
       </div>

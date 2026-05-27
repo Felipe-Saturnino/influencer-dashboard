@@ -65,7 +65,8 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import {
   normalizarSelecaoUnica,
@@ -532,6 +533,7 @@ function statusPresencaNoDia(
 export default function RhCalendarioPage() {
   const { theme: t, isDark, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_calendario");
   const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
@@ -2005,7 +2007,7 @@ export default function RhCalendarioPage() {
                 Selecione um colaborador na lista para ver o controle de presença do mês.
               </div>
             ) : (
-              <div className="app-table-wrap">
+              <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                 {loadingPontoMes ? (
                   <div
                     style={{
@@ -2022,48 +2024,40 @@ export default function RhCalendarioPage() {
                     Atualizando registos de ponto…
                   </div>
                 ) : null}
-                <table
-                  style={{
-                    width: "100%",
-                    borderCollapse: "separate",
-                    borderSpacing: 0,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                  }}
-                >
+                <table style={getDataTableStyle()}>
                   <caption style={{ display: "none" }}>
                     Controle de presença por dia no mês selecionado
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Data
                       </th>
-                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Situação
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Entrada Escalada
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Entrada Realizada
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Saída Escalada
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Saída Realizada
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Horas Escaladas
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Horas Realizadas
                       </th>
-                      <th scope="col" style={getThStyle(t, { whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Status
                       </th>
-                      <th scope="col" style={getThStyle(t, { textAlign: "right", whiteSpace: "normal" })}>
+                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Ações
                       </th>
                     </tr>
@@ -2112,52 +2106,46 @@ export default function RhCalendarioPage() {
                         year: "numeric",
                       });
                       return (
-                        <tr key={iso} style={{ background: zebraStripe(i) }}>
-                          <td style={getTdStyle(t)}>
+                        <tr key={iso} style={{ background: dataTable.zebraRow(i) }}>
+                          <td style={dataTable.tdCenter}>
                             {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
                           </td>
-                          <td style={getTdStyle(t)}>{situacao}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{entEsc}</td>
+                          <td style={dataTable.tdCenter}>{situacao}</td>
+                          <td style={dataTable.tdCenter}>{entEsc}</td>
                           <td
                             style={{
-                              ...getTdStyle(t),
-                              textAlign: "right",
-                              fontVariantNumeric: "tabular-nums",
+                              ...dataTable.tdCenter,
                               ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
                             {entReal}
                           </td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{saiEsc}</td>
+                          <td style={dataTable.tdCenter}>{saiEsc}</td>
                           <td
                             style={{
-                              ...getTdStyle(t),
-                              textAlign: "right",
-                              fontVariantNumeric: "tabular-nums",
+                              ...dataTable.tdCenter,
                               ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
                             {saiReal}
                           </td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{horasEsc}</td>
+                          <td style={dataTable.tdCenter}>{horasEsc}</td>
                           <td
                             style={{
-                              ...getTdStyle(t),
-                              textAlign: "right",
-                              fontVariantNumeric: "tabular-nums",
+                              ...dataTable.tdCenter,
                               ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
                             {horasReal}
                           </td>
-                          <td style={getTdStyle(t)}>{st}</td>
-                          <td style={getTdStyle(t)}>
+                          <td style={dataTable.tdCenter}>{st}</td>
+                          <td style={dataTable.tdCenter}>
                             <div
                               style={{
                                 display: "flex",
                                 flexWrap: "wrap",
                                 gap: 6,
-                                justifyContent: "flex-end",
+                                justifyContent: "center",
                               }}
                             >
                               <button type="button" style={btnPresenca} aria-label={`Aprovar presença — ${labelDiaAria}`}>

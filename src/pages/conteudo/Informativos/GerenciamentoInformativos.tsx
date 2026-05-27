@@ -5,7 +5,8 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { getTdStyle, getThStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
   fmtDataColunaGerenciamento,
@@ -132,6 +133,7 @@ export function GerenciamentoInformativos({
   onRegisterAbrirCriar?: (abrir: () => void) => void;
 }) {
   const { theme: t, user } = useApp();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("informativos");
 
   const [loading, setLoading] = useState(true);
@@ -395,20 +397,20 @@ export function GerenciamentoInformativos({
           Sem dados para o período selecionado.
         </div>
       ) : (
-        <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Gerenciamento de informativos</caption>
             <thead>
               <tr>
-                <SortTableTh label="Assunto" col="assunto" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="left" />
-                <SortTableTh label="Autor" col="autor" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="left" />
-                <SortTableTh label="Perfis" col="perfis" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="left" />
-                <SortTableTh label="Data da Criação" col="createdAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="right" />
-                <SortTableTh label="Status" col="status" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="left" />
-                <SortTableTh label="Data de Aprovação" col="approvedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="right" />
-                <SortTableTh label="Aprovador" col="aprovador" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="left" />
-                <SortTableTh label="Data de Postagem" col="publishedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={getThStyle(t)} align="right" />
-                <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                <SortTableTh label="Assunto" col="assunto" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Autor" col="autor" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Perfis" col="perfis" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Data da Criação" col="createdAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Status" col="status" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Data de Aprovação" col="approvedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Aprovador" col="aprovador" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <SortTableTh label="Data de Postagem" col="publishedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
+                <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
               </tr>
@@ -423,7 +425,7 @@ export function GerenciamentoInformativos({
                   return true;
                 });
                 const busy = acaoLoading === row.id;
-                const zebraBg = zebraStripe(i);
+                const zebraBg = dataTable.zebraRow(i);
                 return (
                   <tr
                     key={row.id}
@@ -435,20 +437,20 @@ export function GerenciamentoInformativos({
                       e.currentTarget.style.background = zebraBg;
                     }}
                   >
-                    <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.assunto}>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.assunto}>
                       {row.assunto}
                     </td>
-                    <td style={getTdStyle(t)}>{row.autorNome}</td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.perfisLabel}>
+                    <td style={dataTable.tdCenter}>{row.autorNome}</td>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.perfisLabel}>
                       {row.perfisLabel}
                     </td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
-                    <td style={getTdStyle(t)}>{INFORMATIVO_STATUS_LABEL[row.status]}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
-                    <td style={getTdStyle(t)}>{row.aprovadorNome}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
+                    <td style={dataTable.tdCenter}>{INFORMATIVO_STATUS_LABEL[row.status]}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
+                    <td style={dataTable.tdCenter}>{row.aprovadorNome}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                         {acoes.includes("editar") ? (
                           <button
                             type="button"

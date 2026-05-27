@@ -17,7 +17,8 @@ import {
   syncGamePresenterDealerFromRhFuncionario,
 } from "../../../lib/rhGamePresenterDealerSync";
 import type { DealerGenero } from "../../../types";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   opcoesTurnoPorEscalaRh,
   turnoRhCoerenteComEscala,
@@ -499,6 +500,7 @@ function ModalStaffAnotacoes({
 export default function RhGestaoStaffPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_staff");
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
@@ -929,17 +931,8 @@ export default function RhGestaoStaffPage() {
           contacte o RH.
         </div>
       ) : (
-        <div className="app-table-wrap">
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              borderRadius: 14,
-              overflow: "hidden",
-              border: `1px solid ${t.cardBorder}`,
-            }}
-          >
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Staff por time</caption>
             <thead>
               <tr>
@@ -949,7 +942,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Nickname"
@@ -957,7 +951,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Time"
@@ -965,7 +960,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Função"
@@ -973,7 +969,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Escala"
@@ -981,7 +978,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="Turno"
@@ -989,7 +987,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 {layoutTabelaSemOperadoraComHorario ? (
                   <SortTableTh
@@ -998,7 +997,8 @@ export default function RhGestaoStaffPage() {
                     sortCol={sortCol}
                     sortDir={sortDir}
                     onSort={handleSortStaff}
-                    thStyle={getThStyle(t)}
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
                 ) : (
                   <SortTableTh
@@ -1007,7 +1007,8 @@ export default function RhGestaoStaffPage() {
                     sortCol={sortCol}
                     sortDir={sortDir}
                     onSort={handleSortStaff}
-                    thStyle={getThStyle(t)}
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
                 )}
                 <SortTableTh
@@ -1016,7 +1017,8 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh
                   label="ID operacional"
@@ -1024,9 +1026,10 @@ export default function RhGestaoStaffPage() {
                   sortCol={sortCol}
                   sortDir={sortDir}
                   onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
-                <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
               </tr>
@@ -1034,7 +1037,7 @@ export default function RhGestaoStaffPage() {
             <tbody>
               {linhasTabela.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ ...getTdStyle(t), textAlign: "center", padding: "32px 16px", color: t.textMuted }}>
+                  <td colSpan={10} style={{ ...dataTable.tdCenter, padding: "32px 16px", color: t.textMuted }}>
                     Nenhum prestador neste filtro.
                   </td>
                 </tr>
@@ -1047,37 +1050,37 @@ export default function RhGestaoStaffPage() {
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
                       : "—";
                   return (
-                    <tr key={row.id} style={{ background: zebraStripe(i) }}>
-                      <td style={getTdStyle(t)} title={row.nome}>
+                    <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.nome}>
                         {row.nome}
                       </td>
-                      <td style={getTdStyle(t)}>{row.staff_nickname?.trim() || "—"}</td>
-                      <td style={getTdStyle(t)} title={nomeTime}>
+                      <td style={dataTable.tdCenter}>{row.staff_nickname?.trim() || "—"}</td>
+                      <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={nomeTime}>
                         {nomeTime}
                       </td>
-                      <td style={getTdStyle(t)}>{row.cargo?.trim() || "—"}</td>
-                      <td style={getTdStyle(t)} title="Gestão de Prestadores (somente leitura)">
+                      <td style={dataTable.tdCenter}>{row.cargo?.trim() || "—"}</td>
+                      <td style={dataTable.tdCenter} title="Gestão de Prestadores (somente leitura)">
                         {row.escala?.trim() || "—"}
                       </td>
                       <td
-                        style={getTdStyle(t)}
+                        style={dataTable.tdCenter}
                         title="Mesmo campo que na Gestão de Prestadores (Dados da contratação). Pode alterar em Editar."
                       >
                         {turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
                       {layoutTabelaSemOperadoraComHorario ? (
-                        <td style={getTdStyle(t)} title="Horário do turno (Gestão de Staff)">
+                        <td style={dataTable.tdCenter} title="Horário do turno (Gestão de Staff)">
                           {textoHorarioTurnoStaffEmTabela(row, opTurnosPorSlug)}
                         </td>
                       ) : (
-                        <td style={getTdStyle(t)}>{opNome}</td>
+                        <td style={dataTable.tdCenter}>{opNome}</td>
                       )}
-                      <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
-                      <td style={getTdStyle(t)} title={row.staff_id_operacional?.trim() || undefined}>
+                      <td style={dataTable.tdCenter}>{labelStatusPrestador(row.status)}</td>
+                      <td style={dataTable.tdCenter} title={row.staff_id_operacional?.trim() || undefined}>
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
-                      <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                           <button
                             type="button"
                             onClick={() => setModalVer(row)}

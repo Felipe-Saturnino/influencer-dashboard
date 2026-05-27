@@ -17,6 +17,8 @@ import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import {
   ctaGradientSalvar,
@@ -39,6 +41,7 @@ function tableRowHoverBg(isDark: boolean): string {
 export default function GestaoOperadoras() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +89,6 @@ export default function GestaoOperadoras() {
     return arr;
   }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
-  const thStyle = getThStyle(t);
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -206,8 +208,8 @@ export default function GestaoOperadoras() {
         ) : operadoras.length === 0 ? (
           <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
         ) : (
-          <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle()}>
             <caption style={{ display: "none" }}>Lista de operadoras cadastradas</caption>
             <thead>
               <tr>
@@ -216,8 +218,8 @@ export default function GestaoOperadoras() {
                   col="slug"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -230,8 +232,8 @@ export default function GestaoOperadoras() {
                   col="nome"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -244,8 +246,8 @@ export default function GestaoOperadoras() {
                   col="status"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(col) =>
                     setSortOp((s) => ({
                       col,
@@ -258,8 +260,8 @@ export default function GestaoOperadoras() {
                   col="criada"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -268,7 +270,7 @@ export default function GestaoOperadoras() {
                   }
                 />
                 {mostrarColunaAcoes && (
-                  <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                  <th scope="col" style={dataTable.thHeader}>
                     Ações
                   </th>
                 )}
@@ -276,7 +278,7 @@ export default function GestaoOperadoras() {
             </thead>
             <tbody>
               {operadorasOrdenadas.map((op, idx) => {
-                const zebra = zebraStripe(idx);
+                const zebra = dataTable.zebraRow(idx);
                 return (
                 <tr
                   key={op.slug}
@@ -288,34 +290,38 @@ export default function GestaoOperadoras() {
                     e.currentTarget.style.background = zebra;
                   }}
                 >
-                  <td style={getTdStyle(t)}>
-                    <code style={{
-                      background: `${BRAND.roxoVivo}18`, borderRadius: 6,
-                      padding: "3px 9px", fontSize: 12,
-                      color: BRAND.roxoVivo, fontFamily: "monospace",
-                      border: `1px solid ${BRAND.roxoVivo}33`,
-                    }}>
-                      {op.slug}
-                    </code>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <code style={{
+                        background: `${BRAND.roxoVivo}18`, borderRadius: 6,
+                        padding: "3px 9px", fontSize: 12,
+                        color: BRAND.roxoVivo, fontFamily: "monospace",
+                        border: `1px solid ${BRAND.roxoVivo}33`,
+                      }}>
+                        {op.slug}
+                      </code>
+                    </div>
                   </td>
-                  <td style={{ ...getTdStyle(t), fontWeight: 600 }}>{op.nome}</td>
-                  <td style={getTdStyle(t)}>
-                    <span style={{
-                      background: op.ativo ? "#05966922" : "#6b728022",
-                      color: op.ativo ? "#059669" : "#6b7280",
-                      border: `1px solid ${op.ativo ? "#05966944" : "#6b728044"}`,
-                      borderRadius: 6, padding: "3px 10px",
-                      fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    }}>
-                      {op.ativo ? "Ativa" : "Inativa"}
-                    </span>
+                  <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{op.nome}</td>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <span style={{
+                        background: op.ativo ? "#05966922" : "#6b728022",
+                        color: op.ativo ? "#059669" : "#6b7280",
+                        border: `1px solid ${op.ativo ? "#05966944" : "#6b728044"}`,
+                        borderRadius: 6, padding: "3px 10px",
+                        fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                      }}>
+                        {op.ativo ? "Ativa" : "Inativa"}
+                      </span>
+                    </div>
                   </td>
-                  <td style={{ ...getTdStyle(t), color: t.textMuted, fontSize: 12 }}>
+                  <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12 }}>
                     {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                   </td>
                   {mostrarColunaAcoes && (
-                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center" }}>
                         {perm.canEditarOk ? (
                           <button
                             type="button"
