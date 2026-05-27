@@ -126,7 +126,8 @@ export function createOverviewSpinDetalhamentoTable(
   const thDetalhamento: CSSProperties = {
     ...(brand.useBrand ? getThStyleBrandAction : getThStyle)(t, { verticalAlign: "middle" }),
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: 700,
     letterSpacing: "0.08em",
     background: headerBgOpaque,
   };
