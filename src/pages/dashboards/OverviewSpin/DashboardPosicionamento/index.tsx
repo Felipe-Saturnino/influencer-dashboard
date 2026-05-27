@@ -505,13 +505,13 @@ function DashboardPosicionamentoOperadora({
 
   const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
-  const zebraBgHistLinha = (i: number) => {
-    const base = brand.blockBg ?? t.cardBg;
-    if (i % 2 === 0) return base;
-    return t.isDark
-      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)"
-      : "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
-  };
+  const histMesaColBg = brand.blockBg ?? t.cardBg;
+
+  /** Fundo opaco na coluna Mesa fixa — color-mix com transparent deixa ver colunas no scroll horizontal. */
+  const zebraBgHistLinha = (i: number) =>
+    i % 2 === 1
+      ? `color-mix(in srgb, ${histMesaColBg} 92%, var(--brand-contrast, #1e36f8) 8%)`
+      : histMesaColBg;
 
   const thHistMesa: CSSProperties = {
     ...getThStyle(t),
@@ -520,7 +520,7 @@ function DashboardPosicionamentoOperadora({
     zIndex: 3,
     minWidth: 140,
     maxWidth: 180,
-    background: brand.blockBg,
+    background: histMesaColBg,
     boxShadow: sombraColMesaHist,
   };
 

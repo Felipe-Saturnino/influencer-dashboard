@@ -767,7 +767,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           Comparativo de Funil
         </SectionTitle>

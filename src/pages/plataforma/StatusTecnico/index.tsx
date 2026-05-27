@@ -42,6 +42,13 @@ import {
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
+import {
+  fmtDataBrasilCurta,
+  hojeIsoBrasil,
+  inicioDiaBrasilUtcIso,
+  isoDateBrasilFromInstant,
+  subDiasIso,
+} from "../../../lib/dateBrasil";
 import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
@@ -90,7 +97,7 @@ interface FluxoDia {
   data: string;
   cda: number;
   social: number;
-  /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia (UTC da data do log). */
+  /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia civil (America/Sao_Paulo). */
   spinRss: number;
   /** Mesas localizadas no lobby (sync_logs lobby_blaze, campo registros_inseridos). */
   lobbyBlaze: number;
@@ -154,7 +161,7 @@ export default function StatusTecnico() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = hojeIsoBrasil();
 
     // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
@@ -200,10 +207,9 @@ export default function StatusTecnico() {
       .eq("data", hoje);
     setRegistrosHoje(count ?? 0);
 
-    // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails
-    const dataInicio = new Date();
-    dataInicio.setDate(dataInicio.getDate() - 14);
-    const dataInicioStr = dataInicio.toISOString().split("T")[0];
+    // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
+    const dataInicioStr = subDiasIso(hoje, 14);
+    const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
     const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
@@ -213,21 +219,21 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, registros_atualizados")
         .eq("integracao_slug", "spin_na_rede_rss")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
       supabase
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_blaze")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
       supabase
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_cda")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
     ]);
@@ -237,7 +243,7 @@ export default function StatusTecnico() {
     ) =>
       rows.reduce<Record<string, number>>((acc, row) => {
         if (row.status === "falha") return acc;
-        const d = row.executado_em?.split("T")[0];
+        const d = isoDateBrasilFromInstant(row.executado_em);
         if (!d) return acc;
         const n = (row.registros_inseridos ?? 0) + (row.registros_atualizados ?? 0);
         acc[d] = (acc[d] ?? 0) + n;
@@ -289,6 +295,7 @@ export default function StatusTecnico() {
       hoje,
     ]);
     const fluxoArray: FluxoDia[] = Array.from(datasSet)
+      .filter((data) => data >= dataInicioStr && data <= hoje)
       .sort((a, b) => a.localeCompare(b))
       .map((data) => {
         const cda = cdaPorData[data] ?? 0;
@@ -787,7 +794,7 @@ export default function StatusTecnico() {
   };
 
   // KPIs derivados
-  const hojeIsoKpi = new Date().toISOString().split("T")[0];
+  const hojeIsoKpi = hojeIsoBrasil();
 
   // Integrações Ativas: CDA, Social, e-mails — OK = último sync/execução com sucesso
   const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
@@ -913,12 +920,8 @@ export default function StatusTecnico() {
     return ["instagram", "facebook", "youtube", "linkedin"].includes(l.tipo) && created >= vinteQuatroHoras;
   });
   const ultimoPipelineOk = pipelineRuns.find((r) => r.status === "success");
-  const ontem = new Date();
-  ontem.setDate(ontem.getDate() - 1);
-  const anteontem = new Date();
-  anteontem.setDate(anteontem.getDate() - 2);
-  const ontemIso = ontem.toISOString().split("T")[0];
-  const anteontemIso = anteontem.toISOString().split("T")[0];
+  const ontemIso = subDiasIso(hojeIso, 1);
+  const anteontemIso = subDiasIso(hojeIso, 2);
   const socialTemDadosRecentes = fluxoDados.some((f) => (f.data === hojeIso || f.data === ontemIso || f.data === anteontemIso) && f.social > 0);
   const socialTeveDadosAntes = fluxoDados.some((f) => f.social > 0);
 
@@ -1039,7 +1042,7 @@ export default function StatusTecnico() {
     .map((int) => {
     const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
     const ultimo = logsInt[0];
-    const syncsHoje = logsInt.filter((l) => l.executado_em?.startsWith(hojeIso));
+    const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
     const regsHoje = syncsHoje.reduce((s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0), 0);
     // Se não teve sync hoje, usar último ok como fallback
     const regsExibir = regsHoje || (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
@@ -1506,7 +1509,7 @@ export default function StatusTecnico() {
                   onMouseLeave={() => setFluxoHover(null)}
                 >
                   <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: fluxoLabelNarrow ? 80 : 100, flexShrink: 0 }}>
-                    {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                    {fmtDataBrasilCurta(f.data)}
                   </span>
                   <div style={{ flex: 1, height: 24, background: t.cardBorder, borderRadius: 6, overflow: "hidden", display: "flex" }}>
                     {f.cda > 0 && (

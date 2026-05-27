@@ -1132,7 +1132,7 @@ export default function SocialMediaDashboard() {
             <>
               <div style={card}>
                 <SectionTitle
-                  sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+                  sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
                 >
                   KPIs Consolidados
                 </SectionTitle>
@@ -1589,7 +1589,7 @@ export default function SocialMediaDashboard() {
           {/* KPIs GERAIS */}
           <div style={card}>
             <SectionTitle
-              sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+              sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
             </SectionTitle>

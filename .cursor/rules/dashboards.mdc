@@ -94,7 +94,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
-- **Heatmap de Posicionamento:** `zebraBgHistLinha` com `--brand-contrast` (nunca `--brand-secondary`). Nunca hardcodar hex de fundo na zebra.
+- **Heatmap de Posicionamento:** coluna **Mesa** `position: sticky` + fundo **opaco** (`zebraBgHistLinha` faz `color-mix` com `blockBg`/`cardBg`, nunca com `transparent`). Zebra com `--brand-contrast` (nunca `--brand-secondary`). Nunca hardcodar hex de fundo na zebra.
 - **`renderMesaDiaTabela`:** `borderCollapse: "separate"`, `borderSpacing: 0`, `<caption style={{ display: "none" }}>`. Linha Total no topo do `<tbody>` por decisão de produto (exceção ao padrão de total no rodapé).
 
 ---
@@ -366,7 +366,7 @@ Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar
 | Parte | Valor |
 |-------|--------|
 | Título (`children`) | `14px`, peso `800`, `FONT_TITLE`, uppercase, `brand.primary` |
-| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, mesma linha (`marginLeft: 4`) |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, mesma linha; prefixo automático **` — `** (`SECTION_TITLE_SUB_SEPARATOR` em `lib/sectionTitleSub.ts`) |
 | Ícone | **Omitir** — `icon` não é usado em blocos de informação (migração: remover props `icon` legadas) |
 
 ```tsx
@@ -377,9 +377,11 @@ Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar
 
 ### Sub-títulos (`sub`) — padrões
 
+O componente **`SectionTitle`** insere **` — `** entre o título e o `sub`. Passar só o texto do subtítulo — **sem** `·`, `—` ou `-` no início (normalização em `normalizeSectionTitleSub`).
+
 ```tsx
 // Comparativo MoM (não histórico):
-sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
+sub={!historico ? "comparativo MTD vs mesmo período do mês anterior" : undefined}
 
 // Período do comparativo de jogo:
 sub={historico ? "mês a mês" : mesSelecionado?.label}

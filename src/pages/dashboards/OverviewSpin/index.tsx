@@ -3577,7 +3577,7 @@ export default function OverviewSpin() {
             sub={
               historico
                 ? "acumulado"
-                : "· comparativo MTD vs mesmo período do mês anterior"
+                : "comparativo MTD vs mesmo período do mês anterior"
             }
           >
             KPIs Consolidados

@@ -1,6 +1,11 @@
 import { useApp } from "../../context/AppContext";
 import { FONT, FONT_TITLE } from "../../constants/theme";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
+import {
+  hasSectionTitleSub,
+  normalizeSectionTitleSub,
+  SECTION_TITLE_SUB_SEPARATOR,
+} from "../../lib/sectionTitleSub";
 
 interface Props {
   /** Omitir em blocos de informação (nível 3) — ícone só no cabeçalho de página. */
@@ -14,6 +19,7 @@ interface Props {
 export default function SectionTitle({ icon, children, sub, compact }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const subContent = hasSectionTitleSub(sub) ? normalizeSectionTitleSub(sub) : null;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: icon ? 8 : 0, marginBottom: compact ? 0 : 16, flexWrap: "wrap" }}>
@@ -47,17 +53,17 @@ export default function SectionTitle({ icon, children, sub, compact }: Props) {
       >
         {children}
       </span>
-      {sub ? (
+      {subContent != null && subContent !== "" ? (
         <span
           style={{
             fontSize: 11,
             fontWeight: 400,
             color: t.textMuted,
             fontFamily: FONT.body,
-            marginLeft: 4,
           }}
         >
-          {sub}
+          {SECTION_TITLE_SUB_SEPARATOR}
+          {subContent}
         </span>
       ) : null}
     </div>

@@ -639,7 +639,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
         </SectionTitle>

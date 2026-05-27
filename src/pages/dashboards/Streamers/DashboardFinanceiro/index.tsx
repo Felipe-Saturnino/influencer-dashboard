@@ -658,7 +658,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
         </SectionTitle>
