@@ -14,13 +14,19 @@ export type OverviewSpinTableTheme = TableThemePick & {
   isDark: boolean;
 };
 
+/** Wrapper de scroll — raio aqui; **não** `overflow: hidden` na `<table>` (quebra coluna sticky). */
+export function getOverviewSpinTableWrapStyle(extra?: CSSProperties): CSSProperties {
+  return {
+    borderRadius: OVERVIEW_SPIN_TABLE_RADIUS,
+    ...extra,
+  };
+}
+
 export function getOverviewSpinTableStyle(extra?: CSSProperties): CSSProperties {
   return {
     width: "100%",
     borderCollapse: "separate",
     borderSpacing: 0,
-    borderRadius: OVERVIEW_SPIN_TABLE_RADIUS,
-    overflow: "hidden",
     ...extra,
   };
 }
@@ -55,7 +61,8 @@ export function createOverviewSpinStickyCol(
     ...thBase,
     position: "sticky",
     left: 0,
-    zIndex: 3,
+    top: 0,
+    zIndex: 4,
     minWidth,
     background: colBg,
     boxShadow: shadow,

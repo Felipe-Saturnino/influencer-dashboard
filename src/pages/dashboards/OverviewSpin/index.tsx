@@ -50,7 +50,11 @@ import {
   getTdNumStyle,
   TOTAL_ROW_BG,
 } from "../../../lib/tableStyles";
-import { createOverviewSpinStickyCol, getOverviewSpinTableStyle } from "./overviewSpinTableStyles";
+import {
+  createOverviewSpinStickyCol,
+  getOverviewSpinTableStyle,
+  getOverviewSpinTableWrapStyle,
+} from "./overviewSpinTableStyles";
 import {
   ArrowUpDown,
   ChevronDown,
@@ -2399,7 +2403,7 @@ export default function OverviewSpin() {
     colTempo: "Data" | "Mês" = "Data",
     tituloTabela = "Mesa",
   ) => (
-    <div className="app-table-wrap">
+    <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
       <table style={getOverviewSpinTableStyle({ minWidth: 560 })}>
         <caption style={{ display: "none" }}>
           {`Resultados de ${tituloTabela} — ${colTempo === "Mês" ? "histórico" : mesSelecionado?.label ?? ""}`}
@@ -2620,7 +2624,7 @@ export default function OverviewSpin() {
       </div>
 
       {modoVisualizacaoDetalhe === "tabela" ? (
-        <div className="app-table-wrap">
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
           <table style={getOverviewSpinTableStyle({ minWidth: 720 })}>
             <caption style={{ display: "none" }}>
               {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
@@ -3053,8 +3057,7 @@ export default function OverviewSpin() {
       </div>
 
       {modoVisualizacao === "tabela" ? (
-        <div className="app-table-wrap">
-          <div style={{ overflowX: "auto" }}>
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
             <table style={getOverviewSpinTableStyle({ minWidth: minWidthTabelaComparativoJogo })}>
               <caption style={{ display: "none" }}>
                 Comparativo de jogo {colTempoLabel === "Mês" ? "histórico" : (mesSelecionado?.label ?? "")}
@@ -3283,7 +3286,6 @@ export default function OverviewSpin() {
                 })}
               </tbody>
             </table>
-          </div>
         </div>
       ) : linhasComparativoJogo.length === 0 ? (
         <div

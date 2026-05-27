@@ -36,7 +36,11 @@ import {
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../../lib/pageContentBoxStyles";
-import { createOverviewSpinStickyCol, getOverviewSpinTableStyle } from "../overviewSpinTableStyles";
+import {
+  createOverviewSpinStickyCol,
+  getOverviewSpinTableStyle,
+  getOverviewSpinTableWrapStyle,
+} from "../overviewSpinTableStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -692,7 +696,7 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
-        <div className="app-table-wrap">
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
           <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
             <thead>
@@ -815,7 +819,7 @@ function DashboardPosicionamentoOperadora({
 
         <div style={{ ...card, marginBottom: 0 }}>
           <SectionTitle>Visibilidade por categoria</SectionTitle>
-          <div className="app-table-wrap">
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getOverviewSpinTableWrapStyle()}>
             <table style={getOverviewSpinTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>

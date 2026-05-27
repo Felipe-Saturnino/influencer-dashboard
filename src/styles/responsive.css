@@ -295,6 +295,13 @@
   max-width: 100%;
 }
 
+/* 1ª coluna position:sticky — scroll só neste wrapper; sem overflow:hidden na table */
+.app-table-wrap--sticky-col {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
 /* Modal overlay: margens laterais no celular */
 .app-modal-overlay-pad {
   padding: clamp(8px, 4vw, 20px);
