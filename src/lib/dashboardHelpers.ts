@@ -62,6 +62,14 @@ export function isCarrosselMesCivilAtual(anoSel: number, mesSel: number, ref: Da
   return anoSel === ref.getFullYear() && mesSel === ref.getMonth();
 }
 
+/** Ontem no fuso local — detalhamento diário (ETL fecha o dia anterior). */
+export function getOntemIsoLocal(ref: Date = new Date()): string {
+  const ontem = new Date(ref);
+  ontem.setHours(0, 0, 0, 0);
+  ontem.setDate(ontem.getDate() - 1);
+  return fmtDate(ontem);
+}
+
 /**
  * Período principal do carrossel e período de comparação (mês civil anterior alinhado).
  * - Mês civil atual: atual = 1..hoje; anterior = 1..mesmo dia no mês anterior (cap no último dia).
