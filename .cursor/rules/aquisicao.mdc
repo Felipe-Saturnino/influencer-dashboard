@@ -47,7 +47,8 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Empty ciclos: copy para influencer vs gestor; detalhes técnicos só em `<details>` para gestor.
 - Alertas: `AlertTriangle` Lucide — nunca emoji ⚠️ sozinho.
 - Ciclo aberto: banner amarelo “Prévia em tempo real…” com `role="status"`.
-- Tabela: expand com `aria-expanded`; coluna **Perfil** para classificação de influencer.
+- Tabelas **Ciclo** e **Consolidado:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`, cabeçalho/zebra/linha total); sub-tabela de histórico no expand usa `thHeaderSub`.
+- Expand no Consolidado: `aria-expanded`; coluna **Perfil** para classificação de influencer.
 - Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
 

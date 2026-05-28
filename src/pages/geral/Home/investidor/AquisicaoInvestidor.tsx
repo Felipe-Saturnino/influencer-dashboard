@@ -50,7 +50,7 @@ export function AquisicaoInvestidor() {
               accentVar="--brand-secondary"
               breakdown={[
                 { label: "Postagens", value: fmtNum(data.social.postagens) },
-                { label: "Seguidores totais", value: fmtNum(data.social.seguidores) },
+                { label: "Novos Seguidores", value: fmtNum(data.social.seguidores) },
                 { label: "Impressões totais", value: fmtNum(data.social.impressoes) },
               ]}
             />

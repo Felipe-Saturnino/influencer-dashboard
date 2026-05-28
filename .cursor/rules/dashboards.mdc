@@ -322,7 +322,7 @@ Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas 
 | **WD Ratio** | `Scale` | `import { Scale }` |
 | **PVI** | `Gauge` | `import { Gauge }` |
 | **Postagens** | `Bookmark` | `import { Bookmark }` |
-| **Seguidores Totais** | `Mic` | `import { Mic }` |
+| **Novos Seguidores** | `Mic` | `import { Mic }` |
 | **Impressões Totais** | `Sparkles` | `import { Sparkles }` |
 | **Engajamento Médio** | `Percent` | — |
 
@@ -353,7 +353,7 @@ Usar **exatamente** estas strings no prop `label` de `KpiCard` e nos headers de 
 - `"GGR por Jogador"` — GGR ÷ FTDs
 - `"PVI"` — Player Value Index (0–100 pts)
 - `"Turnover"`, `"Apostas"`, `"Margem"`, `"Aposta Média"`, `"UAP"`, `"ARPU"` — mesas / jogador
-- `"Postagens"`, `"Seguidores Totais"`, `"Impressões Totais"`, `"Engajamento Médio"` — social
+- `"Postagens"`, `"Novos Seguidores"`, `"Impressões Totais"`, `"Engajamento Médio"` — social
 
 **PVI nunca usa "%"** — sempre `"${v} pts"`.
 **ROI** e **Margem** têm ícones diferentes (`BarChart2` vs `Percent`) — não trocar.

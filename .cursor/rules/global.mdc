@@ -529,7 +529,7 @@ const dataTable = useDataTableBlock();
 | Área | Motivo |
 |------|--------|
 | **Gestão de Usuários** (abas Permissões, Gestores, Prestadores, Operadora) | Matriz de permissões com selects por célula; listas em grelha com layout próprio |
-| **Financeiro** | Tabelas aninhadas (consolidado dentro de linha), múltiplos blocos e linha total com estilos locais |
+| **Financeiro** | Blocos **Ciclo de pagamento** e **Consolidado** já no padrão canónico; demais blocos/KPIs sem tabela ou fora do escopo |
 | **Banca de Jogo** | Linhas expansíveis com sub-tabela e cabeçalho interno transparente |
 | **Gestão de Escala** | Cabeçalhos dinâmicos por dia/turno e grade operacional misturada com tabela |
 | **Gestão de Prestadores** | Colunas variáveis por aba (head count / ações RH / anotações), salário condicional e ações com texto em célula |

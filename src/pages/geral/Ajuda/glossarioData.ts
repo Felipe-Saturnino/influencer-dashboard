@@ -507,10 +507,16 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     accentColor: "#f59e0b",
     termos: [
       {
+        termo: "Novos Seguidores",
+        definicao:
+          "Soma dos novos seguidores ou inscritos ganhos no período selecionado, agregando Instagram, Facebook e YouTube. O KPI na aba Alcance compara o valor ao mesmo recorte do mês anterior.",
+        referencia: "Mídias Sociais → Alcance",
+      },
+      {
         termo: "Seguidores",
         definicao:
-          "Total de seguidores/inscritos no canal no último dia do período. É um snapshot do tamanho da audiência — não um acumulado.",
-        referencia: "Mídias Sociais",
+          "Métrica exibida nos cards por canal (Instagram, Facebook, YouTube) para o respectivo período — alinhada ao dado de novos seguidores/inscritos da integração.",
+        referencia: "Mídias Sociais → Alcance",
       },
       {
         termo: "Impressões",

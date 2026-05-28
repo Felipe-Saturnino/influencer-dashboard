@@ -1589,7 +1589,7 @@ export default function SocialMediaDashboard() {
                 }
               />
               <SocialKpiCard
-                label="Seguidores totais"
+                label="Novos Seguidores"
                 valor={fmtNum(totais.seguidores)}
                 accentVar="--brand-contrast"
                 accentCor={BRAND.roxo}

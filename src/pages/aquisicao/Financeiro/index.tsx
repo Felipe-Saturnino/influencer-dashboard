@@ -7,7 +7,8 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, TOTAL_ROW_BG, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
@@ -1172,6 +1173,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const perm = usePermission("financeiro");
   const { podeVerInfluencer, podeVerOperadora: _podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap: _operadoraInfMap, operadorasList } = filtros;
@@ -1701,10 +1703,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
   }
 
-  const thCiclo = getThStyle(t);
-  const tdCiclo = getTdStyle(t);
-  const tdNumCiclo = getTdNumStyle(t);
-
   const opcioesCiclo = ciclos.map(c => ({
     value: c.id,
     label: `${fmtCicloDatas(c.data_inicio, c.data_fim)}${cicloAberto(c) ? " (atual)" : ""}`,
@@ -1800,10 +1798,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           Carregando...
         </div>
       ) : (
-        <div className="app-table-wrap">
-          <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
+              <caption style={{ display: "none" }}>
                 Pagamentos do ciclo selecionado
               </caption>
             <thead>
@@ -1813,8 +1810,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="influencer"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={thCiclo}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
                       col: c,
@@ -1827,8 +1824,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="classificacao"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={thCiclo}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
                       col: c,
@@ -1842,8 +1839,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     col="operadora"
                     sortCol={sortCiclo.col}
                     sortDir={sortCiclo.dir}
-                    thStyle={thCiclo}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortCiclo((s) => ({
                         col: c,
@@ -1857,8 +1854,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="lives"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={thCiclo}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
                       col: c,
@@ -1871,8 +1868,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   col="horas"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
-                  thStyle={{ ...thCiclo, ...(isAberto && narrowMobile ? { display: "none" } : {}) }}
-                  align="left"
+                  thStyle={{ ...dataTable.thHeader, ...(isAberto && narrowMobile ? { display: "none" } : {}) }}
+                  align="center"
                   onSort={(c) =>
                     setSortCiclo((s) => ({
                       col: c,
@@ -1887,8 +1884,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="cache"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={{ ...thCiclo, ...(narrowMobile ? { display: "none" } : {}) }}
-                      align="left"
+                      thStyle={{ ...dataTable.thHeader, ...(narrowMobile ? { display: "none" } : {}) }}
+                      align="center"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1901,8 +1898,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="total"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={thCiclo}
-                      align="right"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1918,8 +1915,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="total"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={thCiclo}
-                      align="right"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1932,8 +1929,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       col="status"
                       sortCol={sortCiclo.col}
                       sortDir={sortCiclo.dir}
-                      thStyle={thCiclo}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCiclo((s) => ({
                           col: c,
@@ -1941,7 +1938,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                         }))
                       }
                     />
-                    <th scope="col" style={getThStyle(t, { cursor: "default", userSelect: "none" })}>Ação</th>
+                    <th scope="col" style={{ ...dataTable.thHeader, cursor: "default", userSelect: "none" }}>Ação</th>
                   </>
                 )}
               </tr>
@@ -1949,7 +1946,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...tdCiclo, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...dataTable.tdCenter, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1961,7 +1958,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               ) : rowsOrdenados.map((row, i) => {
                 const sk = (row.statusInfluencer ?? "ativo").toLowerCase();
                 const slInf = STATUS_INFLUENCER[sk] ?? { label: row.statusInfluencer ?? "Ativo", color: "#94a3b8" };
-                const zebraBg = zebraStripe(i);
+                const zebraBg = dataTable.zebraRow(i);
                 return (
                 <tr
                   key={row.id}
@@ -1973,8 +1970,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     e.currentTarget.style.background = zebraBg;
                   }}
                 >
-                  <td style={tdCiclo}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                       <Avatar name={row.is_agente ? "A" : row.influencer_name} />
                       <div>
                         <div style={{ fontWeight: 600 }}>{row.influencer_name}</div>
@@ -1985,7 +1982,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </div>
                   </td>
 
-                  <td style={tdCiclo}>
+                  <td style={dataTable.tdCenter}>
                     {row.is_agente ? (
                       <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
                     ) : (
@@ -1993,6 +1990,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           fontSize: "10px",
                           fontWeight: 700,
                           padding: "3px 9px",
@@ -2008,31 +2006,36 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   </td>
 
                   {filterOperadora === "todas" && (
-                    <td style={{ ...tdCiclo, color: t.textMuted, fontSize: "12px" }}>
+                    <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: "12px" }}>
                       {row.is_agente ? "—" : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
                     </td>
                   )}
 
                   {isAberto ? (
                     <>
-                      <td style={{ ...tdCiclo, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
-                      <td style={{ ...tdNumCiclo, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(row.horas_realizadas)}</td>
-                      <td style={{ ...tdNumCiclo, color: t.textMuted, ...(narrowMobile ? { display: "none" } : {}) }}>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
+                      <td style={{ ...dataTable.tdCenter, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(row.horas_realizadas)}</td>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted, ...(narrowMobile ? { display: "none" } : {}) }}>
                         {row.cache_hora > 0
                           ? fmtBRL(row.cache_hora)
                           : <span style={{ color: "#e84025", fontSize: "11px" }}>Não cadastrado</span>}
                       </td>
-                      <td style={{ ...tdNumCiclo, fontWeight: 700, color: row.cache_hora > 0 ? "var(--brand-primary, #7c3aed)" : t.textMuted }}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: row.cache_hora > 0 ? "var(--brand-primary, #7c3aed)" : t.textMuted }}>
                         {row.cache_hora > 0 ? fmtBRL(row.total) : "—"}
                       </td>
                     </>
                   ) : (
                     <>
-                      <td style={{ ...tdCiclo, color: t.textMuted }}>{row.is_agente ? "—" : `${row.qtd_lives ?? 0} live${(row.qtd_lives ?? 0) !== 1 ? "s" : ""}`}</td>
-                      <td style={tdNumCiclo}>{row.is_agente ? "—" : fmtHorasTotal(row.horas_realizadas)}</td>
-                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtBRL(row.total)}</td>
-                      <td style={tdCiclo}><Badge status={row.status} config={STATUS_PAG} /></td>
-                      <td style={tdCiclo}>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>{row.is_agente ? "—" : `${row.qtd_lives ?? 0} live${(row.qtd_lives ?? 0) !== 1 ? "s" : ""}`}</td>
+                      <td style={dataTable.tdCenter}>{row.is_agente ? "—" : fmtHorasTotal(row.horas_realizadas)}</td>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{fmtBRL(row.total)}</td>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <Badge status={row.status} config={STATUS_PAG} />
+                        </div>
+                      </td>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
                         {row.status === "em_analise" && perm.canEditarOk && (perm.canEditar !== "proprios" || row.is_agente || (row.influencer_id && podeVerInfluencer(row.influencer_id))) && (
                           <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">
                             <Clock size={12} aria-hidden />
@@ -2050,6 +2053,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                             {row.pago_em ? new Date(row.pago_em).toLocaleDateString("pt-BR") : "—"}
                           </span>
                         )}
+                        </div>
                       </td>
                     </>
                   )}
@@ -2060,32 +2064,31 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
             {rowsOrdenados.length > 0 && (
               <tfoot>
-                <tr style={{ background: TOTAL_ROW_BG, borderTop: `2px solid ${t.cardBorder}` }}>
-                  <td style={{ ...tdCiclo, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
+                <tr style={{ background: dataTable.totalRowBgStrong, borderTop: `2px solid ${t.cardBorder}` }}>
+                  <td style={{ ...dataTable.tdTotal, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
-                  <td style={tdCiclo} />
-                  {filterOperadora === "todas" && <td style={tdCiclo}></td>}
+                  <td style={dataTable.tdTotal} />
+                  {filterOperadora === "todas" && <td style={dataTable.tdTotal} />}
                   {isAberto ? (
                     <>
-                      <td style={tdCiclo}></td>
-                      <td style={{ ...tdNumCiclo, fontWeight: 700, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={{ ...tdCiclo, ...(narrowMobile ? { display: "none" } : {}) }}></td>
-                      <td style={{ ...tdNumCiclo, fontSize: "15px", color: "var(--brand-primary, #7c3aed)", fontWeight: 700 }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
+                      <td style={dataTable.tdTotal} />
+                      <td style={{ ...dataTable.tdTotal, ...(narrowMobile ? { display: "none" } : {}) }}>{fmtHorasTotal(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...dataTable.tdTotal, ...(narrowMobile ? { display: "none" } : {}) }} />
+                      <td style={{ ...dataTable.tdTotal, fontSize: "15px", color: "var(--brand-primary, #7c3aed)" }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                     </>
                   ) : (
                     <>
-                      <td style={tdCiclo}></td>
-                      <td style={{ ...tdNumCiclo, fontWeight: 700 }}>{fmtHorasTotal(rowsOrdenados.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={{ ...tdNumCiclo, fontSize: "15px", color: "var(--brand-primary, #7c3aed)", fontWeight: 700 }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
-                      <td colSpan={2}></td>
+                      <td style={dataTable.tdTotal} />
+                      <td style={dataTable.tdTotal}>{fmtHorasTotal(rowsOrdenados.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...dataTable.tdTotal, fontSize: "15px", color: "var(--brand-primary, #7c3aed)" }}>{fmtBRL(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
+                      <td colSpan={2} style={dataTable.tdTotal} />
                     </>
                   )}
                 </tr>
               </tfoot>
             )}
           </table>
-          </div>
         </div>
       )}
 
@@ -2115,6 +2118,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
 
@@ -2304,10 +2308,6 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     return arr;
   }, [filtered, sortCons]);
 
-  const thCons = getThStyle(t);
-  const tdCons = getTdStyle(t);
-  const tdNumCons = getTdNumStyle(t);
-
   const pageBox = getPageContentBoxStyle(brand, t);
 
   return (
@@ -2335,22 +2335,21 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
           Carregando...
         </div>
       ) : (
-        <div className="app-table-wrap">
-          <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
+              <caption style={{ display: "none" }}>
                 Consolidado de pagamentos por influencer
               </caption>
             <thead>
               <tr>
-                <th scope="col" style={{ ...thCons, width: "32px" }} aria-label="Expandir" />
+                <th scope="col" style={{ ...dataTable.thHeader, width: "32px" }} aria-label="Expandir" />
                 <SortTableTh<ConsolidSortCol>
                   label="Influencer"
                   col="influencer"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2363,8 +2362,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="totalPago"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2377,8 +2376,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="totalHoras"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2391,8 +2390,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="pendente"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="right"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2405,8 +2404,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="ultimoPag"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2419,8 +2418,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   col="status"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}
-                  thStyle={thCons}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortCons((s) => ({
                       col: c,
@@ -2433,29 +2432,30 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
             <tbody>
               {filtered.length === 0 && !agentesRow ? (
                 <tr>
-                  <td colSpan={7} style={{ ...tdCons, textAlign: "center", color: t.textMuted, padding: "40px" }}>
+                  <td colSpan={7} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: "40px" }}>
                     Nenhum influencer encontrado.
                   </td>
                 </tr>
-              ) : ordenados.map(row => {
+              ) : ordenados.map((row, i) => {
                 const isOpen = expandido === row.influencer_id;
                 const hist = historicoPagamentos[row.influencer_id] ?? [];
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
+                const zebraBg = dataTable.zebraRow(i);
 
                 const histPanelId = `hist-${row.influencer_id}`;
                 return (
                   <Fragment key={row.influencer_id}>
                     <tr
-                      style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }}
+                      style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}`, background: zebraBg }}
                       tabIndex={0}
                       role="row"
                       aria-expanded={isOpen}
                       aria-controls={histPanelId}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.background = zebraBg;
                       }}
                       onClick={() => toggleExpand(row.influencer_id)}
                       onKeyDown={(e) => {
@@ -2465,16 +2465,18 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                         }
                       }}
                     >
-                      <td style={tdCons}>
-                        <ChevronRight
-                          size={14}
-                          color={t.textMuted}
-                          style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
-                          aria-hidden
-                        />
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <ChevronRight
+                            size={14}
+                            color={t.textMuted}
+                            style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
+                            aria-hidden
+                          />
+                        </div>
                       </td>
-                      <td style={tdCons}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                           <Avatar name={row.nome_artistico} />
                           <div>
                             <div style={{ fontWeight: 600, fontSize: "13px" }}>{row.nome_artistico}</div>
@@ -2482,16 +2484,16 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                           </div>
                         </div>
                       </td>
-                      <td style={{ ...tdNumCons, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(row.totalPago)}</td>
-                      <td style={tdNumCons}>{fmtHorasTotal(row.totalHoras)}</td>
-                      <td style={{ ...tdNumCons, color: row.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(row.totalPago)}</td>
+                      <td style={dataTable.tdCenter}>{fmtHorasTotal(row.totalHoras)}</td>
+                      <td style={{ ...dataTable.tdCenter, color: row.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
                         {fmtBRL(row.pendente)}
                       </td>
-                      <td style={{ ...tdCons, color: t.textMuted }}>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>
                         {row.ultimoPagamento ? new Date(row.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
                       </td>
-                      <td style={tdCons}>
-                        <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
+                      <td style={dataTable.tdCenter}>
+                        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
                           {sl.label}
                         </span>
                       </td>
@@ -2517,43 +2519,48 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                           ) : hist.length === 0 ? (
                             <div style={{ color: t.textMuted, fontSize: "12px" }}>Nenhum ciclo encontrado.</div>
                           ) : (
-                            <div className="app-table-wrap">
-                              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-                                <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                              <table style={getDataTableStyle()}>
+                                <caption style={{ display: "none" }}>
                                   Histórico de pagamentos do influencer
                                 </caption>
                               <thead>
                                 <tr>
                                   {["Ciclo", "Horas", "Total", "Status", "Pago em"].map(h => (
-                                    <th key={h} scope="col" style={{ ...thCons, background: "transparent", fontSize: "10px", padding: "6px 10px" }}>{h}</th>
+                                    <th key={h} scope="col" style={{ ...dataTable.thHeaderSub, fontSize: 11 }}>{h}</th>
                                   ))}
                                 </tr>
                               </thead>
                               <tbody>
-                                {hist.map((h) => (
+                                {hist.map((h, hi) => {
+                                  const histZebra = dataTable.zebraRow(hi);
+                                  return (
                                   <tr
                                     key={h.id}
-                                    style={{ borderBottom: `1px solid ${t.divider}` }}
+                                    style={{ borderBottom: `1px solid ${t.divider}`, background: histZebra }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = "transparent";
+                                      e.currentTarget.style.background = histZebra;
                                     }}
                                   >
-                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px" }}>
+                                    <td style={dataTable.tdCenter}>
                                       {h.ciclos_pagamento?.data_inicio} – {h.ciclos_pagamento?.data_fim}
                                     </td>
-                                    <td style={{ ...tdNumCons, fontSize: "12px", padding: "8px 10px" }}>{fmtHorasTotal(h.horas_realizadas)}</td>
-                                    <td style={{ ...tdNumCons, fontSize: "12px", padding: "8px 10px" }}>{fmtBRL(h.total)}</td>
-                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px" }}>
-                                      <Badge status={h.status} config={STATUS_PAG} />
+                                    <td style={dataTable.tdCenter}>{fmtHorasTotal(h.horas_realizadas)}</td>
+                                    <td style={dataTable.tdCenter}>{fmtBRL(h.total)}</td>
+                                    <td style={dataTable.tdCenter}>
+                                      <div style={{ display: "flex", justifyContent: "center" }}>
+                                        <Badge status={h.status} config={STATUS_PAG} />
+                                      </div>
                                     </td>
-                                    <td style={{ ...tdCons, fontSize: "12px", padding: "8px 10px", color: t.textMuted }}>
+                                    <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>
                                       {h.pago_em ? new Date(h.pago_em).toLocaleDateString("pt-BR") : "—"}
                                     </td>
                                   </tr>
-                                ))}
+                                  );
+                                })}
                               </tbody>
                             </table>
                             </div>
@@ -2576,28 +2583,28 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                     e.currentTarget.style.background = t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)";
                   }}
                 >
-                  <td style={tdCons}>
+                  <td style={dataTable.tdCenter}>
                     <span style={{ fontSize: "10px", color: t.textMuted }}>—</span>
                   </td>
-                  <td style={tdCons}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                       <Avatar name="A" />
-                      <div>
+                      <div style={{ textAlign: "left" }}>
                         <div style={{ fontWeight: 600, fontSize: "13px" }}>Agentes</div>
                         <div style={{ fontSize: "11px", color: t.textMuted }}>Pagamentos de agência</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ ...tdNumCons, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(agentesRow.totalPago)}</td>
-                  <td style={{ ...tdCons, color: t.textMuted }}>—</td>
-                  <td style={{ ...tdNumCons, color: agentesRow.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: agentesRow.pendente > 0 ? 600 : 400 }}>
+                  <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(agentesRow.totalPago)}</td>
+                  <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>—</td>
+                  <td style={{ ...dataTable.tdCenter, color: agentesRow.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: agentesRow.pendente > 0 ? 700 : 400 }}>
                     {fmtBRL(agentesRow.pendente)}
                   </td>
-                  <td style={{ ...tdCons, color: t.textMuted }}>
+                  <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>
                     {agentesRow.ultimoPagamento ? new Date(agentesRow.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
                   </td>
-                  <td style={tdCons}>
-                    <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
+                  <td style={dataTable.tdCenter}>
+                    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
                       Agência
                     </span>
                   </td>
@@ -2605,7 +2612,6 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
               )}
             </tbody>
           </table>
-          </div>
         </div>
       )}
     </div>

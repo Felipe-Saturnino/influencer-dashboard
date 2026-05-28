@@ -17,6 +17,7 @@ import {
   fmtDia,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  getOntemIsoLocal,
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import {
@@ -807,10 +808,7 @@ export default function DashboardOverviewInfluencer() {
   const diasDataComparativoExibicao = useMemo(() => {
     if (historico || !mesSelecionado) return diasData;
     if (!isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)) return diasData;
-    const ontem = new Date();
-    ontem.setHours(0, 0, 0, 0);
-    ontem.setDate(ontem.getDate() - 1);
-    const limite = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, "0")}-${String(ontem.getDate()).padStart(2, "0")}`;
+    const limite = getOntemIsoLocal();
     return diasData.filter((d) => d.data <= limite);
   }, [diasData, historico, mesSelecionado]);
 
