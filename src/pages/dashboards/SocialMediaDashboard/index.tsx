@@ -5,7 +5,13 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import {
+  fmtBRL,
+  getMesesDisponiveis,
+  getOntemIsoLocal,
+  getPeriodoComparativoMoM,
+  isCarrosselMesCivilAtual,
+} from "../../../lib/dashboardHelpers";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
@@ -864,11 +870,19 @@ export default function SocialMediaDashboard() {
   const campanhaA = campanhasPerf.find((c) => c.campanha_id === compCampA) ?? null;
   const campanhaB = campanhasPerf.find((c) => c.campanha_id === compCampB) ?? null;
 
-  /** Detalhamento: mais recente primeiro (dia ou mês). */
-  const serieFunilOrdenado = useMemo(
-    () => [...serieFunil].sort((a, b) => b.periodo.localeCompare(a.periodo)),
-    [serieFunil]
-  );
+  /** Detalhamento: mais recente primeiro; no mês atual, só até ontem (ETL diário fecha o dia anterior). */
+  const serieFunilOrdenado = useMemo(() => {
+    let rows = serieFunil;
+    if (
+      !historico &&
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      const limite = getOntemIsoLocal();
+      rows = rows.filter((r) => r.periodo.slice(0, 10) <= limite);
+    }
+    return [...rows].sort((a, b) => b.periodo.localeCompare(a.periodo));
+  }, [serieFunil, historico, mesSelecionado]);
 
   const lastVal = (arr: KpiDaily[], f: keyof KpiDaily): number | null => {
     const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null;
@@ -1623,39 +1637,38 @@ export default function SocialMediaDashboard() {
                 }
               />
             </div>
-          </div>
 
-          {/* Cards por canal */}
-          <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
-            {channelConfig.map((cfg) => {
-              const byCh   = totais.byChannel[cfg.channel] ?? [];
-              const stats  = cfg.stats(byCh);
-              const engVal = calcEngBadge(byCh);
-              return (
-                <section
-                  key={cfg.channel}
-                  aria-label={`Métricas de ${cfg.nome}`}
-                  style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}
-                >
-                  <div style={{ height: 3, background: cfg.cor }} />
-                  <div style={{ padding: "14px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.cor, flexShrink: 0 }} />
-                      <span style={{ fontSize: 14, fontWeight: 800, color: t.text, letterSpacing: "0.04em", fontFamily: FONT_TITLE }}>{cfg.nome}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `${cfg.cor}22`, border: `1px solid ${cfg.cor}44`, color: cfg.cor }}>
-                        Eng. {engVal.toFixed(1)}%
-                      </span>
-                    </div>
-                    {stats.map((s, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === stats.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
-                        <span style={{ color: t.textMuted }}>{s.label}</span>
-                        <span style={{ fontWeight: 600, color: t.text }}>{s.val}</span>
+            <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
+              {channelConfig.map((cfg) => {
+                const byCh   = totais.byChannel[cfg.channel] ?? [];
+                const stats  = cfg.stats(byCh);
+                const engVal = calcEngBadge(byCh);
+                return (
+                  <section
+                    key={cfg.channel}
+                    aria-label={`Métricas de ${cfg.nome}`}
+                    style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}
+                  >
+                    <div style={{ height: 3, background: cfg.cor }} />
+                    <div style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.cor, flexShrink: 0 }} />
+                        <span style={{ fontSize: 14, fontWeight: 800, color: t.text, letterSpacing: "0.04em", fontFamily: FONT_TITLE }}>{cfg.nome}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `${cfg.cor}22`, border: `1px solid ${cfg.cor}44`, color: cfg.cor }}>
+                          Eng. {engVal.toFixed(1)}%
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+                      {stats.map((s, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === stats.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
+                          <span style={{ color: t.textMuted }}>{s.label}</span>
+                          <span style={{ fontWeight: 600, color: t.text }}>{s.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
           </div>
 
           {/* Engajamento por formato */}
