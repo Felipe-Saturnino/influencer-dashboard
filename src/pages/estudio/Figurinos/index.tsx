@@ -11,6 +11,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -88,6 +89,13 @@ function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
+}
+
+/** Nome exibido na coluna «Emprestado para» — primeiro e último token. */
+function labelEmprestadoParaTabela(emp: RhFigurinoEmprestimo | undefined): string {
+  const nome = (emp?.borrower_name ?? "").trim();
+  if (!nome) return "—";
+  return primeiroUltimoNome(nome) || "—";
 }
 
 /** Retirada via Gestão de Prestadores grava `borrower_ref` = id de `rh_funcionarios`; login casa por e-mail como em Dados de Cadastro. */
@@ -371,14 +379,7 @@ export default function FigurinosPage() {
   const pecasOrdenadas = useMemo(() => {
     const arr = [...pecasFiltradas];
     const { col, dir } = sortFig;
-    const borrowerKey = (p: RhFigurinoPeca) => {
-      const emp = empPorItem[p.id];
-      const emprestadoPara =
-        emp?.borrower_name != null || emp?.borrower_ref
-          ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
-          : "—";
-      return emprestadoPara;
-    };
+    const borrowerKey = (p: RhFigurinoPeca) => labelEmprestadoParaTabela(empPorItem[p.id]);
     arr.sort((a, b) => {
       let c = 0;
       switch (col) {
@@ -802,7 +803,6 @@ export default function FigurinosPage() {
                       {sortHeader("Operadora", "operadora")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
-                      {sortHeader("Classificação", "cond")}
                       {sortHeader("Tipo de retirada", "tipo_ret")}
                       {sortHeader("Data de empréstimo", "loaned_at")}
                       {sortHeader("Emprestado para", "borrower")}
@@ -843,10 +843,8 @@ export default function FigurinosPage() {
                 {pecasOrdenadas.map((p, i) => {
                   const emp = empPorItem[p.id];
                   const zebra = dataTable.zebraRow(i);
-                  const emprestadoPara =
-                    emp?.borrower_name != null || emp?.borrower_ref
-                      ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
-                      : "—";
+                  const emprestadoPara = labelEmprestadoParaTabela(emp);
+                  const emprestadoParaCompleto = (emp?.borrower_name ?? "").trim() || "—";
                   return (
                     <tr
                       key={p.id}
@@ -922,10 +920,12 @@ export default function FigurinosPage() {
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
-                          <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
                           <td style={dataTable.tdCenter}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
                           <td style={dataTable.tdCenter}>{fmtDataHora(emp?.loaned_at)}</td>
-                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
+                          <td
+                            style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                            title={emprestadoParaCompleto !== emprestadoPara ? emprestadoParaCompleto : emprestadoPara}
+                          >
                             {emprestadoPara}
                           </td>
                           <td style={dataTable.tdCenter}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
