@@ -823,26 +823,7 @@ export default function DashboardFinanceiro() {
                   <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none" }}>FTD</th>
                   <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>Depósitos</th>
                   <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>Saques</th>
-                  <SortTableTh<FinanceRankSortCol>
-                    rowSpan={2}
-                    label="R$ GGR"
-                    col="ggr"
-                    sortCol={sortFinRank.col}
-                    sortDir={sortFinRank.dir}
-                    onSort={onSortFinRank}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                  />
-                  <SortTableTh<FinanceRankSortCol>
-                    rowSpan={2}
-                    label="GGR/Jogador"
-                    col="ggr_por_jogador"
-                    sortCol={sortFinRank.col}
-                    sortDir={sortFinRank.dir}
-                    onSort={onSortFinRank}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                  />
+                  <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>GGR</th>
                   <SortTableTh<FinanceRankSortCol>
                     rowSpan={2}
                     label="WD Ratio"
@@ -897,6 +878,24 @@ export default function DashboardFinanceiro() {
                     align="center"
                   />
                   <SortTableTh label="Ticket Médio" col="saque_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={dataTable.thHeaderSub} align="center" />
+                  <SortTableTh
+                    label="R$ Total"
+                    col="ggr"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={{ ...dataTable.thHeaderSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="center"
+                  />
+                  <SortTableTh
+                    label="GGR Médio"
+                    col="ggr_por_jogador"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={dataTable.thHeaderSub}
+                    align="center"
+                  />
                 </tr>
               </thead>
               <tbody>
