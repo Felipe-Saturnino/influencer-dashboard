@@ -56,7 +56,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ## Banca de Jogo (`banca_jogo`)
 
-- **Solicitações** e **Consolidado de bancas:** `getPageContentBoxStyle` + **`SectionTitle`** (sem ícone; `compact` no cabeçalho de Solicitações quando na mesma linha que **`CtaCriarButton`** **Solicitar Banca**).
+- **Solicitações** e **Consolidado de bancas:** `getPageContentBoxStyle` + **`SectionTitle`**; tabelas no padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); sub-tabela no expand do Consolidado usa `thHeaderSub`.
 - Workflow: Solicitado → Aprovado → Liberado (cores semânticas Global).
 - **CPF** mascarado na tabela (`***.***.***-**`) com `title` no hover para autorizado.
 - Exclusão: modal de confirmação com texto contextual — não `window.confirm`.

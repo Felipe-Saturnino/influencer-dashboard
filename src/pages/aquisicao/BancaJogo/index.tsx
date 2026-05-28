@@ -29,7 +29,8 @@ import {
   compareNumber,
 } from "../../../lib/classificacaoSort";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { Role } from "../../../types";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
@@ -167,20 +168,6 @@ interface BlocoFiltros {
   operadorasList: { slug: string; nome: string }[];
   mesFiltro: string;
   historico: boolean;
-}
-
-function Avatar({ name, size = 28 }: { name: string; size?: number }) {
-  const letra = (name ?? "?")[0].toUpperCase();
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontWeight: 800, fontSize: size * 0.4,
-    }}>
-      {letra}
-    </div>
-  );
 }
 
 function ModalBloqueioSolicitacaoCampanha({
@@ -657,10 +644,8 @@ function BlocoSolicitacoes({
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
-  const th = getThStyle(t);
-  const td = getTdStyle(t);
-  const tdNum = getTdNumStyle(t);
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
     mesFiltro, historico,
@@ -823,10 +808,9 @@ function BlocoSolicitacoes({
         ) : null}
       </div>
 
-      <div className="app-table-wrap">
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-          <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
+          <caption style={{ display: "none" }}>
             Solicitações de banca em aberto
           </caption>
           <thead>
@@ -836,8 +820,8 @@ function BlocoSolicitacoes({
                 col="influencer"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -850,8 +834,8 @@ function BlocoSolicitacoes({
                 col="classificacao"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -864,8 +848,8 @@ function BlocoSolicitacoes({
                 col="id_op"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={{ ...th, ...(narrowMobile ? { display: "none" } : {}) }}
-                align="left"
+                thStyle={{ ...dataTable.thHeader, ...(narrowMobile ? { display: "none" } : {}) }}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -878,8 +862,8 @@ function BlocoSolicitacoes({
                 col="cpf"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -892,8 +876,8 @@ function BlocoSolicitacoes({
                 col="valor"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
-                align="right"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -906,8 +890,8 @@ function BlocoSolicitacoes({
                 col="status"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -920,8 +904,8 @@ function BlocoSolicitacoes({
                 col="data"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
-                thStyle={{ ...th, ...(narrowMobile ? { display: "none" } : {}) }}
-                align="left"
+                thStyle={{ ...dataTable.thHeader, ...(narrowMobile ? { display: "none" } : {}) }}
+                align="center"
                 onSort={(c) =>
                   setSortSolic((s) => ({
                     col: c,
@@ -929,13 +913,13 @@ function BlocoSolicitacoes({
                   }))
                 }
               />
-              <th scope="col" style={th}>Ação</th>
+              <th scope="col" style={dataTable.thHeader}>Ação</th>
             </tr>
           </thead>
           <tbody>
             {lista.length === 0 ? (
               <tr>
-                <td colSpan={narrowMobile ? 7 : 8} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
+                <td colSpan={narrowMobile ? 7 : 8} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 36 }}>
                   Nenhuma solicitação em aberto neste filtro.
                 </td>
               </tr>
@@ -958,24 +942,26 @@ function BlocoSolicitacoes({
                 const cpfDigits = (perf?.cpf ?? "").replace(/\D/g, "");
                 const cpfMascaravel = cpfDigits.length >= 11;
                 const cpfVisivel = cpfRevelados.has(r.id);
-                const zebraBg = zebraStripe(i);
+                const zebraBg = dataTable.zebraRow(i);
+                const nomeInf = perf?.nome ?? r.influencer_id;
                 return (
                   <tr
                     key={r.id}
                     style={{ borderBottom: `1px solid ${t.cardBorder}`, background: zebraBg }}
                     onMouseEnter={(e: MouseEvent<HTMLTableRowElement>) => {
-                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
                     }}
                     onMouseLeave={(e: MouseEvent<HTMLTableRowElement>) => {
                       e.currentTarget.style.background = zebraBg;
                     }}
                   >
-                    <td style={td}>{perf?.nome ?? r.influencer_id}</td>
-                    <td style={td}>
+                    <td style={{ ...dataTable.tdCenter, fontWeight: 600 }} title={nomeInf}>{nomeInf}</td>
+                    <td style={dataTable.tdCenter}>
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           fontSize: 10,
                           fontWeight: 700,
                           padding: "3px 9px",
@@ -988,9 +974,9 @@ function BlocoSolicitacoes({
                         {slInf.label}
                       </span>
                     </td>
-                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
-                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
+                    <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                         <span>
                           {cpfMascaravel
                             ? cpfVisivel
@@ -1022,15 +1008,15 @@ function BlocoSolicitacoes({
                         ) : null}
                       </div>
                     </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
-                    <td style={td}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: `${st.color}22`, color: st.color, border: `1px solid ${st.color}44` }}>
+                    <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
+                    <td style={dataTable.tdCenter}>
+                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: `${st.color}22`, color: st.color, border: `1px solid ${st.color}44` }}>
                         {st.label}
                       </span>
                     </td>
-                    <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{dataStr}</td>
-                    <td style={td}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                    <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{dataStr}</td>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", justifyContent: "center" }}>
                         {showAprovar ? (
                           <>
                             <button type="button" onClick={() => setModalAprovar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #6b7fff44", background: "#6b7fff15", color: "#6b7fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
@@ -1083,7 +1069,6 @@ function BlocoSolicitacoes({
             )}
           </tbody>
         </table>
-        </div>
       </div>
 
       {bloqueioSolicitacao ? (
@@ -1287,6 +1272,7 @@ function BlocoConsolidadoBanca({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const narrowTablet = useMediaQuery("(max-width: 639px)");
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
@@ -1295,9 +1281,6 @@ function BlocoConsolidadoBanca({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [busca, setBusca] = useState("");
-  const th = getThStyle(t);
-  const td = getTdStyle(t);
-  const tdNum = getTdNumStyle(t);
   type BancaConsSortCol =
     | "influencer"
     | "classificacao"
@@ -1440,22 +1423,21 @@ function BlocoConsolidadoBanca({
         />
       </div>
 
-      <div className="app-table-wrap">
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-          <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
+          <caption style={{ display: "none" }}>
             Consolidado de bancas por influencer
           </caption>
           <thead>
             <tr>
-              <th style={{ ...th, width: 32 }} scope="col" aria-label="Expandir" />
+              <th style={{ ...dataTable.thHeader, width: 32 }} scope="col" aria-label="Expandir" />
               <SortTableTh<BancaConsSortCol>
                 label="Influencer"
                 col="influencer"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1468,8 +1450,8 @@ function BlocoConsolidadoBanca({
                 col="classificacao"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1482,8 +1464,8 @@ function BlocoConsolidadoBanca({
                 col="total_lib"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
-                align="right"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1496,8 +1478,8 @@ function BlocoConsolidadoBanca({
                 col="total_sol"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
-                align="right"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1510,8 +1492,8 @@ function BlocoConsolidadoBanca({
                 col="bloq"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={{ ...th, ...(narrowTablet ? { display: "none" } : {}) }}
-                align="left"
+                thStyle={{ ...dataTable.thHeader, ...(narrowTablet ? { display: "none" } : {}) }}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1524,8 +1506,8 @@ function BlocoConsolidadoBanca({
                 col="desbloq"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={{ ...th, ...(narrowTablet ? { display: "none" } : {}) }}
-                align="left"
+                thStyle={{ ...dataTable.thHeader, ...(narrowTablet ? { display: "none" } : {}) }}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1538,8 +1520,8 @@ function BlocoConsolidadoBanca({
                 col="conta"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
-                thStyle={th}
-                align="left"
+                thStyle={dataTable.thHeader}
+                align="center"
                 onSort={(c) =>
                   setSortBancaCons((s) => ({
                     col: c,
@@ -1552,7 +1534,7 @@ function BlocoConsolidadoBanca({
           <tbody>
             {filtradaOrdenada.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
+                <td colSpan={8} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 40 }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </td>
               </tr>
@@ -1569,7 +1551,7 @@ function BlocoConsolidadoBanca({
                       ? { label: "Cancelado", color: "#ef4444" }
                       : { label: "Ativo", color: "#10b981" };
                 const itens = rowsFiltradas.filter((r) => r.influencer_id === row.influencer_id).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
-                const zebraBg = zebraStripe(i);
+                const zebraBg = dataTable.zebraRow(i);
                 return (
                   <Fragment key={row.influencer_id}>
                     <tr
@@ -1579,7 +1561,7 @@ function BlocoConsolidadoBanca({
                       aria-expanded={open}
                       aria-controls={histPanelId}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = zebraBg;
@@ -1592,28 +1574,25 @@ function BlocoConsolidadoBanca({
                         }
                       }}
                     >
-                      <td style={td}>
-                        <ChevronRight
-                          size={14}
-                          color={t.textMuted}
-                          style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
-                          aria-hidden
-                        />
-                      </td>
-                      <td style={td}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Avatar name={row.nome} />
-                          <div>
-                            <div style={{ fontWeight: 600 }}>{row.nome}</div>
-                            <div style={{ fontSize: 11, color: t.textMuted }}>{row.email}</div>
-                          </div>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <ChevronRight
+                            size={14}
+                            color={t.textMuted}
+                            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
+                            aria-hidden
+                          />
                         </div>
                       </td>
-                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 600 }} title={row.nome}>
+                        {row.nome}
+                      </td>
+                      <td style={dataTable.tdCenter} onClick={(e) => e.stopPropagation()}>
                         <span
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
+                            justifyContent: "center",
                             fontSize: 10,
                             fontWeight: 700,
                             padding: "3px 9px",
@@ -1626,11 +1605,12 @@ function BlocoConsolidadoBanca({
                           {slInf.label}
                         </span>
                       </td>
-                      <td style={{ ...tdNum, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
-                      <td style={{ ...tdNum, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 600 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
-                      <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataBloqueio)}</td>
-                      <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataDesbloqueio)}</td>
-                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
+                      <td style={{ ...dataTable.tdCenter, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 700 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataBloqueio)}</td>
+                      <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12, ...(narrowTablet ? { display: "none" } : {}) }}>{fmtData(row.dataDesbloqueio)}</td>
+                      <td style={dataTable.tdCenter} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
                         {podeEditarStatusConta ? (
                           <button
                             type="button"
@@ -1654,6 +1634,7 @@ function BlocoConsolidadoBanca({
                             {sl.label}
                           </span>
                         )}
+                        </div>
                       </td>
                     </tr>
                     {open ? (
@@ -1670,44 +1651,46 @@ function BlocoConsolidadoBanca({
                           {itens.length === 0 ? (
                             <div style={{ color: t.textMuted, fontSize: 12 }}>Nenhum registro.</div>
                           ) : (
-                            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-                              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                            <table style={getDataTableStyle()}>
+                              <caption style={{ display: "none" }}>
                                 Histórico de solicitações de banca do influencer
                               </caption>
                               <thead>
                                 <tr>
                                   {["Data", "Operadora", "ID operadora", "Valor", "Status"].map((h) => (
-                                    <th key={h} scope="col" style={{ ...getThStyle(t, { background: "transparent", fontSize: 10, padding: "6px 10px" }) }}>{h}</th>
+                                    <th key={h} scope="col" style={{ ...dataTable.thHeaderSub, fontSize: 11 }}>{h}</th>
                                   ))}
                                 </tr>
                               </thead>
                               <tbody>
                                 {itens.map((h, hi) => {
-                                  const innerZebra = zebraStripe(hi);
+                                  const innerZebra = dataTable.zebraRow(hi);
                                   return (
                                   <tr
                                     key={h.id}
                                     style={{ borderBottom: `1px solid ${t.divider}`, background: innerZebra }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.background = innerZebra;
                                     }}
                                   >
-                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>
+                                    <td style={dataTable.tdCenter}>
                                       {new Date(h.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                                     </td>
-                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>{h.operadora_slug}</td>
-                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px", fontFamily: "monospace" }) }}>{(h.id_operadora_exibicao ?? "").trim() || "—"}</td>
-                                    <td style={{ ...getTdNumStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>{fmtMoeda(Number(h.valor))}</td>
-                                    <td style={{ ...getTdStyle(t, { fontSize: 12, padding: "8px 10px" }) }}>
-                                      <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_BANCA[h.status].color }}>{STATUS_BANCA[h.status].label}</span>
+                                    <td style={dataTable.tdCenter}>{h.operadora_slug}</td>
+                                    <td style={{ ...dataTable.tdCenter, fontFamily: "monospace" }}>{(h.id_operadora_exibicao ?? "").trim() || "—"}</td>
+                                    <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{fmtMoeda(Number(h.valor))}</td>
+                                    <td style={dataTable.tdCenter}>
+                                      <span style={{ display: "inline-flex", justifyContent: "center", fontSize: 10, fontWeight: 700, color: STATUS_BANCA[h.status].color }}>{STATUS_BANCA[h.status].label}</span>
                                     </td>
                                   </tr>
                                 );})}
                               </tbody>
                             </table>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1718,7 +1701,6 @@ function BlocoConsolidadoBanca({
             )}
           </tbody>
         </table>
-        </div>
       </div>
       {modalStatus ? (
         <ModalAlterarStatusConta
