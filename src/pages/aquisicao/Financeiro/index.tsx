@@ -311,20 +311,6 @@ function opcoesMesesDoCarrossel(ciclos: CicloPagamento[]): { value: string; labe
 
 // ── Componentes base ───────────────────────────────────────────────────────────
 
-function Avatar({ name, size = 28 }: { name: string; size?: number }) {
-  const letra = (name ?? "?")[0].toUpperCase();
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontWeight: 800, fontSize: size * 0.4,
-    }}>
-      {letra}
-    </div>
-  );
-}
-
 function Badge({ status, config }: { status: string; config: Record<string, { label: string; color: string }> }) {
   const cfg = config[status] ?? { label: status, color: "#6b7280" };
   return (
@@ -1970,16 +1956,14 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     e.currentTarget.style.background = zebraBg;
                   }}
                 >
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                      <Avatar name={row.is_agente ? "A" : row.influencer_name} />
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{row.influencer_name}</div>
-                        {row.is_agente && row.descricao && (
-                          <div style={{ fontSize: "11px", color: t.textMuted }}>{row.descricao}</div>
-                        )}
-                      </div>
-                    </div>
+                  <td
+                    style={dataTable.tdCenter}
+                    title={row.influencer_name}
+                  >
+                    <div style={{ fontWeight: 600 }}>{row.influencer_name}</div>
+                    {row.is_agente && row.descricao ? (
+                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{row.descricao}</div>
+                    ) : null}
                   </td>
 
                   <td style={dataTable.tdCenter}>
@@ -2475,14 +2459,11 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                           />
                         </div>
                       </td>
-                      <td style={dataTable.tdCenter}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                          <Avatar name={row.nome_artistico} />
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: "13px" }}>{row.nome_artistico}</div>
-                            <div style={{ fontSize: "11px", color: t.textMuted }}>{row.email}</div>
-                          </div>
-                        </div>
+                      <td
+                        style={{ ...dataTable.tdCenter, fontWeight: 600 }}
+                        title={row.nome_artistico}
+                      >
+                        {row.nome_artistico}
                       </td>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(row.totalPago)}</td>
                       <td style={dataTable.tdCenter}>{fmtHorasTotal(row.totalHoras)}</td>
@@ -2586,14 +2567,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                   <td style={dataTable.tdCenter}>
                     <span style={{ fontSize: "10px", color: t.textMuted }}>—</span>
                   </td>
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                      <Avatar name="A" />
-                      <div style={{ textAlign: "left" }}>
-                        <div style={{ fontWeight: 600, fontSize: "13px" }}>Agentes</div>
-                        <div style={{ fontSize: "11px", color: t.textMuted }}>Pagamentos de agência</div>
-                      </div>
-                    </div>
+                  <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>
+                    Agentes
                   </td>
                   <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: "#22c55e" }}>{fmtBRL(agentesRow.totalPago)}</td>
                   <td style={{ ...dataTable.tdCenter, color: t.textMuted }}>—</td>

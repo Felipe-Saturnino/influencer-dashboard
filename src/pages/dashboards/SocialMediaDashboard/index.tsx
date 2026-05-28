@@ -30,7 +30,6 @@ import {
   PAGE_CONTENT_BOX_GAP,
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
-  getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
@@ -1571,6 +1570,7 @@ export default function SocialMediaDashboard() {
             >
               KPIs de Mídias Sociais
             </SectionTitle>
+            <div style={{ display: "flex", flexDirection: "column", gap: PAGE_CONTENT_BOX_GAP }}>
             <div className="app-grid-kpi-4">
               <SocialKpiCard
                 label="Postagens"
@@ -1638,7 +1638,7 @@ export default function SocialMediaDashboard() {
               />
             </div>
 
-            <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
+            <div className="app-grid-kpi-3">
               {channelConfig.map((cfg) => {
                 const byCh   = totais.byChannel[cfg.channel] ?? [];
                 const stats  = cfg.stats(byCh);
@@ -1668,6 +1668,7 @@ export default function SocialMediaDashboard() {
                   </section>
                 );
               })}
+            </div>
             </div>
           </div>
 
