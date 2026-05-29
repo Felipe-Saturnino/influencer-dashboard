@@ -29,7 +29,8 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   centavosDeStringMoeda,
   centavosInteirosDeStringMoeda,
@@ -932,6 +933,7 @@ function RhFuncModalHeaderDetalhes({
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_funcionarios");
   const permOrg = usePermission("rh_organograma");
 
@@ -1001,7 +1003,6 @@ export default function RhPrestadoresPage() {
   const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
   const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
-  const tableBoxShell = { ...getPageContentBoxShellStyle(brand, t), overflow: "hidden" as const, padding: 0, marginBottom: 0 };
   const kpiTileShell = getPageContentBoxShellStyle(brand, t);
 
   useEffect(() => {
@@ -2123,13 +2124,13 @@ export default function RhPrestadoresPage() {
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
-        <div style={tableBoxShell}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle()}>
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
                 {["Nome", "Função", "Líder Imediato", "Data da Função", "Remuneração", "Status", "Ações"].map((h) => (
-                  <th key={h} scope="col" style={getThStyle(t)}>
+                  <th key={h} scope="col" style={dataTable.thHeader}>
                     {h}
                   </th>
                 ))}
@@ -2274,8 +2275,6 @@ export default function RhPrestadoresPage() {
     (abaPagina === "anotacoes" && perm.canEditarOk);
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 6 : 7;
-  const thStyleSort = getThStyle(t);
-  const thStyleSortRight = getThStyle(t, { textAlign: "right" });
 
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
@@ -2680,16 +2679,8 @@ export default function RhPrestadoresPage() {
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
-        <div className="app-table-wrap">
-        <div style={tableBoxShell}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              minWidth: tabelaSemSalario ? 620 : 720,
-            }}
-          >
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: tabelaSemSalario ? 620 : 720 })}>
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
             <thead>
               <tr>
@@ -2699,8 +2690,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Função"
@@ -2708,8 +2699,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Líder Imediato"
@@ -2717,8 +2708,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Data da Função"
@@ -2726,8 +2717,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 {!tabelaSemSalario ? (
                   <SortTableTh<PrestadoresSortCol>
@@ -2736,8 +2727,8 @@ export default function RhPrestadoresPage() {
                     sortCol={sortPrestadores.col}
                     sortDir={sortPrestadores.dir}
                     onSort={onSortPrestadores}
-                    thStyle={thStyleSortRight}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     endAdornment={
                       podeVerDadosSensiveis ? (
                         <button
@@ -2775,10 +2766,10 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
-                <th scope="col" style={thStyleSortRight}>
+                <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
               </tr>
@@ -2791,7 +2782,7 @@ export default function RhPrestadoresPage() {
                 </>
               ) : filtrada.length === 0 ? (
                 <tr>
-                  <td colSpan={colunasTabela} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
+                  <td colSpan={colunasTabela} style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}>
                     Sem dados para o período selecionado.
                   </td>
                 </tr>
@@ -2802,16 +2793,24 @@ export default function RhPrestadoresPage() {
                   const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                   const remCol = textoRemuneracaoColunaTabela(row);
                   const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
+                  const zebraBg = dataTable.zebraRow(i);
                   return (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      style={{ background: zebraBg }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebraBg;
+                      }}
+                    >
                       <td
                         style={{
-                          ...getTdStyle(t),
-                          textAlign: "left",
+                          ...dataTable.tdCenter,
                           maxWidth: 200,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          background: zebraStripe(i),
                         }}
                         title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
                       >
@@ -2835,33 +2834,31 @@ export default function RhPrestadoresPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
+                      <td style={dataTable.tdCenter}>{row.cargo}</td>
                       <td
-                        style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }}
+                        style={{ ...dataTable.tdCenter, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}
                         title={liderCompleto !== "—" ? liderCompleto : undefined}
                       >
                         {lider}
                       </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), fontVariantNumeric: "tabular-nums" }}>
-                        {dataFuncaoTxt}
-                      </td>
+                      <td style={dataTable.tdCenter}>{dataFuncaoTxt}</td>
                       {!tabelaSemSalario ? (
                         <td
                           title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
-                          style={getTdNumStyle(t, {
-                            background: zebraStripe(i),
+                          style={{
+                            ...dataTable.tdCenter,
                             ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
-                          })}
+                          }}
                         >
                           {podeVerDadosSensiveis ? remCol.texto : "—"}
                         </td>
                       ) : null}
-                      <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>
+                      <td style={dataTable.tdCenter}>
                         <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
                       </td>
-                      <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
+                      <td style={dataTable.tdCenter}>
                         {preencherAcoesHeadcount || tabelaAcoesRh || tabelaAnotacoesRh ? (
-                          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               type="button"
                               onClick={() => abrirVer(row)}
@@ -2923,7 +2920,6 @@ export default function RhPrestadoresPage() {
             </tbody>
           </table>
         </div>
-      </div>
       </div>
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (

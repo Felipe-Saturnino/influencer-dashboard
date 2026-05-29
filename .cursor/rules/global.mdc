@@ -530,7 +530,6 @@ const dataTable = useDataTableBlock();
 |------|--------|
 | **Gestão de Usuários** (abas Permissões, Gestores, Prestadores, Operadora) | Matriz de permissões com selects por célula; listas em grelha com layout próprio |
 | **Gestão de Escala** | Cabeçalhos dinâmicos por dia/turno e grade operacional misturada com tabela |
-| **Gestão de Prestadores** | Colunas variáveis por aba (head count / ações RH / anotações), salário condicional e ações com texto em célula |
 | **Gestão de Operadoras** (modal Operações) | Sub-tabela de mesas no modal — legado isolado |
 
 Demais listas em bloco nível 3 devem usar `useDataTableBlock()` + `getDataTableWrapStyle` / `getDataTableStyle`. Grades calendário (Agenda dia a dia, etc.) ficam fora do padrão — ver MDC da secção.

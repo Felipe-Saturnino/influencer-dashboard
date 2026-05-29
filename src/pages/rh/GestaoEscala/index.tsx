@@ -7,7 +7,8 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -386,6 +387,9 @@ const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
 
 /** Consolidado: coluna Turno fixa ao rolar horizontalmente. */
 const CONSOLIDADO_COL_TURNO_W = 168;
+const CONSOLIDADO_FONT_HEADER = 12;
+const CONSOLIDADO_FONT_TURNO = 13;
+const CONSOLIDADO_FONT_DIA_HEADER = 11;
 const Z_CONSOLIDADO_STICKY_HEAD = 25;
 const Z_CONSOLIDADO_STICKY_ROW = 24;
 
@@ -479,6 +483,7 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
 export default function RhGestaoEscalaPage() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_gestao_escala");
 
   const hoje = useMemo(() => new Date(), []);
@@ -1082,6 +1087,18 @@ export default function RhGestaoEscalaPage() {
     }),
   };
 
+  const thDiaConsolidado = (dia: DiaMes): CSSProperties => ({
+    ...thDia(dia),
+    fontSize: CONSOLIDADO_FONT_DIA_HEADER,
+  });
+
+  const fundoCelulaTotalConsolidado = (dia: DiaMes): string =>
+    diaComDestaqueCalendario(dia)
+      ? t.isDark
+        ? `color-mix(in srgb, rgba(245,158,11,0.14) 35%, ${dataTable.totalRowBgStrong})`
+        : `color-mix(in srgb, rgba(245,158,11,0.16) 35%, ${dataTable.totalRowBgStrong})`
+      : dataTable.totalRowBgStrong;
+
   const tdSticky = (left: number, rowBg: string, zBody: number, extra?: CSSProperties): CSSProperties => ({
     ...getTdStyle(t, {
       ...extra,
@@ -1170,7 +1187,7 @@ export default function RhGestaoEscalaPage() {
       textAlign: "left",
       fontWeight: 700,
       fontFamily: FONT.body,
-      fontSize: "inherit",
+      fontSize: CONSOLIDADO_FONT_TURNO,
       padding: "10px 12px",
       margin: 0,
       border: "none",
@@ -1402,14 +1419,21 @@ export default function RhGestaoEscalaPage() {
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col" style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_HEAD, fundoStickyConsolidadoTurno)}>
+                      <th
+                        scope="col"
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_HEAD, fundoStickyConsolidadoTurno, {
+                          fontSize: CONSOLIDADO_FONT_HEADER,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                        })}
+                      >
                         Turno
                       </th>
                       {dias.map((dia) => (
                         <th
                           key={`resumo-h-${dia.iso}`}
                           scope="col"
-                          style={thDia(dia)}
+                          style={thDiaConsolidado(dia)}
                           title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
                         >
                           <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
@@ -1424,6 +1448,7 @@ export default function RhGestaoEscalaPage() {
                         scope="row"
                         style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
                           fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
                           padding: 0,
                         })}
                       >
@@ -1506,6 +1531,7 @@ export default function RhGestaoEscalaPage() {
                         scope="row"
                         style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
                           fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
                           padding: 0,
                         })}
                       >
@@ -1586,8 +1612,9 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, TOTAL_ROW_BG, {
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, dataTable.totalRowBgStrong, {
                           fontWeight: 800,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
                           borderTop: `2px solid ${t.cardBorder}`,
                           padding: 0,
                         })}
@@ -1601,13 +1628,13 @@ export default function RhGestaoEscalaPage() {
                             textAlign: "left",
                             fontWeight: 800,
                             fontFamily: FONT.body,
-                            fontSize: "inherit",
+                            fontSize: CONSOLIDADO_FONT_TURNO,
                             padding: "10px 12px",
                             margin: 0,
                             border: "none",
                             borderLeft: "3px solid transparent",
                             boxSizing: "border-box",
-                            background: "transparent",
+                            background: dataTable.totalRowBgStrong,
                             color: t.text,
                             cursor: "pointer",
                             borderRadius: 0,
@@ -1626,11 +1653,7 @@ export default function RhGestaoEscalaPage() {
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 800,
                               borderTop: `2px solid ${t.cardBorder}`,
-                              background: diaComDestaqueCalendario(d)
-                                ? t.isDark
-                                  ? "rgba(245,158,11,0.14)"
-                                  : "rgba(245,158,11,0.16)"
-                                : TOTAL_ROW_BG,
+                              background: fundoCelulaTotalConsolidado(d),
                               color: diaComDestaqueCalendario(d) ? "#f59e0b" : t.text,
                             })}
                           >
