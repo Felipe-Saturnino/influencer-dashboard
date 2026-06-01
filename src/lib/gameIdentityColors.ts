@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { BRAND } from "./dashboardConstants";
 
 /** Chaves de jogo com identidade visual fixa na plataforma (paleta de mercado). */
@@ -52,3 +53,31 @@ export const JOGOS_IDENTIDADE_LISTA = (
   label: GAME_IDENTITY_LABEL[key],
   cor: GAME_IDENTITY_HEX[key],
 }));
+
+/** Mix de fundo/borda/texto — faixa de título ou borda de select (Overview Spin). */
+export function getGameMesaTituloMix(hex: string) {
+  const borderMix = `color-mix(in srgb, ${hex} 35%, transparent)`;
+  return {
+    accent: hex,
+    bg: `color-mix(in srgb, ${hex} 12%, transparent)`,
+    borderMix,
+    border: `1px solid ${borderMix}`,
+  };
+}
+
+/** Faixa de título acima de tabela por mesa/jogo (`Dados por mesa`, Comparativo de mesa). */
+export function getGameMesaTituloStripStyle(hex: string, extra?: CSSProperties): CSSProperties {
+  const mix = getGameMesaTituloMix(hex);
+  return {
+    marginBottom: 10,
+    padding: "6px 10px",
+    borderRadius: 10,
+    background: mix.bg,
+    border: mix.border,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700,
+    color: mix.accent,
+    ...extra,
+  };
+}

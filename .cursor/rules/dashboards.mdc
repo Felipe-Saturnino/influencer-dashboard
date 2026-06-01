@@ -92,13 +92,13 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
-- **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
 - **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
-- **Comparativo de Jogo:** colunas, células e séries de gráfico usam **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`) — Global § Identidade visual por jogo (BJ verde, Roleta vermelho, Baccarat azul, FB amarelo). **Não** redefinir `COR_*` locais.
-- **Dados por mesa / `tituloMesa*`:** exceção temporária — faixas de título podem ainda usar tokens de marca ou legado até migração página a página; **não** misturar paleta antiga (roxo/ciano/laranja) em código novo do Comparativo de Jogo.
+- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde).
+- **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
+- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / vermelho / amarelo); **não** tokens whitelabel.
 
 ---
 
@@ -575,7 +575,7 @@ Envolver `ResponsiveContainer` num pai com `role="img"` e `aria-label` descritiv
 
 Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(--brand-action…) …)` — nunca `rgba(124,58,237,0.12)` ou `#7c3aed` hardcoded para estado ativo.
 
-**Comparativos duais A/B (Mesa, Funil):** com `brand.useBrand`, lado A usa `--brand-action` e lado B `--brand-contrast`. Nunca o mesmo token para A e B.
+**Comparativos duais A/B (Funil):** com `brand.useBrand`, lado A usa `--brand-action` e lado B `--brand-contrast`. Nunca o mesmo token para A e B. **Exceção — Overview Spin Comparativo de mesa (Blackjack):** mesa A e B usam a mesma identidade **`GAME_IDENTITY_HEX.blackjack`** (`getGameMesaTituloMix`).
 
 ---
 

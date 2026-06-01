@@ -93,9 +93,9 @@ Paleta de **mercado** para Baccarat, Roleta, Blackjack e Futebol Brasileiro — 
 
 **Fonte de código:** `src/lib/gameIdentityColors.ts` — importar `GAME_IDENTITY_HEX`, `gameIdentityTextColor`, `getGameTagChipStyle`, `JOGOS_IDENTIDADE_LISTA`. **Proibido** hardcodar hex de jogo em páginas novas.
 
-**Chips/tags:** usar `getGameTagChipStyle(key, isDark)` ou `gameIdentityTextColor` em `FiltroSemanticoTabPill` (`semanticColor`). **Tabelas/gráficos por jogo:** usar `cor` de `JOGOS_IDENTIDADE_LISTA` ou `GAME_IDENTITY_HEX[key]`.
+**Chips/tags:** usar `getGameTagChipStyle(key, isDark)` ou `gameIdentityTextColor` em `FiltroSemanticoTabPill` (`semanticColor`). **Tabelas/gráficos por jogo:** usar `cor` de `JOGOS_IDENTIDADE_LISTA` ou `GAME_IDENTITY_HEX[key]`. **Faixas de título por mesa (Overview Spin):** `getGameMesaTituloStripStyle` / `getGameMesaTituloMix`.
 
-**Exceções documentadas na secção:** Comparativo de Mesa A/B (Overview Spin) usa tokens A/B de marca, não verde de Blackjack; blocos ainda não migrados ficam fora até aprovação página a página.
+**Exceções documentadas na secção:** nenhuma para identidade de jogo na Overview Spin (Comparativo de mesa, Dados por mesa e Comparativo de Jogo usam `gameIdentityColors.ts`).
 
 ---
 
