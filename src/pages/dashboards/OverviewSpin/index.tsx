@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { CAROUSEL_NAV_BTN_PX, getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
@@ -1355,7 +1356,7 @@ export default function OverviewSpin() {
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
-  const [aba, setAba] = useState<OverviewSpinTab>("overview");
+  const [aba, setAba] = useRouteTab("mesas_spin", "overview", ["overview", "posicionamento"] as const);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 

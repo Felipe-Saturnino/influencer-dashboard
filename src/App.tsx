@@ -13,6 +13,11 @@ import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
 import { isCanalDenunciasPublicPath } from "./lib/canalDenunciasSpin";
+import {
+  buildLoginPath,
+  parseAppPathname,
+  PENDING_RETURN_PATH_KEY,
+} from "./lib/appRoutes";
 
 // Helper: retry automático em falhas de carregamento de chunk (ex.: rede instável)
 function lazyWithRetry<T extends ComponentType>(
@@ -76,6 +81,7 @@ const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitaco
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
+const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -149,7 +155,7 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
-  const { user, theme: t, activePage } = useApp();
+  const { user, theme: t, activePage, layoutView } = useApp();
   const [retryKey, setRetryKey] = useState(0);
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -178,7 +184,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
     };
   }, [navDrawer, menuOpen]);
 
-  if (!user) return null;
+  if (!user || layoutView === "sem_acesso") return null;
   const PageComponent = PAGE_MAP[activePage] ?? Home;
 
   const go = (page: string) => {
@@ -251,23 +257,39 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
-  const { user, setUser, checking } = useApp();
+  const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
   const [publicCanal, setPublicCanal] = useState(() =>
     typeof window !== "undefined" ? isCanalDenunciasPublicPath() : false,
   );
 
   useEffect(() => {
-    setPublicCanal(isCanalDenunciasPublicPath());
-    const onPop = () => setPublicCanal(isCanalDenunciasPublicPath());
+    const onPop = () => {
+      setPublicCanal(isCanalDenunciasPublicPath());
+      if (!isCanalDenunciasPublicPath()) applyPathFromLocation();
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [applyPathFromLocation]);
+
+  useEffect(() => {
+    if (checking || !routeReady || user || publicCanal) return;
+    const parsed = parseAppPathname(window.location.pathname);
+    if (parsed.kind === "special" && parsed.special === "login") return;
+    if (parsed.kind === "app") {
+      const full = `${window.location.pathname}${window.location.search}`;
+      sessionStorage.setItem(PENDING_RETURN_PATH_KEY, full);
+    }
+    const loginPath = buildLoginPath();
+    if (window.location.pathname !== loginPath) {
+      window.history.replaceState({}, "", loginPath);
+    }
+  }, [checking, routeReady, user, publicCanal]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
     setUser(null);
   }
-  if (checking) {
+  if (checking || !routeReady) {
     return (
       <div
         className="app-full-viewport-zoomed"
@@ -295,6 +317,22 @@ function Root() {
   if (publicCanal) return <CanalDenunciasSpinPage />;
   if (!user) return <Login onLogin={setUser} />;
   if (user.must_change_password) return <TrocarSenhaObrigatorio />;
+  if (layoutView === "sem_acesso") {
+    return (
+      <div
+        className="app-full-viewport-zoomed"
+        style={{
+          minHeight: "100dvh",
+          background: t.bg,
+          overflowY: "auto",
+        }}
+      >
+        <Suspense fallback={<PageLoadingFallback background={t.bg} />}>
+          <SemAcesso />
+        </Suspense>
+      </div>
+    );
+  }
   return <AppLayout onLogout={handleLogout} />;
 }
 

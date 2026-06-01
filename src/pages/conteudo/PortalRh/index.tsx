@@ -25,6 +25,7 @@ import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
@@ -255,7 +256,11 @@ export default function PortalRhPage() {
   const { theme: t, user } = useApp();
   const perm = usePermission("rh_portal");
 
-  const [aba, setAba] = useState<AbaPortal>("comunicados");
+  const [aba, setAba] = useRouteTab(
+    "rh_portal",
+    "comunicados",
+    ["comunicados", "politicas", "rhtalks", "gerenciamento"] as const,
+  );
   const [busca, setBusca] = useState("");
   const [buscaDeb, setBuscaDeb] = useState("");
   const [loading, setLoading] = useState(true);
@@ -392,7 +397,7 @@ export default function PortalRhPage() {
 
   useEffect(() => {
     if (!perm.canEditarOk && aba === "gerenciamento") setAba("comunicados");
-  }, [perm.canEditarOk, aba]);
+  }, [perm.canEditarOk, aba, setAba]);
 
   useEffect(() => {
     if (aba === "gerenciamento") return;

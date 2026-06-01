@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
@@ -201,7 +202,11 @@ export default function FigurinosPage() {
   const [empPorItem, setEmpPorItem] = useState<Record<string, RhFigurinoEmprestimo>>({});
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aba, setAba] = useState<Aba>("available");
+  const [aba, setAba] = useRouteTab(
+    "rh_figurinos",
+    "available",
+    ["available", "borrowed", "maintenance", "discarded"] as const,
+  );
   const [filtroOp, setFiltroOp] = useState<string>("todas");
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");

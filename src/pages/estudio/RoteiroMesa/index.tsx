@@ -14,6 +14,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -1111,13 +1112,14 @@ export default function RoteiroMesa() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: narrowMobile ? "nowrap" : "wrap", flex: 1, justifyContent: "center", minWidth: narrowMobile ? "max-content" : undefined }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogo</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogos</span>
                 {JOGOS.map(({ key, label }) => {
                   const jcfg = jogoTagChipStyle(key, dark);
                   return (
                     <FiltroSemanticoTabPill
                       key={key}
                       label={label}
+                      icon={isGameIdentityKey(key) ? GAME_IDENTITY_ICONS[key] : undefined}
                       semanticColor={jcfg.color}
                       active={filtroJogo === key}
                       onClick={() => setFiltroJogo(key)}

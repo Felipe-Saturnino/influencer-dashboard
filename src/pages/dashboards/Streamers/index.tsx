@@ -1,8 +1,9 @@
-import { useState, Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Wallet } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -156,7 +157,7 @@ function StreamersFiltrosEUAbas({
 function StreamersAutorizado() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [aba, setAba] = useState<StreamersTab>("overview");
+  const [aba, setAba] = useRouteTab("streamers", "overview", ["overview", "conversao", "financeiro"] as const);
 
   return (
     <StreamersFiltrosProvider>

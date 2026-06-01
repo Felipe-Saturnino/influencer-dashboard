@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { FONT } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import {
@@ -12,6 +12,8 @@ export interface FiltroSemanticoTabPillProps {
   semanticColor: string;
   active: boolean;
   onClick: () => void;
+  /** Ícone à esquerda do rótulo (ex.: Spade / CircleDot por jogo). */
+  icon?: ReactNode;
   "aria-label"?: string;
   style?: CSSProperties;
 }
@@ -25,6 +27,7 @@ export function FiltroSemanticoTabPill({
   semanticColor,
   active,
   onClick,
+  icon,
   "aria-label": ariaLabel,
   style,
 }: FiltroSemanticoTabPillProps) {
@@ -54,6 +57,7 @@ export function FiltroSemanticoTabPill({
         ...style,
       }}
     >
+      {icon}
       {label}
     </button>
   );

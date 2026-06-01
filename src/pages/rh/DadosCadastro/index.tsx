@@ -4,6 +4,8 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
+import { REVISAO_GATE_BANNER_KEY } from "../../../lib/appRoutes";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -324,7 +326,17 @@ export default function RhDadosCadastroPage() {
   const brand = useDashboardBrand();
   const perm = usePermission("rh_dados_cadastro");
 
-  const [aba, setAba] = useState<AbaCadastro>("trabalho");
+  const [aba, setAba] = useRouteTab(
+    "rh_dados_cadastro",
+    "trabalho",
+    ["trabalho", "cadastral", "documentos", "historico"] as const,
+  );
+  const [gateRedirectBanner] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const flagged = sessionStorage.getItem(REVISAO_GATE_BANNER_KEY);
+    if (flagged) sessionStorage.removeItem(REVISAO_GATE_BANNER_KEY);
+    return !!flagged;
+  });
   const [loading, setLoading] = useState(true);
   const [row, setRow] = useState<RhFuncionario | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
@@ -744,6 +756,25 @@ export default function RhDadosCadastroPage() {
         >
           <CheckCircle2 size={16} aria-hidden />
           {msgOk}
+        </div>
+      ) : null}
+
+      {gateRedirectBanner ? (
+        <div
+          role="status"
+          style={{
+            marginBottom: PAGE_CONTENT_BOX_GAP,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            fontSize: 13,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            lineHeight: 1.55,
+          }}
+        >
+          Conclua a atualização cadastral obrigatória nesta página para voltar a usar o restante do sistema.
         </div>
       ) : null}
 

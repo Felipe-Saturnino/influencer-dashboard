@@ -14,6 +14,7 @@ import {
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
   DashboardPageHeader,
@@ -632,7 +633,7 @@ export default function SocialMediaDashboard() {
   const [campanhasPerf, setCampanhasPerf] = useState<CampanhaPerfRow[]>([]);
   const [campanhasPerfPrev, setCampanhasPerfPrev] = useState<CampanhaPerfRow[]>([]);
   const [serieFunil, setSerieFunil] = useState<FunilSerieRow[]>([]);
-  const [aba, setAba] = useState<SocialMediaTab>("overview");
+  const [aba, setAba] = useRouteTab("dash_midias_sociais", "overview", ["overview", "conversao", "alcance"] as const);
   const [compCampA, setCompCampA] = useState<string>("");
   const [compCampB, setCompCampB] = useState<string>("");
   const [sortCampCmp, setSortCampCmp] = useState<{ col: CampCmpSortCol; dir: SortDir }>({ col: "ggr", dir: "desc" });

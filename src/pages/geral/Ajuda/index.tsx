@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MENU } from "../../../constants/menu";
@@ -515,6 +516,11 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Itens Obrigatórios e Confirmação de Ciência",
         texto:
           "Dealers, Agendamento e Jogos são os três itens obrigatórios. Cada um apresenta um bloco de confirmação ao final do conteúdo.\n\nPara confirmar: marque a caixa declarando que leu e compreendeu as regras, depois clique em Confirmar Ciência. A confirmação é registrada com data e hora e não pode ser desfeita.\n\nUma barra de progresso no topo da página indica quantos dos três itens foram confirmados. Quando todos forem concluídos, a página exibe um banner de conclusão e o status muda para Playbook concluído.",
+      },
+      {
+        subtitulo: "Aba Jogos — foco obrigatório",
+        texto:
+          "Na aba Jogos, a seção «Foco obrigatório — Live Casino SPIN» exige que Blackjack, Roleta, Baccarat e Futebol Brasileiro ocorram exclusivamente nas mesas Spin Gaming — nunca em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou equivalentes). Slots seguem regra separada com limite de tempo por hora de live.",
       },
       {
         subtitulo: "Barra de Progresso",
@@ -1899,7 +1905,7 @@ export default function Ajuda() {
   const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const [aba, setAba] = useState<Aba>("conheca");
+  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario"] as const);
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
 
   const menuAjudaVisivel = useMemo(

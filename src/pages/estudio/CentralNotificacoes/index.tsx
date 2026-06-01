@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -291,7 +292,11 @@ export default function CentralNotificacoes() {
   const [campanhas, setCampanhas] = useState<CampanhaComPerfil[]>([]);
   const [solicCampRoteiroPorCampanhaId, setSolicCampRoteiroPorCampanhaId] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [abaStaff, setAbaStaff] = useState<AbaStaff>("troca");
+  const [abaStaff, setAbaStaff] = useRouteTab(
+    "central_notificacoes",
+    "troca",
+    ["troca", "feedback", "campanha_roteiro", "roteiro_mesa"] as const,
+  );
   const [solicTroca, setSolicTroca] = useState<DealerSolRow[]>([]);
   const [solicFeedback, setSolicFeedback] = useState<DealerSolRow[]>([]);
   const [solMinhas, setSolMinhas] = useState<DealerSolRow[]>([]);

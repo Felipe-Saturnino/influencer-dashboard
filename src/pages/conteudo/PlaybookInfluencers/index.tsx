@@ -3,6 +3,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import type { Role } from "../../../types";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -227,9 +228,10 @@ const ConteudoJogos: React.FC<{ dark: boolean }> = ({ dark }) => (
       <>Blackjack nas mesas <strong>Spin Gaming</strong></>,
       <>Roleta nas mesas <strong>Spin Gaming</strong></>,
       <>Baccarat nas mesas <strong>Spin Gaming</strong></>,
+      <>Futebol Brasileiro nas mesas <strong>Spin Gaming</strong></>,
     ]} />
     <BlocoAlerta dark={dark}>
-      <strong>Proibido:</strong> Jogar Blackjack, Roleta ou Baccarat em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou qualquer outro provedor). Esses jogos devem ocorrer <strong>exclusivamente</strong> nas mesas da <strong>Spin Gaming</strong>.
+      <strong>Proibido:</strong> Jogar Blackjack, Roleta, Baccarat ou Futebol Brasileiro em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou qualquer outro provedor). Esses jogos devem ocorrer <strong>exclusivamente</strong> nas mesas da <strong>Spin Gaming</strong>.
     </BlocoAlerta>
     <TituloSecao accent={dark ? "#7b95ff" : BRAND.azul}>Uso de Slots (permitido com limite)</TituloSecao>
     <ListaOK dark={dark} items={[
@@ -718,7 +720,20 @@ export default function PlaybookInfluencers() {
   const perm = usePermission("playbook_influencers");
   const dark = t.isDark ?? false;
 
-  const [abaAtiva, setAbaAtiva] = useState(ABAS[0].key);
+  const [abaAtiva, setAbaAtiva] = useRouteTab(
+    "playbook_influencers",
+    ABAS[0].key,
+    ABAS.map((a) => a.key) as [
+      "posicionamento",
+      "dealers",
+      "agendamento",
+      "jogos",
+      "blackjack",
+      "tecnico",
+      "funfacts",
+      "acesso",
+    ],
+  );
   const [confirmacoes, setConfirmacoes] = useState<Set<string>>(new Set());
   const [totalInflu, setTotalInflu] = useState(0);
   const [totalConfAll, setTotalConfAll] = useState(0);

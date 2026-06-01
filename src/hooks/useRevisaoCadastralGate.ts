@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../context/AppContext";
 import type { PageKey } from "../types";
+import { REVISAO_GATE_BANNER_KEY } from "../lib/appRoutes";
 import {
   PAGES_ISENTAS_GATE_REVISAO_CADASTRO,
   buscarFuncionarioRevisaoCadastralPorEmail,
@@ -9,7 +10,7 @@ import {
 } from "../lib/rhCadastroRevisao";
 
 export function useRevisaoCadastralGate(activePage: string) {
-  const { user, permissions, setActivePage } = useApp();
+  const { user, permissions, navigateTo } = useApp();
   const [gateLoading, setGateLoading] = useState(true);
   const [gateAtivo, setGateAtivo] = useState(false);
 
@@ -45,18 +46,20 @@ export function useRevisaoCadastralGate(activePage: string) {
     if (gateLoading || !gateAtivo) return;
     const page = activePage as PageKey;
     if (PAGES_ISENTAS_GATE_REVISAO_CADASTRO.includes(page)) return;
-    setActivePage("rh_dados_cadastro");
-  }, [gateLoading, gateAtivo, activePage, setActivePage]);
+    sessionStorage.setItem(REVISAO_GATE_BANNER_KEY, "1");
+    navigateTo("rh_dados_cadastro");
+  }, [gateLoading, gateAtivo, activePage, navigateTo]);
 
   const navegarComGate = useCallback(
     (page: string) => {
       if (gateAtivo && !PAGES_ISENTAS_GATE_REVISAO_CADASTRO.includes(page as PageKey)) {
-        setActivePage("rh_dados_cadastro");
+        sessionStorage.setItem(REVISAO_GATE_BANNER_KEY, "1");
+        navigateTo("rh_dados_cadastro");
         return;
       }
-      setActivePage(page);
+      navigateTo(page as PageKey);
     },
-    [gateAtivo, setActivePage],
+    [gateAtivo, navigateTo],
   );
 
   return { gateLoading, gateAtivo, recarregarGate: recarregar, navegarComGate };
