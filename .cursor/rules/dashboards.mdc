@@ -126,6 +126,11 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 
 - **3 abas:** Overview (KPIs + Detalhamento + Comparativo de campanha),
   Conversão (Funil + Comparativo de funil + Comparativo de taxas), Alcance (KPIs sociais + Posts).
+- **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
+  Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
+  Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.
+  **Alcance:** dados orgânicos (`kpi_daily`, posts) **sem** filtro operadora — canal Spin global. O `FiltroOperadoraSelect` **não** aparece na aba Alcance (só Overview/Conversão).
+- Campanhas legadas sem operadora: backfill `casa_apostas` (migração `20260601120000_midias_sociais_filtro_operadora.sql`).
 - **KpiCard local (`SocialKpiCard`):** interface diferente do `KpiCard` compartilhado.
   Aceita `valor` (string), `momComparativo` (objeto com `pctLabel`/`up`/`refLine`), `accentVar`, `accentCor`.
   MoM usa `TrendingUp`/`TrendingDown` Lucide — NUNCA `↑`/`↓` Unicode.

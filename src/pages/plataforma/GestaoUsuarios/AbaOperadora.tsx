@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Operadora } from "../../../types";
-import { BRAND, PAGES } from "./constants";
+import { BRAND, PAGES, secoesMenuFromPages } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
 import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
@@ -101,21 +101,8 @@ export function AbaOperadora() {
     );
   }
 
-  const ordemSecoes = [
-    "Dashboards",
-    "Lives",
-    "Aquisição",
-    "Marketing",
-    "Estúdio",
-    "RH",
-    "Conteúdo",
-    "Plataforma",
-    "Geral",
-  ];
   const pagesDaOp = PAGES.filter((p) => p.key !== "gestao_usuarios");
-  const secoes = [...new Set(pagesDaOp.map((p) => p.secao))].sort(
-    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
-  );
+  const secoes = secoesMenuFromPages(pagesDaOp);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -161,9 +148,7 @@ export function AbaOperadora() {
               {(() => {
                 const secoesComPaginas = secoes.filter((s) => pagesDaOp.some((p) => p.secao === s));
                 return secoes.map((secao) => {
-                  const pagesDaSec = pagesDaOp
-                    .filter((p) => p.secao === secao)
-                    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+                  const pagesDaSec = pagesDaOp.filter((p) => p.secao === secao);
                   if (pagesDaSec.length === 0) return null;
 
                   const isUltima = secao === secoesComPaginas[secoesComPaginas.length - 1];

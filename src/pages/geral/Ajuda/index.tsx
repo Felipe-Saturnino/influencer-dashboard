@@ -113,7 +113,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nAs três abas (Overview, Conversão, Alcance) compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Na aba Alcance o filtro não é exibido — os dados orgânicos dos canais Spin (Instagram, Facebook, YouTube) são sempre globais.\n\nAs três abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",

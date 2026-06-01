@@ -138,6 +138,19 @@ export const PAGES: {
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
+/** Secções na ordem de `PAGES` / menu lateral (primeira ocorrência de cada secao). */
+export function secoesMenuFromPages(pages: readonly { secao: string }[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of pages) {
+    if (!seen.has(p.secao)) {
+      seen.add(p.secao);
+      out.push(p.secao);
+    }
+  }
+  return out;
+}
+
 /**
  * Perfis editáveis na aba Permissões (Administrador não entra: acesso total fixo na plataforma).
  */

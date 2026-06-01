@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -19,6 +20,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
+  FiltroOperadoraSelect,
   SectionTitle,
   SkeletonKpiCard,
   KpiCardDepositos,
@@ -176,6 +178,7 @@ function fmtComparativoMoM(atual: number, anterior: number): { pctLabel: string;
 type CampanhaPerfRow = {
   campanha_id: string;
   campanha_nome: string;
+  operadora_slug: string | null;
   visitas: number;
   registros: number;
   ftds: number;
@@ -567,6 +570,30 @@ function SocialKpiCard({
 export default function SocialMediaDashboard() {
   const { theme: t, isDark } = useApp();
   const perm = usePermission("dash_midias_sociais");
+  const {
+    showFiltroOperadora,
+    podeVerOperadora,
+    operadoraSlugsForcado,
+  } = useDashboardFiltros();
+  const [filtroOperadora, setFiltroOperadora] = useState("todas");
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+
+  const operadoraParaRpc =
+    operadoraSlugsForcado?.[0] ??
+    (filtroOperadora !== "todas" ? filtroOperadora : null);
+  const showColunaOperadora = showFiltroOperadora && filtroOperadora === "todas";
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+      setOperadorasList(data ?? []);
+    });
+  }, []);
+
+  const operadoraNomePorSlug = useMemo(() => {
+    const map = new Map<string, string>();
+    operadorasList.forEach((o) => map.set(o.slug, o.nome));
+    return map;
+  }, [operadorasList]);
 
   // ── Navegação por meses (padrão Overview) ─────────────────────────────────
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(MES_INICIO), []);
@@ -622,7 +649,8 @@ export default function SocialMediaDashboard() {
 
   // ── Estados de dados ──────────────────────────────────────────────────────────
   const [carIdx,   setCarIdx]   = useState(0);
-  const [loading,  setLoading]  = useState(true);
+  const [loadingAlcance, setLoadingAlcance] = useState(true);
+  const [loadingCampanhas, setLoadingCampanhas] = useState(true);
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
   const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
@@ -654,11 +682,11 @@ export default function SocialMediaDashboard() {
     setCarIdx(0);
   }, [posts]);
 
-  // ── Busca de dados ────────────────────────────────────────────────────────────
+  // ── Alcance (redes sociais) — sem filtro operadora ───────────────────────────
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
+    async function loadAlcance() {
+      setLoadingAlcance(true);
       setCarIdx(0);
 
       const kpi = await fetchAllPages<KpiDaily>(async (from, to) =>
@@ -781,22 +809,41 @@ export default function SocialMediaDashboard() {
           .map(([tipo, total]) => ({ tipo, total }))
           .sort((a, b) => b.total - a.total)
       );
+      setLoadingAlcance(false);
+    }
+    loadAlcance();
+    return () => { cancelled = true; };
+  }, [start, end, startPrev, endPrev, historico]);
+
+  // ── Conversão (campanhas / UTMs) — filtro operadora ──────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCampanhas() {
+      setLoadingCampanhas(true);
 
       const agregacaoSerie = historico ? "month" : "day";
       const [funilRes, campRes, serieRes, campPrevRes] = await Promise.all([
-        supabase.rpc("get_campanha_funil_totais", { p_data_inicio: start, p_data_fim: end, p_operadora_slug: null }),
-        supabase.rpc("get_campanhas_performance", { p_data_inicio: start, p_data_fim: end, p_operadora_slug: null }),
+        supabase.rpc("get_campanha_funil_totais", {
+          p_data_inicio: start,
+          p_data_fim: end,
+          p_operadora_slug: operadoraParaRpc,
+        }),
+        supabase.rpc("get_campanhas_performance", {
+          p_data_inicio: start,
+          p_data_fim: end,
+          p_operadora_slug: operadoraParaRpc,
+        }),
         supabase.rpc("get_campanha_funil_serie_temporal", {
           p_data_inicio: start,
           p_data_fim: end,
           p_agregacao: agregacaoSerie,
-          p_operadora_slug: null,
+          p_operadora_slug: operadoraParaRpc,
         }),
         startPrev && endPrev
           ? supabase.rpc("get_campanhas_performance", {
               p_data_inicio: startPrev,
               p_data_fim: endPrev,
-              p_operadora_slug: null,
+              p_operadora_slug: operadoraParaRpc,
             })
           : Promise.resolve({ data: null as CampanhaPerfRow[] | null, error: null }),
       ]);
@@ -825,12 +872,12 @@ export default function SocialMediaDashboard() {
           );
         }
         setCampanhasPerfPrev((campPrevRes.data as CampanhaPerfRow[] | null) ?? []);
+        setLoadingCampanhas(false);
       }
-      setLoading(false);
     }
-    load();
+    loadCampanhas();
     return () => { cancelled = true; };
-  }, [start, end, startPrev, endPrev, historico]);
+  }, [start, end, startPrev, endPrev, historico, operadoraParaRpc]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
   const totais = useMemo(() => totaisFromKpiRows(kpiData), [kpiData]);
@@ -948,6 +995,10 @@ export default function SocialMediaDashboard() {
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   const brand = useDashboardBrand();
+  const loadingOverviewConversao = loadingAlcance || loadingCampanhas;
+
+  const labelOperadoraCampanha = (slug: string | null | undefined) =>
+    slug ? (operadoraNomePorSlug.get(slug) ?? slug) : "—";
 
   const onSortCampCmp = (col: CampCmpSortCol) => {
     setSortCampCmp((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
@@ -1032,6 +1083,22 @@ export default function SocialMediaDashboard() {
     fontSize: 13,
   };
 
+  const skeletonBloco = (
+    <>
+      <div style={card}>
+        <SectionTitle>Carregando…</SectionTitle>
+        <div className="app-grid-kpi-6">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <SkeletonKpiCard key={i} />
+          ))}
+        </div>
+      </div>
+      <div style={{ ...card, marginTop: PAGE_CONTENT_BOX_GAP }}>
+        <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
+      </div>
+    </>
+  );
+
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, background: t.bg }}>
@@ -1085,7 +1152,18 @@ export default function SocialMediaDashboard() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
-            {loading && (
+
+            {showFiltroOperadora && aba !== "alcance" && (
+              <FiltroOperadoraSelect
+                pill
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                operadoras={operadorasList}
+                podeVerOperadora={podeVerOperadora}
+              />
+            )}
+
+            {(loadingAlcance || loadingCampanhas) && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
                 Carregando…
@@ -1115,23 +1193,8 @@ export default function SocialMediaDashboard() {
 
       <div role="tabpanel" id={`panel-midias-${aba}`} aria-labelledby={`tab-midias-${aba}`}>
 
-      {loading ? (
-        <>
-          <div style={card}>
-            <SectionTitle>Carregando…</SectionTitle>
-            <div className="app-grid-kpi-6">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <SkeletonKpiCard key={i} />
-              ))}
-            </div>
-          </div>
-          <div style={{ ...card, marginTop: PAGE_CONTENT_BOX_GAP }}>
-            <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
-          </div>
-        </>
-      ) : (
-        <>
-          {aba === "overview" && (
+      {aba === "overview" && (
+        loadingOverviewConversao ? skeletonBloco : (
             <>
               <div style={card}>
                 <SectionTitle
@@ -1299,6 +1362,9 @@ export default function SocialMediaDashboard() {
                             thStyle={dataTable.thHeader}
                             align="center"
                           />
+                          {showColunaOperadora && (
+                            <th scope="col" style={dataTable.thHeader}>Operadora</th>
+                          )}
                           <SortTableTh label="Acessos" col="visitas" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
                           <SortTableTh label="Registros" col="registros" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
                           <SortTableTh label="# FTDs" col="ftds" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
@@ -1321,6 +1387,11 @@ export default function SocialMediaDashboard() {
                                 >
                                   {c.campanha_nome}
                                 </td>
+                                {showColunaOperadora && (
+                                  <td style={dataTable.tdCenter}>
+                                    {labelOperadoraCampanha(c.operadora_slug)}
+                                  </td>
+                                )}
                                 <td style={dataTable.tdCenter}>{fmtNum(c.visitas)}</td>
                                 <td style={dataTable.tdCenter}>{fmtNum(c.registros)}</td>
                                 <td style={dataTable.tdCenter}>{fmtNum(c.ftds)}</td>
@@ -1343,9 +1414,11 @@ export default function SocialMediaDashboard() {
                 )}
               </div>
             </>
-          )}
+        )
+      )}
 
-          {aba === "conversao" && (
+      {aba === "conversao" && (
+        loadingOverviewConversao ? skeletonBloco : (
             <>
               <div style={card}>
                 <SectionTitle sub={historico ? "acumulado" : undefined}>
@@ -1523,6 +1596,9 @@ export default function SocialMediaDashboard() {
                             thStyle={dataTable.thHeader}
                             align="center"
                           />
+                          {showColunaOperadora && (
+                            <th scope="col" style={dataTable.thHeader}>Operadora</th>
+                          )}
                           <SortTableTh label="Visitas" col="visitas" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
                           <SortTableTh label="Visita → Registro" col="pctVR" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
                           <SortTableTh label="Registros" col="registros" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
@@ -1540,6 +1616,11 @@ export default function SocialMediaDashboard() {
                             >
                               {c.campanha_nome}
                             </td>
+                            {showColunaOperadora && (
+                              <td style={dataTable.tdCenter}>
+                                {labelOperadoraCampanha(c.operadora_slug)}
+                              </td>
+                            )}
                             <td style={dataTable.tdCenter}>{fmtNum(c.visitas)}</td>
                             <td style={dataTable.tdCenter}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
                             <td style={dataTable.tdCenter}>{fmtNum(c.registros)}</td>
@@ -1558,9 +1639,11 @@ export default function SocialMediaDashboard() {
                 )}
               </div>
             </>
-          )}
+        )
+      )}
 
-          {aba === "alcance" && (
+      {aba === "alcance" && (
+        loadingAlcance ? skeletonBloco : (
           <>
           {/* KPIs GERAIS */}
           <div style={card}>
@@ -1846,8 +1929,7 @@ export default function SocialMediaDashboard() {
             )}
           </div>
           </>
-          )}
-        </>
+        )
       )}
       </div>
     </div>
