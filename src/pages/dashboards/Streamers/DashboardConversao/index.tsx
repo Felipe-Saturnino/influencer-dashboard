@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getIdxMesCarrosselPadrao } from "../../../../lib/dashboardHelpers";
 import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
@@ -425,9 +426,7 @@ export default function DashboardConversao() {
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);

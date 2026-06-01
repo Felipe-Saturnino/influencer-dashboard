@@ -17,7 +17,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTa
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import { fmtBRL, getIdxMesCarrosselPadrao, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -200,9 +200,7 @@ export default function DashboardFinanceiro() {
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);

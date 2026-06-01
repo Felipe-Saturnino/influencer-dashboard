@@ -48,6 +48,22 @@ export function getMesesDisponiveis(
   return lista;
 }
 
+export type MesCarrosselRef = { ano: number; mes: number; label?: string };
+
+/**
+ * Índice padrão do carrossel de mês nos dashboards (ETL D-1).
+ * No dia 1 do mês civil, o mês corrente ainda não tem dados fechados — usa o mês anterior.
+ */
+export function getIdxMesCarrosselPadrao(meses: MesCarrosselRef[], ref: Date = new Date()): number {
+  if (meses.length === 0) return 0;
+  const alvo = new Date(ref);
+  if (ref.getDate() === 1) {
+    alvo.setMonth(alvo.getMonth() - 1);
+  }
+  const i = meses.findIndex((m) => m.ano === alvo.getFullYear() && m.mes === alvo.getMonth());
+  return i >= 0 ? i : meses.length - 1;
+}
+
 export function getDatasDoMes(ano: number, mes: number): { inicio: string; fim: string } {
   return {
     inicio: fmtDate(new Date(ano, mes, 1)),

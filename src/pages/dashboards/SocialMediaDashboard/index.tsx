@@ -7,6 +7,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import {
   fmtBRL,
+  getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getOntemIsoLocal,
   getPeriodoComparativoMoM,
@@ -568,11 +569,8 @@ export default function SocialMediaDashboard() {
 
   // ── Navegação por meses (padrão Overview) ─────────────────────────────────
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(MES_INICIO), []);
-  const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex(
-    (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
-  );
-  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
+  const [idxMes, setIdxMes]       = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
@@ -584,7 +582,7 @@ export default function SocialMediaDashboard() {
   function toggleHistorico() {
     if (historico) {
       setHistorico(false);
-      setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+      setIdxMes(idxInicial);
     } else {
       setHistorico(true);
     }

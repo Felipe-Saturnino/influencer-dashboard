@@ -8,7 +8,7 @@ import { CAROUSEL_NAV_BTN_PX, getCarouselBtnNavStyle, getCarouselPeriodLabelStyl
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { fmtBRL, getIdxMesCarrosselPadrao, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
 import {
@@ -1332,12 +1332,9 @@ export default function OverviewSpin() {
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex(
-    (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth(),
-  );
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
-  const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uapPorJogoRows, setUapPorJogoRows] = useState<UapPorJogoPlanRow[]>([]);
@@ -1390,7 +1387,7 @@ export default function OverviewSpin() {
   function toggleHistorico() {
     if (historico) {
       setHistorico(false);
-      setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+      setIdxMes(idxInicial);
     } else setHistorico(true);
   }
 

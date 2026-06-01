@@ -15,6 +15,7 @@ import {
   fmtBRL,
   fmtHorasTotal,
   fmtDia,
+  getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
   getOntemIsoLocal,
@@ -465,10 +466,9 @@ export default function DashboardOverviewInfluencer() {
   const perm = usePermission("dash_overview_influencer");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
-  const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
@@ -493,7 +493,7 @@ export default function DashboardOverviewInfluencer() {
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo() { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
-    if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
+    if (historico) { setHistorico(false); setIdxMes(idxInicial); }
     else setHistorico(true);
   }
 

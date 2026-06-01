@@ -23,6 +23,7 @@ import {
   fmt,
   fmtBRL,
   fmtHorasTotal,
+  getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
   getStatusROI,
@@ -239,10 +240,7 @@ export default function DashboardOverview() {
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal =
-    mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);

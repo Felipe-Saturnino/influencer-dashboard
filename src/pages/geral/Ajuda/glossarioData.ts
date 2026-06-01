@@ -786,6 +786,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "MTD (Month To Date)",
         definicao:
           "Acumulado do mês corrente desde o dia 1 até a data atual. Quando o período selecionado é o mês em curso, todos os KPIs mostram o valor MTD.",
+        nota:
+          "Os dados analíticos são fechados com defasagem de um dia (D-1). No dia 1 de cada mês, o carrossel abre no mês anterior por padrão — ainda não há dados fechados do mês corrente.",
         referencia: "Todos os dashboards",
       },
     ],

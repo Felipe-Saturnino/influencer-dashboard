@@ -201,6 +201,8 @@ Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constan
 
 ## FilterBar — Navegação de Período
 
+**Índice inicial do carrossel:** `getIdxMesCarrosselPadrao(mesesDisponiveis)` em `dashboardHelpers` — no **dia 1** do mês civil, abre no **mês anterior** (dados analíticos D-1); nos demais dias, mês corrente. Usar no `useState` inicial e ao sair do modo Histórico (`toggleHistorico`).
+
 Importar de `src/lib/carouselNavStyles.ts` — **único** padrão de setas e rótulo (Brand MDC §7).
 
 ```tsx
