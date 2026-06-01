@@ -22,6 +22,11 @@ UPDATE public.mesas_spin_cadastro
 SET mesa_identificacao_operadora = '3306', updated_at = now()
 WHERE operadora_slug = 'casa_apostas' AND lower(btrim(nome_mesa)) = 'blackjack 2';
 
+-- Futebol Brasileiro: preencher competition.id da API casino-categories (DevTools → categoria do jogo).
+-- UPDATE public.mesas_spin_cadastro
+-- SET mesa_identificacao_operadora = '<ID>', updated_at = now()
+-- WHERE operadora_slug = 'casa_apostas' AND lower(btrim(tipo_jogo)) = 'futebol brasileiro';
+
 SELECT nome_mesa, mesa_identificacao, mesa_identificacao_operadora
 FROM public.mesas_spin_cadastro
 WHERE operadora_slug = 'casa_apostas'
