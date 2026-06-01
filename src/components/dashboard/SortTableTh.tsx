@@ -12,6 +12,7 @@ type SortTableThProps<T extends string> = {
   thStyle: CSSProperties;
   align?: "left" | "right" | "center";
   rowSpan?: number;
+  title?: string;
   /** Conteúdo após o ícone de ordenação (ex.: botão); use stopPropagation no clique para não ordenar. */
   endAdornment?: ReactNode;
 };
@@ -29,6 +30,7 @@ export function SortTableTh<T extends string>({
   thStyle,
   align = "left",
   rowSpan,
+  title,
   endAdornment,
 }: SortTableThProps<T>) {
   const ativo = sortCol === col;
@@ -40,6 +42,7 @@ export function SortTableTh<T extends string>({
     <th
       scope="col"
       rowSpan={rowSpan}
+      title={title}
       onClick={() => onSort(col)}
       onKeyDown={(e: KeyboardEvent<HTMLTableCellElement>) => {
         if (e.key === "Enter" || e.key === " ") {

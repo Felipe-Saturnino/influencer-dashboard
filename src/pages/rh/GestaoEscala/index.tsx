@@ -18,6 +18,8 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   escalaPrestadorTemTurnosOperacionais,
   staffTurnoCoerenteComEscala,
@@ -184,6 +186,8 @@ type AreaEscalaKey =
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
 type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
+
+type EscalaDiariaSortCol = "nickname" | "escala" | "turno";
 
 function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
@@ -509,12 +513,17 @@ export default function RhGestaoEscalaPage() {
   const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
   /** Filtro da Escala Diária por turno (clique no Consolidado). */
   const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
+  const [sortEscalaDiaria, setSortEscalaDiaria] = useState<{ col: EscalaDiariaSortCol; dir: SortDir }>({
+    col: "turno",
+    dir: "asc",
+  });
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
   useEffect(() => {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
+    setSortEscalaDiaria({ col: "turno", dir: "asc" });
   }, [filtroArea]);
 
   useEffect(() => {
@@ -781,6 +790,28 @@ export default function RhGestaoEscalaPage() {
     if (filtroTurnoConsolidado == null) return linhasAposNickname;
     return linhasAposNickname.filter((row) => linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado));
   }, [linhasAposNickname, filtroTurnoConsolidado]);
+
+  const onSortEscalaDiaria = useCallback((col: EscalaDiariaSortCol) => {
+    setSortEscalaDiaria((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
+  }, []);
+
+  const linhasOrdenadasEscalaDiaria = useMemo(() => {
+    const rows = [...linhasFiltradasEscalaDiaria];
+    const { col, dir } = sortEscalaDiaria;
+    rows.sort((a, b) => {
+      if (col === "nickname") {
+        return compareLocaleTexto(a.nickname, b.nickname, dir);
+      }
+      if (col === "escala") {
+        return compareLocaleTexto(a.escalaCadastro || "—", b.escalaCadastro || "—", dir);
+      }
+      return compareLocaleTexto(a.turnoStaffNome || "—", b.turnoStaffNome || "—", dir);
+    });
+    return rows;
+  }, [linhasFiltradasEscalaDiaria, sortEscalaDiaria]);
 
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosOperadora, areaKey).map(mapLinhaPrestador),
@@ -1905,31 +1936,42 @@ export default function RhGestaoEscalaPage() {
                       Nome
                     </th>
                   ) : null}
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Nickname"
+                    col="nickname"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
                       minWidth: STICKY_W_NICK,
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
                       verticalAlign: "middle",
                     })}
-                  >
-                    Nickname
-                  </th>
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
+                    align="center"
+                  />
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Escala"
+                    col="escala"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
                       minWidth: STICKY_W_ESCALA,
                       maxWidth: STICKY_W_ESCALA,
                       width: STICKY_W_ESCALA,
                       verticalAlign: "middle",
                     })}
-                  >
-                    Escala
-                  </th>
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
+                    align="center"
+                  />
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Turno"
+                    col="turno"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
                       minWidth: STICKY_W_TURNO_STAFF,
                       maxWidth: STICKY_W_TURNO_STAFF,
                       width: STICKY_W_TURNO_STAFF,
@@ -1937,10 +1979,8 @@ export default function RhGestaoEscalaPage() {
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
                     })}
-                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
-                  >
-                    Turno
-                  </th>
+                    align="center"
+                  />
                   {dias.map((dia) => (
                     <th
                       key={dia.iso}
@@ -1990,7 +2030,7 @@ export default function RhGestaoEscalaPage() {
                     </td>
                   </tr>
                 ) : (
-                  linhasFiltradasEscalaDiaria.map((row, i) => {
+                  linhasOrdenadasEscalaDiaria.map((row, i) => {
                     const bg = zebraBgLinha(i);
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>

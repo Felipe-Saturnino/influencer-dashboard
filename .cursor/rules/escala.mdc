@@ -38,7 +38,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Exceções globais nesta secção
 
-- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha; ordenação não se aplica; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`.
+- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha Consolidado; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`. **Escala Diária:** `SortTableTh` em **Nickname**, **Escala** e **Turno** (colunas de dia fixas); ordenação inicial **`turno` asc**; coluna **Nome** fixa quando visível.
 - **Marketplace** e **Solicitações:** listas em tabela usam padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
 - Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
