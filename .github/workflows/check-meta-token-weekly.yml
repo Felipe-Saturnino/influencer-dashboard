@@ -1,0 +1,34 @@
+# Valida META_ACCESS_TOKEN antes do ETL — alerta se inválido ou perto de expirar
+name: Check Meta Token (Social KPIs)
+
+on:
+  schedule:
+    # Segunda 8h BRT = 11h UTC
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r scripts/etl-social-kpis/requirements.txt
+
+      - name: Validar token Meta
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_IG_ACCOUNT_ID: ${{ secrets.META_IG_ACCOUNT_ID }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_TOKEN_WARN_DAYS: "14"
+        working-directory: scripts/etl-social-kpis
+        run: python validate_meta_token.py

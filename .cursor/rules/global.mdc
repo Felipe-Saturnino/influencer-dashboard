@@ -317,11 +317,20 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 | Opção agregadora — **rótulo visível** | **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`) — **nunca** “Todas as operadoras”, “Operadoras” só (sem “Todas”), label lateral |
 | `aria-label` do `<select>` | **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL` — nome do controlo; distinto do rótulo da opção) |
 | Estado inicial | `useState("todas")` (ou `OPERADORA_FILTRO_TODAS_VALUE`) |
+| **Fonte de dados** | **Somente operadoras ativas** — query com `.eq("ativo", true)` antes de passar a `operadoras={…}`; se a página carregar `select("*")` para modais, filtrar `.ativo` só na lista do filtro da barra |
 | Posição | Dentro do wrapper de filtros (`primaryTransparentBg/Border` — Brand); **sem** texto “Operadora:” / “Filtrar por operadora” ao lado |
 
 **Proibido em código novo:** `SelectComIcone` + `Shield` montado à mão; `<select>` sem ícone; markup duplicado com `position: absolute` no ícone; rótulo lateral em uppercase antes do campo.
 
 **Props usuais:** `operadoras={lista}`, `podeVerOperadora`, `minWidth` (default **200**), `disabled`, `showTodasOption={false}` quando escopo força uma slug; `extraOptions` para domínios com “Nenhuma” (Staff, Escala, Dealers) — **não** renomear a agregadora. Visual inativo/ativo: referência **Overview Influencer** (`pill` 999, `getFiltroCampoInativoStyle` em `lib/filterBarStyles.ts`).
+
+**Query canónica (lista do filtro):**
+
+```typescript
+supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome");
+```
+
+**Proibido** incluir operadora com `ativo = false` (ex.: Spin Gaming inativa) nas opções do filtro de lista.
 
 ```tsx
 {showFiltroOperadora && (
@@ -335,7 +344,7 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 )}
 ```
 
-**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`.
+**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`. Modais de edição podem carregar operadoras inativas quando o registo já estiver vinculado — **não** estender essa lista ao filtro da barra. **Gestão de Operadoras** e **Gestão de Usuários** (admin) listam todas por regra de domínio.
 
 ### Botão Histórico (modo período / acumulado na barra) — obrigatório
 
@@ -892,6 +901,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- **`FiltroOperadoraSelect` com operadoras inativas** na barra — lista do filtro deve usar `.eq("ativo", true)` (§ Filtro de operadora).
 - Abas de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone Lucide 16px por aba, ou com `borderRadius` 20/999 (padrão Organograma: radius 10 — Brand §6).
 - Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.
 - Modo **Mês/Semana/Dia** na barra sem `FiltroModoVisualizacaoSelect` ou com ícone `Calendar` no lugar de `CalendarRange`.

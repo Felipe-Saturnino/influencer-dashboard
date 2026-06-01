@@ -29,6 +29,15 @@ from datetime import date, datetime, timedelta, timezone
 import requests
 from supabase import create_client, Client
 
+from meta_token_utils import (
+    days_until_expiry,
+    format_expiry_label,
+    meta_preflight as meta_preflight_api,
+    meta_token_invalid_message,
+    meta_token_invalid_response,
+    meta_token_renewal_hint,
+)
+
 # ------------------------------------------------------------
 # Config
 # ------------------------------------------------------------
@@ -91,35 +100,11 @@ def _meta_graph_error_message(resp: requests.Response) -> str:
 
 
 def _meta_token_invalid_response(resp: requests.Response | None) -> bool:
-    """HTTP 400/401 com OAuth 190 ou mensagem típica de sessão/token expirado."""
-    if resp is None or resp.status_code not in (400, 401, 403):
-        return False
-    err = _meta_graph_error_dict(resp)
-    if err:
-        if err.get("code") == 190:
-            return True
-        msg = (err.get("message") or "").lower()
-        if "error validating access token" in msg:
-            return True
-        if "session has expired" in msg or ("has expired" in msg and "token" in msg):
-            return True
-        if "has been invalidated" in msg or "invalidated" in msg:
-            return True
-    raw = (resp.text or "").lower()
-    return "session has expired" in raw or '"code":190' in raw.replace(" ", "")
+    return meta_token_invalid_response(resp)
 
 
 def _meta_token_invalid_message(text: str | None) -> bool:
-    if not text:
-        return False
-    t = text.lower()
-    compact = text.replace(" ", "").replace("\n", "")
-    return (
-        "session has expired" in t
-        or "error validating access token" in t
-        or '"code":190' in compact
-        or ("expired" in t and "access token" in t)
-    )
+    return meta_token_invalid_message(text)
 
 
 def _redact_secrets_for_log(msg: str | None) -> str | None:
@@ -438,40 +423,45 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
 
 
 def meta_preflight() -> tuple[bool, str]:
-    """
-    Valida META_ACCESS_TOKEN com uma chamada mínima à Graph API.
-    Use no início do backfill para evitar centenas de erros quando o token expirou.
-    Se Meta não estiver configurado, retorna (True, '').
-    """
-    if not META_TOKEN:
+    """Valida META_ACCESS_TOKEN (Page/IG) + log de expiração quando META_APP_* configurado."""
+    ok, err, debug = meta_preflight_api(
+        META_TOKEN,
+        page_id=META_PAGE_ID or None,
+        ig_account_id=META_IG_ACCOUNT_ID or None,
+    )
+    if ok:
+        log.info("Meta preflight OK (token válido para Page/IG).")
+        if debug and debug.get("is_valid") is not False:
+            log.info("Meta token — %s", format_expiry_label(debug.get("expires_at")))
+            days = days_until_expiry(debug.get("expires_at"))
+            warn_days = int(os.environ.get("META_TOKEN_WARN_DAYS", "14"))
+            if days is not None and days < warn_days:
+                warn = (
+                    f"META_ACCESS_TOKEN expira em {days} dia(s) ({format_expiry_label(debug.get('expires_at'))}). "
+                    f"{meta_token_renewal_hint()}"
+                )
+                log.warning(warn)
+                if supabase:
+                    try:
+                        supabase.table("tech_logs").insert(
+                            {
+                                "integracao_slug": "social_kpis",
+                                "tipo": "meta_token_aviso",
+                                "descricao": warn[:500],
+                            }
+                        ).execute()
+                    except Exception as e:
+                        log.warning("Falha ao registrar tech_log de aviso Meta: %s", e)
         return True, ""
-    if not META_PAGE_ID and not META_IG_ACCOUNT_ID:
-        return True, ""
-    base = graph_base()
-    try:
-        if META_PAGE_ID:
-            r = requests.get(
-                f"{base}/{META_PAGE_ID}",
-                params={"fields": "id,name", "access_token": META_TOKEN},
-                timeout=30,
-            )
-        else:
-            r = requests.get(
-                f"{base}/{META_IG_ACCOUNT_ID}",
-                params={"fields": "id,username", "access_token": META_TOKEN},
-                timeout=30,
-            )
-        if r.status_code == 200:
-            log.info("Meta preflight OK (token válido para Page/IG).")
-            return True, ""
-        _log_api_error(r, "Meta preflight")
-        msg = _meta_graph_error_message(r)
-        if not msg:
-            msg = (r.text or "")[:400]
-        return False, msg
-    except requests.RequestException as e:
-        log.error("Meta preflight — falha de rede: %s", e)
-        return False, str(e)
+    _log_api_error_from_msg(err, "Meta preflight")
+    return False, err
+
+
+def _log_api_error_from_msg(msg: str, context: str = ""):
+    if msg:
+        log.error("%s API erro: %s", context, msg)
+        if "expired" in msg.lower() or "logged out" in msg.lower():
+            log.error("Meta — Token expirado ou sessão invalidada. %s", meta_token_renewal_hint())
 
 
 def _cap_engagement_rate(x: float) -> float:
@@ -1248,11 +1238,21 @@ if __name__ == "__main__":
             skip_meta = True
             meta_skip_msg = (
                 "META_ACCESS_TOKEN expirado ou inválido (Meta). "
-                "Gere um novo Page Access Token em developers.facebook.com → seu App → Ferramentas, "
-                "estenda para longa duração e atualize o secret META_ACCESS_TOKEN no GitHub Actions. "
+                f"{meta_token_renewal_hint()} "
                 f"Detalhe: {err_pf[:700] if err_pf else ''}"
             )
             log.error("Meta preflight — Instagram e Facebook serão pulados neste job. %s", meta_skip_msg[:900])
+            if supabase:
+                try:
+                    supabase.table("tech_logs").insert(
+                        {
+                            "integracao_slug": "social_kpis",
+                            "tipo": "meta_token_expirado",
+                            "descricao": meta_skip_msg[:500],
+                        }
+                    ).execute()
+                except Exception as e:
+                    log.warning("Falha ao registrar tech_log Meta expirado: %s", e)
 
     channels = {
         "instagram": fetch_instagram,

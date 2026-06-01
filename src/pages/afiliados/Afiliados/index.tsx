@@ -178,6 +178,7 @@ export default function Afiliados() {
   const [list, setList] = useState<AfiliadoRow[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const operadorasAtivasNoEscopo = operadorasNoEscopo.filter((o) => o.ativo);
   const opsColorMap = Object.fromEntries(operadorasList.map((o) => [o.slug, o.brand_action?.trim() || undefined]));
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ mode: "visualizar" | "editar"; row?: AfiliadoRow } | null>(null);
@@ -349,7 +350,7 @@ export default function Afiliados() {
                   onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
                 />
               ))}
-              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+              {showFiltroOperadora && operadorasAtivasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} aria-hidden="true" />
                   <FiltroOperadoraSelect
@@ -357,7 +358,7 @@ export default function Afiliados() {
                     minWidth={200}
                     value={filterOp}
                     onChange={setFilterOp}
-                    operadoras={operadorasNoEscopo}
+                    operadoras={operadorasAtivasNoEscopo}
                   />
                 </>
               )}

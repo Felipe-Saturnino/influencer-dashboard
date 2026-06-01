@@ -584,7 +584,7 @@ export default function SocialMediaDashboard() {
   const showColunaOperadora = showFiltroOperadora && filtroOperadora === "todas";
 
   useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
       setOperadorasList(data ?? []);
     });
   }, []);

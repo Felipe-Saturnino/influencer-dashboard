@@ -629,7 +629,7 @@ export default function Resultados() {
   }, []);
 
   useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome")
+    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
       .then(({ data }) => { if (data) setOperadorasList(data); });
   }, []);
 

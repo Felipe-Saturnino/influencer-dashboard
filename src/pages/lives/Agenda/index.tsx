@@ -126,7 +126,7 @@ export default function Agenda() {
     if (showFiltroInfluencer || showFiltroOperadora) {
       Promise.all([
         showFiltroInfluencer ? supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name") : Promise.resolve({ data: [] }),
-        showFiltroOperadora  ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
+        showFiltroOperadora  ? supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome") : Promise.resolve({ data: [] }),
       ]).then(([profRes, opsRes]) => {
         if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
         if (showFiltroOperadora)  setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);

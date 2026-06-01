@@ -166,7 +166,7 @@ export default function GestaoLinks() {
   }, [aba, operadoraFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
+  useEffect(() => { supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
   useEffect(() => { supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico").then(({ data }) => setInfluencers(data ?? [])); }, []);
   useEffect(() => { supabase.from("campanhas").select("id, nome, ativo").eq("ativo", true).order("nome").then(({ data }) => setCampanhas(data ?? [])); }, []);
 

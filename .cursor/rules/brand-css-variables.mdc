@@ -329,6 +329,7 @@ Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes 
 - Ícone **Shield** Lucide 15px dentro do campo (via `SelectComIcone` interno).
 - Primeira opção do select: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
 - `aria-label` do controlo: **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`).
+- **Lista:** somente operadoras **ativas** (`.eq("ativo", true)` — Global § Filtro de operadora).
 - **Sem** rótulo de texto ao lado (“Operadora”, “Filtrar por operadora”).
 - Destaque quando slug específica selecionada: `highlightWhenFiltered` (default `true`) — `color-mix` com `--brand-action`.
 - **`pill` default `true`** em `FiltroOperadoraSelect` / `SelectComIcone` na barra (referência: **Overview Influencer**); estado inativo: `t.text`, fundo `t.inputBg`, borda `t.cardBorder`.
@@ -504,6 +505,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Filtro sem ícone quando existe entrada no catálogo (secção 6).
 - Aba de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone 16px dedicado, ou com estilo pill 20/999 em vez do layout Organograma (secção 6 — Abas).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
+- `FiltroOperadoraSelect` alimentado com operadoras **inativas** na barra de filtros.
 - Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
 - Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
 - Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
@@ -522,7 +524,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 
 - [ ] `useDashboardBrand()` + header com título = `menu.ts` + subtítulo
 - [ ] Barra de filtros com `primaryTransparent*` + ícones no catálogo
-- [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** (sem label lateral)
+- [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** + lista **só ativas** (Global § Filtro de operadora)
 - [ ] Filtro de influencer(s): `FiltroInfluencerSelect` + agregadora **Todos Influencers** + pill 999
 - [ ] Modo Mês/Semana/Dia (se aplicável): `FiltroModoVisualizacaoSelect` + `CalendarRange` 15px
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas

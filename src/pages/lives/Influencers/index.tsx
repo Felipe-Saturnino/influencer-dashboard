@@ -274,6 +274,7 @@ export default function Influencers() {
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
 
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const operadorasAtivasNoEscopo = operadorasNoEscopo.filter((o) => o.ativo);
   /** Sem cor salva: omitir — `OperadoraTag` aplica `--brand-action` via color-mix (não passar `var()` aqui: quebraria o sufixo `18` do componente). */
   const opsColorMap = Object.fromEntries(
     operadorasList.map((o) => [o.slug, o.brand_action?.trim() || undefined])
@@ -543,7 +544,7 @@ export default function Influencers() {
                   onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
                 />
               ))}
-              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+              {showFiltroOperadora && operadorasAtivasNoEscopo.length > 0 && (
                 <>
                   <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
                   <FiltroOperadoraSelect
@@ -551,7 +552,7 @@ export default function Influencers() {
                     minWidth={200}
                     value={filterOp}
                     onChange={setFilterOp}
-                    operadoras={operadorasNoEscopo}
+                    operadoras={operadorasAtivasNoEscopo}
                   />
                 </>
               )}

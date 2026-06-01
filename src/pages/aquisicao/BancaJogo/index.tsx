@@ -1813,7 +1813,7 @@ export default function BancaJogo() {
   }, []);
 
   useEffect(() => {
-    void supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+    void supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
       if (data) setOperadorasList(data);
     });
   }, []);
