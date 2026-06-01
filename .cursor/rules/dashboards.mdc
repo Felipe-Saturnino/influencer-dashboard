@@ -97,6 +97,8 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
 - **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
+- **Comparativo de Jogo:** colunas, células e séries de gráfico usam **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`) — Global § Identidade visual por jogo (BJ verde, Roleta vermelho, Baccarat azul, FB amarelo). **Não** redefinir `COR_*` locais.
+- **Dados por mesa / `tituloMesa*`:** exceção temporária — faixas de título podem ainda usar tokens de marca ou legado até migração página a página; **não** misturar paleta antiga (roxo/ciano/laranja) em código novo do Comparativo de Jogo.
 
 ---
 

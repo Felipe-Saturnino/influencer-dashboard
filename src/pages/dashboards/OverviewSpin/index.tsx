@@ -15,6 +15,7 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
+import { JOGOS_IDENTIDADE_LISTA, type GameIdentityKey } from "../../../lib/gameIdentityColors";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -1128,11 +1129,8 @@ function agregarLinhasComparativoJogo(linhas: LinhaComparativoJogoTab[]): LinhaC
   };
 }
 
-/** Identidade visual do tipo de jogo — não segue a paleta da operadora. */
-const COR_BLACKJACK = "#22c55e";
-const COR_ROLETA = "#a78bfa";
-const COR_BACCARAT = "#70cae4";
-const COR_FUTEBOL_BRASILEIRO = "#f97316";
+/** Faixa título Dados por mesa — FB (exceção legado até migração página a página). */
+const COR_FUTEBOL_TITULO_MESA = "#f97316";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
@@ -1181,14 +1179,11 @@ const PALETA_OPERADORAS_DETALHE = [
   "#14b8a6",
 ] as const;
 
-const JOGOS_COMPARATIVO = [
-  { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
-  { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
-  { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
-  { key: "futebol_brasileiro" as const, label: LABEL_FUTEBOL_BRASILEIRO, cor: COR_FUTEBOL_BRASILEIRO },
-] as const;
+const JOGOS_COMPARATIVO = JOGOS_IDENTIDADE_LISTA.map((j) =>
+  j.key === "futebol_brasileiro" ? { ...j, label: LABEL_FUTEBOL_BRASILEIRO } : j,
+);
 
-type JogoComparativoKey = (typeof JOGOS_COMPARATIVO)[number]["key"];
+type JogoComparativoKey = GameIdentityKey;
 
 type MesaCadastroComparativoRow = {
   operadora_slug: string;
@@ -2280,12 +2275,12 @@ export default function OverviewSpin() {
     marginTop: 14,
     padding: "6px 10px",
     borderRadius: 10,
-    background: `color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 12%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 35%, transparent)`,
+    background: `color-mix(in srgb, ${COR_FUTEBOL_TITULO_MESA} 12%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${COR_FUTEBOL_TITULO_MESA} 35%, transparent)`,
     textAlign: "center",
     fontSize: 13,
     fontWeight: 700,
-    color: COR_FUTEBOL_BRASILEIRO,
+    color: COR_FUTEBOL_TITULO_MESA,
     fontFamily: FONT.body,
   };
 

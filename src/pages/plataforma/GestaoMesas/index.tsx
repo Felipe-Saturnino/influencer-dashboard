@@ -16,6 +16,7 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
@@ -40,12 +41,12 @@ const ERRO_MESA_DUPLICADA =
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Futebol Brasileiro", "Poker", "Outro"] as const;
 
-const KPI_TIPOS_JOGO_MESAS = [
-  { label: "Baccarat", cor: "#8b5cf6" },
-  { label: "Blackjack", cor: BRAND.ciano },
-  { label: "Roleta", cor: "#e84025" },
-  { label: "Futebol Brasileiro", cor: "#f59e0b" },
-] as const;
+const KPI_TIPOS_JOGO_MESAS = (
+  ["baccarat", "blackjack", "roleta", "futebol_brasileiro"] as const
+).map((key) => ({
+  label: GAME_IDENTITY_LABEL[key],
+  cor: GAME_IDENTITY_HEX[key],
+}));
 
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";

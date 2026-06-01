@@ -80,6 +80,25 @@ Cinza    #6b7280 → neutro, sem dados
 
 ---
 
+## Identidade visual por jogo (imutável)
+
+Paleta de **mercado** para Baccarat, Roleta, Blackjack e Futebol Brasileiro — distinta da semântica de KPI (verde=bom, vermelho=ruim) e da marca whitelabel.
+
+| Jogo | Cor | Hex |
+|------|-----|-----|
+| **Baccarat** | Azul | `#1e36f8` |
+| **Roleta** | Vermelho | `#e84025` |
+| **Blackjack** | Verde | `#22c55e` |
+| **Futebol Brasileiro** | Amarelo | `#f59e0b` |
+
+**Fonte de código:** `src/lib/gameIdentityColors.ts` — importar `GAME_IDENTITY_HEX`, `gameIdentityTextColor`, `getGameTagChipStyle`, `JOGOS_IDENTIDADE_LISTA`. **Proibido** hardcodar hex de jogo em páginas novas.
+
+**Chips/tags:** usar `getGameTagChipStyle(key, isDark)` ou `gameIdentityTextColor` em `FiltroSemanticoTabPill` (`semanticColor`). **Tabelas/gráficos por jogo:** usar `cor` de `JOGOS_IDENTIDADE_LISTA` ou `GAME_IDENTITY_HEX[key]`.
+
+**Exceções documentadas na secção:** Comparativo de Mesa A/B (Overview Spin) usa tokens A/B de marca, não verde de Blackjack; blocos ainda não migrados ficam fora até aprovação página a página.
+
+---
+
 ## Estrutura de arquivos (`src/`)
 
 ```
@@ -94,7 +113,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, gameIdentityColors, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -866,6 +885,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Emoji no `h1` ou em `BlocoLabel`.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
+- Hex ou `COR_*` local para **identidade de jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — usar `lib/gameIdentityColors.ts` (Global § Identidade visual por jogo).
 - Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).
 - Wrapper de filtro com `marginBottom: 14` **extra** quando `getPageFilterBoxStyle` já aplica `PAGE_CONTENT_BOX_GAP`.
 - `SectionTitle` com prop `icon` no **cabeçalho do bloco de informação** — ícone só no nível 1 (página).
