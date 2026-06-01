@@ -10,7 +10,7 @@ import { AtalhosOperador } from "./AtalhosOperador";
 
 /** Subtítulo canónico — Home Operador Padrão (fallback quando a operadora não tem template dedicado). */
 export const HOME_OPERADOR_PADRAO_SUBTITULO =
-  "Sua operação, sua inteligência.\nA inteligência que a Spin construiu para a sua operação. Tudo que você precisa para ver, decidir e transformar gestão em resultado.";
+  "Sua operação, seus dados.\nA inteligência que a Spin construiu para a sua necessidade. Tudo que você precisa para ver, decidir e transformar gestão em resultado.";
 
 export default function HomeOperadorPadrao({
   sectionIdPrefix = "home-operador-padrao",
