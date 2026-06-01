@@ -184,8 +184,8 @@ export default function RhOrganogramaPage() {
 
   useEffect(() => {
     if (perm.loading) return;
-    if (!perm.canEditarOk) setModo("visual");
-  }, [perm.loading, perm.canEditarOk, setModo]);
+    if (!perm.canEditarOk && modo !== "visual") setModo("visual");
+  }, [perm.loading, perm.canEditarOk, modo, setModo]);
 
   useEffect(() => {
     if (!fotoDiretorFile) {

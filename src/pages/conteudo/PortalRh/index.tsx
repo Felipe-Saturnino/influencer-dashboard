@@ -396,8 +396,9 @@ export default function PortalRhPage() {
   }, [carregar, perm.loading, perm.canView, user?.id]);
 
   useEffect(() => {
+    if (perm.loading) return;
     if (!perm.canEditarOk && aba === "gerenciamento") setAba("comunicados");
-  }, [perm.canEditarOk, aba, setAba]);
+  }, [perm.loading, perm.canEditarOk, aba, setAba]);
 
   useEffect(() => {
     if (aba === "gerenciamento") return;

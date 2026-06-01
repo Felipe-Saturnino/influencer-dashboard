@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 import type { PageKey } from "../types";
 import { REVISAO_GATE_BANNER_KEY } from "../lib/appRoutes";
@@ -9,35 +9,43 @@ import {
   usuarioSujeitoGateRevisaoCadastral,
 } from "../lib/rhCadastroRevisao";
 
-export function useRevisaoCadastralGate(activePage: string) {
-  const { user, permissions, navigateTo } = useApp();
+export function useRevisaoCadastralGate() {
+  const { user, permissions, navigateTo, activePage } = useApp();
   const [gateLoading, setGateLoading] = useState(true);
   const [gateAtivo, setGateAtivo] = useState(false);
+  const bootDoneRef = useRef(false);
 
-  const recarregar = useCallback(async () => {
-    if (!user?.email?.trim()) {
-      setGateAtivo(false);
+  const recarregar = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!user?.email?.trim()) {
+        setGateAtivo(false);
+        setGateLoading(false);
+        bootDoneRef.current = true;
+        return;
+      }
+      const permEdit = permissions.rh_dados_cadastro ?? null;
+      if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEdit)) {
+        setGateAtivo(false);
+        setGateLoading(false);
+        bootDoneRef.current = true;
+        return;
+      }
+      const showBlockingLoader = !opts?.silent && !bootDoneRef.current;
+      if (showBlockingLoader) setGateLoading(true);
+      const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
+      setGateAtivo(revisaoCadastralPendenteParaFuncionario(row));
       setGateLoading(false);
-      return;
-    }
-    const permEdit = permissions.rh_dados_cadastro ?? null;
-    if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEdit)) {
-      setGateAtivo(false);
-      setGateLoading(false);
-      return;
-    }
-    setGateLoading(true);
-    const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
-    setGateAtivo(revisaoCadastralPendenteParaFuncionario(row));
-    setGateLoading(false);
-  }, [user?.email, user?.role, permissions.rh_dados_cadastro]);
+      bootDoneRef.current = true;
+    },
+    [user?.email, user?.role, permissions.rh_dados_cadastro],
+  );
 
   useEffect(() => {
     void recarregar();
-  }, [recarregar, activePage]);
+  }, [recarregar]);
 
   useEffect(() => {
-    const onAtualizado = () => void recarregar();
+    const onAtualizado = () => void recarregar({ silent: true });
     window.addEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     return () => window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
   }, [recarregar]);

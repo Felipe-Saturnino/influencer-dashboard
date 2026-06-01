@@ -239,6 +239,11 @@ function normalizePathname(pathname: string): string {
   return p;
 }
 
+/** Compara caminhos da app ignorando barra final e prefixo `BASE_URL`. */
+export function areAppPathsEqual(a: string, b: string): boolean {
+  return normalizePathname(a) === normalizePathname(b);
+}
+
 export function parseAppPathname(pathname: string): ParsedAppPath {
   const p = normalizePathname(pathname);
   if (p === "/" || p === "") return { kind: "empty" };

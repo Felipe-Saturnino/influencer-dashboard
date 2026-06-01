@@ -5,6 +5,7 @@ import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
 import {
+  areAppPathsEqual,
   buildAppPath,
   buildLoginPath,
   buildParsedAppTarget,
@@ -449,9 +450,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const userRef = useRef<User | null>(null);
   const permissionsRef = useRef(permissions);
   const permissionsAcoesRef = useRef(permissionsAcoes);
+  const activePageRef = useRef(activePage);
+  const activeTabSlugRef = useRef(activeTabSlug);
+  const layoutViewRef = useRef(layoutView);
   userRef.current = user;
   permissionsRef.current = permissions;
   permissionsAcoesRef.current = permissionsAcoes;
+  activePageRef.current = activePage;
+  activeTabSlugRef.current = activeTabSlug;
+  layoutViewRef.current = layoutView;
 
   function syncAuthRefs(
     u: User | null,
@@ -484,10 +491,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         goToSemAcesso(access.reason, options);
         return;
       }
+      const nextPath = buildAppPath(access.pageKey, access.tabSlug);
+      if (
+        layoutViewRef.current === "app" &&
+        activePageRef.current === access.pageKey &&
+        (activeTabSlugRef.current ?? null) === (access.tabSlug ?? null) &&
+        areAppPathsEqual(window.location.pathname, nextPath)
+      ) {
+        return;
+      }
+      layoutViewRef.current = "app";
+      activePageRef.current = access.pageKey;
+      activeTabSlugRef.current = access.tabSlug;
       setLayoutView("app");
       setActivePageState(access.pageKey);
       setActiveTabSlug(access.tabSlug);
-      syncHistory(buildAppPath(access.pageKey, access.tabSlug), options?.replace ?? false);
+      syncHistory(nextPath, options?.replace ?? false);
     },
     [goToSemAcesso],
   );
@@ -530,10 +549,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const path = buildAppPath(access.pageKey, access.tabSlug);
+      if (
+        layoutViewRef.current === "app" &&
+        activePageRef.current === access.pageKey &&
+        (activeTabSlugRef.current ?? null) === (access.tabSlug ?? null) &&
+        areAppPathsEqual(window.location.pathname, path)
+      ) {
+        return;
+      }
+
+      layoutViewRef.current = "app";
+      activePageRef.current = access.pageKey;
+      activeTabSlugRef.current = access.tabSlug;
       setLayoutView("app");
       setActivePageState(access.pageKey);
       setActiveTabSlug(access.tabSlug);
-      const path = buildAppPath(access.pageKey, access.tabSlug);
       syncHistory(path, options?.replace ?? true);
     },
     [navigateTo, goToSemAcesso],

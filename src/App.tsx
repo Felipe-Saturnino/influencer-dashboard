@@ -160,7 +160,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);
   const { gateLoading: revisaoGateLoading, gateAtivo: revisaoGateAtivo, navegarComGate } =
-    useRevisaoCadastralGate(activePage);
+    useRevisaoCadastralGate();
 
   useEffect(() => {
     if (!navDrawer) setMenuOpen(false);

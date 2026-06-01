@@ -126,6 +126,11 @@ export default function InformativosPage() {
   }, [busca]);
 
   useEffect(() => {
+    if (perm.loading) return;
+    if (!perm.canEditarOk && aba === "gerenciamento") setAba("informativos");
+  }, [perm.loading, perm.canEditarOk, aba, setAba]);
+
+  useEffect(() => {
     if (perm.canView !== "nao" && !perm.loading) void carregar();
   }, [perm.canView, perm.loading, carregar]);
 

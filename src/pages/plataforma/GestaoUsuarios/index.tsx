@@ -44,12 +44,14 @@ export default function GestaoUsuarios() {
   const mostrarAbasAdmin = isAdmin && perm.canEditarOk;
 
   useEffect(() => {
+    if (perm.loading) return;
     if (!isAdmin && aba !== "usuarios") setAba("usuarios");
-  }, [isAdmin, aba, setAba]);
+  }, [perm.loading, isAdmin, aba, setAba]);
 
   useEffect(() => {
+    if (perm.loading) return;
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
-  }, [isAdmin, perm.canEditarOk, aba, setAba]);
+  }, [perm.loading, isAdmin, perm.canEditarOk, aba, setAba]);
 
   const card = useMemo(
     () => getPageContentBoxStyle(brand, t, { padding: 28 }),

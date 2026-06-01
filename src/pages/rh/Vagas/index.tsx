@@ -136,9 +136,10 @@ export default function RhVagasPage() {
   }, [recarregarInscricoes, perm.loading, perm.canView]);
 
   useEffect(() => {
+    if (perm.loading) return;
     if (!mostrarAbaGerenciamento && aba === "gerenciamento") setAba("abertas");
     if (!mostrarAbaCandidaturas && aba === "candidaturas") setAba("abertas");
-  }, [mostrarAbaGerenciamento, mostrarAbaCandidaturas, aba, setAba]);
+  }, [perm.loading, mostrarAbaGerenciamento, mostrarAbaCandidaturas, aba, setAba]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
