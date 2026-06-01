@@ -15,6 +15,7 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
+  { slug: "treinamento", label: "Treinamento" },
 ];
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
@@ -27,7 +28,6 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "financeiro", label: "Financeiro" },
   { slug: "tech_ops", label: "Tech Ops" },
   { slug: "ti", label: "TI" },
-  { slug: "treinamento", label: "Treinamento" },
   { slug: "estudio", label: "Estúdio" },
 ];
 

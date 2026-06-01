@@ -284,7 +284,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - **Abas (`AbaUsuarios`, `AbaPermissoes`, …):** `useApp()` internamente — **nunca** prop `t: Theme`.
 - **AbaUsuarios:** filtros controlados pelo `index` / `GestaoUsuariosFiltroBar`; erros fixos PT-BR (sem `e.message`); `Loader2` no loading e nas ações de card; botão **Reativar** (não “ATIVAR”); CTA **Novo Usuário** no topo do card.
 - **AbaPermissoes:** seleção de perfil no **filtro** (não dentro do card); matriz em `app-table-wrap` — **sem** `overflow: hidden` + `overflowX` no mesmo elemento; `<caption hidden>` + `scope="col"`; batch upsert; CTA com `Loader2` branco.
-- **AbaOperadora / AbaGestores / AbaPrestadores:** batch delete + insert; fundos de marca via `color-mix` (não `rgba` fixo da paleta Spin); grids com `paddingBottom: 6` acima da scrollbar.
+- **AbaOperadora / AbaGestores / AbaPrestadores:** batch delete + insert; fundos de marca via `color-mix` (não `rgba` fixo da paleta Spin); grids com `paddingBottom: 6` acima da scrollbar. Tipos de gestor (`GESTOR_TIPOS`): Estúdio, Marketing, Afiliados, Geral, **Treinamento**. Áreas Prestadores (`PRESTADOR_TIPOS`): sem Treinamento (migrado para Gestores).
 - **ModalUsuario:** `useApp()` + `useDashboardBrand()` internos; `MultiSelect` / `SingleSelectOperadora` em ficheiro de módulo (`ModalUsuarioScopeSelects.tsx`); CTA gradiente; erro com `aria-live="polite"`; `onFocus` → `var(--brand-primary)`.
 - **ParesAgenciaUI:** `aria-label` nos selects e no botão remover par.
 - **Helpers:** `gestaoUsuariosUi.tsx`, `gestaoUsuariosTabNav` via `handleGestaoTabsArrowKeyDown`.
