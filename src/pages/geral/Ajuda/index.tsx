@@ -12,6 +12,7 @@ import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown }
 import { PageHeader } from "../../../components/PageHeader";
 import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
+import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -2200,6 +2201,7 @@ export default function Ajuda() {
                       }}>
                         {bloco.texto}
                       </p>
+                      {i === 0 ? <AjudaPaginaAcessoLink pageKey={paginaSelecionada} /> : null}
                       {i < dadosConteudo.blocos.length - 1 && (
                         <div style={{
                           height: 1,

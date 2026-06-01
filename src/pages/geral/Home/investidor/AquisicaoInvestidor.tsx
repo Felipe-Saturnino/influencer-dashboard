@@ -1,6 +1,7 @@
 import { Loader2, Share2, Tv } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { fmtBRL, fmtHorasTotal } from "../../../../lib/dashboardHelpers";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
@@ -11,7 +12,8 @@ import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 export function AquisicaoInvestidor() {
-  const { theme: t, setActivePage } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const { loading, erro, data } = useHomeInvestidorAquisicao();
   const box = getPageContentBoxStyle(brand, t);
@@ -62,13 +64,13 @@ export function AquisicaoInvestidor() {
           </div>
           <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>
             Quer saber mais? Acessa o Dashboard de{" "}
-            <button type="button" onClick={() => setActivePage("streamers")} style={HOME_LINK_BUTTON}>
+            <a {...propsFor("streamers")} style={HOME_LINK_BUTTON}>
               Streamers
-            </button>{" "}
+            </a>{" "}
             e de{" "}
-            <button type="button" onClick={() => setActivePage("dash_midias_sociais")} style={HOME_LINK_BUTTON}>
+            <a {...propsFor("dash_midias_sociais")} style={HOME_LINK_BUTTON}>
               Mídias Sociais
-            </button>
+            </a>
           </p>
         </>
       )}

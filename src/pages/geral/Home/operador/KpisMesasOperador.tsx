@@ -1,6 +1,7 @@
 import { ArrowUpDown, Hash, Loader2, TrendingUp } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { fmtBRL } from "../../../../lib/dashboardHelpers";
 import { fmtVariacaoPctVsAnterior } from "../../../../lib/homeKpisMesasComparativo";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -26,7 +27,8 @@ function comparativoCard(
 }
 
 export function KpisMesasOperador() {
-  const { theme: t, setActivePage } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const { loading, erro, data, semOperadora } = useHomeKpisMesasOperadora();
   const box = getPageContentBoxStyle(brand, t);
@@ -81,9 +83,9 @@ export function KpisMesasOperador() {
           </div>
           <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>
             Quer saber mais? Acessa o Dashboard de{" "}
-            <button type="button" onClick={() => setActivePage("mesas_spin")} style={HOME_LINK_BUTTON}>
+            <a {...propsFor("mesas_spin")} style={HOME_LINK_BUTTON}>
               Overview Spin
-            </button>
+            </a>
           </p>
         </>
       )}

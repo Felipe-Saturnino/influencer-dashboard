@@ -3,6 +3,8 @@ import { HelpCircle, Home } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../hooks/useAppPageNav";
+import { AppPageLink } from "../../../components/AppPageLink";
 import { SEM_ACESSO_REASON_KEY, type SemAcessoReason } from "../../../lib/appRoutes";
 
 const MSG_NOT_FOUND =
@@ -11,7 +13,8 @@ const MSG_FORBIDDEN =
   "Você não tem acesso a esta página! Acesse a página de Ajuda para ver as paginas existentes ou retorne para a Home.";
 
 export default function SemAcesso() {
-  const { theme: t, navigateTo } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
 
   const reason: SemAcessoReason = useMemo(() => {
@@ -51,9 +54,8 @@ export default function SemAcesso() {
       </div>
       <p style={{ fontSize: 15, lineHeight: 1.65, color: t.text, margin: "0 0 24px" }}>{message}</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-        <button
-          type="button"
-          onClick={() => navigateTo("ajuda")}
+        <a
+          {...propsFor("ajuda")}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -67,14 +69,14 @@ export default function SemAcesso() {
             fontWeight: 600,
             cursor: "pointer",
             fontFamily: FONT.body,
+            textDecoration: "none",
           }}
         >
           <HelpCircle size={16} aria-hidden />
           Ajuda
-        </button>
-        <button
-          type="button"
-          onClick={() => navigateTo("home")}
+        </a>
+        <AppPageLink
+          pageKey="home"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -88,13 +90,13 @@ export default function SemAcesso() {
             color: "#fff",
             fontSize: 13,
             fontWeight: 700,
-            cursor: "pointer",
+            textDecoration: "none",
             fontFamily: FONT.body,
           }}
         >
           <Home size={16} aria-hidden />
           Home
-        </button>
+        </AppPageLink>
       </div>
     </div>
   );

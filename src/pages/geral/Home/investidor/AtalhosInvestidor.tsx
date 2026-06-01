@@ -2,6 +2,7 @@ import { ArrowRight, Calendar, Dices, HelpCircle, Tv } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { getPageMenuLabel } from "../../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../../lib/pageCanonicalCopy";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -17,7 +18,8 @@ const ATALHOS_INVESTIDOR: { key: PageKey; icon: LucideIcon }[] = [
 ];
 
 export function AtalhosInvestidor() {
-  const { theme: t, setActivePage } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const box = getPageContentBoxStyle(brand, t);
   const accentColor = "var(--brand-primary, #7c3aed)";
@@ -35,10 +37,9 @@ export function AtalhosInvestidor() {
         {ATALHOS_INVESTIDOR.map(({ key, icon: Icon }) => {
           const subtitle = getPageCanonicalSubtitle(key) ?? "";
           return (
-            <button
+            <a
               key={key}
-              type="button"
-              onClick={() => setActivePage(key)}
+              {...propsFor(key)}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -54,6 +55,7 @@ export function AtalhosInvestidor() {
                 textAlign: "left",
                 width: "100%",
                 minWidth: 0,
+                textDecoration: "none",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
@@ -79,7 +81,7 @@ export function AtalhosInvestidor() {
                   {subtitle}
                 </p>
               ) : null}
-            </button>
+            </a>
           );
         })}
       </div>

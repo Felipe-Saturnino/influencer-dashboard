@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- Provider + hook useApp no mesmo módulo (padrão do projeto). */
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
@@ -445,6 +445,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [permissionsAcoes, setPermissionsAcoes] = useState<PermissoesAcoesMapa>(emptyAcoesMapa);
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
 
+  /** Refs síncronos — evitam checar permissões stale logo após `setPermissions` (antes do re-render). */
+  const userRef = useRef<User | null>(null);
+  const permissionsRef = useRef(permissions);
+  const permissionsAcoesRef = useRef(permissionsAcoes);
+  userRef.current = user;
+  permissionsRef.current = permissions;
+  permissionsAcoesRef.current = permissionsAcoes;
+
+  function syncAuthRefs(
+    u: User | null,
+    perms: PermissoesMapa,
+    acoes: PermissoesAcoesMapa,
+  ) {
+    userRef.current = u;
+    permissionsRef.current = perms;
+    permissionsAcoesRef.current = acoes;
+  }
+
   const goToSemAcesso = useCallback((reason: "not_found" | "forbidden", options?: { replace?: boolean }) => {
     sessionStorage.setItem(SEM_ACESSO_REASON_KEY, reason);
     setLayoutView("sem_acesso");
@@ -453,9 +471,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const navigateTo = useCallback(
     (pageKey: PageKey, tabSlug?: string | null, options?: { replace?: boolean }) => {
-      if (!user) return;
+      const u = userRef.current;
+      if (!u) return;
       const parsed = buildParsedAppTarget(pageKey, tabSlug);
-      const access = resolveRouteAccess(parsed, user.role, permissions, permissionsAcoes);
+      const access = resolveRouteAccess(
+        parsed,
+        u.role,
+        permissionsRef.current,
+        permissionsAcoesRef.current,
+      );
       if (!access.ok) {
         goToSemAcesso(access.reason, options);
         return;
@@ -465,15 +489,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveTabSlug(access.tabSlug);
       syncHistory(buildAppPath(access.pageKey, access.tabSlug), options?.replace ?? false);
     },
-    [user, permissions, permissionsAcoes, goToSemAcesso],
+    [goToSemAcesso],
   );
 
   const applyPathFromLocation = useCallback(
     (options?: { replace?: boolean }) => {
       const parsed = parseAppPathname(window.location.pathname);
+      const u = userRef.current;
 
       if (parsed.kind === "empty") {
-        if (user) navigateTo("home", null, { replace: true });
+        if (u) navigateTo("home", null, { replace: true });
         return;
       }
 
@@ -482,15 +507,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setLayoutView("sem_acesso");
           return;
         }
-        if (parsed.special === "home" && user) {
+        if (parsed.special === "login") {
+          if (u) navigateTo("home", null, { replace: true });
+          return;
+        }
+        if (parsed.special === "home" && u) {
           navigateTo("home", null, options);
         }
         return;
       }
 
-      if (!user) return;
+      if (!u) return;
 
-      const access = resolveRouteAccess(parsed, user.role, permissions, permissionsAcoes);
+      const access = resolveRouteAccess(
+        parsed,
+        u.role,
+        permissionsRef.current,
+        permissionsAcoesRef.current,
+      );
       if (!access.ok) {
         goToSemAcesso(access.reason, options);
         return;
@@ -502,7 +536,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const path = buildAppPath(access.pageKey, access.tabSlug);
       syncHistory(path, options?.replace ?? true);
     },
-    [user, permissions, permissionsAcoes, navigateTo, goToSemAcesso],
+    [navigateTo, goToSemAcesso],
   );
 
   const setActivePage = useCallback(
@@ -605,6 +639,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
+    userRef.current = u;
     if (u) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
@@ -619,6 +654,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ]);
         setPermissions(perms);
         setPermissionsAcoes(acoes);
+        syncAuthRefs(u, perms, acoes);
 
         const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
         if (pendingReturn) {
@@ -640,18 +676,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error("Erro ao carregar permissões/escopos após login:", err);
-        setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
-        setPermissionsAcoes(emptyAcoesMapa());
+        const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
+        const emptyAcoes = emptyAcoesMapa();
+        setPermissions(emptyPerms);
+        setPermissionsAcoes(emptyAcoes);
         setEscoposVisiveis(ESCOPOS_VAZIOS);
+        syncAuthRefs(u, emptyPerms, emptyAcoes);
       }
       setRouteReady(true);
       applyPathFromLocation({ replace: true });
     } else {
-      setPermissions(
-        Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
-      );
-      setPermissionsAcoes(emptyAcoesMapa());
+      const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
+      const emptyAcoes = emptyAcoesMapa();
+      setPermissions(emptyPerms);
+      setPermissionsAcoes(emptyAcoes);
       setEscoposVisiveis(ESCOPOS_VAZIOS);
+      syncAuthRefs(null, emptyPerms, emptyAcoes);
       setLayoutView("app");
       setRouteReady(true);
       syncHistory(buildLoginPath(), true);
@@ -665,7 +705,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     link.href = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600;700&display=swap";
     document.head.appendChild(link);
 
-    // Restaura sessão ativa
+    // Restaura sessão ativa (mount único — applyPathFromLocation usa refs, não closure stale)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
         if (session) {
@@ -683,6 +723,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             const u = profile as User;
             setUserState(u);
+            userRef.current = u;
             try {
               const escopos = await carregarEscoposVisiveis(u.id, u.role);
               setEscoposVisiveis(escopos);
@@ -696,11 +737,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ]);
               setPermissions(perms);
               setPermissionsAcoes(acoes);
+              syncAuthRefs(u, perms, acoes);
             } catch (err) {
               console.error("Erro ao carregar permissões/escopos:", err);
-              setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
-              setPermissionsAcoes(emptyAcoesMapa());
+              const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
+              const emptyAcoes = emptyAcoesMapa();
+              setPermissions(emptyPerms);
+              setPermissionsAcoes(emptyAcoes);
               setEscoposVisiveis(ESCOPOS_VAZIOS);
+              syncAuthRefs(u, emptyPerms, emptyAcoes);
             }
             setRouteReady(true);
             applyPathFromLocation({ replace: true });
@@ -715,7 +760,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setChecking(false);
       }
     });
-  }, [applyPathFromLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap de sessão só no mount
+  }, []);
 
   // Mantém o estado React alinhado ao Auth quando a sessão é limpa (ex.: tokens inválidos em Edge Function).
   useEffect(() => {
@@ -729,6 +775,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOperadoraBrand(null);
       setOperadoraHomeReady(true);
       setPermissionsAcoes(emptyAcoesMapa());
+      syncAuthRefs(
+        null,
+        Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa,
+        emptyAcoesMapa(),
+      );
       setActivePageState("home");
       setActiveTabSlug(null);
       setLayoutView("app");
