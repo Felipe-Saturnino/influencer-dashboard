@@ -5,8 +5,10 @@ import { fmtBRL } from "../../../../lib/dashboardHelpers";
 import { fmtVariacaoPctVsAnterior } from "../../../../lib/homeKpisMesasComparativo";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
+import { getHomeKpiReferenciaMes } from "../../../../lib/homeInvestidorMtd";
 import { useHomeKpisMesasOperadora } from "../hooks/useHomeKpisMesasOperadora";
 import { HomeKpiCard } from "../shared/HomeKpiCard";
+import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 function comparativoCard(
@@ -31,11 +33,14 @@ export function KpisMesasOperador() {
 
   const fmtApostas = (n: number) => n.toLocaleString("pt-BR");
 
+  const mesLabel = getHomeKpiReferenciaMes().label;
+
   return (
     <section style={box} aria-labelledby="home-operador-kpis-title">
       <h2 id="home-operador-kpis-title" style={homeSectionTitleStyle(t.sectionTitle)}>
         Principais KPIs
       </h2>
+      <HomeSectionMesSubtitle label={mesLabel} />
 
       {semOperadora ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>

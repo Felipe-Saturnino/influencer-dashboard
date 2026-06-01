@@ -31,7 +31,7 @@ import {
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
-import HomeOperador from "./HomeOperador";
+import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -353,7 +353,7 @@ export default function Home() {
   }
 
   if (user.role === "operador") {
-    return <HomeOperador />;
+    return <HomeOperadorRouter />;
   }
 
   const role = user.role;

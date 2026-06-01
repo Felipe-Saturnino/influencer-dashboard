@@ -125,7 +125,13 @@ export function ModalCriarInformativo({
   const persistir = async (acao: "salvar" | "aprovacao" | "publicar") => {
     if (!user?.id) return;
     const novoStatus: InformativoStatus =
-      acao === "salvar" ? "rascunho" : acao === "aprovacao" ? "aprovacao" : "publicado";
+      acao === "salvar"
+        ? modo === "editar" && (statusAtual === "publicado" || statusAtual === "aprovacao")
+          ? statusAtual
+          : "rascunho"
+        : acao === "aprovacao"
+          ? "aprovacao"
+          : "publicado";
 
     const escopoPersistido = mostrarEscopoOperador ? operadorEscopo : null;
 

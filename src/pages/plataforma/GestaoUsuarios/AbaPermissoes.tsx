@@ -8,6 +8,7 @@ import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../typ
 import { BRAND, PAGES, PERM_OPCOES, roleLabel } from "./constants";
 import { SalvarCtaContent } from "./gestaoUsuariosUi";
 import { ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 interface AbaPermissoesProps {
   roleAtivo: Role;
@@ -265,7 +266,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
           border: `1px solid ${t.cardBorder}`,
         }}
       >
-        <div className="app-table-wrap">
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table
             style={{
               width: "100%",

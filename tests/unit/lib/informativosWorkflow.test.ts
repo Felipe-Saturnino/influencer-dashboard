@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   acaoEnvioPermitida,
   perfisRequeremFluxoAprovacao,
+  podeEditarInformativoGerenciamento,
+  podeExcluirInformativoGerenciamento,
   podePublicarDiretoInformativo,
   podeUsuarioAprovarInformativo,
   rolePodeAprovarInformativo,
@@ -40,6 +42,15 @@ describe("informativosWorkflow — aprovação", () => {
   it("mistura restrita — prevalece só admin", () => {
     expect(rolePodeAprovarInformativo("gestor", ["influencer", "operador"])).toBe(false);
     expect(rolePodeAprovarInformativo("admin", ["influencer", "operador"])).toBe(true);
+  });
+
+  it("editar e excluir no gerenciamento respeitam sim e próprios", () => {
+    expect(podeEditarInformativoGerenciamento("sim", true, "u1", "u2")).toBe(true);
+    expect(podeEditarInformativoGerenciamento("proprios", true, "u1", "u1")).toBe(true);
+    expect(podeEditarInformativoGerenciamento("proprios", true, "u1", "u2")).toBe(false);
+    expect(podeEditarInformativoGerenciamento("sim", false, "u1", "u1")).toBe(false);
+    expect(podeExcluirInformativoGerenciamento("proprios", true, "u1", "u2")).toBe(false);
+    expect(podeExcluirInformativoGerenciamento("nao", true, "u1", "u1")).toBe(false);
   });
 
   it("autoaprovação só para administrador", () => {

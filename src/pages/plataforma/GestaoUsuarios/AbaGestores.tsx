@@ -8,6 +8,7 @@ import { BRAND, PAGES, GESTOR_TIPOS } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
 import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 export function AbaGestores() {
   const { theme: t } = useApp();
@@ -138,7 +139,7 @@ export function AbaGestores() {
               {gt.label}
             </div>
 
-            <div className="app-table-wrap">
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <div
                 className="operadora-secoes-grid"
                 style={{

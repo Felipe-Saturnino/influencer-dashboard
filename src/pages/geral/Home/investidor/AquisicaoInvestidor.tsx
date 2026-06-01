@@ -4,8 +4,10 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { fmtBRL, fmtHorasTotal } from "../../../../lib/dashboardHelpers";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
+import { getHomeKpiReferenciaMes } from "../../../../lib/homeInvestidorMtd";
 import { useHomeInvestidorAquisicao } from "../hooks/useHomeInvestidorAquisicao";
 import { HomeKpiCard } from "../shared/HomeKpiCard";
+import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 export function AquisicaoInvestidor() {
@@ -16,11 +18,14 @@ export function AquisicaoInvestidor() {
 
   const fmtNum = (n: number) => n.toLocaleString("pt-BR");
 
+  const mesLabel = getHomeKpiReferenciaMes().label;
+
   return (
     <section style={box} aria-labelledby="home-investidor-aquisicao-title">
       <h2 id="home-investidor-aquisicao-title" style={homeSectionTitleStyle(t.sectionTitle)}>
         Ações de Aquisição
       </h2>
+      <HomeSectionMesSubtitle label={mesLabel} />
 
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0" }}>

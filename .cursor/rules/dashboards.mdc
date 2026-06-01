@@ -448,28 +448,13 @@ Isso inclui: Tooltips customizados, sub-componentes de sorting (`ThRankingSort`)
 
 ## Tabelas de Dashboard
 
-Importar de `lib/tableStyles`:
+**Padrão obrigatório:** Global § Tabelas → `useDataTableBlock()` (ou `createDataTableBlockStyles` no Overview Spin) + `getDataTableWrapStyle` / `getDataTableStyle`. Cabeçalho `dataTable.thHeader` (+ `thHeaderSub` em cabeçalho duplo); corpo `dataTable.tdCenter`; zebra `dataTable.zebraRow(i)`; linha Total `dataTable.totalRowBgStrong` + `tdTotal` / `tdTotalSticky`. **1ª coluna fixa:** `app-table-wrap--sticky-col` + `thHeaderSticky` / `tdSticky`.
 
-```typescript
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
-const thStyle = getThStyle(t);
-const tdStyle = getTdStyle(t);
-```
+**Exceção Overview Spin:** linha Total no **topo** do `<tbody>` em `renderMesaDiaTabela` — documentada no Global.
 
-**Zebrado:** usar sempre `zebraStripe(i)` — nunca `i % 2 === 0 ? ...` hardcoded.
+**Legado `lib/tableStyles`:** só em exceções documentadas no Global (Gestão de Escala, modal Operadoras) — **não** em dashboards novos.
 
-**Linha de Total:** toda tabela de detalhamento/série temporal deve ter linha de total no final do `<tbody>`:
-
-```tsx
-<tr style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
-  <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>
-    Total
-  </td>
-  {/* células de total */}
-</tr>
-```
-
-**Scroll e acessibilidade:** tabelas largas envolver com `app-table-wrap` e, quando aplicável, `<div style={{ overflowX: "auto" }}>` por dentro. Incluir `<caption>` visualmente oculto (sr-only) com texto descritivo do período/bloco.
+**Scroll e acessibilidade:** `app-table-wrap` (+ `--sticky-col` quando aplicável); **um** scroll horizontal; **sem** `overflow: hidden` na `<table>`. `<caption style={{ display: "none" }}>` com texto descritivo do bloco.
 
 **Ordenação:** cabeçalhos clicáveis usam ícones Lucide (`ChevronDown`, `ChevronUp`, `ChevronsUpDown`) com `aria-sort` — nunca caracteres Unicode `↓ ↑ ↕`.
 
@@ -603,7 +588,7 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 ## O Que Nunca Fazer em Dashboards
 
 - Nunca declarar componentes funcionais (Tooltips, sub-tabs, `render*`) **dentro** do componente da página
-- Nunca declarar `thStyle`/`tdStyle`/`zebraStripe` localmente — importar de `lib/tableStyles`
+- Nunca tabela de bloco com `getThStyle`/`zebraStripe` direto — usar **`useDataTableBlock`** / `dataTable.*` (Global § Tabelas)
 - Nunca declarar `card` com valores diferentes do padrão
 - Nunca duplicar `SectionTitle`, `KpiCard`, `FunilVisual` localmente
 - Nunca usar `accentVar` com tokens proibidos na secção KpiCard

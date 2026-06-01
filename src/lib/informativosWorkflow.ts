@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Role } from "../types";
+import type { PermissaoValor, Role } from "../types";
 import { validarOperadorEscopoInformativo } from "./informativosOperadorEscopo";
 
 export type InformativoStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
@@ -76,6 +76,34 @@ export function podeUsuarioAprovarInformativo(
 export function acaoEnvioPermitida(acao: "publicar" | "aprovacao", perfis: string[]): boolean {
   if (acao === "publicar") return podePublicarDiretoInformativo(perfis);
   return perfisRequeremFluxoAprovacao(perfis);
+}
+
+/** Editar na aba Gerenciamento — respeita Gestão de Usuários (sim / próprios). */
+export function podeEditarInformativoGerenciamento(
+  canEditar: PermissaoValor | null,
+  canEditarOk: boolean,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+): boolean {
+  if (!canEditarOk) return false;
+  if (canEditar === "proprios") {
+    return !!userId && !!createdBy && createdBy === userId;
+  }
+  return canEditar === "sim";
+}
+
+/** Excluir na aba Gerenciamento — respeita Gestão de Usuários (sim / próprios). */
+export function podeExcluirInformativoGerenciamento(
+  canExcluir: PermissaoValor | null,
+  canExcluirOk: boolean,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+): boolean {
+  if (!canExcluirOk) return false;
+  if (canExcluir === "proprios") {
+    return !!userId && !!createdBy && createdBy === userId;
+  }
+  return canExcluir === "sim";
 }
 
 export const INFORMATIVO_STATUS_LABEL: Record<InformativoStatus, string> = {

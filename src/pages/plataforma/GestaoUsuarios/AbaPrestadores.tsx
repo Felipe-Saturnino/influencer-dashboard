@@ -8,6 +8,7 @@ import { BRAND, PAGES, PRESTADOR_TIPOS } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
 import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 export function AbaPrestadores() {
   const { theme: t } = useApp();
@@ -142,7 +143,7 @@ export function AbaPrestadores() {
               {pt.label}
             </div>
 
-            <div className="app-table-wrap">
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <div
                 className="operadora-secoes-grid"
                 style={{

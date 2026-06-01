@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -1019,6 +1020,9 @@ export default function RhGestaoEscalaPage() {
 
   const thSticky = (left: number, extra?: CSSProperties): CSSProperties => ({
     ...thBase,
+    fontSize: CONSOLIDADO_FONT_HEADER,
+    fontWeight: 700,
+    letterSpacing: "0.06em",
     position: "sticky",
     left,
     zIndex: Z_STICKY_HEAD,
@@ -1397,14 +1401,13 @@ export default function RhGestaoEscalaPage() {
                 <SectionTitle sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária">
                   Consolidado
                 </SectionTitle>
-                <div className="app-table-wrap">
+                <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                 <table
                   style={{
                     width: "100%",
                     minWidth: CONSOLIDADO_COL_TURNO_W + dias.length * 44,
                     borderCollapse: "separate",
                     borderSpacing: 0,
-                    borderRadius: 14,
                     border: `1px solid ${t.cardBorder}`,
                   }}
                 >
@@ -1866,7 +1869,7 @@ export default function RhGestaoEscalaPage() {
                   />
                 </div>
               </div>
-              <div className="app-table-wrap">
+              <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table
               style={{
                 width: "100%",
@@ -1878,7 +1881,6 @@ export default function RhGestaoEscalaPage() {
                   dias.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
-                borderRadius: 14,
                 border: `1px solid ${t.cardBorder}`,
               }}
             >
@@ -1943,7 +1945,7 @@ export default function RhGestaoEscalaPage() {
                     <th
                       key={dia.iso}
                       scope="col"
-                      style={thDia(dia)}
+                      style={thDiaConsolidado(dia)}
                       title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
                     >
                       <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>

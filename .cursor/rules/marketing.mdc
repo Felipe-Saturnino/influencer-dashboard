@@ -55,7 +55,7 @@ Perfis: Gestor (operação interna).
 - Filtro operadora: **`FiltroOperadoraSelect`** (`pill`) **dentro** do strip `primaryTransparent*` — nunca solto entre header e abas; agregadora **Todas Operadoras**.
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
-- Tabela: `tableLayout: fixed`; mobile ocultar Depósitos/GGR; manter UTM, FTDs, Ações.
+- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
 - `SortTableTh` + default em coluna de data quando existir (Global).
 - Vazios por aba: ver tabela em estados abaixo.
 - **Handoff:** mapear UTM, ignorar, sincronização métricas.

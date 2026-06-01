@@ -11,6 +11,8 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
   fmtDataColunaGerenciamento,
   INFORMATIVO_STATUS_LABEL,
+  podeEditarInformativoGerenciamento,
+  podeExcluirInformativoGerenciamento,
   podeUsuarioAprovarInformativo,
   registrarHistoricoStatus,
   stripHtmlText,
@@ -80,7 +82,7 @@ function compareDataIso(a: string | null, b: string | null, dir: number): number
 function acoesPorStatus(status: InformativoStatus): ("editar" | "aprovar" | "arquivar" | "historico" | "excluir")[] {
   switch (status) {
     case "publicado":
-      return ["arquivar", "historico"];
+      return ["editar", "arquivar", "historico"];
     case "rascunho":
       return ["editar", "historico", "excluir"];
     case "aprovacao":
@@ -410,7 +412,7 @@ export function GerenciamentoInformativos({
                 <SortTableTh label="Data de Aprovação" col="approvedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
                 <SortTableTh label="Aprovador" col="aprovador" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
                 <SortTableTh label="Data de Postagem" col="publishedAt" sortCol={sortCol} sortDir={sortDir} onSort={onSortColuna} thStyle={dataTable.thHeader} align="center" />
-                <th scope="col" style={dataTable.thHeader}>
+                <th scope="col" style={{ ...dataTable.thHeader, minWidth: 120 }}>
                   Ações
                 </th>
               </tr>
@@ -418,7 +420,22 @@ export function GerenciamentoInformativos({
             <tbody>
               {rowsOrdenadas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status).filter((a) => {
-                  if (a === "excluir") return perm.canExcluirOk === true;
+                  if (a === "editar") {
+                    return podeEditarInformativoGerenciamento(
+                      perm.canEditar,
+                      perm.canEditarOk,
+                      user?.id,
+                      row.createdBy,
+                    );
+                  }
+                  if (a === "excluir") {
+                    return podeExcluirInformativoGerenciamento(
+                      perm.canExcluir,
+                      perm.canExcluirOk,
+                      user?.id,
+                      row.createdBy,
+                    );
+                  }
                   if (a === "aprovar") {
                     return podeUsuarioAprovarInformativo(user?.role, user?.id, row.createdBy, row.perfis);
                   }
@@ -449,8 +466,17 @@ export function GerenciamentoInformativos({
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
                     <td style={dataTable.tdCenter}>{row.aprovadorNome}</td>
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
-                    <td style={dataTable.tdCenter}>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                    <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          gap: 6,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          minHeight: 30,
+                        }}
+                      >
                         {acoes.includes("editar") ? (
                           <button
                             type="button"

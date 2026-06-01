@@ -16,7 +16,6 @@ import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
@@ -24,6 +23,13 @@ import {
   ctaGradientSalvar,
   handleGestaoTabsArrowKeyDown,
 } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import {
+  HOME_OPERADOR_TEMPLATE_PADRAO,
+  HOME_OPERADOR_TEMPLATE_SELECT_OPTIONS,
+  HOME_OPERADOR_TEMPLATES_DEDICADOS,
+  getRegisteredHomeOperadorTemplateKeys,
+  isHomeOperadorTemplatePadrao,
+} from "../../../lib/homeOperadoraTemplate";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
@@ -445,6 +451,7 @@ function ModalOperadora({
 }) {
   const { theme: t } = useApp();
   const dashBrand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const nomeInputRef = useRef<HTMLInputElement>(null);
   const isNova = !editando;
   const [aba, setAba] = useState<ModalTabId>("dados");
@@ -461,6 +468,9 @@ function ModalOperadora({
   const [turnoManha, setTurnoManha] = useState(() => timeDbToInput(editando?.turno_manha_inicio));
   const [turnoTarde, setTurnoTarde] = useState(() => timeDbToInput(editando?.turno_tarde_inicio));
   const [turnoNoite, setTurnoNoite] = useState(() => timeDbToInput(editando?.turno_noite_inicio));
+  const [homeTemplate, setHomeTemplate] = useState(() =>
+    isHomeOperadorTemplatePadrao(editando?.home_template) ? HOME_OPERADOR_TEMPLATE_PADRAO : (editando?.home_template?.trim() ?? HOME_OPERADOR_TEMPLATE_PADRAO),
+  );
   const [mesas, setMesas] = useState<MesaCadastroResumo[]>([]);
   const [mesasLoading, setMesasLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -720,9 +730,22 @@ function ModalOperadora({
                 turno_noite_inicio: tn || null,
               };
 
+        const dedicatedKeys = new Set([
+          ...HOME_OPERADOR_TEMPLATES_DEDICADOS.map((x) => x.key),
+          ...getRegisteredHomeOperadorTemplateKeys(),
+        ]);
+        if (homeTemplate !== HOME_OPERADOR_TEMPLATE_PADRAO && !dedicatedKeys.has(homeTemplate)) {
+          setErro("Template de Home inválido. Selecione Home Operador Padrão ou um template dedicado registrado.");
+          setSalvando(false);
+          return;
+        }
+        const homeTemplatePayload = {
+          home_template: homeTemplate === HOME_OPERADOR_TEMPLATE_PADRAO ? null : homeTemplate,
+        };
+
         const { error } = await supabase
           .from("operadoras")
-          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload })
+          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload, ...homeTemplatePayload })
           .eq("slug", editando.slug);
         if (error) throw error;
       }
@@ -892,10 +915,6 @@ function ModalOperadora({
     </div>
   );
 
-  const thM = getThStyle(t);
-  const tdM = getTdStyle(t);
-  const tdNum = getTdNumStyle(t);
-
   return (
     <ModalBase maxWidth={isNova ? 520 : 720} onClose={tryClose}>
       <ModalHeader
@@ -1031,6 +1050,29 @@ function ModalOperadora({
 
       {!isNova && aba === "operacoes" && (
         <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes" tabIndex={0}>
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="op-home-template">
+              Home do operador
+            </label>
+            <select
+              id="op-home-template"
+              value={homeTemplate}
+              onChange={(e) => setHomeTemplate(e.target.value)}
+              style={inputStyle}
+              aria-label="Template de Home para usuários operador desta operadora"
+            >
+              {HOME_OPERADOR_TEMPLATE_SELECT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
+              Operadores com escopo nesta operadora veem o template selecionado ao entrar na Home. Sem template dedicado,
+              usa-se a Home Operador Padrão.
+            </p>
+          </div>
+
           <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
             Horário de turno dos dealers
           </div>
@@ -1086,32 +1128,54 @@ function ModalOperadora({
               Nenhuma mesa cadastrada para esta operadora.
             </div>
           ) : (
-            <div className="app-table-wrap">
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle()}>
                 <caption style={{ display: "none" }}>
                   Mesas em operação cadastradas para esta operadora
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Jogo</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Nome da mesa</th>
-                    <th scope="col" style={{ ...thM, textAlign: "right" }}>Nº mesa</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID Spin</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID operadora</th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Jogo
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Nome da mesa
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Nº mesa
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      ID Spin
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      ID operadora
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mesas.map((m, i) => (
-                    <tr key={`${m.mesa_identificacao}-${i}`} style={{ background: zebraStripe(i) }}>
-                      <td style={{ ...tdM, textAlign: "left" }}>{m.tipo_jogo}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontWeight: 600 }}>{m.nome_mesa}</td>
-                      <td style={{ ...tdNum }}>{m.numero_mesa ?? "—"}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>
-                        {m.mesa_identificacao_operadora?.trim() ? m.mesa_identificacao_operadora : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {mesas.map((m, i) => {
+                    const zebraBg = dataTable.zebraRow(i);
+                    return (
+                      <tr
+                        key={`${m.mesa_identificacao}-${i}`}
+                        style={{ background: zebraBg }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebraBg;
+                        }}
+                      >
+                        <td style={dataTable.tdCenter}>{m.tipo_jogo}</td>
+                        <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{m.nome_mesa}</td>
+                        <td style={dataTable.tdCenter}>{m.numero_mesa ?? "—"}</td>
+                        <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
+                        <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12 }}>
+                          {m.mesa_identificacao_operadora?.trim() ? m.mesa_identificacao_operadora : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

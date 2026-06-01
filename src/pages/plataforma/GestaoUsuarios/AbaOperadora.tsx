@@ -9,6 +9,7 @@ import { BRAND, PAGES } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
 import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 export function AbaOperadora() {
   const { theme: t } = useApp();
@@ -148,7 +149,7 @@ export function AbaOperadora() {
             </div>
 
             {/* Grid: colunas iguais no desktop; no mobile, app-table-wrap permite rolagem horizontal */}
-            <div className="app-table-wrap">
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <div
                 className="operadora-secoes-grid"
                 style={{

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../../../../context/AppContext";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
-import { getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
-import { getHomeInvestidorMtdPeriodo } from "../../../../lib/homeInvestidorMtd";
+import { getHomeKpiPeriodosComparativoMoM } from "../../../../lib/homeInvestidorMtd";
 import type { RelatorioDailySummaryRow } from "../../../../lib/homeInvestidorKpisMesas";
 import { somarKpisMesasMtd, type HomeKpiTotais } from "../../../../lib/homeKpisMesasComparativo";
 
@@ -40,9 +39,7 @@ export function useHomeKpisMesasOperadora() {
       }
 
       try {
-        const hoje = new Date();
-        const mtd = getHomeInvestidorMtdPeriodo(hoje);
-        const { anterior: periodoAnterior } = getPeriodoComparativoMoM(hoje.getFullYear(), hoje.getMonth());
+        const { atual: mtd, anterior: periodoAnterior } = getHomeKpiPeriodosComparativoMoM();
 
         const [rowsMtd, rowsAnterior] = await Promise.all([
           fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>

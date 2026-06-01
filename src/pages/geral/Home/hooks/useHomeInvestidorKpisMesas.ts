@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
-import { getHomeInvestidorMtdPeriodo } from "../../../../lib/homeInvestidorMtd";
+import { getHomeKpiPeriodo } from "../../../../lib/homeInvestidorMtd";
 import {
   aggregateHomeKpisMesasMtd,
   type HomeKpisMesasAgregado,
@@ -20,7 +20,7 @@ export function useHomeInvestidorKpisMesas() {
       setLoading(true);
       setErro(false);
       try {
-        const { inicio, fim } = getHomeInvestidorMtdPeriodo();
+        const { inicio, fim } = getHomeKpiPeriodo();
         const [dailyRows, operadorasRes] = await Promise.all([
           fetchAllPages<RelatorioDailySummaryRow>(async (from, to) =>
             supabase

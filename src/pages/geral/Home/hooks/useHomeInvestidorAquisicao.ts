@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
-import { getHomeInvestidorMtdPeriodo } from "../../../../lib/homeInvestidorMtd";
+import { getHomeKpiPeriodo } from "../../../../lib/homeInvestidorMtd";
 import { totaisSocialKpiFromRows, type KpiDailyRow } from "../../../../lib/socialKpiTotals";
 
 export type HomeAquisicaoStreamers = {
@@ -33,7 +33,7 @@ export function useHomeInvestidorAquisicao() {
       setLoading(true);
       setErro(false);
       try {
-        const { inicio, fim } = getHomeInvestidorMtdPeriodo();
+        const { inicio, fim } = getHomeKpiPeriodo();
 
         const [lives, metricasRows, kpiDaily] = await Promise.all([
           fetchAllPages<{ id: string }>(async (from, to) =>

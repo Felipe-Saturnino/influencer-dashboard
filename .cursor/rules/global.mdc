@@ -530,9 +530,20 @@ const dataTable = useDataTableBlock();
 |------|--------|
 | **Gestão de Usuários** (abas Permissões, Gestores, Prestadores, Operadora) | Matriz de permissões com selects por célula; listas em grelha com layout próprio |
 | **Gestão de Escala** | Cabeçalhos dinâmicos por dia/turno e grade operacional misturada com tabela |
-| **Gestão de Operadoras** (modal Operações) | Sub-tabela de mesas no modal — legado isolado |
 
 Demais listas em bloco nível 3 devem usar `useDataTableBlock()` + `getDataTableWrapStyle` / `getDataTableStyle`. Grades calendário (Agenda dia a dia, etc.) ficam fora do padrão — ver MDC da secção.
+
+### Responsividade — mecanismos globais (obrigatório)
+
+| Mecanismo | Quando |
+|-----------|--------|
+| **`app-page-shell`** | Container raiz de **toda** página logada de produto (exceto Login / troca de senha obrigatória e rotas públicas) |
+| **`app-table-wrap`** + **`getDataTableWrapStyle()`** | Qualquer `<table>` ou matriz larga com scroll horizontal (inclui exceções: Gestão de Escala, Gestão de Usuários) |
+| **`app-table-wrap--sticky-col`** | 1ª coluna fixa no scroll (dashboards analíticos, Consolidado Turno) |
+| **`app-grid-kpi-*`**, **`app-grid-2`**, … | KPIs e grelhas — breakpoints em `responsive.css`; **não** `@media` inline em componentes |
+| **`app-modal-overlay-pad`** | Modais em viewport estreita (`clamp` lateral) |
+
+Listas/cards sem `<table>` (Lives, Afiliados, Agenda): `app-page-shell` + grids/classes `responsive.css`; calendário Agenda usa `app-agenda-cal-scroll-inner` quando aplicável.
 
 ### Legado — listas e migração gradual
 

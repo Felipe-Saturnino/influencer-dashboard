@@ -79,7 +79,7 @@ alwaysApply: false
 - **Filtros:** só `getPageFilterBoxStyle` (operadora, categoria, tamanho, busca, abas) — **sem** título **FILTROS**.
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
-- Tabelas 4 abas: hover, tablist ARIA completo.
+- Tabelas 4 abas: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); hover nas linhas; tablist ARIA completo.
 - Filtros na barra (strip `primaryTransparent*`): **`FiltroOperadoraSelect`** (**Todas Operadoras**), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
 - **Handoff:** barcode, condição da peça, abas.
 
@@ -117,7 +117,7 @@ alwaysApply: false
 - `isDark` desestruturado de `useApp()` — usar `t.isDark`.
 - `brand` / `t` como props em `DealerCard` ou modais.
 - `Loader2` na FilterBar da Central.
-- Tabelas sem hover (Figurinos).
+- Tabelas de inventário (Figurinos): padrão canónico + hover nas linhas — ver Global § Tabelas.
 - GameIcons no header (`PageHeader` + Lucide).
 - Query de observações sem `.limit()`.
 - Filtro de operadora com `GiShield`, markup manual ou agregadora “Todas as operadoras” / “Operadoras” só — usar `FiltroOperadoraSelect` (**Todas Operadoras**).
