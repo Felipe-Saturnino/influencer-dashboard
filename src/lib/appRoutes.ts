@@ -14,6 +14,9 @@ export const ROUTE_SLUG_HOME = "Home";
 export const ROUTE_SLUG_LOGIN = "Login";
 export const ROUTE_SLUG_SEM_ACESSO = "SemAcesso";
 
+/** Home, Configurações e Ajuda — acessíveis a qualquer perfil autenticado. */
+export const PAGE_KEYS_UTILITY: PageKey[] = ["home", "configuracoes", "ajuda"];
+
 export type AppRouteTabDef = {
   /** Chave interna do componente (ex.: `overview`, `conversao`). */
   tabId: string;
@@ -362,7 +365,7 @@ export function resolveRouteAccess(
   if (parsed.kind === "special") {
     if (parsed.special === "sem_acesso") return { ok: true, pageKey: "home", tabId: null, tabSlug: null };
     if (parsed.special === "home") {
-      if (role === "admin" || podeVerPaginaNasPermissoes(permissions.home)) {
+      if (role) {
         return { ok: true, pageKey: "home", tabId: null, tabSlug: null };
       }
       return { ok: false, reason: "forbidden" };
@@ -370,12 +373,29 @@ export function resolveRouteAccess(
     return { ok: true, pageKey: "home", tabId: null, tabSlug: null };
   }
 
+  const route = getAppRouteByPageKey(parsed.pageKey);
+
+  if (role && PAGE_KEYS_UTILITY.includes(parsed.pageKey)) {
+    if (parsed.tabId && route?.tabs) {
+      const tabDef = route.tabs.find((t) => t.tabId === parsed.tabId);
+      if (!tabDef) return { ok: false, reason: "not_found" };
+      if (!isTabAllowedForUser(parsed.pageKey, tabDef, role, acoes)) {
+        return { ok: false, reason: "forbidden" };
+      }
+    }
+    return {
+      ok: true,
+      pageKey: parsed.pageKey,
+      tabId: parsed.tabId,
+      tabSlug: parsed.tabSlug,
+    };
+  }
+
   const cv = permissions[parsed.pageKey];
   if (role !== "admin" && !podeVerPaginaNasPermissoes(cv)) {
     return { ok: false, reason: "forbidden" };
   }
 
-  const route = getAppRouteByPageKey(parsed.pageKey);
   if (parsed.tabId && route?.tabs) {
     const tabDef = route.tabs.find((t) => t.tabId === parsed.tabId);
     if (!tabDef) return { ok: false, reason: "not_found" };

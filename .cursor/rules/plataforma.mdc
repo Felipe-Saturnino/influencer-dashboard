@@ -247,6 +247,9 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 
 - Bloco de filtros: `getPageFilterBoxStyle` + carrossel de operadoras (`getCarouselBtnNavStyle` / `getCarouselPeriodLabelStyle`) + pill **Todas Operadoras** (`getFiltroBarTabButtonStyle` + ícone `Shield`) — referência Gestão de Usuários (status); **sem** `FiltroOperadoraSelect` na barra.
 - **KPIs por jogo** (abaixo do filtro, acima da tabela): `app-grid-kpi-4` + `getPageKpiSectionGapStyle` — Baccarat, Blackjack, Roleta, Futebol Brasileiro; **`borderLeft` e valor** com `GAME_IDENTITY_HEX` / `JOGOS_IDENTIDADE_LISTA` (`lib/gameIdentityColors.ts` — Global § Identidade por jogo); mesmo visual dos cards de Gestão de Operadoras; contagens respeitam o filtro do carrossel.
+
+**Exceções — identidade de jogo (Gestão de Mesas):** nenhuma. Paleta canónica obrigatória; nova exceção **somente** com pedido explícito de produto — registrar neste MDC antes de codar.
+
 - Bloco **Mesas:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) + `CtaCriarButton` **Nova Mesa** na mesma linha (`perm.canCriarOk`).
 - `FiltroOperadoraSelect` com `highlightWhenFiltered` default (`true`) — nunca `false`.
 - Ícone do header: Lucide (`LayoutGrid` ou `Table2`) — `GiRoundTable` e qualquer GameIcon proibidos no header.

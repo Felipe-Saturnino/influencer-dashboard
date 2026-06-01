@@ -392,6 +392,10 @@ async function carregarPermissoes(
     }
   }
 
+  for (const k of PAGES_SEM_MATRIZ_ESCOPO_TIPO) {
+    mapa[k] = "sim";
+  }
+
   return mapa;
 }
 
@@ -503,6 +507,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       layoutViewRef.current = "app";
       activePageRef.current = access.pageKey;
       activeTabSlugRef.current = access.tabSlug;
+      sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
       setLayoutView("app");
       setActivePageState(access.pageKey);
       setActiveTabSlug(access.tabSlug);

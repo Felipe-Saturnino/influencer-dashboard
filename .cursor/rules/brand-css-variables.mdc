@@ -11,8 +11,8 @@ alwaysApply: true
 
 | Origem | Pode citar |
 |--------|------------|
-| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca >5) |
-| **Brand (este)** | Global (limite semântica vs marca); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
+| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, **identidade por jogo**, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca >5) |
+| **Brand (este)** | Global (limite semântica vs marca vs jogo); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
 | **Secções** (`dashboards`, `lives`, `estudio`, …) | **Global** + **Brand** — sem citar outras secções para marca |
 
 **Antes de codar:** ler Global → Brand → MDC da secção (ordem detalhada no Global).
@@ -48,6 +48,19 @@ Aliases no contexto: ao aplicar brandguide, `--brand-primary` = `--brand-action`
 **Proibido em código novo fora de `dashboards/`:** usar `--brand-action` / `--brand-contrast` como fallback principal em páginas operacionais — usar `--brand-primary` / `--brand-accent` ou o hook.
 
 **Dentro de `dashboards/`:** não usar `--brand-primary` em código novo; não usar `rgba(124,58,237,…)` fixo.
+
+### 1.5 Identidade por jogo — fora do whitelabel
+
+Cores e ícones de **Baccarat, Roleta, Blackjack e Futebol Brasileiro** **não** seguem `--brand-*` nem `useDashboardBrand()` — são **fixas de produto Spin** (Global § Identidade visual por jogo).
+
+| Proibido | Usar em vez disso |
+|----------|-------------------|
+| `--brand-action`, `--brand-primary`, `brand.accent` em tag/filtro/KPI/gráfico por jogo | `GAME_IDENTITY_HEX` / `getGameTagChipStyle` |
+| `getFiltroCampoAtivoStyle` / `getFiltroBarPillStateStyle` em filtro de jogo | `getGameTagChipStyle` ou `FiltroSemanticoTabPill` com `semanticColor={gameIdentityTextColor(...)}` |
+| Pill única (ex.: amarelo ou roxo para todos os jogos) | Cor canónica **por** jogo |
+| Hex solto por jogo na página | `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx` |
+
+**Exceção:** somente com **pedido explícito de produto** — documentar na MDC da secção («Exceções — identidade de jogo») **antes** de implementar. Sem entrada no MDC = paleta canónica **obrigatória**.
 
 ---
 
@@ -121,6 +134,8 @@ Estados partilhados em `lib/filterBarStyles.ts` (`getFiltroCampoInativoStyle`, `
 | Demais secções | `var(--brand-accent, #1e36f8)` ou `var(--brand-primary, #7c3aed)` 12–15% | `brand.accent` ou `brand.primary` |
 
 Fallback Spin quando `!brand.useBrand`: `color-mix` com `var(--brand-primary, #7c3aed)` nos pills ativos (via `getFiltroCampoAtivoStyle`).
+
+**Chip de jogo (Baccarat, Roleta, Blackjack, Futebol Brasileiro):** **não** usar esta tabela de marca — usar **`getGameTagChipStyle`** / **`gameIdentityTextColor`** (Global § Identidade visual por jogo). Ícones: **`GAME_IDENTITY_ICONS`** (13px). Exceção só com pedido explícito documentado no MDC da secção.
 
 ### Links de marca (não semânticos)
 
@@ -258,6 +273,7 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroHojeButton`** | `src/components/dashboard/FiltroHojeButton.tsx` | Atalho **Hoje** na Agenda — ícone `History` 15px (não confundir com Histórico) |
 | **`FiltroStatusSemanticoPill`** | `src/components/FiltroStatusSemanticoPill.tsx` | Chips de **status** na barra (bolinha 8px + cor semântica ativa) — Lives, Afiliados |
 | **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
+| **`FiltroSemanticoTabPill`** | `src/components/dashboard/FiltroSemanticoTabPill.tsx` | Chips **sem** bolinha — domínio (ex.: **Jogo** / Tipo no Roteiro de Mesa); ativo na cor do domínio, **não** marca |
 | **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
 | `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
@@ -301,6 +317,8 @@ import { Network, LayoutList } from "lucide-react";
 ```
 
 **Exceção:** `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` / `FiltroSemanticoTabPill` são **filtros** com cor semântica — não substituem `FiltroBarTabButton` para troca de módulo/painel.
+
+**Filtro de jogo (`FiltroSemanticoTabPill`):** ícone de **`GAME_IDENTITY_ICONS`** (13px); `semanticColor={gameIdentityTextColor(key, isDark)}` — Global § Identidade visual por jogo. **Não** `brand.accent`, **não** pill única para todos os jogos. Exceção só com pedido explícito no MDC da secção.
 
 `SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
@@ -360,6 +378,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 |---------------------|------------|-------------------|
 | Status (chip semântico) | Bolinha 8px + cor | **`FiltroStatusSemanticoPill`** — Lives, Afiliados; **não** `ShieldAlert` |
 | Plataforma (chip) | `PlatLogo` 13px | **`FiltroPlataformaSemanticoPill`** |
+| **Jogo** (chip tab) | `GAME_IDENTITY_ICONS` 13px | **`FiltroSemanticoTabPill`** + `gameIdentityTextColor` — Roteiro de Mesa, Gestão de Dealers; **não** marca (Global § Identidade por jogo) |
 | Campanha / UTM (legado) | `Megaphone` / `Link2` | `SelectComIcone` fora da barra canónica |
 | Busca (página) | `Search` 16px | **`BarraPesquisaPagina`** |
 | Busca (painel dropdown) | `Search` 14px | **`BarraPesquisaFiltroPainel`** |
@@ -468,6 +487,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 ## 9. O que não é marca (permanece no Global)
 
 - Paleta semântica de dados (verde = bom, vermelho = ruim, amarelo, roxo FTD/Hora).
+- **Identidade por jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx`; Global § Identidade visual por jogo; **nunca** whitelabel.
 - `useApp()` / `t.*` para superfícies neutras.
 - `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, `SortTableTh`, ordenação default, permissões (Gestão de Usuários / admin irrestrito), filtros (`Todos` default, busca se >5 opções), strings de vazio/loading.
 - Título alinhado ao menu + subtítulo: regra de conteúdo no Global; implementação visual neste MDC (secção 4).
@@ -493,6 +513,8 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Título diferente do menu ou página sem subtítulo.
 - `blockBg` na barra de filtros.
 - Substituir verde/vermelho de GGR/ROI por `--brand-primary` por estética.
+- Tag, filtro, KPI, faixa de título ou série de gráfico **por jogo** com `--brand-*`, `brand.accent` ou hex local — usar Global § Identidade visual por jogo (exceção só com pedido explícito no MDC da secção).
+- `FiltroSemanticoTabPill` de **jogo** ativo em cor de marca ou pill única para todos os jogos.
 
 ---
 
@@ -510,3 +532,4 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA
 - [ ] Semântica de dado intacta (Global)
+- [ ] Tags/filtros/KPIs/gráficos/faixas **por jogo**: `gameIdentityColors` + `gameIdentityIcons` (Global § Identidade por jogo) — exceção **só** com pedido explícito documentado no MDC da secção

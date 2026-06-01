@@ -100,6 +100,12 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
 - **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / vermelho / amarelo); **não** tokens whitelabel.
 
+**Identidade por jogo (regra global):** paleta canónica **obrigatória** em todo bloco que distingue os quatro jogos — Global § Identidade visual por jogo + Brand §1.5. **Exceção:** somente com pedido explícito de produto — registrar em «Exceções — identidade de jogo» neste MDC antes de codar.
+
+### Exceções — identidade de jogo (Overview Spin)
+
+Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados por mesa usam `gameIdentityColors.ts`.
+
 ---
 
 ## Streamers — Arquitetura de 3 Abas
