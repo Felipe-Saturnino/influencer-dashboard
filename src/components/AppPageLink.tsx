@@ -51,8 +51,8 @@ export function AjudaPaginaAcessoLink({ pageKey }: { pageKey: PageKey }) {
         fontFamily: FONT.body,
       }}
     >
-      Acesse a pagina aqui{" "}
-      <AppPageLink pageKey={pageKey} showAbsoluteUrl />
+      Acesse a pagina{" "}
+      <AppPageLink pageKey={pageKey}>AQUI</AppPageLink>
     </p>
   );
 }

@@ -13,6 +13,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
+import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -2199,7 +2200,7 @@ export default function Ajuda() {
                         margin: 0,
                         whiteSpace: "pre-line",
                       }}>
-                        {bloco.texto}
+                        {renderAjudaTexto(bloco.texto)}
                       </p>
                       {i === 0 ? <AjudaPaginaAcessoLink pageKey={paginaSelecionada} /> : null}
                       {i < dadosConteudo.blocos.length - 1 && (
