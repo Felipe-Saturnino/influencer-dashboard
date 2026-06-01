@@ -6,18 +6,31 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, AlertCircle, Upload, Check, Trash2, Building2, Loader2, Palette, Layers } from "lucide-react";
+import { Pencil, AlertCircle, Upload, Check, Trash2, Loader2, Palette, Layers, Building2 } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import {
   ctaGradientSalvar,
   handleGestaoTabsArrowKeyDown,
 } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import {
+  HOME_OPERADOR_TEMPLATE_PADRAO,
+  HOME_OPERADOR_TEMPLATE_SELECT_OPTIONS,
+  HOME_OPERADOR_TEMPLATES_DEDICADOS,
+  getRegisteredHomeOperadorTemplateKeys,
+  isHomeOperadorTemplatePadrao,
+} from "../../../lib/homeOperadoraTemplate";
+import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 const ERRO_EXCLUIR_OPERADORA =
@@ -33,7 +46,8 @@ function tableRowHoverBg(isDark: boolean): string {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
   const { theme: t } = useApp();
-  const dashBrand = useDashboardBrand();
+  const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +95,6 @@ export default function GestaoOperadoras() {
     return arr;
   }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
-  const thStyle = getThStyle(t);
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -128,30 +141,14 @@ export default function GestaoOperadoras() {
   return (
     <div className="app-page-shell">
 
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <span style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: dashBrand.primaryIconBg,
-          border: dashBrand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: dashBrand.primaryIconColor,
-          flexShrink: 0, marginTop: 3,
-        }}>
-          <Building2 size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: dashBrand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-            Gestão de Operadoras
-          </h1>
-          <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-            Gerencie operadoras parceiras, identidade visual e configurações de integração.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="gestao_operadoras" />}
+        title={getPageMenuLabel("gestao_operadoras")}
+        subtitle="Gerencie operadoras parceiras, identidade visual e configurações de integração."
+      />
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
-      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
         {[
           { label: "Total", valor: loading ? "—" : operadoras.length, cor: BRAND.roxoVivo },
           { label: "Ativas", valor: loading ? "—" : ativas, cor: "#059669" },
@@ -173,15 +170,19 @@ export default function GestaoOperadoras() {
         ))}
       </div>
 
-      {/* ─── Tabela ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 18,
-        boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-        overflow: "hidden",
-      }}>
-        {perm.canCriarOk && (
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "18px 20px 16px" }}>
+      <div style={getPageContentBoxStyle(brand, t)}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Operadoras</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -191,13 +192,13 @@ export default function GestaoOperadoras() {
             >
               Nova Operadora
             </CtaCriarButton>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {loading ? (
           <div
             style={{
-              padding: "40px 20px",
+              padding: "40px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
               textAlign: "center",
@@ -211,10 +212,10 @@ export default function GestaoOperadoras() {
             Carregando…
           </div>
         ) : operadoras.length === 0 ? (
-          <div style={{ padding: "48px 20px", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
+          <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
         ) : (
-          <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle()}>
             <caption style={{ display: "none" }}>Lista de operadoras cadastradas</caption>
             <thead>
               <tr>
@@ -223,8 +224,8 @@ export default function GestaoOperadoras() {
                   col="slug"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -237,8 +238,8 @@ export default function GestaoOperadoras() {
                   col="nome"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -251,8 +252,8 @@ export default function GestaoOperadoras() {
                   col="status"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(col) =>
                     setSortOp((s) => ({
                       col,
@@ -265,8 +266,8 @@ export default function GestaoOperadoras() {
                   col="criada"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
-                  thStyle={thStyle}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={(c) =>
                     setSortOp((s) => ({
                       col: c,
@@ -275,7 +276,7 @@ export default function GestaoOperadoras() {
                   }
                 />
                 {mostrarColunaAcoes && (
-                  <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                  <th scope="col" style={dataTable.thHeader}>
                     Ações
                   </th>
                 )}
@@ -283,7 +284,7 @@ export default function GestaoOperadoras() {
             </thead>
             <tbody>
               {operadorasOrdenadas.map((op, idx) => {
-                const zebra = zebraStripe(idx);
+                const zebra = dataTable.zebraRow(idx);
                 return (
                 <tr
                   key={op.slug}
@@ -295,34 +296,38 @@ export default function GestaoOperadoras() {
                     e.currentTarget.style.background = zebra;
                   }}
                 >
-                  <td style={getTdStyle(t)}>
-                    <code style={{
-                      background: `${BRAND.roxoVivo}18`, borderRadius: 6,
-                      padding: "3px 9px", fontSize: 12,
-                      color: BRAND.roxoVivo, fontFamily: "monospace",
-                      border: `1px solid ${BRAND.roxoVivo}33`,
-                    }}>
-                      {op.slug}
-                    </code>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <code style={{
+                        background: `${BRAND.roxoVivo}18`, borderRadius: 6,
+                        padding: "3px 9px", fontSize: 12,
+                        color: BRAND.roxoVivo, fontFamily: "monospace",
+                        border: `1px solid ${BRAND.roxoVivo}33`,
+                      }}>
+                        {op.slug}
+                      </code>
+                    </div>
                   </td>
-                  <td style={{ ...getTdStyle(t), fontWeight: 600 }}>{op.nome}</td>
-                  <td style={getTdStyle(t)}>
-                    <span style={{
-                      background: op.ativo ? "#05966922" : "#6b728022",
-                      color: op.ativo ? "#059669" : "#6b7280",
-                      border: `1px solid ${op.ativo ? "#05966944" : "#6b728044"}`,
-                      borderRadius: 6, padding: "3px 10px",
-                      fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    }}>
-                      {op.ativo ? "Ativa" : "Inativa"}
-                    </span>
+                  <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{op.nome}</td>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <span style={{
+                        background: op.ativo ? "#05966922" : "#6b728022",
+                        color: op.ativo ? "#059669" : "#6b7280",
+                        border: `1px solid ${op.ativo ? "#05966944" : "#6b728044"}`,
+                        borderRadius: 6, padding: "3px 10px",
+                        fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                      }}>
+                        {op.ativo ? "Ativa" : "Inativa"}
+                      </span>
+                    </div>
                   </td>
-                  <td style={{ ...getTdStyle(t), color: t.textMuted, fontSize: 12 }}>
+                  <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12 }}>
                     {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                   </td>
                   {mostrarColunaAcoes && (
-                    <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center" }}>
                         {perm.canEditarOk ? (
                           <button
                             type="button"
@@ -446,6 +451,7 @@ function ModalOperadora({
 }) {
   const { theme: t } = useApp();
   const dashBrand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const nomeInputRef = useRef<HTMLInputElement>(null);
   const isNova = !editando;
   const [aba, setAba] = useState<ModalTabId>("dados");
@@ -462,6 +468,9 @@ function ModalOperadora({
   const [turnoManha, setTurnoManha] = useState(() => timeDbToInput(editando?.turno_manha_inicio));
   const [turnoTarde, setTurnoTarde] = useState(() => timeDbToInput(editando?.turno_tarde_inicio));
   const [turnoNoite, setTurnoNoite] = useState(() => timeDbToInput(editando?.turno_noite_inicio));
+  const [homeTemplate, setHomeTemplate] = useState(() =>
+    isHomeOperadorTemplatePadrao(editando?.home_template) ? HOME_OPERADOR_TEMPLATE_PADRAO : (editando?.home_template?.trim() ?? HOME_OPERADOR_TEMPLATE_PADRAO),
+  );
   const [mesas, setMesas] = useState<MesaCadastroResumo[]>([]);
   const [mesasLoading, setMesasLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -721,9 +730,22 @@ function ModalOperadora({
                 turno_noite_inicio: tn || null,
               };
 
+        const dedicatedKeys = new Set([
+          ...HOME_OPERADOR_TEMPLATES_DEDICADOS.map((x) => x.key),
+          ...getRegisteredHomeOperadorTemplateKeys(),
+        ]);
+        if (homeTemplate !== HOME_OPERADOR_TEMPLATE_PADRAO && !dedicatedKeys.has(homeTemplate)) {
+          setErro("Template de Home inválido. Selecione Home Operador Padrão ou um template dedicado registrado.");
+          setSalvando(false);
+          return;
+        }
+        const homeTemplatePayload = {
+          home_template: homeTemplate === HOME_OPERADOR_TEMPLATE_PADRAO ? null : homeTemplate,
+        };
+
         const { error } = await supabase
           .from("operadoras")
-          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload })
+          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload, ...homeTemplatePayload })
           .eq("slug", editando.slug);
         if (error) throw error;
       }
@@ -893,10 +915,6 @@ function ModalOperadora({
     </div>
   );
 
-  const thM = getThStyle(t);
-  const tdM = getTdStyle(t);
-  const tdNum = getTdNumStyle(t);
-
   return (
     <ModalBase maxWidth={isNova ? 520 : 720} onClose={tryClose}>
       <ModalHeader
@@ -1032,6 +1050,29 @@ function ModalOperadora({
 
       {!isNova && aba === "operacoes" && (
         <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes" tabIndex={0}>
+          <div style={fieldStyle}>
+            <label style={labelStyle} htmlFor="op-home-template">
+              Home do operador
+            </label>
+            <select
+              id="op-home-template"
+              value={homeTemplate}
+              onChange={(e) => setHomeTemplate(e.target.value)}
+              style={inputStyle}
+              aria-label="Template de Home para usuários operador desta operadora"
+            >
+              {HOME_OPERADOR_TEMPLATE_SELECT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
+              Operadores com escopo nesta operadora veem o template selecionado ao entrar na Home. Sem template dedicado,
+              usa-se a Home Operador Padrão.
+            </p>
+          </div>
+
           <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
             Horário de turno dos dealers
           </div>
@@ -1087,32 +1128,54 @@ function ModalOperadora({
               Nenhuma mesa cadastrada para esta operadora.
             </div>
           ) : (
-            <div className="app-table-wrap">
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle()}>
                 <caption style={{ display: "none" }}>
                   Mesas em operação cadastradas para esta operadora
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Jogo</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Nome da mesa</th>
-                    <th scope="col" style={{ ...thM, textAlign: "right" }}>Nº mesa</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID Spin</th>
-                    <th scope="col" style={{ ...thM, textAlign: "left" }}>ID operadora</th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Jogo
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Nome da mesa
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      Nº mesa
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      ID Spin
+                    </th>
+                    <th scope="col" style={dataTable.thHeader}>
+                      ID operadora
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mesas.map((m, i) => (
-                    <tr key={`${m.mesa_identificacao}-${i}`} style={{ background: zebraStripe(i) }}>
-                      <td style={{ ...tdM, textAlign: "left" }}>{m.tipo_jogo}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontWeight: 600 }}>{m.nome_mesa}</td>
-                      <td style={{ ...tdNum }}>{m.numero_mesa ?? "—"}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
-                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>
-                        {m.mesa_identificacao_operadora?.trim() ? m.mesa_identificacao_operadora : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {mesas.map((m, i) => {
+                    const zebraBg = dataTable.zebraRow(i);
+                    return (
+                      <tr
+                        key={`${m.mesa_identificacao}-${i}`}
+                        style={{ background: zebraBg }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebraBg;
+                        }}
+                      >
+                        <td style={dataTable.tdCenter}>{m.tipo_jogo}</td>
+                        <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{m.nome_mesa}</td>
+                        <td style={dataTable.tdCenter}>{m.numero_mesa ?? "—"}</td>
+                        <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
+                        <td style={{ ...dataTable.tdCenter, fontFamily: "monospace", fontSize: 12 }}>
+                          {m.mesa_identificacao_operadora?.trim() ? m.mesa_identificacao_operadora : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

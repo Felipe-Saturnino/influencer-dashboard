@@ -64,6 +64,7 @@ export type PageKey =
   | "escala_solicitacoes"
   | "rh_central_denuncias"
   | "rh_portal"
+  | "informativos"
   | "configuracoes"
   | "ajuda";
 
@@ -265,6 +266,8 @@ export interface Operadora {
   turno_manha_inicio?:  string | null;
   turno_tarde_inicio?:  string | null;
   turno_noite_inicio?:  string | null;
+  /** Chave do template de Home do perfil Operador (`default` / null = Home Operador Padrão). */
+  home_template?:       string | null;
 }
 
 // ─── OPERADORA PAGES ─────────────────────────────────────────────────────────

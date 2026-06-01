@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## Cabeçalho — título e subtítulo
 
-`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+`PageHeader` + `PageMenuIcon` (Global / Brand §4). **`title`** = `getPageMenuLabel` / `label` em `menu.ts`.
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
@@ -40,12 +40,15 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ## Financeiro (`financeiro`)
 
+- **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — **sem** caixa pai (mesmo layout que **Banca de Jogo**): rótulo em caixa alta acima do valor (`R$ PAGO`, `R$ PENDENTE`, `HORAS REALIZADAS`), `borderLeft` 3px semântico, `brand.blockBg`, skeleton só no valor.
+- **Ciclo de pagamento** e **Consolidado de influencers:** `getPageContentBoxStyle` + **`SectionTitle`** (sem ícone; `compact` no cabeçalho do ciclo quando na mesma linha que select/badge/ações).
 - Carrossel de mês + **`FiltroHistoricoButton`** na FilterBar (padrão Overview Influencer); rótulo **`Todo o período`** no modo histórico; KPIs com skeleton inline (sem “Carregando...” dentro do card).
 - **Datas de ciclo** no select: formato legível (`dd/mm – dd/mm/aa`) — nunca ISO cru no label.
 - Empty ciclos: copy para influencer vs gestor; detalhes técnicos só em `<details>` para gestor.
 - Alertas: `AlertTriangle` Lucide — nunca emoji ⚠️ sozinho.
 - Ciclo aberto: banner amarelo “Prévia em tempo real…” com `role="status"`.
-- Tabela: expand com `aria-expanded`; coluna **Perfil** para classificação de influencer.
+- Tabelas **Ciclo** e **Consolidado:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`, cabeçalho/zebra/linha total); sub-tabela de histórico no expand usa `thHeaderSub`.
+- Expand no Consolidado: `aria-expanded`; coluna **Perfil** para classificação de influencer.
 - Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
 
@@ -53,6 +56,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 
 ## Banca de Jogo (`banca_jogo`)
 
+- **Solicitações** e **Consolidado de bancas:** `getPageContentBoxStyle` + **`SectionTitle`**; tabelas no padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); sub-tabela no expand do Consolidado usa `thHeaderSub`.
 - Workflow: Solicitado → Aprovado → Liberado (cores semânticas Global).
 - **CPF** mascarado na tabela (`***.***.***-**`) com `title` no hover para autorizado.
 - Exclusão: modal de confirmação com texto contextual — não `window.confirm`.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Network } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -21,9 +21,13 @@ import type {
   RhOrgGerenciaComFilhos,
   RhOrgTime,
 } from "../../../types/rhOrganograma";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
@@ -135,7 +139,7 @@ export default function RhOrganogramaPage() {
 
   const [sobreGerencia, setSobreGerencia] = useState("");
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const orgPanelBox = getPageContentBoxStyle(brand, t, { marginBottom: 0 });
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -788,16 +792,9 @@ export default function RhOrganogramaPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<Network size={16} aria-hidden />}
-        title="Organograma"
+        icon={<PageMenuIcon pageKey="rh_organograma" />}
+        title={getPageMenuLabel("rh_organograma")}
         subtitle="Diretorias, gerências e times"
-        actions={
-          podeEditar && modo === "gerenciar" ? (
-            <CtaCriarButton type="button" onClick={abrirNovaDiretoria}>
-              Nova diretoria
-            </CtaCriarButton>
-          ) : null
-        }
       />
 
       {erroGlobal ? (
@@ -858,19 +855,34 @@ export default function RhOrganogramaPage() {
         role={podeEditar ? "tabpanel" : "region"}
         id={`panel-org-${modo}`}
         {...(podeEditar ? { "aria-labelledby": `tab-org-${modo}` } : { "aria-label": "Organograma" })}
-        style={{
-          borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          padding: 20,
-          boxShadow: cardShadow,
-          minHeight: 200,
-        }}
+        style={{ ...orgPanelBox, minHeight: 200 }}
       >
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
             <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
           </div>
-        ) : modo === "visual" ? (
+        ) : (
+          <>
+            {modo === "gerenciar" ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <SectionTitle compact>Gerenciamento</SectionTitle>
+                {podeEditar ? (
+                  <CtaCriarButton type="button" onClick={abrirNovaDiretoria}>
+                    Nova diretoria
+                  </CtaCriarButton>
+                ) : null}
+              </div>
+            ) : null}
+            {modo === "visual" ? (
           filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS ? (
             <OrgChartHierarquico
               arvore={arvore}
@@ -956,6 +968,8 @@ export default function RhOrganogramaPage() {
             onExcluirGerencia={prepararExcluirGerencia}
             onExcluirTime={prepararExcluirTime}
           />
+            )}
+          </>
         )}
       </div>
 

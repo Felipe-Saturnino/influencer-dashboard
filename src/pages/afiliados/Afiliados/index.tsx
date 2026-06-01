@@ -16,8 +16,14 @@ import { influencerElegivelQuadroPerfilIncompleto } from "../../../lib/influence
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import {
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 function SensitiveField({
   value, label, labelStyle, textStyle, editMode = false,
@@ -284,10 +290,10 @@ export default function Afiliados() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <DashboardPageHeader icon={<Users size={14} aria-hidden="true" />} title="Afiliados" subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
+      <DashboardPageHeader icon={<PageMenuIcon pageKey="afiliados" />} title={getPageMenuLabel("afiliados")} subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
 
       {showManagementUI && (
-        <div className="app-grid-2" style={{ gap: 16, marginBottom: 20 }}>
+        <div className="app-grid-2" style={{ ...getPageKpiSectionGapStyle(), gap: 16 }}>
           <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: cardShadow }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: brand.secondary, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
               <Users size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Total de Afiliados
@@ -330,8 +336,7 @@ export default function Afiliados() {
       )}
 
       {showManagementUI && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+        <div style={getPageFilterBoxStyle(brand, t)}>
             {/* Linha 1: Status + Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
@@ -375,13 +380,6 @@ export default function Afiliados() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {!loading && showManagementUI && (
-        <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> afiliado(s)
         </div>
       )}
 

@@ -75,6 +75,7 @@ const EscalaMarketplaceTurnos = lazyWithRetry(() => import("./pages/escala/Marke
 const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitacoes"));
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
+const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -116,6 +117,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   escala_solicitacoes: EscalaSolicitacoes,
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
+  informativos:      Informativos,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };

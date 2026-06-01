@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, Loader2, Radio } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { getPageContentBoxShellStyle } from "../../../lib/pageContentBoxStyles";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 
@@ -153,45 +157,16 @@ export default function SpinNaRede() {
     );
   }
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const listItemBox = getPageContentBoxShellStyle(brand, t, { padding: "14px 16px", marginBottom: 0 });
 
   return (
     <div className="app-page-shell app-page-shell--pb64" style={{ fontFamily: FONT.body }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: brand.primaryIconColor,
-            flexShrink: 0,
-          }}
-        >
-          <Radio size={16} aria-hidden="true" />
-        </span>
-        <h1
-          style={{
-            fontSize: 18,
-            fontWeight: 800,
-            color: brand.primary,
-            fontFamily: FONT_TITLE,
-            margin: 0,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          Spin na Rede
-        </h1>
-      </div>
-
-      <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, maxWidth: 720, lineHeight: 1.45 }}>
-        Acompanhe as menções e aparições públicas da Spin Gaming na mídia.
-      </p>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="spin_na_rede" />}
+        title={getPageMenuLabel("spin_na_rede")}
+        subtitle="Acompanhe as menções e aparições públicas da Spin Gaming na mídia."
+      />
 
       {erro && (
         <div
@@ -234,13 +209,7 @@ export default function SpinNaRede() {
             return (
               <li
                 key={row.id}
-                style={{
-                  borderRadius: 14,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.cardBg,
-                  boxShadow: cardShadow,
-                  padding: "14px 16px",
-                }}
+                style={listItemBox}
               >
                 <div
                   style={{

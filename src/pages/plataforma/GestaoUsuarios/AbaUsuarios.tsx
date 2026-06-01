@@ -8,11 +8,12 @@ import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdg
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
-import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES, FILTROS_PERFIL_LINHAS } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import type { ContagensFiltroUsuarios } from "./GestaoUsuariosFiltroBar";
 
 interface AbaUsuariosProps {
   /** Atalhos administrativos (criar/editar/desativar) só quando o utilizador é admin na app. */
@@ -23,6 +24,11 @@ interface AbaUsuariosProps {
   podeEditarUsuario: boolean;
   /** Excluir: desativar utilizador. */
   podeExcluirUsuario: boolean;
+  busca: string;
+  onBuscaChange: (v: string) => void;
+  filtroStatus: FiltroStatusUsuarios;
+  filtroPerfilSet: Set<Role>;
+  onContagensChange: (c: ContagensFiltroUsuarios) => void;
 }
 
 function formatarUltimoLogin(iso: string | null | undefined): string {
@@ -36,11 +42,10 @@ function formatarUltimoLogin(iso: string | null | undefined): string {
   }
 }
 
-/** Filtro de status: vazio = todos; chaves selecionadas = união (ativo e/ou desativado; ambos = todos). */
-function passaFiltroStatus(u: UsuarioCompleto, set: Set<"ativo" | "desativado">): boolean {
-  if (set.size === 0) return true;
+function passaFiltroStatus(u: UsuarioCompleto, modo: FiltroStatusUsuarios): boolean {
+  if (modo === "todos") return true;
   const ok = u.ativo !== false;
-  return (set.has("ativo") && ok) || (set.has("desativado") && !ok);
+  return modo === "ativo" ? ok : !ok;
 }
 
 function passaFiltroPerfil(u: UsuarioCompleto, set: Set<Role>): boolean {
@@ -90,6 +95,11 @@ export function AbaUsuarios({
   podeCriarUsuario,
   podeEditarUsuario,
   podeExcluirUsuario,
+  busca,
+  onBuscaChange,
+  filtroStatus,
+  filtroPerfilSet,
+  onContagensChange,
 }: AbaUsuariosProps) {
   const { theme: t } = useApp();
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
@@ -97,12 +107,6 @@ export function AbaUsuarios({
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
-  const [busca, setBusca] = useState("");
-  /** Por defeito só utilizadores ativos; incluir desativados via filtro "Desativado" (e/ou desmarcar "Ativo"). */
-  const [filtroStatusSet, setFiltroStatusSet] = useState<Set<"ativo" | "desativado">>(
-    () => new Set(["ativo"]),
-  );
-  const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(new Set());
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
   const [modalResetSenha, setModalResetSenha] = useState<UsuarioCompleto | null>(null);
   const [feedbackAcao, setFeedbackAcao] = useState<{ tipo: "erro" | "ok"; msg: string } | null>(null);
@@ -185,43 +189,42 @@ export function AbaUsuarios({
   const qtdAtivos = baseContagemStatus.filter((u) => u.ativo !== false).length;
   const qtdDesativados = baseContagemStatus.length - qtdAtivos;
 
-  const baseContagemPerfil = porBusca.filter((u) => passaFiltroStatus(u, filtroStatusSet));
+  const baseContagemPerfil = porBusca.filter((u) => passaFiltroStatus(u, filtroStatus));
   const qtdPorPerfil = Object.fromEntries(
     ROLES.map((r) => [r.value, baseContagemPerfil.filter((u) => u.role === r.value).length])
   ) as Record<Role, number>;
 
   const usuariosListaFinal = porBusca.filter(
-    (u) => passaFiltroStatus(u, filtroStatusSet) && passaFiltroPerfil(u, filtroPerfilSet)
+    (u) => passaFiltroStatus(u, filtroStatus) && passaFiltroPerfil(u, filtroPerfilSet)
   );
 
-  const toggleFiltroStatus = (chave: "ativo" | "desativado") => {
-    setFiltroStatusSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(chave)) next.delete(chave);
-      else next.add(chave);
-      return next;
-    });
-  };
+  const contagensPerfilKey = ROLES.map((r) => qtdPorPerfil[r.value]).join(",");
 
-  const toggleFiltroPerfil = (role: Role) => {
-    setFiltroPerfilSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(role)) next.delete(role);
-      else next.add(role);
-      return next;
-    });
-  };
+  useEffect(
+    () => {
+      onContagensChange({ qtdAtivos, qtdDesativados, qtdPorPerfil });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- contagensPerfilKey resume qtdPorPerfil
+    [qtdAtivos, qtdDesativados, contagensPerfilKey, onContagensChange],
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Linha 1: pesquisa + novo usuário */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <BarraPesquisaPagina
           value={busca}
-          onChange={setBusca}
+          onChange={onBuscaChange}
           placeholder={PAGE_SEARCH.nomeEmail}
           aria-label="Buscar usuários por nome ou e-mail"
-          wrapperStyle={{ flex: "1 1 240px", minWidth: 200 }}
+          wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
           inputStyle={{ fontSize: 14 }}
         />
         {modoAdmin && podeCriarUsuario ? (
@@ -229,122 +232,6 @@ export function AbaUsuarios({
             Novo Usuário
           </CtaCriarButton>
         ) : null}
-      </div>
-
-      {/* Status (default: só Ativo) e filtros por perfil em três linhas (gerênciais / internos / externos) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginRight: 4,
-            }}
-          >
-            Status
-          </span>
-          {(
-            [
-              { key: "ativo" as const, label: "Ativo", count: qtdAtivos, cor: BRAND.verde },
-              { key: "desativado" as const, label: "Desativado", count: qtdDesativados, cor: BRAND.cinza },
-            ] as const
-          ).map(({ key, label, count, cor }) => {
-            const sel = filtroStatusSet.has(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={sel}
-                onClick={() => toggleFiltroStatus(key)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${sel ? cor : t.cardBorder}`,
-                  background: sel ? `${cor}22` : t.inputBg ?? "transparent",
-                  color: sel ? cor : t.textMuted,
-                  fontSize: 13,
-                  fontWeight: sel ? 700 : 500,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  transition: "all 0.18s",
-                }}
-              >
-                {label}
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    opacity: sel ? 1 : 0.85,
-                    minWidth: 18,
-                    textAlign: "center",
-                  }}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {FILTROS_PERFIL_LINHAS.map(({ titulo, roles }) => (
-            <div key={titulo} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginRight: 4,
-                  flexShrink: 0,
-                }}
-              >
-                {titulo}
-              </span>
-              {roles.map((roleVal) => {
-                const label = roleLabel(roleVal);
-                const cor = roleBadgeColor(roleVal);
-                const sel = filtroPerfilSet.has(roleVal);
-                const count = qtdPorPerfil[roleVal];
-                return (
-                  <button
-                    key={roleVal}
-                    type="button"
-                    aria-pressed={sel}
-                    aria-label={`Filtrar por perfil ${label}`}
-                    onClick={() => toggleFiltroPerfil(roleVal)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "6px 14px",
-                      borderRadius: 999,
-                      border: `1px solid ${sel ? cor : t.cardBorder}`,
-                      background: sel ? `${cor}22` : t.inputBg ?? "transparent",
-                      color: sel ? cor : t.textMuted,
-                      fontSize: 12,
-                      fontWeight: sel ? 700 : 500,
-                      cursor: "pointer",
-                      fontFamily: FONT.body,
-                      transition: "all 0.18s",
-                    }}
-                  >
-                    {label}
-                    <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
       </div>
 
       {feedbackAcao && (

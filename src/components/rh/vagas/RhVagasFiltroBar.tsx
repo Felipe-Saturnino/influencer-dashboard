@@ -5,6 +5,7 @@ import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../..
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { useApp } from "../../../context/AppContext";
 import {
   VAGA_FILTRO_STATUS_ARIA_LABEL,
   VAGA_FILTRO_TIPO_ARIA_LABEL,
@@ -82,6 +83,7 @@ export function RhVagasFiltroBar({
   onVagaIdFiltroCandidaturas?: (value: string) => void;
 }) {
   const brand = useDashboardBrand();
+  const { theme: appTheme } = useApp();
   const tabs: RhVagasAba[] = [
     ...TAB_BASE.filter((k) => k !== "gerenciamento" || mostrarGerenciamento),
     ...(mostrarCandidaturas ? (["candidaturas"] as const) : []),
@@ -166,8 +168,7 @@ export function RhVagasFiltroBar({
   const mostrarNovaVaga = aba === "gerenciamento" && podeCriarVaga && onNovaVaga;
 
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={getFilterBarWrapperStyle(brand)}>
+    <div style={getFilterBarWrapperStyle(brand, appTheme)}>
         <div
           role="tablist"
           aria-label="Seções de vagas"
@@ -232,7 +233,6 @@ export function RhVagasFiltroBar({
             </CtaCriarButton>
           ) : null}
         </div>
-      </div>
     </div>
   );
 }

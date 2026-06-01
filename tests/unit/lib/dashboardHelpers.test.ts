@@ -4,6 +4,7 @@ import {
   fmtHorasTotal,
   fmtDia,
   getDatasDoMes,
+  getIdxMesCarrosselPadrao,
   getPeriodoComparativoMoM,
   getStatusROI,
 } from "@/lib/dashboardHelpers";
@@ -39,6 +40,42 @@ describe("fmtDia", () => {
 describe("getDatasDoMes", () => {
   it("retorna primeiro e último dia do mês civil", () => {
     expect(getDatasDoMes(2026, 1)).toEqual({ inicio: "2026-02-01", fim: "2026-02-28" });
+  });
+});
+
+describe("getIdxMesCarrosselPadrao", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const meses = [
+    { ano: 2026, mes: 0, label: "Jan 2026" },
+    { ano: 2026, mes: 1, label: "Fev 2026" },
+    { ano: 2026, mes: 2, label: "Mar 2026" },
+    { ano: 2026, mes: 3, label: "Abr 2026" },
+    { ano: 2026, mes: 4, label: "Mai 2026" },
+  ];
+
+  it("dia 2+: seleciona o mês civil corrente", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 15));
+    expect(getIdxMesCarrosselPadrao(meses)).toBe(4);
+  });
+
+  it("dia 1: seleciona o mês anterior (ETL D-1)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 1));
+    expect(getIdxMesCarrosselPadrao(meses)).toBe(3);
+  });
+
+  it("1º de janeiro: mês anterior no ano passado", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 1));
+    const mesesComDez = [
+      { ano: 2025, mes: 11, label: "Dez 2025" },
+      { ano: 2026, mes: 0, label: "Jan 2026" },
+    ];
+    expect(getIdxMesCarrosselPadrao(mesesComDez)).toBe(0);
   });
 });
 

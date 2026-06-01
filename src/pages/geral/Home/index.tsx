@@ -30,6 +30,8 @@ import {
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
+import HomeInvestidor from "./HomeInvestidor";
+import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -346,9 +348,17 @@ export default function Home() {
 
   if (!user) return null;
 
+  if (user.role === "investidor") {
+    return <HomeInvestidor />;
+  }
+
+  if (user.role === "operador") {
+    return <HomeOperadorRouter />;
+  }
+
   const role = user.role;
   const welcome = ROLE_WELCOME[role];
-  const useBrand = role === "operador" && !!operadoraBrand;
+  const useBrand = false;
 
   const atalhos: { key: string; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [];
   for (const sec of MENU) {
@@ -371,18 +381,6 @@ export default function Home() {
       atalhosOrdenados.unshift(item);
     }
   }
-  if (role === "operador") {
-    const preferidos = ["streamers", "dash_overview_influencer", "agenda", "influencers"];
-    atalhosOrdenados.sort((a, b) => {
-      const ia = preferidos.indexOf(a.key);
-      const ib = preferidos.indexOf(b.key);
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return a.label.localeCompare(b.label);
-    });
-  }
-
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
   const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 

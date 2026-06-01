@@ -1,10 +1,10 @@
-# ETL Social Media KPIs - Execução diária às 6h (horário de Brasília)
-# 6h BRT = 9h UTC
+# ETL Social Media KPIs - Execução diária ~6h30 (horário de Brasília)
+# 6h30 BRT = 9h30 UTC — escalonado; recuperação em daily-jobs-watchdog.yml
 name: Sync Social Media KPIs (6h)
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "30 9 * * *"
   workflow_dispatch:
 
 jobs:

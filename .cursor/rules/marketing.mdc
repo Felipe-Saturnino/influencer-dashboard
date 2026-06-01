@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## Cabeçalho — título e subtítulo
 
-`PageHeader` (Família B). **`title`** = `label` em `menu.ts`.
+`PageHeader` + `PageMenuIcon` (Global / Brand §4). **`title`** = `getPageMenuLabel` / `label` em `menu.ts`.
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
@@ -41,7 +41,8 @@ Perfis: Gestor (operação interna).
 ## Campanhas (`campanhas`)
 
 - Sem FilterBar de período/operadora.
-- KPI cards: `borderTop: 3px solid` (não `borderLeft`); sombra Global.
+- **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — layout igual Financeiro/Banca de Jogo (`borderLeft` 3px, rótulo em caixa alta acima: **TOTAL**, **ATIVAS**, **INATIVAS**; `brand.blockBg`; sem caixa pai).
+- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`.
 - Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
 - `autoFocus` em modal: ref + `setTimeout(100)`.
 - Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
@@ -54,7 +55,7 @@ Perfis: Gestor (operação interna).
 - Filtro operadora: **`FiltroOperadoraSelect`** (`pill`) **dentro** do strip `primaryTransparent*` — nunca solto entre header e abas; agregadora **Todas Operadoras**.
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
-- Tabela: `tableLayout: fixed`; mobile ocultar Depósitos/GGR; manter UTM, FTDs, Ações.
+- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
 - `SortTableTh` + default em coluna de data quando existir (Global).
 - Vazios por aba: ver tabela em estados abaixo.
 - **Handoff:** mapear UTM, ignorar, sincronização métricas.

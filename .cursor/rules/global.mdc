@@ -94,7 +94,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -147,6 +147,12 @@ Nunca `@media` inline em componentes.
 
 ```typescript
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../lib/tableStyles";
+import {
+  createDataTableBlockStyles,
+  createDataTableStickyCol,
+  getDataTableStyle,
+  getDataTableWrapStyle,
+} from "../lib/dataTableStyles";
 import { BRAND, FONT_TITLE, STATUS_ORDEM } from "../lib/dashboardConstants";
 import { fmtBRL, fmtHorasTotal, getMesesDisponiveis, getPeriodoComparativoMoM } from "../lib/dashboardHelpers";
 import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../lib/classificacaoSort";
@@ -471,13 +477,81 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 ## Tabelas
 
-### Estrutura e estilo
+### Padrão canónico — tabela de dados em bloco (nível 3)
 
-1. `getThStyle(t)` / `getTdStyle(t)` de `lib/tableStyles`.
+**Referência:** Overview Spin → bloco **Detalhamento Diário** (`createDataTableBlockStyles` em `src/lib/dataTableStyles.ts`).
+
+**Código obrigatório em tabelas novas** dentro de `getPageContentBoxStyle` (padding **20px** — distância tabela ↔ borda do bloco vem daí + `SectionTitle` acima; **não** acrescentar margin horizontal extra no `app-table-wrap`).
+
+```tsx
+import { useDataTableBlock } from "../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../lib/dataTableStyles";
+
+const dataTable = useDataTableBlock();
+
+<div style={contentBox}>
+  <SectionTitle sub="…">Título do bloco</SectionTitle>
+  <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+    <table style={getDataTableStyle({ minWidth: 720 })}>
+      <caption style={{ display: "none" }}>…</caption>
+      <thead>
+        <tr>
+          <th scope="col" style={dataTable.thHeaderSticky}>…</th> {/* só se 1ª coluna fixa */}
+          <th scope="col" style={dataTable.thHeader}>Coluna</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style={{ background: dataTable.zebraRow(i) }}>
+          <td style={dataTable.tdCenter}>…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+| Item | Regra |
+|------|--------|
+| **Bordas arredondadas** | **`borderRadius: 14`** no **wrapper** (`getDataTableWrapStyle` / `DATA_TABLE_RADIUS`). **Não** `getPageContentBoxRadius` na `<table>`. **Não** `overflow: hidden` na `<table>` (quebra coluna sticky). |
+| **Distância tabela ↔ bloco** | Bloco com `getPageContentBoxStyle` → **`padding: 20px`**. Tabela em `width: 100%` dentro do wrapper, sem padding lateral próprio. |
+| **Cores — cabeçalho (fundo da linha)** | Spin **Light:** `color-mix(colBg 86%, --brand-action 14%)`. Spin **Dark:** `color-mix(colBg 82%, --brand-action 18%)`. **Whitelabel:** `color-mix(colBg 86%, --brand-action 14%)`. Texto do cabeçalho: `getThStyle` / `getThStyleBrandAction` (cor do label, não alterar sem pedido de produto). |
+| **Cores — linhas (zebra)** | Fundos **opacos** via `dataTable.zebraRow(i)` — nunca `transparent` na linha par no dark. Spin light: par = `colBg`, ímpar = mix 8% secondary. Spin dark: par 10% / ímpar 18% secondary. Whitelabel: contrast 6% / 12%. Semântica GGR+/− mantém verde/vermelho do Global. |
+| **Tamanho do texto** | Cabeçalho: **`12px`**, **`fontWeight: 700`**, uppercase, `letterSpacing: 0.08em`. Corpo: **`13px`** (`getTdStyle`). |
+| **Alinhamento — corpo** | Valores **`textAlign: "center"`** (`dataTable.tdCenter`); `fontVariantNumeric: "tabular-nums"`. Pills/badges na célula: wrapper `display: flex; justifyContent: center`. |
+| **Cabeçalho** | Todas as colunas: **mesmo fundo** (`thHeader`), labels **centralizados**. 1ª coluna fixa no scroll: `thHeaderSticky` (mesmo visual + `position: sticky; left: 0`). |
+| **Scroll horizontal** | `className="app-table-wrap app-table-wrap--sticky-col"` — um único contentor de scroll; **proibido** `overflow: hidden` na `<table>` e **evitar** dois wrappers com `overflow-x: auto` aninhados. |
+| **Coluna fixa (opcional)** | `createDataTableStickyCol` + `tdSticky` / `thHeaderSticky` — fundo opaco na coluna fixa. Documentar exceção se a tabela não tiver 1ª coluna fixa. |
+
+**Linha Total / sublinhas:** `dataTable.totalRowBgStrong` + `tdTotal` / `tdTotalSticky` (negrito, tom mais forte que zebra). Cabeçalho duplo: `thHeader` (linha 1) + `thHeaderSub` (linha 2), mesma faixa de cor. Exceções (total no topo vs rodapé) no MDC da secção.
+
+**Exceções (aguardam decisão de produto — não migrar sem alinhamento):**
+
+| Área | Motivo |
+|------|--------|
+| **Gestão de Usuários** (abas Permissões, Gestores, Prestadores, Operadora) | Matriz de permissões com selects por célula; listas em grelha com layout próprio |
+| **Gestão de Escala** | Cabeçalhos dinâmicos por dia/turno e grade operacional misturada com tabela |
+
+Demais listas em bloco nível 3 devem usar `useDataTableBlock()` + `getDataTableWrapStyle` / `getDataTableStyle`. Grades calendário (Agenda dia a dia, etc.) ficam fora do padrão — ver MDC da secção.
+
+### Responsividade — mecanismos globais (obrigatório)
+
+| Mecanismo | Quando |
+|-----------|--------|
+| **`app-page-shell`** | Container raiz de **toda** página logada de produto (exceto Login / troca de senha obrigatória e rotas públicas) |
+| **`app-table-wrap`** + **`getDataTableWrapStyle()`** | Qualquer `<table>` ou matriz larga com scroll horizontal (inclui exceções: Gestão de Escala, Gestão de Usuários) |
+| **`app-table-wrap--sticky-col`** | 1ª coluna fixa no scroll (dashboards analíticos, Consolidado Turno) |
+| **`app-grid-kpi-*`**, **`app-grid-2`**, … | KPIs e grelhas — breakpoints em `responsive.css`; **não** `@media` inline em componentes |
+| **`app-modal-overlay-pad`** | Modais em viewport estreita (`clamp` lateral) |
+
+Listas/cards sem `<table>` (Lives, Afiliados, Agenda): `app-page-shell` + grids/classes `responsive.css`; calendário Agenda usa `app-agenda-cal-scroll-inner` quando aplicável.
+
+### Legado — listas e migração gradual
+
+1. `getThStyle(t)` / `getTdStyle(t)` / `getTdNumStyle(t)` de `lib/tableStyles`.
 2. Wrapper `<div className="app-table-wrap">`.
-3. `borderCollapse: "separate"`, `borderSpacing: 0`, `borderRadius: 14`, `overflow: "hidden"` quando aplicável.
+3. `borderCollapse: "separate"`, `borderSpacing: 0`.
 4. Zebra: `zebraStripe(i)` — não inline.
-5. Texto: `textAlign: left`; valores: `right` + `fontVariantNumeric: "tabular-nums"`.
+5. Texto: `textAlign: left`; valores numéricos: `right` + `fontVariantNumeric: "tabular-nums"`.
 6. Nome longo: `maxWidth: 160`, `overflow: hidden`, `textOverflow: ellipsis`, `title={valor}`.
 
 ### Ordenação por coluna (obrigatória quando aplicável)
@@ -550,7 +624,7 @@ fmtHorasTotal(h)          // 24:30
 
 - Ícones **decorativos** em células/badges: `aria-hidden="true"`.
 - Botões só ícone (linha de tabela): `aria-label` + `title` — ver Brand sec. 8.
-- Preferir **Lucide** em UI de página; GameIcons restritos ao menu lateral (`menu.ts`).
+- Preferir **Lucide** em UI de página e no **menu lateral** (`menu.ts` — `LucideIcon` por item). Cabeçalho de página: `PageMenuIcon` alinhado ao mesmo ícone do menu.
 
 Lista estendida (modais, tabelas clicáveis, abas):
 
@@ -600,13 +674,74 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - **Zebra:** `zebraStripe(i)` ou equivalente tema — não `rgba(124,58,237,…)` fixo.
 - Listas de conteúdo gerado pelo usuário: queries com **`.limit()`** — ver regra na secção se o volume for alto.
 
-### Sombra de cards
+### Hierarquia visual da página (3 níveis)
+
+Padrão transversal para páginas logadas de produto (dashboards e demais secções). **Não** confundir com títulos internos de KPI, mesa ou grupo dentro de um bloco.
+
+| Nível | Superfície | Conteúdo | Título / subtítulo | Ícone decorativo |
+|-------|------------|----------|-------------------|------------------|
+| **1 — Página** | `PageHeader` / `DashboardPageHeader` | Propósito da rota | `h1` = label do menu · subtítulo **13px** uma linha (`pageHeaderStyles`) | **Sim** — ícone do menu (32×16 no badge) |
+| **2 — Filtro** | `getPageFilterBoxStyle` / `getFilterBarWrapperStyle` | Carrossel, Histórico, Operadora, Influencer, abas `FiltroBarTabButton`, CTAs na strip | **Sem** título de bloco · **sem** `SectionTitle` | Só nos **controlos** (pills, tabs, ícones de filtro — Brand §6) |
+| **3 — Informação** | `getPageContentBoxStyle` | KPIs, tabelas, gráficos, funis | **Título de bloco** + **`sub`** (ver abaixo) | **Não** no cabeçalho do bloco |
+
+**Título de bloco (nível 3)** — componente `SectionTitle` (`src/components/dashboard/SectionTitle.tsx`):
+
+| Parte | Valor |
+|-------|--------|
+| Título | `14px`, peso `800`, `FONT_TITLE`, `textTransform: uppercase`, cor `brand.primary` |
+| Subtítulo (`sub`) | `11px`, peso `400`, `t.textMuted`, **mesma linha**; travessão **`—`** com **`12px`** entre título e subtítulo + **`6px`** entre travessão e texto (`lib/sectionTitleSub.ts`) — não prefixar `sub` com `·` / `—` |
+
+**Proibido no cabeçalho do bloco de informação:** badge 28×28 com ícone Lucide; `<p>` separado como subtítulo do bloco (usar prop `sub`). **Permitido dentro do bloco:** ícones em `KpiCard`, botões, CTAs, pills de filtro de secção, badges — não são “título de bloco”.
+
+**Subníveis dentro do bloco** (não são título de bloco — regras da secção, ex. `dashboards.mdc`): rótulos de grupo KPI 10px, títulos de mesa 13px, legendas de funil 9px.
+
+**Gap vertical entre níveis 1 → 2 → 3:** ver § Blocos de página (`PAGE_CONTENT_BOX_GAP` = 14px entre filtro e blocos de informação).
+
+### Blocos de página (caixas de conteúdo)
+
+**Escopo:** apenas a **moldura** dos contentores de primeiro nível (filtro, secção KPI consolidado, tabela, gráfico) e o **espaço entre eles** — **não** o layout interno (mini-cards KPI, células, badges, linhas de lista).
+
+**Helper:** `src/lib/pageContentBoxStyles.ts` + `useDashboardBrand()` / `useApp().theme`.
+
+| Propriedade | Valor |
+|-------------|--------|
+| Gap entre blocos | **`PAGE_CONTENT_BOX_GAP` = 14px** (`marginBottom` no bloco ou `getPageKpiSectionGapStyle` na grelha KPI sem caixa pai) |
+| Borda | `1px solid t.cardBorder` |
+| `borderRadius` | **14** (light) · **18** (dark) — `getPageContentBoxRadius(t.isDark)` |
+| `boxShadow` | `getPageContentBoxShadow(t.isDark)` |
+| Fundo conteúdo — Spin, light | **`#ffffff`** |
+| Fundo conteúdo — dark / whitelabel | `brand.blockBg` |
+| Barra de filtros — operadora | `primaryTransparentBg` / `primaryTransparentBorder` — `getPageFilterBoxStyle` ou `getFilterBarWrapperStyle(brand, t)` |
+| Barra de filtros — Spin, light | caixa branca (mesma moldura que conteúdo) |
+| Padding do bloco de secção | **20px** — `getPageContentBoxStyle` |
 
 ```typescript
-const cardShadow = t.isDark
-  ? "0 4px 20px rgba(0,0,0,0.25)"
-  : "0 2px 8px rgba(0,0,0,0.07)";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+  getPageContentBoxShellStyle,
+  getPageContentBoxRadius,
+} from "../lib/pageContentBoxStyles";
+
+const pageBox = getPageContentBoxStyle(brand, t);
+
+<div style={getPageFilterBoxStyle(brand, t)}>{/* filtros */}</div>
+<div style={pageBox}>{/* secção */}</div>
+
+{/* Opção A — KPIs no topo ainda sem caixa “KPIs Consolidados”: só gap 14 até o próximo bloco */}
+<div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle({ gap: 12 })} />
 ```
+
+**Secção “KPIs Consolidados” (fase seguinte):** um único `pageBox` com `SectionTitle` (sem ícone no título) + grelha `app-grid-kpi-*` **dentro** — cards internos (`KpiCard`, etc.) padronizam depois; não duplicar sombra no filho.
+
+**Exclusões (não usar `pageBox`):** Login, Trocar senha, canal público, modais, sidebar, **Home**, **Configurações**, **Ajuda**.
+
+**Proibido em código novo:** `marginBottom: 20` / `24` entre blocos de página; `borderRadius: 16` fixo em bloco de secção; `const card` duplicado com `blockBg` + sombra inline — usar o helper.
+
+### Sombra de cards (legado interno)
+
+Preferir `getPageContentBoxShadow(t.isDark)` em blocos de página. Mini-cards e itens de lista podem manter sombra local até migração de `KpiCard`.
 
 Não usar sombra única em light e dark.
 
@@ -710,6 +845,11 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Lista >5 opções sem busca no painel do filtro.
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
+- Tabela nova em bloco nível 3 sem `createDataTableBlockStyles` / `getDataTableWrapStyle` (usar padrão Detalhamento Diário — § Tabelas padrão canónico).
+- `overflow: hidden` ou `borderRadius` do content box na `<table>` (quebra sticky e raio 14 do wrapper).
+- Dois wrappers `overflow-x: auto` aninhados na mesma tabela.
+- Cabeçalho de bloco com fundos diferentes por coluna (exceto exceção documentada na secção).
+- Zebra de linha com `transparent` no dark em tabela do padrão canónico.
 - Strings de vazio ou sem permissão diferentes das fixas acima.
 - Semântica de KPI invertida manualmente (fora de `isInverso`).
 - Página nova sem atualizar MDC da secção (e Ajuda quando aplicável).
@@ -726,3 +866,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Emoji no `h1` ou em `BlocoLabel`.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
+- Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).
+- Wrapper de filtro com `marginBottom: 14` **extra** quando `getPageFilterBoxStyle` já aplica `PAGE_CONTENT_BOX_GAP`.
+- `SectionTitle` com prop `icon` no **cabeçalho do bloco de informação** — ícone só no nível 1 (página).
+- Subtítulo de bloco em `<p>` fora do `SectionTitle` em vez da prop `sub` (11px inline).

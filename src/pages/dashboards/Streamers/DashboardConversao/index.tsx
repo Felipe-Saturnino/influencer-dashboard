@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getIdxMesCarrosselPadrao } from "../../../../lib/dashboardHelpers";
 import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
@@ -6,17 +7,29 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../../lib/pageContentBoxStyles";
 import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock, Filter, Gauge, Trophy, X } from "lucide-react";
 import {
-  GiTrophy, GiMedal, GiLaurelsTrophy,
-  GiArcheryTarget,
-  GiCheckMark, GiShare, GiGamepad,
-} from "react-icons/gi";
+  Award,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Gamepad2,
+  Medal,
+  Share2,
+  Target,
+  Trophy,
+  X,
+} from "lucide-react";
 
 const COR_A = {
   accent: "var(--brand-action, #7c3aed)",
@@ -104,12 +117,12 @@ type AcaoInfo = { label: string; icon: React.ReactNode; cor: string; bg: string;
 
 function getAcao(row: ConversaoRow): AcaoInfo {
   if (row.pctViewAcesso !== null && row.pctViewAcesso < 10)
-    return { label: "Divulgar o link",  icon: <GiShare size={11} />,          cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" };
+    return { label: "Divulgar o link",  icon: <Share2 size={11} aria-hidden />,          cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" };
   if (row.pctAcessoReg !== null && row.pctAcessoReg < 10)
-    return { label: "Converter visita", icon: <GiGamepad size={11} />,         cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" };
+    return { label: "Converter visita", icon: <Gamepad2 size={11} aria-hidden />,         cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" };
   if (row.pctRegFTD !== null && row.pctRegFTD < 60)
-    return { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} />,   cor: BRAND.azul,    bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  };
-  return { label: "Em dia",            icon: <GiCheckMark size={11} />,       cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
+    return { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />,   cor: BRAND.azul,    bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  };
+  return { label: "Em dia",            icon: <Check size={11} aria-hidden />,       cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
 }
 
 // ─── FUNIL SVG (mesmo padrão do Overview, adaptado para 1 influencer) ─────────
@@ -275,9 +288,9 @@ function ItemLista({
 // ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
 const PODIO_H    = [130, 90, 70];
 const PODIO_ICONS = [
-  <GiTrophy key="1" size={28} aria-hidden />,
-  <GiMedal key="2" size={24} aria-hidden />,
-  <GiLaurelsTrophy key="3" size={22} aria-hidden />,
+  <Trophy key="1" size={28} aria-hidden />,
+  <Medal key="2" size={24} aria-hidden />,
+  <Award key="3" size={22} aria-hidden />,
 ];
 
 function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
@@ -406,16 +419,14 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
@@ -603,10 +614,10 @@ export default function DashboardConversao() {
   const rankingFtdHora = rowsFiltradosEscopo.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
   const acoesDisponiveis = [
-    { label: "Divulgar o link",  icon: <GiShare size={11} aria-hidden />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
-    { label: "Converter visita", icon: <GiGamepad size={11} aria-hidden />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
-    { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
-    { label: "Em dia",           icon: <GiCheckMark size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
+    { label: "Divulgar o link",  icon: <Share2 size={11} aria-hidden />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
+    { label: "Converter visita", icon: <Gamepad2 size={11} aria-hidden />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
+    { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
+    { label: "Em dia",           icon: <Check size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
@@ -660,16 +671,9 @@ export default function DashboardConversao() {
   const brand = useDashboardBrand();
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
-  const thStyle = getThStyle(t);
-  const tdStyle = getTdStyle(t);
+  const dataTable = useDataTableBlock();
 
   const selectStyle: React.CSSProperties = {
     background: t.inputBg ?? t.cardBg,
@@ -701,13 +705,7 @@ export default function DashboardConversao() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {!embed && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             <button
@@ -762,15 +760,13 @@ export default function DashboardConversao() {
               </span>
             )}
           </div>
-        </div>
       </div>
       )}
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
-          icon={<Filter size={14} aria-hidden />}
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           Comparativo de Funil
         </SectionTitle>
@@ -842,13 +838,10 @@ export default function DashboardConversao() {
       </div>
 
       {/* ══ BLOCO 3: PÓDIO FTD/HORA ═════════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Trophy size={14} aria-hidden />}>
-          Ranking FTD/Hora — Eficiência por Influencer
+      <div style={card}>
+        <SectionTitle sub="FTDs gerados por hora de live">
+          Ranking FTD/Hora
         </SectionTitle>
-        <p style={{ margin: "-8px 0 20px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          FTDs gerados por hora de live — influencers sem horas registradas omitidos.
-        </p>
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
         ) : (
@@ -859,7 +852,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<Gauge size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Comparativo de Taxas
           </SectionTitle>
 
@@ -914,23 +907,22 @@ export default function DashboardConversao() {
         ) : rowsFiltrados.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div className="app-table-wrap">
-            <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 960 })}>
+              <caption style={{ display: "none" }}>
                 Comparativo de taxas de conversão — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
               </caption>
               <thead>
                 <tr>
-                  <SortTableTh<TaxasConvSortCol> label="Influencer" col="nome" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Views" col="views" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="View→Acesso" col="pctViewAcesso" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Acessos" col="acessos" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Acesso→Reg" col="pctAcessoReg" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Registros" col="registros" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Reg→FTD" col="pctRegFTD" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
-                  <SortTableTh label="Ação" col="acao" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh<TaxasConvSortCol> label="Influencer" col="nome" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Views" col="views" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="View→Acesso" col="pctViewAcesso" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Acessos" col="acessos" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Acesso→Reg" col="pctAcessoReg" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Registros" col="registros" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Reg→FTD" col="pctRegFTD" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Ação" col="acao" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={dataTable.thHeader} align="center" />
                 </tr>
               </thead>
               <tbody>
@@ -940,40 +932,37 @@ export default function DashboardConversao() {
                   const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;
                   const hl3 = !hl1 && !hl2 && r.pctRegFTD !== null && r.pctRegFTD < 60;
                   return (
-                    <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
-                      <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
+                    <tr key={r.influencer_id} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome}</td>
+                      <td style={dataTable.tdCenter}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl1 ? 700 : 400,
                         color: hl1 ? BRAND.amarelo : t.textMuted,
                         borderLeft: hl1 ? `3px solid rgba(245,158,11,0.7)` : "none",
                         background: hl1 ? "rgba(245,158,11,0.08)" : undefined,
-                        paddingLeft: hl1 ? 9 : 12,
                       }}>{fmtPct(r.pctViewAcesso)}</td>
-                      <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl2 ? 700 : 400,
                         color: hl2 ? "#a855f7" : t.textMuted,
                         borderLeft: hl2 ? `3px solid rgba(168,85,247,0.7)` : "none",
                         background: hl2 ? "rgba(168,85,247,0.08)" : undefined,
-                        paddingLeft: hl2 ? 9 : 12,
                       }}>{fmtPct(r.pctAcessoReg)}</td>
-                      <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         fontSize: 12,
                         fontWeight: hl3 ? 700 : 400,
                         color: hl3 ? BRAND.azul : t.textMuted,
                         borderLeft: hl3 ? `3px solid rgba(30,54,248,0.7)` : "none",
                         background: hl3 ? "rgba(30,54,248,0.08)" : undefined,
-                        paddingLeft: hl3 ? 9 : 12,
                       }}>{fmtPct(r.pctRegFTD)}</td>
-                      <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? BRAND.verde : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 700, color: r.ftds > 0 ? BRAND.verde : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>
                         <span style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "4px 10px", borderRadius: 999,
@@ -989,7 +978,6 @@ export default function DashboardConversao() {
                 })}
               </tbody>
             </table>
-            </div>
           </div>
         )}
       </div>

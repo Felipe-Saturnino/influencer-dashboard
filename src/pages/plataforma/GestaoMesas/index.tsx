@@ -3,11 +3,16 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT, FONT_TITLE } from "../../../constants/theme";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { Pencil, Trash2, Loader2, AlertCircle, LayoutGrid } from "lucide-react";
+import { FONT, FONT_TITLE, BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { Pencil, Trash2, Loader2, AlertCircle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { FiltroOperadoraSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -15,7 +20,17 @@ import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { ctaGradientSalvar } from "../GestaoUsuarios/gestaoUsuariosHelpers";
-import { BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFilterBarRowStyle, getFiltroBarTabButtonStyle } from "../../../lib/filterBarStyles";
+import {
+  OPERADORA_FILTRO_TODAS_LABEL,
+  OPERADORA_FILTRO_TODAS_VALUE,
+} from "../../../components/FiltroOperadoraSelect";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 const ERRO_EXCLUIR_MESA = "Não foi possível excluir a mesa. Verifique se não há registros vinculados.";
@@ -24,6 +39,13 @@ const ERRO_MESA_DUPLICADA =
   "Já existe uma mesa com este ID Spin ou ID da operadora para esta operadora.";
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Futebol Brasileiro", "Poker", "Outro"] as const;
+
+const KPI_TIPOS_JOGO_MESAS = [
+  { label: "Baccarat", cor: "#8b5cf6" },
+  { label: "Blackjack", cor: BRAND.ciano },
+  { label: "Roleta", cor: "#e84025" },
+  { label: "Futebol Brasileiro", cor: "#f59e0b" },
+] as const;
 
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
@@ -61,7 +83,7 @@ export default function GestaoMesas() {
   const [deleteTarget, setDeleteTarget] = useState<MesaSpinCadastroRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+  const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
   type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident" | "identOp";
   const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
 
@@ -93,11 +115,65 @@ export default function GestaoMesas() {
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
   }, [rows]);
 
+  /** Carrossel: «Todas Operadoras» sempre na primeira posição (default). */
+  const operadorasCarrossel = useMemo(
+    () => [
+      { slug: OPERADORA_FILTRO_TODAS_VALUE, nome: OPERADORA_FILTRO_TODAS_LABEL },
+      ...operadorasOpcoes.map(([slug, nome]) => ({ slug, nome })),
+    ],
+    [operadorasOpcoes],
+  );
+
   const rowsFiltradas = useMemo(() => {
     let out = rows;
-    if (filtroOperadora !== "todas") out = out.filter((r) => r.operadora_slug === filtroOperadora);
+    if (filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE) {
+      out = out.filter((r) => r.operadora_slug === filtroOperadora);
+    }
     return out;
   }, [rows, filtroOperadora]);
+
+  const contagemPorJogo = useMemo(() => {
+    const map = new Map<string, number>(
+      KPI_TIPOS_JOGO_MESAS.map((k) => [k.label, 0]),
+    );
+    for (const r of rowsFiltradas) {
+      const tipo = (r.tipo_jogo ?? "").trim();
+      if (map.has(tipo)) map.set(tipo, (map.get(tipo) ?? 0) + 1);
+    }
+    return map;
+  }, [rowsFiltradas]);
+
+  const labelCarrosselOperadora = useMemo(() => {
+    return (
+      operadorasCarrossel.find((o) => o.slug === filtroOperadora)?.nome ?? OPERADORA_FILTRO_TODAS_LABEL
+    );
+  }, [filtroOperadora, operadorasCarrossel]);
+
+  const indiceCarrosselOperadora = useMemo(() => {
+    const idx = operadorasCarrossel.findIndex((o) => o.slug === filtroOperadora);
+    return idx >= 0 ? idx : 0;
+  }, [filtroOperadora, operadorasCarrossel]);
+
+  useEffect(() => {
+    if (!operadorasCarrossel.some((o) => o.slug === filtroOperadora)) {
+      setFiltroOperadora(OPERADORA_FILTRO_TODAS_VALUE);
+    }
+  }, [operadorasCarrossel, filtroOperadora]);
+
+  const avancarOperadoraCarrossel = useCallback(() => {
+    if (operadorasCarrossel.length <= 1) return;
+    const next = operadorasCarrossel[(indiceCarrosselOperadora + 1) % operadorasCarrossel.length]!;
+    setFiltroOperadora(next.slug);
+  }, [indiceCarrosselOperadora, operadorasCarrossel]);
+
+  const retrocederOperadoraCarrossel = useCallback(() => {
+    if (operadorasCarrossel.length <= 1) return;
+    const prev =
+      operadorasCarrossel[
+        (indiceCarrosselOperadora - 1 + operadorasCarrossel.length) % operadorasCarrossel.length
+      ]!;
+    setFiltroOperadora(prev.slug);
+  }, [indiceCarrosselOperadora, operadorasCarrossel]);
 
   const rowsOrdenadas = useMemo(() => {
     const arr = [...rowsFiltradas];
@@ -137,6 +213,8 @@ export default function GestaoMesas() {
     return arr;
   }, [rowsFiltradas, sortMesa]);
 
+  const dataTable = useDataTableBlock();
+
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -153,70 +231,114 @@ export default function GestaoMesas() {
     );
   }
 
-  const card: React.CSSProperties = {
-    background: t.cardBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const contentBox = getPageContentBoxStyle(dashBrand, t);
+  const todasOperadorasAtivo = filtroOperadora === OPERADORA_FILTRO_TODAS_VALUE;
+  const carrosselOperadoraDesabilitado = operadorasCarrossel.length <= 1;
 
   return (
     <div className="app-page-shell">
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <span
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: dashBrand.primaryIconBg,
-            border: dashBrand.primaryIconBorder,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: dashBrand.primaryIconColor,
-            flexShrink: 0,
-            marginTop: 3,
-          }}
-        >
-          <LayoutGrid size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1
+      <PageHeader
+        icon={<PageMenuIcon pageKey="gestao_mesas" />}
+        title={getPageMenuLabel("gestao_mesas")}
+        subtitle="Cadastre e gerencie as mesas disponíveis por operadora."
+      />
+
+      <div style={getPageFilterBoxStyle(dashBrand, t)}>
+        <div style={getFilterBarRowStyle({ width: "100%" })}>
+          <button
+            type="button"
+            aria-label="Operadora anterior"
+            disabled={carrosselOperadoraDesabilitado}
+            onClick={retrocederOperadoraCarrossel}
+            style={getCarouselBtnNavStyle(t, carrosselOperadoraDesabilitado)}
+          >
+            <ChevronLeft size={14} aria-hidden="true" />
+          </button>
+          <span style={getCarouselPeriodLabelStyle(t, { minWidth: 160 })}>
+            {labelCarrosselOperadora}
+          </span>
+          <button
+            type="button"
+            aria-label="Próxima operadora"
+            disabled={carrosselOperadoraDesabilitado}
+            onClick={avancarOperadoraCarrossel}
+            style={getCarouselBtnNavStyle(t, carrosselOperadoraDesabilitado)}
+          >
+            <ChevronRight size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-pressed={todasOperadorasAtivo}
+            onClick={() => setFiltroOperadora(OPERADORA_FILTRO_TODAS_VALUE)}
             style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: dashBrand.primary,
-              fontFamily: FONT_TITLE,
-              margin: 0,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
+              ...getFiltroBarTabButtonStyle(t, dashBrand, todasOperadorasAtivo),
+              fontFamily: FONT.body,
+              transition: "all 0.15s",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            Gestão de Mesas
-          </h1>
-          <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", maxWidth: 560, lineHeight: 1.45 }}>
-            Cadastre e gerencie as mesas disponíveis por operadora.
-          </p>
+            <Shield size={16} strokeWidth={2} aria-hidden="true" />
+            {OPERADORA_FILTRO_TODAS_LABEL}
+          </button>
         </div>
       </div>
 
-      <div
-        style={{
-          marginBottom: 16,
-          padding: "12px 20px",
-          borderRadius: 14,
-          background: dashBrand.primaryTransparentBg,
-          border: dashBrand.primaryTransparentBorder,
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <FiltroOperadoraSelect
-            value={filtroOperadora}
-            onChange={setFiltroOperadora}
-            operadoras={operadorasOpcoes.map(([slug, nome]) => ({ slug, nome }))}
-          />
-          {perm.canCriarOk && (
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
+        {KPI_TIPOS_JOGO_MESAS.map((k) => (
+          <div
+            key={k.label}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${k.cor}`,
+              borderRadius: 18,
+              padding: "16px 20px",
+              boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "1.4px",
+                textTransform: "uppercase",
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                marginBottom: 6,
+              }}
+            >
+              {k.label}
+            </div>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 900,
+                color: k.cor,
+                fontFamily: FONT_TITLE,
+                lineHeight: 1,
+              }}
+            >
+              {loading ? "—" : (contagemPorJogo.get(k.label) ?? 0)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={contentBox}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Mesas</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -224,13 +346,11 @@ export default function GestaoMesas() {
                 setModalOpen(true);
               }}
             >
-              Nova mesa
+              Nova Mesa
             </CtaCriarButton>
-          )}
+          ) : null}
         </div>
-      </div>
 
-      <div style={card}>
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <Loader2 size={20} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -240,21 +360,13 @@ export default function GestaoMesas() {
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
             {rows.length === 0
               ? "Nenhuma mesa cadastrada."
-              : filtroOperadora !== "todas"
+              : filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE
                 ? "Nenhuma mesa para o filtro selecionado."
                 : "Nenhuma mesa cadastrada."}
           </div>
         ) : (
-          <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: 14,
-                overflow: "hidden",
-              }}
-            >
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Cadastro de mesas por operadora</caption>
               <thead>
                 <tr>
@@ -263,8 +375,8 @@ export default function GestaoMesas() {
                     col="operadora"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -277,8 +389,8 @@ export default function GestaoMesas() {
                     col="nome"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -291,8 +403,8 @@ export default function GestaoMesas() {
                     col="tipo"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(col) =>
                       setSortMesa((s) => ({
                         col,
@@ -305,8 +417,8 @@ export default function GestaoMesas() {
                     col="numero"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -319,8 +431,8 @@ export default function GestaoMesas() {
                     col="ident"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -333,8 +445,8 @@ export default function GestaoMesas() {
                     col="identOp"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
-                    thStyle={getThStyle(t)}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={(c) =>
                       setSortMesa((s) => ({
                         col: c,
@@ -343,7 +455,7 @@ export default function GestaoMesas() {
                     }
                   />
                   {(perm.canEditarOk || perm.canExcluirOk) && (
-                    <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Ações
                     </th>
                   )}
@@ -351,7 +463,7 @@ export default function GestaoMesas() {
               </thead>
               <tbody>
                 {rowsOrdenadas.map((r, i) => {
-                  const zebra = zebraStripe(i);
+                  const zebra = dataTable.zebraRow(i);
                   return (
                   <tr
                     key={r.id}
@@ -363,23 +475,23 @@ export default function GestaoMesas() {
                       e.currentTarget.style.background = zebra;
                     }}
                   >
-                    <td style={getTdStyle(t)} title={r.operadora_slug}>
+                    <td style={dataTable.tdCenter} title={r.operadora_slug}>
                       {nomeOperadoraJoin(r) ?? r.operadora_slug}
                     </td>
-                    <td style={{ ...getTdStyle(t), fontWeight: 600 }}>{r.nome_mesa}</td>
-                    <td style={getTdStyle(t)}>{r.tipo_jogo}</td>
-                    <td style={{ ...getTdStyle(t), textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome_mesa}</td>
+                    <td style={dataTable.tdCenter}>{r.tipo_jogo}</td>
+                    <td style={dataTable.tdCenter}>
                       {r.numero_mesa?.trim() ? r.numero_mesa : "—"}
                     </td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
                       {r.mesa_identificacao}
                     </td>
-                    <td style={{ ...getTdStyle(t), maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
+                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
                       {r.mesa_identificacao_operadora?.trim() ? r.mesa_identificacao_operadora : "—"}
                     </td>
                     {(perm.canEditarOk || perm.canExcluirOk) && (
-                      <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                           {perm.canEditarOk && (
                             <button
                               type="button"

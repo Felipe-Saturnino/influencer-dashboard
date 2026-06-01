@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, ChevronLeft, ChevronRight, ClipboardList, Inbox, Loader2, MoreHorizontal } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2, MoreHorizontal } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -12,10 +12,16 @@ import {
   FiltroHistoricoButton,
   FiltroSolicitacoesTipoAcaoSelect,
   SectionTitle,
+  SortTableTh,
+  type SortDir,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO,
   OFERTA_STATUS_LABEL,
@@ -42,10 +48,62 @@ import {
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { BRAND } from "../../../lib/dashboardConstants";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 const MOCK_SOLICITACOES: LinhaOfertaMarketplace[] = [];
 
 const MSG_VAZIO_SOLICITACOES = "Sem solicitações para os filtros selecionados.";
+
+type SolicitacaoSortCol =
+  | "dataAbertura"
+  | "tipo"
+  | "turnoOferta"
+  | "operadora"
+  | "dataInteresse"
+  | "turnoInteresse"
+  | "comprador"
+  | "status";
+
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+}
+
+function valorOrdenacaoSolicitacao(row: LinhaOfertaMarketplace, col: SolicitacaoSortCol): string {
+  switch (col) {
+    case "dataAbertura":
+      return dataAberturaSolicitacaoIso(row);
+    case "tipo":
+      return RH_CALENDARIO_ACAO_LABEL_FORMAL[row.tipo as RhCalendarioAcaoTipo] ?? row.tipo;
+    case "turnoOferta":
+      return row.turnoOferta;
+    case "operadora":
+      return row.operadora;
+    case "dataInteresse":
+      return row.dataInteresseIso ?? "";
+    case "turnoInteresse":
+      return row.turnoInteresse ?? "";
+    case "comprador":
+      return row.comprador ?? "";
+    case "status":
+      return row.status ? OFERTA_STATUS_LABEL[row.status] : "";
+    default:
+      return "";
+  }
+}
+
+function ordenarSolicitacoes(
+  rows: LinhaOfertaMarketplace[],
+  sort: { col: SolicitacaoSortCol; dir: SortDir },
+): LinhaOfertaMarketplace[] {
+  const arr = [...rows];
+  const { col, dir } = sort;
+  arr.sort((a, b) => {
+    const c = compareLocaleTexto(valorOrdenacaoSolicitacao(a, col), valorOrdenacaoSolicitacao(b, col), dir);
+    if (c !== 0) return c;
+    return compareLocaleTexto(a.id, b.id, "asc");
+  });
+  return arr;
+}
 
 function inicioFimMesUtc(ano: number, mes0: number): { ini: string; fim: string } {
   const ini = new Date(Date.UTC(ano, mes0, 1));
@@ -117,6 +175,18 @@ export default function EscalaSolicitacoesPage() {
   const [filtroTipo, setFiltroTipo] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeIds, setFiltroTimeIds] = useState<string[]>([]);
   const [filtroStaffIds, setFiltroStaffIds] = useState<string[]>([]);
+  const [sortSolicitacao, setSortSolicitacao] = useState<{ col: SolicitacaoSortCol; dir: SortDir }>({
+    col: "dataAbertura",
+    dir: "desc",
+  });
+
+  const dataTable = useDataTableBlock();
+
+  const onSortSolicitacao = (col: SolicitacaoSortCol) =>
+    setSortSolicitacao((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -375,128 +445,151 @@ export default function EscalaSolicitacoesPage() {
   });
 
   function renderTabelaSolicitacoes(rows: LinhaOfertaMarketplace[], comStatus: boolean) {
-    if (rows.length === 0) {
+    const sorted = ordenarSolicitacoes(rows, sortSolicitacao);
+    if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {MSG_VAZIO_SOLICITACOES}
         </div>
       );
     }
-    const headers = [
-      "Data de Abertura",
-      "Tipo de Ação",
-      "Turno da Oferta",
-      "Operadora",
-      "Data de Interesse",
-      "Turno de Interesse",
-      "Comprador",
-      ...(comStatus ? (["Status"] as const) : []),
-      "Ações",
-    ];
     return (
-      <div className="app-table-wrap">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Solicitações</caption>
           <thead>
             <tr>
-              {headers.map((h) => (
-                <th key={h} scope="col" style={getThStyle(t)}>
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<SolicitacaoSortCol>
+                label="Data de Abertura"
+                col="dataAbertura"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Tipo de Ação"
+                col="tipo"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Turno da Oferta"
+                col="turnoOferta"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Operadora"
+                col="operadora"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Data de Interesse"
+                col="dataInteresse"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Turno de Interesse"
+                col="turnoInteresse"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              <SortTableTh<SolicitacaoSortCol>
+                label="Comprador"
+                col="comprador"
+                sortCol={sortSolicitacao.col}
+                sortDir={sortSolicitacao.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortSolicitacao}
+              />
+              {comStatus && (
+                <SortTableTh<SolicitacaoSortCol>
+                  label="Status"
+                  col="status"
+                  sortCol={sortSolicitacao.col}
+                  sortDir={sortSolicitacao.dir}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                  onSort={onSortSolicitacao}
+                />
+              )}
+              <th scope="col" style={dataTable.thHeader}>
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {dataAberturaSolicitacaoIso(r)}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoOferta}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.operadora}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {r.dataInteresseIso ?? "—"}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoInteresse ?? "—"}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.comprador ?? "—"}</td>
-                {comStatus && (
-                  <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                    {r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}
+            {sorted.map((r, i) => {
+              const zebra = dataTable.zebraRow(i);
+              return (
+                <tr
+                  key={r.id}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={dataTable.tdCenter}>{dataAberturaSolicitacaoIso(r)}</td>
+                  <td style={dataTable.tdCenter}>
+                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
                   </td>
-                )}
-                <td style={getTdStyle(t, { textAlign: "center", background: zebraStripe(i) })}>
-                  <button
-                    type="button"
-                    aria-label="Ações da solicitação"
-                    style={{
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      borderRadius: 8,
-                      padding: 6,
-                      cursor: "pointer",
-                      color: t.text,
-                    }}
-                  >
-                    <MoreHorizontal size={16} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>
+                  {comStatus && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        aria-label="Ações da solicitação"
+                        style={{
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          borderRadius: 8,
+                          padding: 6,
+                          cursor: "pointer",
+                          color: t.text,
+                        }}
+                      >
+                        <MoreHorizontal size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     );
   }
-
-  const blocoFiltrosLinha = loadingStaff ? (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        color: t.textMuted,
-        fontSize: 12,
-        fontFamily: FONT.body,
-      }}
-    >
-      <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-      {soProprios ? "Carregando…" : "Carregando staff…"}
-    </span>
-  ) : erroStaff ? (
-    <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-  ) : (
-    <>
-      <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
-      {showTimeFilter ? (
-        <FiltroCalendarioTimeSelect
-          selected={filtroTimeIds}
-          onChange={(ids) => {
-            setFiltroTimeIds(ids);
-            setFiltroStaffIds([]);
-          }}
-          items={timeMultiselectItems}
-        />
-      ) : null}
-      {showStaffFilter ? (
-        <FiltroCalendarioStaffSelect
-          selected={filtroStaffIds}
-          onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
-          items={staffMultiselectItems}
-        />
-      ) : null}
-    </>
-  );
 
   const blocoCarrosselHistorico = (
     <>
@@ -541,6 +634,52 @@ export default function EscalaSolicitacoesPage() {
     </>
   );
 
+  const blocoFiltrosLinha1 = (
+    <>
+      {blocoCarrosselHistorico}
+      {loadingStaff ? (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+          {soProprios ? "Carregando…" : "Carregando staff…"}
+        </span>
+      ) : erroStaff ? (
+        <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
+      ) : (
+        <>
+          <FiltroSolicitacoesTipoAcaoSelect value={filtroTipo} onChange={setFiltroTipo} />
+          {showTimeFilter ? (
+            <FiltroCalendarioTimeSelect
+              selected={filtroTimeIds}
+              onChange={(ids) => {
+                setFiltroTimeIds(ids);
+                setFiltroStaffIds([]);
+              }}
+              items={timeMultiselectItems}
+            />
+          ) : null}
+          {showStaffFilter ? (
+            <FiltroCalendarioStaffSelect
+              selected={filtroStaffIds}
+              onChange={(ids) => setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids))}
+              items={staffMultiselectItems}
+            />
+          ) : null}
+        </>
+      )}
+    </>
+  );
+
+  const contentBox = getPageContentBoxStyle(brand, t);
+
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>
@@ -560,17 +699,15 @@ export default function EscalaSolicitacoesPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Solicitações"
+        icon={<PageMenuIcon pageKey="escala_solicitacoes" />}
+        title={getPageMenuLabel("escala_solicitacoes")}
         subtitle="Acompanhe solicitações em aberto e o histórico arquivado por período, time e colaborador."
         brand={brand}
         t={t}
       />
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
-          <div style={filterBarSection(false)}>{blocoCarrosselHistorico}</div>
-          <div style={filterBarSection(true)}>{blocoFiltrosLinha}</div>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
+          <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
           <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
             <FiltroBarTabButton
               id="tab-sol-aberto"
@@ -591,20 +728,23 @@ export default function EscalaSolicitacoesPage() {
               Solicitações Arquivadas
             </FiltroBarTabButton>
           </div>
-        </div>
       </div>
 
       {aba === "aberto" && (
         <div role="tabpanel" id="panel-sol-aberto" aria-labelledby="tab-sol-aberto">
-          <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
-          {renderTabelaSolicitacoes(linhasAberto, false)}
+          <div style={contentBox}>
+            <SectionTitle>Solicitações</SectionTitle>
+            {renderTabelaSolicitacoes(linhasAberto, false)}
+          </div>
         </div>
       )}
 
       {aba === "arquivadas" && (
         <div role="tabpanel" id="panel-sol-arq" aria-labelledby="tab-sol-arq">
-          <SectionTitle icon={<ClipboardList size={14} aria-hidden="true" />}>Solicitações</SectionTitle>
-          {renderTabelaSolicitacoes(linhasArquivadas, true)}
+          <div style={contentBox}>
+            <SectionTitle>Solicitações</SectionTitle>
+            {renderTabelaSolicitacoes(linhasArquivadas, true)}
+          </div>
         </div>
       )}
     </div>

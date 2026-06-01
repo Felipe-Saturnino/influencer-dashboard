@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, List, MoreHorizontal, Store, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -11,11 +11,18 @@ import {
   FiltroHistoricoButton,
   FiltroSolicitacoesTipoAcaoSelect,
   SectionTitle,
+  SortTableTh,
+  type SortDir,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
@@ -40,6 +47,60 @@ const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "tod
 }));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
+
+type OfertaSortCol =
+  | "dataOferta"
+  | "tipo"
+  | "turnoOferta"
+  | "operadora"
+  | "ofertante"
+  | "dataInteresse"
+  | "turnoInteresse"
+  | "comprador"
+  | "status";
+
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+}
+
+function valorOrdenacaoOferta(row: LinhaOfertaMarketplace, col: OfertaSortCol): string {
+  switch (col) {
+    case "dataOferta":
+      return row.dataOfertaIso.slice(0, 10);
+    case "tipo":
+      return RH_CALENDARIO_ACAO_LABEL_FORMAL[row.tipo as RhCalendarioAcaoTipo] ?? row.tipo;
+    case "turnoOferta":
+      return row.turnoOferta;
+    case "operadora":
+      return row.operadora;
+    case "ofertante":
+      return row.ofertante;
+    case "dataInteresse":
+      return row.dataInteresseIso ?? "";
+    case "turnoInteresse":
+      return row.turnoInteresse ?? "";
+    case "comprador":
+      return row.comprador ?? "";
+    case "status":
+      return row.status ? OFERTA_STATUS_LABEL[row.status] : "";
+    default:
+      return "";
+  }
+}
+
+function ordenarOfertas(
+  rows: LinhaOfertaMarketplace[],
+  sort: { col: OfertaSortCol; dir: SortDir },
+): LinhaOfertaMarketplace[] {
+  const arr = [...rows];
+  const { col, dir } = sort;
+  arr.sort((a, b) => {
+    const c = compareLocaleTexto(valorOrdenacaoOferta(a, col), valorOrdenacaoOferta(b, col), dir);
+    if (c !== 0) return c;
+    return compareLocaleTexto(a.id, b.id, "asc");
+  });
+  return arr;
+}
 
 function inicioFimMesUtc(ano: number, mes0: number): { ini: string; fim: string } {
   const ini = new Date(Date.UTC(ano, mes0, 1));
@@ -94,6 +155,18 @@ export default function EscalaMarketplaceTurnosPage() {
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeIdsTodas, setFiltroTimeIdsTodas] = useState<string[]>([]);
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
+  const [sortOferta, setSortOferta] = useState<{ col: OfertaSortCol; dir: SortDir }>({
+    col: "dataOferta",
+    dir: "desc",
+  });
+
+  const dataTable = useDataTableBlock();
+
+  const onSortOferta = (col: OfertaSortCol) =>
+    setSortOferta((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
 
   const filtroTimeTodas = useMemo((): EscalaTimeFiltro => {
     if (filtroTimeIdsTodas.length === 0) return "todos";
@@ -233,8 +306,11 @@ export default function EscalaMarketplaceTurnosPage() {
       </div>
     );
 
+  const contentBox = getPageContentBoxStyle(brand, t);
+
   function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
-    if (rows.length === 0) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {MSG_VAZIO_OFERTAS}
@@ -242,54 +318,103 @@ export default function EscalaMarketplaceTurnosPage() {
       );
     }
     return (
-      <div className="app-table-wrap">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas de vendas de turno ou folga</caption>
           <thead>
             <tr>
-              {["Data da Oferta", "Tipo de Ação", "Turno da Oferta", "Operadora", "Ofertante", "Ações"].map((h) => (
-                <th key={h} scope="col" style={getThStyle(t)}>
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<OfertaSortCol>
+                label="Data da Oferta"
+                col="dataOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Tipo de Ação"
+                col="tipo"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno da Oferta"
+                col="turnoOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Operadora"
+                col="operadora"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Ofertante"
+                col="ofertante"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <th scope="col" style={dataTable.thHeader}>
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.dataOfertaIso}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoOferta}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.operadora}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.ofertante}</td>
-                <td style={getTdStyle(t, { textAlign: "center", background: zebraStripe(i) })}>
-                  <button
-                    type="button"
-                    aria-label="Ações da oferta"
-                    style={{
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      borderRadius: 8,
-                      padding: 6,
-                      cursor: "pointer",
-                      color: t.text,
-                    }}
-                  >
-                    <MoreHorizontal size={16} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {sorted.map((r, i) => {
+              const zebra = dataTable.zebraRow(i);
+              return (
+                <tr
+                  key={r.id}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>
+                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
+                  </td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.ofertante}</td>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        aria-label="Ações da oferta"
+                        style={{
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          borderRadius: 8,
+                          padding: 6,
+                          cursor: "pointer",
+                          color: t.text,
+                        }}
+                      >
+                        <MoreHorizontal size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -297,72 +422,120 @@ export default function EscalaMarketplaceTurnosPage() {
   }
 
   function renderTabelaTrocaTodas(rows: LinhaOfertaMarketplace[]) {
-    if (rows.length === 0) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
-    const headers = [
-      "Data da Oferta",
-      "Turno da Oferta",
-      "Operadora",
-      "Ofertante",
-      "Data de Interesse",
-      "Turno de Interesse",
-      "Ações",
-    ];
     return (
-      <div className="app-table-wrap">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas de troca</caption>
           <thead>
             <tr>
-              {headers.map((h) => (
-                <th key={h} scope="col" style={getThStyle(t)}>
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<OfertaSortCol>
+                label="Data da Oferta"
+                col="dataOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno da Oferta"
+                col="turnoOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Operadora"
+                col="operadora"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Ofertante"
+                col="ofertante"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Data de Interesse"
+                col="dataInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno de Interesse"
+                col="turnoInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <th scope="col" style={dataTable.thHeader}>
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.dataOfertaIso}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoOferta}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.operadora}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.ofertante}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {r.dataInteresseIso ?? "—"}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoInteresse ?? "—"}</td>
-                <td style={getTdStyle(t, { textAlign: "center", background: zebraStripe(i) })}>
-                  <button
-                    type="button"
-                    aria-label="Ações da oferta"
-                    style={{
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      borderRadius: 8,
-                      padding: 6,
-                      cursor: "pointer",
-                      color: t.text,
-                    }}
-                  >
-                    <MoreHorizontal size={16} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {sorted.map((r, i) => {
+              const zebra = dataTable.zebraRow(i);
+              return (
+                <tr
+                  key={r.id}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.ofertante}</td>
+                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        aria-label="Ações da oferta"
+                        style={{
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          borderRadius: 8,
+                          padding: 6,
+                          cursor: "pointer",
+                          color: t.text,
+                        }}
+                      >
+                        <MoreHorizontal size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -373,106 +546,150 @@ export default function EscalaMarketplaceTurnosPage() {
     rows: LinhaOfertaMarketplace[],
     variant: "interessado" | "em_analise" | "aberto",
   ) {
-    if (rows.length === 0) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
-    const headers =
-      variant === "interessado"
-        ? [
-            "Data da Oferta",
-            "Tipo de Ação",
-            "Turno da Oferta",
-            "Operadora",
-            "Data de Interesse",
-            "Turno de Interesse",
-            "Comprador",
-            "Ações",
-          ]
-        : variant === "em_analise"
-          ? [
-              "Data da Oferta",
-              "Tipo de Ação",
-              "Turno da Oferta",
-              "Operadora",
-              "Data de Interesse",
-              "Turno de Interesse",
-              "Comprador",
-              "Status",
-              "Ações",
-            ]
-          : [
-              "Data da Oferta",
-              "Tipo de Ação",
-              "Turno da Oferta",
-              "Operadora",
-              "Data de Interesse",
-              "Turno de Interesse",
-              "Ações",
-            ];
     return (
-      <div className="app-table-wrap">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Minhas ofertas</caption>
           <thead>
             <tr>
-              {headers.map((h) => (
-                <th key={h} scope="col" style={getThStyle(t)}>
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<OfertaSortCol>
+                label="Data da Oferta"
+                col="dataOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Tipo de Ação"
+                col="tipo"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno da Oferta"
+                col="turnoOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Operadora"
+                col="operadora"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Data de Interesse"
+                col="dataInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno de Interesse"
+                col="turnoInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              {variant !== "aberto" && (
+                <SortTableTh<OfertaSortCol>
+                  label="Comprador"
+                  col="comprador"
+                  sortCol={sortOferta.col}
+                  sortDir={sortOferta.dir}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                  onSort={onSortOferta}
+                />
+              )}
+              {variant === "em_analise" && (
+                <SortTableTh<OfertaSortCol>
+                  label="Status"
+                  col="status"
+                  sortCol={sortOferta.col}
+                  sortDir={sortOferta.dir}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                  onSort={onSortOferta}
+                />
+              )}
+              <th scope="col" style={dataTable.thHeader}>
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.dataOfertaIso}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoOferta}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.operadora}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {r.dataInteresseIso ?? "—"}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoInteresse ?? "—"}</td>
-                {variant !== "aberto" && (
-                  <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.comprador ?? "—"}</td>
-                )}
-                {variant === "em_analise" && (
-                  <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                    {r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}
+            {sorted.map((r, i) => {
+              const zebra = dataTable.zebraRow(i);
+              return (
+                <tr
+                  key={r.id}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>
+                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
                   </td>
-                )}
-                <td style={getTdStyle(t, { textAlign: "center", background: zebraStripe(i) })}>
-                  <button
-                    type="button"
-                    aria-label="Ações da oferta"
-                    style={{
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.inputBg,
-                      borderRadius: 8,
-                      padding: 6,
-                      cursor: "pointer",
-                      color: t.text,
-                    }}
-                  >
-                    <MoreHorizontal size={16} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  {variant !== "aberto" && (
+                    <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>
+                  )}
+                  {variant === "em_analise" && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
+                  <td style={dataTable.tdCenter}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        aria-label="Ações da oferta"
+                        style={{
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          borderRadius: 8,
+                          padding: 6,
+                          cursor: "pointer",
+                          color: t.text,
+                        }}
+                      >
+                        <MoreHorizontal size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -480,63 +697,121 @@ export default function EscalaMarketplaceTurnosPage() {
   }
 
   function renderTabelaEncerradas(rows: LinhaOfertaMarketplace[]) {
-    if (rows.length === 0) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) {
       return (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {MSG_VAZIO_OFERTAS}
         </div>
       );
     }
-    const cols = [
-      "Data da Oferta",
-      "Tipo de Ação",
-      "Turno da Oferta",
-      "Operadora",
-      "Data de Interesse",
-      "Turno de Interesse",
-      "Comprador",
-      "Status",
-    ];
     return (
-      <div className="app-table-wrap">
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            borderRadius: 14,
-            overflow: "hidden",
-          }}
-        >
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas encerradas</caption>
           <thead>
             <tr>
-              {cols.map((h) => (
-                <th key={h} scope="col" style={getThStyle(t)}>
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<OfertaSortCol>
+                label="Data da Oferta"
+                col="dataOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Tipo de Ação"
+                col="tipo"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno da Oferta"
+                col="turnoOferta"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Operadora"
+                col="operadora"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Data de Interesse"
+                col="dataInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Turno de Interesse"
+                col="turnoInteresse"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Comprador"
+                col="comprador"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
+              <SortTableTh<OfertaSortCol>
+                label="Status"
+                col="status"
+                sortCol={sortOferta.col}
+                sortDir={sortOferta.dir}
+                thStyle={dataTable.thHeader}
+                align="center"
+                onSort={onSortOferta}
+              />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.dataOfertaIso}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoOferta}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.operadora}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {r.dataInteresseIso ?? "—"}
-                </td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.turnoInteresse ?? "—"}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>{r.comprador ?? "—"}</td>
-                <td style={getTdStyle(t, { textAlign: "left", background: zebraStripe(i) })}>
-                  {r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}
-                </td>
-              </tr>
-            ))}
+            {sorted.map((r, i) => {
+              const zebra = dataTable.zebraRow(i);
+              return (
+                <tr
+                  key={r.id}
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>
+                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
+                  </td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -546,15 +821,14 @@ export default function EscalaMarketplaceTurnosPage() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
-        icon={<Store size={14} aria-hidden="true" />}
-        title="Marketplace"
+        icon={<PageMenuIcon pageKey="escala_marketplace_turnos" />}
+        title={getPageMenuLabel("escala_marketplace_turnos")}
         subtitle="Ofertas de venda e troca de turnos — todas as publicações e as suas."
         brand={brand}
         t={t}
       />
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
           <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
             <FiltroBarTabButton
@@ -576,40 +850,39 @@ export default function EscalaMarketplaceTurnosPage() {
               Minhas Ofertas
             </FiltroBarTabButton>
           </div>
-        </div>
       </div>
 
       {aba === "todas" && (
         <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
-          <SectionTitle icon={<List size={14} aria-hidden="true" />}>Ofertas de Vendas</SectionTitle>
-          {renderTabelaVendas(linhasVendasTodas)}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />}>Ofertas de Troca</SectionTitle>
-          {renderTabelaTrocaTodas(linhasTrocaTodas)}
+          <div style={contentBox}>
+            <SectionTitle>Ofertas de Vendas</SectionTitle>
+            {renderTabelaVendas(linhasVendasTodas)}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas de Troca</SectionTitle>
+            {renderTabelaTrocaTodas(linhasTrocaTodas)}
+          </div>
         </div>
       )}
 
       {aba === "minhas" && (
         <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Interessado">
-            Ofertas em análise
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Em análise">
-            Ofertas em aprovação
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="status Aberto">
-            Ofertas abertas
-          </SectionTitle>
-          {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
-          <div style={{ height: 22 }} />
-          <SectionTitle icon={<List size={14} aria-hidden="true" />} sub="Aprovada ou Recusada">
-            Ofertas encerradas
-          </SectionTitle>
-          {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+          <div style={contentBox}>
+            <SectionTitle>Ofertas em análise</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas em aprovação</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas abertas</SectionTitle>
+            {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
+          </div>
+          <div style={contentBox}>
+            <SectionTitle>Ofertas encerradas</SectionTitle>
+            {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+          </div>
         </div>
       )}
     </div>

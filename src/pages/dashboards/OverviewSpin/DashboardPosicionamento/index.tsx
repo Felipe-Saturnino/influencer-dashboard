@@ -3,19 +3,16 @@ import {
   ArrowDown,
   ArrowUp,
   Eye,
-  LayoutList,
-  ListOrdered,
   Loader2,
   MapPin,
   Minus,
   TrendingDown,
   Trophy,
-  AlertTriangle,
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { FONT } from "../../../../constants/theme";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { createDataTableBlockStyles, getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
@@ -34,6 +31,11 @@ import {
   SEMANTIC,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
+import {
+  getPageContentBoxShellStyle,
+  getPageContentBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../../lib/pageContentBoxStyles";
 
 interface Props {
   operadoraSlug: string;
@@ -50,6 +52,7 @@ const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
 ];
 
 type CatVisSortCol = "categoria" | "top3" | "top10";
+type HistMesaSortCol = "mesa";
 
 function KpiPosCard({
   label,
@@ -76,9 +79,7 @@ function KpiPosCard({
   return (
     <div
       style={{
-        borderRadius: 14,
-        border: `1px solid ${t.cardBorder}`,
-        background: brand.blockBg,
+        ...getPageContentBoxShellStyle(brand, t),
         overflow: "hidden",
       }}
     >
@@ -251,7 +252,7 @@ function PosicaoAtualMesasBlock({
   if (loading) {
     return (
       <div style={cardStyle}>
-        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <SectionTitle>{titulo}</SectionTitle>
         <div
           style={{
             display: "flex",
@@ -273,7 +274,7 @@ function PosicaoAtualMesasBlock({
   if (semDados) {
     return (
       <div style={cardStyle}>
-        <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
+        <SectionTitle>{titulo}</SectionTitle>
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: "12px 0 0" }}>
           Sem dados para o período selecionado.
         </p>
@@ -283,10 +284,7 @@ function PosicaoAtualMesasBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle icon={<ListOrdered size={15} aria-hidden="true" />}>{titulo}</SectionTitle>
-      <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-        {fmtUltimaAtualizacao(ultimaExecutadoEm)}
-      </p>
+      <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {mesasOrdenadas.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
@@ -352,7 +350,7 @@ function AlertasPeriodoBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle icon={<AlertTriangle size={15} aria-hidden="true" />}>Alertas do período</SectionTitle>
+      <SectionTitle>Alertas do período</SectionTitle>
       {alertas.length === 0 ? (
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
           Nenhum alerta automático para o período.
@@ -408,7 +406,7 @@ function DashboardPosicionamentoTodas({
 
   return (
     <>
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
@@ -449,6 +447,10 @@ function DashboardPosicionamentoOperadora({
     col: "top10",
     dir: "desc",
   });
+  const [sortHistMesa, setSortHistMesa] = useState<{ col: HistMesaSortCol; dir: SortDir }>({
+    col: "mesa",
+    dir: "asc",
+  });
 
   const data = useLobbyPosicionamentoData(operadoraSlug, refDate);
   const {
@@ -478,6 +480,24 @@ function DashboardPosicionamentoOperadora({
   );
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
 
+  const nomeMesaHist = useCallback(
+    (mid: string) => snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid,
+    [snapshotAtual],
+  );
+
+  const heatMesasOrdenadas = useMemo(() => {
+    const arr = [...heatMesas];
+    arr.sort((a, b) => compareLocaleTexto(nomeMesaHist(a), nomeMesaHist(b), sortHistMesa.dir));
+    return arr;
+  }, [heatMesas, nomeMesaHist, sortHistMesa.dir]);
+
+  const onSortHistMesa = useCallback((col: HistMesaSortCol) => {
+    setSortHistMesa((s) => ({
+      col,
+      dir: s.col === col && s.dir === "asc" ? "desc" : "asc",
+    }));
+  }, []);
+
   const onSortCatVis = useCallback((col: CatVisSortCol) => {
     setSortCatVis((s) => ({
       col,
@@ -503,47 +523,25 @@ function DashboardPosicionamentoOperadora({
     return arr;
   }, [cats, sortCatVis]);
 
-  const thCatVis = getThStyle(t);
-
-  const sombraColMesaHist = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
-
-  const zebraBgHistLinha = (i: number) => {
-    const base = brand.blockBg ?? t.cardBg;
-    if (i % 2 === 0) return base;
-    return t.isDark
-      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)"
-      : "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
-  };
+  const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
 
   const thHistMesa: CSSProperties = {
-    ...getThStyle(t),
-    position: "sticky",
-    left: 0,
-    zIndex: 3,
+    ...dataTable.thHeaderSticky,
     minWidth: 140,
     maxWidth: 180,
-    background: brand.blockBg,
-    boxShadow: sombraColMesaHist,
   };
 
   const tdHistMesa = (i: number): CSSProperties => ({
-    ...getTdStyle(t),
-    position: "sticky",
-    left: 0,
-    zIndex: 2,
-    minWidth: 140,
+    ...dataTable.tdSticky({ rowIndex: i, minWidth: 140 }),
     maxWidth: 160,
-    fontWeight: 600,
-    textAlign: "left",
-    background: zebraBgHistLinha(i),
-    boxShadow: sombraColMesaHist,
     overflow: "hidden",
     textOverflow: "ellipsis",
+    textAlign: "left",
   });
 
   if (loading) {
     return (
-      <div className="app-grid-kpi-4" style={{ marginBottom: 14 }}>
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonKpiCard key={i} />
         ))}
@@ -572,7 +570,7 @@ function DashboardPosicionamentoOperadora({
 
   return (
     <>
-      <div className="app-grid-kpi-4" style={{ marginBottom: 14 }}>
+      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
         <KpiPosCard
           label="Visibilidade na vitrine"
           value={visAtual != null ? `${visAtual.toFixed(0)}%` : "—"}
@@ -608,7 +606,7 @@ function DashboardPosicionamentoOperadora({
         />
       </div>
 
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo="Posição atual das mesas"
           loading={false}
@@ -620,10 +618,9 @@ function DashboardPosicionamentoOperadora({
         />
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Concorrentes à frente</SectionTitle>
-          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
-          </p>
+          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+            Concorrentes à frente
+          </SectionTitle>
           {concorrentesJogo.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
@@ -653,7 +650,7 @@ function DashboardPosicionamentoOperadora({
         </div>
       </div>
 
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <div
           style={{
             display: "flex",
@@ -664,7 +661,7 @@ function DashboardPosicionamentoOperadora({
             marginBottom: 12,
           }}
         >
-          <SectionTitle icon={<LayoutList size={15} aria-hidden="true" />}>Histórico de posicionamento</SectionTitle>
+          <SectionTitle>Histórico de posicionamento</SectionTitle>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {HISTORICO_MODOS.map((m) => {
               const ativo = historicoModo === m.id;
@@ -695,35 +692,32 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
-        <div className="app-table-wrap">
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              borderRadius: 14,
-              fontFamily: FONT.body,
-              fontSize: 12,
-            }}
-          >
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
             <thead>
               <tr>
-                <th scope="col" style={thHistMesa}>
-                  Mesa
-                </th>
+                <SortTableTh<HistMesaSortCol>
+                  label="Mesa"
+                  col="mesa"
+                  sortCol={sortHistMesa.col}
+                  sortDir={sortHistMesa.dir}
+                  thStyle={thHistMesa}
+                  align="center"
+                  onSort={onSortHistMesa}
+                />
                 {heatCols.map((c) => (
-                  <th key={c.key} scope="col" style={{ ...getThStyle(t), textAlign: "center" }}>
+                  <th key={c.key} scope="col" style={dataTable.thHeader}>
                     {c.label}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {heatMesas.map((mid, rowIdx) => {
-                const nome = snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid;
+              {heatMesasOrdenadas.map((mid, rowIdx) => {
+                const nome = nomeMesaHist(mid);
                 return (
-                  <tr key={mid} style={{ background: zebraStripe(rowIdx) }}>
+                  <tr key={mid} style={{ background: dataTable.zebraRow(rowIdx) }}>
                     <td style={tdHistMesa(rowIdx)} title={nome}>
                       {nome}
                     </td>
@@ -731,7 +725,7 @@ function DashboardPosicionamentoOperadora({
                       const execIds = execIdsColunaHistorico(historicoModo, col.key, refDate, execucoesAll);
                       const pos = posicaoMediaMesaNoBucket(mid, execIds, posByExec);
                       return (
-                        <td key={col.key} style={{ ...getTdStyle(t), textAlign: "center" }}>
+                        <td key={col.key} style={dataTable.tdCenter}>
                           <span
                             style={{
                               display: "inline-block",
@@ -757,12 +751,11 @@ function DashboardPosicionamentoOperadora({
         </div>
       </div>
 
-      <div className="app-grid-2" style={{ marginBottom: 14 }}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<Trophy size={15} aria-hidden="true" />}>Ranking de concorrentes</SectionTitle>
-          <p style={{ fontSize: 11, color: t.textMuted, margin: "0 0 12px", fontFamily: FONT.body }}>
-            {fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}
-          </p>
+          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+            Ranking de concorrentes
+          </SectionTitle>
           {rankingJogos.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
@@ -821,19 +814,9 @@ function DashboardPosicionamentoOperadora({
         </div>
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle icon={<Eye size={15} aria-hidden="true" />}>Visibilidade por categoria</SectionTitle>
-          <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: 14,
-                overflow: "hidden",
-                fontFamily: FONT.body,
-                fontSize: 12,
-              }}
-            >
+          <SectionTitle>Visibilidade por categoria</SectionTitle>
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
               <thead>
                 <tr>
@@ -842,8 +825,8 @@ function DashboardPosicionamentoOperadora({
                     col="categoria"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={thCatVis}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                   <SortTableTh<CatVisSortCol>
@@ -851,8 +834,8 @@ function DashboardPosicionamentoOperadora({
                     col="top3"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                   <SortTableTh<CatVisSortCol>
@@ -860,18 +843,18 @@ function DashboardPosicionamentoOperadora({
                     col="top10"
                     sortCol={sortCatVis.col}
                     sortDir={sortCatVis.dir}
-                    thStyle={getThStyle(t, { textAlign: "right" })}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortCatVis}
                   />
                 </tr>
               </thead>
               <tbody>
                 {catsOrdenadas.map((c, i) => (
-                  <tr key={c.categoria} style={{ background: zebraStripe(i) }}>
-                    <td style={getTdStyle(t)}>{c.categoria}</td>
-                    <td style={getTdNumStyle(t)}>{c.pctTop3.toFixed(0)}%</td>
-                    <td style={getTdNumStyle(t)}>{c.pctTop10.toFixed(0)}%</td>
+                  <tr key={c.categoria} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdCenter}>{c.categoria}</td>
+                    <td style={dataTable.tdCenter}>{c.pctTop3.toFixed(0)}%</td>
+                    <td style={dataTable.tdCenter}>{c.pctTop10.toFixed(0)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -889,14 +872,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate, slugTo
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
-  const card: CSSProperties = {
-    borderRadius: 18,
-    border: `1px solid ${t.cardBorder}`,
-    background: brand.blockBg,
-    padding: 20,
-    marginBottom: 14,
-    boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card: CSSProperties = getPageContentBoxStyle(brand, t);
 
   const resolveNome = slugToNome ?? ((slug: string) => slug);
 

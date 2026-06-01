@@ -6,6 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
@@ -26,6 +27,8 @@ import {
 import OperadoraTag from "../../../components/OperadoraTag";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -86,6 +89,7 @@ const CARD_SHADOW = (isDark: boolean) =>
 export default function GestaoDealers() {
   const { theme: t, user, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
+  const consolidadoBox = getPageContentBoxStyle(brand, t, { padding: "14px 18px" });
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
   const permCentral = usePermission("central_notificacoes");
@@ -232,8 +236,8 @@ export default function GestaoDealers() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <PageHeader
-        icon={<Users size={14} aria-hidden />}
-        title="Gestão de Dealers"
+        icon={<PageMenuIcon pageKey="gestao_dealers" />}
+        title={getPageMenuLabel("gestao_dealers")}
         subtitle="Catálogo do elenco com especialidades, turnos e solicitações das operadoras."
       />
 
@@ -242,8 +246,7 @@ export default function GestaoDealers() {
       ) : null}
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -273,22 +276,16 @@ export default function GestaoDealers() {
               />
             )}
           </div>
-        </div>
       </div>
 
       {/* ─── Bloco consolidado: metade Dealers + metade filtros / busca ───────── */}
       {loading ? (
         <div
           style={{
+            ...consolidadoBox,
             display: "flex",
             flexWrap: "wrap",
             gap: "20px 28px",
-            background: brand.blockBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            padding: "14px 18px",
-            marginBottom: 24,
-            boxShadow: CARD_SHADOW(t.isDark),
           }}
         >
           <div style={{ flex: "1 1 220px", minHeight: 118, borderRadius: 12, background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }} />
@@ -300,18 +297,15 @@ export default function GestaoDealers() {
         </div>
       ) : null}
       {!loading && (
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "stretch",
-          gap: "20px 28px",
-          background: brand.blockBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 16,
-          padding: "14px 18px",
-          marginBottom: 24,
-          boxShadow: CARD_SHADOW(t.isDark),
-        }}>
+        <div
+          style={{
+            ...consolidadoBox,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "stretch",
+            gap: "20px 28px",
+          }}
+        >
           <div style={{
             flex: "1 1 220px",
             maxWidth: "100%",

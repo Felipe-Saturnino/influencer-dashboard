@@ -29,7 +29,8 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   centavosDeStringMoeda,
   centavosInteirosDeStringMoeda,
@@ -77,6 +78,8 @@ import {
 } from "../../../lib/rhCadastroRevisao";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
@@ -93,6 +96,7 @@ import {
   getFilterBarWrapperStyle,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
+import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
@@ -929,6 +933,7 @@ function RhFuncModalHeaderDetalhes({
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_funcionarios");
   const permOrg = usePermission("rh_organograma");
 
@@ -998,7 +1003,7 @@ export default function RhPrestadoresPage() {
   const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
   const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const kpiTileShell = getPageContentBoxShellStyle(brand, t);
 
   useEffect(() => {
     if (permOrg.loading || permOrg.canView === "nao") {
@@ -2119,13 +2124,13 @@ export default function RhPrestadoresPage() {
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle()}>
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
                 {["Nome", "Função", "Líder Imediato", "Data da Função", "Remuneração", "Status", "Ações"].map((h) => (
-                  <th key={h} scope="col" style={getThStyle(t)}>
+                  <th key={h} scope="col" style={dataTable.thHeader}>
                     {h}
                   </th>
                 ))}
@@ -2265,10 +2270,11 @@ export default function RhPrestadoresPage() {
   const preencherAcoesHeadcount = abaPagina === "headcount";
   const tabelaAcoesRh = abaPagina === "acoes_rh";
   const tabelaAnotacoesRh = abaPagina === "anotacoes";
+  const mostrarCtaAbaPaginaRh =
+    (abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis) ||
+    (abaPagina === "anotacoes" && perm.canEditarOk);
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 6 : 7;
-  const thStyleSort = getThStyle(t);
-  const thStyleSortRight = getThStyle(t, { textAlign: "right" });
 
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
@@ -2299,8 +2305,8 @@ export default function RhPrestadoresPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<UserCircle2 size={16} aria-hidden />}
-        title="Gestão de Prestadores"
+        icon={<PageMenuIcon pageKey="rh_funcionarios" />}
+        title={getPageMenuLabel("rh_funcionarios")}
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
@@ -2346,14 +2352,12 @@ export default function RhPrestadoresPage() {
         </div>
       ) : null}
 
-      <div className="app-grid-3" style={{ gap: 16, marginBottom: 16 }}>
+      <div className="app-grid-3" style={{ gap: 16, ...getPageKpiSectionGapStyle() }}>
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 18,
+            ...kpiTileShell,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2405,11 +2409,10 @@ export default function RhPrestadoresPage() {
 
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            ...kpiTileShell,
             border: "1px solid rgba(232, 64, 37, 0.25)",
-            borderRadius: 18,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2480,11 +2483,10 @@ export default function RhPrestadoresPage() {
 
         <div
           style={{
-            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            ...kpiTileShell,
             border: "1px solid rgba(245, 158, 11, 0.35)",
-            borderRadius: 18,
             padding: 20,
-            boxShadow: cardShadow,
+            marginBottom: 0,
           }}
         >
           <div
@@ -2532,8 +2534,7 @@ export default function RhPrestadoresPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 18 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={filterBarSection(false)}>
             <FiltroBarCampoSelect
               id="rh-filtro-dir"
@@ -2594,73 +2595,92 @@ export default function RhPrestadoresPage() {
               wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
             />
           </div>
-          <div role="tablist" aria-label="Módulos de gestão de colaboradores" style={filterBarSection(true)}>
-            {ABAS_PAGINA_RH_FUNC.map((tb) => (
-              <FiltroBarTabButton
-                key={tb.key}
-                id={idTabPagina(tb.key)}
-                active={abaPagina === tb.key}
-                aria-controls={panelPaginaRhId}
-                onClick={() => setAbaPagina(tb.key)}
-                onKeyDown={(e) =>
-                  handleFiltroBarTabsArrowKeyDown(
-                    e,
-                    ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                    tb.key,
-                    setAbaPagina,
-                    "rh-gest-func-pag-",
-                  )
-                }
-                icon={iconAbaPagina(tb.key)}
+          <div style={filterBarSection(true)}>
+            {mostrarCtaAbaPaginaRh ? (
+              <div className="app-filter-bar-tabs-cta">
+                <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+                <div
+                  role="tablist"
+                  aria-label="Módulos de gestão de colaboradores"
+                  className="app-filter-bar-tabs-cta__tabs"
+                >
+                  {ABAS_PAGINA_RH_FUNC.map((tb) => (
+                    <FiltroBarTabButton
+                      key={tb.key}
+                      id={idTabPagina(tb.key)}
+                      active={abaPagina === tb.key}
+                      aria-controls={panelPaginaRhId}
+                      onClick={() => setAbaPagina(tb.key)}
+                      onKeyDown={(e) =>
+                        handleFiltroBarTabsArrowKeyDown(
+                          e,
+                          ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                          tb.key,
+                          setAbaPagina,
+                          "rh-gest-func-pag-",
+                        )
+                      }
+                      icon={iconAbaPagina(tb.key)}
+                    >
+                      {tb.label}
+                    </FiltroBarTabButton>
+                  ))}
+                </div>
+                <div className="app-filter-bar-tabs-cta__actions">
+                  {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
+                    <CtaCriarButton type="button" onClick={abrirNovo}>
+                      Novo Prestador
+                    </CtaCriarButton>
+                  ) : null}
+                  {abaPagina === "anotacoes" && perm.canEditarOk ? (
+                    <CtaCriarButton type="button" onClick={() => abrirModalRhTalks()}>
+                      RH Talks
+                    </CtaCriarButton>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div
+                role="tablist"
+                aria-label="Módulos de gestão de colaboradores"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  width: "100%",
+                }}
               >
-                {tb.label}
-              </FiltroBarTabButton>
-            ))}
+                {ABAS_PAGINA_RH_FUNC.map((tb) => (
+                  <FiltroBarTabButton
+                    key={tb.key}
+                    id={idTabPagina(tb.key)}
+                    active={abaPagina === tb.key}
+                    aria-controls={panelPaginaRhId}
+                    onClick={() => setAbaPagina(tb.key)}
+                    onKeyDown={(e) =>
+                      handleFiltroBarTabsArrowKeyDown(
+                        e,
+                        ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                        tb.key,
+                        setAbaPagina,
+                        "rh-gest-func-pag-",
+                      )
+                    }
+                    icon={iconAbaPagina(tb.key)}
+                  >
+                    {tb.label}
+                  </FiltroBarTabButton>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
       </div>
 
       <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-          {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-            <CtaCriarButton type="button" onClick={abrirNovo}>
-              Novo Prestador
-            </CtaCriarButton>
-          ) : null}
-          {abaPagina === "anotacoes" && perm.canEditarOk ? (
-            <button
-              type="button"
-              onClick={() => abrirModalRhTalks()}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              RH Talks
-            </button>
-          ) : null}
-        </div>
-
-        <div className="app-table-wrap">
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              minWidth: tabelaSemSalario ? 620 : 720,
-            }}
-          >
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: tabelaSemSalario ? 620 : 720 })}>
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
             <thead>
               <tr>
@@ -2670,8 +2690,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Função"
@@ -2679,8 +2699,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Líder Imediato"
@@ -2688,8 +2708,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 <SortTableTh<PrestadoresSortCol>
                   label="Data da Função"
@@ -2697,8 +2717,8 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
                 {!tabelaSemSalario ? (
                   <SortTableTh<PrestadoresSortCol>
@@ -2707,8 +2727,8 @@ export default function RhPrestadoresPage() {
                     sortCol={sortPrestadores.col}
                     sortDir={sortPrestadores.dir}
                     onSort={onSortPrestadores}
-                    thStyle={thStyleSortRight}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     endAdornment={
                       podeVerDadosSensiveis ? (
                         <button
@@ -2746,10 +2766,10 @@ export default function RhPrestadoresPage() {
                   sortCol={sortPrestadores.col}
                   sortDir={sortPrestadores.dir}
                   onSort={onSortPrestadores}
-                  thStyle={thStyleSort}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                 />
-                <th scope="col" style={thStyleSortRight}>
+                <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
               </tr>
@@ -2762,7 +2782,7 @@ export default function RhPrestadoresPage() {
                 </>
               ) : filtrada.length === 0 ? (
                 <tr>
-                  <td colSpan={colunasTabela} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
+                  <td colSpan={colunasTabela} style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}>
                     Sem dados para o período selecionado.
                   </td>
                 </tr>
@@ -2773,16 +2793,24 @@ export default function RhPrestadoresPage() {
                   const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                   const remCol = textoRemuneracaoColunaTabela(row);
                   const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
+                  const zebraBg = dataTable.zebraRow(i);
                   return (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      style={{ background: zebraBg }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebraBg;
+                      }}
+                    >
                       <td
                         style={{
-                          ...getTdStyle(t),
-                          textAlign: "left",
+                          ...dataTable.tdCenter,
                           maxWidth: 200,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          background: zebraStripe(i),
                         }}
                         title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
                       >
@@ -2806,33 +2834,31 @@ export default function RhPrestadoresPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
+                      <td style={dataTable.tdCenter}>{row.cargo}</td>
                       <td
-                        style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }}
+                        style={{ ...dataTable.tdCenter, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}
                         title={liderCompleto !== "—" ? liderCompleto : undefined}
                       >
                         {lider}
                       </td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), fontVariantNumeric: "tabular-nums" }}>
-                        {dataFuncaoTxt}
-                      </td>
+                      <td style={dataTable.tdCenter}>{dataFuncaoTxt}</td>
                       {!tabelaSemSalario ? (
                         <td
                           title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
-                          style={getTdNumStyle(t, {
-                            background: zebraStripe(i),
+                          style={{
+                            ...dataTable.tdCenter,
                             ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
-                          })}
+                          }}
                         >
                           {podeVerDadosSensiveis ? remCol.texto : "—"}
                         </td>
                       ) : null}
-                      <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>
+                      <td style={dataTable.tdCenter}>
                         <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
                       </td>
-                      <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
+                      <td style={dataTable.tdCenter}>
                         {preencherAcoesHeadcount || tabelaAcoesRh || tabelaAnotacoesRh ? (
-                          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               type="button"
                               onClick={() => abrirVer(row)}
@@ -2894,7 +2920,6 @@ export default function RhPrestadoresPage() {
             </tbody>
           </table>
         </div>
-      </div>
       </div>
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (

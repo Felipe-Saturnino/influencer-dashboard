@@ -338,7 +338,7 @@ export default function CanalDenunciasSpinPage() {
         <div
           role="tablist"
           aria-label="Formulário do canal de denúncias"
-          style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
           onKeyDown={(e) => onFiltroBarTabsKeyDown(e, CANAL_TABS, setAba, (k) => `tab-canal-${k}`)}
         >
           <FiltroBarTabButton
@@ -368,7 +368,7 @@ export default function CanalDenunciasSpinPage() {
             aria-labelledby="tab-canal-denunciar"
             style={{
               border: "1px solid rgba(124,58,237,0.35)",
-              borderRadius: "0 16px 16px 16px",
+              borderRadius: 16,
               padding: "clamp(18px, 4vw, 28px)",
               background: "rgba(15,15,26,0.88)",
             }}
@@ -603,7 +603,7 @@ export default function CanalDenunciasSpinPage() {
             aria-labelledby="tab-canal-consultar"
             style={{
               border: "1px solid rgba(124,58,237,0.35)",
-              borderRadius: "0 16px 16px 16px",
+              borderRadius: 16,
               padding: "clamp(18px, 4vw, 28px)",
               background: "rgba(15,15,26,0.88)",
             }}

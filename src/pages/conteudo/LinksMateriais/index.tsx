@@ -14,7 +14,12 @@ import {
   type SpinQrFrameVariant,
 } from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
-import { Link2, Copy, Check, AlertCircle, QrCode, Download, Share2, Loader2 } from "lucide-react";
+import { Copy, Check, AlertCircle, QrCode, Download, Loader2 } from "lucide-react";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { ReactNode } from "react";
@@ -34,8 +39,6 @@ function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): Reac
     </span>
   );
 }
-
-const LINK_SECTION_TITLE_ID = "link-rastreamento-title";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const PREVIA_QUADRO_MAX_W = 280;
@@ -427,77 +430,14 @@ export default function LinksMateriais() {
 
   return (
     <div className="app-page-shell">
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <Share2 size={16} aria-hidden />
-          </span>
-          <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
-            fontFamily: FONT_TITLE, margin: 0,
-            letterSpacing: "0.05em", textTransform: "uppercase",
-          }}>
-            Links e Materiais
-          </h1>
-        </div>
-        <div style={{
-          marginTop: 4,
-          paddingLeft: 40,
-          maxWidth: "100%",
-          boxSizing: "border-box",
-          fontFamily: FONT.body,
-          fontSize: 13,
-          lineHeight: 1.65,
-          color: t.textMuted,
-        }}>
-          <p style={{ margin: 0 }}>
-            Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="links_materiais" />}
+        title={getPageMenuLabel("links_materiais")}
+        subtitle="Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação."
+      />
 
-      <section
-        aria-labelledby={LINK_SECTION_TITLE_ID}
-        style={{
-          boxSizing: "border-box",
-          width: "100%",
-          background: brand.blockBg,
-          border: brand.primaryTransparentBorder,
-          borderRadius: 14,
-          padding: "16px 20px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <span style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <Link2 size={14} aria-hidden />
-          </span>
-          <h2
-            id={LINK_SECTION_TITLE_ID}
-            style={{
-              margin: 0,
-              fontSize: 13,
-              fontWeight: 700,
-              color: brand.primary,
-              fontFamily: FONT_TITLE,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}
-          >
-            Link de rastreamento
-          </h2>
-        </div>
+      <div style={getPageContentBoxStyle(brand, t)} role="region" aria-label="Link de rastreamento">
+        <SectionTitle>Link de rastreamento</SectionTitle>
 
         {!perm.loading && !perm.canEditarOk && (
           <div style={{
@@ -1061,7 +1001,7 @@ export default function LinksMateriais() {
             </div>
           </div>
         )}
-      </section>
+      </div>
 
       <ModalBloqueioAgendaLive
         open={bloqueioEmissao !== null}

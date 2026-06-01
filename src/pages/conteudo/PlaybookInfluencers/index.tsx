@@ -8,18 +8,17 @@ import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   Check, ChevronRight, AlertTriangle, Info,
-  BookOpen, Users, Calendar, Gamepad2,
+  Users, Calendar, Gamepad2,
   Zap, Wrench, Star, MonitorPlay, ShieldCheck, Loader2,
 } from "lucide-react";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_SIZE } from "../../../lib/filterBarStyles";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { PAGE_HEADER_SUBTITLE_PADDING_LEFT } from "../../../lib/pageHeaderStyles";
+import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
-
-/** Texto introdutório fixo abaixo do título (visível em todas as abas). */
-const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
-  "Este material tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo alinhamento com a operação, posicionamento de marca e melhor experiência para o público.",
-  "As diretrizes abaixo devem ser aplicadas de forma natural e autêntica, respeitando o estilo de cada criador.",
-] as const;
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
@@ -793,110 +792,96 @@ export default function PlaybookInfluencers() {
   const confirmadosOb = ITENS_OBRIGATORIOS.filter((a) => confirmacoes.has(a.itemKey!)).length;
   const tudoConfirmado = roleParidadeInfluencer(user?.role) && confirmadosOb === totalOb && totalOb > 0;
 
-  return (
-    <div className="app-page-shell">
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
-            <span style={{
-              width: 32, height: 32, borderRadius: 9,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: brand.primaryIconColor, flexShrink: 0,
-            }}>
-              <BookOpen size={16} aria-hidden />
-            </span>
-            <h1 style={{
-              fontSize: 18, fontWeight: 800, color: brand.primary,
-              fontFamily: FONT_TITLE, margin: 0,
-              letterSpacing: "0.05em", textTransform: "uppercase",
-            }}>
-              Playbook — Influencers
-            </h1>
-          </div>
-
-          {!loadingStats && (
-            exibirAuditoria ? (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "7px 14px", borderRadius: 20,
-                background: dark ? "rgba(30,54,248,0.10)" : "rgba(30,54,248,0.07)",
-                border: "1px solid rgba(30,54,248,0.25)",
-                flexShrink: 0,
-              }}>
-                <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} aria-hidden />
-                <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT.body }}>
-                  {totalConfAll} de {totalInflu} influencers confirmaram tudo
-                </span>
-              </div>
-            ) : roleParidadeInfluencer(user?.role) ? (
-              tudoConfirmado ? (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 14px", borderRadius: 20,
-                  background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
-                  border: "1px solid rgba(34,197,94,0.25)",
-                  flexShrink: 0,
-                }}>
-                  <Check size={14} color={BRAND.verde} aria-hidden />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
-                    Playbook concluído
-                  </span>
-                </div>
-              ) : (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 14px", borderRadius: 20,
-                  background: dark ? "rgba(232,64,37,0.09)" : "rgba(232,64,37,0.06)",
-                  border: "1px solid rgba(232,64,37,0.25)",
-                  flexShrink: 0,
-                }}>
-                  <AlertTriangle size={14} color={BRAND.vermelho} aria-hidden />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#ff9980" : BRAND.vermelho, fontFamily: FONT.body }}>
-                    {confirmadosOb} de {totalOb} itens obrigatórios confirmados
-                  </span>
-                </div>
-              )
-            ) : null
-          )}
-        </div>
-
-        <p
+  const playbookHeaderActions =
+    !loadingStats &&
+    (exibirAuditoria ? (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "7px 14px",
+          borderRadius: 20,
+          background: dark ? "rgba(30,54,248,0.10)" : "rgba(30,54,248,0.07)",
+          border: "1px solid rgba(30,54,248,0.25)",
+          flexShrink: 0,
+        }}
+      >
+        <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} aria-hidden />
+        <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT.body }}>
+          {totalConfAll} de {totalInflu} influencers confirmaram tudo
+        </span>
+      </div>
+    ) : roleParidadeInfluencer(user?.role) ? (
+      tudoConfirmado ? (
+        <div
           style={{
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            margin: "5px 0 0",
-            paddingLeft: 40,
-            lineHeight: 1.45,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "7px 14px",
+            borderRadius: 20,
+            background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
+            border: "1px solid rgba(34,197,94,0.25)",
+            flexShrink: 0,
           }}
         >
-          Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.
-        </p>
+          <Check size={14} color={BRAND.verde} aria-hidden />
+          <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
+            Playbook concluído
+          </span>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "7px 14px",
+            borderRadius: 20,
+            background: dark ? "rgba(232,64,37,0.09)" : "rgba(232,64,37,0.06)",
+            border: "1px solid rgba(232,64,37,0.25)",
+            flexShrink: 0,
+          }}
+        >
+          <AlertTriangle size={14} color={BRAND.vermelho} aria-hidden />
+          <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#ff9980" : BRAND.vermelho, fontFamily: FONT.body }}>
+            {confirmadosOb} de {totalOb} itens obrigatórios confirmados
+          </span>
+        </div>
+      )
+    ) : null);
 
-        <div style={{
-          marginTop: 12,
-          paddingLeft: 40,
-          width: "100%",
+  return (
+    <div className="app-page-shell">
+      <PageHeader
+        icon={<PageMenuIcon pageKey="playbook_influencers" />}
+        title={getPageMenuLabel("playbook_influencers")}
+        subtitle="Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir."
+        actions={playbookHeaderActions || undefined}
+      />
+
+      <div
+        style={{
+          paddingLeft: PAGE_HEADER_SUBTITLE_PADDING_LEFT,
           maxWidth: "100%",
           boxSizing: "border-box",
           fontFamily: FONT.body,
           fontSize: 13,
           lineHeight: 1.65,
           color: t.textMuted,
-        }}>
-          {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
-            <p key={i} style={{ margin: i === 0 ? "0 0 10px 0" : 0 }}>
-              {texto}
-            </p>
-          ))}
-        </div>
+          ...getPageKpiSectionGapStyle(),
+        }}
+      >
+        <p style={{ margin: 0 }}>
+          O material abaixo tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo
+          alinhamento com a operação, posicionamento de marca e melhor experiência para o público.
+        </p>
       </div>
 
       {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
         <div style={{
-          marginBottom: 20, padding: "16px 20px", borderRadius: 12,
+          ...getPageKpiSectionGapStyle(), padding: "16px 20px", borderRadius: 12,
           background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
           border: "1.5px solid rgba(34,197,94,0.30)",
           display: "flex", alignItems: "center", gap: 12,
@@ -916,7 +901,7 @@ export default function PlaybookInfluencers() {
       )}
 
       {roleParidadeInfluencer(user?.role) && !tudoConfirmado && totalOb > 0 && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={getPageKpiSectionGapStyle()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Progresso
@@ -1015,7 +1000,7 @@ export default function PlaybookInfluencers() {
         boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
       }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, ...getPageKpiSectionGapStyle() }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 4, height: 22, borderRadius: 2, background: abaConfig.accentColor, flexShrink: 0 }} />
             <h2 style={{

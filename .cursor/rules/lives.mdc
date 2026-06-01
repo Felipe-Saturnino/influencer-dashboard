@@ -369,6 +369,8 @@ Toda string visível ao usuário deve estar em português do Brasil.
 
 **Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
 
+**Bloco do calendário (nível 2 — `getPageContentBoxStyle`):** toolbar na mesma linha com `justifyContent: space-between` — à esquerda `SectionTitle` com `compact`, título **Calendário**, `sub` **Data e hora das lives dos influencers** (sem ícone; padrão Global § Blocos de página); à direita **`CtaCriarButton`** **Nova Live** quando `perm.canCriarOk` (fora da barra de filtros).
+
 **Calendário — `gridAutoRows`:**
 ```tsx
 // Modo Mês — nunca altura fixa:

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   Building2,
   Calendar,
+  CalendarHeart,
   CalendarRange,
   Clock,
   History,
@@ -41,4 +42,6 @@ export const FilterBarIcons = {
   acaoSolicitacao: <ListChecks {...FILTRO_BAR_ICON_PROPS} />,
   figurinoCategoria: <Tags {...FILTRO_BAR_ICON_PROPS} />,
   figurinoTamanho: <Ruler {...FILTRO_BAR_ICON_PROPS} />,
+  /** Tipo de compromisso — exclusivo do Calendário RH (Compromissos). */
+  tipoCompromisso: <CalendarHeart {...FILTRO_BAR_ICON_PROPS} />,
 } as const satisfies Record<string, ReactNode>;

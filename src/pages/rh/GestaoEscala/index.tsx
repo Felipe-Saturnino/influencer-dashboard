@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   escalaPrestadorTemTurnosOperacionais,
   staffTurnoCoerenteComEscala,
@@ -179,6 +186,8 @@ type AreaEscalaKey =
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
 type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
+
+type EscalaDiariaSortCol = "nickname" | "escala" | "turno";
 
 function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
@@ -381,6 +390,14 @@ const STICKY_LEFT_NICK_SEM_NOME = 0;
 const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
 const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
 
+/** Consolidado: coluna Turno fixa ao rolar horizontalmente. */
+const CONSOLIDADO_COL_TURNO_W = 168;
+const CONSOLIDADO_FONT_HEADER = 12;
+const CONSOLIDADO_FONT_TURNO = 13;
+const CONSOLIDADO_FONT_DIA_HEADER = 11;
+const Z_CONSOLIDADO_STICKY_HEAD = 25;
+const Z_CONSOLIDADO_STICKY_ROW = 24;
+
 /** Navegação e escala consideram a partir de abril de 2026 (sem escala antes). */
 const ESCALA_ANO_MIN = 2026;
 /** Abril (0-indexado). */
@@ -469,8 +486,9 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
 }
 
 export default function RhGestaoEscalaPage() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const perm = usePermission("rh_gestao_escala");
 
   const hoje = useMemo(() => new Date(), []);
@@ -495,12 +513,17 @@ export default function RhGestaoEscalaPage() {
   const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
   /** Filtro da Escala Diária por turno (clique no Consolidado). */
   const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
+  const [sortEscalaDiaria, setSortEscalaDiaria] = useState<{ col: EscalaDiariaSortCol; dir: SortDir }>({
+    col: "turno",
+    dir: "asc",
+  });
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
   useEffect(() => {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
+    setSortEscalaDiaria({ col: "turno", dir: "asc" });
   }, [filtroArea]);
 
   useEffect(() => {
@@ -768,6 +791,28 @@ export default function RhGestaoEscalaPage() {
     return linhasAposNickname.filter((row) => linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado));
   }, [linhasAposNickname, filtroTurnoConsolidado]);
 
+  const onSortEscalaDiaria = useCallback((col: EscalaDiariaSortCol) => {
+    setSortEscalaDiaria((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
+  }, []);
+
+  const linhasOrdenadasEscalaDiaria = useMemo(() => {
+    const rows = [...linhasFiltradasEscalaDiaria];
+    const { col, dir } = sortEscalaDiaria;
+    rows.sort((a, b) => {
+      if (col === "nickname") {
+        return compareLocaleTexto(a.nickname, b.nickname, dir);
+      }
+      if (col === "escala") {
+        return compareLocaleTexto(a.escalaCadastro || "—", b.escalaCadastro || "—", dir);
+      }
+      return compareLocaleTexto(a.turnoStaffNome || "—", b.turnoStaffNome || "—", dir);
+    });
+    return rows;
+  }, [linhasFiltradasEscalaDiaria, sortEscalaDiaria]);
+
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosOperadora, areaKey).map(mapLinhaPrestador),
     [prestadoresFiltradosOperadora],
@@ -991,14 +1036,7 @@ export default function RhGestaoEscalaPage() {
     [gerarPorFiltro, linhasPorFiltroGerar, dias],
   );
 
-  /** Mesmo bloco de conteúdo que `OverviewSpin` (Detalhamento Diário): `card` + `SectionTitle`. */
-  const card: CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
-  };
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   const thBase = getThStyle(t);
 
@@ -1013,6 +1051,9 @@ export default function RhGestaoEscalaPage() {
 
   const thSticky = (left: number, extra?: CSSProperties): CSSProperties => ({
     ...thBase,
+    fontSize: CONSOLIDADO_FONT_HEADER,
+    fontWeight: 700,
+    letterSpacing: "0.06em",
     position: "sticky",
     left,
     zIndex: Z_STICKY_HEAD,
@@ -1050,6 +1091,25 @@ export default function RhGestaoEscalaPage() {
 
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
+  const fundoStickyConsolidadoTurno = brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff";
+
+  const thConsolidadoTurnoSticky = (zIndex: number, bg: string, extra?: CSSProperties): CSSProperties => ({
+    ...getThStyle(t),
+    textAlign: "left",
+    position: "sticky",
+    left: 0,
+    zIndex,
+    boxSizing: "border-box",
+    minWidth: CONSOLIDADO_COL_TURNO_W,
+    maxWidth: 200,
+    width: CONSOLIDADO_COL_TURNO_W,
+    background: bg,
+    borderRight: `1px solid ${t.cardBorder}`,
+    boxShadow: sombraColFixa,
+    verticalAlign: "middle",
+    ...extra,
+  });
+
   const tdDia: CSSProperties = {
     ...getTdStyle(t, {
       textAlign: "center",
@@ -1061,6 +1121,18 @@ export default function RhGestaoEscalaPage() {
       position: "relative",
     }),
   };
+
+  const thDiaConsolidado = (dia: DiaMes): CSSProperties => ({
+    ...thDia(dia),
+    fontSize: CONSOLIDADO_FONT_DIA_HEADER,
+  });
+
+  const fundoCelulaTotalConsolidado = (dia: DiaMes): string =>
+    diaComDestaqueCalendario(dia)
+      ? t.isDark
+        ? `color-mix(in srgb, rgba(245,158,11,0.14) 35%, ${dataTable.totalRowBgStrong})`
+        : `color-mix(in srgb, rgba(245,158,11,0.16) 35%, ${dataTable.totalRowBgStrong})`
+      : dataTable.totalRowBgStrong;
 
   const tdSticky = (left: number, rowBg: string, zBody: number, extra?: CSSProperties): CSSProperties => ({
     ...getTdStyle(t, {
@@ -1150,7 +1222,7 @@ export default function RhGestaoEscalaPage() {
       textAlign: "left",
       fontWeight: 700,
       fontFamily: FONT.body,
-      fontSize: "inherit",
+      fontSize: CONSOLIDADO_FONT_TURNO,
       padding: "10px 12px",
       margin: 0,
       border: "none",
@@ -1211,20 +1283,12 @@ export default function RhGestaoEscalaPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<CalendarRange size={14} aria-hidden />}
-        title="Gestão de Escala"
+        icon={<PageMenuIcon pageKey="rh_gestao_escala" />}
+        title={getPageMenuLabel("rh_gestao_escala")}
         subtitle="Gere a escala por área (time), colaborador e dia do mês."
       />
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1314,7 +1378,6 @@ export default function RhGestaoEscalaPage() {
               </div>
             </>
           ) : null}
-        </div>
       </div>
 
       {erroPrestadores && (
@@ -1364,22 +1427,18 @@ export default function RhGestaoEscalaPage() {
             {resumoTurnoDias && mostrarFiltroArea ? (
               <section
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
-                style={{ ...card, marginBottom: 14 }}
+                style={contentBox}
               >
-                <SectionTitle
-                  icon={<Users size={15} aria-hidden />}
-                  sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária"
-                >
+                <SectionTitle sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária">
                   Consolidado
                 </SectionTitle>
-                <div className="app-table-wrap">
+                <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                 <table
                   style={{
                     width: "100%",
-                    minWidth: 168 + dias.length * 44,
+                    minWidth: CONSOLIDADO_COL_TURNO_W + dias.length * 44,
                     borderCollapse: "separate",
                     borderSpacing: 0,
-                    borderRadius: 14,
                     border: `1px solid ${t.cardBorder}`,
                   }}
                 >
@@ -1396,13 +1455,11 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="col"
-                        style={{
-                          ...getThStyle(t),
-                          textAlign: "left",
-                          minWidth: 168,
-                          maxWidth: 200,
-                          verticalAlign: "middle",
-                        }}
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_HEAD, fundoStickyConsolidadoTurno, {
+                          fontSize: CONSOLIDADO_FONT_HEADER,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                        })}
                       >
                         Turno
                       </th>
@@ -1410,7 +1467,7 @@ export default function RhGestaoEscalaPage() {
                         <th
                           key={`resumo-h-${dia.iso}`}
                           scope="col"
-                          style={thDia(dia)}
+                          style={thDiaConsolidado(dia)}
                           title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
                         >
                           <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
@@ -1423,7 +1480,11 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
+                          padding: 0,
+                        })}
                       >
                         <button
                           type="button"
@@ -1461,7 +1522,10 @@ export default function RhGestaoEscalaPage() {
                       <tr>
                         <th
                           scope="row"
-                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            padding: 0,
+                          })}
                         >
                           <button
                             type="button"
@@ -1499,7 +1563,11 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
+                          padding: 0,
+                        })}
                       >
                         <button
                           type="button"
@@ -1537,7 +1605,10 @@ export default function RhGestaoEscalaPage() {
                       <tr>
                         <th
                           scope="row"
-                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            padding: 0,
+                          })}
                         >
                           <button
                             type="button"
@@ -1575,15 +1646,12 @@ export default function RhGestaoEscalaPage() {
                     <tr>
                       <th
                         scope="row"
-                        style={{
-                          ...getThStyle(t),
-                          textAlign: "left",
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, dataTable.totalRowBgStrong, {
                           fontWeight: 800,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
                           borderTop: `2px solid ${t.cardBorder}`,
-                          background: TOTAL_ROW_BG,
                           padding: 0,
-                          verticalAlign: "middle",
-                        }}
+                        })}
                       >
                         <button
                           type="button"
@@ -1594,13 +1662,13 @@ export default function RhGestaoEscalaPage() {
                             textAlign: "left",
                             fontWeight: 800,
                             fontFamily: FONT.body,
-                            fontSize: "inherit",
+                            fontSize: CONSOLIDADO_FONT_TURNO,
                             padding: "10px 12px",
                             margin: 0,
                             border: "none",
                             borderLeft: "3px solid transparent",
                             boxSizing: "border-box",
-                            background: "transparent",
+                            background: dataTable.totalRowBgStrong,
                             color: t.text,
                             cursor: "pointer",
                             borderRadius: 0,
@@ -1619,11 +1687,7 @@ export default function RhGestaoEscalaPage() {
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 800,
                               borderTop: `2px solid ${t.cardBorder}`,
-                              background: diaComDestaqueCalendario(d)
-                                ? t.isDark
-                                  ? "rgba(245,158,11,0.14)"
-                                  : "rgba(245,158,11,0.16)"
-                                : TOTAL_ROW_BG,
+                              background: fundoCelulaTotalConsolidado(d),
                               color: diaComDestaqueCalendario(d) ? "#f59e0b" : t.text,
                             })}
                           >
@@ -1639,9 +1703,9 @@ export default function RhGestaoEscalaPage() {
             ) : null}
             <section
               aria-label="Escala Diária - Definição de status diário por Prestador"
-              style={{ ...card, marginBottom: 14 }}
+              style={contentBox}
             >
-              <SectionTitle icon={<Calendar size={15} aria-hidden />} sub="definição de status diário por Prestador">
+              <SectionTitle sub="definição de status diário por Prestador">
                 Escala Diária
               </SectionTitle>
               <div
@@ -1836,7 +1900,7 @@ export default function RhGestaoEscalaPage() {
                   />
                 </div>
               </div>
-              <div className="app-table-wrap">
+              <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table
               style={{
                 width: "100%",
@@ -1848,7 +1912,6 @@ export default function RhGestaoEscalaPage() {
                   dias.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
-                borderRadius: 14,
                 border: `1px solid ${t.cardBorder}`,
               }}
             >
@@ -1873,31 +1936,42 @@ export default function RhGestaoEscalaPage() {
                       Nome
                     </th>
                   ) : null}
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Nickname"
+                    col="nickname"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
                       minWidth: STICKY_W_NICK,
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
                       verticalAlign: "middle",
                     })}
-                  >
-                    Nickname
-                  </th>
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
+                    align="center"
+                  />
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Escala"
+                    col="escala"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
                       minWidth: STICKY_W_ESCALA,
                       maxWidth: STICKY_W_ESCALA,
                       width: STICKY_W_ESCALA,
                       verticalAlign: "middle",
                     })}
-                  >
-                    Escala
-                  </th>
-                  <th
-                    scope="col"
-                    style={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
+                    align="center"
+                  />
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Turno"
+                    col="turno"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
+                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
                       minWidth: STICKY_W_TURNO_STAFF,
                       maxWidth: STICKY_W_TURNO_STAFF,
                       width: STICKY_W_TURNO_STAFF,
@@ -1905,15 +1979,13 @@ export default function RhGestaoEscalaPage() {
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
                     })}
-                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
-                  >
-                    Turno
-                  </th>
+                    align="center"
+                  />
                   {dias.map((dia) => (
                     <th
                       key={dia.iso}
                       scope="col"
-                      style={thDia(dia)}
+                      style={thDiaConsolidado(dia)}
                       title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
                     >
                       <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
@@ -1958,7 +2030,7 @@ export default function RhGestaoEscalaPage() {
                     </td>
                   </tr>
                 ) : (
-                  linhasFiltradasEscalaDiaria.map((row, i) => {
+                  linhasOrdenadasEscalaDiaria.map((row, i) => {
                     const bg = zebraBgLinha(i);
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>

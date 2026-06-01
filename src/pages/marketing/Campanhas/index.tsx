@@ -5,17 +5,20 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { Campanha } from "../../../types";
-import { Pencil, AlertCircle, Trash2, Megaphone, Loader2 } from "lucide-react";
+import { Pencil, AlertCircle, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
-import { BlocoLabel } from "../../../components/BlocoLabel";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -85,9 +88,10 @@ export default function Campanhas() {
   }, [campanhas, sortCamp, operadoras]);
   const ativas = campanhas.filter((c) => c.ativo).length;
 
-  const th = getThStyle(t);
-  const td = getTdStyle(t);
+  const dataTable = useDataTableBlock();
   const mostrarColunaAcoes = perm.canEditarOk || perm.canExcluirOk;
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const contentBox = getPageContentBoxStyle(brand, t, { overflow: "hidden" });
 
   const confirmarExcluirCampanha = async () => {
     if (!campanhaParaExcluir?.id) return;
@@ -119,53 +123,51 @@ export default function Campanhas() {
     );
   }
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Megaphone size={14} aria-hidden />}
-        title="Campanhas"
+        icon={<PageMenuIcon pageKey="campanhas" />}
+        title={getPageMenuLabel("campanhas")}
         subtitle="Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards."
       />
 
-      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
         {[
-          { label: "Total", valor: campanhas.length, cor: brand.accent },
-          { label: "Ativas", valor: ativas, cor: "#059669" },
-          { label: "Inativas", valor: campanhas.length - ativas, cor: COR.cinza },
+          { label: "TOTAL", valor: campanhas.length, cor: "var(--brand-primary, #7c3aed)" },
+          { label: "ATIVAS", valor: ativas, cor: "#22c55e" },
+          { label: "INATIVAS", valor: campanhas.length - ativas, cor: COR.cinza },
         ].map((c) => (
           <div
             key={c.label}
+            aria-label={`${c.label}: ${c.valor}`}
             style={{
-              background: brand.blockBg,
+              borderRadius: 14,
               border: `1px solid ${t.cardBorder}`,
-              borderTop: `3px solid ${c.cor}`,
-              borderRadius: 18,
-              padding: "16px 20px",
+              borderLeft: `3px solid ${c.cor}`,
+              background: brand.blockBg,
+              padding: "16px 18px",
               boxShadow: cardShadow,
             }}
           >
             <div
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: "1.4px",
-                textTransform: "uppercase",
                 color: t.textMuted,
                 fontFamily: FONT.body,
-                marginBottom: 6,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
               }}
             >
               {c.label}
             </div>
             <div
               style={{
-                fontSize: 28,
-                fontWeight: 900,
+                fontSize: 26,
+                fontWeight: 800,
                 color: c.cor,
                 fontFamily: FONT_TITLE,
-                lineHeight: 1,
+                marginTop: 6,
               }}
             >
               {c.valor}
@@ -174,27 +176,19 @@ export default function Campanhas() {
         ))}
       </div>
 
-      <div
-        style={{
-          background: brand.blockBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18,
-          boxShadow: cardShadow,
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ padding: "16px 20px 0" }}>
-          <BlocoLabel label="Campanhas cadastradas" />
-        </div>
-        {perm.canCriarOk && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              padding: "12px 20px 16px",
-            }}
-          >
+      <div style={contentBox}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Campanhas cadastradas</SectionTitle>
+          {perm.canCriarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -204,8 +198,8 @@ export default function Campanhas() {
             >
               Nova Campanha
             </CtaCriarButton>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {loading ? (
           <div
@@ -214,7 +208,7 @@ export default function Campanhas() {
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
-              padding: "40px 20px",
+              padding: "40px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
             }}
@@ -225,7 +219,7 @@ export default function Campanhas() {
         ) : campanhas.length === 0 ? (
           <div
             style={{
-              padding: "48px 20px",
+              padding: "48px 0",
               color: t.textMuted,
               fontFamily: FONT.body,
               textAlign: "center",
@@ -234,24 +228,9 @@ export default function Campanhas() {
             Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.
           </div>
         ) : (
-          <div className="app-table-wrap">
-            <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-                <caption
-                  style={{
-                    position: "absolute",
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: "hidden",
-                    clip: "rect(0,0,0,0)",
-                    whiteSpace: "nowrap",
-                    border: 0,
-                  }}
-                >
-                  Campanhas cadastradas
-                </caption>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle()}>
+                <caption style={{ display: "none" }}>Campanhas cadastradas</caption>
                 <thead>
                   <tr>
                     <SortTableTh<CampSortCol>
@@ -259,8 +238,8 @@ export default function Campanhas() {
                       col="nome"
                       sortCol={sortCamp.col}
                       sortDir={sortCamp.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCamp((s) => ({
                           col: c,
@@ -273,8 +252,8 @@ export default function Campanhas() {
                       col="operadora"
                       sortCol={sortCamp.col}
                       sortDir={sortCamp.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCamp((s) => ({
                           col: c,
@@ -287,8 +266,8 @@ export default function Campanhas() {
                       col="classificacao"
                       sortCol={sortCamp.col}
                       sortDir={sortCamp.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(col) =>
                         setSortCamp((s) => ({
                           col,
@@ -301,8 +280,8 @@ export default function Campanhas() {
                       col="criada"
                       sortCol={sortCamp.col}
                       sortDir={sortCamp.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={(c) =>
                         setSortCamp((s) => ({
                           col: c,
@@ -310,12 +289,12 @@ export default function Campanhas() {
                         }))
                       }
                     />
-                    {mostrarColunaAcoes && <th scope="col" style={th}>Ações</th>}
+                    {mostrarColunaAcoes && <th scope="col" style={dataTable.thHeader}>Ações</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {campanhasOrdenadas.map((c, idx) => {
-                    const zebraBg = zebraStripe(idx);
+                    const zebraBg = dataTable.zebraRow(idx);
                     return (
                       <tr
                         key={c.id}
@@ -327,13 +306,15 @@ export default function Campanhas() {
                           e.currentTarget.style.background = zebraBg;
                         }}
                       >
-                        <td style={{ ...td, fontWeight: 600 }}>{c.nome}</td>
-                        <td style={td}>
+                        <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{c.nome}</td>
+                        <td style={dataTable.tdCenter}>
                           {operadoras.find((o) => o.slug === c.operadora_slug)?.nome ?? c.operadora_slug ?? "—"}
                         </td>
-                        <td style={td}>
+                        <td style={dataTable.tdCenter}>
                           <span
                             style={{
+                              display: "inline-flex",
+                              alignItems: "center",
                               background: c.ativo ? "#05966922" : "#6b728022",
                               color: c.ativo ? "#059669" : "#6b7280",
                               border: `1px solid ${c.ativo ? "#05966944" : "#6b728044"}`,
@@ -347,12 +328,12 @@ export default function Campanhas() {
                             {c.ativo ? "Ativa" : "Inativa"}
                           </span>
                         </td>
-                        <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
+                        <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: 12 }}>
                           {c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR") : "—"}
                         </td>
                         {mostrarColunaAcoes && (
-                          <td style={td}>
-                            <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center" }}>
                               {perm.canEditarOk ? (
                                 <button
                                   type="button"
@@ -411,7 +392,6 @@ export default function Campanhas() {
                   })}
                 </tbody>
               </table>
-            </div>
           </div>
         )}
       </div>

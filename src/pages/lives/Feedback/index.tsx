@@ -9,7 +9,7 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import {
-  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, MessageSquare,
+  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
@@ -19,6 +19,13 @@ import {
   FiltroOperadoraSelect,
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -481,21 +488,15 @@ export default function Feedback() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<MessageSquare size={14} aria-hidden="true" />}
-        title="Feedback"
+        icon={<PageMenuIcon pageKey="feedback" />}
+        title={getPageMenuLabel("feedback")}
         subtitle="Consulte o histórico validado de lives com KPIs e dados de resultado."
         brand={brand}
         t={t}
       />
 
       {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           {/* Linha 1: Carrossel de semanas, Histórico, Influencer e Operadora — alinhado ao Overview Influencer */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
@@ -567,12 +568,11 @@ export default function Feedback() {
               />
             ))}
           </div>
-        </div>
       </div>
 
       {/* ── QUADROS DE RESUMO ── */}
       {!loading && (
-        <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
+        <div className="app-grid-kpi-3" style={getPageKpiSectionGapStyle()}>
           {/* Total de lives */}
           <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "16px 18px", boxShadow: cardShadow }}>
             <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>
@@ -625,18 +625,6 @@ export default function Feedback() {
         </div>
       )}
 
-      {/* Contador */}
-      {!loading && livesFiltered.length > 0 && (
-        <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-          {livesFiltered.length} live(s) encontrada(s)
-          {influencerFiltros.length > 0 && (
-            <span style={{ marginLeft: 8, color: brand.accent, fontWeight: 600 }}>
-              · {influencerFiltros.length} influencer(s) selecionado(s)
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Lista */}
       {loading ? (
         <div
@@ -647,7 +635,7 @@ export default function Feedback() {
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : livesFiltered.length === 0 ? (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ ...getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" }), color: t.textMuted, fontFamily: FONT.body }}>
           Sem dados para o período selecionado.
         </div>
       ) : (

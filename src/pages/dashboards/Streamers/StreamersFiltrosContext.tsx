@@ -11,7 +11,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { getMesesDisponiveis } from "../../../lib/dashboardHelpers";
+import { getMesesDisponiveis, getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
 
 export type MesRef = { ano: number; mes: number; label: string };
@@ -56,11 +56,7 @@ export function useStreamersFiltros(): StreamersFiltrosContextValue {
 export function StreamersFiltrosProvider({ children }: { children: ReactNode }) {
   const { podeVerInfluencer } = useDashboardFiltros();
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = useMemo(() => new Date(), []);
-  const idxInicial = useMemo(() => {
-    const i = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-    return i >= 0 ? i : mesesDisponiveis.length - 1;
-  }, [mesesDisponiveis, hoje]);
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
   const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);

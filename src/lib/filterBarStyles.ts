@@ -1,5 +1,6 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { Theme } from "../constants/theme";
+import { getPageFilterBoxStyle, type PageContentBoxBrand, type PageContentBoxTheme } from "./pageContentBoxStyles";
 
 /** Padding do wrapper da barra de filtros (referência: Overview Influencer). */
 export const FILTER_BAR_PADDING = "12px 20px" as const;
@@ -19,17 +20,13 @@ export function getFilterBarRowStyle(overrides?: CSSProperties): CSSProperties {
   };
 }
 
-/** Wrapper transparente da barra (Brand §5). */
-export function getFilterBarWrapperStyle(brand: {
-  primaryTransparentBorder: string;
-  primaryTransparentBg: string;
-}): CSSProperties {
-  return {
-    borderRadius: 14,
-    border: brand.primaryTransparentBorder,
-    background: brand.primaryTransparentBg,
-    padding: FILTER_BAR_PADDING,
-  };
+/** Wrapper da barra de filtros — moldura de página + gap 14px (Global § Blocos de página). */
+export function getFilterBarWrapperStyle(
+  brand: PageContentBoxBrand,
+  t: PageContentBoxTheme,
+  overrides?: CSSProperties,
+): CSSProperties {
+  return getPageFilterBoxStyle(brand, t, overrides);
 }
 
 export type FiltroBarBrand = {

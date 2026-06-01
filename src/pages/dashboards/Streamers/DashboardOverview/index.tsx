@@ -6,6 +6,10 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../../lib/pageContentBoxStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
@@ -19,6 +23,7 @@ import {
   fmt,
   fmtBRL,
   fmtHorasTotal,
+  getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
   getStatusROI,
@@ -35,7 +40,8 @@ import {
   SortTableTh,
   type SortDir,
 } from "../../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import {
   BarChart2,
   ChevronLeft,
@@ -44,7 +50,6 @@ import {
   Coins,
   Receipt,
   Wallet,
-  Filter,
   TrendingUp,
   Trophy,
   UserPlus,
@@ -215,7 +220,7 @@ function RankingThSort({
       sortCol={sortRanking.col}
       sortDir={sortRanking.dir}
       thStyle={thStyle}
-      align="left"
+      align="center"
       onSort={(c) =>
         setSortRanking((s) => ({
           col: c,
@@ -228,17 +233,14 @@ function RankingThSort({
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal =
-    mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
@@ -549,16 +551,9 @@ export default function DashboardOverview() {
   const brand = useDashboardBrand();
 
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
-  const thStyle = getThStyle(t);
-  const tdStyle = getTdStyle(t);
+  const dataTable = useDataTableBlock();
 
   // ── STATUS BADGES ─────────────────────────────────────────────────────────────
   const statusBadges = [
@@ -581,13 +576,7 @@ export default function DashboardOverview() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {!embed && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -642,15 +631,13 @@ export default function DashboardOverview() {
               </span>
             )}
           </div>
-        </div>
       </div>
       )}
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={15} aria-hidden />}
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
         </SectionTitle>
@@ -736,8 +723,8 @@ export default function DashboardOverview() {
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Filter size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+      <div style={card}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual
@@ -749,7 +736,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<Trophy size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Ranking de Influencers
           </SectionTitle>
 
@@ -803,23 +790,23 @@ export default function DashboardOverview() {
         ) : rankingFiltrado.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div className="app-table-wrap">
-            <table style={{ width: "100%", minWidth: 640, borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 640 })}>
+              <caption style={{ display: "none" }}>
                 Ranking de influencers — {historico ? "Todo o período" : (mesSelecionado?.label ?? "Período")}
               </caption>
               <thead>
                 <tr>
-                  <RankingThSort col="nome" label="Influencer" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="lives" label="Lives" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="horas" label="Horas" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="views" label="Views" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="acessos" label="Acessos" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="registros" label="Registros" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="ftds" label="FTDs" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="ggr" label="GGR" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="investimento" label="Investimento" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="roi" label="Performance" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="nome" label="Influencer" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="lives" label="Lives" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="horas" label="Horas" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="views" label="Views" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="acessos" label="Acessos" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="registros" label="Registros" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="ftds" label="FTDs" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="ggr" label="GGR" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="investimento" label="Investimento" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
+                  <RankingThSort col="roi" label="Performance" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={dataTable.thHeader} />
                 </tr>
               </thead>
               <tbody>
@@ -830,11 +817,11 @@ export default function DashboardOverview() {
                   return (
                     <tr
                       key={r.influencer_id}
-                      style={{ background: zebraStripe(i) }}
+                      style={{ background: dataTable.zebraRow(i) }}
                     >
                       <td
                         style={{
-                          ...tdStyle,
+                          ...dataTable.tdCenter,
                           fontWeight: 600,
                           maxWidth: 160,
                           overflow: "hidden",
@@ -845,15 +832,15 @@ export default function DashboardOverview() {
                       >
                         {r.nome}
                       </td>
-                      <td style={tdStyle}>{r.lives}</td>
-                      <td style={tdStyle}>{r.horas > 0 ? `${String(hT).padStart(2,"0")}:${String(mT).padStart(2,"0")}` : "—"}</td>
-                      <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
-                      <td style={tdStyle}>{r.investimento > 0 ? fmtBRL(r.investimento) : "—"}</td>
-                      <td style={tdStyle}>
+                      <td style={dataTable.tdCenter}>{r.lives}</td>
+                      <td style={dataTable.tdCenter}>{r.horas > 0 ? `${String(hT).padStart(2,"0")}:${String(mT).padStart(2,"0")}` : "—"}</td>
+                      <td style={dataTable.tdCenter}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{r.ftds.toLocaleString("pt-BR")}</td>
+                      <td style={{ ...dataTable.tdCenter, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
+                      <td style={dataTable.tdCenter}>{r.investimento > 0 ? fmtBRL(r.investimento) : "—"}</td>
+                      <td style={dataTable.tdCenter}>
                         <span style={{
                           padding: "4px 10px", borderRadius: 999,
                           border: `1px solid ${st.border}`,

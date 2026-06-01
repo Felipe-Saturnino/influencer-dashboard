@@ -6,24 +6,26 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../../lib/carouselNavStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../../lib/pageContentBoxStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import { fmtBRL, getIdxMesCarrosselPadrao, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  BarChart2,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   Clock,
-  Coins,
   Gauge,
-  ListOrdered,
   Scale,
   Trophy,
   User,
@@ -191,16 +193,14 @@ function PieTooltip({ active, payload, total }: {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
-  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
+  const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
 
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
@@ -583,16 +583,9 @@ export default function DashboardFinanceiro() {
   const brand = useDashboardBrand();
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18, padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
-  const thStyle = getThStyle(t);
-  const thGroup = getThStyle(t, { textAlign: "center", borderBottom: "none" });
-  const thSub = getThStyle(t, { fontSize: 9, fontWeight: 500, letterSpacing: "0.06em" });
-  const tdStyle = getTdStyle(t);
+  const dataTable = useDataTableBlock();
 
   if (perm.canView === "nao") {
     return (
@@ -606,13 +599,7 @@ export default function DashboardFinanceiro() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {!embed && (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -661,15 +648,13 @@ export default function DashboardFinanceiro() {
               </span>
             )}
           </div>
-        </div>
       </div>
       )}
 
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={14} aria-hidden />}
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
         </SectionTitle>
@@ -737,8 +722,8 @@ export default function DashboardFinanceiro() {
       </div>
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Coins size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+      <div style={card}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Investimento por Influencer
         </SectionTitle>
 
@@ -795,7 +780,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<ListOrdered size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle sub={historico ? "acumulado" : undefined}>
             Ranking Financeiro
           </SectionTitle>
           {/* Legenda de perfis */}
@@ -816,10 +801,9 @@ export default function DashboardFinanceiro() {
         ) : rowsParaExibir.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div className="app-table-wrap">
-            <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 1080 })}>
+              <caption style={{ display: "none" }}>
                 Ranking financeiro de influencers — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
               </caption>
               <thead>
@@ -831,32 +815,13 @@ export default function DashboardFinanceiro() {
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
-                  <th colSpan={2} scope="colgroup" style={thGroup}>FTD</th>
-                  <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Depósitos</th>
-                  <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Saques</th>
-                  <SortTableTh<FinanceRankSortCol>
-                    rowSpan={2}
-                    label="R$ GGR"
-                    col="ggr"
-                    sortCol={sortFinRank.col}
-                    sortDir={sortFinRank.dir}
-                    onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="right"
-                  />
-                  <SortTableTh<FinanceRankSortCol>
-                    rowSpan={2}
-                    label="GGR/Jogador"
-                    col="ggr_por_jogador"
-                    sortCol={sortFinRank.col}
-                    sortDir={sortFinRank.dir}
-                    onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="right"
-                  />
+                  <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none" }}>FTD</th>
+                  <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>Depósitos</th>
+                  <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>Saques</th>
+                  <th colSpan={2} scope="colgroup" style={{ ...dataTable.thHeader, borderBottom: "none", borderLeft: `1px solid ${t.cardBorder}` }}>GGR</th>
                   <SortTableTh<FinanceRankSortCol>
                     rowSpan={2}
                     label="WD Ratio"
@@ -864,8 +829,8 @@ export default function DashboardFinanceiro() {
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
                   <SortTableTh<FinanceRankSortCol>
                     rowSpan={2}
@@ -874,8 +839,8 @@ export default function DashboardFinanceiro() {
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="right"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
                   <SortTableTh<FinanceRankSortCol>
                     rowSpan={2}
@@ -884,58 +849,76 @@ export default function DashboardFinanceiro() {
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={thStyle}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                   />
                 </tr>
                 <tr>
-                  <SortTableTh label="R$ Total" col="ftd_total" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
-                  <SortTableTh label="Ticket Médio" col="ftd_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh label="R$ Total" col="ftd_total" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={dataTable.thHeaderSub} align="center" />
+                  <SortTableTh label="Ticket Médio" col="ftd_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={dataTable.thHeaderSub} align="center" />
                   <SortTableTh
                     label="R$ Total"
                     col="depositos"
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}
-                    align="right"
+                    thStyle={{ ...dataTable.thHeaderSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="center"
                   />
-                  <SortTableTh label="Ticket Médio" col="deposito_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh label="Ticket Médio" col="deposito_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={dataTable.thHeaderSub} align="center" />
                   <SortTableTh
                     label="R$ Total"
                     col="saques"
                     sortCol={sortFinRank.col}
                     sortDir={sortFinRank.dir}
                     onSort={onSortFinRank}
-                    thStyle={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}
-                    align="right"
+                    thStyle={{ ...dataTable.thHeaderSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="center"
                   />
-                  <SortTableTh label="Ticket Médio" col="saque_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh label="Ticket Médio" col="saque_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={dataTable.thHeaderSub} align="center" />
+                  <SortTableTh
+                    label="R$ Total"
+                    col="ggr"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={{ ...dataTable.thHeaderSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="center"
+                  />
+                  <SortTableTh
+                    label="GGR Médio"
+                    col="ggr_por_jogador"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={dataTable.thHeaderSub}
+                    align="center"
+                  />
                 </tr>
               </thead>
               <tbody>
                 {rowsFinOrdenadas.map((r, i) => {
                   const st = PERFIL_CORES[r.perfil_jogador];
                   return (
-                    <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
-                      <td style={tdStyle}>{fmtBRL(r.ftd_total)}</td>
-                      <td style={tdStyle}>{r.ftds > 0 ? fmtBRL(r.ftd_ticket_medio) : "—"}</td>
-                      <td style={tdStyle}>{fmtBRL(r.depositos)}</td>
-                      <td style={tdStyle}>{r.deposit_count > 0 ? fmtBRL(r.deposito_ticket_medio) : "—"}</td>
-                      <td style={tdStyle}>{fmtBRL(r.saques)}</td>
-                      <td style={tdStyle}>{r.saque_ticket_medio > 0 ? fmtBRL(r.saque_ticket_medio) : "—"}</td>
-                      <td style={{ ...tdStyle, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
-                      <td style={tdStyle}>{r.ftds > 0 ? fmtBRL(r.ggr_por_jogador) : "—"}</td>
+                    <tr key={r.influencer_id} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome}</td>
+                      <td style={dataTable.tdCenter}>{fmtBRL(r.ftd_total)}</td>
+                      <td style={dataTable.tdCenter}>{r.ftds > 0 ? fmtBRL(r.ftd_ticket_medio) : "—"}</td>
+                      <td style={dataTable.tdCenter}>{fmtBRL(r.depositos)}</td>
+                      <td style={dataTable.tdCenter}>{r.deposit_count > 0 ? fmtBRL(r.deposito_ticket_medio) : "—"}</td>
+                      <td style={dataTable.tdCenter}>{fmtBRL(r.saques)}</td>
+                      <td style={dataTable.tdCenter}>{r.saque_ticket_medio > 0 ? fmtBRL(r.saque_ticket_medio) : "—"}</td>
+                      <td style={{ ...dataTable.tdCenter, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
+                      <td style={dataTable.tdCenter}>{r.ftds > 0 ? fmtBRL(r.ggr_por_jogador) : "—"}</td>
                       <td style={{
-                        ...tdStyle,
+                        ...dataTable.tdCenter,
                         color: r.depositos > 0 ? wdRatioColor(r.wd_ratio) : t.text,
                         fontWeight: r.depositos > 0 ? 700 : 400,
                       }}>
                         {r.depositos > 0 ? `${r.wd_ratio.toFixed(1)}%` : "—"}
                       </td>
-                      <td style={tdStyle}>{r.pvi} pts</td>
-                      <td style={tdStyle}>
+                      <td style={dataTable.tdCenter}>{r.pvi} pts</td>
+                      <td style={dataTable.tdCenter}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
                           <User size={11} aria-hidden /> {r.perfil_jogador}
                         </span>
@@ -945,7 +928,6 @@ export default function DashboardFinanceiro() {
                 })}
               </tbody>
             </table>
-            </div>
           </div>
         )}
       </div>

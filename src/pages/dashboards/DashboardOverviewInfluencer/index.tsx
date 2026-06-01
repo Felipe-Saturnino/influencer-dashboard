@@ -9,17 +9,20 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
   fmtHorasTotal,
   fmtDia,
+  getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  getOntemIsoLocal,
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import {
+  DashboardPageHeader,
   SectionTitle,
   KpiCard,
   FunilVisual,
@@ -29,27 +32,25 @@ import {
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
-  getThStyle,
-  getThStyleBrandAction,
-  getTdStyle,
-  zebraStripe,
-  zebraStripeBrandContrast,
-} from "../../../lib/tableStyles";
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
   AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart2,
-  CalendarDays,
   ChartColumnBig,
   ChevronLeft,
   ChevronRight,
   Clock,
   Coins,
   Eye,
-  Filter,
-  Gauge,
   Table2,
   TrendingUp,
   Trophy,
@@ -460,15 +461,14 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, isDark, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
-  const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
@@ -493,7 +493,7 @@ export default function DashboardOverviewInfluencer() {
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo() { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
-    if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
+    if (historico) { setHistorico(false); setIdxMes(idxInicial); }
     else setHistorico(true);
   }
 
@@ -808,10 +808,7 @@ export default function DashboardOverviewInfluencer() {
   const diasDataComparativoExibicao = useMemo(() => {
     if (historico || !mesSelecionado) return diasData;
     if (!isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)) return diasData;
-    const ontem = new Date();
-    ontem.setHours(0, 0, 0, 0);
-    ontem.setDate(ontem.getDate() - 1);
-    const limite = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, "0")}-${String(ontem.getDate()).padStart(2, "0")}`;
+    const limite = getOntemIsoLocal();
     return diasData.filter((d) => d.data <= limite);
   }, [diasData, historico, mesSelecionado]);
 
@@ -944,17 +941,8 @@ export default function DashboardOverviewInfluencer() {
     ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
-  const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
-  const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
-  const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
-  const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
+  const card = getPageContentBoxStyle(brand, t);
+  const dataTable = useDataTableBlock();
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -965,53 +953,16 @@ export default function DashboardOverviewInfluencer() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              color: brand.primaryIconColor,
-            }}
-          >
-            <BarChart2 size={14} aria-hidden="true" />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: brand.primary,
-                fontFamily: FONT_TITLE,
-                margin: 0,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Overview Influencer
-            </h1>
-            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Resumo executivo de financeiro, operação e conversão do canal de influencers.
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<PageMenuIcon pageKey="dash_overview_influencer" />}
+        title={getPageMenuLabel("dash_overview_influencer")}
+        subtitle="Resumo executivo de financeiro, operação e conversão do canal de influencers."
+        brand={brand}
+        t={t}
+      />
 
       {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
@@ -1069,7 +1020,6 @@ export default function DashboardOverviewInfluencer() {
               </span>
             )}
           </div>
-        </div>
       </div>
 
       {filtroResetado && (
@@ -1094,10 +1044,9 @@ export default function DashboardOverviewInfluencer() {
       )}
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={card}>
         <SectionTitle
-          icon={<BarChart2 size={14} aria-hidden="true" />}
-          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+          sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
         </SectionTitle>
@@ -1238,16 +1187,16 @@ export default function DashboardOverviewInfluencer() {
       </div>
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Filter size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
+      <div style={card}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
       </div>
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<Gauge size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
+      <div style={card}>
+        <SectionTitle sub={historico ? "acumulado" : undefined}>
           Eficiência
         </SectionTitle>
         <div style={{
@@ -1266,11 +1215,8 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
-        <div style={{ ...card, marginBottom: 14 }}>
-          <SectionTitle
-            icon={<CalendarDays size={14} aria-hidden="true" />}
-            sub={historico ? "mês a mês" : undefined}
-          >
+        <div style={card}>
+          <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>
             {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
           </SectionTitle>
 
@@ -1378,21 +1324,9 @@ export default function DashboardOverviewInfluencer() {
             </div>
 
           {modoVisualizacaoComparativo === "tabela" ? (
-            <div className="app-table-wrap">
-              <table style={{ width: "100%", minWidth: 900, borderCollapse: "separate", borderSpacing: 0 }}>
-                <caption
-                  style={{
-                    position: "absolute",
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: "hidden",
-                    clip: "rect(0,0,0,0)",
-                    whiteSpace: "nowrap",
-                    border: 0,
-                  }}
-                >
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: 900 })}>
+                <caption style={{ display: "none" }}>
                   {historico
                     ? "Detalhamento mensal — todo o período"
                     : `Detalhamento diário — ${mesSelecionado?.label ?? ""}`}
@@ -1414,7 +1348,7 @@ export default function DashboardOverviewInfluencer() {
                       "R$ Saques",
                       "R$ GGR",
                     ].map((h) => (
-                      <th key={h} scope="col" style={thStyle}>
+                      <th key={h} scope="col" style={dataTable.thHeader}>
                         {h}
                       </th>
                     ))}
@@ -1422,24 +1356,24 @@ export default function DashboardOverviewInfluencer() {
                 </thead>
                 <tbody>
                   {diasDataComparativoExibicao.map((d, i) => (
-                    <tr key={d.data} style={{ background: zebraTabelaDetalhamento(i) }}>
-                      <td style={tdStyle}>
+                    <tr key={d.data} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdCenter}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
-                      <td style={tdStyle}>{d.duracao > 0 ? fmtHorasTotal(d.duracao) : "—"}</td>
-                      <td style={tdStyle}>{cel(d.media_views)}</td>
-                      <td style={tdStyle}>{cel(d.max_views)}</td>
-                      <td style={tdStyle}>{cel(d.acessos)}</td>
-                      <td style={tdStyle}>{cel(d.registros)}</td>
-                      <td style={tdStyle}>{cel(d.ftd_count)}</td>
-                      <td style={tdStyle}>{cel(d.ftd_total, true)}</td>
-                      <td style={tdStyle}>{cel(d.deposit_count)}</td>
-                      <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
-                      <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
-                      <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{d.duracao > 0 ? fmtHorasTotal(d.duracao) : "—"}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.media_views)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.max_views)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.acessos)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.registros)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.ftd_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.ftd_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.deposit_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.deposit_total, true)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.withdrawal_count)}</td>
+                      <td style={dataTable.tdCenter}>{cel(d.withdrawal_total, true)}</td>
                       <td
                         style={{
-                          ...tdStyle,
+                          ...dataTable.tdCenter,
                           color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
                           fontWeight: d.ggr !== 0 ? 600 : undefined,
                         }}

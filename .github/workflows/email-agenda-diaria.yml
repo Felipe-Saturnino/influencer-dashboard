@@ -4,8 +4,8 @@
 # Requer secrets no GitHub: SUPABASE_URL, SUPABASE_ANON_KEY (os mesmos do workflow da diretoria).
 # Destinatários vêm de EMAIL_AGENDA_DESTINATARIOS nos Secrets do Supabase (Edge Functions).
 #
-# Cron: 9h UTC = ~6h em Brasília. Pode atrasar por fila do GitHub; ver comentários em
-# relatorio-diario-diretoria.yml para alternativas (Supabase Schedules, etc.).
+# Cron: 9h10 UTC ≈ 6h10 BRT — escalonado (não usar 0 9 junto com outros workflows).
+# Pode atrasar por fila do GitHub; ver relatorio-diario-diretoria.yml e daily-jobs-watchdog.yml.
 
 name: E-mail Agenda Diária (6h BRT)
 
@@ -14,7 +14,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "10 9 * * *"
   workflow_dispatch:
 
 concurrency:

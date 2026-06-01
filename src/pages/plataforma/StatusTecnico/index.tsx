@@ -1,26 +1,26 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import {
-  Activity,
   AlertCircle,
   AlertTriangle,
-  BarChart2,
-  Bell,
   CheckCircle2,
-  FileText,
   Loader2,
-  MonitorCheck,
-  Network,
   RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -35,70 +35,31 @@ import {
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
+  HORARIO_AGENDADO_BR,
   MODAL_OVERLAY_BG,
   MSG_SEM_PERMISSAO,
+  pipelineSucessoNoDia,
+  syncLogOkNoDia,
   tableRowHoverBg,
 } from "./statusTecnicoHelpers";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
+import {
+  getPageContentBoxStyle,
+  getPageKpiSectionGapStyle,
+} from "../../../lib/pageContentBoxStyles";
+import {
+  fmtDataBrasilCurta,
+  hojeIsoBrasil,
+  inicioDiaBrasilUtcIso,
+  isoDateBrasilFromInstant,
+  passouHorarioAgendadoBr,
+  subDiasIso,
+} from "../../../lib/dateBrasil";
+import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
-
-// ─── StatusSectionTitle (padrão da plataforma — não colidir com shared SectionTitle) ──
-function StatusSectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: brand.primaryIconBg,
-        border: brand.primaryIconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: brand.primaryIconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-    </div>
-  );
-}
-
-// ─── StatusKpiCard (accent bar — nomenclatura distinta do KpiCard shared) ─────
-function StatusKpiCard({ label, value, accentColor, loading }: {
-  label: string; value: React.ReactNode; accentColor: string; loading?: boolean;
-}) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{
-      background: t.cardBg, borderRadius: 16,
-      border: `1px solid ${t.cardBorder}`, overflow: "hidden",
-    }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
-      <div style={{ padding: "18px 20px" }}>
-        <p style={{
-          fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
-          color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
-          margin: "0 0 10px",
-        }}>
-          {label}
-        </p>
-        <div style={{
-          fontFamily: FONT.body, fontSize: 28, fontWeight: 800,
-          color: t.text, margin: 0, lineHeight: 1.1,
-        }}>
-          {loading ? "—" : value}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface SyncLog {
@@ -143,7 +104,7 @@ interface FluxoDia {
   data: string;
   cda: number;
   social: number;
-  /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia (UTC da data do log). */
+  /** Registros processados (inseridos + atualizados) nos sync_logs da ingestão RSS Spin na Rede, por dia civil (America/Sao_Paulo). */
   spinRss: number;
   /** Mesas localizadas no lobby (sync_logs lobby_blaze, campo registros_inseridos). */
   lobbyBlaze: number;
@@ -187,6 +148,13 @@ export default function StatusTecnico() {
   const [emailUltimoAgenda, setEmailUltimoAgenda] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
+  type IntegracaoSortCol = "integracao" | "ultimoSync" | "registros" | "erros" | "status";
+  const [sortIntegracao, setSortIntegracao] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+    col: "ultimoSync",
+    dir: "desc",
+  });
+  type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
+  const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
   const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "lobby_blaze" | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
@@ -202,17 +170,13 @@ export default function StatusTecnico() {
   const [cidrExcluir, setCidrExcluir] = useState<PrestadorPontoCidrRow | null>(null);
   const [cidrExcluindo, setCidrExcluindo] = useState(false);
   const [cidrErroExcluir, setCidrErroExcluir] = useState<string | null>(null);
-  const card: React.CSSProperties = {
-    background: t.cardBg,
-    borderRadius: 16,
-    padding: 24,
-    border: `1px solid ${t.cardBorder}`,
-  };
+  const pageBox = getPageContentBoxStyle(dashBrand, t);
+  const dataTable = useDataTableBlock();
   const cidrInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = hojeIsoBrasil();
 
     // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
@@ -258,10 +222,9 @@ export default function StatusTecnico() {
       .eq("data", hoje);
     setRegistrosHoje(count ?? 0);
 
-    // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails
-    const dataInicio = new Date();
-    dataInicio.setDate(dataInicio.getDate() - 14);
-    const dataInicioStr = dataInicio.toISOString().split("T")[0];
+    // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
+    const dataInicioStr = subDiasIso(hoje, 14);
+    const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
     const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
@@ -271,21 +234,21 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, registros_atualizados")
         .eq("integracao_slug", "spin_na_rede_rss")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
       supabase
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_blaze")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
       supabase
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_cda")
-        .gte("executado_em", `${dataInicioStr}T00:00:00.000Z`)
+        .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
     ]);
@@ -295,7 +258,7 @@ export default function StatusTecnico() {
     ) =>
       rows.reduce<Record<string, number>>((acc, row) => {
         if (row.status === "falha") return acc;
-        const d = row.executado_em?.split("T")[0];
+        const d = isoDateBrasilFromInstant(row.executado_em);
         if (!d) return acc;
         const n = (row.registros_inseridos ?? 0) + (row.registros_atualizados ?? 0);
         acc[d] = (acc[d] ?? 0) + n;
@@ -347,6 +310,7 @@ export default function StatusTecnico() {
       hoje,
     ]);
     const fluxoArray: FluxoDia[] = Array.from(datasSet)
+      .filter((data) => data >= dataInicioStr && data <= hoje)
       .sort((a, b) => a.localeCompare(b))
       .map((data) => {
         const cda = cdaPorData[data] ?? 0;
@@ -845,14 +809,23 @@ export default function StatusTecnico() {
   };
 
   // KPIs derivados
-  const hojeIsoKpi = new Date().toISOString().split("T")[0];
+  const hojeIsoKpi = hojeIsoBrasil();
 
-  // Integrações Ativas: CDA, Social, e-mails — OK = último sync/execução com sucesso
-  const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
-  const cdaStatusOk = ultimoSyncCdaLog?.status === "ok";
+  const passouHorarioCda = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.cda);
+  const passouHorarioSocial = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.social);
 
-  const ultimoSyncSpinRssLog = syncLogs.find((l) => l.integracao_slug === "spin_na_rede_rss");
-  const spinNaRedeRssStatusOk = ultimoSyncSpinRssLog?.status === "ok";
+  // Integrações Ativas: jobs diários — OK se executou com sucesso hoje (SP); antes do horário, aceita último OK
+  const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
+  const ultimoSyncCdaLog = syncLogsCdaKpi[0];
+  const cdaOkHoje = syncLogOkNoDia(syncLogsCdaKpi, hojeIsoKpi);
+  const cdaStatusOk =
+    cdaOkHoje || (!passouHorarioCda && ultimoSyncCdaLog?.status === "ok");
+
+  const syncLogsSpinRssKpi = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
+  const ultimoSyncSpinRssLog = syncLogsSpinRssKpi[0];
+  const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
+  const spinNaRedeRssStatusOk =
+    spinRssOkHoje || (!passouHorarioSocial && ultimoSyncSpinRssLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
   const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
@@ -864,7 +837,9 @@ export default function StatusTecnico() {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
   }, null);
-  const socialStatusOk = ultimoPipelineRun?.status === "success";
+  const socialOkHoje = pipelineSucessoNoDia(pipelineRuns, hojeIsoKpi);
+  const socialStatusOk =
+    socialOkHoje || (!passouHorarioSocial && ultimoPipelineRun?.status === "success");
 
   const ultimoTechLogDiretoria = techLogs
     .filter((l) => l.tipo === "relatorio_diretoria")
@@ -878,12 +853,20 @@ export default function StatusTecnico() {
       if (!max) return l.created_at;
       return l.created_at > max ? l.created_at : max;
     }, null);
+  const emailDiretoriaHoje =
+    (fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.relatorio_diretoria ?? 0) > 0;
+  const emailAgendaHoje =
+    (fluxoDados.find((f) => f.data === hojeIsoKpi)?.emails?.email_agenda_diaria ?? 0) > 0;
   const emailStatusDiretoriaOk =
-    !!emailUltimoDiretoria &&
-    (!ultimoTechLogDiretoria || emailUltimoDiretoria >= ultimoTechLogDiretoria);
+    emailDiretoriaHoje ||
+    (!passouHorarioSocial &&
+      !!emailUltimoDiretoria &&
+      (!ultimoTechLogDiretoria || emailUltimoDiretoria >= ultimoTechLogDiretoria));
   const emailStatusAgendaOk =
-    !!emailUltimoAgenda &&
-    (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda);
+    emailAgendaHoje ||
+    (!passouHorarioSocial &&
+      !!emailUltimoAgenda &&
+      (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda));
 
   const integracoesAtivasCount = [
     cdaStatusOk,
@@ -935,29 +918,26 @@ export default function StatusTecnico() {
   const alertas: Array<{ nivel: "erro" | "aviso"; msg: string }> = [];
   const vinteQuatroHoras = new Date();
   vinteQuatroHoras.setHours(vinteQuatroHoras.getHours() - 24);
-  const trintaSeisHoras = new Date();
-  trintaSeisHoras.setHours(trintaSeisHoras.getHours() - 36);
 
-  // ── Sync CDA (Casa de Apostas) ──
-  const syncLogsCda = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
+  // ── Sync CDA (Casa de Apostas) — Actions 4h BRT ──
+  const syncLogsCda = syncLogsCdaKpi;
   const ultimoSyncCdaOk = syncLogsCda.find((l) => l.status === "ok");
   const ultimoSyncCdaFalha = syncLogsCda.find((l) => l.status === "falha");
+  const cdaTeveHistorico = syncLogsCda.some((l) => l.status === "ok") || fluxoDados.some((f) => f.cda > 0);
   const taxaErroCda = syncLogsCda.length > 0
     ? ((syncLogsCda.filter((l) => l.status === "falha").length / syncLogsCda.length) * 100).toFixed(1)
     : "0";
 
   if (!ultimoSyncCdaOk && ultimoSyncCdaFalha) {
     alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA com sucesso" });
-  } else if (ultimoSyncCdaOk) {
-    const exec = new Date(ultimoSyncCdaOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Sync CDA atrasado" });
-    }
+  }
+  if (passouHorarioCda && !cdaOkHoje && cdaTeveHistorico) {
+    alertas.push({ nivel: "erro", msg: "Sync CDA não executou hoje (agendado 4h)" });
   }
   if (parseFloat(taxaErroCda) > 5) {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA (${taxaErroCda}%)` });
   }
-  if (registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
+  if (passouHorarioCda && registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
     alertas.push({ nivel: "aviso", msg: "Sync CDA sem dados recentes" });
   }
 
@@ -970,13 +950,8 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return ["instagram", "facebook", "youtube", "linkedin"].includes(l.tipo) && created >= vinteQuatroHoras;
   });
-  const ultimoPipelineOk = pipelineRuns.find((r) => r.status === "success");
-  const ontem = new Date();
-  ontem.setDate(ontem.getDate() - 1);
-  const anteontem = new Date();
-  anteontem.setDate(anteontem.getDate() - 2);
-  const ontemIso = ontem.toISOString().split("T")[0];
-  const anteontemIso = anteontem.toISOString().split("T")[0];
+  const ontemIso = subDiasIso(hojeIso, 1);
+  const anteontemIso = subDiasIso(hojeIso, 2);
   const socialTemDadosRecentes = fluxoDados.some((f) => (f.data === hojeIso || f.data === ontemIso || f.data === anteontemIso) && f.social > 0);
   const socialTeveDadosAntes = fluxoDados.some((f) => f.social > 0);
 
@@ -988,16 +963,10 @@ export default function StatusTecnico() {
     const canais = [...new Set(techLogsSocial24h.map((l) => l.tipo))].join(", ");
     alertas.push({ nivel: "erro", msg: `Sync Social Media com erro${canais ? ` (${canais})` : ""}` });
   }
-  if (socialTeveDadosAntes && !socialTemDadosRecentes) {
+  if (passouHorarioSocial && socialTeveDadosAntes && !socialOkHoje) {
+    alertas.push({ nivel: "erro", msg: "Sync Social Media não executou hoje (agendado 6h)" });
+  } else if (socialTeveDadosAntes && !socialTemDadosRecentes) {
     alertas.push({ nivel: "aviso", msg: "Sync Social Media sem dados recentes" });
-  }
-  if (ultimoPipelineOk) {
-    const exec = new Date(ultimoPipelineOk.created_at);
-    if (exec < trintaSeisHoras) {
-      alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
-    }
-  } else if (pipelineRuns.length > 0 && socialTeveDadosAntes) {
-    alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
   }
 
   // ── E-mail para diretoria ──
@@ -1005,14 +974,11 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return l.tipo === "relatorio_diretoria" && created >= vinteQuatroHoras;
   });
-  const emailEnviadoHojeDir =
-    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.relatorio_diretoria ?? 0) > 0;
-
   if (techLogsEmailDir24h.length > 0) {
     alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Relatório de Influencers (Resend)" });
   }
-  if (!emailEnviadoHojeDir) {
-    alertas.push({ nivel: "aviso", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje" });
+  if (passouHorarioSocial && !emailDiretoriaHoje) {
+    alertas.push({ nivel: "erro", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)" });
   }
 
   // ── E-mail agenda (operacional) ──
@@ -1020,31 +986,28 @@ export default function StatusTecnico() {
     const created = new Date(l.created_at);
     return l.tipo === "email_agenda_diaria" && created >= vinteQuatroHoras;
   });
-  const emailEnviadoHojeAgenda =
-    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.email_agenda_diaria ?? 0) > 0;
-
   if (techLogsEmailAgenda24h.length > 0) {
     alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Agenda do dia (Resend)" });
   }
-  if (!emailEnviadoHojeAgenda) {
-    alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
+  if (passouHorarioSocial && !emailAgendaHoje) {
+    alertas.push({ nivel: "erro", msg: "E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)" });
   }
 
-  // ── Ingest Spin na Rede (RSS) ──
-  const syncLogsSpinRss = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
+  // ── Ingest Spin na Rede (RSS) — Actions 6h BRT ──
+  const syncLogsSpinRss = syncLogsSpinRssKpi;
   const ultimoSyncSpinRssOk = syncLogsSpinRss.find((l) => l.status === "ok");
   const ultimoSyncSpinRssFalha = syncLogsSpinRss.find((l) => l.status === "falha");
+  const spinRssTeveHistorico =
+    syncLogsSpinRss.some((l) => l.status === "ok") || fluxoDados.some((f) => f.spinRss > 0);
   const taxaErroSpinRss = syncLogsSpinRss.length > 0
     ? ((syncLogsSpinRss.filter((l) => l.status === "falha").length / syncLogsSpinRss.length) * 100).toFixed(1)
     : "0";
 
   if (syncLogsSpinRss.length > 0 && !ultimoSyncSpinRssOk && ultimoSyncSpinRssFalha) {
     alertas.push({ nivel: "erro", msg: "Nenhum ingest Spin na Rede (RSS) com sucesso" });
-  } else if (ultimoSyncSpinRssOk) {
-    const exec = new Date(ultimoSyncSpinRssOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Ingest Spin na Rede (RSS) atrasada (> 24h sem execução OK)" });
-    }
+  }
+  if (passouHorarioSocial && spinRssTeveHistorico && !spinRssOkHoje) {
+    alertas.push({ nivel: "erro", msg: "Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)" });
   }
   if (parseFloat(taxaErroSpinRss) > 5 && syncLogsSpinRss.length > 0) {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no ingest Spin na Rede RSS (${taxaErroSpinRss}%)` });
@@ -1093,72 +1056,205 @@ export default function StatusTecnico() {
   }
 
   // Status por integração (última execução)
-  const statusPorIntegracao = integrations
-    .map((int) => {
-    const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
-    const ultimo = logsInt[0];
-    const syncsHoje = logsInt.filter((l) => l.executado_em?.startsWith(hojeIso));
-    const regsHoje = syncsHoje.reduce((s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0), 0);
-    // Se não teve sync hoje, usar último ok como fallback
-    const regsExibir = regsHoje || (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
-    let status: "ok" | "warning" | "falha" = "ok";
-    if (!ultimo) status = "falha";
-    else if (ultimo.status === "falha") status = "falha";
-    else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
-    const syncTipo =
-      int.slug === "casa_apostas"
-        ? ("cda" as const)
-        : int.slug === "spin_na_rede_rss"
-          ? ("spin_rss" as const)
-          : int.slug === "lobby_blaze"
-            ? ("lobby_blaze" as const)
-            : int.slug === "lobby_cda"
-              ? ("lobby_cda" as const)
-              : ("none" as const);
-    return {
-      ...int,
-      ultimoSync: ultimo?.executado_em ?? null,
-      registrosHoje: regsExibir,
-      erros: ultimo?.erros_count ?? 0,
-      status,
-      syncTipo,
-    };
-  });
+  const statusPorIntegracao = useMemo(
+    () =>
+      integrations.map((int) => {
+        const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
+        const ultimo = logsInt[0];
+        const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+        const regsHoje = syncsHoje.reduce((s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0), 0);
+        const regsExibir =
+          regsHoje || (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
+        let status: "ok" | "warning" | "falha" = "ok";
+        if (!ultimo) status = "falha";
+        else if (ultimo.status === "falha") status = "falha";
+        else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+        const syncTipo =
+          int.slug === "casa_apostas"
+            ? ("cda" as const)
+            : int.slug === "spin_na_rede_rss"
+              ? ("spin_rss" as const)
+              : int.slug === "lobby_blaze"
+                ? ("lobby_blaze" as const)
+                : int.slug === "lobby_cda"
+                  ? ("lobby_cda" as const)
+                  : ("none" as const);
+        return {
+          ...int,
+          ultimoSync: ultimo?.executado_em ?? null,
+          registrosHoje: regsExibir,
+          erros: ultimo?.erros_count ?? 0,
+          status,
+          syncTipo,
+        };
+      }),
+    [integrations, syncLogs, hojeIso],
+  );
 
-  // Linha Social Media KPIs — dados de pipeline_runs e fluxoDados
   const fluxoHojeSocial = fluxoDados.find((f) => f.data === hojeIso);
-  const socialKpisRow = {
-    slug: "social_kpis",
-    nome: "Social Media KPIs",
-    descricao: "ETL Instagram, Facebook, YouTube, LinkedIn",
-    ativo: true,
-    ultimoSync: ultimoPipelineRun?.created_at ?? null,
-    registrosHoje: fluxoHojeSocial?.social ?? 0,
-    erros: pipelineRuns.filter((r) => r.status === "error").length,
-    status: (ultimoPipelineRun?.status === "success" ? "ok" : ultimoPipelineRun?.status === "error" ? "falha" : "warning") as "ok" | "warning" | "falha",
-    syncTipo: "social" as const,
-  };
-  // Linha E-mail para diretoria — dados de email_envios e tech_logs
-  const emailDiretoriaRow = {
-    slug: "email_diretoria",
-    nome: "Enviar e-mail para diretoria",
-    ultimoSync: emailUltimoDiretoria,
-    registrosHoje: fluxoHojeSocial?.emails?.relatorio_diretoria ?? 0,
-    erros: techLogs.filter((l) => l.tipo === "relatorio_diretoria").length,
-    status: (emailStatusDiretoriaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
-    syncTipo: "email" as const,
-  };
-  const emailAgendaRow = {
-    slug: "email_agenda",
-    nome: "Enviar e-mail de Agenda",
-    ultimoSync: emailUltimoAgenda,
-    registrosHoje: fluxoHojeSocial?.emails?.email_agenda_diaria ?? 0,
-    erros: techLogs.filter((l) => l.tipo === "email_agenda_diaria").length,
-    status: (emailStatusAgendaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
-    syncTipo: "email_agenda" as const,
+
+  const socialKpisRow = useMemo(
+    () => ({
+      slug: "social_kpis",
+      nome: "Social Media KPIs",
+      descricao: "ETL Instagram, Facebook, YouTube, LinkedIn",
+      ativo: true,
+      ultimoSync: ultimoPipelineRun?.created_at ?? null,
+      registrosHoje: fluxoHojeSocial?.social ?? 0,
+      erros: pipelineRuns.filter((r) => r.status === "error").length,
+      status: (socialOkHoje || ultimoPipelineRun?.status === "success"
+        ? "ok"
+        : ultimoPipelineRun?.status === "error"
+          ? "falha"
+          : "warning") as "ok" | "warning" | "falha",
+      syncTipo: "social" as const,
+    }),
+    [ultimoPipelineRun, fluxoHojeSocial, pipelineRuns, socialOkHoje],
+  );
+
+  const emailDiretoriaRow = useMemo(
+    () => ({
+      slug: "email_diretoria",
+      nome: "Enviar e-mail para diretoria",
+      ultimoSync: emailUltimoDiretoria,
+      registrosHoje: fluxoHojeSocial?.emails?.relatorio_diretoria ?? 0,
+      erros: techLogs.filter((l) => l.tipo === "relatorio_diretoria").length,
+      status: (emailStatusDiretoriaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
+      syncTipo: "email" as const,
+    }),
+    [emailUltimoDiretoria, fluxoHojeSocial, techLogs, emailStatusDiretoriaOk],
+  );
+
+  const emailAgendaRow = useMemo(
+    () => ({
+      slug: "email_agenda",
+      nome: "Enviar e-mail de Agenda",
+      ultimoSync: emailUltimoAgenda,
+      registrosHoje: fluxoHojeSocial?.emails?.email_agenda_diaria ?? 0,
+      erros: techLogs.filter((l) => l.tipo === "email_agenda_diaria").length,
+      status: (emailStatusAgendaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
+      syncTipo: "email_agenda" as const,
+    }),
+    [emailUltimoAgenda, fluxoHojeSocial, techLogs, emailStatusAgendaOk],
+  );
+
+  const statusIntegracaoRank = (s: string | null | undefined) => {
+    if (s === "ok") return 0;
+    if (s === "warning") return 1;
+    if (s === "falha") return 2;
+    return 3;
   };
 
-  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
+  const linhasCompletasOrdenadas = useMemo(() => {
+    const arr = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
+    const { col, dir } = sortIntegracao;
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (col) {
+        case "integracao":
+          c = compareLocaleTexto(a.nome ?? "", b.nome ?? "", dir);
+          break;
+        case "ultimoSync": {
+          const ta = "ultimoSync" in a && a.ultimoSync ? String(a.ultimoSync) : "";
+          const tb = "ultimoSync" in b && b.ultimoSync ? String(b.ultimoSync) : "";
+          c = compareLocaleTexto(ta, tb, dir);
+          break;
+        }
+        case "registros":
+          c = compareNumber(
+            "registrosHoje" in a ? Number(a.registrosHoje) : 0,
+            "registrosHoje" in b ? Number(b.registrosHoje) : 0,
+            dir,
+          );
+          break;
+        case "erros":
+          c = compareNumber(
+            "erros" in a ? Number(a.erros) : 0,
+            "erros" in b ? Number(b.erros) : 0,
+            dir,
+          );
+          break;
+        case "status":
+          c = compareNumber(
+            statusIntegracaoRank("status" in a ? (a.status as string) : null),
+            statusIntegracaoRank("status" in b ? (b.status as string) : null),
+            dir,
+          );
+          break;
+        default:
+          c = 0;
+      }
+      if (c !== 0) return c;
+      return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
+    });
+    return arr;
+  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, sortIntegracao]);
+
+  const techLogsFiltrados = useMemo(() => {
+    const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
+    const desdeDisplay = new Date();
+    desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
+    return techLogs.filter((l) => new Date(l.created_at) >= desdeDisplay);
+  }, [techLogs, logFiltro]);
+
+  const labelIntegracaoLog = useCallback(
+    (log: TechLog) => {
+      if (log.integracao_slug) {
+        return (
+          integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
+          (log.integracao_slug === "spin_na_rede_rss"
+            ? "Spin na Rede (RSS)"
+            : log.integracao_slug === "lobby_blaze"
+              ? "Lobby Blaze"
+              : log.integracao_slug === "lobby_cda"
+                ? "Lobby Casa de Apostas"
+                : log.integracao_slug)
+        );
+      }
+      return (
+        {
+          instagram: "Social Media (Instagram)",
+          facebook: "Social Media (Facebook)",
+          youtube: "Social Media (YouTube)",
+          linkedin: "Social Media (LinkedIn)",
+          relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
+          email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
+          resend: "E-mail (Resend)",
+          spin_na_rede_rss: "Spin na Rede (RSS)",
+          lobby_blaze: "Lobby Blaze",
+          lobby_cda: "Lobby Casa de Apostas",
+        }[log.tipo] ?? log.tipo
+      );
+    },
+    [integrations],
+  );
+
+  const techLogsOrdenados = useMemo(() => {
+    const arr = [...techLogsFiltrados];
+    const { col, dir } = sortLog;
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (col) {
+        case "hora":
+          c = compareLocaleTexto(a.created_at, b.created_at, dir);
+          break;
+        case "integracao":
+          c = compareLocaleTexto(labelIntegracaoLog(a), labelIntegracaoLog(b), dir);
+          break;
+        case "tipo":
+          c = compareLocaleTexto(a.tipo, b.tipo, dir);
+          break;
+        case "descricao":
+          c = compareLocaleTexto(a.descricao, b.descricao, dir);
+          break;
+        default:
+          c = 0;
+      }
+      if (c !== 0) return c;
+      return compareLocaleTexto(b.created_at, a.created_at, "desc");
+    });
+    return arr;
+  }, [techLogsFiltrados, sortLog, labelIntegracaoLog]);
 
   const fluxoLabel = (k: string) =>
     ({
@@ -1276,61 +1372,92 @@ export default function StatusTecnico() {
     );
   }
 
+  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const kpiSkeletonStyle: CSSProperties = {
+    height: 28,
+    width: "65%",
+    borderRadius: 8,
+    background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+  };
+  const kpisConsolidados: { label: string; color: string; display: React.ReactNode }[] = [
+    {
+      label: "INTEGRAÇÕES ATIVAS",
+      color: corIntegracoes,
+      display: `${integracoesAtivasCount} / ${totalIntegracoes}`,
+    },
+    {
+      label: "ÚLTIMO SYNC",
+      color: BRAND.ciano,
+      display: ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca",
+    },
+    {
+      label: "REGISTROS HOJE",
+      color: BRAND.roxoVivo,
+      display: registrosHojeTotal.toLocaleString("pt-BR"),
+    },
+    {
+      label: "TAXA DE ERRO",
+      color: corTaxaErro,
+      display: `${taxaErro}%`,
+    },
+  ];
+
   return (
-    <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="app-page-shell">
 
-      {/* ── Header — padrão da plataforma ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: dashBrand.primaryIconBg,
-          border: dashBrand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: dashBrand.primaryIconColor, flexShrink: 0,
-        }}>
-          <MonitorCheck size={14} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: dashBrand.primary, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Status Técnico
-          </h1>
-          <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
-            Monitore integrações, alertas automáticos e sincronizações da plataforma.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<PageMenuIcon pageKey="status_tecnico" />}
+        title={getPageMenuLabel("status_tecnico")}
+        subtitle="Monitore integrações, alertas automáticos e sincronizações da plataforma."
+      />
 
-      {/* ── KPI Cards — accent bar ── */}
-      <div className="app-grid-kpi-4" style={{ gap: 16 }}>
-        <StatusKpiCard
-          label="Integrações Ativas"
-          loading={loading}
-          accentColor={corIntegracoes}
-          value={<span style={{ color: corIntegracoes }}>{integracoesAtivasCount} / {totalIntegracoes}</span>}
-        />
-        <StatusKpiCard
-          label="Último Sync"
-          loading={loading}
-          accentColor={BRAND.ciano}
-          value={<span style={{ fontSize: 20, fontWeight: 700 }}>{ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}</span>}
-        />
-        <StatusKpiCard
-          label="Registros Hoje"
-          loading={loading}
-          accentColor={BRAND.roxoVivo}
-          value={<span style={{ color: BRAND.roxoVivo }}>{registrosHojeTotal.toLocaleString("pt-BR")}</span>}
-        />
-        <StatusKpiCard
-          label="Taxa de Erro"
-          loading={loading}
-          accentColor={corTaxaErro}
-          value={<span style={{ color: corTaxaErro }}>{taxaErro}%</span>}
-        />
+      <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+        {kpisConsolidados.map((k) => (
+          <div
+            key={k.label}
+            aria-label={loading ? k.label : `${k.label}: ${k.display}`}
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${k.color}`,
+              background: dashBrand.blockBg,
+              padding: "16px 18px",
+              boxShadow: cardShadow,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              {k.label}
+            </div>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: k.color,
+                fontFamily: FONT_TITLE,
+                marginTop: 6,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {loading ? <div style={kpiSkeletonStyle} aria-hidden /> : k.display}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Status das Integrações ── */}
-      <div style={card}>
-        <StatusSectionTitle icon={<Activity size={14} aria-hidden="true" />}>Status das Integrações</StatusSectionTitle>
+      <div style={pageBox}>
+        <SectionTitle>Status das Integrações</SectionTitle>
         {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
@@ -1370,21 +1497,90 @@ export default function StatusTecnico() {
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
-          <div className="app-table-wrap">
-            <table style={{
-              width: "100%", borderCollapse: "separate", borderSpacing: 0,
-              borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}`,
-            }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Status das integrações de dados</caption>
               <thead>
                 <tr>
-                  {["Integração", "Último Sync", "Registros Hoje", "Erros", "Status", ...(mostrarColunaAcao ? ["Ação"] : [])].map((h) => (
-                    <th key={h} scope="col" style={{ ...getThStyle(t), textAlign: "left" }}>{h}</th>
-                  ))}
+                  <SortTableTh<IntegracaoSortCol>
+                    label="Integração"
+                    col="integracao"
+                    sortCol={sortIntegracao.col}
+                    sortDir={sortIntegracao.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortIntegracao((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<IntegracaoSortCol>
+                    label="Último Sync"
+                    col="ultimoSync"
+                    sortCol={sortIntegracao.col}
+                    sortDir={sortIntegracao.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortIntegracao((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<IntegracaoSortCol>
+                    label="Registros Hoje"
+                    col="registros"
+                    sortCol={sortIntegracao.col}
+                    sortDir={sortIntegracao.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortIntegracao((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<IntegracaoSortCol>
+                    label="Erros"
+                    col="erros"
+                    sortCol={sortIntegracao.col}
+                    sortDir={sortIntegracao.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortIntegracao((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<IntegracaoSortCol>
+                    label="Status"
+                    col="status"
+                    sortCol={sortIntegracao.col}
+                    sortDir={sortIntegracao.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortIntegracao((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  {mostrarColunaAcao && (
+                    <th scope="col" style={dataTable.thHeader}>
+                      Ação
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {linhasCompletas.map((row, idx) => {
+                {linhasCompletasOrdenadas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
                   const isSpinRss = row.syncTipo === "spin_rss";
@@ -1403,7 +1599,7 @@ export default function StatusTecnico() {
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
                   const status = "status" in row ? row.status : null;
-                  const zebra = zebraStripe(idx);
+                  const zebra = dataTable.zebraRow(idx);
                   return (
                     <tr
                       key={row.slug}
@@ -1415,13 +1611,11 @@ export default function StatusTecnico() {
                         e.currentTarget.style.background = zebra;
                       }}
                     >
-                      <td style={getTdStyle(t)}>
-                        {row.nome}
-                      </td>
-                      <td style={getTdStyle(t)}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
-                      <td style={getTdStyle(t)}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
-                      <td style={getTdStyle(t)}>{erros as number}</td>
-                      <td style={getTdStyle(t)}>
+                      <td style={dataTable.tdCenter}>{row.nome}</td>
+                      <td style={dataTable.tdCenter}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
+                      <td style={dataTable.tdCenter}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{erros as number}</td>
+                      <td style={dataTable.tdCenter}>
                         {status && (
                           <span style={{
                             display: "inline-flex", alignItems: "center", gap: 6,
@@ -1438,7 +1632,7 @@ export default function StatusTecnico() {
                         )}
                       </td>
                       {mostrarColunaAcao && (
-                      <td style={getTdStyle(t)}>
+                      <td style={dataTable.tdCenter}>
                         {(isLobbyBlaze || isLobbyCda) && (
                           <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
                         )}
@@ -1491,9 +1685,8 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Fluxo de Dados — sem legenda textual (#5 + remoção legenda) */}
-      <div style={card}>
-        <StatusSectionTitle icon={<BarChart2 size={14} aria-hidden="true" />}>Fluxo de Dados (últimos 14 dias)</StatusSectionTitle>
+      <div style={pageBox}>
+        <SectionTitle sub="últimos 14 dias">Fluxo de Dados</SectionTitle>
 
         {/* Legenda visual compacta — sem texto explicativo de escala */}
         <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
@@ -1534,7 +1727,7 @@ export default function StatusTecnico() {
                   onMouseLeave={() => setFluxoHover(null)}
                 >
                   <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: fluxoLabelNarrow ? 80 : 100, flexShrink: 0 }}>
-                    {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                    {fmtDataBrasilCurta(f.data)}
                   </span>
                   <div style={{ flex: 1, height: 24, background: t.cardBorder, borderRadius: 6, overflow: "hidden", display: "flex" }}>
                     {f.cda > 0 && (
@@ -1616,9 +1809,8 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Alertas — hierarquia erro vs aviso (#4, #8) */}
-      <div style={card}>
-        <StatusSectionTitle icon={<Bell size={14} aria-hidden="true" />}>Alertas</StatusSectionTitle>
+      <div style={pageBox}>
+        <SectionTitle>Alertas</SectionTitle>
         {alertas.length === 0 ? (
           <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
@@ -1656,11 +1848,19 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Logs Recentes */}
-      <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 4 }}>
-          <StatusSectionTitle icon={<FileText size={14} aria-hidden="true" />}>Logs Recentes</StatusSectionTitle>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div style={pageBox}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact>Logs Recentes</SectionTitle>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(["1h", "24h", "48h"] as const).map((f) => {
               const ativo = logFiltro === f;
               const chip = tabAtivaPrincipalStyle(ativo, t.cardBorder, t.inputBg ?? t.bg);
@@ -1692,80 +1892,117 @@ export default function StatusTecnico() {
 
         {loading ? (
           <StatusTecnicoLoadingBlock />
-        ) : (() => {
-          const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
-          const desdeDisplay = new Date(); desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
-          const techLogsFiltrados = techLogs.filter((l) => new Date(l.created_at) >= desdeDisplay);
-          return techLogsFiltrados.length === 0 ? (
-            <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Nenhum log de erro no período.</p>
-          ) : (
-            <div className="app-table-wrap">
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-                <caption style={{ display: "none" }}>Logs de erro recentes das integrações</caption>
-                <thead>
-                  <tr>
-                    {["Hora", "Integração", "Tipo", "Descrição"].map((h) => (
-                      <th key={h} scope="col" style={getThStyle(t)}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {techLogsFiltrados.map((log, idx) => {
-                    const integracaoLabel =
-                      log.integracao_slug
-                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
-                          (log.integracao_slug === "spin_na_rede_rss"
-                            ? "Spin na Rede (RSS)"
-                            : log.integracao_slug === "lobby_blaze"
-                              ? "Lobby Blaze"
-                              : log.integracao_slug === "lobby_cda"
-                                ? "Lobby Casa de Apostas"
-                                : log.integracao_slug)
-                        : {
-                            instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
-                            youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
-                            relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
-                            email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
-                            resend: "E-mail (Resend)",
-                            spin_na_rede_rss: "Spin na Rede (RSS)",
-                            lobby_blaze: "Lobby Blaze",
-                            lobby_cda: "Lobby Casa de Apostas",
-                          }[log.tipo] ?? log.tipo;
-                    const zebra = zebraStripe(idx);
-                    return (
-                      <tr
-                        key={log.id}
-                        style={{ background: zebra }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = zebra;
-                        }}
-                      >
-                        <td style={getTdStyle(t)}>{formatarHora(log.created_at)}</td>
-                        <td style={getTdStyle(t)}>{integracaoLabel}</td>
-                        <td style={getTdStyle(t)}>
-                          <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{log.tipo}</code>
-                        </td>
-                        <td style={getTdStyle(t)}>{log.descricao}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
+        ) : techLogsFiltrados.length === 0 ? (
+          <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Nenhum log de erro no período.</p>
+        ) : (
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
+              <caption style={{ display: "none" }}>Logs de erro recentes das integrações</caption>
+              <thead>
+                <tr>
+                  <SortTableTh<LogSortCol>
+                    label="Hora"
+                    col="hora"
+                    sortCol={sortLog.col}
+                    sortDir={sortLog.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortLog((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<LogSortCol>
+                    label="Integração"
+                    col="integracao"
+                    sortCol={sortLog.col}
+                    sortDir={sortLog.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortLog((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<LogSortCol>
+                    label="Tipo"
+                    col="tipo"
+                    sortCol={sortLog.col}
+                    sortDir={sortLog.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortLog((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<LogSortCol>
+                    label="Descrição"
+                    col="descricao"
+                    sortCol={sortLog.col}
+                    sortDir={sortLog.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(c) =>
+                      setSortLog((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {techLogsOrdenados.map((log, idx) => {
+                  const integracaoLabel = labelIntegracaoLog(log);
+                  const zebra = dataTable.zebraRow(idx);
+                  return (
+                    <tr
+                      key={log.id}
+                      style={{ background: zebra }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebra;
+                      }}
+                    >
+                      <td style={dataTable.tdCenter}>{formatarHora(log.created_at)}</td>
+                      <td style={dataTable.tdCenter}>{integracaoLabel}</td>
+                      <td style={dataTable.tdCenter}>
+                        <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{log.tipo}</code>
+                      </td>
+                      <td style={dataTable.tdCenter}>{log.descricao}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Redes permitidas — check-in de prestadores */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <StatusSectionTitle icon={<Network size={14} aria-hidden="true" />}>
-            Redes permitidas — check-in de prestadores
-          </StatusSectionTitle>
-          {perm.canEditarOk && (
+      <div style={pageBox}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="check-in de prestadores">
+            Redes permitidas
+          </SectionTitle>
+          {perm.canEditarOk ? (
             <CtaCriarButton
               type="button"
               onClick={() => {
@@ -1775,12 +2012,11 @@ export default function StatusTecnico() {
                 setModalCidrAdicionar(true);
               }}
               disabledBackground={BRAND.cinza}
-              style={{ marginBottom: 20 }}
               aria-label="Nova Rede"
             >
               Nova Rede
             </CtaCriarButton>
-          )}
+          ) : null}
         </div>
         {loading ? (
           <StatusTecnicoLoadingBlock />
@@ -1854,97 +2090,57 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Configuração de Alertas */}
-      <div style={card}>
-        <StatusSectionTitle icon={<AlertTriangle size={14} aria-hidden="true" />}>Configuração de Alertas</StatusSectionTitle>
-        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16, marginTop: -12 }}>
-          Condições monitoradas automaticamente. Edição futura via administração.
-        </p>
+      <div style={pageBox}>
+        <SectionTitle sub="Condições monitoradas automaticamente">
+          Configuração de Alertas
+        </SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
-          <div className="app-table-wrap">
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden" }}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Condições monitoradas para alertas automáticos</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={getThStyle(t)}>Alerta</th>
-                  <th scope="col" style={getThStyle(t)}>Condição</th>
+                  <th scope="col" style={dataTable.thHeader}>Alerta</th>
+                  <th scope="col" style={dataTable.thHeader}>Condição</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style={getTdStyle(t)}>Nenhum Sync CDA com sucesso</td>
-                  <td style={getTdStyle(t)}>Último sync com falha, nenhum OK</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Sync CDA atrasado</td>
-                  <td style={getTdStyle(t)}>&gt; 24h sem sync OK</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Taxa de erro alta no Sync CDA</td>
-                  <td style={getTdStyle(t)}>&gt; 5%</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Sync CDA sem dados recentes</td>
-                  <td style={getTdStyle(t)}>Nenhum registro hoje (com histórico)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Erro no Sync Social Media</td>
-                  <td style={getTdStyle(t)}>pipeline_runs status=error (24h)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Sync Social Media com erro</td>
-                  <td style={getTdStyle(t)}>tech_logs canal (24h)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Sync Social Media sem dados recentes</td>
-                  <td style={getTdStyle(t)}>Sem kpi_daily em 3 dias (com histórico)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Sync Social Media atrasado</td>
-                  <td style={getTdStyle(t)}>&gt; 36h sem pipeline success</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Erro ao enviar E-mail - Relatório de Influencers (Resend)</td>
-                  <td style={getTdStyle(t)}>tech_logs relatorio_diretoria (24h)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
-                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo relatorio_diretoria)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Erro ao enviar E-mail - Agenda do dia (Resend)</td>
-                  <td style={getTdStyle(t)}>tech_logs email_agenda_diaria (24h)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
-                  <td style={getTdStyle(t)}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Nenhum ingest Spin na Rede (RSS) com sucesso</td>
-                  <td style={getTdStyle(t)}>Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Ingest Spin na Rede (RSS) atrasada</td>
-                  <td style={getTdStyle(t)}>&gt; 24h sem sync_logs OK</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Taxa de erro alta no ingest Spin na Rede RSS</td>
-                  <td style={getTdStyle(t)}>&gt; 5% em sync_logs (slug spin_na_rede_rss)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Nenhuma coleta Lobby Blaze com sucesso</td>
-                  <td style={getTdStyle(t)}>Último sync_logs com falha, nenhum OK (slug lobby_blaze)</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Coleta Lobby Blaze atrasada</td>
-                  <td style={getTdStyle(t)}>&gt; 24h sem sync_logs OK</td>
-                </tr>
-                <tr>
-                  <td style={getTdStyle(t)}>Taxa de erro alta no Lobby Blaze</td>
-                  <td style={getTdStyle(t)}>&gt; 5% em sync_logs (slug lobby_blaze)</td>
-                </tr>
+                {[
+                  ["Nenhum Sync CDA com sucesso", "Último sync com falha, nenhum OK"],
+                  ["Sync CDA não executou hoje (agendado 4h)", "Após 4h BRT, sem sync_logs OK na data civil de hoje (SP)"],
+                  ["Taxa de erro alta no Sync CDA", "> 5%"],
+                  ["Sync CDA sem dados recentes", "Nenhum registro hoje (com histórico)"],
+                  ["Erro no Sync Social Media", "pipeline_runs status=error (24h)"],
+                  ["Sync Social Media com erro", "tech_logs canal (24h)"],
+                  ["Sync Social Media sem dados recentes", "Sem kpi_daily em 3 dias (com histórico)"],
+                  ["Sync Social Media não executou hoje (agendado 6h)", "Após 6h BRT, sem pipeline_runs success na data de hoje (SP)"],
+                  ["Erro ao enviar E-mail - Relatório de Influencers (Resend)", "tech_logs relatorio_diretoria (24h)"],
+                  ["E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo relatorio_diretoria)"],
+                  ["Erro ao enviar E-mail - Agenda do dia (Resend)", "tech_logs email_agenda_diaria (24h)"],
+                  ["E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo email_agenda_diaria)"],
+                  ["Nenhum ingest Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
+                  ["Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
+                  ["Taxa de erro alta no ingest Spin na Rede RSS", "> 5% em sync_logs (slug spin_na_rede_rss)"],
+                  ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
+                  ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
+                  ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
+                ].map(([alerta, condicao], idx) => (
+                  <tr
+                    key={alerta}
+                    style={{ background: dataTable.zebraRow(idx) }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = dataTable.zebraRow(idx);
+                    }}
+                  >
+                    <td style={dataTable.tdCenter}>{alerta}</td>
+                    <td style={dataTable.tdCenter}>{condicao}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

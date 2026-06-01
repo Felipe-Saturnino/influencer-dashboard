@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
@@ -18,7 +19,7 @@ import {
   FiltroInfluencerSelect,
   FiltroModoVisualizacaoSelect,
 } from "../../../components/dashboard";
-import { CalendarRange, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
@@ -28,7 +29,11 @@ import {
   FiltroOperadoraSelect,
   FiltroPlataformaSemanticoPill,
   FiltroStatusSemanticoPill,
+  SectionTitle,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -173,14 +178,7 @@ export default function Agenda() {
   }
 
 
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: cardShadow,
-  };
+  const contentBox = getPageContentBoxStyle(brand, t);
 
   const calendarViewProps = {
     current,
@@ -222,16 +220,15 @@ export default function Agenda() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<CalendarRange size={14} aria-hidden="true" />}
-        title="Agenda"
-        subtitle="Visualize, agende e acompanhe as lives dos influencers."
+        icon={<PageMenuIcon pageKey="agenda" />}
+        title={getPageMenuLabel("agenda")}
+        subtitle={getPageCanonicalSubtitle("agenda")}
         brand={brand}
         t={t}
       />
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={getFilterBarWrapperStyle(brand)}>
+      <div style={getFilterBarWrapperStyle(brand, t)}>
           <div style={getFilterBarRowStyle()}>
             <button
               type="button"
@@ -326,12 +323,23 @@ export default function Agenda() {
             )}
           </div>
         </div>
-      </div>
 
       {/* ── CALENDÁRIO ── */}
-      <div style={card}>
-        {perm.canCriarOk && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div style={contentBox}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Data e hora das lives dos influencers">
+            Calendário
+          </SectionTitle>
+          {perm.canCriarOk && (
             <CtaCriarButton
               onClick={() => void tentarAbrirNovaLive()}
               loading={checandoNovaLive}
@@ -339,8 +347,8 @@ export default function Agenda() {
             >
               Nova Live
             </CtaCriarButton>
-          </div>
-        )}
+          )}
+        </div>
         {loading ? (
           <div
             role="status"

@@ -1,19 +1,23 @@
 import { useState, Suspense, lazy } from "react";
-import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Tv, Wallet } from "lucide-react";
+import { BarChart2, ChevronLeft, ChevronRight, Clock, GitCompare, Loader2, Wallet } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
+  DashboardPageHeader,
   FiltroBarTabButton,
   FiltroHistoricoButton,
   FiltroInfluencerSelect,
   FiltroOperadoraSelect,
 } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -49,15 +53,7 @@ function StreamersFiltrosEUAbas({
   const tabIds: StreamersTab[] = ["overview", "conversao", "financeiro"];
 
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-        }}
-      >
+    <div style={getPageFilterBoxStyle(brand, t)}>
         <div
           style={{
             display: "flex",
@@ -153,7 +149,6 @@ function StreamersFiltrosEUAbas({
             );
           })}
         </div>
-      </div>
     </div>
   );
 }
@@ -167,44 +162,13 @@ function StreamersAutorizado() {
     <StreamersFiltrosProvider>
       <div style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
         <div className="app-page-shell" style={{ paddingBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 8,
-                  background: brand.primaryIconBg,
-                  border: brand.primaryIconBorder,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  color: brand.primaryIconColor,
-                }}
-              >
-                <Tv size={14} aria-hidden="true" />
-              </div>
-              <div>
-                <h1
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: brand.primary,
-                    fontFamily: FONT_TITLE,
-                    margin: 0,
-                    letterSpacing: "0.5px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Streamers
-                </h1>
-                <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-                  Acompanhe performance, conversão e financeiro do canal de influencers.
-                </p>
-              </div>
-            </div>
-          </div>
+          <DashboardPageHeader
+            icon={<PageMenuIcon pageKey="streamers" />}
+            title={getPageMenuLabel("streamers")}
+            subtitle={getPageCanonicalSubtitle("streamers")}
+            brand={brand}
+            t={t}
+          />
 
           <StreamersFiltrosEUAbas aba={aba} setAba={setAba} />
         </div>

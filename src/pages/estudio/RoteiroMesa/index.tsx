@@ -6,10 +6,12 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2, NotebookPen } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
@@ -17,6 +19,7 @@ import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
   return !!role && ROLES_STAFF_OPERACOES_LIVES.includes(role as Role);
@@ -1081,14 +1084,13 @@ export default function RoteiroMesa() {
       ) : null}
 
       <PageHeader
-        icon={<NotebookPen size={14} aria-hidden />}
-        title="Roteiro de Mesa"
+        icon={<PageMenuIcon pageKey="roteiro_mesa" />}
+        title={getPageMenuLabel("roteiro_mesa")}
         subtitle="Scripts e orientações de live por operadora para o dealer usar em mesa."
       />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
           <div
             style={{
@@ -1168,7 +1170,6 @@ export default function RoteiroMesa() {
             />
           ) : null}
           </div>
-        </div>
       </div>
 
       {/* ── ESTADO: SEM OPERADORA ── */}

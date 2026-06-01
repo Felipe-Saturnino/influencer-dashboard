@@ -8,6 +8,9 @@ import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
 import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { PageHeader } from "../../../components/PageHeader";
+import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -122,7 +125,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Alcance — Orgânico por Canal",
         texto:
-          "Apresenta quatro KPIs de alcance orgânico (Postagens, Seguidores Totais, Impressões Totais, Engajamento Médio) com comparativo ao mês anterior (ou subtítulo \"acumulado\" no Histórico).\n\nOs cards por canal (Instagram, Facebook, YouTube) detalham as métricas individuais de cada plataforma — seguidores, alcance, impressões, engajamento e taxa de engajamento.\n\nEngajamento por formato mostra a distribuição das postagens por tipo (Reels, Foto, Vídeo, Carrossel, etc.).\n\nPostagens recentes exibe o carrossel com até cinco publicações visíveis por vez no período — use as setas ou a paginação (ex.: \"1–5 / 12\") para percorrer o restante. Clique no título da postagem para abrir o link original na plataforma.",
+          "Apresenta quatro KPIs de alcance orgânico (Postagens, Novos Seguidores, Impressões Totais, Engajamento Médio) com comparativo ao mês anterior (ou subtítulo \"acumulado\" no Histórico).\n\nOs cards por canal (Instagram, Facebook, YouTube) detalham as métricas individuais de cada plataforma — seguidores, alcance, impressões, engajamento e taxa de engajamento.\n\nEngajamento por formato mostra a distribuição das postagens por tipo (Reels, Foto, Vídeo, Carrossel, etc.).\n\nPostagens recentes exibe o carrossel com até cinco publicações visíveis por vez no período — use as setas ou a paginação (ex.: \"1–5 / 12\") para percorrer o restante. Clique no título da postagem para abrir o link original na plataforma.",
       },
     ],
   },
@@ -180,7 +183,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Criando uma Nova Live",
         texto:
-          "Clique em Nova Live para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando...\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
+          "No bloco **Calendário** (subtítulo *Data e hora das lives dos influencers*), use **Nova Live** no canto direito da mesma linha do título para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando...\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
       },
       {
         subtitulo: "Restrições de Data e Permissão",
@@ -433,7 +436,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Consolidado",
         texto:
-          "Use os filtros de operadora, categoria e tamanho para restringir o inventário visualizado. O painel Consolidado exibe em tempo real a contagem de peças por status: disponíveis (verde), emprestadas (amarelo), fixas (azul) e em manutenção (roxo). Esses números refletem os filtros ativos.",
+          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de secção) reúne operadora, categoria, tamanho, pesquisa, bipagem e abas de status.",
       },
       {
         subtitulo: "Abas de Inventário",
@@ -588,6 +591,30 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       },
     ],
   },
+  informativos: {
+    titulo: "Informativos",
+    blocos: [
+      {
+        texto:
+          "A página Informativos permite criar avisos direcionados a um ou mais perfis da plataforma. O conteúdo publicado é exibido na Home dos utilizadores cujo perfil foi selecionado na postagem.",
+      },
+      {
+        subtitulo: "Aba Informativos",
+        texto:
+          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (todo o período) e busca por palavras-chave no assunto ou na descrição.",
+      },
+      {
+        subtitulo: "Gerenciamento de Informativos",
+        texto:
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro utilizador.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Ver, criar, editar e excluir são configurados em Gestão de Usuários para a página Informativos. Sem permissão de visualização, a página não aparece no menu.",
+      },
+    ],
+  },
   rh_portal: {
     titulo: "Portal de RH",
     blocos: [
@@ -642,12 +669,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Solicitações",
         texto:
-          "A tabela de Solicitações lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão Solicitar Banca (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
+          "No bloco **Solicitações** (título de secção padrão), a tabela lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão **Solicitar Banca** na mesma linha do título (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
       },
       {
         subtitulo: "Consolidado de Bancas",
         texto:
-          "Lista todos os influencers com ao menos uma solicitação no período. Clique em qualquer linha para expandir o histórico de bancas daquele influencer com datas, valores e status de cada transação.\n\nA coluna Status da Conta indica se a conta do influencer na operadora está Liberada ou Bloqueada. Perfis de gestão podem alterar o status diretamente clicando no badge — o modal exibe uma recomendação de manter a conta Bloqueada durante ações ativas para evitar saques indevidos.",
+          "No bloco **Consolidado de bancas**, a busca por nome ou e-mail fica logo abaixo do título. A tabela lista todos os influencers com ao menos uma solicitação no período. Clique em qualquer linha para expandir o histórico de bancas daquele influencer com datas, valores e status de cada transação.\n\nA coluna Status da Conta indica se a conta do influencer na operadora está Liberada ou Bloqueada. Perfis de gestão podem alterar o status diretamente clicando no badge — o modal exibe uma recomendação de manter a conta Bloqueada durante ações ativas para evitar saques indevidos.",
       },
     ],
   },
@@ -739,12 +766,12 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs",
         texto:
-          "Três indicadores resumem o período selecionado:\n\n— Total pago: soma dos pagamentos com status Pago\n— Pendente: soma dos pagamentos Em análise ou Aguardando pagamento\n— Total de horas realizadas: horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
+          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguardando pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",
         texto:
-          "Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
+          "O bloco **Ciclo de pagamento** (título de secção padrão) reúne o seletor de ciclo, ações e a tabela. Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
       },
       {
         subtitulo: "Pagamento de Agente",
@@ -754,7 +781,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Consolidado de Influencers",
         texto:
-          "Lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado. A busca por nome ou e-mail filtra a lista instantaneamente.",
+          "No bloco **Consolidado de influencers**, a busca por nome ou e-mail fica logo abaixo do título. A tabela lista todos os influencers com ao menos um pagamento no período. Clique em qualquer linha para expandir o histórico dos últimos 12 ciclos daquele influencer.\n\nAs colunas Total Pago, Total Horas, Pendente e Último Pagamento resumem o desempenho financeiro no recorte de tempo selecionado.",
       },
     ],
   },
@@ -768,7 +795,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Indicadores de Resumo",
         texto:
-          "Os três cards no topo mostram o total de campanhas cadastradas, quantas estão ativas e quantas estão inativas. Os valores se atualizam imediatamente após qualquer criação, edição ou exclusão.",
+          "Três cards no topo (formato Financeiro/Banca de Jogo — rótulo em caixa alta acima do valor): **TOTAL**, **ATIVAS** e **INATIVAS**. Os valores se atualizam imediatamente após qualquer criação, edição ou exclusão.",
       },
       {
         subtitulo: "Tabela de Campanhas",
@@ -778,7 +805,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Criando uma Campanha",
         texto:
-          "Clique em Nova Campanha (botão pill com ícone +) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+          "No bloco **Campanhas cadastradas**, use **Nova Campanha** na mesma linha do título (ícone + no padrão de criação) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
       },
     ],
   },
@@ -816,7 +843,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "O filtro de operadora no topo permite visualizar mesas de uma operadora específica ou de todas simultaneamente (**Todas Operadoras**). A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro ativo. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
@@ -1506,6 +1533,21 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       },
     ],
   },
+  informativos: {
+    titulo: "Informativos",
+    blocos: [
+      {
+        subtitulo: "Não vejo a aba Gerenciamento de Informativos?",
+        texto:
+          "A aba só aparece para utilizadores com permissão de Editar em Informativos na Gestão de Usuários. Peça ao administrador para liberar Ver e Editar (e Criar/Excluir, se necessário).",
+      },
+      {
+        subtitulo: "Publiquei um informativo mas não aparece na Home?",
+        texto:
+          "Confirme que o status está Publicado e que o perfil do utilizador foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
+      },
+    ],
+  },
   rh_portal: {
     titulo: "Portal de RH",
     blocos: [
@@ -1916,37 +1958,11 @@ export default function Ajuda() {
   return (
     <div className="app-page-shell" style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-        <span style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: brand.primaryIconColor,
-          flexShrink: 0,
-        }}>
-          <HelpCircle size={14} aria-hidden="true" />
-        </span>
-        <h1 style={{
-          fontSize: 22,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT_TITLE,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          margin: 0,
-        }}>
-          Ajuda
-        </h1>
-      </div>
-
-      <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 24px 40px" }}>
-        Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.
-      </p>
+      <PageHeader
+        icon={<HelpCircle {...PAGE_HEADER_ICON_PROPS} />}
+        title="Ajuda"
+        subtitle={getPageCanonicalSubtitle("ajuda")}
+      />
 
       <div
         role="tablist"

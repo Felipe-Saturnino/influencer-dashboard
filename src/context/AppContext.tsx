@@ -37,6 +37,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "escala_solicitacoes",
   "rh_central_denuncias",
   "rh_portal",
+  "informativos",
   "configuracoes", "ajuda",
 ];
 
@@ -60,12 +61,14 @@ export interface EscoposVisiveis {
   prestadorTiposVisiveis?: string[];
 }
 
-/** Brand da operadora (operador): logo, fonte e fundo (hex); demais cores via CSS vars --brand-* */
+/** Brand da operadora (operador): logo, fonte, fundo e template de Home */
 export interface OperadoraBrand {
-  nome:      string | null;
-  logo_url:  string | null;
-  font_url:  string | null;
-  brand_bg:  string | null;
+  nome:           string | null;
+  logo_url:       string | null;
+  font_url:       string | null;
+  brand_bg:       string | null;
+  /** Chave do template de Home (`default` / null = Home Operador Padrão). */
+  home_template:  string | null;
 }
 
 interface AppContextValue {
@@ -87,6 +90,8 @@ interface AppContextValue {
   podeVerOperadora: (slug: string) => boolean;
   /** Brand da operadora (operador): logo_url para Sidebar; cores via --brand-* */
   operadoraBrand: OperadoraBrand | null;
+  /** Operador: true após carregar cadastro da operadora do escopo (template de Home + brand). */
+  operadoraHomeReady: boolean;
   // Theme
   theme:    Theme;
   isDark:   boolean;
@@ -382,6 +387,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
   const [operadoraBrand, setOperadoraBrand] = useState<OperadoraBrand | null>(null);
+  const [operadoraHomeReady, setOperadoraHomeReady] = useState(true);
   const [brandRefreshKey, setBrandRefreshKey] = useState(0);
 
   // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
@@ -401,19 +407,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
   }, [effectiveIsDark]);
 
-  // Brandguide: operador vê cores e logo da operadora; demais roles usam default
+  // Brandguide + template de Home: operador vê identidade da operadora do escopo
   useEffect(() => {
     if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
       aplicarBrandguideReset();
       setOperadoraBrand(null);
+      setOperadoraHomeReady(true);
       return;
     }
     const slug = escoposVisiveis.operadorasVisiveis[0];
+    let cancelled = false;
+    setOperadoraHomeReady(false);
     void (async () => {
       try {
         const { data } = await supabase.from("operadoras").select(
-          "nome, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url"
+          "nome, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url, home_template"
         ).eq("slug", slug).single();
+        if (cancelled) return;
         const hasBrand = !!(
           data?.brand_action || data?.brand_contrast || data?.brand_bg || data?.brand_text
           || (data?.logo_url ?? "").trim()
@@ -427,12 +437,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const logo = (data?.logo_url ?? "").trim() || null;
         const font = (data?.font_url ?? "").trim() || null;
         const bg = (data?.brand_bg ?? "").trim() || null;
-        setOperadoraBrand({ nome, logo_url: logo, font_url: font, brand_bg: bg });
+        const homeTemplate = (data?.home_template ?? "").trim() || null;
+        setOperadoraBrand({ nome, logo_url: logo, font_url: font, brand_bg: bg, home_template: homeTemplate });
       } catch {
-        aplicarBrandguideReset();
-        setOperadoraBrand(null);
+        if (!cancelled) {
+          aplicarBrandguideReset();
+          setOperadoraBrand(null);
+        }
+      } finally {
+        if (!cancelled) setOperadoraHomeReady(true);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
   // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
@@ -546,6 +564,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setEscoposVisiveis(ESCOPOS_VAZIOS);
       setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
       setOperadoraBrand(null);
+      setOperadoraHomeReady(true);
       setActivePage("home");
     });
     return () => subscription.unsubscribe();
@@ -578,6 +597,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       permissions, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,
       operadoraBrand,
+      operadoraHomeReady,
       theme, isDark: effectiveIsDark, setIsDark: setTheme,
     }}>
       {children}

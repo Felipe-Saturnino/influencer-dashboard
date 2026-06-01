@@ -23,5 +23,6 @@ export const PAGE_SEARCH = {
   organograma: `Buscar por Prestador, Gerência ou Time${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   denuncias: `Buscar por palavras-chaves no relato${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   portalRh: `Buscar por palavras-chaves na postagem${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  informativos: `Buscar por palavras-chave no informativo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   glossario: `Buscar por termo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
 } as const;

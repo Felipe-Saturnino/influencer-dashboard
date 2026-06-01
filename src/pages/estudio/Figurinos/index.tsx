@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Shirt, Trash2, Wrench, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Trash2, Wrench, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -7,11 +7,15 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
@@ -25,6 +29,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
+import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
@@ -63,12 +68,9 @@ const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
   discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
-const SECTION_LABEL_STYLE: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  margin: 0,
-};
+function tableRowHoverBg(isDark: boolean): string {
+  return isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+}
 
 function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
@@ -87,6 +89,13 @@ function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
+}
+
+/** Nome exibido na coluna «Emprestado para» — primeiro e último token. */
+function labelEmprestadoParaTabela(emp: RhFigurinoEmprestimo | undefined): string {
+  const nome = (emp?.borrower_name ?? "").trim();
+  if (!nome) return "—";
+  return primeiroUltimoNome(nome) || "—";
 }
 
 /** Retirada via Gestão de Prestadores grava `borrower_ref` = id de `rh_funcionarios`; login casa por e-mail como em Dados de Cadastro. */
@@ -181,6 +190,7 @@ function BlocoResumoPecaBasico({
 export default function FigurinosPage() {
   const { theme: t, user, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("rh_figurinos");
 
@@ -237,8 +247,6 @@ export default function FigurinosPage() {
 
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [histErro, setHistErro] = useState<string | null>(null);
-
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -371,14 +379,7 @@ export default function FigurinosPage() {
   const pecasOrdenadas = useMemo(() => {
     const arr = [...pecasFiltradas];
     const { col, dir } = sortFig;
-    const borrowerKey = (p: RhFigurinoPeca) => {
-      const emp = empPorItem[p.id];
-      const emprestadoPara =
-        emp?.borrower_name != null || emp?.borrower_ref
-          ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
-          : "—";
-      return emprestadoPara;
-    };
+    const borrowerKey = (p: RhFigurinoPeca) => labelEmprestadoParaTabela(empPorItem[p.id]);
     arr.sort((a, b) => {
       let c = 0;
       switch (col) {
@@ -459,8 +460,8 @@ export default function FigurinosPage() {
         col={col}
         sortCol={sortFig.col}
         sortDir={sortFig.dir}
-        thStyle={getThStyle(t)}
-        align="left"
+        thStyle={dataTable.thHeader}
+        align="center"
         onSort={(c) =>
           setSortFig((s) => ({
             col: c,
@@ -469,7 +470,7 @@ export default function FigurinosPage() {
         }
       />
     ),
-    [sortFig, t],
+    [sortFig, dataTable],
   );
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
@@ -570,8 +571,8 @@ export default function FigurinosPage() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Shirt size={14} aria-hidden />}
-        title="Figurinos"
+        icon={<PageMenuIcon pageKey="rh_figurinos" />}
+        title={getPageMenuLabel("rh_figurinos")}
         subtitle="Controle o inventário de peças com retiradas, devoluções e manutenções."
       />
 
@@ -597,69 +598,54 @@ export default function FigurinosPage() {
         </div>
       ) : null}
 
-      {/* Bloco 1: Consolidado */}
-      <div style={{ marginBottom: 20 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          CONSOLIDADO
-        </h2>
-        <div className="app-grid-kpi-5" style={{ width: "100%", gap: 14 }}>
-          {[
-            { label: "Total de peças", value: kpis.tot, cor: t.text },
-            { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
-            { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
-            { label: "Fixos", value: kpis.fx, cor: "#0ea5e9" },
-            { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
-          ].map((k) => (
+      {/* Bloco 1: Consolidado (KPIs — formato Financeiro) */}
+      <div className="app-grid-kpi-5" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+        {[
+          { label: "TOTAL DE PEÇAS", value: kpis.tot, cor: "var(--brand-primary, #7c3aed)" },
+          { label: "DISPONÍVEIS", value: kpis.av, cor: "#22c55e" },
+          { label: "EMPRESTADAS", value: kpis.bo, cor: "#f59e0b" },
+          { label: "FIXOS", value: kpis.fx, cor: "#0ea5e9" },
+          { label: "EM MANUTENÇÃO", value: kpis.ma, cor: "#a78bfa" },
+        ].map((k) => (
+          <div
+            key={k.label}
+            aria-label={`${k.label}: ${k.value}`}
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${t.cardBorder}`,
+              borderLeft: `3px solid ${k.cor}`,
+              background: brand.blockBg,
+              padding: "16px 18px",
+              boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+            }}
+          >
             <div
-              key={k.label}
-              aria-label={`${k.label}: ${k.value}`}
               style={{
-                borderRadius: 14,
-                border: `1px solid ${t.cardBorder}`,
-                background: brand.blockBg,
-                padding: "16px 18px",
-                boxShadow: cardShadow,
+                fontSize: 11,
+                fontWeight: 700,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
-                {k.label.toUpperCase()}
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
+              {k.label}
             </div>
-          ))}
-        </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>
+              {k.value}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Bloco 2: Filtros */}
-      <div style={{ marginBottom: 20 }}>
-        <h2
-          style={{
-            ...SECTION_LABEL_STYLE,
-            color: t.textMuted,
-            fontFamily: FONT.body,
-            marginBottom: 8,
-          }}
-        >
-          FILTROS
-        </h2>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
+      <div
+        style={getPageFilterBoxStyle(brand, t, {
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        })}
+      >
           <div
             style={{
               display: "flex",
@@ -777,7 +763,6 @@ export default function FigurinosPage() {
               </FiltroBarTabButton>
             ))}
           </div>
-        </div>
       </div>
 
       {/* Bloco 3: Tabela */}
@@ -794,17 +779,8 @@ export default function FigurinosPage() {
               : emptyMsgAba(aba)}
           </div>
         ) : (
-          <div className="app-table-wrap">
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                borderRadius: 14,
-                overflow: "hidden",
-                border: `1px solid ${t.cardBorder}`,
-              }}
-            >
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 900 })}>
               <caption style={{ display: "none" }}>Inventário de figurinos — {labelAba(aba)}</caption>
               <thead>
                 <tr>
@@ -816,7 +792,7 @@ export default function FigurinosPage() {
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Data de aquisição", "data_aqui")}
                       {sortHeader("Classificação", "cond")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ações
                       </th>
                     </>
@@ -827,12 +803,11 @@ export default function FigurinosPage() {
                       {sortHeader("Operadora", "operadora")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
-                      {sortHeader("Classificação", "cond")}
                       {sortHeader("Tipo de retirada", "tipo_ret")}
                       {sortHeader("Data de empréstimo", "loaned_at")}
                       {sortHeader("Emprestado para", "borrower")}
                       {sortHeader("Registrado por", "loaned_by")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ação
                       </th>
                     </>
@@ -846,7 +821,7 @@ export default function FigurinosPage() {
                       {sortHeader("Motivo", "motivo")}
                       {sortHeader("Data de envio", "sent_at")}
                       {sortHeader("Registrado por", "entered_by")}
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
+                      <th scope="col" style={dataTable.thHeader}>
                         Ações
                       </th>
                     </>
@@ -867,33 +842,32 @@ export default function FigurinosPage() {
               <tbody>
                 {pecasOrdenadas.map((p, i) => {
                   const emp = empPorItem[p.id];
-                  const zebra = { background: zebraStripe(i) };
-                  const emprestadoPara =
-                    emp?.borrower_name != null || emp?.borrower_ref
-                      ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
-                      : "—";
+                  const zebra = dataTable.zebraRow(i);
+                  const emprestadoPara = labelEmprestadoParaTabela(emp);
+                  const emprestadoParaCompleto = (emp?.borrower_name ?? "").trim() || "—";
                   return (
                     <tr
                       key={p.id}
-                      style={{ borderBottom: `1px solid ${t.cardBorder}`, ...zebra }}
+                      style={{ background: zebra }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = zebra.background ?? "transparent";
+                        e.currentTarget.style.background = zebra;
                       }}
                     >
                       {aba === "available" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{fmtDataSóDia(p.purchase_date)}</td>
-                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataSóDia(p.purchase_date)}</td>
+                          <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <>
                                 <button
@@ -901,7 +875,6 @@ export default function FigurinosPage() {
                                   onClick={() => setEmpPeca(p)}
                                   style={{
                                     padding: "4px 10px",
-                                    marginRight: 6,
                                     borderRadius: 8,
                                     border: `1px solid rgba(34,197,94,0.35)`,
                                     background: "rgba(34,197,94,0.12)",
@@ -935,25 +908,29 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "borrowed" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
-                          <td style={getTdStyle(t)}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(emp?.loaned_at)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={dataTable.tdCenter}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(emp?.loaned_at)}</td>
+                          <td
+                            style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                            title={emprestadoParaCompleto !== emprestadoPara ? emprestadoParaCompleto : emprestadoPara}
+                          >
                             {emprestadoPara}
                           </td>
-                          <td style={getTdStyle(t)}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <button
                                 type="button"
@@ -975,23 +952,25 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "maintenance" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.maintenance_reason ?? ""}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.maintenance_reason ?? ""}>
                             {p.maintenance_reason ?? "—"}
                           </td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(p.maintenance_entered_at)}</td>
-                          <td style={getTdStyle(t)}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(p.maintenance_entered_at)}</td>
+                          <td style={dataTable.tdCenter}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
                             {podeEditar ? (
                               <>
                                 <button
@@ -999,7 +978,6 @@ export default function FigurinosPage() {
                                   onClick={() => setConcluirManutPeca(p)}
                                   style={{
                                     padding: "4px 10px",
-                                    marginRight: 6,
                                     borderRadius: 8,
                                     border: `1px solid rgba(34,197,94,0.35)`,
                                     background: "rgba(34,197,94,0.12)",
@@ -1033,22 +1011,23 @@ export default function FigurinosPage() {
                             ) : (
                               "—"
                             )}
+                            </div>
                           </td>
                         </>
                       ) : null}
                       {aba === "discarded" ? (
                         <>
-                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                          <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
                             {labelOperadorasPeca(p, operadoraNome)}
                           </td>
-                          <td style={getTdStyle(t)}>{p.category}</td>
-                          <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }} title={p.discard_reason ?? ""}>
+                          <td style={dataTable.tdCenter}>{p.category}</td>
+                          <td style={dataTable.tdCenter}>{p.size}</td>
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }} title={p.discard_reason ?? ""}>
                             {p.discard_reason ?? "—"}
                           </td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(p.discarded_at)}</td>
-                          <td style={getTdStyle(t)}>{p.discarded_by?.trim() ? p.discarded_by : "—"}</td>
+                          <td style={dataTable.tdCenter}>{fmtDataHora(p.discarded_at)}</td>
+                          <td style={dataTable.tdCenter}>{p.discarded_by?.trim() ? p.discarded_by : "—"}</td>
                         </>
                       ) : null}
                     </tr>
@@ -2602,6 +2581,7 @@ function ModalDetalhe({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
   const [pdfLoading, setPdfLoading] = useState(false);
   const [abaDet, setAbaDet] = useState<AbaDetalheFig>("detalhes");
 
@@ -2808,27 +2788,18 @@ function ModalDetalhe({
               Sem histórico de alterações de status.
             </div>
           ) : (
-            <div className="app-table-wrap">
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "separate",
-                  borderSpacing: 0,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  border: `1px solid ${t.cardBorder}`,
-                }}
-              >
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle()}>
                 <caption style={{ display: "none" }}>Histórico de alterações de status da peça</caption>
                 <thead>
                   <tr>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Data/Hora
                     </th>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Status
                     </th>
-                    <th scope="col" style={getThStyle(t)}>
+                    <th scope="col" style={dataTable.thHeader}>
                       Registrado por
                     </th>
                   </tr>
@@ -2836,15 +2807,27 @@ function ModalDetalhe({
                 <tbody>
                   {[...histStatus]
                     .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
-                    .map((h, i) => (
-                      <tr key={h.id} style={{ background: zebraStripe(i), borderBottom: `1px solid ${t.cardBorder}` }}>
-                        <td style={getTdStyle(t)}>{fmtDataHora(h.changed_at)}</td>
-                        <td style={getTdStyle(t)}>
+                    .map((h, i) => {
+                      const zebra = dataTable.zebraRow(i);
+                      return (
+                      <tr
+                        key={h.id}
+                        style={{ background: zebra }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebra;
+                        }}
+                      >
+                        <td style={dataTable.tdCenter}>{fmtDataHora(h.changed_at)}</td>
+                        <td style={dataTable.tdCenter}>
                           {labelStatusHistorico(h.previous_status)} → {labelStatusHistorico(h.new_status)}
                         </td>
-                        <td style={getTdStyle(t)}>{h.changed_by}</td>
+                        <td style={dataTable.tdCenter}>{h.changed_by}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

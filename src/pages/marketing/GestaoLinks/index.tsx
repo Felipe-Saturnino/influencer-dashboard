@@ -9,6 +9,8 @@ import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
 import { Ban, CheckCircle2, Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import {
@@ -21,7 +23,12 @@ import {
 } from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import {
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 
 const COR = {
   vermelho: "#e84025",
@@ -104,8 +111,6 @@ export default function GestaoLinks() {
     | "visitas"
     | "registros";
   const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "primeiro", dir: "desc" });
-
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   function fecharModalLimpo() {
     setModalAberto(false);
@@ -252,12 +257,10 @@ export default function GestaoLinks() {
     if (!error) carregar();
   }
 
-  const th = getThStyle(t);
-  const td = getTdStyle(t);
-  const tdMuted: React.CSSProperties = { ...td, color: t.textMuted, fontSize: 12, whiteSpace: "nowrap" };
-  // coluna UTM Source: permite quebra, tem maxWidth
+  const dataTable = useDataTableBlock();
+  const tdMuted: React.CSSProperties = { ...dataTable.tdCenter, color: t.textMuted, fontSize: 12, whiteSpace: "nowrap" };
   const tdUtm: React.CSSProperties = {
-    ...td,
+    ...dataTable.tdCenter,
     whiteSpace: "normal",
     wordBreak: "break-all",
     maxWidth: 220,
@@ -336,9 +339,6 @@ export default function GestaoLinks() {
     setSortLinks(defaults[aba]);
   }, [aba]);
 
-  const thNum = { ...th, textAlign: "right" as const };
-  const tdNum = getTdNumStyle(t);
-
   const onSortLinks = (c: LinkSortCol) =>
     setSortLinks((s) => ({
       col: c,
@@ -389,8 +389,8 @@ export default function GestaoLinks() {
     <div className="app-page-shell">
 
       <PageHeader
-        icon={<Link2 size={14} aria-hidden />}
-        title="Gestão de Links"
+        icon={<PageMenuIcon pageKey="gestao_links" />}
+        title={getPageMenuLabel("gestao_links")}
         subtitle="Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios."
         actions={
           totalPendentes > 0 ? (
@@ -401,8 +401,7 @@ export default function GestaoLinks() {
         }
       />
 
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
             <div
               style={{
@@ -499,7 +498,6 @@ export default function GestaoLinks() {
               />
             ) : null}
           </div>
-        </div>
       </div>
 
       <div
@@ -524,34 +522,19 @@ export default function GestaoLinks() {
           Carregando links...
         </div>
       ) : aliases.length === 0 ? (
-        <div style={{
-          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18, padding: 60,
-          textAlign: "center", color: t.textMuted,
-          fontFamily: FONT.body, fontSize: 14,
-          boxShadow: cardShadow,
-        }}>
+        <div style={getPageContentBoxStyle(brand, t, {
+          padding: 60,
+          textAlign: "center",
+          color: t.textMuted,
+          fontSize: 14,
+        })}>
           {emptyMessages[aba]}
         </div>
       ) : (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, boxShadow: cardShadow, overflow: "hidden" }}>
-          <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13, tableLayout: "fixed" }}>
-            <caption
-              style={{
-                position: "absolute",
-                width: 1,
-                height: 1,
-                padding: 0,
-                margin: -1,
-                overflow: "hidden",
-                clip: "rect(0,0,0,0)",
-                whiteSpace: "nowrap",
-                border: 0,
-              }}
-            >
-              Links por status
-            </caption>
+        <div style={getPageContentBoxStyle(brand, t, { padding: 0 })}>
+          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ fontSize: 13, tableLayout: "fixed" })}>
+            <caption style={{ display: "none" }}>Links por status</caption>
             <colgroup>
               <col style={{ width: aba === "pendentes" ? "32%" : "22%" }} />
               <col style={{ width: "14%" }} />
@@ -578,8 +561,8 @@ export default function GestaoLinks() {
                   col="utm"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={onSortLinks}
                 />
                 <SortTableTh<LinkSortCol>
@@ -587,8 +570,8 @@ export default function GestaoLinks() {
                   col="operadora"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={onSortLinks}
                 />
                 <SortTableTh<LinkSortCol>
@@ -596,8 +579,8 @@ export default function GestaoLinks() {
                   col="primeiro"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
-                  thStyle={th}
-                  align="left"
+                  thStyle={dataTable.thHeader}
+                  align="center"
                   onSort={onSortLinks}
                 />
                 {aba !== "pendentes" && (
@@ -606,8 +589,8 @@ export default function GestaoLinks() {
                     col="acao"
                     sortCol={sortLinks.col}
                     sortDir={sortLinks.dir}
-                    thStyle={th}
-                    align="left"
+                    thStyle={dataTable.thHeader}
+                    align="center"
                     onSort={onSortLinks}
                   />
                 )}
@@ -618,8 +601,8 @@ export default function GestaoLinks() {
                       col="proprietario"
                       sortCol={sortLinks.col}
                       sortDir={sortLinks.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={onSortLinks}
                     />
                     <SortTableTh<LinkSortCol>
@@ -627,8 +610,8 @@ export default function GestaoLinks() {
                       col="status"
                       sortCol={sortLinks.col}
                       sortDir={sortLinks.dir}
-                      thStyle={th}
-                      align="left"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={onSortLinks}
                     />
                   </>
@@ -640,8 +623,8 @@ export default function GestaoLinks() {
                       col="visitas"
                       sortCol={sortLinks.col}
                       sortDir={sortLinks.dir}
-                      thStyle={thNum}
-                      align="right"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={onSortLinks}
                     />
                     <SortTableTh<LinkSortCol>
@@ -649,24 +632,24 @@ export default function GestaoLinks() {
                       col="registros"
                       sortCol={sortLinks.col}
                       sortDir={sortLinks.dir}
-                      thStyle={thNum}
-                      align="right"
+                      thStyle={dataTable.thHeader}
+                      align="center"
                       onSort={onSortLinks}
                     />
                   </>
                 )}
-                <th scope="col" style={th}>Ações</th>
+                <th scope="col" style={dataTable.thHeader}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {aliasesOrdenados.length === 0 ? (
                 <tr>
-                  <td colSpan={colunasPorAba(aba)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
+                  <td colSpan={colunasPorAba(aba)} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
                     {emptyMessages[aba]}
                   </td>
                 </tr>
               ) : aliasesOrdenados.map((alias, idx) => {
-                const zebraBg = zebraStripe(idx);
+                const zebraBg = dataTable.zebraRow(idx);
                 const utmAccent = brand.accent;
                 const nomeOperadora =
                   operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—";
@@ -697,27 +680,27 @@ export default function GestaoLinks() {
                         <span>{alias.utm_source}</span>
                       </span>
                     </td>
-                    <td style={td} title={nomeOperadora}>{nomeOperadora}</td>
+                    <td style={dataTable.tdCenter} title={nomeOperadora}>{nomeOperadora}</td>
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                     {aba !== "pendentes" && (
                       <td style={tdMuted}>{fmtData(dataAcaoIso(aba, alias))}</td>
                     )}
                     {aba === "mapeados" && (
                       <>
-                        <td style={{ ...td, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={proprietario}>
+                        <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={proprietario}>
                           {proprietario}
                         </td>
-                        <td style={td}>{renderStatusBadge(alias)}</td>
+                        <td style={dataTable.tdCenter}>{renderStatusBadge(alias)}</td>
                       </>
                     )}
                     {aba === "ignorados" && (
                       <>
-                        <td style={tdNum}>{(alias.total_visits ?? 0).toLocaleString("pt-BR")}</td>
-                        <td style={tdNum}>{(alias.total_registrations ?? 0).toLocaleString("pt-BR")}</td>
+                        <td style={dataTable.tdCenter}>{(alias.total_visits ?? 0).toLocaleString("pt-BR")}</td>
+                        <td style={dataTable.tdCenter}>{(alias.total_registrations ?? 0).toLocaleString("pt-BR")}</td>
                       </>
                     )}
-                    <td style={td}>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
                             <button type="button" onClick={() => abrirModal(alias)}

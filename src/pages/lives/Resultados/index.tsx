@@ -11,17 +11,20 @@ import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   AlertTriangle,
   Check,
   CheckCircle,
-  ClipboardList,
   Info,
   Loader2,
   Trash2,
   X,
 } from "lucide-react";
 
+import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
 
@@ -104,7 +107,7 @@ function LiveCard({
   const platColor = PLAT_COLOR[live.plataforma];
   const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
   const isExcluindo = excluindo?.id === live.id;
-  const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+  const liveCardStyle = { ...getPageContentBoxStyle(brand, t), marginBottom: 12 };
 
   async function handleExcluirConfirmado() {
     if (!perm.canExcluirOk) return;
@@ -117,14 +120,7 @@ function LiveCard({
   }
 
   return (
-    <div style={{
-      background: brand.blockBg,
-      border: `1px solid ${t.cardBorder}`,
-      borderRadius: 18,
-      padding: 20,
-      marginBottom: 12,
-      boxShadow: cardShadow,
-    }}>
+    <div style={liveCardStyle}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
           <div style={{
@@ -666,8 +662,8 @@ export default function Resultados() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <DashboardPageHeader
-        icon={<ClipboardList size={14} aria-hidden="true" />}
-        title="Resultados"
+        icon={<PageMenuIcon pageKey="resultados" />}
+        title={getPageMenuLabel("resultados")}
         subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
         brand={brand}
         t={t}
@@ -675,14 +671,8 @@ export default function Resultados() {
 
       {/* ── FILTROS (padrão Dashboards) ── */}
       {(showFiltroInfluencer || showFiltroOperadora) && (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={getFilterBarWrapperStyle(brand, t)}>
+            <div style={getFilterBarRowStyle()}>
               {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
                 <FiltroInfluencerSelect
                   mode="multiple"
@@ -702,7 +692,6 @@ export default function Resultados() {
                 />
               )}
             </div>
-          </div>
         </div>
       )}
 
@@ -716,11 +705,7 @@ export default function Resultados() {
           <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
         </div>
       ) : livesFiltered.length === 0 ? (
-        <div style={{
-          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: 16, padding: 48,
-          textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
-        }}>
+        <div style={{ ...getPageContentBoxStyle(brand, t), padding: 48, textAlign: "center", color: t.textMuted }}>
           <CheckCircle size={24} style={{ marginBottom: 8, color: BRAND.verde }} aria-hidden="true" />
           <div style={{ fontSize: 14, fontWeight: 600 }}>Nenhuma live pendente de validação.</div>
         </div>

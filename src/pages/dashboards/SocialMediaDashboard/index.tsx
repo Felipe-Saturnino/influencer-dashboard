@@ -5,16 +5,33 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import { fmtBRL, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import {
-  getThStyle,
-  getThStyleBrandAction,
-  getTdStyle,
-  getTdNumStyle,
-  zebraStripe,
-  zebraStripeBrandContrast,
-} from "../../../lib/tableStyles";
-import { FiltroHistoricoButton, SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, FiltroBarTabButton, type SortDir } from "../../../components/dashboard";
+  fmtBRL,
+  getIdxMesCarrosselPadrao,
+  getMesesDisponiveis,
+  getOntemIsoLocal,
+  getPeriodoComparativoMoM,
+  isCarrosselMesCivilAtual,
+} from "../../../lib/dashboardHelpers";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import {
+  DashboardPageHeader,
+  FiltroHistoricoButton,
+  SectionTitle,
+  SkeletonKpiCard,
+  KpiCardDepositos,
+  SortTableTh,
+  FiltroBarTabButton,
+  type SortDir,
+} from "../../../components/dashboard";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import {
+  PAGE_CONTENT_BOX_GAP,
+  getPageContentBoxStyle,
+  getPageFilterBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
@@ -24,23 +41,18 @@ import {
   ArrowUpFromLine,
   BarChart2,
   Bookmark,
-  CalendarDays,
   Clock,
-  Filter,
   Heart,
-  Layers,
   MessageCircle,
   Mic,
   Percent,
   Play,
   Sparkles,
-  Video,
   ChevronLeft,
   ChevronRight,
   GitCompare,
   Share2,
   TrendingDown,
-  Target,
   Trophy,
   TrendingUp,
   CircleDollarSign,
@@ -557,11 +569,8 @@ export default function SocialMediaDashboard() {
 
   // ── Navegação por meses (padrão Overview) ─────────────────────────────────
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(MES_INICIO), []);
-  const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex(
-    (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
-  );
-  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
+  const [idxMes, setIdxMes]       = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
@@ -573,7 +582,7 @@ export default function SocialMediaDashboard() {
   function toggleHistorico() {
     if (historico) {
       setHistorico(false);
-      setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+      setIdxMes(idxInicial);
     } else {
       setHistorico(true);
     }
@@ -858,11 +867,19 @@ export default function SocialMediaDashboard() {
   const campanhaA = campanhasPerf.find((c) => c.campanha_id === compCampA) ?? null;
   const campanhaB = campanhasPerf.find((c) => c.campanha_id === compCampB) ?? null;
 
-  /** Detalhamento: mais recente primeiro (dia ou mês). */
-  const serieFunilOrdenado = useMemo(
-    () => [...serieFunil].sort((a, b) => b.periodo.localeCompare(a.periodo)),
-    [serieFunil]
-  );
+  /** Detalhamento: mais recente primeiro; no mês atual, só até ontem (ETL diário fecha o dia anterior). */
+  const serieFunilOrdenado = useMemo(() => {
+    let rows = serieFunil;
+    if (
+      !historico &&
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      const limite = getOntemIsoLocal();
+      rows = rows.filter((r) => r.periodo.slice(0, 10) <= limite);
+    }
+    return [...rows].sort((a, b) => b.periodo.localeCompare(a.periodo));
+  }, [serieFunil, historico, mesSelecionado]);
 
   const lastVal = (arr: KpiDaily[], f: keyof KpiDaily): number | null => {
     const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null;
@@ -997,21 +1014,11 @@ export default function SocialMediaDashboard() {
   }, [campanhasPerf, sortTaxCmp]);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: brand.blockBg,
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 14,
-    boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-  };
+  const card = getPageContentBoxStyle(brand, t);
 
-  const thStyle = brand.useBrand ? getThStyleBrandAction(t) : getThStyle(t);
-  const zebraTabelaMidias = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
+  const dataTable = useDataTableBlock();
   const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
   const corFunilComparativoCampanhaB = COR_FUNIL_B;
-  const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
-  const tdNumStyle = getTdNumStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
   const selectCampStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 120,
@@ -1037,55 +1044,16 @@ export default function SocialMediaDashboard() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text, paddingBottom: 12 }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: brand.primaryIconBg,
-              border: brand.primaryIconBorder,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              color: brand.primaryIconColor,
-            }}
-          >
-            <Share2 size={14} aria-hidden />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: brand.primary,
-                fontFamily: FONT_TITLE,
-                margin: 0,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Mídias sociais
-            </h1>
-            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-              Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas.
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<PageMenuIcon pageKey="dash_midias_sociais" />}
+        title={getPageMenuLabel("dash_midias_sociais")}
+        subtitle="Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas."
+        brand={brand}
+        t={t}
+      />
 
       {/* Período + abas */}
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
-            padding: "12px 20px",
-          }}
-        >
+      <div style={getPageFilterBoxStyle(brand, t)}>
           <div
             style={{
               display: "flex",
@@ -1142,7 +1110,6 @@ export default function SocialMediaDashboard() {
               );
             })}
           </div>
-        </div>
       </div>
 
       <div role="tabpanel" id={`panel-midias-${aba}`} aria-labelledby={`tab-midias-${aba}`}>
@@ -1150,14 +1117,14 @@ export default function SocialMediaDashboard() {
       {loading ? (
         <>
           <div style={card}>
-            <SectionTitle icon={<BarChart2 size={14} aria-hidden />}>Carregando…</SectionTitle>
+            <SectionTitle>Carregando…</SectionTitle>
             <div className="app-grid-kpi-6">
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <SkeletonKpiCard key={i} />
               ))}
             </div>
           </div>
-          <div style={{ ...card, marginTop: 14 }}>
+          <div style={{ ...card, marginTop: PAGE_CONTENT_BOX_GAP }}>
             <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
           </div>
         </>
@@ -1167,10 +1134,9 @@ export default function SocialMediaDashboard() {
             <>
               <div style={card}>
                 <SectionTitle
-                  icon={<BarChart2 size={14} aria-hidden />}
                   sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
                 >
-                  KPIs consolidados
+                  KPIs Consolidados
                 </SectionTitle>
                 <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
                   <SocialKpiCard
@@ -1248,42 +1214,32 @@ export default function SocialMediaDashboard() {
 
               <div style={card}>
                 <SectionTitle
-                  icon={<CalendarDays size={14} aria-hidden />}
-                  sub={historico ? "Mês a mês (Jan/2026 em diante)" : "dia a dia"}
+                  sub={historico ? "mês a mês" : "dia a dia"}
                 >
                   Detalhamento {historico ? "mensal" : "diário"}
                 </SectionTitle>
                 {serieFunilOrdenado.length > 0 ? (
-                  <div className="app-table-wrap">
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "separate",
-                        borderSpacing: 0,
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: `1px solid ${t.cardBorder}`,
-                      }}
-                    >
+                  <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                    <table style={getDataTableStyle({ minWidth: 900 })}>
                       <caption style={{ display: "none" }}>
                         Detalhamento de visitas, conversões e GGR por {historico ? "mês" : "dia"} no período selecionado.
                       </caption>
                       <thead>
                         <tr>
                           {[
-                            { label: "Período", scope: "col" as const, align: "left" as const },
-                            { label: "# Visitas", scope: "col" as const, align: "right" as const },
-                            { label: "# Registros", scope: "col" as const, align: "right" as const },
-                            { label: "# FTD", scope: "col" as const, align: "right" as const },
-                            { label: "R$ FTD", scope: "col" as const, align: "right" as const },
-                            { label: "# Depósito", scope: "col" as const, align: "right" as const },
-                            { label: "R$ Depósito", scope: "col" as const, align: "right" as const },
-                            { label: "# Saque", scope: "col" as const, align: "right" as const },
-                            { label: "R$ Saque", scope: "col" as const, align: "right" as const },
-                            { label: "R$ GGR", scope: "col" as const, align: "right" as const },
-                          ].map((h) => (
-                            <th key={h.label} scope={h.scope} style={{ ...thStyle, textAlign: h.align }}>
-                              {h.label}
+                            "Período",
+                            "# Visitas",
+                            "# Registros",
+                            "# FTD",
+                            "R$ FTD",
+                            "# Depósito",
+                            "R$ Depósito",
+                            "# Saque",
+                            "R$ Saque",
+                            "R$ GGR",
+                          ].map((label) => (
+                            <th key={label} scope="col" style={dataTable.thHeader}>
+                              {label}
                             </th>
                           ))}
                         </tr>
@@ -1292,22 +1248,22 @@ export default function SocialMediaDashboard() {
                         {serieFunilOrdenado.map((row, i) => {
                           const ggr = (row.deposit_total ?? 0) - (row.withdrawal_total ?? 0);
                           return (
-                            <tr key={row.periodo} style={{ background: zebraTabelaMidias(i) }}>
+                            <tr key={row.periodo} style={{ background: dataTable.zebraRow(i) }}>
                               <td
-                                style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}
+                                style={{ ...dataTable.tdCenter, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}
                                 title={row.periodo}
                               >
                                 {fmtPeriodoSerieCell(row.periodo, historico)}
                               </td>
-                              <td style={tdNumStyle}>{fmtNum(row.visitas)}</td>
-                              <td style={tdNumStyle}>{fmtNum(row.registros)}</td>
-                              <td style={tdNumStyle}>{fmtNum(row.ftds)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(row.ftd_total)}</td>
-                              <td style={tdNumStyle}>{fmtNum(row.deposit_count)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(row.deposit_total)}</td>
-                              <td style={tdNumStyle}>{fmtNum(row.withdrawal_count)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(row.withdrawal_total)}</td>
-                              <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
+                              <td style={dataTable.tdCenter}>{fmtNum(row.visitas)}</td>
+                              <td style={dataTable.tdCenter}>{fmtNum(row.registros)}</td>
+                              <td style={dataTable.tdCenter}>{fmtNum(row.ftds)}</td>
+                              <td style={dataTable.tdCenter}>{fmtBRL(row.ftd_total)}</td>
+                              <td style={dataTable.tdCenter}>{fmtNum(row.deposit_count)}</td>
+                              <td style={dataTable.tdCenter}>{fmtBRL(row.deposit_total)}</td>
+                              <td style={dataTable.tdCenter}>{fmtNum(row.withdrawal_count)}</td>
+                              <td style={dataTable.tdCenter}>{fmtBRL(row.withdrawal_total)}</td>
+                              <td style={{ ...dataTable.tdCenter, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
                             </tr>
                           );
                         })}
@@ -1322,21 +1278,12 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Target size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de campanha
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
-                  <div className="app-table-wrap">
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "separate",
-                        borderSpacing: 0,
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: `1px solid ${t.cardBorder}`,
-                      }}
-                    >
+                  <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                    <table style={getDataTableStyle({ minWidth: 960 })}>
                       <caption style={{ display: "none" }}>
                         Performance por campanha com UTMs mapeadas no período selecionado.
                       </caption>
@@ -1348,40 +1295,40 @@ export default function SocialMediaDashboard() {
                             sortCol={sortCampCmp.col}
                             sortDir={sortCampCmp.dir}
                             onSort={onSortCampCmp}
-                            thStyle={thStyle}
-                            align="left"
+                            thStyle={dataTable.thHeader}
+                            align="center"
                           />
-                          <SortTableTh label="Acessos" col="visitas" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="Registros" col="registros" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="# FTDs" col="ftds" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="R$ FTDs" col="ftd_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="# Depósitos" col="deposit_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="R$ Depósitos" col="deposit_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="# Saques" col="withdrawal_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="R$ Saques" col="withdrawal_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="R$ GGR" col="ggr" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Acessos" col="visitas" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="Registros" col="registros" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="# FTDs" col="ftds" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="R$ FTDs" col="ftd_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="# Depósitos" col="deposit_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="R$ Depósitos" col="deposit_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="# Saques" col="withdrawal_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="R$ Saques" col="withdrawal_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="R$ GGR" col="ggr" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={dataTable.thHeader} align="center" />
                         </tr>
                       </thead>
                       <tbody>
                         {campanhasCmpOrdenadas.map((c, i) => {
                             const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
                             return (
-                              <tr key={c.campanha_id} style={{ background: zebraTabelaMidias(i) }}>
+                              <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(i) }}>
                                 <td
-                                  style={{ ...tdStyle, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
+                                  style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
                                   title={c.campanha_nome}
                                 >
                                   {c.campanha_nome}
                                 </td>
-                                <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
-                                <td style={tdNumStyle}>{fmtNum(c.registros)}</td>
-                                <td style={tdNumStyle}>{fmtNum(c.ftds)}</td>
-                                <td style={tdNumStyle}>{fmtBRL(c.ftd_total)}</td>
-                                <td style={tdNumStyle}>{fmtNum(c.deposit_count ?? 0)}</td>
-                                <td style={tdNumStyle}>{fmtBRL(c.deposit_total)}</td>
-                                <td style={tdNumStyle}>{fmtNum(c.withdrawal_count ?? 0)}</td>
-                                <td style={tdNumStyle}>{fmtBRL(c.withdrawal_total)}</td>
-                                <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
+                                <td style={dataTable.tdCenter}>{fmtNum(c.visitas)}</td>
+                                <td style={dataTable.tdCenter}>{fmtNum(c.registros)}</td>
+                                <td style={dataTable.tdCenter}>{fmtNum(c.ftds)}</td>
+                                <td style={dataTable.tdCenter}>{fmtBRL(c.ftd_total)}</td>
+                                <td style={dataTable.tdCenter}>{fmtNum(c.deposit_count ?? 0)}</td>
+                                <td style={dataTable.tdCenter}>{fmtBRL(c.deposit_total)}</td>
+                                <td style={dataTable.tdCenter}>{fmtNum(c.withdrawal_count ?? 0)}</td>
+                                <td style={dataTable.tdCenter}>{fmtBRL(c.withdrawal_total)}</td>
+                                <td style={{ ...dataTable.tdCenter, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
                               </tr>
                             );
                           })}
@@ -1400,7 +1347,7 @@ export default function SocialMediaDashboard() {
           {aba === "conversao" && (
             <>
               <div style={card}>
-                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Funil de conversão
                 </SectionTitle>
                 {(funilTotais?.visitas ?? 0) + (funilTotais?.registros ?? 0) + (funilTotais?.ftds ?? 0) > 0 ? (
@@ -1421,7 +1368,7 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de funil
                 </SectionTitle>
                 <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
@@ -1557,21 +1504,12 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<TrendingUp size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                <SectionTitle sub={historico ? "acumulado" : undefined}>
                   Comparativo de taxas
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
-                  <div className="app-table-wrap">
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "separate",
-                        borderSpacing: 0,
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: `1px solid ${t.cardBorder}`,
-                      }}
-                    >
+                  <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                    <table style={getDataTableStyle({ minWidth: 800 })}>
                       <caption style={{ display: "none" }}>Taxas de conversão por campanha no período.</caption>
                       <thead>
                         <tr>
@@ -1581,32 +1519,32 @@ export default function SocialMediaDashboard() {
                             sortCol={sortTaxCmp.col}
                             sortDir={sortTaxCmp.dir}
                             onSort={onSortTaxCmp}
-                            thStyle={thStyle}
-                            align="left"
+                            thStyle={dataTable.thHeader}
+                            align="center"
                           />
-                          <SortTableTh label="Visitas" col="visitas" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="Visita → Registro" col="pctVR" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="Registros" col="registros" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="Registro → FTD" col="pctRF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
-                          <SortTableTh label="Visita → FTD" col="pctVF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Visitas" col="visitas" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="Visita → Registro" col="pctVR" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="Registros" col="registros" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="Registro → FTD" col="pctRF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
+                          <SortTableTh label="Visita → FTD" col="pctVF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={dataTable.thHeader} align="center" />
                         </tr>
                       </thead>
                       <tbody>
                         {campanhasTaxasOrdenadas.map((c, i) => (
-                          <tr key={c.campanha_id} style={{ background: zebraTabelaMidias(i) }}>
+                          <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(i) }}>
                             <td
-                              style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                              style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
                               title={c.campanha_nome}
                             >
                               {c.campanha_nome}
                             </td>
-                            <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
-                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
-                            <td style={tdNumStyle}>{fmtNum(c.registros)}</td>
-                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
-                            <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
-                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
+                            <td style={dataTable.tdCenter}>{fmtNum(c.visitas)}</td>
+                            <td style={dataTable.tdCenter}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
+                            <td style={dataTable.tdCenter}>{fmtNum(c.registros)}</td>
+                            <td style={dataTable.tdCenter}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
+                            <td style={{ ...dataTable.tdCenter, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                            <td style={dataTable.tdCenter}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1626,11 +1564,11 @@ export default function SocialMediaDashboard() {
           {/* KPIs GERAIS */}
           <div style={card}>
             <SectionTitle
-              icon={<BarChart2 size={14} aria-hidden />}
               sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
             </SectionTitle>
+            <div style={{ display: "flex", flexDirection: "column", gap: PAGE_CONTENT_BOX_GAP }}>
             <div className="app-grid-kpi-4">
               <SocialKpiCard
                 label="Postagens"
@@ -1649,7 +1587,7 @@ export default function SocialMediaDashboard() {
                 }
               />
               <SocialKpiCard
-                label="Seguidores totais"
+                label="Novos Seguidores"
                 valor={fmtNum(totais.seguidores)}
                 accentVar="--brand-contrast"
                 accentCor={BRAND.roxo}
@@ -1697,44 +1635,44 @@ export default function SocialMediaDashboard() {
                 }
               />
             </div>
-          </div>
 
-          {/* Cards por canal */}
-          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
-            {channelConfig.map((cfg) => {
-              const byCh   = totais.byChannel[cfg.channel] ?? [];
-              const stats  = cfg.stats(byCh);
-              const engVal = calcEngBadge(byCh);
-              return (
-                <section
-                  key={cfg.channel}
-                  aria-label={`Métricas de ${cfg.nome}`}
-                  style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}
-                >
-                  <div style={{ height: 3, background: cfg.cor }} />
-                  <div style={{ padding: "14px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.cor, flexShrink: 0 }} />
-                      <span style={{ fontSize: 14, fontWeight: 800, color: t.text, letterSpacing: "0.04em", fontFamily: FONT_TITLE }}>{cfg.nome}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `${cfg.cor}22`, border: `1px solid ${cfg.cor}44`, color: cfg.cor }}>
-                        Eng. {engVal.toFixed(1)}%
-                      </span>
-                    </div>
-                    {stats.map((s, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === stats.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
-                        <span style={{ color: t.textMuted }}>{s.label}</span>
-                        <span style={{ fontWeight: 600, color: t.text }}>{s.val}</span>
+            <div className="app-grid-kpi-3">
+              {channelConfig.map((cfg) => {
+                const byCh   = totais.byChannel[cfg.channel] ?? [];
+                const stats  = cfg.stats(byCh);
+                const engVal = calcEngBadge(byCh);
+                return (
+                  <section
+                    key={cfg.channel}
+                    aria-label={`Métricas de ${cfg.nome}`}
+                    style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}
+                  >
+                    <div style={{ height: 3, background: cfg.cor }} />
+                    <div style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.cor, flexShrink: 0 }} />
+                        <span style={{ fontSize: 14, fontWeight: 800, color: t.text, letterSpacing: "0.04em", fontFamily: FONT_TITLE }}>{cfg.nome}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `${cfg.cor}22`, border: `1px solid ${cfg.cor}44`, color: cfg.cor }}>
+                          Eng. {engVal.toFixed(1)}%
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+                      {stats.map((s, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === stats.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
+                          <span style={{ color: t.textMuted }}>{s.label}</span>
+                          <span style={{ fontWeight: 600, color: t.text }}>{s.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+            </div>
           </div>
 
           {/* Engajamento por formato */}
           <div style={card}>
-            <SectionTitle icon={<Layers size={14} aria-hidden />}>Engajamento por formato</SectionTitle>
+            <SectionTitle>Engajamento por formato</SectionTitle>
             {formatos.length > 0 ? (
               formatos.map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
@@ -1766,7 +1704,7 @@ export default function SocialMediaDashboard() {
 
           {/* Carrossel postagens */}
           <div style={card}>
-            <SectionTitle icon={<Video size={14} aria-hidden />}>Postagens recentes</SectionTitle>
+            <SectionTitle>Postagens recentes</SectionTitle>
             {posts.length > 0 ? (
               <>
                 <div

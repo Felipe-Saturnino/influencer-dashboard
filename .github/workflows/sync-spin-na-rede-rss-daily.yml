@@ -1,11 +1,11 @@
 # Spin na Rede — ingestão RSS via Edge Function `sync-spin-na-rede-rss`
-# Diário às 6h horário de Brasília (BRT, UTC−3) → 9h UTC
+# Diário ~6h20 BRT → 9h20 UTC (escalonado; ver daily-jobs-watchdog.yml)
 # Secrets: SUPABASE_URL, SUPABASE_ANON_KEY (Settings → Secrets and variables → Actions)
 name: Sync Spin na Rede RSS (6h BRT)
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "20 9 * * *"
   workflow_dispatch:
 
 jobs:
