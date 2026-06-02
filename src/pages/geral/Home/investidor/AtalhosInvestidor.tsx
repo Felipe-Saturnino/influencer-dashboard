@@ -1,4 +1,4 @@
-import { ArrowRight, Calendar, Dices, HelpCircle, Tv } from "lucide-react";
+import { Calendar, Dices, HelpCircle, Tv } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
@@ -6,8 +6,8 @@ import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { getPageMenuLabel } from "../../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../../lib/pageCanonicalCopy";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
-import { FONT } from "../../../../constants/theme";
 import type { PageKey } from "../../../../types";
+import { HomeAtalhoCard } from "../shared/HomeAtalhoCard";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "../shared/homeSharedUi";
 
 const ATALHOS_INVESTIDOR: { key: PageKey; icon: LucideIcon }[] = [
@@ -23,6 +23,7 @@ export function AtalhosInvestidor() {
   const brand = useDashboardBrand();
   const box = getPageContentBoxStyle(brand, t);
   const accentColor = "var(--brand-primary, #7c3aed)";
+  const iconBg = "rgba(74, 32, 130, 0.2)";
 
   return (
     <section style={box} aria-labelledby="home-investidor-atalhos-title">
@@ -35,66 +36,17 @@ export function AtalhosInvestidor() {
 
       <div className="app-grid-atalhos-investidor">
         {ATALHOS_INVESTIDOR.map(({ key, icon: Icon }) => {
-          const subtitle = getPageCanonicalSubtitle(key) ?? "";
+          const nav = propsFor(key);
           return (
-            <a
+            <HomeAtalhoCard
               key={key}
-              {...propsFor(key)}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 10,
-                padding: "16px 18px",
-                borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                textAlign: "left",
-                width: "100%",
-                minWidth: 0,
-                maxWidth: "100%",
-                boxSizing: "border-box",
-                overflow: "hidden",
-                textDecoration: "none",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-                <span
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: "rgba(74, 32, 130, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon size={18} color={accentColor} aria-hidden />
-                </span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, minWidth: 0 }}>{getPageMenuLabel(key)}</span>
-                <ArrowRight size={14} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
-              </div>
-              {subtitle ? (
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    color: t.textMuted,
-                    lineHeight: 1.5,
-                    paddingLeft: 48,
-                    width: "100%",
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {subtitle}
-                </p>
-              ) : null}
-            </a>
+              href={nav.href}
+              onClick={nav.onClick}
+              icon={<Icon size={18} color={accentColor} aria-hidden />}
+              title={getPageMenuLabel(key)}
+              subtitle={getPageCanonicalSubtitle(key) ?? undefined}
+              iconBg={iconBg}
+            />
           );
         })}
       </div>
