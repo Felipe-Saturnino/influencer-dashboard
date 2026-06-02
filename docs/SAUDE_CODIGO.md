@@ -78,6 +78,8 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 | `DashboardOverview/index.tsx` | ~880 | ✅ KPIs, Funil, helpers extraídos |
 | `DashboardOverviewInfluencer/index.tsx` | ~620 | ✅ Usa componentes compartilhados |
 | `DashboardConversao/index.tsx` | ~850 | Pendente extração |
+| `OverviewSpin/index.tsx` | ~3 100 | ✅ Lógica em `overviewSpinLogic.ts` (~1 230 linhas); abas em `OverviewSpinAbaNav.tsx` |
+| `GestaoPrestador/index.tsx` | ~3 900 | ✅ Helpers em `gestaoPrestadorHelpers.ts`; KPIs em `PrestadorKpiResumo.tsx` |
 
 Componentes compartilhados criados:
 - `src/components/dashboard/` — KpiCard, KpiCardDepositos, SectionTitle, FunilVisual

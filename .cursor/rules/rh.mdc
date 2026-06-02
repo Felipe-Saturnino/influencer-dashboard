@@ -40,6 +40,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Gestão de Prestadores (`rh_funcionarios`)
 
+- Pasta `rh/GestaoPrestador/`: `index.tsx` (página + modais), `gestaoPrestadorHelpers.ts` (formulário, payload, filtros, validações), `RhFuncModalHeaderDetalhes.tsx`, `PrestadorKpiResumo.tsx` (cards Total / Cadastro incompleto / Revisão).
 - `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
 - **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
 - **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `FilterBarIcons.diretoria`; Gerência `Layers`; Setor `FilterBarIcons.time`; Contrato `FileSignature`; Status `FilterBarIcons.status` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`) + CTA na mesma fileira quando aplicável (`app-filter-bar-tabs-cta` em `responsive.css`): **Novo Prestador** em Head Count (`perm.canCriarOk` + `podeVerDadosSensiveis`); **RH Talks** em Anotações RH (`perm.canEditarOk`). Aba Ações RH: só abas centralizadas.
