@@ -276,7 +276,6 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroSemanticoTabPill`** | `src/components/dashboard/FiltroSemanticoTabPill.tsx` | Chips **sem** bolinha — domínio (ex.: **Jogo** / Tipo no Roteiro de Mesa); ativo na cor do domínio, **não** marca |
 | **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
-| `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
 | **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Multi na barra (ex.: tipos de denúncia) — ícone via catálogo ou domínio |
 | `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |

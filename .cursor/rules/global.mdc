@@ -478,7 +478,7 @@ Quando a página tiver **seletor de granularidade de calendário** na barra (ex.
 />
 ```
 
-**Proibido:** trigger sempre em destaque marca sem `defaultValue`; `SingleDropdown` local; ícone `Calendar` neste controlo.
+**Proibido:** trigger sempre em destaque marca sem `defaultValue`; dropdown local duplicado (usar só `FiltroModoVisualizacaoSelect`); ícone `Calendar` neste controlo.
 
 ### Botão Hoje (Agenda)
 

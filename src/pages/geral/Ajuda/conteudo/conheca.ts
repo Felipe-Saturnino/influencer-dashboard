@@ -408,12 +408,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de autoatendimento cadastral do prestador e consulta/atualização por perfis com permissão ampliada. Cinco abas: **Histórico de trabalho** (somente leitura — dados de contratação mantidos em Gestão de Prestadores), **Dados cadastrais**, **Documentos**, **Formação e Competências** e **Histórico** de movimentações RH.",
+          "Página de autoatendimento cadastral do prestador e consulta/atualização por perfis com permissão ampliada. Seis abas: **Histórico de trabalho** (somente leitura — vínculo na Spin), **Dados cadastrais**, **Documentos**, **Formação e Competências**, **Experiência Profissional** (empregos anteriores) e **Histórico** de movimentações RH.",
       },
       {
         subtitulo: "Permissões e filtros",
         texto:
-          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais, documentos e formação/competências de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro — não se aplica à aba Formação e Competências.",
+          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais, documentos, formação/competências e experiência profissional de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro — não se aplica às abas Formação e Competências nem Experiência Profissional.",
       },
       {
         subtitulo: "Documentos e revisão",
@@ -424,6 +424,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Formação e Competências",
         texto:
           "Cadastre formação acadêmica, idiomas (lista fixa da plataforma), cursos complementares e itens de portfólio. Vídeos e áudios entram por link externo; demais tipos aceitam URL ou arquivo (PDF, imagem ou Word, até 15 MB). Prestadores com vínculo encerrado consultam em modo leitura. Cada inclusão, alteração ou exclusão gera registro na aba Histórico.",
+      },
+      {
+        subtitulo: "Experiência Profissional",
+        texto:
+          "Registre cargos e empresas onde trabalhou **antes** do vínculo na Spin — distinto da aba Histórico de trabalho (contratação atual, somente leitura). Informe cargo, empresa, mês/ano de início e, se houver, mês/ano de fim; sem data de fim o período aparece como «… — atual». Descrição opcional (até 500 caracteres). Alterações geram evento na aba Histórico.",
       },
     ],
   },

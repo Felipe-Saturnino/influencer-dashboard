@@ -4,7 +4,9 @@ import type { CSSProperties } from "react";
 import { FONT } from "../../constants/theme";
 import type { RhFuncionarioHistorico } from "../../types/rhFuncionario";
 import { montarResumoHistoricoFormacao } from "../../lib/rhFormacaoHistorico";
+import { montarResumoHistoricoExperiencia } from "../../lib/rhExperienciaHistorico";
 import type { RhFormacaoHistoricoAcao, RhFormacaoHistoricoBloco } from "../../types/rhFormacaoCompetencias";
+import type { RhExperienciaHistoricoAcao } from "../../types/rhExperienciaProfissional";
 
 export const HIST_TIPO_LABEL: Record<string, string> = {
   revisao_contrato: "Revisão de Contrato",
@@ -19,6 +21,7 @@ export const HIST_TIPO_LABEL: Record<string, string> = {
   dados_cadastro_self: "Atualização — Dados de Cadastro",
   atualizacao_cadastral_sem_alteracao: "Revisão cadastral — sem alterações",
   formacao_competencias: "Formação e Competências",
+  experiencia_profissional: "Experiência Profissional",
 };
 
 const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
@@ -34,6 +37,7 @@ const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
   dados_cadastro_self: { bg: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.34)" },
   atualizacao_cadastral_sem_alteracao: { bg: "rgba(167, 139, 250, 0.12)", border: "rgba(167, 139, 250, 0.38)" },
   formacao_competencias: { bg: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.34)" },
+  experiencia_profissional: { bg: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.34)" },
 };
 
 export function cardStyleHistoricoPorTipo(
@@ -190,6 +194,14 @@ export function ListaHistoricoRh({
                 {montarResumoHistoricoFormacao(
                   (det.acao as RhFormacaoHistoricoAcao) ?? "editar",
                   (det.bloco as RhFormacaoHistoricoBloco) ?? "formacao_academica",
+                  typeof det.resumo === "string" ? det.resumo : "",
+                )}
+              </div>
+            ) : null}
+            {h.tipo === "experiencia_profissional" ? (
+              <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
+                {montarResumoHistoricoExperiencia(
+                  (det.acao as RhExperienciaHistoricoAcao) ?? "editar",
                   typeof det.resumo === "string" ? det.resumo : "",
                 )}
               </div>

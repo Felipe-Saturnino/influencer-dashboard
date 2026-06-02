@@ -125,6 +125,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "cadastral", slug: "DadosCadastrais", label: "Dados cadastrais", access: "always" },
     { tabId: "documentos", slug: "Documentos", label: "Documentos", access: "always" },
     { tabId: "formacao", slug: "FormacaoCompetencias", label: "Formação e Competências", access: "always" },
+    { tabId: "experiencia", slug: "ExperienciaProfissional", label: "Experiência Profissional", access: "always" },
     { tabId: "historico", slug: "Historico", label: "Histórico", access: "always" },
   ]),
   page("Organograma", "rh_organograma", "Organograma", [

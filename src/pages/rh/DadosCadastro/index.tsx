@@ -44,6 +44,7 @@ import {
 } from "../../../components/dashboard";
 import { ABAS_CADASTRO, CADASTRO_TAB_ICONS, CADASTRO_TAB_IDS } from "./constants";
 import FormacaoCompetenciasPainel from "./FormacaoCompetencias";
+import ExperienciaProfissionalPainel from "./ExperienciaProfissional";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
@@ -299,6 +300,7 @@ export default function RhDadosCadastroPage() {
   const visualizandoProprioCadastro = ehProprioCadastroDados(meuPrestadorId, row?.id ?? null);
   const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null);
   const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
+  const podeEditarExperiencia = podeEditarSelecionado && row?.status !== "encerrado";
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
   const staffSelectItems = useMemo(
     () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
@@ -1678,6 +1680,16 @@ export default function RhDadosCadastroPage() {
         <FormacaoCompetenciasPainel
           funcionarioId={row.id}
           podeEditar={podeEditarFormacao}
+          usuarioLabel={user?.email ?? String(user?.id ?? "—")}
+          onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
+          onErro={setErroGlobal}
+        />
+      ) : null}
+
+      {aba === "experiencia" && row ? (
+        <ExperienciaProfissionalPainel
+          funcionarioId={row.id}
+          podeEditar={podeEditarExperiencia}
           usuarioLabel={user?.email ?? String(user?.id ?? "—")}
           onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
           onErro={setErroGlobal}
