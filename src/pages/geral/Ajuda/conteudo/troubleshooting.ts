@@ -1,0 +1,943 @@
+// ─── Conteúdo: Troubleshooting ────────────────────────────────────────────────
+export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: string; texto: string }[] }> = {
+  streamers: {
+    titulo: "Streamers",
+    blocos: [
+      {
+        subtitulo: "Os dados mudaram ao trocar de aba, mas eu não alterei os filtros?",
+        texto:
+          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando...' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver na tablist.",
+      },
+      {
+        subtitulo: "O Comparativo de Funil não mostra nenhum influencer nas opções?",
+        texto:
+          "Os seletores do Comparativo de Funil exibem apenas os influencers com dados no período selecionado. Se não há dados para o período (mês sem lives ou sem métricas), os seletores ficam vazios. Tente selecionar outro mês ou ativar o modo Histórico para ver todos os períodos acumulados.",
+      },
+      {
+        subtitulo: "O Ranking FTD/Hora está vazio ou com poucos influencers?",
+        texto:
+          "O pódio e a lista de FTD/Hora exibem apenas influencers com horas de live registradas no período. Influencers com métricas de conversão mas sem lives cadastradas no sistema não aparecem neste ranking. Verifique se as lives do período foram corretamente registradas com duração na agenda.",
+      },
+      {
+        subtitulo: "O ROI aparece como '—' para alguns influencers?",
+        texto:
+          "ROI exibe '—' quando não há investimento registrado para o influencer no período. Isso ocorre quando o pagamento ainda não foi confirmado (status Pendente) ou quando o influencer não tem contrato de cachê cadastrado. Apenas pagamentos com status Pago são considerados no cálculo.",
+      },
+      {
+        subtitulo: "O PVI está como 0 ou parece inconsistente?",
+        texto:
+          "O PVI (Player Value Index) é calculado com base em três componentes: ticket médio de depósito, GGR por jogador e WD Ratio. Se qualquer um desses dados for zero (ex.: influencer sem depósitos registrados), o PVI não pode ser calculado corretamente e pode aparecer baixo ou zerado. Isso é esperado para influencers com poucos FTDs no período.",
+      },
+      {
+        subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
+        texto:
+          "As abas usam fontes de dados parcialmente diferentes: Financeiro usa um procedimento otimizado do banco para meses fechados, e cai no modo de busca linha a linha para o mês atual (MTD). Para meses passados fechados os valores devem ser idênticos. Se houver divergência em meses fechados, entre em contato com o suporte informando o mês e os valores observados.",
+      },
+    ],
+  },
+  mesas_spin: {
+    titulo: "Overview Spin",
+    blocos: [
+      {
+        subtitulo: "Os KPIs aparecem como '—' mesmo com o mês selecionado?",
+        texto:
+          "Causa mais provável: não há dados carregados para o período. Verifique se o filtro de operadora está correto — se uma operadora específica estiver selecionada mas não tiver dados naquele mês, todos os KPIs exibem '—'. Tente selecionar **Todas Operadoras** no filtro para confirmar se existem dados consolidados. Se o problema persistir para o mês atual, pode ser que o processamento diário ainda não tenha sido executado.",
+      },
+      {
+        subtitulo: "O Comparativo de Mesa não aparece mesmo com dados no mês?",
+        texto:
+          "O Comparativo de Mesa só é exibido quando uma operadora específica está selecionada (não com **Todas Operadoras** no filtro). Selecione uma operadora no filtro e verifique se há dados de mesa individuais cadastrados para o período. Se não houver registros de mesas individuais (somente resumo diário), a seção permanece vazia.",
+      },
+      {
+        subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
+        texto:
+          "O Posicionamento exibe dados do dia atual. Se o monitoramento automático ainda não executou hoje (acontece em horários específicos ao longo do dia), os dados podem não estar disponíveis. Verifique o horário exibido em 'Última atualização' — se indicar um horário de ontem, aguarde a próxima execução. Se o campo não aparecer, selecione uma operadora específica no filtro: **Todas Operadoras** na aba Posicionamento exibe ambas simultaneamente (Blaze e Casa de Apostas).",
+      },
+      {
+        subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
+        texto:
+          "O Histórico agrega todos os meses disponíveis desde o início da operação. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico, navegue até aquele mês sem ativar o Histórico.",
+      },
+      {
+        subtitulo: "O modo gráfico do Detalhamento mostra barras muito pequenas para uma operadora?",
+        texto:
+          "No gráfico por operadora, cada plataforma é representada por uma barra separada no mesmo dia. Se uma operadora tem volume muito menor que outra, as barras ficam proporcionalmente pequenas. Isso é comportamento correto — use a tabela para ver os valores exatos. Alterne para o modo Tabela clicando no botão 'Tabela' no canto superior direito da seção.",
+      },
+      {
+        subtitulo: "Não consigo selecionar operadoras no filtro?",
+        texto:
+          "O filtro de operadoras é exibido apenas para usuários com permissão de visualização multi-operadora. Se o seletor não aparecer, seu perfil de acesso está restrito a uma operadora específica, e os dados já estão filtrados automaticamente. Isso é configurado pelo administrador da plataforma.",
+      },
+    ],
+  },
+  dash_midias_sociais: {
+    titulo: "Mídias Sociais",
+    blocos: [
+      {
+        subtitulo: "Não aparecem dados no Overview mesmo com o mês selecionado?",
+        texto:
+          "O Overview exibe dados de campanhas com UTMs mapeadas. Se nenhuma campanha tiver UTMs vinculadas no período, as tabelas ficam vazias e os KPIs mostram zero. Verifique se as campanhas estão ativas e com UTMs cadastradas em Marketing → Gestão de Links. O dashboard de Mídias Sociais só exibe dados de tráfego originado por links rastreados.",
+      },
+      {
+        subtitulo: "Os KPIs de alcance na aba Alcance estão zerados ou com '—'?",
+        texto:
+          "Os KPIs da aba Alcance vêm da integração com as APIs do Instagram, Facebook e YouTube. Se a integração estava desconectada ou houve falha no ETL (processo de coleta de dados) no período selecionado, os dados não estarão disponíveis. Os dados de mídias sociais estão disponíveis a partir de Janeiro de 2026.",
+      },
+      {
+        subtitulo: "O carrossel de postagens não exibe thumbnails?",
+        texto:
+          "As thumbnails das postagens são carregadas diretamente dos servidores das plataformas (Instagram, Facebook, YouTube). Se uma thumbnail não carregar, é exibido o badge colorido do canal como fallback. Isso pode ocorrer por política de CORS da plataforma ou expiração do link de thumbnail — não afeta os dados de métricas.",
+      },
+      {
+        subtitulo: "O Comparativo de campanha não mostra todas as campanhas?",
+        texto:
+          "Apenas campanhas com pelo menos uma UTM mapeada e tráfego registrado no período aparecem na tabela. Campanhas criadas mas sem UTMs vinculadas ou sem acessos no período não aparecem. Para verificar as UTMs cadastradas, acesse Marketing → Gestão de Links.",
+      },
+      {
+        subtitulo: "O GGR do Overview de Mídias Sociais é diferente do GGR do Streamers?",
+        texto:
+          "Correto — os dois dashboards medem canais diferentes. O Streamers mede conversão via links de influencers (UTMs de lives). O Mídias Sociais mede conversão via campanhas de redes sociais (UTMs de posts e anúncios). Um mesmo jogador pode aparecer em ambos dependendo de qual canal originou o primeiro depósito.",
+      },
+    ],
+  },
+  dash_overview_influencer: {
+    titulo: "Overview Influencer",
+    blocos: [
+      {
+        subtitulo: "O filtro de influencer foi removido automaticamente?",
+        texto:
+          "Quando você navega para um mês onde o influencer selecionado não tem dados, o sistema remove o filtro automaticamente e exibe uma notificação amarela no topo da página. Isso acontece porque exibir uma página inteiramente vazia para um filtro inválido seria confuso. Selecione o influencer novamente no filtro e escolha um período em que ele tenha dados.",
+      },
+      {
+        subtitulo: "Os KPIs mostram '—' para GGR ou FTDs mesmo com dados de lives?",
+        texto:
+          "Lives e métricas de conversão vêm de fontes diferentes. É possível ter lives registradas mas sem métricas de conversão (acessos, registros, FTDs) para o período — isso ocorre quando os links do influencer não estavam rastreados ou as UTMs não foram mapeadas corretamente. Verifique se os links de divulgação do influencer estão cadastrados em Marketing → Gestão de Links.",
+      },
+      {
+        subtitulo: "O Investimento aparece como R$ 0,00?",
+        texto:
+          "O investimento exibido considera apenas pagamentos com status Pago. Pagamentos pendentes, em análise ou de meses anteriores ainda não confirmados não são incluídos. Verifique o status dos pagamentos do período no módulo financeiro correspondente.",
+      },
+      {
+        subtitulo: "O Detalhamento Diário não exibe todos os dias do mês?",
+        texto:
+          "Para o mês atual, o detalhamento exibe apenas os dias até ontem — o dia atual é excluído por estar incompleto (os dados do dia só são fechados no final do dia). Para meses passados, todos os dias são exibidos. Este é o comportamento esperado.",
+      },
+      {
+        subtitulo: "A Média de Views parece muito baixa ou '—' mesmo com lives realizadas?",
+        texto:
+          "A Média de Views é calculada como a média das médias de espectadores das lives com resultado registrado. Se as lives foram realizadas mas os resultados (duração, média de views) não foram preenchidos na agenda, a métrica aparece como '—'. Verifique se os resultados das lives estão cadastrados em Lives → Resultados.",
+      },
+    ],
+  },
+  agenda: {
+    titulo: "Agenda",
+    blocos: [
+      {
+        subtitulo: "Uma live não aparece no calendário?",
+        texto:
+          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com qualquer filtro ativo, apenas as lives que atendem a todos os critérios são exibidas. O botão Limpar filtros aparece automaticamente — use-o para ver a agenda completa.\n\nInfluencers e agências só visualizam as próprias lives. Se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
+      },
+      {
+        subtitulo: "Não consigo salvar uma nova live?",
+        texto:
+          "O campo de link é obrigatório. Verifique se o link da plataforma selecionada está preenchido. O link é pré-preenchido automaticamente com o perfil do influencer, mas atualiza ao trocar de plataforma — se a nova plataforma não tiver link cadastrado, o campo fica em branco e precisa ser preenchido manualmente.",
+      },
+      {
+        subtitulo: "Apareceu um modal de 'Agendamento indisponível'?",
+        texto:
+          "O bloqueio ocorre quando o influencer não atendeu os pré-requisitos:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. Use o botão 'Ir para Influencers' no próprio modal para ir diretamente à correção.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. Use o botão 'Ir para Playbook Influencers' no modal.\n\nO sistema verifica esses pré-requisitos automaticamente ao clicar em Nova Live. Se ambos os problemas existirem, os dois botões aparecem.",
+      },
+      {
+        subtitulo: "Não consigo editar uma live?",
+        texto:
+          "Lives com status Realizada ou Não Realizada são bloqueadas para edição por influencers, agências e operadores — o modal abre em modo somente leitura. Apenas Admin e Gestor podem editar lives já validadas. Se você precisa corrigir uma live validada, solicite a quem tem perfil Admin ou Gestor.",
+      },
+      {
+        subtitulo: "Não consigo excluir uma live?",
+        texto:
+          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal segue o fluxo de duplo clique (Confirmar?) quando o seu perfil tem permissão de exclusão.",
+      },
+      {
+        subtitulo: "Não consigo agendar para hoje?",
+        texto:
+          "Influencers e operadores só podem agendar lives a partir do dia seguinte — agendar para o mesmo dia não é permitido. Essa restrição não se aplica a Admin e Gestor, que podem criar e editar lives em qualquer data.",
+      },
+      {
+        subtitulo: "A live foi salva mas não aparece para minha operadora?",
+        texto:
+          "Novas lives recebem a operadora do primeiro vínculo ativo do influencer. Se a live não aparece no seu escopo, verifique em Influencers → Operadoras se o vínculo correto está ativo e em primeiro lugar, ou peça a um Gestor/Admin para ajustar a live.",
+      },
+      {
+        subtitulo: "Não consigo criar ou editar uma live em data passada?",
+        texto:
+          "Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados. Se o sistema bloqueou a operação, verifique se a data preenchida não está no passado e se o seu perfil tem essa permissão.",
+      },
+      {
+        subtitulo: "O botão Nova Live não aparece?",
+        texto:
+          "O botão aparece apenas para perfis com permissão de criação. Se ele não aparecer mesmo estando logado, o seu perfil pode não ter essa permissão configurada. Entre em contato com o administrador da conta.",
+      },
+    ],
+  },
+  resultados: {
+    titulo: "Resultados",
+    blocos: [
+      {
+        subtitulo: "Uma live não aparece na lista?",
+        texto:
+          "A lista exibe apenas lives com status Agendada cujo horário passou há mais de 5 horas. Verifique:\n\n— A live pode ainda não ter atingido a janela de 5 horas desde o horário agendado.\n— Se os filtros de influencer ou operadora estiverem ativos, a live pode estar sendo ocultada.\n— Veja na Agenda se a live tem status diferente de Agendada — lives já validadas (Realizada ou Não Realizada) não aparecem aqui.",
+      },
+      {
+        subtitulo: "A página está vazia mas sei que há lives pendentes?",
+        texto:
+          "Confirme se os filtros de influencer ou operadora não estão ocultando as lives. Se os filtros estiverem desativados, verifique se as lives em questão passaram da janela de 5 horas desde o horário agendado. Se as lives foram validadas por outro usuário enquanto a página estava aberta, recarregue para ver a lista atualizada.",
+      },
+      {
+        subtitulo: "A operadora na validação não bate com o que esperava?",
+        texto:
+          "Em lives novas agendadas pela Agenda, a operadora pode ter sido definida automaticamente pelo primeiro vínculo ativo do influencer (Influencers → Operadoras). Na validação você pode ajustar a operadora — ela continua obrigatória e alimenta o Financeiro. Se o vínculo em Influencers estiver incorreto, corrija o cadastro antes de validar em massa.",
+      },
+      {
+        subtitulo: "Não consigo salvar a validação?",
+        texto:
+          "Verifique:\n\n— O campo Operadora é obrigatório para qualquer status (Realizada ou Não Realizada).\n— Para lives Realizadas, a Duração deve ser preenchida — horas e minutos não podem ser ambos zero.\n— O Máximo de Views não pode ser menor que a Média de Views.",
+      },
+      {
+        subtitulo: "O Horário Real de Início já vem preenchido. Devo alterar?",
+        texto:
+          "O campo é pré-preenchido com o horário agendado da live. Altere apenas se a live começou em horário diferente do agendado — isso garante que a duração registrada para o módulo Financeiro seja precisa.",
+      },
+      {
+        subtitulo: "Por que a operadora é obrigatória mesmo para lives não realizadas?",
+        texto:
+          "A operadora registrada na validação é o vínculo que conecta a live ao ciclo de pagamentos no módulo Financeiro. Sem ela, o sistema não consegue associar a live ao ciclo correto — por isso é obrigatória independentemente do status.",
+      },
+      {
+        subtitulo: "O botão Validar não aparece?",
+        texto:
+          "O botão aparece apenas para perfis com permissão de edição. Se ele não aparecer, o seu perfil pode não ter essa permissão configurada. Entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "Posso excluir uma live da lista de validação?",
+        texto:
+          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com confirmação em dois cliques. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
+      },
+    ],
+  },
+  feedback: {
+    titulo: "Feedback",
+    blocos: [
+      {
+        subtitulo: "Nenhuma live aparece na lista?",
+        texto:
+          "Verifique o período selecionado — o padrão exibe a semana atual. Ative Histórico para ver o acumulado completo. Lives só aparecem no Feedback após serem validadas em Resultados — lives com status Agendada não aparecem aqui.",
+      },
+      {
+        subtitulo: "Os KPIs do topo estão zerados?",
+        texto:
+          "Os KPIs consideram todas as lives do período independentemente do chip de status da lista. Se os KPIs estão zero, não há lives validadas no período selecionado. Tente ativar Histórico para confirmar se existem lives em outros períodos.",
+      },
+      {
+        subtitulo: "Uma live específica não aparece?",
+        texto:
+          "Confirme se o filtro de status, influencer ou operadora não está excluindo essa live. O chip de status padrão é 'Todos', mas se estiver em Realizada ou Não Realizada, lives do outro tipo ficam ocultas.\n\nVerifique também se a live foi validada em Resultados. Se ainda está como Agendada, não aparecerá no Feedback.",
+      },
+      {
+        subtitulo: "A Média de Views no KPI parece diferente do esperado?",
+        texto:
+          "O KPI é a média das médias individuais por live — não a soma de todas as views. Cada live contribui com sua própria média de audiência, e o indicador é a média dessas médias. Lives sem dado de views registrado são excluídas deste cálculo.",
+      },
+      {
+        subtitulo: "Não consigo editar uma live?",
+        texto:
+          "O botão Editar aparece apenas para perfis com permissão de edição. Se não aparecer ou estiver ausente, o perfil não tem essa permissão. Entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "Não consigo excluir uma live?",
+        texto:
+          "O botão Excluir segue as mesmas regras de permissão que o Editar e usa o fluxo de duplo clique (Confirmar?). Lives fora do seu escopo não exibem ações.",
+      },
+      {
+        subtitulo: "A operadora não aparece nas opções ao editar?",
+        texto:
+          "O seletor de operadora exibe apenas as operadoras dentro do seu escopo de acesso. Se a operadora esperada não aparece, pode não estar atribuída ao seu perfil. Verifique com o administrador da conta.",
+      },
+    ],
+  },
+  influencers: {
+    titulo: "Influencers",
+    blocos: [
+      {
+        subtitulo: "Nenhum influencer aparece na lista?",
+        texto:
+          "Verifique se os filtros de status, plataforma, operadora, cachê ou busca estão limitando a lista. O botão Limpar filtros aparece automaticamente quando há filtros ativos. Se a lista continuar vazia, pode ser que nenhum influencer tenha sido cadastrado ou que o escopo do seu perfil não inclua influencers ativos.",
+      },
+      {
+        subtitulo: "Não consigo alterar o status ou o cachê de um influencer?",
+        texto:
+          "Alterações de status e cachê por hora são restritas a Admin e Gestor. Para outros perfis, o badge de status no card é somente leitura e o campo de cachê fica bloqueado no formulário de edição. Se você é Gestor e ainda não consegue alterar, verifique com o administrador se sua permissão de edição está configurada corretamente.",
+      },
+      {
+        subtitulo: "Um influencer aparece como 'Perfil Incompleto'?",
+        texto:
+          "O badge e o quadro de Perfil Incompleto aparecem para influencers ativos com dados obrigatórios faltando. Clique no nome no quadro de Perfil Incompleto no topo da página para abrir diretamente o formulário de edição, ou use o botão Editar no card da lista.",
+      },
+      {
+        subtitulo: "Não consigo salvar o perfil?",
+        texto:
+          "Verifique:\n\n— Na aba Canais: cada plataforma selecionada exige que o link correspondente esteja preenchido.\n— Na aba Operadoras: cada operadora marcada como ativa exige o ID do influencer naquela operadora.\n\nO erro pode estar em uma aba diferente da que você está visualizando no momento do aviso.",
+      },
+      {
+        subtitulo: "A aba Histórico não aparece no formulário de edição?",
+        texto:
+          "A aba Histórico está disponível apenas no modal de Visualização (botão Ver). O formulário de edição tem quatro abas — Cadastral, Canais, Financeiro e Operadoras — e não inclui a aba Histórico.",
+      },
+      {
+        subtitulo: "Os dados sensíveis somem sozinhos?",
+        texto:
+          "No modo de visualização, CPF, Chave PIX e dados bancários ocultam-se automaticamente após 10 segundos de serem revelados. Clique no ícone de olho para revelar novamente. No modo de edição, os dados ficam visíveis durante toda a sessão.",
+      },
+      {
+        subtitulo: "O filtro de operadora não aparece?",
+        texto:
+          "O filtro de operadora aparece apenas para perfis com acesso a múltiplas operadoras. Operadores com escopo restrito a uma única operadora não veem esse filtro — a lista já está filtrada automaticamente pelo escopo do perfil.",
+      },
+    ],
+  },
+  scout: {
+    titulo: "Scout",
+    blocos: [
+      {
+        subtitulo: "Nenhum prospecto aparece na lista?",
+        texto:
+          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status. Verifique também se o chip de plataforma na grade de Cobertura está ativo — ele também filtra a lista quando selecionado. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
+      },
+      {
+        subtitulo: "Não consigo fechar a parceria — aparece uma mensagem de erro?",
+        texto:
+          "Para marcar como Fechado, todos estes campos são obrigatórios:\n\n— Nome artístico e e-mail\n— Cachê negociado maior que zero\n— Operadora (aba Contato)\n— Pelo menos uma plataforma com link e métrica preenchidos — views ou seguidores, conforme a plataforma (aba Canais)\n\nA mensagem de erro indica qual campo está faltando. Acesse a aba correspondente, preencha o dado e tente novamente.",
+      },
+      {
+        subtitulo: "O botão ficou em 'Criando usuário...' por muito tempo?",
+        texto:
+          "O fechamento envolve criação do usuário, vínculo com a operadora e configuração de escopo — pode levar alguns segundos em conexões lentas. Não feche o modal durante o processo. Se ocorrer uma falha, uma mensagem de erro aparecerá no formulário — anote o erro e entre em contato com a equipe técnica.",
+      },
+      {
+        subtitulo: "Não vejo o botão Editar em um prospecto?",
+        texto:
+          "O botão Editar aparece apenas quando o perfil tem permissão de edição. Em alguns perfis, só quem criou o prospecto pode editá-lo. Se nenhuma dessas condições se aplica e o botão não aparece, entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "Um prospecto fechado aparece aqui mas não em Influencers?",
+        texto:
+          "Isso pode indicar que o processo de criação de usuário não foi concluído — o e-mail pode já estar em uso ou ter ocorrido um erro durante o fechamento. Verifique se o influencer foi criado na Gestão de Usuários. Se não foi, edite o prospecto, corrija os dados necessários e tente marcar como Fechado novamente.",
+      },
+      {
+        subtitulo: "Posso editar um prospecto já Fechado?",
+        texto:
+          "Sim — é possível editar dados de contato, canais e adicionar anotações mesmo após o fechamento. Alterar o status de Fechado para outro não desfaz a criação do usuário — o influencer continua ativo na plataforma.",
+      },
+      {
+        subtitulo: "As views do Scout diferem dos dados nos dashboards?",
+        texto:
+          "As views/seguidores cadastrados no Scout são dados de prospecção inseridos manualmente durante a negociação. Os números nos dashboards de Streamers e Overview Influencer vêm dos dados reais das lives realizadas. São fontes diferentes — diferenças são esperadas e não indicam inconsistência.",
+      },
+    ],
+  },
+  gestao_dealers: {
+    titulo: "Gestão de Dealers",
+    blocos: [
+      {
+        subtitulo: "Um dealer não aparece na listagem?",
+        texto:
+          "Verifique se há filtros ativos — turno, gênero, jogo ou operadora podem estar restringindo a listagem. O bloco consolidado exibe a contagem filtrada; compare com o total sem filtros para confirmar.\n\nO campo de busca aceita nome real e nickname. Se a busca estiver preenchida, ela se aplica em conjunto com os demais filtros — limpe o campo para ver todos os dealers do filtro atual.\n\nPara perfis com escopo de operadora restrito, apenas os dealers vinculados àquela operadora aparecem na listagem — isso é comportamento esperado.",
+      },
+      {
+        subtitulo: "O botão Solicitar não aparece no card?",
+        texto:
+          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o filtro de operadora na página está definido para a operadora do escopo — quando o usuário tem acesso a mais de uma, a operadora precisa estar selecionada no filtro para que o botão apareça.",
+      },
+      {
+        subtitulo: "O botão Histórico não aparece?",
+        texto:
+          "O botão Histórico requer permissão de visualização na Central de Notificações (configurada em Gestão de Usuários → Permissões). Verifique se a permissão de visualização para a página 'Central de Notificações' está ativa no perfil do usuário.\n\nPara o perfil Operador, o Histórico também exige que a operadora ativa esteja definida no escopo — sem ela, o botão não é renderizado.",
+      },
+      {
+        subtitulo: "Não consigo editar um dealer?",
+        texto:
+          "O botão Editar aparece apenas para perfis com permissão de edição configurada em Gestão de Usuários. Verifique se a permissão 'can_editar' está ativa para a página 'Gestão de Dealers'.\n\nPara perfis com edição restrita a 'próprios', o botão só aparece em dealers vinculados a operadoras dentro do escopo do usuário. Dealers sem operadora ou de outras operadoras não exibem o botão Editar.",
+      },
+      {
+        subtitulo: "Não consigo salvar um dealer — aparece mensagem de erro?",
+        texto:
+          "Verifique os campos obrigatórios:\n\n— Nome real: não pode estar em branco.\n— Nickname: não pode estar em branco.\n— Jogos: pelo menos um jogo de especialidade deve ser selecionado.\n\nSe o upload de foto falhar, o erro indicará o motivo. Confirme se o bucket 'dealer-photos' existe e está configurado no Supabase Storage. O erro pode ocorrer também por limite de tamanho de arquivo — tente com imagens menores.",
+      },
+      {
+        subtitulo: "A foto enviada não aparece no card?",
+        texto:
+          "Após o upload, a URL da foto é armazenada no campo 'fotos' do dealer. Se a foto não aparece após salvar, verifique:\n\n— Se o upload foi concluído antes de clicar em Salvar — o indicador 'Enviando...' deve ter desaparecido.\n— Se a URL gerada pelo Storage é pública. Acesse o Supabase → Storage → dealer-photos e confirme que o bucket está configurado como público.\n— Fotos enviadas mas não salvas (modal fechado antes do Salvar) são perdidas — o upload ocorre no Storage mas a URL não é vinculada ao dealer.",
+      },
+      {
+        subtitulo: "O histórico de solicitações do dealer está vazio?",
+        texto:
+          "O modal de Histórico exibe solicitações registradas na tabela 'dealer_solicitacoes' para aquele dealer. Se estiver vazio, significa que nenhuma solicitação foi criada para esse dealer ainda — isso é comportamento esperado para dealers recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo dealer não são exibidas.",
+      },
+    ],
+  },
+  central_notificacoes: {
+    titulo: "Central de Notificações",
+    blocos: [
+      {
+        subtitulo: "A listagem está vazia mas sei que há solicitações em aberto?",
+        texto:
+          "Verifique o período selecionado na barra de navegação. O filtro de período afeta as solicitações resolvidas exibidas, mas solicitações abertas (pendente ou em andamento) aparecem independentemente do mês selecionado — elas sempre são buscadas sem corte de data.\n\nSe os filtros de operadora estiverem ativos, tente selecionar **Todas Operadoras** no filtro para confirmar se os dados existem em outro escopo.\n\nPara perfis Operador, apenas solicitações da operadora do escopo aparecem — isso é comportamento esperado.",
+      },
+      {
+        subtitulo: "O badge de contagem na aba não reflete o número correto?",
+        texto:
+          "O badge exibe apenas solicitações abertas (pendente ou em andamento) onde o campo 'aguarda_resposta_de' está definido como 'gestor' — ou seja, a bola está com o estúdio. Solicitações em andamento mas aguardando resposta da operadora não são contabilizadas no badge.\n\nSe o número parece desatualizado, recarregue a página — a contagem é calculada no momento do carregamento dos dados e não atualiza em tempo real nessa visualização.",
+      },
+      {
+        subtitulo: "Não consigo responder na thread?",
+        texto:
+          "O campo de texto e o botão de envio só aparecem quando:\n\n— A solicitação está com status diferente de 'resolvido' ou 'cancelado'.\n— O perfil tem permissão de edição ativa na Central de Notificações (Gestão de Usuários → Permissões → can_editar).\n\nSe a thread abre em modo somente leitura com a mensagem 'Sem permissão para responder nesta página', verifique a configuração de permissão na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "A campanha não aparece para o Operador?",
+        texto:
+          "As campanhas exibidas para operadores vêm da tabela 'roteiro_mesa_campanhas' filtradas pela operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada com a operadora correta no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha.",
+      },
+      {
+        subtitulo: "O botão 'Marcar como resolvido' não aparece na thread?",
+        texto:
+          "O botão de resolução só é exibido para perfis Staff (admin, gestor ou executivo) com permissão de edição ativa. Perfis Operador não têm acesso a essa ação — operadores podem enviar mensagens mas não podem encerrar solicitações.\n\nSe você é Gestor e o botão não aparece, verifique se a permissão 'can_editar' está ativa para a Central de Notificações na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "O banner de pendências na Gestão de Dealers não aparece?",
+        texto:
+          "O banner amarelo de pendências (componente BannerPendencias) só é exibido para o perfil Operador quando há solicitações com 'aguarda_resposta_de = operadora' em aberto. Verifique:\n\n— Se o usuário tem o perfil Operador configurado.\n— Se há solicitações abertas aguardando resposta da operadora — o banner não aparece quando todas as solicitações estão aguardando o estúdio.\n— O banner monitora em tempo real via realtime do Supabase. Se a conexão realtime estiver instável, o banner pode não atualizar automaticamente — recarregue a página para forçar a leitura.",
+      },
+      {
+        subtitulo: "As solicitações concluídas não aparecem na seção de histórico?",
+        texto:
+          "A seção 'Solicitações concluídas' exibe itens com status 'resolvido' cuja data de resolução está dentro do período selecionado. Se o período estiver no mês atual e as resoluções ocorreram em meses anteriores, os itens não aparecerão — ative Histórico para ver o acumulado completo.\n\nA seção só é exibida para o perfil Operador. Para Gestores, os itens resolvidos aparecem dentro das próprias abas do inbox, mesclados com os abertos.",
+      },
+    ],
+  },
+  rh_figurinos: {
+    titulo: "Figurinos",
+    blocos: [
+      {
+        subtitulo: "A câmera não abre ao clicar em Bipar código?",
+        texto:
+          "O navegador precisa de permissão para acessar a câmera. Verifique se a permissão foi concedida — na barra do navegador deve aparecer um ícone de câmera. Se negado, recarregue a página e permita o acesso quando solicitado. Em dispositivos sem câmera, use o campo de texto manual abaixo do leitor para digitar o código.",
+      },
+      {
+        subtitulo: "O código bipado retornou 'não reconhecido'?",
+        texto:
+          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. Certifique-se de que o código começa com 'FIG-' (ex: FIG-000003). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
+      },
+      {
+        subtitulo: "O prestador não aparece na lista de retirada?",
+        texto:
+          "A lista de prestadores vem da página Gestão de Prestadores e exibe apenas funcionários com status Ativo ou Indisponível. Se o prestador não aparece, verifique se ele está cadastrado e ativo na Gestão de Prestadores. Funcionários com status Inativo ou Desligado não são exibidos.",
+      },
+      {
+        subtitulo: "Os botões Retirada e Manutenção não aparecem na tabela?",
+        texto:
+          "Esses botões exigem permissão de edição na página Figurinos. Se você não os vê, sua conta está configurada apenas para visualização. Solicite ao administrador a liberação de permissão de edição.",
+      },
+      {
+        subtitulo: "A peça está na aba errada ou não aparece?",
+        texto:
+          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em **Todas Operadoras**, **Todas as categorias** e **Todos os tamanhos** para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
+      },
+      {
+        subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
+        texto:
+          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex: FIG-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
+      },
+      {
+        subtitulo: "Não consigo registrar uma movimentação?",
+        texto:
+          "Confirme permissão de edição para Figurinos em Gestão de Usuários. Alguns status de peça bloqueiam certas ações (por exemplo, descarte definitivo). Verifique campos obrigatórios do formulário. A interface exibe mensagens genéricas em português — detalhes técnicos ficam no console do navegador para suporte.",
+      },
+    ],
+  },
+  roteiro_mesa: {
+    titulo: "Roteiro de Mesa",
+    blocos: [
+      {
+        subtitulo: "Não vejo nenhum bloco de conteúdo?",
+        texto:
+          "É necessário selecionar uma operadora na barra de filtros (perfis com múltiplas operadoras). Sem seleção, a página exibe apenas a orientação para escolher a operadora.\n\nSe a operadora já está selecionada e os blocos continuam vazios, confirme permissão de visualização e se há campanhas ou sugestões cadastradas para aquela operadora.",
+      },
+      {
+        subtitulo: "A campanha não aparece na Central de Notificações?",
+        texto:
+          "Confirme operadora, datas de início/fim e permissões. A Central filtra por escopo; campanhas fora do período podem exigir modo Histórico na Central.\n\nA campanha precisa estar ativa no intervalo selecionado na Central e vinculada à operadora do escopo do operador.",
+      },
+      {
+        subtitulo: "Filtros de jogo ou tipo escondem itens?",
+        texto:
+          "Os filtros Jogo e Tipo aplicam-se às sugestões dos blocos Abertura, Durante o jogo e Fechamento — não ao bloco Campanhas. Volte Jogo e Tipo para 'Todos' para ver o conjunto completo de roteiros do bloco.",
+      },
+      {
+        subtitulo: "Erro ao salvar bloco ou campanha?",
+        texto:
+          "Verifique campos obrigatórios (título, texto, operadora, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
+      },
+      {
+        subtitulo: "Não consigo excluir uma sugestão ou campanha?",
+        texto:
+          "A exclusão exige permissão can_excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+      },
+    ],
+  },
+  playbook_influencers: {
+    titulo: "Playbook — Influencers",
+    blocos: [
+      {
+        subtitulo: "O bloco de confirmação não aparece na aba?",
+        texto:
+          "O bloco de ciência só aparece para usuários com perfil de influencer ativo. Verifique se o seu usuário está cadastrado com o papel correto na plataforma. Se o perfil estiver correto e o bloco ainda não aparecer, recarregue a página. Caso persista, contate o administrador para verificar as permissões da sua conta.",
+      },
+      {
+        subtitulo: "Cliquei em Confirmar Ciência mas nada aconteceu?",
+        texto:
+          "Verifique se a caixa de confirmação foi marcada antes de clicar no botão — o botão fica inativo enquanto a caixa não estiver selecionada. Se a caixa estava marcada e o botão não respondeu, pode ter ocorrido uma falha temporária de conexão. Aguarde alguns segundos e tente novamente. Se o erro persistir, recarregue a página.",
+      },
+      {
+        subtitulo: "A barra de progresso não avança mesmo após confirmar?",
+        texto:
+          "Após confirmar, a barra deve atualizar imediatamente. Se não atualizar, recarregue a página para sincronizar o estado. Verifique também se a aba que você confirmou é realmente uma das três obrigatórias (Dealers, Agendamento e Jogos).",
+      },
+      {
+        subtitulo: "O Painel de Auditoria não aparece para mim?",
+        texto:
+          "O painel de auditoria é visível apenas para gestores, administradores, executivos e demais papéis com permissão de editar. Influencers não visualizam o painel de outros — apenas o próprio bloco de confirmação. Se você tem papel de gestor e o painel não aparece, verifique se a sua permissão de Editar no Playbook Influencers está ativa em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Um influencer aparece como pendente mas já me disse que confirmou?",
+        texto:
+          "A listagem do painel exibe apenas influencers ativos com perfil cadastrado. Se o influencer foi marcado como inativo após confirmar, pode não aparecer na contagem de confirmados. Verifique o status do influencer em Gestão de Influencers. Se o status estiver ativo e o nome ainda aparecer como pendente, a confirmação pode não ter sido gravada — peça ao influencer que repita o processo.",
+      },
+      {
+        subtitulo: "A página não carrega ou aparece em branco?",
+        texto:
+          "Verifique a sua conexão com a internet. Se o problema persistir, recarregue a página ou faça logout e login novamente. Se o acesso ao Playbook Influencers sumir completamente do menu, o seu perfil pode ter tido a permissão de visualização removida — contate o administrador.",
+      },
+    ],
+  },
+  links_materiais: {
+    titulo: "Links e Materiais",
+    blocos: [
+      {
+        subtitulo: "O botão Emitir está desabilitado?",
+        texto:
+          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer na lista.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, contate o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
+        texto:
+          "O link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
+      },
+      {
+        subtitulo: "O UTM foi preenchido automaticamente com um nome errado?",
+        texto:
+          "O UTM é gerado a partir do nome artístico cadastrado no perfil do influencer. Se o nome artístico estiver desatualizado, atualize-o em Influencers (área de perfil) e volte para emitir. Você também pode editar o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
+      },
+      {
+        subtitulo: "O link já foi emitido mas não aparece na tela?",
+        texto:
+          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar o influencer na lista.",
+      },
+      {
+        subtitulo: "O QR Code não aparece após emitir?",
+        texto:
+          "As prévias dos QR Codes são geradas automaticamente após a emissão do link. Se o quadro de prévia mostrar apenas o placeholder por mais de 10 segundos, pode ter havido uma falha na geração da imagem. Recarregue a página — o link já estará salvo e as prévias serão geradas novamente.",
+      },
+      {
+        subtitulo: "Não consigo baixar o PNG do QR Code?",
+        texto:
+          "Verifique se o seu navegador está bloqueando downloads automáticos. Na maioria dos navegadores, um ícone aparece na barra de endereço quando um download é bloqueado — clique nele e permita o download desta página. Se o botão mostrar Gerando… por mais de 15 segundos sem baixar, recarregue a página e tente novamente.",
+      },
+      {
+        subtitulo: "Como gestor, não vejo nenhum influencer na lista?",
+        texto:
+          "A lista exibe apenas influencers dentro do seu escopo de visibilidade configurado na Gestão de Usuários. Se a lista estiver vazia, o seu escopo pode não incluir nenhum influencer ativo. Contate o administrador para revisar o seu escopo de acesso.",
+      },
+    ],
+  },
+  spin_na_rede: {
+    titulo: "Spin na Rede",
+    blocos: [
+      {
+        subtitulo: "A página não carrega ou fica em branco?",
+        texto:
+          "Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, faça logout e login novamente. Caso a Spin na Rede não apareça mais no menu, seu acesso à seção Conteúdo pode ter sido removido — contate o administrador.",
+      },
+      {
+        subtitulo: "Não aparece nenhuma menção mesmo com o agregador ativo?",
+        texto:
+          "A ausência de itens pode significar que nenhuma publicação passou pelo filtro de relevância ainda, ou que o agregador RSS ainda não foi configurado para o ambiente de produção. A mensagem na tela indica exatamente isso. Se você espera ver publicações recentes e elas não aparecem, informe o time técnico para verificar o status do agregador.",
+      },
+      {
+        subtitulo: "As miniaturas das matérias não aparecem?",
+        texto:
+          "Miniaturas são carregadas diretamente do site de origem e dependem da disponibilidade do servidor externo. Se a imagem não aparecer, o cartão continua funcional com título, texto e link — a miniatura é apenas visual e não afeta o acesso à matéria.",
+      },
+      {
+        subtitulo: "O link 'Ir para a matéria' não abre nada?",
+        texto:
+          "Verifique se o seu navegador está bloqueando popups ou novas abas desta página. Procure um ícone na barra de endereço indicando popup bloqueado e permita para este site. Se o link continuar sem resposta, a matéria original pode ter sido removida ou o URL alterado.",
+      },
+    ],
+  },
+  informativos: {
+    titulo: "Informativos",
+    blocos: [
+      {
+        subtitulo: "Não vejo a aba Gerenciamento de Informativos?",
+        texto:
+          "A aba só aparece para utilizadores com permissão de Editar em Informativos na Gestão de Usuários. Peça ao administrador para liberar Ver e Editar (e Criar/Excluir, se necessário).",
+      },
+      {
+        subtitulo: "Publiquei um informativo mas não aparece na Home?",
+        texto:
+          "Confirme que o status está Publicado e que o perfil do utilizador foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
+      },
+    ],
+  },
+  rh_portal: {
+    titulo: "Portal de RH",
+    blocos: [
+      {
+        subtitulo: "O portal não carrega os comunicados ou aparece em branco?",
+        texto:
+          "Verifique a conexão com a internet e recarregue a página. Se o erro persistir, faça logout e login novamente. Se a mensagem de erro aparecer em português indicando que não foi possível carregar, aguarde alguns minutos e tente novamente — pode ser uma instabilidade temporária do banco de dados.",
+      },
+      {
+        subtitulo: "Não consigo ver a aba Gerenciamento de Postagens?",
+        texto:
+          "A aba de Gerenciamento aparece apenas para usuários com permissão de Editar no Portal de RH. Se você precisa dessa permissão, contate o administrador para ativá-la em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "O botão 'Ver Ata' está desabilitado numa RH Talk?",
+        texto:
+          "Essa ata tem acesso restrito a participantes da reunião. Se você esteve presente na reunião mas não consegue ver, pode ser que o registro de participação não tenha sido feito. Informe ao RH para que adicionem seu usuário como participante.",
+      },
+      {
+        subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",
+        texto:
+          "O badge Novo desaparece após o clique quando a operação é registrada com sucesso. Se voltou após recarregar a página, pode ter ocorrido uma falha no registro. Tente clicar em Lido novamente. Se o problema persistir, contate o suporte.",
+      },
+      {
+        subtitulo: "Tentei publicar uma postagem mas deu erro?",
+        texto:
+          "Verifique se todos os campos obrigatórios (marcados com asterisco vermelho) estão preenchidos. Se todos estão preenchidos e o erro persiste, pode ser uma instabilidade temporária. Aguarde alguns segundos e tente novamente. Rascunhos são salvos mesmo que a publicação falhe — verifique na aba Gerenciamento se o rascunho foi salvo.",
+      },
+      {
+        subtitulo: "Uma postagem que aprovar não aparece na lista de publicados?",
+        texto:
+          "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, verifique o filtro de mês ativo — ela pode ter sido publicada em um mês diferente do selecionado. Mude o carrossel para o mês de publicação ou use a aba Gerenciamento com filtro Status: Publicado.",
+      },
+      {
+        subtitulo: "Não consigo arquivar uma postagem publicada?",
+        texto:
+          "O botão Arquivar exige dois cliques: o primeiro destaca o botão e exibe Confirmar?; o segundo executa a ação. Se você clicou fora do botão antes de confirmar, repita o processo.",
+      },
+      {
+        subtitulo: "O anexo ou imagem não abre ao clicar?",
+        texto:
+          "Os arquivos são abertos em uma nova aba. Verifique se o navegador está bloqueando novas abas desta página e permita o popup. Se o link mostrar 'Carregando…' por mais de 10 segundos, pode ser que o arquivo tenha sido removido do armazenamento. Informe ao responsável pela postagem.",
+      },
+    ],
+  },
+  banca_jogo: {
+    titulo: "Banca de Jogo",
+    blocos: [
+      {
+        subtitulo: "Não consigo criar uma solicitação?",
+        texto:
+          "A solicitação pode estar bloqueada por dois motivos: (1) cadastro de perfil incompleto — acesse Lives → Influencers e complete todas as informações obrigatórias; (2) ciência do Playbook pendente — acesse Conteúdo → Playbook e registre sua concordância. O sistema indica qual das situações está bloqueando e oferece um botão de acesso direto para resolver.",
+      },
+      {
+        subtitulo: "A solicitação sumiu após ser criada?",
+        texto:
+          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, confirme o mês selecionado no carrossel — a solicitação pode ter sido criada em outro período. Ative o Histórico para ver tudo sem restrição de data.",
+      },
+      {
+        subtitulo: "Os botões Aprovar, Recusar e Liberar não aparecem?",
+        texto:
+          "Esses botões são exclusivos para perfis de gestão interna com permissão de edição. Aprovar e Recusar aparecem para solicitações com status Solicitado. Liberar aparece apenas para solicitações Aprovadas. Se você tem o perfil correto e os botões não aparecem, verifique se o filtro de período está correto — solicitações de outro mês não são exibidas na visualização atual.",
+      },
+      {
+        subtitulo: "O Status da Conta no Consolidado não está correto?",
+        texto:
+          "O status Liberada/Bloqueada reflete o registro manual feito pela equipe de gestão. Se você acredita que o status está desatualizado, contate o gestor responsável para que ele altere diretamente pelo badge da linha no Consolidado de Bancas.",
+      },
+      {
+        subtitulo: "O CPF aparece sempre mascarado — como revelar?",
+        texto:
+          "Clique no ícone de olho ao lado do CPF mascarado (***.***.***-**) para revelar o número completo temporariamente. A revelação é individual por linha e não persiste após navegar para outra página. Essa funcionalidade está disponível apenas para perfis com acesso aos dados do influencer.",
+      },
+      {
+        subtitulo: "O Histórico do Consolidado não expande?",
+        texto:
+          "Clique na linha do influencer para expandir o histórico. Se o histórico aparecer vazio após expandir, significa que não há solicitações registradas para aquele influencer no período selecionado. Ative o Histórico (filtro) para ver todas as transações sem restrição de data.",
+      },
+    ],
+  },
+  afiliados: {
+    titulo: "Afiliados — Problemas Comuns",
+    blocos: [
+      {
+        subtitulo: "Não consigo salvar o perfil do afiliado?",
+        texto:
+          "Todos os campos financeiros são obrigatórios: Chave PIX, Banco, Agência e Conta. Verifique a aba Financeiro e preencha todos os campos antes de salvar. A mensagem de erro em vermelho indica qual campo está faltando.",
+      },
+      {
+        subtitulo: "O afiliado está marcado como Perfil Incompleto mesmo após preencher?",
+        texto:
+          "Certifique-se de clicar em Salvar após preencher — campos preenchidos sem salvar não atualizam o indicador. Verifique todas as abas: a incompletude pode estar em Cadastral (nome, CPF, telefone) ou Financeiro (dados bancários). Ao salvar com sucesso, o nome deve sair do quadro de Incompletos automaticamente.",
+      },
+      {
+        subtitulo: "Não consigo alterar o status do afiliado?",
+        texto:
+          "Alteração de status é restrita a Gestores e Admin. Se o badge de status não abre o dropdown, seu perfil não tem essa permissão. Entre em contato com um Gestor ou Admin para alterar o status.",
+      },
+      {
+        subtitulo: "O afiliado não aparece na lista?",
+        texto:
+          "Verifique os filtros ativos: Status (chip colorido), Operadora e Busca por texto. O botão Limpar filtros remove todos de uma vez. Lembre que o filtro de status seleciona apenas o status clicado — afiliados de outros status ficam ocultos.",
+      },
+      {
+        subtitulo: "Dados sensíveis não aparecem?",
+        texto:
+          "CPF e dados bancários ficam ocultos por segurança. Clique no ícone de olho ao lado do campo para revelar por 10 segundos. No modo de edição, os campos ficam visíveis permanentemente enquanto o modal estiver aberto.",
+      },
+      {
+        subtitulo: "O vínculo com operadora não foi salvo?",
+        texto:
+          "Na aba Operadoras, ao marcar uma operadora como Ativa, o campo de ID é obrigatório. Se estiver vazio, o sistema exibe erro e não salva. Preencha o ID do afiliado naquela operadora antes de salvar.",
+      },
+    ],
+  },
+  afiliados_network: {
+    titulo: "Network — Problemas Comuns",
+    blocos: [
+      {
+        subtitulo: "Um prospecto não aparece na lista?",
+        texto:
+          "Por padrão, registros com status Fechado são ocultados. Para vê-los, clique no card 'Fechado' no funil — ele funciona como filtro. Verifique também se há texto na busca que esteja filtrando o nome.",
+      },
+      {
+        subtitulo: "Não consigo salvar um novo prospecto?",
+        texto:
+          "Ao salvar (+ Adicionar ou primeiro Salvar), o sistema sempre tenta criar o usuário afiliado na plataforma. Nesse momento são obrigatórios: Nome, E-mail e Operadora (aba Contato). Se faltar e-mail ou operadora, a mensagem em vermelho indica o campo. Para apenas rascunhar no funil sem criar usuário, ainda não há fluxo separado — qualquer Salvar com registro sem usuário dispara a criação.",
+      },
+      {
+        subtitulo: "O botão ficou em 'Salvando...' por muito tempo?",
+        texto:
+          "Ao salvar um prospecto sem usuário criado, a plataforma aciona uma função de servidor para criar o cadastro. Em caso de lentidão, aguarde até 30 segundos. Se aparecer mensagem de erro, verifique se o e-mail já não está cadastrado na plataforma — cada e-mail aceita apenas um usuário.",
+      },
+      {
+        subtitulo: "Os campos E-mail e Operadora estão bloqueados?",
+        texto:
+          "Quando o afiliado já foi criado na plataforma (o registro tem usuário vinculado), E-mail e Operadora ficam bloqueados para edição. Essas informações só podem ser alteradas pela administração do sistema, não pelo formulário de Network.",
+      },
+      {
+        subtitulo: "As anotações não aparecem depois de adicionar?",
+        texto:
+          "Anotações são salvas ao clicar em 'Adicionar Anotação' — não ao clicar em Salvar. Se o botão estava desabilitado (cinza), o campo de texto estava vazio. Escreva o texto e clique em 'Adicionar Anotação' antes de fechar o modal.",
+      },
+      {
+        subtitulo: "Salvei no Network mas o afiliado não aparece em Afiliados?",
+        texto:
+          "O usuário só é criado após um Salvar bem-sucedido com e-mail e operadora, quando o registro ainda não tinha acesso na plataforma. Status Fechado não é requisito. Se o Salvar falhou (e-mail duplicado, operadora ausente, timeout), o prospecto continua no Network sem usuário — corrija os dados e salve de novo. Confira também filtros de status e operadora na página Afiliados.",
+      },
+      {
+        subtitulo: "Preciso marcar Fechado antes de criar o acesso?",
+        texto:
+          "Não. A criação do usuário ocorre no primeiro Salvar válido (e-mail + operadora) para registros sem vínculo, em qualquer estágio do funil. Fechado é etapa comercial de prospecção; a lista oculta Fechados por padrão, mas não controla a criação do login.",
+      },
+    ],
+  },
+  financeiro: {
+    titulo: "Financeiro",
+    blocos: [
+      {
+        subtitulo: "Nenhum ciclo aparece na página?",
+        texto:
+          "Os ciclos são gerados automaticamente a cada semana. Se a página estiver vazia, clique em Tentar novamente. Caso o problema persista, verifique se há lives realizadas e validadas no período — sem lives registradas, não há ciclo visível para influencers e agências. Gestores podem verificar as permissões de criação de ciclos com o time técnico.",
+      },
+      {
+        subtitulo: "O ciclo que quero não aparece no dropdown?",
+        texto:
+          "O dropdown exibe apenas ciclos do mês selecionado no carrossel. Navegue para o mês correto ou ative o modo Histórico para ver todos os ciclos. Se uma live foi realizada em determinada semana e o ciclo não aparece, verifique se a live foi validada com status Realizada e se tem resultado registrado (duração e operadora).",
+      },
+      {
+        subtitulo: "Os valores estimados diferem do que era esperado?",
+        texto:
+          "A prévia do ciclo aberto calcula estimativa com base nas lives realizadas e no cachê/hora cadastrado no perfil do influencer. Se o valor parece errado: (1) confirme que o cachê/hora está cadastrado corretamente em Lives → Influencers; (2) verifique se todas as lives do período foram validadas com duração registrada; (3) veja se o filtro de operadora está em Todas — filtrar por operadora específica mostra apenas as lives daquela plataforma.",
+      },
+      {
+        subtitulo: "O botão Analisar ou Pagar não aparece?",
+        texto:
+          "Esses botões dependem do seu perfil e da permissão de edição. O botão Analisar aparece para pagamentos Em análise; Pagar aparece para pagamentos Aguardando pagamento. Se você tem permissão e os botões não aparecem, confirme que o ciclo está fechado — no ciclo aberto (prévia), nenhuma ação está disponível.",
+      },
+      {
+        subtitulo: "Minhas lives estão realizadas mas não aparecem no financeiro?",
+        texto:
+          "Para que uma live gere pagamento ela precisa: (1) ter status Realizada; (2) ter resultado registrado com duração em horas e minutos; (3) ter operadora atribuída. Se os três pontos estão corretos e a live ainda não aparece, verifique se o mês selecionado corresponde à data da live e se o cachê/hora está cadastrado — lives com cachê zero ficam com estimativa R$ 0,00 e podem parecer ausentes.",
+      },
+      {
+        subtitulo: "O Consolidado de Influencers não mostra um influencer?",
+        texto:
+          "O consolidado exibe apenas influencers com ao menos um ciclo de pagamento no período. Se um influencer não aparece, certifique-se de que ele tem pagamentos registrados no mês selecionado — pode ser necessário navegar para outro mês ou ativar o Histórico. A busca por nome/e-mail funciona sobre os resultados já carregados.",
+      },
+    ],
+  },
+  campanhas: {
+    titulo: "Campanhas",
+    blocos: [
+      {
+        subtitulo: "Não consigo criar ou editar campanhas?",
+        texto:
+          "Os botões Nova Campanha e Editar dependem de permissão de criação e edição, respectivamente. Se os botões não aparecem, seu perfil não tem acesso a essas ações. Entre em contato com o gestor responsável para solicitar a permissão adequada.",
+      },
+      {
+        subtitulo: "Excluí uma campanha mas os dados nos dashboards sumiram?",
+        texto:
+          "A exclusão de uma campanha desfaz os vínculos com os UTMs na Gestão de Links, mas não apaga dados históricos dos dashboards. Se dados desapareceram, verifique se os UTMs que estavam associados à campanha foram remapeados — eles voltam para Pendentes e precisam de nova associação para alimentar os relatórios.",
+      },
+      {
+        subtitulo: "A campanha inativa ainda aparece no modal de Gestão de Links?",
+        texto:
+          "Campanhas inativas não aparecem como opção ao mapear novos links. Se você precisa associar um link a uma campanha que ficou inativa, edite a campanha, altere o status para Ativa, mapeie o link e, se necessário, volte a inativar.",
+      },
+      {
+        subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
+        texto:
+          "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  gestao_operadoras: {
+    titulo: "Gestão de Operadoras",
+    blocos: [
+      {
+        subtitulo: "Não consigo ativar uma operadora?",
+        texto:
+          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Mesas. Cadastre as mesas primeiro e tente novamente.",
+      },
+      {
+        subtitulo: "Erro ao excluir uma operadora?",
+        texto:
+          "A exclusão falha quando existem registros vinculados à operadora (mesas, escalas, figurinos, etc.). Remova todos os vínculos primeiro, ou desative a operadora sem excluir para preservar o histórico.",
+      },
+      {
+        subtitulo: "As cores do brandguide não aparecem para o operador?",
+        texto:
+          "Verifique se as quatro cores estão preenchidas em formato #RRGGBB e se o logo foi enviado. O operador precisa fazer logout e login novamente para que o brandguide atualizado seja carregado.",
+      },
+    ],
+  },
+  gestao_mesas: {
+    titulo: "Gestão de Mesas",
+    blocos: [
+      {
+        subtitulo: "Erro ao cadastrar uma mesa — 'já existe uma mesa com este ID'?",
+        texto:
+          "O ID Spin e o ID da operadora são únicos por operadora. Verifique se já existe uma mesa com os mesmos identificadores na lista. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
+      },
+      {
+        subtitulo: "A lista aparece vazia mesmo havendo mesas cadastradas?",
+        texto:
+          "Verifique se o filtro de operadora está selecionado em **Todas Operadoras**. Se um filtro específico estiver ativo, apenas as mesas daquela operadora serão exibidas.",
+      },
+    ],
+  },
+  status_tecnico: {
+    titulo: "Status Técnico",
+    blocos: [
+      {
+        subtitulo: "Uma integração aparece como 'Falha' — o que fazer?",
+        texto:
+          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Se o erro persistir após corrigir a causa, use o botão Sync para forçar uma nova tentativa.",
+      },
+      {
+        subtitulo: "O botão Sync não aparece para uma integração?",
+        texto:
+          "Apenas as integrações CDA, Social Media KPIs e Spin na Rede RSS possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+      },
+      {
+        subtitulo: "Um prestador não consegue fazer check-in?",
+        texto:
+          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.",
+      },
+      {
+        subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
+        texto:
+          "Os alertas são calculados com base nos registros de email_envios do dia corrente (UTC). Se o envio foi feito muito cedo ou próximo da meia-noite, pode haver defasagem de fuso horário. Verifique nos Logs Recentes se o envio aparece registrado.",
+      },
+    ],
+  },
+  gestao_usuarios: {
+    titulo: "Gestão de Usuários",
+    blocos: [
+      {
+        subtitulo: "Um usuário diz que não vê determinada página no menu após alteração?",
+        texto:
+          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Operadora, Gestores ou Prestadores, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
+      },
+      {
+        subtitulo: "As abas Permissões, Operadora, Gestores e Prestadores não aparecem?",
+        texto:
+          "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
+      },
+      {
+        subtitulo: "Erro ao salvar permissões ou páginas?",
+        texto:
+          "Verifique sua conexão com a internet. Se o erro persistir, recarregue a página antes de tentar novamente — isso evita salvar um estado inconsistente. Em caso de erro contínuo, contate o suporte técnico.",
+      },
+      {
+        subtitulo: "Não consigo criar um novo usuário?",
+        texto:
+          "O botão Novo Usuário (pill com ícone +) só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
+      },
+    ],
+  },
+  gestao_links: {
+    titulo: "Gestão de Links",
+    blocos: [
+      {
+        subtitulo: "Um link mapeado não aparece nos dashboards?",
+        texto:
+          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer correto? Na aba Mapeados, a coluna Influencer / Campanha confirma a associação. (2) O influencer tem perfil ativo e está presente no dashboard? Perfis Cancelados podem não aparecer nos relatórios.",
+      },
+      {
+        subtitulo: "O botão Mapear não aparece na aba Pendentes?",
+        texto:
+          "O botão Mapear requer permissão de edição na Gestão de Links. Se não aparece, seu perfil não tem essa permissão. Entre em contato com o gestor para solicitar acesso.",
+      },
+      {
+        subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
+        texto:
+          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer ou campanha corretos.",
+      },
+      {
+        subtitulo: "Um UTM Source tem dados históricos mas mostra R$ 0,00 em GGR?",
+        texto:
+          "O GGR mostrado é calculado como Depósitos menos Saques. Se ambos são zero, pode significar que: (1) a operadora ainda não sincronizou os dados para esse UTM — aguarde a rotina diária das 4h; (2) o UTM foi detectado recentemente e não há transações registradas ainda.",
+      },
+      {
+        subtitulo: "Há links que não quero mapear mas também não quero que apareçam como pendentes?",
+        texto:
+          "Use o botão Ignorar na aba Pendentes. O link vai para a aba Ignorados e não conta no indicador de pendentes. Se mudar de ideia, use Reabrir na aba Ignorados para devolvê-lo aos Pendentes.",
+      },
+    ],
+  },
+};
