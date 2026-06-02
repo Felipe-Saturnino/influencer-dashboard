@@ -110,8 +110,16 @@ export function ModalExperienciaProfissional({
           </div>
         ) : null}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-        <div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+          gap: 12,
+          marginBottom: 14,
+          width: "100%",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
           <label style={labelStyle}>
             Mês/ano de início
             <CampoObrigatorioMark />
@@ -129,7 +137,7 @@ export function ModalExperienciaProfissional({
             </div>
           ) : null}
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <label style={labelStyle}>Mês/ano de fim</label>
           <input
             type="month"

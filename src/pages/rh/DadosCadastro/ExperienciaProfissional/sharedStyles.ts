@@ -7,6 +7,8 @@ export function getExperienciaInputStyle(t: {
 }): CSSProperties {
   return {
     width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 10,
     border: `1px solid ${t.cardBorder}`,

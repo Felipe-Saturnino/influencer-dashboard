@@ -481,7 +481,10 @@ export function ModalPortfolio({
   const somenteLink = RH_PORTFOLIO_TIPOS_SOMENTE_LINK.includes(tipo);
 
   useEffect(() => {
-    if (somenteLink) setOrigem("link");
+    if (somenteLink) {
+      setOrigem("link");
+      setFile(null);
+    }
   }, [somenteLink]);
 
   const submit = async () => {
@@ -566,7 +569,7 @@ export function ModalPortfolio({
           </select>
         </div>
       ) : null}
-      {(somenteLink || origem === "link") && !(initial?.origem === "arquivo") ? (
+      {somenteLink || origem === "link" ? (
         <div style={fieldGap}>
           <label style={labelStyle}>
             URL
@@ -581,7 +584,7 @@ export function ModalPortfolio({
           />
         </div>
       ) : null}
-      {(!somenteLink && origem === "arquivo") || (initial?.origem === "arquivo" && !somenteLink) ? (
+      {!somenteLink && origem === "arquivo" ? (
         <div style={fieldGap}>
           <label style={labelStyle}>{initial ? "Substituir arquivo" : "Arquivo"}</label>
           {initial?.file_name ? (
