@@ -47,10 +47,8 @@ import type {
   RhTipoTerminoPrestacao,
 } from "../../../types/rhFuncionario";
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
-import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
-import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
-import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { primeiroUltimoNome, syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
+import { encontrarVinculoParaFuncionarioRow } from "../../../lib/rhOrganogramaTree";
+import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
   mensagemFeedbackSyncPrestador,
   syncUsuarioPrestadorAposSalvarRh,
@@ -72,7 +70,6 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   FiltroBarTabButton,
   SkeletonTableRow,
-  type SortDir,
 } from "../../../components/dashboard";
 import {
   FILTRO_BAR_TAB_ICON_SIZE,
@@ -88,7 +85,6 @@ import {
   blurSensivel,
   buildRhFuncionarioPayloadFromState,
   ctaGradient,
-  dataFuncaoOuInicioIso,
   diffContratacaoSlices,
   escalaEhPermitida,
   estadoVazioForm,
@@ -96,7 +92,6 @@ import {
   historicoPrestadorPassaFiltroTipo,
   labelStatusPrestador,
   mensagemErroSupabaseRhFuncionarioSalvar,
-  prestadorCadastroIncompleto,
   sliceContratacaoDeForm,
   sliceContratacaoDeRow,
   tiposAcaoDisponiveis,
@@ -105,9 +100,7 @@ import {
   type FiltroStatusPrestador,
   type FiltroTipoAcaoHistoricoPrestador,
   type FormState,
-  type PrestadoresSortCol,
   type SliceContratacao,
-  valorRemuneracaoOrdenacao,
   valorSelectEscala,
 } from "./gestaoPrestadorHelpers";
 
@@ -116,17 +109,15 @@ import { RhFuncModalHeaderDetalhes } from "./RhFuncModalHeaderDetalhes";
 import { PrestadorKpiResumo } from "./PrestadorKpiResumo";
 import { PrestadorFiltroBar } from "./PrestadorFiltroBar";
 import { PrestadorTabelaColaboradores } from "./PrestadorTabelaColaboradores";
+import { usePrestadorLista } from "./usePrestadorLista";
 
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_funcionarios");
-  const permOrg = usePermission("rh_organograma");
 
   const podeVerDadosSensiveis = user?.role === "admin" || perm.canEditarOk;
-  const [lista, setLista] = useState<RhFuncionario[]>([]);
-  const [loading, setLoading] = useState(true);
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
@@ -141,8 +132,6 @@ export default function RhPrestadoresPage() {
     "headcount",
     ["headcount", "acoes_rh", "anotacoes"] as const,
   );
-  const [sortPrestadores, setSortPrestadores] = useState<{ col: PrestadoresSortCol; dir: SortDir }>({ col: "nome", dir: "asc" });
-
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(estadoVazioForm);
@@ -150,9 +139,36 @@ export default function RhPrestadoresPage() {
   const [alertaValidacaoModal, setAlertaValidacaoModal] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
-  const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
+
+  const {
+    lista,
+    loading,
+    carregar,
+    erroCarregar,
+    opcoesTimes,
+    organogramaGrupos,
+    opcoesVinculoFlat,
+    opcoesFiltroDiretoria,
+    opcoesFiltroGerencia,
+    opcoesFiltroSetor,
+    gerenciasOpcoes,
+    filtrada,
+    resumoPrestadoresCards,
+    filtradaOrdenada,
+    liderImediatoLinha,
+    onSortPrestadores,
+    sortPrestadores,
+    permOrg,
+  } = usePrestadorLista({
+    busca,
+    filtroDiretoria,
+    filtroGerencia,
+    filtroSetor,
+    filtroContrato,
+    filtroStatus,
+    abaPagina,
+  });
   /** No modal Visualizar: false = dados sensíveis com blur (ocultar). */
   const [modalVerExibirSensiveis, setModalVerExibirSensiveis] = useState(false);
   const [tabelaSalarioVisivel, setTabelaSalarioVisivel] = useState(false);
@@ -195,44 +211,8 @@ export default function RhPrestadoresPage() {
   const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
   useEffect(() => {
-    if (permOrg.loading || permOrg.canView === "nao") {
-      setOpcoesTimes([]);
-      setOrganogramaGrupos([]);
-      return;
-    }
-    let cancel = false;
-    void (async () => {
-      const { opcoes, grupos, error } = await carregarOpcoesTimesOrganograma();
-      if (cancel) return;
-      if (error) {
-        setOpcoesTimes([]);
-        setOrganogramaGrupos([]);
-      } else {
-        setOpcoesTimes(opcoes);
-        setOrganogramaGrupos(grupos);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [permOrg.loading, permOrg.canView]);
-
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    setErroGlobal(null);
-    const { data, error } = await supabase.from("rh_funcionarios").select("*").order("nome", { ascending: true }).limit(5000);
-    if (error) setErroGlobal(error.message);
-    setLista((data ?? []) as RhFuncionario[]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
-
-  useEffect(() => {
-    setSortPrestadores({ col: "nome", dir: "asc" });
-  }, [abaPagina]);
+    if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
+  }, [filtroGerencia, gerenciasOpcoes]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
@@ -269,49 +249,6 @@ export default function RhPrestadoresPage() {
     setAcaoForm(formDeFuncionario(acaoModalRow));
     acaoBaselineRef.current = sliceContratacaoDeRow(acaoModalRow);
   }, [acaoTipo, acaoModalRow]);
-
-  const setoresUnicos = useMemo(() => {
-    const s = new Set<string>();
-    lista.forEach((r) => {
-      if (r.setor.trim()) s.add(r.setor.trim());
-    });
-    return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [lista]);
-
-  const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
-
-  const diretoriasOpcoes = useMemo(() => {
-    const u = new Set<string>();
-    opcoesVinculoFlat.forEach((v) => u.add(v.diretoriaNome));
-    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesVinculoFlat]);
-
-  const gerenciasOpcoes = useMemo(() => {
-    const u = new Set<string>();
-    opcoesVinculoFlat.forEach((v) => {
-      if (!v.gerenciaNome) return;
-      if (filtroDiretoria && v.diretoriaNome !== filtroDiretoria) return;
-      u.add(v.gerenciaNome);
-    });
-    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesVinculoFlat, filtroDiretoria]);
-
-  const opcoesFiltroDiretoria = useMemo(
-    () => diretoriasOpcoes.map((d) => ({ value: d, label: d })),
-    [diretoriasOpcoes],
-  );
-  const opcoesFiltroGerencia = useMemo(
-    () => gerenciasOpcoes.map((g) => ({ value: g, label: g })),
-    [gerenciasOpcoes],
-  );
-  const opcoesFiltroSetor = useMemo(
-    () => setoresUnicos.map((s) => ({ value: s, label: s })),
-    [setoresUnicos],
-  );
-
-  useEffect(() => {
-    if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
-  }, [filtroGerencia, gerenciasOpcoes]);
 
   const usarSelectOrganograma = useMemo(
     () => permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0,
@@ -380,48 +317,6 @@ export default function RhPrestadoresPage() {
     return c;
   }, [fieldErr, ehPJ]);
 
-  const filtrada = useMemo(() => {
-    const b = busca.trim().toLowerCase();
-    const digits = somenteDigitos(busca);
-    return lista.filter((r) => {
-      if (filtroStatus === "disponiveis") {
-        if (r.status === "encerrado") return false;
-      } else if (r.status !== filtroStatus) return false;
-      if (filtroContrato !== "todos" && r.tipo_contrato !== filtroContrato) return false;
-      if (filtroSetor && r.setor.trim() !== filtroSetor) return false;
-      if (filtroDiretoria) {
-        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
-        if (!o || o.diretoriaNome !== filtroDiretoria) return false;
-      }
-      if (filtroGerencia) {
-        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
-        if (!o || o.gerenciaNome !== filtroGerencia) return false;
-      }
-      if (!b) return true;
-      if (digits.length === 11 && r.cpf === digits) return true;
-      if (r.nome.toLowerCase().includes(b)) return true;
-      if (r.email.toLowerCase().includes(b)) return true;
-      if (r.cpf && r.cpf.includes(digits) && digits.length >= 3) return true;
-      return false;
-    });
-  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesVinculoFlat]);
-
-  const resumoPrestadoresCards = useMemo(() => {
-    const temOrganograma = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
-    const total = filtrada.length;
-    let ativo = 0;
-    let indisponivel = 0;
-    let encerrado = 0;
-    for (const r of filtrada) {
-      if (r.status === "ativo") ativo += 1;
-      else if (r.status === "indisponivel") indisponivel += 1;
-      else encerrado += 1;
-    }
-    const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
-    const revisaoPendente = filtrada.filter((r) => revisaoCadastralPendenteParaFuncionario(r));
-    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente };
-  }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
-
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim().toLowerCase();
     if (!q) return [];
@@ -464,50 +359,6 @@ export default function RhPrestadoresPage() {
     setModalVerExibirSensiveis(false);
     setModalForm("ver");
   };
-
-  const liderImediatoLinha = useCallback(
-    (row: RhFuncionario) => {
-      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
-      if (o) return o.gestorNome;
-      if (row.org_time_id) return opcoesTimes.find((x) => x.timeId === row.org_time_id)?.gestorNome ?? "—";
-      return "—";
-    },
-    [opcoesTimes, opcoesVinculoFlat],
-  );
-
-  const onSortPrestadores = useCallback((col: PrestadoresSortCol) => {
-    setSortPrestadores((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
-  }, []);
-
-  const filtradaOrdenada = useMemo(() => {
-    const { col, dir } = sortPrestadores;
-    const mult = dir === "asc" ? 1 : -1;
-    const rows = [...filtrada];
-    rows.sort((a, b) => {
-      switch (col) {
-        case "nome":
-          return mult * primeiroUltimoNome(a.nome).localeCompare(primeiroUltimoNome(b.nome), "pt-BR");
-        case "cargo":
-          return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
-        case "lider":
-          return mult * liderImediatoLinha(a).localeCompare(liderImediatoLinha(b), "pt-BR");
-        case "data_funcao":
-          return mult * dataFuncaoOuInicioIso(a).localeCompare(dataFuncaoOuInicioIso(b), "pt-BR");
-        case "salario":
-          return mult * (valorRemuneracaoOrdenacao(a) - valorRemuneracaoOrdenacao(b));
-        case "status": {
-          const ord: Record<string, number> = { ativo: 0, indisponivel: 1, encerrado: 2 };
-          const oa = ord[a.status] ?? 99;
-          const ob = ord[b.status] ?? 99;
-          if (oa !== ob) return mult * (oa - ob);
-          return mult * a.nome.localeCompare(b.nome, "pt-BR");
-        }
-        default:
-          return 0;
-      }
-    });
-    return rows;
-  }, [filtrada, sortPrestadores, liderImediatoLinha]);
 
   const inserirHistorico = useCallback(
     async (
@@ -1459,7 +1310,7 @@ export default function RhPrestadoresPage() {
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
-      {erroGlobal && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
+      {(erroGlobal || erroCarregar) && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
         <div
           role="alert"
           style={{
@@ -1476,7 +1327,7 @@ export default function RhPrestadoresPage() {
           }}
         >
           <AlertCircle size={14} color="#e84025" aria-hidden />
-          {erroGlobal}
+          {erroGlobal ?? erroCarregar}
         </div>
       ) : null}
 
@@ -2037,8 +1888,8 @@ export default function RhPrestadoresPage() {
                         list="lista-setores"
                       />
                       <datalist id="lista-setores">
-                        {setoresUnicos.map((s) => (
-                          <option key={s} value={s} />
+                        {opcoesFiltroSetor.map((s) => (
+                          <option key={s.value} value={s.value} />
                         ))}
                       </datalist>
                       {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length === 0 && opcoesVinculoFlat.length === 0 ? (

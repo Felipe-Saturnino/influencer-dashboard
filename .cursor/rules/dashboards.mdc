@@ -18,7 +18,7 @@ alwaysApply: false
 |---|---|
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
-| Overview Spin | `src/pages/dashboards/OverviewSpin/` — `index.tsx` (UI restante), `useOverviewSpinDados.ts` (fetch/estado período), `useOverviewSpinKpiExibir.ts`, `OverviewSpinFiltroBar.tsx`, `OverviewSpinKpisConsolidados.tsx`, `overviewSpinLogic.ts`, `overviewSpinTabs.ts` + `OverviewSpinAbaNav.tsx`, `DashboardPosicionamento/` lazy (rota `mesas_spin`) |
+| Overview Spin | `src/pages/dashboards/OverviewSpin/` — `index.tsx` (shell + aba overview layout), `useOverviewSpinDados.ts`, `useOverviewSpinTabelaRows.ts`, `useOverviewSpinComparativos.ts`, `useOverviewSpinKpiExibir.ts`, `OverviewSpinFiltroBar.tsx`, `OverviewSpinKpisConsolidados.tsx`, `OverviewSpinDetalhamentoInterativo.tsx`, `OverviewSpinComparativoJogoInterativo.tsx`, `OverviewSpinMesaDiaTabela.tsx`, `overviewSpinLogic.ts`, `overviewSpinTabs.ts` + `OverviewSpinAbaNav.tsx`, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
 **Marca / FilterBar:** `useDashboardBrand()` + tokens canónicos `--brand-action` / `--brand-contrast` / `--brand-icon-color` — detalhes em **Brand MDC** e tabela abaixo só onde for **analítico**.
