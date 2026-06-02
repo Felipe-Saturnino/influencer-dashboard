@@ -18,6 +18,7 @@ import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   centavosDeStringMoeda,
@@ -61,6 +62,7 @@ import {
   revisaoCadastralPendenteParaFuncionario,
   prestadorExigeRevisaoCadastral,
 } from "../../../lib/rhCadastroRevisao";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -69,6 +71,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
   FiltroBarTabButton,
+  SkeletonTableRow,
   type SortDir,
 } from "../../../components/dashboard";
 import {

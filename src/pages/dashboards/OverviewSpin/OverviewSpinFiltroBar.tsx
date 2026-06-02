@@ -25,7 +25,7 @@ type Props = {
   filtroOperadora: string;
   onFiltroOperadoraChange: (v: string) => void;
   operadorasOcr: { slug: string; nome: string }[];
-  podeVerOperadora: boolean;
+  podeVerOperadora: (slug: string) => boolean;
   loading: boolean;
   onSelectAba: (key: OverviewSpinTab) => void;
 };

@@ -4,17 +4,10 @@ import {
   arpuComparativoFromGgrUap,
   type DailyRow,
   type LinhaDetalheTab,
+  type MonthlyKpiSnapshot,
 } from "./overviewSpinLogic";
 
-export type KpiExibirSnapshot = {
-  turnover: number;
-  ggr: number;
-  margin_pct: number | null;
-  bets: number;
-  uap: number | null;
-  bet_size: number | null;
-  arpu: number | null;
-};
+export type KpiExibirSnapshot = MonthlyKpiSnapshot;
 
 type Params = {
   historico: boolean;
