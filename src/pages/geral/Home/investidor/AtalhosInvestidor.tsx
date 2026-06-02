@@ -55,6 +55,9 @@ export function AtalhosInvestidor() {
                 textAlign: "left",
                 width: "100%",
                 minWidth: 0,
+                maxWidth: "100%",
+                boxSizing: "border-box",
+                overflow: "hidden",
                 textDecoration: "none",
               }}
             >
@@ -77,7 +80,17 @@ export function AtalhosInvestidor() {
                 <ArrowRight size={14} color={t.textMuted} aria-hidden style={{ flexShrink: 0 }} />
               </div>
               {subtitle ? (
-                <p style={{ margin: 0, fontSize: 12, color: t.textMuted, lineHeight: 1.5, paddingLeft: 48 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: t.textMuted,
+                    lineHeight: 1.5,
+                    paddingLeft: 48,
+                    width: "100%",
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   {subtitle}
                 </p>
               ) : null}

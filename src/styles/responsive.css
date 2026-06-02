@@ -289,38 +289,32 @@
   }
 }
 
-/* Duas colunas → 1 no mobile */
+/* Home Investidor — atalhos (auto-fit evita sobreposição quando a área útil é estreita) */
 .app-grid-atalhos-investidor {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 900px) {
-  .app-grid-atalhos-investidor {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.app-grid-atalhos-investidor > * {
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-@media (max-width: 520px) {
-  .app-grid-atalhos-investidor {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Home Operador — dois atalhos lado a lado */
+/* Home Operador — dois atalhos */
 .app-grid-atalhos-operador {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 640px) {
-  .app-grid-atalhos-operador {
-    grid-template-columns: 1fr;
-  }
+.app-grid-atalhos-operador > * {
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Três colunas iguais (filtros etc.) */
