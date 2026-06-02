@@ -408,17 +408,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de autoatendimento cadastral do prestador e consulta/atualização por perfis com permissão ampliada. Quatro abas: **Histórico de trabalho** (somente leitura — dados de contratação mantidos em Gestão de Prestadores), **Dados cadastrais**, **Documentos** e **Histórico** de movimentações RH.",
+          "Página de autoatendimento cadastral do prestador e consulta/atualização por perfis com permissão ampliada. Cinco abas: **Histórico de trabalho** (somente leitura — dados de contratação mantidos em Gestão de Prestadores), **Dados cadastrais**, **Documentos**, **Formação e Competências** e **Histórico** de movimentações RH.",
       },
       {
         subtitulo: "Permissões e filtros",
         texto:
-          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais e documentos de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro.",
+          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais, documentos e formação/competências de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro — não se aplica à aba Formação e Competências.",
       },
       {
         subtitulo: "Documentos e revisão",
         texto:
           "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica pode ser concluída atualizando dados, enviando novos arquivos ou marcando «Confirmar sem alterações» quando nada mudou.",
+      },
+      {
+        subtitulo: "Formação e Competências",
+        texto:
+          "Cadastre formação acadêmica, idiomas (lista fixa da plataforma), cursos complementares e itens de portfólio. Vídeos e áudios entram por link externo; demais tipos aceitam URL ou arquivo (PDF, imagem ou Word, até 15 MB). Prestadores com vínculo encerrado consultam em modo leitura. Cada inclusão, alteração ou exclusão gera registro na aba Histórico.",
       },
     ],
   },
@@ -858,12 +863,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página restrita a administradores. Centraliza o monitoramento das integrações de dados da plataforma, exibe alertas automáticos, logs de erro recentes e gerencia as redes autorizadas para check-in de prestadores.",
+          "Página de monitoramento operacional. Quem tem permissão de **Ver** acompanha integrações, alertas e logs; quem tem **Editar** liberado em Gestão de Usuários pode disparar syncs, e-mails, diagnóstico da plataforma e gerenciar redes de check-in. O perfil Administrador mantém acesso total.",
       },
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails) com o horário do último sync, volume de registros processados hoje e contagem de erros. Administradores podem disparar sincronizações manuais diretamente pela tabela — todas as ações exigem confirmação antes de executar.",
+          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails) com o horário do último sync, volume de registros processados hoje e contagem de erros. Com permissão de Editar, use **Executar diagnóstico** no cabeçalho do bloco (não dispara sync nem e-mail — apenas verifica jobs recentes, credenciais e integrações; o resultado entra em **Logs Recentes** com tipos Diagnóstico OK / Aviso / Erro). Sincronizações e envios na tabela exigem confirmação antes de executar.",
+      },
+      {
+        subtitulo: "Logs Recentes",
+        texto:
+          "Lista eventos técnicos das últimas horas, incluindo falhas de sync e linhas geradas pelo diagnóstico manual. Filtre por tipo; entradas de diagnóstico resumem quantos checks passaram, avisaram ou falharam na execução.",
       },
       {
         subtitulo: "Fluxo de dados",
@@ -878,7 +888,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Redes permitidas — Check-in de prestadores",
         texto:
-          "Gerencia os prefixos de rede CIDR autorizados para registro de ponto dos prestadores. O check-in fica bloqueado para qualquer IP que não esteja coberto por pelo menos um CIDR configurado. Administradores podem adicionar prefixos com o botão **Nova Rede** (ícone + e gradiente de criação) ou remover prefixos na tabela.",
+          "Gerencia os prefixos de rede CIDR autorizados para registro de ponto dos prestadores. O check-in fica bloqueado para qualquer IP que não esteja coberto por pelo menos um CIDR configurado. Com permissão de Editar, adicione prefixos com **Nova Rede** ou remova na tabela.",
+      },
+      {
+        subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
+        texto:
+          "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
       },
     ],
   },

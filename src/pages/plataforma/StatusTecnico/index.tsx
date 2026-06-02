@@ -30,6 +30,7 @@ import {
   ctaGradientStatus,
   ERRO_EMAIL_AGENDA,
   ERRO_EMAIL_DIRETORIA,
+  ERRO_DIAGNOSTICO_PLATAFORMA,
   ERRO_REDE_EDGE,
   ERRO_SYNC_CDA,
   ERRO_SYNC_LOBBY_BLAZE,
@@ -56,6 +57,7 @@ import {
   passouHorarioAgendadoBr,
   subDiasIso,
 } from "../../../lib/dateBrasil";
+import { labelTipoTechLog } from "../../../lib/platformHealthDiagnostics";
 import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
@@ -157,6 +159,9 @@ export default function StatusTecnico() {
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
   const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "lobby_blaze" | null>(null);
+  const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
+  const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
+  const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
   const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
     typeof window !== "undefined" && window.innerWidth < 480,
@@ -350,17 +355,18 @@ export default function StatusTecnico() {
   }, [carregar, perm.canView]);
 
   useEffect(() => {
-    if (confirmarSync == null && confirmarEmail == null) return;
+    if (confirmarSync == null && confirmarEmail == null && !confirmarDiagnostico) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         setConfirmarSync(null);
         setConfirmarEmail(null);
+        setConfirmarDiagnostico(false);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [confirmarSync, confirmarEmail]);
+  }, [confirmarSync, confirmarEmail, confirmarDiagnostico]);
 
   useEffect(() => {
     const onResize = () => setFluxoLabelNarrow(window.innerWidth < 480);
@@ -629,6 +635,76 @@ export default function StatusTecnico() {
       setSyncLobbyBlazeMensagem({ tipo: "erro", texto: ERRO_SYNC_LOBBY_BLAZE });
     } finally {
       setSyncLobbyBlazeExecutando(false);
+    }
+  };
+
+  const executarDiagnosticoPlataforma = async () => {
+    if (diagnosticoExecutando || !perm.canEditarOk) return;
+    setDiagnosticoExecutando(true);
+    setDiagnosticoMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setDiagnosticoMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setDiagnosticoExecutando(false);
+        return;
+      }
+
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("platform-health-check", {
+        body: {},
+      });
+
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        resumo?: string;
+        inseridos?: number;
+        erroCount?: number;
+        avisoCount?: number;
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_DIAGNOSTICO_PLATAFORMA;
+        if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        } else if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Função de diagnóstico não encontrada. Publique a Edge Function platform-health-check no Supabase.";
+        } else if (im.includes("403")) {
+          texto = "Sem permissão para executar diagnóstico. Libere Editar em Status Técnico.";
+        }
+        setDiagnosticoMensagem({ tipo: "erro", texto });
+        setDiagnosticoExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        setDiagnosticoMensagem({
+          tipo: "erro",
+          texto: resData.erro ?? ERRO_DIAGNOSTICO_PLATAFORMA,
+        });
+        setDiagnosticoExecutando(false);
+        return;
+      }
+
+      const temFalha = (resData.erroCount ?? 0) > 0;
+      setDiagnosticoMensagem({
+        tipo: temFalha ? "erro" : "ok",
+        texto:
+          resData.resumo ??
+          `Diagnóstico gravado (${resData.inseridos ?? 0} entradas). Confira Logs Recentes.`,
+      });
+      setLogFiltro("1h");
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setDiagnosticoMensagem({ tipo: "erro", texto: ERRO_DIAGNOSTICO_PLATAFORMA });
+    } finally {
+      setDiagnosticoExecutando(false);
     }
   };
 
@@ -1223,6 +1299,10 @@ export default function StatusTecnico() {
           spin_na_rede_rss: "Spin na Rede (RSS)",
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
+          diagnostico_plataforma: "Diagnóstico da plataforma",
+          diagnostico_ok: "Diagnóstico da plataforma",
+          diagnostico_aviso: "Diagnóstico da plataforma",
+          diagnostico_erro: "Diagnóstico da plataforma",
         }[log.tipo] ?? log.tipo
       );
     },
@@ -1457,10 +1537,43 @@ export default function StatusTecnico() {
 
       {/* ── Status das Integrações ── */}
       <div style={pageBox}>
-        <SectionTitle>Status das Integrações</SectionTitle>
-        {(syncMensagem || syncSocialMensagem || syncSpinRssMensagem || syncLobbyBlazeMensagem || emailMensagem || emailAgendaMensagem) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="leitura de jobs e credenciais — sem disparar sync">
+            Status das Integrações
+          </SectionTitle>
+          {perm.canEditarOk ? (
+            <CtaCriarButton
+              type="button"
+              onClick={() => setConfirmarDiagnostico(true)}
+              disabled={diagnosticoExecutando}
+              loading={diagnosticoExecutando}
+              loadingLabel="Executando diagnóstico..."
+              disabledBackground={BRAND.cinza}
+              aria-label="Executar diagnóstico da plataforma"
+            >
+              Executar diagnóstico
+            </CtaCriarButton>
+          ) : null}
+        </div>
+        {(diagnosticoMensagem ||
+          syncMensagem ||
+          syncSocialMensagem ||
+          syncSpinRssMensagem ||
+          syncLobbyBlazeMensagem ||
+          emailMensagem ||
+          emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
+              diagnosticoMensagem && { prefix: "Diagnóstico", msg: diagnosticoMensagem },
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
@@ -1976,7 +2089,7 @@ export default function StatusTecnico() {
                       <td style={dataTable.tdCenter}>{formatarHora(log.created_at)}</td>
                       <td style={dataTable.tdCenter}>{integracaoLabel}</td>
                       <td style={dataTable.tdCenter}>
-                        <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{log.tipo}</code>
+                        <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{labelTipoTechLog(log.tipo)}</code>
                       </td>
                       <td style={dataTable.tdCenter}>{log.descricao}</td>
                     </tr>
@@ -2147,7 +2260,7 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {(confirmarSync || confirmarEmail) && (
+      {(confirmarSync || confirmarEmail || confirmarDiagnostico) && (
         <div
           role="dialog"
           aria-modal="true"
@@ -2166,6 +2279,7 @@ export default function StatusTecnico() {
             if (e.target === e.currentTarget) {
               setConfirmarSync(null);
               setConfirmarEmail(null);
+              setConfirmarDiagnostico(false);
             }
           }}
         >
@@ -2187,11 +2301,14 @@ export default function StatusTecnico() {
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
+              {confirmarDiagnostico && "Executar diagnóstico da plataforma"}
             </h2>
             <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.textMuted, marginBottom: 0 }}>
-              {confirmarSync
-                ? "Esta ação irá sincronizar dados conforme a configuração do período. Continuar?"
-                : "Esta ação irá disparar o envio do e-mail. Continuar?"}
+              {confirmarDiagnostico
+                ? "Serão verificados jobs recentes, credenciais e integrações. O resultado aparece em Logs Recentes (última 1 hora). Não dispara sync nem e-mails. Continuar?"
+                : confirmarSync
+                  ? "Esta ação irá sincronizar dados conforme a configuração do período. Continuar?"
+                  : "Esta ação irá disparar o envio do e-mail. Continuar?"}
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
               <button
@@ -2199,6 +2316,7 @@ export default function StatusTecnico() {
                 onClick={() => {
                   setConfirmarSync(null);
                   setConfirmarEmail(null);
+                  setConfirmarDiagnostico(false);
                 }}
                 style={{
                   background: "transparent",
@@ -2216,7 +2334,10 @@ export default function StatusTecnico() {
               <button
                 type="button"
                 onClick={() => {
-                  if (confirmarSync === "cda") {
+                  if (confirmarDiagnostico) {
+                    setConfirmarDiagnostico(false);
+                    void executarDiagnosticoPlataforma();
+                  } else if (confirmarSync === "cda") {
                     setConfirmarSync(null);
                     void executarSync();
                   } else if (confirmarSync === "social") {

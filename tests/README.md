@@ -56,6 +56,6 @@ Artefacto HTML de cobertura: job CI → **coverage-report** (14 dias).
 
 Variáveis `VITE_*` no CI são placeholders; testes atuais não chamam Supabase real.
 
-## Próxima frente (produto)
+## Diagnóstico operacional (Status Técnico)
 
-Diagnóstico operacional na **Status Técnico** (edge function + `tech_logs`) — separado desta suíte Vitest.
+Implementado à parte do Vitest: Edge `platform-health-check`, helpers em `platformHealthDiagnostics.ts`, testes em `tests/unit/lib/platformHealthDiagnostics.test.ts`. Deploy: `docs/SETUP-PLATFORM-HEALTH.md`.

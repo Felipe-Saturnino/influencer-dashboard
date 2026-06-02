@@ -119,3 +119,5 @@ Componentes compartilhados criados:
 | **Cobertura** | ⚠️ Em expansão | Foco em `src/lib/**` e helpers de páginas decompostas; ver `tests/README.md` |
 
 Suíte atual: testes unitários de lib + smoke de import lazy (rotas core e páginas modularizadas). Regressões de UI/filtros ainda dependem de revisão manual até ampliar RTL nos componentes compartilhados.
+
+**Diagnóstico em produção:** botão **Executar diagnóstico** em Status Técnico → Edge `platform-health-check` → `tech_logs`. Deploy e tipos de log: `docs/SETUP-PLATFORM-HEALTH.md`. Complementa o Vitest; não o substitui.

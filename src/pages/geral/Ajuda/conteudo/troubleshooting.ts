@@ -866,7 +866,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Uma integração aparece como 'Falha' — o que fazer?",
         texto:
-          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Se o erro persistir após corrigir a causa, use o botão Sync para forçar uma nova tentativa.",
+          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Com permissão de Editar, use **Executar diagnóstico** para registrar um relatório em Logs Recentes (sem disparar sync). Se o erro persistir após corrigir a causa, use o botão Sync na integração correspondente.",
+      },
+      {
+        subtitulo: "Executar diagnóstico não faz nada ou retorna erro?",
+        texto:
+          "Confirme permissão de **Editar** em Status Técnico (Gestão de Usuários). A função precisa estar publicada no Supabase: `supabase functions deploy platform-health-check`. Se a mensagem indicar função não encontrada, faça o deploy e tente de novo. O diagnóstico não substitui os testes Vitest do CI — ele só inspeciona o ambiente em que você está logado.",
       },
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
