@@ -31,6 +31,7 @@ import {
 import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
+import HomeExecutivo from "./HomeExecutivo";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
@@ -353,6 +354,10 @@ export default function Home() {
 
   if (user.role === "investidor") {
     return <HomeInvestidor />;
+  }
+
+  if (user.role === "executivo") {
+    return <HomeExecutivo />;
   }
 
   if (user.role === "operador") {

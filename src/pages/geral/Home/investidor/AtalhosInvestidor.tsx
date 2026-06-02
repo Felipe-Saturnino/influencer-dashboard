@@ -17,17 +17,18 @@ const ATALHOS_INVESTIDOR: { key: PageKey; icon: LucideIcon }[] = [
   { key: "ajuda", icon: HelpCircle },
 ];
 
-export function AtalhosInvestidor() {
+export function AtalhosInvestidor({ sectionIdPrefix = "home-investidor" }: { sectionIdPrefix?: string }) {
   const { theme: t } = useApp();
   const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const box = getPageContentBoxStyle(brand, t);
+  const titleId = `${sectionIdPrefix}-atalhos-title`;
   const accentColor = "var(--brand-primary, #7c3aed)";
   const iconBg = "rgba(74, 32, 130, 0.2)";
 
   return (
-    <section style={box} aria-labelledby="home-investidor-atalhos-title">
-      <h2 id="home-investidor-atalhos-title" style={homeSectionTitleStyle(t.sectionTitle)}>
+    <section style={box} aria-labelledby={titleId}>
+      <h2 id={titleId} style={homeSectionTitleStyle(t.sectionTitle)}>
         Acesso rápido
       </h2>
       <p style={{ ...HOME_BODY_MUTED, color: t.textMuted, marginBottom: 16 }}>

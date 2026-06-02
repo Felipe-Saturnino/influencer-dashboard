@@ -68,9 +68,10 @@ Ao renomear item no menu, atualizar em cascata: `menu.ts`, `h1` da página, `tit
 
 - Ponto de entrada após login.
 - **`investidor`:** layout dedicado em `HomeInvestidor.tsx` — boas-vindas (sem avatar), KPIs mesas MTD (`relatorio_daily_summary` + lista por operadora), aquisição Streamers/Mídias, Spin na Rede (MTD, oculto se vazio), informativos publicados (`perfis` contém `investidor`, HTML integral), atalhos fixos com subtítulo de `lib/pageCanonicalCopy.ts`.
+- **`executivo`:** layout dedicado em `HomeExecutivo.tsx` — mesma estrutura que Investidor (KPIs, aquisição, Spin na Rede, atalhos Agenda/Overview Spin/Streamers/Ajuda); boas-vindas com subtítulo executivo; informativos com `perfis` contém `executivo`. RLS: `_role_sem_escopo_app()` em `20260526120000_home_investidor_feed_rls.sql`.
 - **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
-- **Período KPI / Aquisição (Home Investidor e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.
+- **Período KPI / Aquisição (Home Investidor, Executivo e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.
 - **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu + blocos influencer/agência.
 
 ---
