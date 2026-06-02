@@ -92,11 +92,19 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
-- **corCompMesaA** → `--brand-action`; **corCompMesaB** → `--brand-contrast`. Nunca igualar as duas cores mesmo em `brand.useBrand = true`.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
 - **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
+- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde).
+- **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
+- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / vermelho / amarelo); **não** tokens whitelabel.
+
+**Identidade por jogo (regra global):** paleta canónica **obrigatória** em todo bloco que distingue os quatro jogos — Global § Identidade visual por jogo + Brand §1.5. **Exceção:** somente com pedido explícito de produto — registrar em «Exceções — identidade de jogo» neste MDC antes de codar.
+
+### Exceções — identidade de jogo (Overview Spin)
+
+Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados por mesa usam `gameIdentityColors.ts`.
 
 ---
 
@@ -118,6 +126,11 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 
 - **3 abas:** Overview (KPIs + Detalhamento + Comparativo de campanha),
   Conversão (Funil + Comparativo de funil + Comparativo de taxas), Alcance (KPIs sociais + Posts).
+- **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
+  Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
+  Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.
+  **Alcance:** dados orgânicos (`kpi_daily`, posts) **sem** filtro operadora — canal Spin global. O `FiltroOperadoraSelect` **não** aparece na aba Alcance (só Overview/Conversão).
+- Campanhas legadas sem operadora: backfill `casa_apostas` (migração `20260601120000_midias_sociais_filtro_operadora.sql`).
 - **KpiCard local (`SocialKpiCard`):** interface diferente do `KpiCard` compartilhado.
   Aceita `valor` (string), `momComparativo` (objeto com `pctLabel`/`up`/`refLine`), `accentVar`, `accentCor`.
   MoM usa `TrendingUp`/`TrendingDown` Lucide — NUNCA `↑`/`↓` Unicode.
@@ -573,7 +586,7 @@ Envolver `ResponsiveContainer` num pai com `role="img"` e `aria-label` descritiv
 
 Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(--brand-action…) …)` — nunca `rgba(124,58,237,0.12)` ou `#7c3aed` hardcoded para estado ativo.
 
-**Comparativos duais A/B (Mesa, Funil):** com `brand.useBrand`, lado A usa `--brand-action` e lado B `--brand-contrast`. Nunca o mesmo token para A e B.
+**Comparativos duais A/B (Funil):** com `brand.useBrand`, lado A usa `--brand-action` e lado B `--brand-contrast`. Nunca o mesmo token para A e B. **Exceção — Overview Spin Comparativo de mesa (Blackjack):** mesa A e B usam a mesma identidade **`GAME_IDENTITY_HEX.blackjack`** (`getGameMesaTituloMix`).
 
 ---
 

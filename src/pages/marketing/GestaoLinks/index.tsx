@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -86,7 +87,7 @@ export default function GestaoLinks() {
       (alias.campanha_id ? true : !alias.influencer_id || podeVerInfluencer(alias.influencer_id!))
     );
 
-  const [aba, setAba] = useState<Aba>("pendentes");
+  const [aba, setAba] = useRouteTab("gestao_links", "pendentes", ["pendentes", "mapeados", "ignorados"] as const);
   const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [aliases, setAliases] = useState<UtmAlias[]>([]);
@@ -165,7 +166,7 @@ export default function GestaoLinks() {
   }, [aba, operadoraFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
+  useEffect(() => { supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
   useEffect(() => { supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico").then(({ data }) => setInfluencers(data ?? [])); }, []);
   useEffect(() => { supabase.from("campanhas").select("id, nome, ativo").eq("ativo", true).order("nome").then(({ data }) => setCampanhas(data ?? [])); }, []);
 

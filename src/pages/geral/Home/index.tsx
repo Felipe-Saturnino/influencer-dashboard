@@ -3,7 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
-import { Role, Live, LiveResultado } from "../../../types";
+import { Role, Live, LiveResultado, type PageKey } from "../../../types";
 import { supabase } from "../../../lib/supabase";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../constants/playbookGuia";
@@ -32,6 +32,8 @@ import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
+import { AppPageLink } from "../../../components/AppPageLink";
+import { useAppPageNav } from "../../../hooks/useAppPageNav";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -227,7 +229,8 @@ type PerfilRow = {
 };
 
 export default function Home() {
-  const { theme: t, user, permissions, operadoraBrand, setActivePage, isDark } = useApp();
+  const { theme: t, user, permissions, operadoraBrand, isDark } = useApp();
+  const { propsFor } = useAppPageNav();
 
   const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
   const [perfilRow, setPerfilRow] = useState<PerfilRow | null>(null);
@@ -360,12 +363,12 @@ export default function Home() {
   const welcome = ROLE_WELCOME[role];
   const useBrand = false;
 
-  const atalhos: { key: string; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [];
+  const atalhos: { key: PageKey; label: string; icon: React.ComponentType<{ size?: number; color?: string }> }[] = [];
   for (const sec of MENU) {
     for (const item of sec.items) {
       if (permissions[item.key] === "sim" || permissions[item.key] === "proprios") {
         atalhos.push({
-          key: item.key,
+          key: item.key as PageKey,
           label: item.label,
           icon: PAGE_ICONS[item.key] ?? item.icon,
         });
@@ -510,10 +513,10 @@ export default function Home() {
               Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos
               ou confirme que nada mudou no período.
             </p>
-            <button
-              type="button"
-              onClick={() => setActivePage("rh_dados_cadastro")}
+            <a
+              {...propsFor("rh_dados_cadastro")}
               style={{
+                display: "inline-block",
                 padding: "8px 16px",
                 borderRadius: 10,
                 border: `1px solid ${BRAND.vermelho}`,
@@ -523,10 +526,11 @@ export default function Home() {
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: FONT.body,
+                textDecoration: "none",
               }}
             >
               Ir para Dados de Cadastro
-            </button>
+            </a>
           </div>
         </div>
       )}
@@ -551,10 +555,10 @@ export default function Home() {
               Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página
               Influencers e preencha todos os itens pendentes das suas informações.
             </p>
-            <button
-              type="button"
-              onClick={() => setActivePage("influencers")}
+            <a
+              {...propsFor("influencers")}
               style={{
+                display: "inline-block",
                 padding: "8px 16px",
                 borderRadius: 10,
                 border: `1px solid ${BRAND.vermelho}`,
@@ -564,10 +568,11 @@ export default function Home() {
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: FONT.body,
+                textDecoration: "none",
               }}
             >
               Ir para Influencers
-            </button>
+            </a>
           </div>
         </div>
       )}
@@ -593,10 +598,10 @@ export default function Home() {
               <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para dar
               sua ciência.
             </p>
-            <button
-              type="button"
-              onClick={() => setActivePage("playbook_influencers")}
+            <a
+              {...propsFor("playbook_influencers")}
               style={{
+                display: "inline-block",
                 padding: "8px 16px",
                 borderRadius: 10,
                 border: `1px solid ${BRAND.vermelho}`,
@@ -606,10 +611,11 @@ export default function Home() {
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: FONT.body,
+                textDecoration: "none",
               }}
             >
               Ir para Playbook
-            </button>
+            </a>
           </div>
         </div>
       )}
@@ -800,9 +806,9 @@ export default function Home() {
             {atalhosOrdenados.map((atalho) => {
               const Icon = atalho.icon;
               return (
-                <button
+                <a
                   key={atalho.key}
-                  onClick={() => setActivePage(atalho.key)}
+                  {...propsFor(atalho.key)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -818,6 +824,7 @@ export default function Home() {
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "all 0.15s",
+                    textDecoration: "none",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = useBrand
@@ -848,7 +855,7 @@ export default function Home() {
                   </span>
                   <span style={{ flex: 1 }}>{atalho.label}</span>
                   <ArrowRight size={14} color={t.textMuted} />
-                </button>
+                </a>
               );
             })}
           </div>
@@ -879,24 +886,17 @@ export default function Home() {
         </h2>
         <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.6 }}>
           Use o menu lateral para navegar entre as seções. Em caso de dúvidas, acesse a página de{" "}
-          <button
-            type="button"
-            onClick={() => setActivePage("ajuda")}
+          <AppPageLink
+            pageKey="ajuda"
             style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              margin: 0,
               font: "inherit",
               fontWeight: 700,
               color: accentColor,
-              textDecoration: "underline",
-              cursor: "pointer",
               display: "inline",
             }}
           >
             AJUDA
-          </button>{" "}
+          </AppPageLink>{" "}
           da plataforma ou pelo ícone do seu perfil no canto superior direito.
         </p>
       </div>

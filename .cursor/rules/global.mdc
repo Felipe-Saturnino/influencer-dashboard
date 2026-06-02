@@ -26,8 +26,8 @@ Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
 | MDC | Conteúdo |
 |-----|----------|
-| **Global** | Semântica de dados, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
-| **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** inclui `vite.config` nem chunks de produção |
+| **Global** | Semântica de dados, **identidade visual por jogo**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
+| **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
 ### Manutenção dos MDCs de secção
@@ -35,8 +35,9 @@ Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 Sempre que criar ou alterar de forma relevante uma página em `src/pages/**`:
 
 1. Atualizar o **MDC da secção** correspondente (nova subsecção por `PageKey`, personas, fluxos, exceções, strings de vazio específicas).
-2. Se a secção ainda não tiver MDC, **criar** o ficheiro `.cursor/rules/<secao>.mdc` com `globs` das pastas reais antes de considerar a feature fechada.
-3. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários) e `App.tsx` — ver Permissões.
+2. Se a UI distinguir **jogos Spin** com cor/ícone e houver **exceção** à paleta canónica, documentar em **«Exceções — identidade de jogo»** no MDC da secção (Global § Identidade visual por jogo).
+3. Se a secção ainda não tiver MDC, **criar** o ficheiro `.cursor/rules/<secao>.mdc` com `globs` das pastas reais antes de considerar a feature fechada.
+4. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários) e `App.tsx` — ver Permissões.
 
 ### Ajuda e glossário (qualquer secção)
 
@@ -53,9 +54,10 @@ Toda página logada de produto: **`h1` = label do menu** + **subtítulo de uma l
 
 ---
 
-## Marca vs semântica (ponte)
+## Marca vs semântica vs jogo (ponte)
 
-- **Marca / whitelabel / UI de identidade:** `brand-css-variables.mdc` — não duplicar aqui.
+- **Marca / whitelabel / UI de identidade operadora:** `brand-css-variables.mdc` — não duplicar aqui.
+- **Identidade por jogo (Baccarat, Roleta, Blackjack, Futebol Brasileiro):** **este Global** § Identidade visual por jogo — **fixa**, **não** whitelabel, **não** `--brand-*`. Brand §1.5 reforça o limite.
 - **`src/pages/dashboards/**`:** regras analíticas em `dashboards.mdc` (KpiCard, funil, MoM, FilterBar).
 - **Superfícies neutras:** `const { theme: t } = useApp()` — `t.bg`, `t.text`, `t.cardBorder`, `t.textMuted`, `t.cardBg`, `t.inputBg`.
 - Evitar hex solto em fundos e textos de UI neutra; usar `t.*`.
@@ -80,6 +82,58 @@ Cinza    #6b7280 → neutro, sem dados
 
 ---
 
+## Identidade visual por jogo (imutável — obrigatório por defeito)
+
+**Regra de produto:** em **todo** desenvolvimento novo ou alteração de UI que distinga **Baccarat, Roleta, Blackjack ou Futebol Brasileiro** (tag, badge, filtro, coluna de tabela, série de gráfico, KPI, faixa de título de mesa, especialidade de dealer, etc.), usar **`src/lib/gameIdentityColors.ts`** (e **`src/lib/gameIdentityIcons.tsx`** para ícones Lucide 13px quando aplicável).
+
+**Não** usar `--brand-*`, `brand.accent`, `getFiltroCampoAtivoStyle`, pill única de marca (ex.: amarelo/roxo para todos os jogos), semântica KPI (verde=bom) nem hex solto por jogo.
+
+**Exceção:** **somente** quando produto **pedir explicitamente** no handoff — registrar **antes de codar** na **MDC da secção** (subsecção «Exceções — identidade de jogo» com motivo e superfície). **Sem** entrada no MDC da secção = paleta canónica **obrigatória**.
+
+Paleta de **mercado** — distinta da semântica de KPI e da marca whitelabel:
+
+| Jogo | Cor | Hex |
+|------|-----|-----|
+| **Baccarat** | Azul | `#1e36f8` |
+| **Roleta** | Vermelho | `#e84025` |
+| **Blackjack** | Verde | `#22c55e` |
+| **Futebol Brasileiro** | Amarelo | `#f59e0b` |
+
+### API canónica
+
+| Ficheiro | Export | Uso |
+|----------|--------|-----|
+| `gameIdentityColors.ts` | `GAME_IDENTITY_HEX`, `GAME_IDENTITY_LABEL`, `GameIdentityKey` | Hex e rótulos |
+| | `JOGOS_IDENTIDADE_LISTA` | Comparativo de Jogo, KPIs por jogo |
+| | `gameIdentityTextColor(key, isDark)` | Texto em chip / `FiltroSemanticoTabPill` (`semanticColor`) |
+| | `getGameTagChipStyle(key, isDark)` | Tags, filtros consolidados, badges em cards |
+| | `getGameMesaTituloMix(hex)` | Borda de select + mix (Comparativo de mesa) |
+| | `getGameMesaTituloStripStyle(hex, extra?)` | Faixa de título acima de tabela (`Dados por mesa`) |
+| `gameIdentityIcons.tsx` | `GAME_IDENTITY_ICONS`, `GAME_IDENTITY_ICON_SIZE` | Ícones por jogo (Spade, CircleDot, Crown, Flag) |
+
+```typescript
+import {
+  GAME_IDENTITY_HEX,
+  getGameTagChipStyle,
+  getGameMesaTituloStripStyle,
+} from "../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS } from "../lib/gameIdentityIcons";
+```
+
+### Superfícies (mapeamento rápido)
+
+| Superfície | Helper |
+|------------|--------|
+| Tag / badge / filtro por jogo | `getGameTagChipStyle` + `GAME_IDENTITY_ICONS` |
+| Chip na barra (`FiltroSemanticoTabPill`) | `semanticColor` = `gameIdentityTextColor(key, isDark)` |
+| Coluna, célula ou barra de gráfico por jogo | `cor` de `JOGOS_IDENTIDADE_LISTA` ou `GAME_IDENTITY_HEX[key]` |
+| Faixa de título de mesa | `getGameMesaTituloStripStyle(GAME_IDENTITY_HEX[key])` |
+| Comparativo de mesa (só Blackjack) | `getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)` — mesma cor em A e B |
+
+**Referência implementada:** Overview Spin (Comparativo de Jogo, Comparativo de mesa, Dados por mesa), Roteiro de Mesa, Gestão de Mesas (KPIs), Gestão de Dealers (filtro + cards).
+
+---
+
 ## Estrutura de arquivos (`src/`)
 
 ```
@@ -94,7 +148,7 @@ components/     # Compartilhados — usar antes de criar local
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
-lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, dashboardHelpers, classificacaoSort, supabase, …
+lib/            # tableStyles, dataTableStyles, carouselNavStyles, filterBarStyles, gameIdentityColors, gameIdentityIcons, dashboardHelpers, classificacaoSort, supabase, …
 pages/          # Por secção — ver MDC da secção (geral, dashboards, lives, …)
 .cursor/rules/  # global, brand, geral, escala, rh, <secao>.mdc
 styles/         # global.css, responsive.css
@@ -156,6 +210,7 @@ import {
 import { BRAND, FONT_TITLE, STATUS_ORDEM } from "../lib/dashboardConstants";
 import { fmtBRL, fmtHorasTotal, getMesesDisponiveis, getPeriodoComparativoMoM } from "../lib/dashboardHelpers";
 import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../lib/classificacaoSort";
+// Identidade por jogo (BJ, Roleta, Baccarat, FB): GAME_IDENTITY_HEX, getGameTagChipStyle — lib/gameIdentityColors.ts; GAME_IDENTITY_ICONS — lib/gameIdentityIcons.tsx (Global § Identidade visual por jogo)
 // Datas ISO: comparar como string (desc = mais novo primeiro) ou helper local documentado na página
 ```
 
@@ -262,11 +317,20 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 | Opção agregadora — **rótulo visível** | **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`) — **nunca** “Todas as operadoras”, “Operadoras” só (sem “Todas”), label lateral |
 | `aria-label` do `<select>` | **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL` — nome do controlo; distinto do rótulo da opção) |
 | Estado inicial | `useState("todas")` (ou `OPERADORA_FILTRO_TODAS_VALUE`) |
+| **Fonte de dados** | **Somente operadoras ativas** — query com `.eq("ativo", true)` antes de passar a `operadoras={…}`; se a página carregar `select("*")` para modais, filtrar `.ativo` só na lista do filtro da barra |
 | Posição | Dentro do wrapper de filtros (`primaryTransparentBg/Border` — Brand); **sem** texto “Operadora:” / “Filtrar por operadora” ao lado |
 
 **Proibido em código novo:** `SelectComIcone` + `Shield` montado à mão; `<select>` sem ícone; markup duplicado com `position: absolute` no ícone; rótulo lateral em uppercase antes do campo.
 
 **Props usuais:** `operadoras={lista}`, `podeVerOperadora`, `minWidth` (default **200**), `disabled`, `showTodasOption={false}` quando escopo força uma slug; `extraOptions` para domínios com “Nenhuma” (Staff, Escala, Dealers) — **não** renomear a agregadora. Visual inativo/ativo: referência **Overview Influencer** (`pill` 999, `getFiltroCampoInativoStyle` em `lib/filterBarStyles.ts`).
+
+**Query canónica (lista do filtro):**
+
+```typescript
+supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome");
+```
+
+**Proibido** incluir operadora com `ativo = false` (ex.: Spin Gaming inativa) nas opções do filtro de lista.
 
 ```tsx
 {showFiltroOperadora && (
@@ -280,7 +344,7 @@ Sempre que a página exibir **seletor de operadora** na barra de filtros (ou str
 )}
 ```
 
-**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`.
+**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`. Modais de edição podem carregar operadoras inativas quando o registo já estiver vinculado — **não** estender essa lista ao filtro da barra. **Gestão de Operadoras** e **Gestão de Usuários** (admin) listam todas por regra de domínio.
 
 ### Botão Histórico (modo período / acumulado na barra) — obrigatório
 
@@ -837,6 +901,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- **`FiltroOperadoraSelect` com operadoras inativas** na barra — lista do filtro deve usar `.eq("ativo", true)` (§ Filtro de operadora).
 - Abas de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone Lucide 16px por aba, ou com `borderRadius` 20/999 (padrão Organograma: radius 10 — Brand §6).
 - Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.
 - Modo **Mês/Semana/Dia** na barra sem `FiltroModoVisualizacaoSelect` ou com ícone `Calendar` no lugar de `CalendarRange`.
@@ -866,6 +931,8 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Emoji no `h1` ou em `BlocoLabel`.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
+- Hex ou `COR_*` local para **identidade de jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — usar `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx` (Global § Identidade visual por jogo); exceção **só** com pedido explícito de produto documentado no MDC da secção.
+- Tag, filtro, KPI ou gráfico por jogo com `--brand-*`, `brand.accent` ou pill única de marca — ver Brand §1.5.
 - Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).
 - Wrapper de filtro com `marginBottom: 14` **extra** quando `getPageFilterBoxStyle` já aplica `PAGE_CONTENT_BOX_GAP`.
 - `SectionTitle` com prop `icon` no **cabeçalho do bloco de informação** — ícone só no nível 1 (página).

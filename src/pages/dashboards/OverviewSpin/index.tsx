@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { CAROUSEL_NAV_BTN_PX, getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
@@ -15,6 +16,13 @@ import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
+import {
+  GAME_IDENTITY_HEX,
+  JOGOS_IDENTIDADE_LISTA,
+  getGameMesaTituloMix,
+  getGameMesaTituloStripStyle,
+  type GameIdentityKey,
+} from "../../../lib/gameIdentityColors";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
@@ -83,19 +91,7 @@ import {
 /** Legenda MoM do card UAP: referência é o mês anterior fechado (mensal), não o recorte MTD. */
 const KPI_UAP_VS_LEGENDA = "período completo do mês ant.";
 
-/** Paleta A/B — mesmo padrão do Comparativo de Funil (Conversão). */
-const COR_MESA_A = {
-  accent: "var(--brand-action, #7c3aed)",
-  bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-} as const;
-const COR_MESA_B = {
-  accent: "var(--brand-contrast, #1e36f8)",
-  bg: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
-  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
-} as const;
-
-/** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
+/** Zebras por coluna nas tabelas de mesa — alinhado a tokens de marca. */
 interface DailyRow {
   data: string;
   turnover: number | null;
@@ -1128,12 +1124,6 @@ function agregarLinhasComparativoJogo(linhas: LinhaComparativoJogoTab[]): LinhaC
   };
 }
 
-/** Identidade visual do tipo de jogo — não segue a paleta da operadora. */
-const COR_BLACKJACK = "#22c55e";
-const COR_ROLETA = "#a78bfa";
-const COR_BACCARAT = "#70cae4";
-const COR_FUTEBOL_BRASILEIRO = "#f97316";
-
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
 type KpiJogoDef = {
@@ -1181,14 +1171,11 @@ const PALETA_OPERADORAS_DETALHE = [
   "#14b8a6",
 ] as const;
 
-const JOGOS_COMPARATIVO = [
-  { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
-  { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
-  { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
-  { key: "futebol_brasileiro" as const, label: LABEL_FUTEBOL_BRASILEIRO, cor: COR_FUTEBOL_BRASILEIRO },
-] as const;
+const JOGOS_COMPARATIVO = JOGOS_IDENTIDADE_LISTA.map((j) =>
+  j.key === "futebol_brasileiro" ? { ...j, label: LABEL_FUTEBOL_BRASILEIRO } : j,
+);
 
-type JogoComparativoKey = (typeof JOGOS_COMPARATIVO)[number]["key"];
+type JogoComparativoKey = GameIdentityKey;
 
 type MesaCadastroComparativoRow = {
   operadora_slug: string;
@@ -1369,7 +1356,7 @@ export default function OverviewSpin() {
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
-  const [aba, setAba] = useState<OverviewSpinTab>("overview");
+  const [aba, setAba] = useRouteTab("mesas_spin", "overview", ["overview", "posicionamento"] as const);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -2193,27 +2180,9 @@ export default function OverviewSpin() {
 
   const brand = useDashboardBrand();
 
-  const corCompMesaA = useMemo(
-    () =>
-      brand.useBrand
-        ? {
-            accent: "var(--brand-action, #7c3aed)",
-            bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-          }
-        : COR_MESA_A,
-    [brand.useBrand],
-  );
-  const corCompMesaB = useMemo(
-    () =>
-      brand.useBrand
-        ? {
-            accent: "var(--brand-contrast)",
-            bg: "color-mix(in srgb, var(--brand-contrast) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-contrast) 35%, transparent)",
-          }
-        : COR_MESA_B,
-    [brand.useBrand],
+  const corTituloBlackjack = useMemo(
+    () => getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack),
+    [],
   );
 
   const vsBadgeStyle: React.CSSProperties = {
@@ -2235,59 +2204,22 @@ export default function OverviewSpin() {
 
   const contentBox = getPageContentBoxStyle(brand, t);
 
-  const tituloMesaDadosContrasteOp: React.CSSProperties = {
-    marginBottom: 10,
-    padding: "6px 10px",
-    borderRadius: 10,
-    background: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
-    border: "1px solid color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: 700,
-    color: "var(--brand-contrast, #1e36f8)",
-    fontFamily: FONT.body,
-  };
-  const tituloMesaSpeedBaccarat: React.CSSProperties = brand.useBrand
-    ? tituloMesaDadosContrasteOp
-    : {
-        marginBottom: 10,
-        padding: "6px 10px",
-        borderRadius: 10,
-        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
-        textAlign: "center",
-        fontSize: 13,
-        fontWeight: 700,
-        color: "var(--brand-icon-color, #70cae4)",
+  const tituloMesaSpeedBaccarat = useMemo(
+    () => getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.baccarat, { fontFamily: FONT.body }),
+    [],
+  );
+  const tituloMesaRoleta = useMemo(
+    () => getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.roleta, { fontFamily: FONT.body }),
+    [],
+  );
+  const tituloMesaFutebolBrasileiro = useMemo(
+    () =>
+      getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.futebol_brasileiro, {
         fontFamily: FONT.body,
-      };
-  const tituloMesaRoleta: React.CSSProperties = brand.useBrand
-    ? tituloMesaDadosContrasteOp
-    : {
-        marginBottom: 10,
-        padding: "6px 10px",
-        borderRadius: 10,
-        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
-        textAlign: "center",
-        fontSize: 13,
-        fontWeight: 700,
-        color: "var(--brand-action, #7c3aed)",
-        fontFamily: FONT.body,
-      };
-  const tituloMesaFutebolBrasileiro: React.CSSProperties = {
-    marginBottom: 10,
-    marginTop: 14,
-    padding: "6px 10px",
-    borderRadius: 10,
-    background: `color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 12%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${COR_FUTEBOL_BRASILEIRO} 35%, transparent)`,
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: 700,
-    color: COR_FUTEBOL_BRASILEIRO,
-    fontFamily: FONT.body,
-  };
+        marginTop: 14,
+      }),
+    [],
+  );
 
   const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
 
@@ -3915,7 +3847,7 @@ export default function OverviewSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaA ? corCompMesaA.border : undefined,
+                          borderColor: compMesaA ? corTituloBlackjack.borderMix : undefined,
                           width: "100%",
                         }}
                       >
@@ -3940,7 +3872,7 @@ export default function OverviewSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaB ? corCompMesaB.border : undefined,
+                          borderColor: compMesaB ? corTituloBlackjack.borderMix : undefined,
                           width: "100%",
                         }}
                       >
@@ -3960,12 +3892,12 @@ export default function OverviewSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: corCompMesaA.bg,
-                            border: `1px solid ${corCompMesaA.border}`,
+                            background: corTituloBlackjack.bg,
+                            border: corTituloBlackjack.border,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: corCompMesaA.accent,
+                            color: corTituloBlackjack.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3975,12 +3907,12 @@ export default function OverviewSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: corCompMesaB.bg,
-                            border: `1px solid ${corCompMesaB.border}`,
+                            background: corTituloBlackjack.bg,
+                            border: corTituloBlackjack.border,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: corCompMesaB.accent,
+                            color: corTituloBlackjack.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -4186,7 +4118,7 @@ export default function OverviewSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaA ? corCompMesaA.border : undefined,
+                              borderColor: compMesaA ? corTituloBlackjack.borderMix : undefined,
                               width: "100%",
                             }}
                           >
@@ -4211,7 +4143,7 @@ export default function OverviewSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaB ? corCompMesaB.border : undefined,
+                              borderColor: compMesaB ? corTituloBlackjack.borderMix : undefined,
                               width: "100%",
                             }}
                           >
@@ -4231,12 +4163,12 @@ export default function OverviewSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: corCompMesaA.bg,
-                                border: `1px solid ${corCompMesaA.border}`,
+                                background: corTituloBlackjack.bg,
+                                border: corTituloBlackjack.border,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: corCompMesaA.accent,
+                                color: corTituloBlackjack.accent,
                                 fontFamily: FONT.body,
                               }}
                             >
@@ -4246,12 +4178,12 @@ export default function OverviewSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: corCompMesaB.bg,
-                                border: `1px solid ${corCompMesaB.border}`,
+                                background: corTituloBlackjack.bg,
+                                border: corTituloBlackjack.border,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: corCompMesaB.accent,
+                                color: corTituloBlackjack.accent,
                                 fontFamily: FONT.body,
                               }}
                             >

@@ -7,8 +7,8 @@ import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
  * Cria usuário Auth + profile + user_scopes (prestador_tipo) quando aplicável.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento) >
- *   times (Performance Coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
+ * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento → Gestor) >
+ *   times (Performance Coach → Gestor Treinamento, Shift Leader, Service Manager, GP, CS, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
@@ -22,10 +22,11 @@ type PrestadorTipoSlug =
   | 'financeiro'
   | 'tech_ops'
   | 'ti'
-  | 'treinamento'
   | 'estudio'
 
-type PerfilRhSync = 'figurino' | 'rh' | 'shift_leader' | 'service_manager' | 'prestador'
+type GestorTipoSlug = 'operacoes' | 'marketing' | 'afiliados' | 'geral' | 'treinamento'
+
+type PerfilRhSync = 'figurino' | 'rh' | 'shift_leader' | 'service_manager' | 'prestador' | 'gestor'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -182,65 +183,65 @@ function normTimeNome(s: string | null | undefined): string {
 }
 
 /**
- * Prioridade: gerências específicas → perfil staff ou Prestador + `prestador_tipo`;
+ * Prioridade: gerências específicas → perfil staff, Gestor (Treinamento) ou Prestador + `prestador_tipo`;
  * depois times; por fim `rh_funcionarios.area_atuacao` (escritorio | estudio); default Escritório.
  */
 function resolvePerfilEscopo(
   gerenciaNome: string | null | undefined,
   timeNome: string | null | undefined,
   areaAtuacaoRh: string | null | undefined,
-): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null } {
+): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null; gestorTipo: GestorTipoSlug | null } {
   const g = normTimeNome(gerenciaNome)
   if (g === 'figurino') {
-    return { role: 'figurino', prestadorTipo: null }
+    return { role: 'figurino', prestadorTipo: null, gestorTipo: null }
   }
   if (g === 'rh' || g === 'recursos humanos') {
-    return { role: 'rh', prestadorTipo: null }
+    return { role: 'rh', prestadorTipo: null, gestorTipo: null }
   }
   if (g === 'facilities') {
-    return { role: 'prestador', prestadorTipo: 'facilities' }
+    return { role: 'prestador', prestadorTipo: 'facilities', gestorTipo: null }
   }
   if (g === 'financeiro') {
-    return { role: 'prestador', prestadorTipo: 'financeiro' }
+    return { role: 'prestador', prestadorTipo: 'financeiro', gestorTipo: null }
   }
   if (g === 'tech ops') {
-    return { role: 'prestador', prestadorTipo: 'tech_ops' }
+    return { role: 'prestador', prestadorTipo: 'tech_ops', gestorTipo: null }
   }
   if (g === 'ti') {
-    return { role: 'prestador', prestadorTipo: 'ti' }
+    return { role: 'prestador', prestadorTipo: 'ti', gestorTipo: null }
   }
   if (g === 'treinamento') {
-    return { role: 'prestador', prestadorTipo: 'treinamento' }
+    return { role: 'gestor', prestadorTipo: null, gestorTipo: 'treinamento' }
   }
 
   const t = normTimeNome(timeNome)
   if (t === 'performance coach') {
-    return { role: 'prestador', prestadorTipo: 'treinamento' }
+    return { role: 'gestor', prestadorTipo: null, gestorTipo: 'treinamento' }
   }
   if (t === 'shift leader') {
-    return { role: 'shift_leader', prestadorTipo: null }
+    return { role: 'shift_leader', prestadorTipo: null, gestorTipo: null }
   }
   if (t === 'service manager') {
-    return { role: 'service_manager', prestadorTipo: null }
+    return { role: 'service_manager', prestadorTipo: null, gestorTipo: null }
   }
   if (t === 'game presenter') {
-    return { role: 'prestador', prestadorTipo: 'game_presenter' }
+    return { role: 'prestador', prestadorTipo: 'game_presenter', gestorTipo: null }
   }
   if (t === 'customer service') {
-    return { role: 'prestador', prestadorTipo: 'customer_service' }
+    return { role: 'prestador', prestadorTipo: 'customer_service', gestorTipo: null }
   }
   if (t === 'shuffler') {
-    return { role: 'prestador', prestadorTipo: 'shuffler' }
+    return { role: 'prestador', prestadorTipo: 'shuffler', gestorTipo: null }
   }
 
   const a = normTimeNome(areaAtuacaoRh)
   if (a === 'escritorio') {
-    return { role: 'prestador', prestadorTipo: 'escritorio' }
+    return { role: 'prestador', prestadorTipo: 'escritorio', gestorTipo: null }
   }
   if (a === 'estudio') {
-    return { role: 'prestador', prestadorTipo: 'estudio' }
+    return { role: 'prestador', prestadorTipo: 'estudio', gestorTipo: null }
   }
-  return { role: 'prestador', prestadorTipo: 'escritorio' }
+  return { role: 'prestador', prestadorTipo: 'escritorio', gestorTipo: null }
 }
 
 function corsHeaders(req: Request) {
@@ -462,7 +463,7 @@ serve(async (req) => {
   }
 
   const nomePlataforma = String(row.nome ?? '').trim() || loginEmail.split('@')[0] || 'Prestador'
-  const { role: perfilRole, prestadorTipo: tipoSlug } = resolvePerfilEscopo(
+  const { role: perfilRole, prestadorTipo: tipoSlug, gestorTipo: gestorSlug } = resolvePerfilEscopo(
     gerenciaNome,
     timeNome,
     (row as { area_atuacao?: string | null }).area_atuacao,
@@ -509,6 +510,22 @@ serve(async (req) => {
       status: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
+  }
+
+  if (gestorSlug !== null) {
+    const { error: scopeGestorErr } = await supabase.from('user_scopes').insert({
+      user_id: uid,
+      scope_type: 'gestor_tipo',
+      scope_ref: gestorSlug,
+    })
+    if (scopeGestorErr) {
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
+      await supabase.from('profiles').delete().eq('id', uid)
+      return new Response(JSON.stringify({ error: `Erro ao salvar tipo de gestor: ${scopeGestorErr.message}` }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   if (tipoSlug !== null) {

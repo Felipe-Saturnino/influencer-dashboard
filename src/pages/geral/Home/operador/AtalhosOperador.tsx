@@ -2,6 +2,7 @@ import { ArrowRight, Dices, HelpCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { getPageMenuLabel } from "../../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../../lib/pageCanonicalCopy";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -15,7 +16,8 @@ const ATALHOS_OPERADOR: { key: PageKey; icon: LucideIcon }[] = [
 ];
 
 export function AtalhosOperador() {
-  const { theme: t, setActivePage } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const box = getPageContentBoxStyle(brand, t);
   const accentColor = brand.useBrand ? "var(--brand-primary)" : "var(--brand-primary, #7c3aed)";
@@ -33,10 +35,9 @@ export function AtalhosOperador() {
         {ATALHOS_OPERADOR.map(({ key, icon: Icon }) => {
           const subtitle = getPageCanonicalSubtitle(key) ?? "";
           return (
-            <button
+            <a
               key={key}
-              type="button"
-              onClick={() => setActivePage(key)}
+              {...propsFor(key)}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -52,6 +53,7 @@ export function AtalhosOperador() {
                 textAlign: "left",
                 width: "100%",
                 minWidth: 0,
+                textDecoration: "none",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
@@ -79,7 +81,7 @@ export function AtalhosOperador() {
                   {subtitle}
                 </p>
               ) : null}
-            </button>
+            </a>
           );
         })}
       </div>

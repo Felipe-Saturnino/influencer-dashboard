@@ -14,8 +14,11 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
@@ -40,12 +43,12 @@ const ERRO_MESA_DUPLICADA =
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Futebol Brasileiro", "Poker", "Outro"] as const;
 
-const KPI_TIPOS_JOGO_MESAS = [
-  { label: "Baccarat", cor: "#8b5cf6" },
-  { label: "Blackjack", cor: BRAND.ciano },
-  { label: "Roleta", cor: "#e84025" },
-  { label: "Futebol Brasileiro", cor: "#f59e0b" },
-] as const;
+const KPI_TIPOS_JOGO_MESAS = (
+  ["baccarat", "blackjack", "roleta", "futebol_brasileiro"] as const
+).map((key) => ({
+  label: GAME_IDENTITY_LABEL[key],
+  cor: GAME_IDENTITY_HEX[key],
+}));
 
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
@@ -84,6 +87,7 @@ export default function GestaoMesas() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
+  const [buscaMesa, setBuscaMesa] = useState("");
   type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident" | "identOp";
   const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
 
@@ -124,24 +128,32 @@ export default function GestaoMesas() {
     [operadorasOpcoes],
   );
 
-  const rowsFiltradas = useMemo(() => {
-    let out = rows;
-    if (filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE) {
-      out = out.filter((r) => r.operadora_slug === filtroOperadora);
-    }
-    return out;
+  const rowsPorOperadora = useMemo(() => {
+    if (filtroOperadora === OPERADORA_FILTRO_TODAS_VALUE) return rows;
+    return rows.filter((r) => r.operadora_slug === filtroOperadora);
   }, [rows, filtroOperadora]);
+
+  const rowsFiltradas = useMemo(() => {
+    const q = buscaMesa.trim().toLowerCase();
+    if (!q) return rowsPorOperadora;
+    return rowsPorOperadora.filter((r) => {
+      const nome = (r.nome_mesa ?? "").toLowerCase();
+      const idSpin = (r.mesa_identificacao ?? "").toLowerCase();
+      const numero = (r.numero_mesa ?? "").toLowerCase();
+      return nome.includes(q) || idSpin.includes(q) || numero.includes(q);
+    });
+  }, [rowsPorOperadora, buscaMesa]);
 
   const contagemPorJogo = useMemo(() => {
     const map = new Map<string, number>(
       KPI_TIPOS_JOGO_MESAS.map((k) => [k.label, 0]),
     );
-    for (const r of rowsFiltradas) {
+    for (const r of rowsPorOperadora) {
       const tipo = (r.tipo_jogo ?? "").trim();
       if (map.has(tipo)) map.set(tipo, (map.get(tipo) ?? 0) + 1);
     }
     return map;
-  }, [rowsFiltradas]);
+  }, [rowsPorOperadora]);
 
   const labelCarrosselOperadora = useMemo(() => {
     return (
@@ -327,28 +339,37 @@ export default function GestaoMesas() {
       </div>
 
       <div style={contentBox}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: 16,
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
           <SectionTitle compact>Mesas</SectionTitle>
-          {perm.canCriarOk ? (
-            <CtaCriarButton
-              type="button"
-              onClick={() => {
-                setEditando(null);
-                setModalOpen(true);
-              }}
-            >
-              Nova Mesa
-            </CtaCriarButton>
-          ) : null}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BarraPesquisaPagina
+              value={buscaMesa}
+              onChange={setBuscaMesa}
+              placeholder={PAGE_SEARCH.mesaNomeOuId}
+              aria-label="Buscar por nome da mesa, ID Spin ou número da mesa"
+              wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
+            />
+            {perm.canCriarOk ? (
+              <CtaCriarButton
+                type="button"
+                onClick={() => {
+                  setEditando(null);
+                  setModalOpen(true);
+                }}
+                style={{ flexShrink: 0 }}
+              >
+                Nova Mesa
+              </CtaCriarButton>
+            ) : null}
+          </div>
         </div>
 
         {loading ? (
@@ -360,9 +381,11 @@ export default function GestaoMesas() {
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
             {rows.length === 0
               ? "Nenhuma mesa cadastrada."
-              : filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE
-                ? "Nenhuma mesa para o filtro selecionado."
-                : "Nenhuma mesa cadastrada."}
+              : buscaMesa.trim()
+                ? "Nenhuma mesa encontrada."
+                : filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE
+                  ? "Nenhuma mesa para o filtro selecionado."
+                  : "Nenhuma mesa cadastrada."}
           </div>
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MENU } from "../../../constants/menu";
@@ -11,6 +12,8 @@ import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown }
 import { PageHeader } from "../../../components/PageHeader";
 import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
+import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
+import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
@@ -76,7 +79,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Comparativo de Jogo",
         texto:
-          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (roxo), Baccarat (ciano) e Futebol Brasileiro (laranja). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
+          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (vermelho), Baccarat (azul) e Futebol Brasileiro (amarelo). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
@@ -110,7 +113,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nAs três abas (Overview, Conversão, Alcance) compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Na aba Alcance o filtro não é exibido — os dados orgânicos dos canais Spin (Instagram, Facebook, YouTube) são sempre globais.\n\nAs três abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
@@ -517,6 +520,11 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Dealers, Agendamento e Jogos são os três itens obrigatórios. Cada um apresenta um bloco de confirmação ao final do conteúdo.\n\nPara confirmar: marque a caixa declarando que leu e compreendeu as regras, depois clique em Confirmar Ciência. A confirmação é registrada com data e hora e não pode ser desfeita.\n\nUma barra de progresso no topo da página indica quantos dos três itens foram confirmados. Quando todos forem concluídos, a página exibe um banner de conclusão e o status muda para Playbook concluído.",
       },
       {
+        subtitulo: "Aba Jogos — foco obrigatório",
+        texto:
+          "Na aba Jogos, a seção «Foco obrigatório — Live Casino SPIN» exige que Blackjack, Roleta, Baccarat e Futebol Brasileiro ocorram exclusivamente nas mesas Spin Gaming — nunca em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou equivalentes). Slots seguem regra separada com limite de tempo por hora de live.",
+      },
+      {
         subtitulo: "Barra de Progresso",
         texto:
           "A barra abaixo do cabeçalho mostra o avanço nas confirmações obrigatórias. Ela só aparece para influencers com confirmações pendentes. Quando todos os itens estiverem confirmados, a barra é substituída pelo banner de conclusão.",
@@ -819,7 +827,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Lista de operadoras",
         texto:
-          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. A tabela permite ordenação por qualquer coluna.",
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna.",
       },
       {
         subtitulo: "Cadastrar ou editar operadora",
@@ -843,7 +851,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro ativo. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro de operadora. No bloco Mesas, use a busca abaixo do título para filtrar por nome da mesa, ID Spin ou número da mesa. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
@@ -1899,7 +1907,7 @@ export default function Ajuda() {
   const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const [aba, setAba] = useState<Aba>("conheca");
+  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario"] as const);
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
 
   const menuAjudaVisivel = useMemo(
@@ -2192,8 +2200,9 @@ export default function Ajuda() {
                         margin: 0,
                         whiteSpace: "pre-line",
                       }}>
-                        {bloco.texto}
+                        {renderAjudaTexto(bloco.texto)}
                       </p>
+                      {i === 0 ? <AjudaPaginaAcessoLink pageKey={paginaSelecionada} /> : null}
                       {i < dadosConteudo.blocos.length - 1 && (
                         <div style={{
                           height: 1,

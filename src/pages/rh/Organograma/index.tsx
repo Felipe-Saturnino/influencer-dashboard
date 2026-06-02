@@ -4,6 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
   coletarIdsTimesDaGerencia,
@@ -43,8 +44,6 @@ import {
   proximoCentroCustosGerencia,
   proximoCentroCustosTime,
 } from "../../../lib/rhOrganogramaCentroCustos";
-
-type ModoPagina = "visual" | "gerenciar";
 
 type ModalOff =
   | null
@@ -94,7 +93,7 @@ export default function RhOrganogramaPage() {
   const brand = useDashboardBrand();
   const perm = usePermission("rh_organograma");
 
-  const [modo, setModo] = useState<ModoPagina>("visual");
+  const [modo, setModo] = useRouteTab("rh_organograma", "visual", ["visual", "gerenciar"] as const);
   const [loading, setLoading] = useState(true);
   const [diretorias, setDiretorias] = useState<RhOrgDiretoria[]>([]);
   const [gerencias, setGerencias] = useState<RhOrgGerencia[]>([]);
@@ -185,8 +184,8 @@ export default function RhOrganogramaPage() {
 
   useEffect(() => {
     if (perm.loading) return;
-    if (!perm.canEditarOk) setModo("visual");
-  }, [perm.loading, perm.canEditarOk]);
+    if (!perm.canEditarOk && modo !== "visual") setModo("visual");
+  }, [perm.loading, perm.canEditarOk, modo, setModo]);
 
   useEffect(() => {
     if (!fotoDiretorFile) {

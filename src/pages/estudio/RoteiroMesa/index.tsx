@@ -13,6 +13,8 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
+import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -174,14 +176,18 @@ const MSG_ERRO_CONVERSA_CAMPANHA =
 const MSG_ERRO_MSG_CAMPANHA =
   "Não foi possível salvar a campanha: falha ao registrar a primeira mensagem. Se o problema persistir, contate o suporte.";
 
-// ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
-const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => string; border: string }> = {
-  todos:     { bg: "rgba(74,32,130,0.12)",   color: (d) => d ? "#b08aee" : "#3a1868", border: "rgba(74,32,130,0.28)"   },
-  blackjack: { bg: "rgba(30,54,248,0.12)",   color: (d) => d ? "#7b95ff" : "#1631c4", border: "rgba(30,54,248,0.28)"   },
-  roleta:    { bg: "rgba(232,64,37,0.12)",   color: (d) => d ? "#ff8570" : "#b02a14", border: "rgba(232,64,37,0.28)"   },
-  baccarat:  { bg: "rgba(112,202,228,0.12)", color: (d) => d ? "#70cae4" : "#0f6a8a", border: "rgba(112,202,228,0.28)" },
-  futebol_brasileiro: { bg: "rgba(249,115,22,0.12)", color: (d) => d ? "#fb923c" : "#c2410c", border: "rgba(249,115,22,0.28)" },
-};
+// ─── Tags de jogo (paleta canónica — Global § Identidade por jogo) ───────────
+function jogoTagChipStyle(key: JogoTag, isDark: boolean): { bg: string; color: string; border: string } {
+  if (key === "todos") {
+    return {
+      bg: "rgba(74,32,130,0.12)",
+      color: isDark ? "#b08aee" : "#3a1868",
+      border: "rgba(74,32,130,0.28)",
+    };
+  }
+  const style = getGameTagChipStyle(key, isDark);
+  return { bg: style.bg, color: style.color, border: style.border };
+}
 
 // ─── TAG CHIP ─────────────────────────────────────────────────────────────────
 function TagChip({ label, bg, color, border }: { label: string; bg: string; color: string; border: string }) {
@@ -356,10 +362,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
         </p>
         <div role="group" aria-labelledby={labelJogosId} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
-            const jcfg = JOGO_TAG_CONFIG[key];
+            const jcfg = jogoTagChipStyle(key, dark);
             const isActive = jogos.includes(key);
             return (
-              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
+              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
             );
           })}
         </div>
@@ -566,10 +572,10 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
         </p>
         <div role="group" aria-labelledby={labelJogosId} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
-            const jcfg = JOGO_TAG_CONFIG[key];
+            const jcfg = jogoTagChipStyle(key, dark);
             const isActive = jogos.includes(key);
             return (
-              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
+              <button key={key} type="button" aria-pressed={isActive} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} aria-hidden />}{label}</button>
             );
           })}
         </div>
@@ -690,9 +696,9 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
           {jogosList.map((jogo) => {
-            const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
+            const jcfg = jogoTagChipStyle(jogo as JogoTag, dark);
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
-            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
+            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color} border={jcfg.border} /> : null;
           })}
         </div>
       </div>
@@ -785,9 +791,9 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
           {(campanha.jogos ?? ["todos"]).map((jogo) => {
-            const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
+            const jcfg = jogoTagChipStyle(jogo as JogoTag, dark);
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
-            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
+            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color} border={jcfg.border} /> : null;
           })}
           {(campanha.data_inicio || campanha.data_fim) && (
             <TagChip label={`${formatDate(campanha.data_inicio) ?? "?"} → ${formatDate(campanha.data_fim) ?? "?"}`} bg="rgba(112,202,228,0.10)" color={cianoText} border="rgba(112,202,228,0.25)" />
@@ -1106,14 +1112,15 @@ export default function RoteiroMesa() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 28, flexWrap: narrowMobile ? "nowrap" : "wrap", flex: 1, justifyContent: "center", minWidth: narrowMobile ? "max-content" : undefined }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogo</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogos</span>
                 {JOGOS.map(({ key, label }) => {
-                  const jcfg = JOGO_TAG_CONFIG[key];
+                  const jcfg = jogoTagChipStyle(key, dark);
                   return (
                     <FiltroSemanticoTabPill
                       key={key}
                       label={label}
-                      semanticColor={jcfg.color(dark)}
+                      icon={isGameIdentityKey(key) ? GAME_IDENTITY_ICONS[key] : undefined}
+                      semanticColor={jcfg.color}
                       active={filtroJogo === key}
                       onClick={() => setFiltroJogo(key)}
                     />

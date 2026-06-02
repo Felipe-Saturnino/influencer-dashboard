@@ -15,6 +15,7 @@ import {
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -538,7 +539,11 @@ export default function RhCalendarioPage() {
   const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
   const [current, setCurrent] = useState(() => mesInicialCalendarioRhNaEntrada());
-  const [abaPrincipal, setAbaPrincipal] = useState<"compromissos" | "presenca">("compromissos");
+  const [abaPrincipal, setAbaPrincipal] = useRouteTab(
+    "rh_calendario",
+    "compromissos",
+    ["compromissos", "presenca"] as const,
+  );
   const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<TipoCompromissoCalFiltroValue>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);

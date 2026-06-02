@@ -368,7 +368,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **BlocoCiencia:** `role="checkbox"` customizado; `key={itemKey}` para remount; `aria-live` na transição; erro upsert: `"Não foi possível registrar a confirmação. Tente novamente."`; `Loader2` branco em Confirmar Ciência.
 - **PainelAuditoria:** `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
 - **Fun Facts:** `value: "Sim"` — proibido `"✓"`.
-- Imagens em `ConteudoAcesso`: `width`/`height` + `loading="lazy"`.
+- **ConteudoJogos:** foco obrigatório Live Casino SPIN — Blackjack, Roleta, Baccarat e **Futebol Brasileiro** exclusivamente nas mesas Spin Gaming; alerta de proibição inclui os quatro jogos.
 - Barra de progresso: `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-accent)) : vermelho→azul`.
 
 ### SpinNaRede (`src/pages/conteudo/SpinNaRede/index.tsx`)

@@ -10,6 +10,7 @@ import {
   sanitizeStorageFileName,
   type TipoDenunciaKey,
 } from "../../lib/canalDenunciasSpin";
+import { buildLoginPath } from "../../lib/appRoutes";
 
 const MAX_ANEXO_BYTES = 20 * 1024 * 1024;
 
@@ -684,7 +685,7 @@ export default function CanalDenunciasSpinPage() {
         )}
 
         <p style={{ textAlign: "center", marginTop: 32, marginBottom: 24, fontSize: 12, color: "#8a7aa8" }}>
-          <a href="/" style={{ color: "var(--brand-icon, #70cae4)", fontWeight: 600 }}>
+          <a href={buildLoginPath()} style={{ color: "var(--brand-icon, #70cae4)", fontWeight: 600 }}>
             Voltar ao login da plataforma
           </a>
         </p>

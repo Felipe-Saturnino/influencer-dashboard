@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, MoreHorizontal, Store, User } from "lucide-r
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
   DashboardPageHeader,
@@ -151,7 +152,7 @@ export default function EscalaMarketplaceTurnosPage() {
     setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
   }, [mesesDisponiveis.length]);
 
-  const [aba, setAba] = useState<"todas" | "minhas">("todas");
+  const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", ["todas", "minhas"] as const);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeIdsTodas, setFiltroTimeIdsTodas] = useState<string[]>([]);
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");

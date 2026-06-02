@@ -23,6 +23,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -949,7 +950,11 @@ export default function RhPrestadoresPage() {
   const [filtroSetor, setFiltroSetor] = useState("");
   const [filtroContrato, setFiltroContrato] = useState<RhFuncionarioTipoContrato | "todos">("todos");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusPrestador>("disponiveis");
-  const [abaPagina, setAbaPagina] = useState<AbaPaginaRhFunc>("headcount");
+  const [abaPagina, setAbaPagina] = useRouteTab(
+    "rh_funcionarios",
+    "headcount",
+    ["headcount", "acoes_rh", "anotacoes"] as const,
+  );
   const [sortPrestadores, setSortPrestadores] = useState<{ col: PrestadoresSortCol; dir: SortDir }>({ col: "nome", dir: "asc" });
 
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");

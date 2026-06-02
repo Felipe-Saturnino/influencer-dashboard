@@ -12,6 +12,8 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
@@ -58,6 +60,7 @@ export default function GestaoOperadoras() {
   const [operadoraParaExcluir, setOperadoraParaExcluir] = useState<Operadora | null>(null);
   const [excluindoOperadora, setExcluindoOperadora] = useState(false);
   const [erroExcluirOperadora, setErroExcluirOperadora] = useState<string | null>(null);
+  const [buscaOperadora, setBuscaOperadora] = useState("");
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -68,8 +71,14 @@ export default function GestaoOperadoras() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const operadorasFiltradas = useMemo(() => {
+    const q = buscaOperadora.trim().toLowerCase();
+    if (!q) return operadoras;
+    return operadoras.filter((o) => (o.nome ?? "").toLowerCase().includes(q));
+  }, [operadoras, buscaOperadora]);
+
   const operadorasOrdenadas = useMemo(() => {
-    const arr = [...operadoras];
+    const arr = [...operadorasFiltradas];
     const { col, dir } = sortOp;
     arr.sort((a, b) => {
       let c = 0;
@@ -93,7 +102,7 @@ export default function GestaoOperadoras() {
       return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
     });
     return arr;
-  }, [operadoras, sortOp]);
+  }, [operadorasFiltradas, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
   if (perm.loading) {
     return (
@@ -171,28 +180,37 @@ export default function GestaoOperadoras() {
       </div>
 
       <div style={getPageContentBoxStyle(brand, t)}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: 16,
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
           <SectionTitle compact>Operadoras</SectionTitle>
-          {perm.canCriarOk ? (
-            <CtaCriarButton
-              type="button"
-              onClick={() => {
-                setEditando(null);
-                setModalOpen(true);
-              }}
-            >
-              Nova Operadora
-            </CtaCriarButton>
-          ) : null}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <BarraPesquisaPagina
+              value={buscaOperadora}
+              onChange={setBuscaOperadora}
+              placeholder={PAGE_SEARCH.operadoraNome}
+              aria-label="Buscar por nome de operadora"
+              wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
+            />
+            {perm.canCriarOk ? (
+              <CtaCriarButton
+                type="button"
+                onClick={() => {
+                  setEditando(null);
+                  setModalOpen(true);
+                }}
+                style={{ flexShrink: 0 }}
+              >
+                Nova Operadora
+              </CtaCriarButton>
+            ) : null}
+          </div>
         </div>
 
         {loading ? (
@@ -213,6 +231,8 @@ export default function GestaoOperadoras() {
           </div>
         ) : operadoras.length === 0 ? (
           <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
+        ) : operadorasOrdenadas.length === 0 ? (
+          <div style={{ padding: "48px 0", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora encontrada.</div>
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle()}>

@@ -15,6 +15,7 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
+  { slug: "treinamento", label: "Treinamento" },
 ];
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
@@ -27,7 +28,6 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "financeiro", label: "Financeiro" },
   { slug: "tech_ops", label: "Tech Ops" },
   { slug: "ti", label: "TI" },
-  { slug: "treinamento", label: "Treinamento" },
   { slug: "estudio", label: "Estúdio" },
 ];
 
@@ -137,6 +137,19 @@ export const PAGES: {
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
+
+/** Secções na ordem de `PAGES` / menu lateral (primeira ocorrência de cada secao). */
+export function secoesMenuFromPages(pages: readonly { secao: string }[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of pages) {
+    if (!seen.has(p.secao)) {
+      seen.add(p.secao);
+      out.push(p.secao);
+    }
+  }
+  return out;
+}
 
 /**
  * Perfis editáveis na aba Permissões (Administrador não entra: acesso total fixo na plataforma).

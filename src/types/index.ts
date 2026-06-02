@@ -197,7 +197,7 @@ export type ScopeType =
   | "gestor_tipo"
   | "prestador_tipo";
 
-export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral";
+export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral" | "treinamento";
 
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =
@@ -209,7 +209,6 @@ export type PrestadorTipoSlug =
   | "financeiro"
   | "tech_ops"
   | "ti"
-  | "treinamento"
   | "estudio";
 
 export interface UserScope {

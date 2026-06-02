@@ -25,6 +25,7 @@ export const CATEGORIAS_LOBBY_EXIBICAO = [
   "Roleta",
   "Blackjack",
   "Blackjack VIP",
+  "Futebol Brasileiro",
 ] as const;
 
 export interface LobbyExecucaoRow {
@@ -104,6 +105,15 @@ export function labelTipoJogo(tipo: string, nomeMesa?: string): string {
   if (t.includes("blackjack") || t.includes("black")) return "Blackjack";
   if (t.includes("roleta") || t === "roleta") return "Roleta";
   if (t.includes("baccarat") || t.includes("bacará")) return "Baccarat";
+  if (
+    t.includes("futebol brasileiro") ||
+    t.includes("futebol studio") ||
+    t.includes("football studio") ||
+    t.includes("futebol_studio") ||
+    (t.includes("futebol") && !t.includes("roleta"))
+  ) {
+    return "Futebol Brasileiro";
+  }
   return tipo.trim() || "Outros";
 }
 

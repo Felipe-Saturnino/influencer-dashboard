@@ -7,20 +7,18 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
   Eye,
   History,
   Send,
-  Flag,
   ChevronLeft,
   ChevronRight,
-  CircleDot,
   Users,
   User,
-  Spade,
-  Crown,
   Loader2,
   Star,
 } from "lucide-react";
@@ -74,12 +72,45 @@ const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
   masculino: <Users size={13} aria-hidden />,
 };
 
-const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
-  blackjack: <Spade size={13} aria-hidden />,
-  roleta: <CircleDot size={13} aria-hidden />,
-  baccarat: <Crown size={13} aria-hidden />,
-  futebol_brasileiro: <Flag size={13} aria-hidden />,
-};
+function estiloTagJogoDealer(key: DealerJogoCadastro, isDark: boolean): CSSProperties {
+  const chip = getGameTagChipStyle(key, isDark);
+  return {
+    background: chip.bg,
+    border: `1px solid ${chip.border}`,
+    color: chip.color,
+    padding: "3px 10px",
+    borderRadius: 20,
+    fontSize: 11,
+    fontWeight: 700,
+    fontFamily: FONT.body,
+    textTransform: "uppercase",
+    flexShrink: 0,
+  };
+}
+
+function estiloFiltroJogoDealer(
+  key: DealerJogoCadastro,
+  isDark: boolean,
+  ativo: boolean,
+  textMuted: string,
+): CSSProperties {
+  const chip = getGameTagChipStyle(key, isDark);
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "5px 12px",
+    borderRadius: 999,
+    cursor: "pointer",
+    fontFamily: FONT.body,
+    fontSize: 12,
+    border: ativo ? `1px solid ${chip.border}` : `1px solid color-mix(in srgb, ${chip.hex} 22%, transparent)`,
+    background: ativo ? chip.bg : "transparent",
+    color: ativo ? chip.color : textMuted,
+    fontWeight: ativo ? 700 : 500,
+    transition: "all 0.15s",
+  };
+}
 
 const CARD_SHADOW = (isDark: boolean) =>
   isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
@@ -391,23 +422,9 @@ export default function GestaoDealers() {
                       type="button"
                       aria-pressed={ativo}
                       onClick={() => setFiltroJogos(ativo ? "todos" : o.value)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "5px 12px",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        border: ativo ? `1px solid ${BRAND.amarelo}` : `1px solid ${BRAND.amarelo}55`,
-                        background: ativo ? "rgba(245,158,11,0.15)" : `${BRAND.amarelo}11`,
-                        color: ativo ? BRAND.amarelo : t.textMuted,
-                        fontWeight: ativo ? 700 : 500,
-                        transition: "all 0.15s",
-                      }}
+                      style={estiloFiltroJogoDealer(o.value, t.isDark, ativo, t.textMuted)}
                     >
-                      {ICONE_JOGO[o.value]}
+                      {GAME_IDENTITY_ICONS[o.value]}
                       <span>{o.label} · {porJogo[o.value] ?? 0}</span>
                     </button>
                   );
@@ -697,21 +714,7 @@ function DealerCard({
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center", alignContent: "flex-start" }}>
           {(dealer.jogos ?? []).filter((j): j is DealerJogoCadastro => j !== "mesa_vip").map((j) => (
-            <span
-              key={j}
-              style={{
-                background: "var(--brand-action-12, rgba(124,58,237,0.12))",
-                border: "1px solid var(--brand-action-border, rgba(124,58,237,0.3))",
-                color: "var(--brand-action, #7c3aed)",
-                padding: "3px 10px",
-                borderRadius: 20,
-                fontSize: 11,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                textTransform: "uppercase",
-                flexShrink: 0,
-              }}
-            >
+            <span key={j} style={estiloTagJogoDealer(j, t.isDark)}>
               {JOGOS_OPTS.find((o) => o.value === j)?.label ?? j}
             </span>
           ))}

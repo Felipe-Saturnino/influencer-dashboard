@@ -5,6 +5,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../constants/theme";
 import { AbaUsuarios } from "./AbaUsuarios";
@@ -16,7 +17,6 @@ import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import {
   GestaoUsuariosFiltroBar,
   type AbaGestaoEscopo,
-  type AbaGestaoPrincipal,
   type ContagensFiltroUsuarios,
 } from "./GestaoUsuariosFiltroBar";
 import type { Role } from "../../../types";
@@ -32,7 +32,7 @@ export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("gestao_usuarios");
-  const [aba, setAba] = useState<AbaGestaoPrincipal>("usuarios");
+  const [aba, setAba] = useRouteTab("gestao_usuarios", "usuarios", ["usuarios", "permissoes", "escopos"] as const);
   const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
   const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
   const [busca, setBusca] = useState("");
@@ -44,12 +44,14 @@ export default function GestaoUsuarios() {
   const mostrarAbasAdmin = isAdmin && perm.canEditarOk;
 
   useEffect(() => {
+    if (perm.loading) return;
     if (!isAdmin && aba !== "usuarios") setAba("usuarios");
-  }, [isAdmin, aba]);
+  }, [perm.loading, isAdmin, aba, setAba]);
 
   useEffect(() => {
+    if (perm.loading) return;
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
-  }, [isAdmin, perm.canEditarOk, aba]);
+  }, [perm.loading, isAdmin, perm.canEditarOk, aba, setAba]);
 
   const card = useMemo(
     () => getPageContentBoxStyle(brand, t, { padding: 28 }),

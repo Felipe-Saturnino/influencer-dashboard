@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
@@ -16,7 +17,7 @@ import {
   vagaPassaBuscaNomeOuDiretoria,
 } from "../../../lib/rhVagasFormat";
 import { RhVagasCandidaturasPainel } from "../../../components/rh/vagas/RhVagasCandidaturasPainel";
-import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../types/rhVaga";
+import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
 import type { RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -80,7 +81,11 @@ export default function RhVagasPage() {
   const [vagas, setVagas] = useState<RhVagaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [aba, setAba] = useState<RhVagasAba>("abertas");
+  const [aba, setAba] = useRouteTab(
+    "rh_vagas",
+    "abertas",
+    ["abertas", "em_andamento", "gerenciamento", "candidaturas"] as const,
+  );
   const [busca, setBusca] = useState("");
   const [filtroStatusGestao, setFiltroStatusGestao] = useState<RhVagaStatus | "todos">(VAGA_FILTRO_TODOS_STATUS_VALUE);
   const [filtroTipoCand, setFiltroTipoCand] = useState<RhVagasCandidaturasFiltroTipo>(VAGA_FILTRO_TODOS_TIPOS_VALUE);
@@ -131,9 +136,10 @@ export default function RhVagasPage() {
   }, [recarregarInscricoes, perm.loading, perm.canView]);
 
   useEffect(() => {
+    if (perm.loading) return;
     if (!mostrarAbaGerenciamento && aba === "gerenciamento") setAba("abertas");
     if (!mostrarAbaCandidaturas && aba === "candidaturas") setAba("abertas");
-  }, [mostrarAbaGerenciamento, mostrarAbaCandidaturas, aba]);
+  }, [perm.loading, mostrarAbaGerenciamento, mostrarAbaCandidaturas, aba, setAba]);
 
   useEffect(() => {
     if (!sucessoMsg) return;

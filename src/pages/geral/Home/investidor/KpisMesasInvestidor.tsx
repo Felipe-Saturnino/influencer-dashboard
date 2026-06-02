@@ -1,6 +1,7 @@
 import { ArrowUpDown, Hash, Loader2, TrendingUp } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { fmtBRL } from "../../../../lib/dashboardHelpers";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
@@ -11,7 +12,8 @@ import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
 import { homeSectionTitleStyle, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
 export function KpisMesasInvestidor() {
-  const { theme: t, setActivePage } = useApp();
+  const { theme: t } = useApp();
+  const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const { loading, erro, data } = useHomeInvestidorKpisMesas();
   const box = getPageContentBoxStyle(brand, t);
@@ -71,9 +73,9 @@ export function KpisMesasInvestidor() {
           </div>
           <p style={{ ...HOME_FOOTER_HINT, color: t.textMuted }}>
             Quer saber mais? Acessa o Dashboard de{" "}
-            <button type="button" onClick={() => setActivePage("mesas_spin")} style={HOME_LINK_BUTTON}>
+            <a {...propsFor("mesas_spin")} style={HOME_LINK_BUTTON}>
               Overview Spin
-            </button>
+            </a>
           </p>
         </>
       )}

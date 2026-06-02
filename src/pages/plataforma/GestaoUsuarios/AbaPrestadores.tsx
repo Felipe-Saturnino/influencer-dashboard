@@ -4,7 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
-import { BRAND, PAGES, PRESTADOR_TIPOS } from "./constants";
+import { BRAND, PAGES, PRESTADOR_TIPOS, secoesMenuFromPages } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
 import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
@@ -90,21 +90,8 @@ export function AbaPrestadores() {
     return <GestaoUsuariosLoading />;
   }
 
-  const ordemSecoes = [
-    "Dashboards",
-    "Lives",
-    "Aquisição",
-    "Marketing",
-    "Estúdio",
-    "RH",
-    "Conteúdo",
-    "Plataforma",
-    "Geral",
-  ];
   const pagesDaTipo = PAGES;
-  const secoes = [...new Set(pagesDaTipo.map((p) => p.secao))].sort(
-    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR"),
-  );
+  const secoes = secoesMenuFromPages(pagesDaTipo);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -155,9 +142,7 @@ export function AbaPrestadores() {
                 {(() => {
                   const secoesComPaginas = secoes.filter((s) => pagesDaTipo.some((p) => p.secao === s));
                   return secoes.map((secao) => {
-                    const pagesDaSec = pagesDaTipo
-                      .filter((p) => p.secao === secao)
-                      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+                    const pagesDaSec = pagesDaTipo.filter((p) => p.secao === secao);
                     if (pagesDaSec.length === 0) return null;
 
                     const isUltima = secao === secoesComPaginas[secoesComPaginas.length - 1];

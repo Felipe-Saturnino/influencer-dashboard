@@ -3,6 +3,7 @@ import { LayoutList, Loader2, SlidersHorizontal } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
@@ -45,7 +46,7 @@ export default function InformativosPage() {
   const { theme: t } = useApp();
   const perm = usePermission("informativos");
 
-  const [aba, setAba] = useState<AbaInformativos>("informativos");
+  const [aba, setAba] = useRouteTab("informativos", "informativos", ["informativos", "gerenciamento"] as const);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [lista, setLista] = useState<
@@ -123,6 +124,11 @@ export default function InformativosPage() {
     const id = window.setTimeout(() => setBuscaDeb(busca), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
+
+  useEffect(() => {
+    if (perm.loading) return;
+    if (!perm.canEditarOk && aba === "gerenciamento") setAba("informativos");
+  }, [perm.loading, perm.canEditarOk, aba, setAba]);
 
   useEffect(() => {
     if (perm.canView !== "nao" && !perm.loading) void carregar();

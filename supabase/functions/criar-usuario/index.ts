@@ -35,6 +35,7 @@ const GESTOR_TIPO_SLUGS = [
   'marketing',
   'afiliados',
   'geral',
+  'treinamento',
 ] as const
 
 const PRESTADOR_TIPO_SLUGS = [
@@ -46,7 +47,6 @@ const PRESTADOR_TIPO_SLUGS = [
   'financeiro',
   'tech_ops',
   'ti',
-  'treinamento',
   'estudio',
 ] as const
 

@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 /**
  * Edge Function: monitor-lobby-cda
  * Lê categorias do cassino CDA (competitions por categoria), grava posição das mesas Spin
- * dentro da categoria do tipo (Roleta, Baccarat, BlackJack & Poker).
+ * dentro da categoria do tipo (Roleta, Baccarat, BlackJack & Poker, Futebol Brasileiro, …).
  *
  * POST { dry_run?: boolean, cda_categories?: CdaCategory[] }
  * Opcional: fetch via secret CDA_LOBBY_CATEGORIES_URL (URL copiada do DevTools).
@@ -21,7 +21,13 @@ const CDA_CASINO_REFERER = "https://www.casadeapostas.bet.br/br/casino";
 /** Provider no JSON da CDA para mesas Spin (não confundir com slots "Spin" no nome). */
 const PROVIDER_SLUG_SPIN = "gamesglobal";
 
-type TipoLobby = "roleta" | "baccarat" | "blackjack" | "blackjack_vip" | "other";
+type TipoLobby =
+  | "roleta"
+  | "baccarat"
+  | "blackjack"
+  | "blackjack_vip"
+  | "futebol_brasileiro"
+  | "other";
 
 interface MonitorBody {
   dry_run?: boolean;
@@ -108,6 +114,16 @@ function slugifyProvider(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+function isFutebolBrasileiroTexto(t: string): boolean {
+  return (
+    t.includes("futebol brasileiro") ||
+    t.includes("futebol studio") ||
+    t.includes("football studio") ||
+    t.includes("futebol_studio") ||
+    (t.includes("futebol") && !t.includes("roleta"))
+  );
+}
+
 function tipoLobbyFromCadastro(tipoJogo: string, nomeMesa?: string): TipoLobby {
   const t = `${tipoJogo} ${nomeMesa ?? ""}`.toLowerCase();
   if (t.includes("vip") && (t.includes("black") || t.includes("bj"))) {
@@ -118,6 +134,7 @@ function tipoLobbyFromCadastro(tipoJogo: string, nomeMesa?: string): TipoLobby {
     return "baccarat";
   }
   if (t.includes("roleta") || t.includes("roulette")) return "roleta";
+  if (isFutebolBrasileiroTexto(t)) return "futebol_brasileiro";
   return "other";
 }
 
@@ -129,6 +146,9 @@ function tipoLobbyFromJogo(name: string, slug: string): TipoLobby {
   if (/blackjack|black-jack|black jack/.test(s)) return "blackjack";
   if (/baccarat|bacará|bacara|bac-bo|bac bo/.test(s)) return "baccarat";
   if (/roleta|roulette/.test(s)) return "roleta";
+  if (/futebol brasileiro|futebol studio|football studio|futebol_studio/.test(s)) {
+    return "futebol_brasileiro";
+  }
   return "other";
 }
 
@@ -137,6 +157,7 @@ function categoriaNomeFromMesa(tipoJogo: string, nomeMesa?: string): string {
   if (tipo === "roleta") return "Roleta";
   if (tipo === "baccarat") return "Baccarat & Sic Bo";
   if (tipo === "blackjack" || tipo === "blackjack_vip") return "BlackJack & Poker";
+  if (tipo === "futebol_brasileiro") return "Futebol Studio";
   return "Roleta";
 }
 
@@ -228,6 +249,57 @@ function findCategory(
 ): CdaCategory | undefined {
   const alvo = nomeCategoria.trim().toLowerCase();
   return categories.find((c) => c.name.trim().toLowerCase() === alvo);
+}
+
+/** Busca categoria por nome exato ou substring (ex.: Futebol Studio na CDA). */
+function findCategoryByNameHints(
+  categories: CdaCategory[],
+  hints: string[],
+): CdaCategory | undefined {
+  for (const hint of hints) {
+    const exact = findCategory(categories, hint);
+    if (exact) return exact;
+  }
+  const norm = (s: string) => s.trim().toLowerCase();
+  for (const hint of hints) {
+    const h = norm(hint);
+    const found = categories.find((c) => {
+      const n = norm(c.name);
+      return n.includes(h) || h.includes(n);
+    });
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function resolvePosicaoMesaCda(
+  categories: CdaCategory[],
+  idOperadora: string,
+  nomeCatPreferida: string,
+  tipo: TipoLobby,
+): { cat: CdaCategory | undefined; pos: number | null; categoriaLobby: string } {
+  let cat = findCategory(categories, nomeCatPreferida);
+  if (!cat && tipo === "futebol_brasileiro") {
+    cat = findCategoryByNameHints(categories, [
+      "Futebol Studio",
+      "Futebol Brasileiro",
+      "Game Shows",
+      "Programas de Jogo",
+    ]);
+  }
+  if (cat) {
+    const pos = posicaoMesaNaCategoria(cat, idOperadora);
+    if (pos != null) {
+      return { cat, pos, categoriaLobby: cat.name };
+    }
+  }
+  for (const c of categories) {
+    const pos = posicaoMesaNaCategoria(c, idOperadora);
+    if (pos != null) {
+      return { cat: c, pos, categoriaLobby: c.name };
+    }
+  }
+  return { cat, pos: null, categoriaLobby: cat?.name ?? nomeCatPreferida };
 }
 
 function posicaoMesaNaCategoria(
@@ -382,10 +454,11 @@ serve(async (req) => {
   const linhasPosicao = mesasList.map((m) => {
     const idOperadora = m.mesa_identificacao_operadora!.trim();
     const nomeCat = categoriaNomeFromMesa(m.tipo_jogo, m.nome_mesa);
-    const cat = findCategory(categories, nomeCat);
-    const lobbyCat = cat ? lobbyFromCategory(cat) : [];
-    const pos = cat ? posicaoMesaNaCategoria(cat, idOperadora) : null;
     const tipo = tipoLobbyFromCadastro(m.tipo_jogo, m.nome_mesa);
+    const resolved = resolvePosicaoMesaCda(categories, idOperadora, nomeCat, tipo);
+    const cat = resolved.cat;
+    const pos = resolved.pos;
+    const lobbyCat = cat ? lobbyFromCategory(cat) : [];
     const concorrentes = pos != null ? concorrentesAFrente(lobbyCat, pos, tipo) : [];
     return {
       operadora_slug: OPERADORA_SLUG,
@@ -393,7 +466,7 @@ serve(async (req) => {
       mesa_identificacao_operadora: idOperadora,
       nome_mesa: m.nome_mesa,
       tipo_jogo: m.tipo_jogo,
-      categoria_lobby: nomeCat,
+      categoria_lobby: resolved.categoriaLobby,
       posicao: pos,
       qtd_concorrentes_a_frente: concorrentes.length,
       concorrentes_a_frente: concorrentes,
@@ -411,14 +484,13 @@ serve(async (req) => {
   const piorMesaDry = piorMesaSpinLinhas(linhasPosicao);
   let jogosVitrineDry: ConcorrenteJson[] = [];
   if (piorMesaDry) {
-    const mesaWorst = mesasList.find(
-      (m) => m.mesa_identificacao.trim() === piorMesaDry.mesa_identificacao,
+    const linhaWorst = linhasPosicao.find(
+      (l) => l.mesa_identificacao === piorMesaDry.mesa_identificacao,
     );
-    if (mesaWorst) {
-      const catWorst = findCategory(
-        categories,
-        categoriaNomeFromMesa(mesaWorst.tipo_jogo, mesaWorst.nome_mesa),
-      );
+    if (linhaWorst?.categoria_lobby) {
+      const catWorst =
+        findCategory(categories, linhaWorst.categoria_lobby) ??
+        findCategoryByNameHints(categories, [linhaWorst.categoria_lobby]);
       if (catWorst) {
         jogosVitrineDry = jogosAFrentePiorMesaSpin(
           lobbyFromCategory(catWorst),

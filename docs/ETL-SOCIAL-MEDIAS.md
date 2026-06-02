@@ -79,7 +79,15 @@ Também pode rodar via **GitHub Actions** em: Actions → Backfill Social KPIs (
 
 ### 3. GitHub Actions (automático)
 
-O workflow `.github/workflows/sync-social-kpis-daily.yml` roda **todo dia às 6h (horário de Brasília)**.
+O workflow `.github/workflows/sync-social-kpis-daily.yml` roda **todo dia às 6h30 (horário de Brasília)**.
+
+Workflows relacionados:
+
+| Workflow | Quando | Função |
+|----------|--------|--------|
+| `sync-social-kpis-daily.yml` | Diário 6h30 BRT | Coleta ontem → Supabase |
+| `check-meta-token-weekly.yml` | Segunda 8h BRT | Falha se token Meta inválido ou expira em < 14 dias |
+| `backfill-social-kpis.yml` | Manual | Carga histórica |
 
 Configure os **Secrets** em: Repositório → Settings → Secrets and variables → Actions.
 
@@ -87,15 +95,31 @@ Configure os **Secrets** em: Repositório → Settings → Secrets and variables
 |--------|-------------|-----|
 | `SUPABASE_URL` | ✅ | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Chave `service_role` (Dashboard → Settings → API) |
-| `META_ACCESS_TOKEN` | Para IG/FB | Token de longa duração da Meta |
+| `META_ACCESS_TOKEN` | Para IG/FB | **Page Access Token** (ver § Meta abaixo) |
 | `META_PAGE_ID` | Para IG/FB | ID da página do Facebook |
 | `META_IG_ACCOUNT_ID` | Para IG (opcional) | ID direto da conta Instagram Business (evita lookup via Page) |
+| `META_APP_ID` | Recomendado | App ID — permite `debug_token` e alerta de expiração |
+| `META_APP_SECRET` | Recomendado | App Secret — par do `META_APP_ID` |
 | `YOUTUBE_CLIENT_ID` | Para YT | OAuth 2.0 Client ID |
 | `YOUTUBE_CLIENT_SECRET` | Para YT | OAuth 2.0 Client Secret |
 | `YOUTUBE_REFRESH_TOKEN` | Para YT | Refresh token obtido no fluxo OAuth |
 | `YOUTUBE_CHANNEL_ID` | Para YT | ID do canal do YouTube |
 | `LINKEDIN_ACCESS_TOKEN` | Para LI | Token de acesso à API do LinkedIn |
 | `LINKEDIN_ORG_ID` | Para LI | URN da organização (ex: `urn:li:organization:123456`) |
+
+### Validar token Meta antes de depurar
+
+```powershell
+cd scripts/etl-social-kpis
+pip install -r requirements.txt
+$env:META_ACCESS_TOKEN = "..."
+$env:META_PAGE_ID = "..."
+$env:META_APP_ID = "..."
+$env:META_APP_SECRET = "..."
+python validate_meta_token.py
+```
+
+Exit code **0** = OK · **1** = inválido ou expira em menos de 14 dias (`META_TOKEN_WARN_DAYS`).
 
 Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6h) → Run workflow.
 
@@ -114,15 +138,44 @@ Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6
 
 ### Meta (Instagram + Facebook)
 
+#### Diagnóstico — erro «user logged out» / OAuth 190
+
+Mensagem típica no Status Técnico:
+
+> `Error validating access token: The session is invalid because the user logged out.`
+
+**Causa:** o `META_ACCESS_TOKEN` no GitHub foi gerado a partir da sessão de um **usuário pessoal** (Graph API Explorer ou login no Facebook). Quando esse usuário faz logout, troca senha ou o token de 60 dias vence, Instagram e Facebook param de sincronizar — a aba **Alcance** fica sem dados novos.
+
+**Correção imediata (restaura o sync hoje):**
+
+1. Acesse [Meta for Developers](https://developers.facebook.com) → seu App → **Ferramentas** → **Graph API Explorer** ou **Access Token Tool**.
+2. Gere um novo **Page Access Token** da página Spin (usuário admin da Página + IG Business).
+3. Estenda para longa duração (botão «Extend Access Token») **ou** migre para System User (recomendado abaixo).
+4. GitHub → repositório → **Settings → Secrets and variables → Actions** → atualize `META_ACCESS_TOKEN`.
+5. Rode `python validate_meta_token.py` (local) ou **Actions → Sync Social Media KPIs → Run workflow**.
+6. Se faltarem dias no dashboard, rode **Backfill Social KPIs** para o intervalo afetado.
+
+#### Produção — token que não expira (System User)
+
+Tokens de usuário pessoal **sempre** voltarão a falhar. Para automação diária estável:
+
+1. [Meta Business Settings](https://business.facebook.com/settings) → **Usuários → Usuários do sistema** → criar System User (Admin).
+2. Atribuir ativos: **Página Facebook** + **conta Instagram Business** da Spin.
+3. No app (developers.facebook.com): adicionar o System User com permissões `pages_read_engagement`, `pages_show_list`, `instagram_basic`, `instagram_manage_insights`.
+4. Gerar token para o System User com acesso à Página — em apps Business este token **não expira** (`expires_at = 0` no `debug_token`).
+5. Gravar em `META_ACCESS_TOKEN` no GitHub.
+6. Configure também `META_APP_ID` + `META_APP_SECRET` para o job avisar **14 dias antes** se algo mudar.
+
+Passos detalhados: [System Users — Marketing API](https://developers.facebook.com/docs/marketing-api/system-users).
+
+#### Permissões e IDs
+
 1. Crie um app em [developers.facebook.com](https://developers.facebook.com).
 2. Conecte a página do Facebook ao app.
 3. Vincule a conta do Instagram Business à página.
-4. Gere um **Page Access Token** de longa duração (60 dias) e estenda com **Access Token Tool** no painel do app (ou use fluxo com System User para token estável em produção).
-5. Permissões necessárias: `pages_read_engagement`, `pages_show_list`, `instagram_basic`, `instagram_manage_insights`. Conta Business com Page vinculada ao Instagram Business pode exigir também `ads_read` ou `ads_management` para alguns endpoints (ex.: Stories).
+4. Permissões necessárias: `pages_read_engagement`, `pages_show_list`, `instagram_basic`, `instagram_manage_insights`. Conta Business com Page vinculada ao Instagram Business pode exigir também `ads_read` ou `ads_management` para alguns endpoints (ex.: Stories).
 
-**Token expirado?** Se aparecer `Session has expired` ou `Token expirado`, gere um novo Page Access Token em Meta for Developers → Seu App → Ferramentas → Graph API Explorer. Atualize o secret `META_ACCESS_TOKEN` no GitHub. **Coloque um lembrete no calendário** (ex.: a cada 50 dias) para renovar antes do vencimento e manter a taxa de erro do sync baixa.
-
-**Conta correta** — O token deve ser de um usuário que seja **admin** da Página e da conta Instagram Business; caso contrário, insights e posts podem falhar intermitentemente.
+**Conta correta** — O token deve ser de um usuário/System User com acesso **admin** à Página e à conta Instagram Business.
 
 **Instagram retorna 400 na Page lookup?** Se a Página não tiver Instagram vinculada, use o secret opcional `META_IG_ACCOUNT_ID` com o ID direto da conta Instagram Business.
 
@@ -145,13 +198,18 @@ Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6
 
 ```
 scripts/etl-social-kpis/
-├── etl.py           # Script principal (dia a dia)
-├── backfill.py      # Carga histórica (intervalo de datas)
+├── etl.py                 # Script principal (dia a dia)
+├── backfill.py            # Carga histórica (intervalo de datas)
+├── meta_token_utils.py    # Validação / debug_token Meta
+├── validate_meta_token.py # CLI — usar antes de renovar secrets
+├── get_youtube_token.py   # OAuth YouTube (refresh token)
 ├── requirements.txt
 docs/
 └── ETL-SOCIAL-MEDIAS.md   # Esta documentação
 .github/workflows/
-└── sync-social-kpis-daily.yml
+├── sync-social-kpis-daily.yml
+├── check-meta-token-weekly.yml
+└── backfill-social-kpis.yml
 ```
 
 ---

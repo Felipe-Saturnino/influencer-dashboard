@@ -3,6 +3,7 @@ import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2, MoreHorizontal } fr
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
   DashboardPageHeader,
@@ -171,7 +172,7 @@ export default function EscalaSolicitacoesPage() {
     setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
   }, [mesesDisponiveis.length]);
 
-  const [aba, setAba] = useState<"aberto" | "arquivadas">("aberto");
+  const [aba, setAba] = useRouteTab("escala_solicitacoes", "aberto", ["aberto", "arquivadas"] as const);
   const [filtroTipo, setFiltroTipo] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeIds, setFiltroTimeIds] = useState<string[]>([]);
   const [filtroStaffIds, setFiltroStaffIds] = useState<string[]>([]);

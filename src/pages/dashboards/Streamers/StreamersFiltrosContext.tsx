@@ -75,7 +75,7 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
     (async () => {
       const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
         supabase.from("influencer_perfil").select("id, nome_artistico").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").order("nome"),
+        supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
         supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
       ]);
       if (cancel) return;
