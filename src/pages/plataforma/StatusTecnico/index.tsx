@@ -57,7 +57,13 @@ import {
   passouHorarioAgendadoBr,
   subDiasIso,
 } from "../../../lib/dateBrasil";
-import { labelTipoTechLog } from "../../../lib/platformHealthDiagnostics";
+import {
+  labelTipoTechLog,
+  TIPO_DIAGNOSTICO_AVISO,
+  TIPO_DIAGNOSTICO_ERRO,
+  TIPO_DIAGNOSTICO_OK,
+  TIPO_DIAGNOSTICO_RESUMO,
+} from "../../../lib/platformHealthDiagnostics";
 import type { CSSProperties } from "react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
@@ -1214,6 +1220,44 @@ export default function StatusTecnico() {
     [emailUltimoAgenda, fluxoHojeSocial, techLogs, emailStatusAgendaOk],
   );
 
+  const diagnosticoPlataformaRow = useMemo(() => {
+    const ultimoResumo = techLogs.find((l) => l.tipo === TIPO_DIAGNOSTICO_RESUMO);
+    const ultimoSync = ultimoResumo?.created_at ?? null;
+    let registrosUltima = 0;
+    let errosUltima = 0;
+    let avisosUltima = 0;
+    let status: "ok" | "warning" | "falha" = "warning";
+
+    if (ultimoResumo) {
+      const t0 = new Date(ultimoResumo.created_at).getTime();
+      const batch = techLogs.filter((l) => {
+        const t = new Date(l.created_at).getTime();
+        return (
+          t >= t0 - 3000 &&
+          t <= t0 + 120_000 &&
+          (l.tipo === TIPO_DIAGNOSTICO_OK ||
+            l.tipo === TIPO_DIAGNOSTICO_AVISO ||
+            l.tipo === TIPO_DIAGNOSTICO_ERRO ||
+            l.tipo === TIPO_DIAGNOSTICO_RESUMO)
+        );
+      });
+      registrosUltima = batch.filter((l) => l.tipo !== TIPO_DIAGNOSTICO_RESUMO).length;
+      errosUltima = batch.filter((l) => l.tipo === TIPO_DIAGNOSTICO_ERRO).length;
+      avisosUltima = batch.filter((l) => l.tipo === TIPO_DIAGNOSTICO_AVISO).length;
+      status = errosUltima > 0 ? "falha" : avisosUltima > 0 ? "warning" : "ok";
+    }
+
+    return {
+      slug: "diagnostico_plataforma",
+      nome: "Diagnóstico da Plataforma",
+      ultimoSync,
+      registrosHoje: registrosUltima,
+      erros: errosUltima,
+      status,
+      syncTipo: "diagnostico" as const,
+    };
+  }, [techLogs]);
+
   const statusIntegracaoRank = (s: string | null | undefined) => {
     if (s === "ok") return 0;
     if (s === "warning") return 1;
@@ -1222,7 +1266,13 @@ export default function StatusTecnico() {
   };
 
   const linhasCompletasOrdenadas = useMemo(() => {
-    const arr = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
+    const arr = [
+      ...statusPorIntegracao,
+      socialKpisRow,
+      emailDiretoriaRow,
+      emailAgendaRow,
+      diagnosticoPlataformaRow,
+    ];
     const { col, dir } = sortIntegracao;
     arr.sort((a, b) => {
       let c = 0;
@@ -1264,7 +1314,7 @@ export default function StatusTecnico() {
       return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
     });
     return arr;
-  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, sortIntegracao]);
+  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, diagnosticoPlataformaRow, sortIntegracao]);
 
   const techLogsFiltrados = useMemo(() => {
     const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
@@ -1537,33 +1587,9 @@ export default function StatusTecnico() {
 
       {/* ── Status das Integrações ── */}
       <div style={pageBox}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 16,
-          }}
-        >
-          <SectionTitle compact sub="leitura de jobs e credenciais — sem disparar sync">
-            Status das Integrações
-          </SectionTitle>
-          {perm.canEditarOk ? (
-            <CtaCriarButton
-              type="button"
-              onClick={() => setConfirmarDiagnostico(true)}
-              disabled={diagnosticoExecutando}
-              loading={diagnosticoExecutando}
-              loadingLabel="Executando diagnóstico..."
-              disabledBackground={BRAND.cinza}
-              aria-label="Executar diagnóstico da plataforma"
-            >
-              Executar diagnóstico
-            </CtaCriarButton>
-          ) : null}
-        </div>
+        <SectionTitle sub="pipelines, e-mails e diagnóstico manual da plataforma">
+          Status das Integrações
+        </SectionTitle>
         {(diagnosticoMensagem ||
           syncMensagem ||
           syncSocialMensagem ||
@@ -1701,6 +1727,7 @@ export default function StatusTecnico() {
                   const isLobbyCda = row.syncTipo === "lobby_cda";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
+                  const isDiagnostico = row.syncTipo === "diagnostico";
                   const syncExecutandoRow = isCda
                     ? syncExecutando
                     : isSocial
@@ -1785,6 +1812,23 @@ export default function StatusTecnico() {
                             style={btnAcao(emailAgendaEnviando)}
                           >
                             <AcaoCtaContent executando={emailAgendaEnviando} label="Enviar" labelExecutando="Enviando..." />
+                          </button>
+                        )}
+                        {isDiagnostico && (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarDiagnostico(true)}
+                            disabled={diagnosticoExecutando || !perm.canEditarOk}
+                            style={btnAcao(diagnosticoExecutando)}
+                            aria-label="Executar diagnóstico da plataforma"
+                            title="Executar diagnóstico da plataforma"
+                          >
+                            <AcaoCtaContent
+                              executando={diagnosticoExecutando}
+                              label="Executar"
+                              labelExecutando="Executando..."
+                              icon={<RefreshCw size={13} aria-hidden="true" />}
+                            />
                           </button>
                         )}
                       </td>
