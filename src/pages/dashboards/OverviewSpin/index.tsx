@@ -5,19 +5,16 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
-import { CAROUSEL_NAV_BTN_PX, getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { supabase } from "../../../lib/supabase";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { fmtBRL, getIdxMesCarrosselPadrao, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { TooltipComparativoJogo, TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
-import { OverviewSpinAbaNav } from "./OverviewSpinAbaNav";
+import { OverviewSpinFiltroBar } from "./OverviewSpinFiltroBar";
+import { OverviewSpinKpisConsolidados } from "./OverviewSpinKpisConsolidados";
+import { useOverviewSpinDados } from "./useOverviewSpinDados";
+import { useOverviewSpinKpiExibir } from "./useOverviewSpinKpiExibir";
 import type { OverviewSpinTab } from "./overviewSpinTabs";
 import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
-import {
-  getPageContentBoxStyle,
-  getPageFilterBoxStyle,
-} from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import {
   GAME_IDENTITY_HEX,
   getGameMesaTituloMix,
@@ -26,7 +23,6 @@ import {
 import {
   JOGOS_COMPARATIVO,
   KPIS_DISPONIVEIS,
-  KPI_UAP_VS_LEGENDA,
   LABEL_FUTEBOL_BRASILEIRO,
   PALETA_OPERADORAS_DETALHE,
   UAP_JOGO_MAP,
@@ -35,17 +31,13 @@ import {
   agregaDailyRawPorOperadoraNoDia,
   agregaDailyRawPorOperadoraNoMes,
   agregarLinhasComparativoJogo,
-  applyMesasOperadoraSlugFilter,
   arpuComparativoFromGgrUap,
   buildPorTabelaGameBuckets,
   buildSlugListForMesasQueries,
-  buildUapPorJogoQuery,
   calcularPctComparativoOficial,
   filtrarPorEscopoOperadora,
   fmtDiaMesPtBr,
   fmtMesAnoCurtoFromYm,
-  fmtPct,
-  getMesesDisponiveis,
   isMesaBlackjackComparativo,
   isMesaFutebolBrasileiro,
   jogoComparativoKeysFromCadastroMesa,
@@ -53,15 +45,6 @@ import {
   linhaComparativoJogoAgregadaMes,
   linhaMesaPorDiaFromRow,
   linhasMesaAgregadasPorMes,
-  mapPorTabelaV2,
-  mergeDailyRowsAgregadoTodasOperadoras,
-  mergeDailyRowsPorData,
-  mergeMonthlyHistoricoAgregadoTodas,
-  mergeMonthlyHistoricoRows,
-  mergeMonthlyUapArpuAgregadoTodas,
-  mergeMonthlyUapArpuSingleMonth,
-  mergeUapPorJogoRows,
-  nKpi,
   normalizeMesasYmd,
   pickKpiMetricaDetalhe,
   pickPorTabelaOperDayShift,
@@ -70,48 +53,30 @@ import {
   totaisOficiaisFromDailyRow,
   totaisOficiaisHistoricoMes,
   type CelulaJogoMetricas,
-  type DailyRawRow,
   type DailyRow,
   type JogoComparativoKey,
   type KpiJogoKey,
   type LinhaComparativoJogoTab,
   type LinhaDetalheTab,
   type LinhaMesaPorDia,
-  type MesaCadastroComparativoRow,
-  type MonthlyRawRow,
-  type MonthlyRow,
   type PorTabelaRow,
   type TotaisOficiaisComparativo,
-  type UapPorJogoPlanRow,
-  type UapRawRow,
 } from "./overviewSpinLogic";
+
 
 
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
 import {
-  ArrowUpDown,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CircleDollarSign,
-  Clock,
-  Hash,
   Loader2,
   Table2,
-  TrendingUp,
-  Percent,
   ChartColumnBig,
-  Users,
 } from "lucide-react";
-import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   MarginBadge,
-  FiltroHistoricoButton,
-  FiltroOperadoraSelect,
-  SkeletonKpiCard,
   DashboardPageHeader,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -140,270 +105,45 @@ export default function OverviewSpin() {
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
-  const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
+  const [aba, setAba] = useRouteTab("mesas_spin", "overview", ["overview", "posicionamento"] as const);
 
-  const [idxMes, setIdxMes] = useState(idxInicial);
-  const [historico, setHistorico] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [uapPorJogoRows, setUapPorJogoRows] = useState<UapPorJogoPlanRow[]>([]);
+  const {
+    mesesDisponiveis,
+    idxMes,
+    historico,
+    setHistorico,
+    loading,
+    filtroOperadora,
+    setFiltroOperadora,
+    modoAgregadoTodasOperadoras,
+    mesSelecionado,
+    operadorasOcr,
+    mesasCadastro,
+    dailyData,
+    monthlyData,
+    porTabelaRows,
+    porTabelaHistAll,
+    monthlyUapArpuSel,
+    monthlyUapArpuPrev,
+    dailyDataPrevMonth,
+    uapPorJogoRows,
+    dailyRawUnmerged,
+    monthlyRawUnmerged,
+    irMesAnterior,
+    irMesProximo,
+    toggleHistorico,
+  } = useOverviewSpinDados(aba);
 
-  const [dailyData, setDailyData] = useState<DailyRow[]>([]);
-  const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
-  const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
-  const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
-  /** UAP/ARPU mensais oficiais (tabela monthly); quando null, KPI mostra "—". */
-  const [monthlyUapArpuSel, setMonthlyUapArpuSel] = useState<{
-    uap: number | null;
-    arpu: number | null;
-  } | null>(null);
-  const [monthlyUapArpuPrev, setMonthlyUapArpuPrev] = useState<{
-    uap: number | null;
-    arpu: number | null;
-  } | null>(null);
-  /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
-  const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
-  const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
-  const [mesasCadastro, setMesasCadastro] = useState<MesaCadastroComparativoRow[]>([]);
-  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
   const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
     () => new Set<KpiJogoKey>(["ggr", "turnover", "uap"]),
   );
   const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
-  const [dailyRawUnmerged, setDailyRawUnmerged] = useState<DailyRawRow[]>([]);
-  const [monthlyRawUnmerged, setMonthlyRawUnmerged] = useState<MonthlyRawRow[]>([]);
   const [expandedDetalhe, setExpandedDetalhe] = useState<Set<string>>(() => new Set());
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
   const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
-  const [aba, setAba] = useRouteTab("mesas_spin", "overview", ["overview", "posicionamento"] as const);
-
-  const mesSelecionado = mesesDisponiveis[idxMes];
-
-  const modoAgregadoTodasOperadoras =
-    filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
-
-  function irMesAnterior() {
-    setHistorico(false);
-    setIdxMes((i) => Math.max(0, i - 1));
-  }
-  function irMesProximo() {
-    setHistorico(false);
-    setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1));
-  }
-  function toggleHistorico() {
-    if (historico) {
-      setHistorico(false);
-      setIdxMes(idxInicial);
-    } else setHistorico(true);
-  }
-
-  useEffect(() => {
-    let alive = true;
-    supabase
-      .from("operadoras")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome")
-      .then(({ data }) => {
-        if (alive) setOperadorasOcr(data ?? []);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    void supabase
-      .from("mesas_spin_cadastro")
-      .select("operadora_slug, tipo_jogo, nome_mesa")
-      .then(({ data }) => {
-        if (!alive) return;
-        setMesasCadastro((data ?? []) as MesaCadastroComparativoRow[]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    setPorTabelaRows([]);
-    setPorTabelaHistAll([]);
-    setMonthlyUapArpuSel(null);
-    setMonthlyUapArpuPrev(null);
-    setDailyDataPrevMonth([]);
-    setUapPorJogoRows([]);
-    setDailyRawUnmerged([]);
-    setMonthlyRawUnmerged([]);
-
-    try {
-      const slugList = buildSlugListForMesasQueries({
-        operadoraSlugsForcado,
-        filtroOperadora,
-        semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo === true,
-        operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
-      });
-      const agregadoTodas =
-        filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
-      if (historico) {
-        const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_monthly_summary")
-                .select("mes, uap, arpu, operadora_slug")
-                .order("mes", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_daily_summary")
-                .select("data, turnover, ggr, apostas, uap, operadora_slug")
-                .order("data", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_por_tabela")
-                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
-                .order("dia", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to, slugList)),
-        ]);
-        setMonthlyRawUnmerged(monthlyRaw as MonthlyRawRow[]);
-        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
-        setMonthlyData(
-          agregadoTodas
-            ? mergeMonthlyHistoricoAgregadoTodas(monthlyRaw as MonthlyRawRow[])
-            : mergeMonthlyHistoricoRows(monthlyRaw as MonthlyRawRow[]),
-        );
-        setDailyData(
-          agregadoTodas
-            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
-            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
-        );
-        setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
-      } else if (mesSelecionado) {
-        const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-        const { inicio, fim } = atual;
-        const { inicio: pi, fim: pf } = anterior;
-
-        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_daily_summary")
-                .select("data, turnover, ggr, apostas, uap, operadora_slug")
-                .gte("data", inicio)
-                .lte("data", fim)
-                .order("data", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_daily_summary")
-                .select("data, turnover, ggr, apostas, uap, operadora_slug")
-                .gte("data", pi)
-                .lte("data", pf)
-                .order("data", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) =>
-            applyMesasOperadoraSlugFilter(
-              supabase
-                .from("relatorio_por_tabela")
-                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
-                .gte("dia", inicio)
-                .lte("dia", fim)
-                .order("dia", { ascending: true })
-                .order("mesa", { ascending: true })
-                .range(from, to),
-              slugList,
-            ),
-          ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList)),
-        ]);
-
-        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
-        setMonthlyRawUnmerged([]);
-        setDailyData(
-          agregadoTodas
-            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
-            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
-        );
-        setMonthlyData([]);
-        setDailyDataPrevMonth(
-          agregadoTodas
-            ? mergeDailyRowsAgregadoTodasOperadoras(dailyPrevRaw as DailyRawRow[])
-            : mergeDailyRowsPorData(dailyPrevRaw as DailyRawRow[]),
-        );
-        setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
-
-        const { data: mSelRows } = await applyMesasOperadoraSlugFilter(
-          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", inicio),
-          slugList,
-        );
-        setMonthlyUapArpuSel(
-          agregadoTodas
-            ? mergeMonthlyUapArpuAgregadoTodas(mSelRows ?? [])
-            : mergeMonthlyUapArpuSingleMonth(mSelRows ?? []),
-        );
-
-        const { data: mPrevRows } = await applyMesasOperadoraSlugFilter(
-          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", pi),
-          slugList,
-        );
-        setMonthlyUapArpuPrev(
-          agregadoTodas
-            ? mergeMonthlyUapArpuAgregadoTodas(mPrevRows ?? [])
-            : mergeMonthlyUapArpuSingleMonth(mPrevRows ?? []),
-        );
-      }
-    } catch {
-      setUapPorJogoRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    historico,
-    mesSelecionado,
-    operadoraSlugsForcado,
-    filtroOperadora,
-    escoposVisiveis.semRestricaoEscopo,
-    escoposVisiveis.operadorasVisiveis,
-  ]);
-
-  useEffect(() => {
-    if (aba !== "overview") return;
-    void carregar();
-  }, [carregar, aba]);
-
-  useEffect(() => {
-    if (!operadoraSlugsForcado?.length) return;
-    if (operadoraSlugsForcado.length === 1 && filtroOperadora === "todas") {
-      setFiltroOperadora(operadoraSlugsForcado[0]);
-    }
-  }, [operadoraSlugsForcado, filtroOperadora]);
 
   useEffect(() => {
     setExpandedDetalhe(new Set());
@@ -551,71 +291,15 @@ export default function OverviewSpin() {
       );
   }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
 
-  const kpiExibir = useMemo(() => {
-    if (historico) {
-      if (tabelaRows.length === 0) return null;
-      let turnover = 0;
-      let ggr = 0;
-      let bets = 0;
-      const uapMeses: number[] = [];
-      for (const r of tabelaRows) {
-        turnover += Number(r.turnover ?? 0);
-        ggr += Number(r.ggr ?? 0);
-        bets += Number(r.bets ?? 0);
-        if (r.uap != null) uapMeses.push(Number(r.uap));
-      }
-      const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
-      const bet_size = bets !== 0 ? turnover / bets : null;
-      if (modoAgregadoTodasOperadoras) {
-        /** UAP = média dos totais mensais (somando operadoras no mês) — relatorio_monthly_summary. */
-        const somaUapMeses = uapMeses.reduce((a, b) => a + b, 0);
-        const mediaUapMesesHist =
-          uapMeses.length > 0 ? somaUapMeses / uapMeses.length : null;
-        return {
-          turnover,
-          ggr,
-          margin_pct,
-          bets,
-          uap: mediaUapMesesHist,
-          bet_size,
-          arpu: arpuComparativoFromGgrUap(ggr, mediaUapMesesHist),
-        };
-      }
-      const somaUap = uapMeses.reduce((a, b) => a + b, 0);
-      const mediaUap = uapMeses.length > 0 ? somaUap / uapMeses.length : null;
-      return {
-        turnover,
-        ggr,
-        margin_pct,
-        bets,
-        uap: mediaUap,
-        bet_size,
-        arpu: arpuComparativoFromGgrUap(ggr, mediaUap),
-      };
-    }
-    const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
-    if (!base) return null;
-    const u = monthlyUapArpuSel?.uap ?? null;
-    return {
-      ...base,
-      uap: u,
-      /** ARPU do quadro: GGR agregado do período ÷ UAP oficial mensal relatorio_monthly_summary. */
-      arpu: arpuComparativoFromGgrUap(base.ggr, u),
-    };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, modoAgregadoTodasOperadoras]);
-
-  const kpiAntExibir = useMemo(() => {
-    const base =
-      historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
-    if (!base) return null;
-    if (historico) return base;
-    const u = monthlyUapArpuPrev?.uap ?? null;
-    return {
-      ...base,
-      uap: u,
-      arpu: arpuComparativoFromGgrUap(base.ggr, u),
-    };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
+  const { kpiExibir, kpiAntExibir, isHistoricoKpi } = useOverviewSpinKpiExibir({
+    historico,
+    modoAgregadoTodasOperadoras,
+    tabelaRows,
+    dailyData,
+    dailyDataPrevMonth,
+    monthlyUapArpuSel,
+    monthlyUapArpuPrev,
+  });
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {
@@ -998,7 +682,6 @@ export default function OverviewSpin() {
     });
   }, [mesasOpcoesBlackjack, compMesaA]);
 
-  const isHistoricoKpi = historico || dailyDataPrevMonth.length === 0;
 
   const brand = useDashboardBrand();
 
@@ -2195,283 +1878,38 @@ export default function OverviewSpin() {
         t={t}
       />
 
-      <div style={getPageFilterBoxStyle(brand, t)}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              marginBottom: 12,
-            }}
-          >
-            {aba !== "posicionamento" ? (
-              <button
-                type="button"
-                aria-label="Mês anterior"
-                style={getCarouselBtnNavStyle(t, carrosselAnteriorDisabled)}
-                onClick={irCarrosselAnterior}
-                disabled={carrosselAnteriorDisabled}
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </button>
-            ) : (
-              <span style={{ width: CAROUSEL_NAV_BTN_PX, flexShrink: 0 }} aria-hidden />
-            )}
-            <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
-              {labelCarrosselCentral}
-            </span>
-            {aba !== "posicionamento" ? (
-              <button
-                type="button"
-                aria-label="Próximo mês"
-                style={getCarouselBtnNavStyle(t, carrosselProximoDisabled)}
-                onClick={irCarrosselProximo}
-                disabled={carrosselProximoDisabled}
-              >
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-            ) : (
-              <span style={{ width: CAROUSEL_NAV_BTN_PX, flexShrink: 0 }} aria-hidden />
-            )}
-
-            {aba === "overview" ? (
-              <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
-            ) : null}
-
-            {showFiltroOperadora && (
-              <FiltroOperadoraSelect
-                value={filtroOperadora}
-                onChange={setFiltroOperadora}
-                operadoras={operadorasOcr}
-                podeVerOperadora={podeVerOperadora}
-              />
-            )}
-
-            {aba === "overview" && loading && (
-              <span
-                style={{
-                  fontSize: 12,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Clock size={12} aria-hidden />
-                Carregando…
-              </span>
-            )}
-          </div>
-
-          <OverviewSpinAbaNav aba={aba} onSelectAba={selecionarAbaSpin} />
-      </div>
+      <OverviewSpinFiltroBar
+        brand={brand}
+        t={t}
+        aba={aba}
+        labelCarrosselCentral={labelCarrosselCentral}
+        carrosselAnteriorDisabled={carrosselAnteriorDisabled}
+        carrosselProximoDisabled={carrosselProximoDisabled}
+        onCarrosselAnterior={irCarrosselAnterior}
+        onCarrosselProximo={irCarrosselProximo}
+        historico={historico}
+        onToggleHistorico={toggleHistorico}
+        showFiltroOperadora={showFiltroOperadora}
+        filtroOperadora={filtroOperadora}
+        onFiltroOperadoraChange={setFiltroOperadora}
+        operadorasOcr={operadorasOcr}
+        podeVerOperadora={podeVerOperadora}
+        loading={loading}
+        onSelectAba={selecionarAbaSpin}
+      />
 
       <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
       {aba === "overview" && (
       <>
-      <div style={contentBox}>
-          <SectionTitle
-            sub={
-              historico
-                ? "acumulado"
-                : "comparativo MTD vs mesmo período do mês anterior"
-            }
-          >
-            KPIs Consolidados
-          </SectionTitle>
-          {loading ? (
-            modoAgregadoTodasOperadoras ? (
-              <>
-                <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
-                  {[0, 1, 2].map((i) => (
-                    <SkeletonKpiCard key={`a-${i}`} />
-                  ))}
-                </div>
-                <div className="app-grid-kpi-4" style={{ gap: 12 }}>
-                  {[0, 1, 2, 3].map((i) => (
-                    <SkeletonKpiCard key={`b-${i}`} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-                  {[0, 1, 2, 3].map((i) => (
-                    <SkeletonKpiCard key={i} />
-                  ))}
-                </div>
-                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-                  {[0, 1, 2].map((i) => (
-                    <SkeletonKpiCard key={i} />
-                  ))}
-                </div>
-              </>
-            )
-          ) : modoAgregadoTodasOperadoras ? (
-            <>
-              <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
-                <KpiCard
-                  label="GGR"
-                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
-                  icon={<TrendingUp size={16} />}
-                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
-                  atual={nKpi(kpiExibir?.ggr)}
-                  anterior={nKpi(kpiAntExibir?.ggr)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Turnover"
-                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<ArrowUpDown size={16} />}
-                  accentVar="--brand-contrast"
-                  accentColor={BRAND.roxoVivo}
-                  atual={nKpi(kpiExibir?.turnover)}
-                  anterior={nKpi(kpiAntExibir?.turnover)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Margem"
-                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
-                  icon={<Percent size={16} />}
-                  accentColor={BRAND.amarelo}
-                  atual={nKpi(kpiExibir?.margin_pct)}
-                  anterior={nKpi(kpiAntExibir?.margin_pct)}
-                  isHistorico={isHistoricoKpi}
-                />
-              </div>
-              <div className="app-grid-kpi-4" style={{ gap: 12 }}>
-                <KpiCard
-                  label="Apostas"
-                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-                  icon={<Hash size={16} aria-hidden />}
-                  accentVar="--brand-action"
-                  accentColor={BRAND.azul}
-                  atual={nKpi(kpiExibir?.bets)}
-                  anterior={nKpi(kpiAntExibir?.bets)}
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Aposta média"
-                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
-                  icon={<ChartColumnBig size={16} />}
-                  accentVar="--brand-contrast"
-                  accentColor={BRAND.ciano}
-                  atual={nKpi(kpiExibir?.bet_size)}
-                  anterior={nKpi(kpiAntExibir?.bet_size)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="UAP"
-                  value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
-                  icon={<Users size={16} />}
-                  accentVar="--brand-icon-color"
-                  accentColor={BRAND.roxo}
-                  atual={nKpi(kpiExibir?.uap)}
-                  anterior={nKpi(kpiAntExibir?.uap)}
-                  isHistorico={isHistoricoKpi}
-                  vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
-                />
-                <KpiCard
-                  label="ARPU"
-                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<CircleDollarSign size={16} />}
-                  accentVar="--brand-icon-color"
-                  accentColor={BRAND.roxoVivo}
-                  atual={nKpi(kpiExibir?.arpu)}
-                  anterior={nKpi(kpiAntExibir?.arpu)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-                <KpiCard
-                  label="GGR"
-                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
-                  icon={<TrendingUp size={16} />}
-                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
-                  atual={nKpi(kpiExibir?.ggr)}
-                  anterior={nKpi(kpiAntExibir?.ggr)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Turnover"
-                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<ArrowUpDown size={16} />}
-                  accentVar="--brand-contrast"
-                  accentColor={BRAND.roxoVivo}
-                  atual={nKpi(kpiExibir?.turnover)}
-                  anterior={nKpi(kpiAntExibir?.turnover)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Apostas"
-                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-                  icon={<Hash size={16} aria-hidden />}
-                  accentVar="--brand-action"
-                  accentColor={BRAND.azul}
-                  atual={nKpi(kpiExibir?.bets)}
-                  anterior={nKpi(kpiAntExibir?.bets)}
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="Margem"
-                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
-                  icon={<Percent size={16} />}
-                  accentColor={BRAND.amarelo}
-                  atual={nKpi(kpiExibir?.margin_pct)}
-                  anterior={nKpi(kpiAntExibir?.margin_pct)}
-                  isHistorico={isHistoricoKpi}
-                />
-              </div>
-              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-                <KpiCard
-                  label="Aposta média"
-                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
-                  icon={<ChartColumnBig size={16} />}
-                  accentVar="--brand-contrast"
-                  accentColor={BRAND.ciano}
-                  atual={nKpi(kpiExibir?.bet_size)}
-                  anterior={nKpi(kpiAntExibir?.bet_size)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-                <KpiCard
-                  label="UAP"
-                  value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
-                  icon={<Users size={16} />}
-                  accentVar="--brand-icon-color"
-                  accentColor={BRAND.roxo}
-                  atual={nKpi(kpiExibir?.uap)}
-                  anterior={nKpi(kpiAntExibir?.uap)}
-                  isHistorico={isHistoricoKpi}
-                  vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
-                />
-                <KpiCard
-                  label="ARPU"
-                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<CircleDollarSign size={16} />}
-                  accentVar="--brand-icon-color"
-                  accentColor={BRAND.roxoVivo}
-                  atual={nKpi(kpiExibir?.arpu)}
-                  anterior={nKpi(kpiAntExibir?.arpu)}
-                  isBRL
-                  isHistorico={isHistoricoKpi}
-                />
-              </div>
-            </>
-          )}
-        </div>
+      <OverviewSpinKpisConsolidados
+        contentBoxStyle={contentBox}
+        loading={loading}
+        historico={historico}
+        modoAgregadoTodasOperadoras={modoAgregadoTodasOperadoras}
+        kpiExibir={kpiExibir}
+        kpiAntExibir={kpiAntExibir}
+        isHistoricoKpi={isHistoricoKpi}
+      />
 
       <div style={contentBox}>
         <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>

@@ -3,20 +3,11 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
-  ClipboardList,
-  Eye,
-  EyeOff,
   FileSignature,
   FolderOpen,
-  History,
   Landmark,
-  Layers,
   Loader2,
-  Pencil,
-  StickyNote,
-  Trash2,
   UserCircle2,
-  Users,
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -26,9 +17,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   centavosDeStringMoeda,
@@ -59,7 +48,6 @@ import type {
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
-import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { primeiroUltimoNome, syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
@@ -73,39 +61,29 @@ import {
   revisaoCadastralPendenteParaFuncionario,
   prestadorExigeRevisaoCadastral,
 } from "../../../lib/rhCadastroRevisao";
-import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
-  FiltroBarCampoSelect,
   FiltroBarTabButton,
-  SkeletonTableRow,
-  SortTableTh,
   type SortDir,
 } from "../../../components/dashboard";
 import {
   FILTRO_BAR_TAB_ICON_SIZE,
-  getFilterBarRowStyle,
-  getFilterBarWrapperStyle,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
-import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
-  ABAS_PAGINA_RH_FUNC,
   ESCALAS_PERMITIDAS,
   FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS,
   NIVEIS,
-  PRESTADOR_STATUS_FILTRO_EXTRA,
   TIPOS_CONTRATO,
   UFS_BR,
   abaDoCampoRhModal,
   blurSensivel,
   buildRhFuncionarioPayloadFromState,
-  corStatusPrestador,
   ctaGradient,
   dataFuncaoOuInicioIso,
   diffContratacaoSlices,
@@ -118,8 +96,6 @@ import {
   prestadorCadastroIncompleto,
   sliceContratacaoDeForm,
   sliceContratacaoDeRow,
-  textoDataFuncaoColunaTabela,
-  textoRemuneracaoColunaTabela,
   tiposAcaoDisponiveis,
   type AbaFuncModal,
   type AbaPaginaRhFunc,
@@ -132,8 +108,11 @@ import {
   valorSelectEscala,
 } from "./gestaoPrestadorHelpers";
 
+
 import { RhFuncModalHeaderDetalhes } from "./RhFuncModalHeaderDetalhes";
 import { PrestadorKpiResumo } from "./PrestadorKpiResumo";
+import { PrestadorFiltroBar } from "./PrestadorFiltroBar";
+import { PrestadorTabelaColaboradores } from "./PrestadorTabelaColaboradores";
 
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
@@ -1421,13 +1400,6 @@ export default function RhPrestadoresPage() {
     if (k === "bancarios") return <Landmark {...p} />;
     return <FolderOpen {...p} />;
   };
-  const iconAbaPagina = (k: AbaPaginaRhFunc) => {
-    const sz = FILTRO_BAR_TAB_ICON_SIZE;
-    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
-    if (k === "headcount") return <Users {...p} />;
-    if (k === "acoes_rh") return <ClipboardList {...p} />;
-    return <StickyNote {...p} />;
-  };
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
   const fecharModalFuncionario = () => {
     if (salvando) return;
@@ -1459,13 +1431,6 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
-    ...getFilterBarRowStyle(),
-    width: "100%",
-    ...(withTopBorder
-      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
-      : {}),
-  });
   const idTabPagina = (k: AbaPaginaRhFunc) => `rh-gest-func-pag-${k}`;
   const panelPaginaRhId = "rh-gest-func-panel-pag";
   const legendaTabelaPorAba =
@@ -1482,32 +1447,6 @@ export default function RhPrestadoresPage() {
     (abaPagina === "anotacoes" && perm.canEditarOk);
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 6 : 7;
-
-  const btnIconTabela: CSSProperties = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    cursor: "pointer",
-    fontSize: 12,
-    fontFamily: FONT.body,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-  const btnIconTabelaCta: CSSProperties = {
-    ...btnIconTabela,
-    border: "none",
-    color: "#fff",
-    fontWeight: 700,
-    background: ctaGradient(brand),
-  };
-  const btnIconTabelaPerigo: CSSProperties = {
-    ...btnIconTabela,
-    border: "1px solid rgba(232,64,37,0.45)",
-    color: "#e84025",
-  };
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -1566,393 +1505,63 @@ export default function RhPrestadoresPage() {
         onEditarPrestador={abrirEditar}
       />
 
-      <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>
-            <FiltroBarCampoSelect
-              id="rh-filtro-dir"
-              value={filtroDiretoria}
-              onChange={setFiltroDiretoria}
-              options={opcoesFiltroDiretoria}
-              icon={FilterBarIcons.diretoria}
-              ariaLabel="Diretorias"
-              todasLabel="Todas Diretorias"
-            />
-            <FiltroBarCampoSelect
-              id="rh-filtro-ger"
-              value={filtroGerencia}
-              onChange={setFiltroGerencia}
-              options={opcoesFiltroGerencia}
-              icon={<Layers size={15} strokeWidth={2} aria-hidden="true" />}
-              ariaLabel="Gerências"
-              todasLabel="Todas Gerências"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-setor"
-              value={filtroSetor}
-              onChange={setFiltroSetor}
-              options={opcoesFiltroSetor}
-              icon={FilterBarIcons.time}
-              ariaLabel="Setores"
-              todasLabel="Todos Setores"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-contrato"
-              value={filtroContrato}
-              onChange={(v) => setFiltroContrato(v as typeof filtroContrato)}
-              options={TIPOS_CONTRATO}
-              icon={<FileSignature size={15} strokeWidth={2} aria-hidden="true" />}
-              ariaLabel="Tipos de contrato"
-              todasValue="todos"
-              todasLabel="Todos Contratos"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-status"
-              value={filtroStatus}
-              onChange={(v) => setFiltroStatus(v as FiltroStatusPrestador)}
-              options={[]}
-              extraOptions={PRESTADOR_STATUS_FILTRO_EXTRA}
-              icon={FilterBarIcons.status}
-              ariaLabel="Status"
-              todasValue="disponiveis"
-              todasLabel="Todos Status"
-            />
-          </div>
-          <div style={filterBarSection(true)}>
-            <BarraPesquisaPagina
-              id="rh-func-busca"
-              value={busca}
-              onChange={setBusca}
-              placeholder={PAGE_SEARCH.nomeCpfEmail}
-              aria-label="Pesquisar por nome, CPF ou e-mail"
-              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
-            />
-          </div>
-          <div style={filterBarSection(true)}>
-            {mostrarCtaAbaPaginaRh ? (
-              <div className="app-filter-bar-tabs-cta">
-                <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
-                <div
-                  role="tablist"
-                  aria-label="Módulos de gestão de colaboradores"
-                  className="app-filter-bar-tabs-cta__tabs"
-                >
-                  {ABAS_PAGINA_RH_FUNC.map((tb) => (
-                    <FiltroBarTabButton
-                      key={tb.key}
-                      id={idTabPagina(tb.key)}
-                      active={abaPagina === tb.key}
-                      aria-controls={panelPaginaRhId}
-                      onClick={() => setAbaPagina(tb.key)}
-                      onKeyDown={(e) =>
-                        handleFiltroBarTabsArrowKeyDown(
-                          e,
-                          ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                          tb.key,
-                          setAbaPagina,
-                          "rh-gest-func-pag-",
-                        )
-                      }
-                      icon={iconAbaPagina(tb.key)}
-                    >
-                      {tb.label}
-                    </FiltroBarTabButton>
-                  ))}
-                </div>
-                <div className="app-filter-bar-tabs-cta__actions">
-                  {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-                    <CtaCriarButton type="button" onClick={abrirNovo}>
-                      Novo Prestador
-                    </CtaCriarButton>
-                  ) : null}
-                  {abaPagina === "anotacoes" && perm.canEditarOk ? (
-                    <CtaCriarButton type="button" onClick={() => abrirModalRhTalks()}>
-                      RH Talks
-                    </CtaCriarButton>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div
-                role="tablist"
-                aria-label="Módulos de gestão de colaboradores"
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                  width: "100%",
-                }}
-              >
-                {ABAS_PAGINA_RH_FUNC.map((tb) => (
-                  <FiltroBarTabButton
-                    key={tb.key}
-                    id={idTabPagina(tb.key)}
-                    active={abaPagina === tb.key}
-                    aria-controls={panelPaginaRhId}
-                    onClick={() => setAbaPagina(tb.key)}
-                    onKeyDown={(e) =>
-                      handleFiltroBarTabsArrowKeyDown(
-                        e,
-                        ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                        tb.key,
-                        setAbaPagina,
-                        "rh-gest-func-pag-",
-                      )
-                    }
-                    icon={iconAbaPagina(tb.key)}
-                  >
-                    {tb.label}
-                  </FiltroBarTabButton>
-                ))}
-              </div>
-            )}
-          </div>
-      </div>
+      <PrestadorFiltroBar
+        brand={brand}
+        t={t}
+        filtroDiretoria={filtroDiretoria}
+        onFiltroDiretoriaChange={setFiltroDiretoria}
+        opcoesFiltroDiretoria={opcoesFiltroDiretoria}
+        filtroGerencia={filtroGerencia}
+        onFiltroGerenciaChange={setFiltroGerencia}
+        opcoesFiltroGerencia={opcoesFiltroGerencia}
+        filtroSetor={filtroSetor}
+        onFiltroSetorChange={setFiltroSetor}
+        opcoesFiltroSetor={opcoesFiltroSetor}
+        filtroContrato={filtroContrato}
+        onFiltroContratoChange={setFiltroContrato}
+        filtroStatus={filtroStatus}
+        onFiltroStatusChange={setFiltroStatus}
+        busca={busca}
+        onBuscaChange={setBusca}
+        abaPagina={abaPagina}
+        onAbaPaginaChange={setAbaPagina}
+        panelPaginaRhId={panelPaginaRhId}
+        mostrarCtaAbaPaginaRh={mostrarCtaAbaPaginaRh}
+        podeCriarHeadcount={perm.canCriarOk && podeVerDadosSensiveis}
+        podeRhTalks={perm.canEditarOk}
+        onNovoPrestador={abrirNovo}
+        onRhTalks={() => abrirModalRhTalks()}
+      />
 
-      <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
-        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-          <table style={getDataTableStyle({ minWidth: tabelaSemSalario ? 620 : 720 })}>
-            <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
-            <thead>
-              <tr>
-                <SortTableTh<PrestadoresSortCol>
-                  label="Nome"
-                  col="nome"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Função"
-                  col="cargo"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Líder Imediato"
-                  col="lider"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Data da Função"
-                  col="data_funcao"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                {!tabelaSemSalario ? (
-                  <SortTableTh<PrestadoresSortCol>
-                    label="Remuneração"
-                    col="salario"
-                    sortCol={sortPrestadores.col}
-                    sortDir={sortPrestadores.dir}
-                    onSort={onSortPrestadores}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    endAdornment={
-                      podeVerDadosSensiveis ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTabelaSalarioVisivel((v) => !v);
-                          }}
-                          aria-label={
-                            tabelaSalarioVisivel
-                              ? "Ocultar valores de remuneração na tabela"
-                              : "Exibir valores de remuneração na tabela"
-                          }
-                          title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
-                          style={{
-                            padding: 4,
-                            borderRadius: 8,
-                            border: `1px solid ${t.cardBorder}`,
-                            background: t.inputBg,
-                            cursor: "pointer",
-                            color: t.textMuted,
-                            display: "inline-flex",
-                            alignItems: "center",
-                          }}
-                        >
-                          {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
-                        </button>
-                      ) : null
-                    }
-                  />
-                ) : null}
-                <SortTableTh<PrestadoresSortCol>
-                  label="Status"
-                  col="status"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <th scope="col" style={dataTable.thHeader}>
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <>
-                  <SkeletonTableRow cols={colunasTabela} />
-                  <SkeletonTableRow cols={colunasTabela} />
-                </>
-              ) : filtrada.length === 0 ? (
-                <tr>
-                  <td colSpan={colunasTabela} style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}>
-                    Sem dados para o período selecionado.
-                  </td>
-                </tr>
-              ) : (
-                filtradaOrdenada.map((row, i) => {
-                  const nomeExibicao = primeiroUltimoNome(row.nome) || "—";
-                  const liderCompleto = liderImediatoLinha(row);
-                  const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
-                  const remCol = textoRemuneracaoColunaTabela(row);
-                  const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
-                  const zebraBg = dataTable.zebraRow(i);
-                  return (
-                    <tr
-                      key={row.id}
-                      style={{ background: zebraBg }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = zebraBg;
-                      }}
-                    >
-                      <td
-                        style={{
-                          ...dataTable.tdCenter,
-                          maxWidth: 200,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                        title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
-                      >
-                        {nomeExibicao}
-                        {revisaoCadastralPendenteParaFuncionario(row) ? (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              marginLeft: 8,
-                              padding: "2px 8px",
-                              borderRadius: 999,
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#f59e0b",
-                              border: "1px solid rgba(245, 158, 11, 0.45)",
-                              background: "rgba(245, 158, 11, 0.12)",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            Revisão pendente
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={dataTable.tdCenter}>{row.cargo}</td>
-                      <td
-                        style={{ ...dataTable.tdCenter, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}
-                        title={liderCompleto !== "—" ? liderCompleto : undefined}
-                      >
-                        {lider}
-                      </td>
-                      <td style={dataTable.tdCenter}>{dataFuncaoTxt}</td>
-                      {!tabelaSemSalario ? (
-                        <td
-                          title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
-                          style={{
-                            ...dataTable.tdCenter,
-                            ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
-                          }}
-                        >
-                          {podeVerDadosSensiveis ? remCol.texto : "—"}
-                        </td>
-                      ) : null}
-                      <td style={dataTable.tdCenter}>
-                        <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
-                      </td>
-                      <td style={dataTable.tdCenter}>
-                        {preencherAcoesHeadcount || tabelaAcoesRh || tabelaAnotacoesRh ? (
-                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => abrirVer(row)}
-                              style={btnIconTabela}
-                              aria-label={`Visualizar ${row.nome}`}
-                            >
-                              <Eye size={14} aria-hidden />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirModalHistorico(row)}
-                              style={btnIconTabela}
-                              aria-label={`Histórico de ${row.nome}`}
-                            >
-                              <History size={14} aria-hidden />
-                            </button>
-                            {preencherAcoesHeadcount && perm.canEditarOk ? (
-                              <button type="button" onClick={() => abrirEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
-                                <Pencil size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {tabelaAcoesRh && perm.canEditarOk ? (
-                              <button
-                                type="button"
-                                onClick={() => abrirModalRegistrarAcao(row)}
-                                style={btnIconTabelaCta}
-                                aria-label={`Registrar ação de RH para ${row.nome}`}
-                              >
-                                <ClipboardList size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {tabelaAnotacoesRh && perm.canEditarOk ? (
-                              <button
-                                type="button"
-                                onClick={() => abrirModalRegistrarAnotacao(row)}
-                                style={btnIconTabelaCta}
-                                aria-label={`Registrar anotação de RH para ${row.nome}`}
-                              >
-                                <StickyNote size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {perm.canExcluirOk ? (
-                              <button
-                                type="button"
-                                onClick={() => setPrestadorExcluirConfirm(row)}
-                                style={btnIconTabelaPerigo}
-                                aria-label={`Excluir ${row.nome}`}
-                              >
-                                <Trash2 size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PrestadorTabelaColaboradores
+        brand={brand}
+        t={t}
+        panelPaginaRhId={panelPaginaRhId}
+        idTabPagina={idTabPagina(abaPagina)}
+        legendaTabelaPorAba={legendaTabelaPorAba}
+        tabelaSemSalario={tabelaSemSalario}
+        colunasTabela={colunasTabela}
+        preencherAcoesHeadcount={preencherAcoesHeadcount}
+        tabelaAcoesRh={tabelaAcoesRh}
+        tabelaAnotacoesRh={tabelaAnotacoesRh}
+        loading={loading}
+        filtrada={filtrada}
+        filtradaOrdenada={filtradaOrdenada}
+        sortPrestadores={sortPrestadores}
+        onSortPrestadores={onSortPrestadores}
+        liderImediatoLinha={liderImediatoLinha}
+        podeVerDadosSensiveis={podeVerDadosSensiveis}
+        tabelaSalarioVisivel={tabelaSalarioVisivel}
+        onToggleTabelaSalarioVisivel={() => setTabelaSalarioVisivel((v) => !v)}
+        podeEditar={perm.canEditarOk}
+        podeExcluir={perm.canExcluirOk}
+        onAbrirVer={abrirVer}
+        onAbrirHistorico={abrirModalHistorico}
+        onAbrirEditar={abrirEditar}
+        onRegistrarAcao={abrirModalRegistrarAcao}
+        onRegistrarAnotacao={abrirModalRegistrarAnotacao}
+        onConfirmarExclusao={setPrestadorExcluirConfirm}
+      />
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (
         <ModalBase maxWidth={720} onClose={fecharModalFuncionario}>
