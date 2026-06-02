@@ -806,6 +806,39 @@ export default function RhDadosCadastroPage() {
     ...(withTopBorder ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` } : {}),
   });
 
+  const revisaoCadastralProximaNotice =
+    !revisaoPendente && proximaRevisaoLabel && visualizandoProprioCadastro && row ? (
+      <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
+        Próxima revisão cadastral prevista em {proximaRevisaoLabel}.
+        {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
+          <>
+            {" "}
+            Última revisão em {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
+            {row.cadastro_revisao_tipo === "sem_alteracao" ? " (sem alterações declaradas)" : null}.
+          </>
+        ) : (
+          <>
+            {" "}
+            Referência atual: cadastro em Gestão de Prestadores ({fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}
+            ).
+          </>
+        )}
+      </p>
+    ) : null;
+
+  const revisaoCadastralProximaNoticeRow = revisaoCadastralProximaNotice ? (
+    <div
+      style={{
+        width: "100%",
+        paddingTop: 12,
+        marginTop: 12,
+        borderTop: `1px solid ${t.cardBorder}`,
+      }}
+    >
+      {revisaoCadastralProximaNotice}
+    </div>
+  ) : null;
+
   const abasCadastro = (
     <>
       {ABAS_CADASTRO.map((tb) => (
@@ -980,23 +1013,6 @@ export default function RhDadosCadastroPage() {
             </div>
           </div>
         </section>
-      ) : proximaRevisaoLabel && visualizandoProprioCadastro ? (
-        <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Próxima revisão cadastral prevista em {proximaRevisaoLabel}.
-          {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
-            <>
-              {" "}
-              Última revisão em {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
-              {row.cadastro_revisao_tipo === "sem_alteracao" ? " (sem alterações declaradas)" : null}.
-            </>
-          ) : (
-            <>
-              {" "}
-              Referência atual: cadastro em Gestão de Prestadores (
-              {fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}).
-            </>
-          )}
-        </p>
       ) : null}
 
       {vistaCompleta && row && !podeEditarSelecionado ? (
@@ -1038,6 +1054,7 @@ export default function RhDadosCadastroPage() {
               </FiltroMeuCalendarioButton>
             ) : null}
           </div>
+          {revisaoCadastralProximaNoticeRow}
           <div
             role="tablist"
             aria-label="Seções do cadastro"
@@ -1049,20 +1066,25 @@ export default function RhDadosCadastroPage() {
           </div>
         </div>
       ) : (
-        <div
-          role="tablist"
-          aria-label="Seções do cadastro"
-          className="app-cadastro-tabs-row"
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: PAGE_CONTENT_BOX_GAP,
-            ...getFilterBarRowStyle(),
-            width: "100%",
-          }}
-          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_CADASTRO.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
-        >
-          {abasCadastro}
+        <div style={{ ...getPageFilterBoxStyle(brand, t), marginBottom: PAGE_CONTENT_BOX_GAP }}>
+          {revisaoCadastralProximaNoticeRow}
+          <div
+            role="tablist"
+            aria-label="Seções do cadastro"
+            className="app-cadastro-tabs-row"
+            style={{
+              ...(revisaoCadastralProximaNotice
+                ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
+                : {}),
+              display: "flex",
+              gap: 8,
+              ...getFilterBarRowStyle(),
+              width: "100%",
+            }}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_CADASTRO.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
+          >
+            {abasCadastro}
+          </div>
         </div>
       )}
 
