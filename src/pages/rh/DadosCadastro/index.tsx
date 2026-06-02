@@ -290,7 +290,7 @@ export default function RhDadosCadastroPage() {
   const vistaCompleta = !perm.loading && dadosCadastroVistaCompleta(perm.canView);
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
-  const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
+  const [filterStaffId, setFilterStaffId] = useState<string | null>(null);
   const [meuPrestadorId, setMeuPrestadorId] = useState<string | null>(null);
 
   const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
@@ -317,9 +317,7 @@ export default function RhDadosCadastroPage() {
 
   const visualizandoProprioCadastro = ehProprioCadastroDados(meuPrestadorId, row?.id ?? null);
   const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null);
-  const meuCadastroAtivo = Boolean(
-    meuPrestadorId && filterStaffIds.length === 1 && filterStaffIds[0] === meuPrestadorId,
-  );
+  const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
   const staffSelectItems = useMemo(
     () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
     [prestadores],
@@ -397,18 +395,17 @@ export default function RhDadosCadastroPage() {
   useEffect(() => {
     if (perm.loading) return;
     if (vistaCompleta) {
-      const id = filterStaffIds[0];
-      if (!id) {
+      if (!filterStaffId) {
         setRow(null);
         setForm(null);
         setLoading(false);
         return;
       }
-      void carregarFuncionarioPorId(id);
+      void carregarFuncionarioPorId(filterStaffId);
       return;
     }
     void carregarFuncionarioProprio();
-  }, [perm.loading, vistaCompleta, filterStaffIds, carregarFuncionarioProprio, carregarFuncionarioPorId]);
+  }, [perm.loading, vistaCompleta, filterStaffId, carregarFuncionarioProprio, carregarFuncionarioPorId]);
 
   useEffect(() => {
     if (perm.loading || !vistaCompleta) return;
@@ -449,9 +446,9 @@ export default function RhDadosCadastroPage() {
   }, [perm.loading, vistaCompleta, user?.email]);
 
   useEffect(() => {
-    if (!vistaCompleta || !meuPrestadorId || filterStaffIds.length > 0) return;
-    setFilterStaffIds([meuPrestadorId]);
-  }, [vistaCompleta, meuPrestadorId, filterStaffIds.length]);
+    if (!vistaCompleta || !meuPrestadorId || filterStaffId) return;
+    setFilterStaffId(meuPrestadorId);
+  }, [vistaCompleta, meuPrestadorId, filterStaffId]);
 
   useEffect(() => {
     let cancel = false;
@@ -751,7 +748,7 @@ export default function RhDadosCadastroPage() {
     );
   }
 
-  if (vistaCompleta && !filterStaffIds[0]) {
+  if (vistaCompleta && !filterStaffId) {
     return (
       <div className="app-page-shell">
         <PageHeader
@@ -762,15 +759,16 @@ export default function RhDadosCadastroPage() {
         <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={getFilterBarRowStyle({ width: "100%" })}>
             <FiltroCalendarioStaffSelect
-              selected={filterStaffIds}
-              onChange={setFilterStaffIds}
+              mode="single"
+              selected={filterStaffId ? [filterStaffId] : []}
+              onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
               items={staffSelectItems}
               disabled={loadingStaff || staffSelectItems.length === 0}
             />
             {meuPrestadorId ? (
               <FiltroMeuCalendarioButton
                 active={meuCadastroAtivo}
-                onClick={() => setFilterStaffIds([meuPrestadorId])}
+                onClick={() => setFilterStaffId(meuPrestadorId)}
                 ariaLabelActive="Mostrar lista completa de prestadores"
                 ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
               >
@@ -1034,15 +1032,16 @@ export default function RhDadosCadastroPage() {
         <div style={{ ...getPageFilterBoxStyle(brand, t), marginBottom: PAGE_CONTENT_BOX_GAP }}>
           <div style={getFilterBarRowStyle({ width: "100%" })}>
             <FiltroCalendarioStaffSelect
-              selected={filterStaffIds}
-              onChange={setFilterStaffIds}
+              mode="single"
+              selected={filterStaffId ? [filterStaffId] : []}
+              onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
               items={staffSelectItems}
               disabled={loadingStaff || staffSelectItems.length === 0}
             />
             {meuPrestadorId ? (
               <FiltroMeuCalendarioButton
                 active={meuCadastroAtivo}
-                onClick={() => setFilterStaffIds([meuPrestadorId])}
+                onClick={() => setFilterStaffId(meuPrestadorId)}
                 ariaLabelActive="Mostrar lista completa de prestadores"
                 ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
               >

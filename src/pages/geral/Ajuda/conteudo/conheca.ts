@@ -413,7 +413,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões e filtros",
         texto:
-          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (`FiltroCalendarioStaffSelect`) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais e documentos de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro.",
+          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais e documentos de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro.",
       },
       {
         subtitulo: "Documentos e revisão",

@@ -37,6 +37,8 @@ export interface FiltroEntidadeBarSelectProps {
   enableSearch?: boolean;
   searchPlaceholder?: string;
   disabled?: boolean;
+  /** `single` — um membro por vez (ex.: Dados de Cadastro); default `multiple`. */
+  mode?: "single" | "multiple";
 }
 
 /**
@@ -53,10 +55,12 @@ export function FiltroEntidadeBarSelect({
   enableSearch: enableSearchProp,
   searchPlaceholder = FILTER_SEARCH_STAFF,
   disabled = false,
+  mode = "multiple",
 }: FiltroEntidadeBarSelectProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const accentColor = brand.useBrand ? "var(--brand-action, #7c3aed)" : brand.accent;
+  const isSingle = mode === "single";
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -167,7 +171,7 @@ export function FiltroEntidadeBarSelect({
           style={{
             width: 14,
             height: 14,
-            borderRadius: 3,
+            borderRadius: isSingle ? 999 : 3,
             flexShrink: 0,
             border: `1.5px solid ${picked ? accentColor : t.cardBorder}`,
             background: picked ? accentColor : "transparent",
@@ -176,11 +180,36 @@ export function FiltroEntidadeBarSelect({
             justifyContent: "center",
           }}
         >
-          {picked ? <Check size={9} color="#fff" strokeWidth={3} aria-hidden="true" /> : null}
+          {picked ? (
+            isSingle ? (
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: "#fff",
+                  display: "block",
+                }}
+                aria-hidden="true"
+              />
+            ) : (
+              <Check size={9} color="#fff" strokeWidth={3} aria-hidden="true" />
+            )
+          ) : null}
         </span>
         {label}
       </div>
     );
+  }
+
+  function toggleItem(id: string) {
+    if (isSingle) {
+      onChange(selected.includes(id) ? [] : [id]);
+      closePanel();
+      return;
+    }
+    if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
+    else onChange([...selected, id]);
   }
 
   return (
@@ -217,7 +246,13 @@ export function FiltroEntidadeBarSelect({
       </button>
 
       {open && (
-        <div id={listboxId} role="listbox" aria-multiselectable="true" aria-label={listboxAriaLabel} style={panelStyle}>
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-multiselectable={isSingle ? undefined : true}
+          aria-label={listboxAriaLabel}
+          style={panelStyle}
+        >
           {enableSearch ? (
             <BarraPesquisaFiltroPainel
               inputRef={searchInputRef}
@@ -267,10 +302,7 @@ export function FiltroEntidadeBarSelect({
             </div>
           ) : (
             filtered.map((item) =>
-              renderOptionRow(item.id, item.name, selected.includes(item.id), () => {
-                if (selected.includes(item.id)) onChange(selected.filter((id) => id !== item.id));
-                else onChange([...selected, item.id]);
-              })
+              renderOptionRow(item.id, item.name, selected.includes(item.id), () => toggleItem(item.id)),
             )
           )}
         </div>
