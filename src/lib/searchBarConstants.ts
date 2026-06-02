@@ -26,4 +26,5 @@ export const PAGE_SEARCH = {
   informativos: `Buscar por palavras-chave no informativo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   glossario: `Buscar por termo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   operadoraNome: `Buscar por nome de operadora${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  mesaNomeOuId: `Buscar por nome da mesa ou ID da mesa${SEARCH_PLACEHOLDER_ELLIPSIS}`,
 } as const;

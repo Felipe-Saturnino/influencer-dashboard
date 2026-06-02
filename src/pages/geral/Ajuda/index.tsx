@@ -851,7 +851,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro ativo. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro de operadora. No bloco Mesas, use a busca abaixo do título para filtrar por nome da mesa, ID Spin ou número da mesa. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
