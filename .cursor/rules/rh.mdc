@@ -56,12 +56,15 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - **Permissões (Gestão de Usuários → `rh_dados_cadastro`):**
   - **Ver/Editar Próprios:** entra direto no cadastro vinculado ao e-mail de login; sem filtro Staff nem botão **Meu Cadastro**.
   - **Ver Sim + Editar Próprios:** barra com `FiltroCalendarioStaffSelect` (`mode="single"`) + **Meu Cadastro** (`FiltroMeuCalendarioButton`); abas na linha 2 do bloco (`getPageFilterBoxStyle`); cadastro alheio **somente leitura**.
-  - **Ver Sim + Editar Sim:** mesma barra; edita abas **Dados cadastrais** e **Documentos** de qualquer prestador ativo/indisponível (sem depender de Gestão de Prestadores).
+  - **Ver Sim + Editar Sim:** mesma barra; edita abas **Dados cadastrais**, **Documentos** e **Formação e Competências** de qualquer prestador ativo/indisponível (sem depender de Gestão de Prestadores).
+- **Prestador encerrado:** aba Formação e Competências em somente leitura (RLS + UI).
+- **Aba Formação e Competências:** quatro blocos — formação acadêmica, idiomas (catálogo fixo), cursos/certificações e portfólio (link ou arquivo no bucket `rh-prestador-self-media`, até 15 MB; vídeo/áudio só por URL). CRUD gera linha no histórico (`tipo: formacao_competencias`). **Sem** revisão cadastral de 6 meses nesta aba.
 - **Aba Histórico de trabalho:** sempre read-only para todos — contratação/organograma/remuneração só em **Gestão de Prestadores**.
 - **Revisão cadastral (6 meses):** banner e «Confirmar sem alterações» só no **próprio** cadastro.
 - **Histórico (aba):** anotações RH «Particulares» ocultas para o prestador no próprio cadastro; visíveis ao consultar terceiro com Ver Sim.
 - **RLS:** migration `20260602140000_rh_dados_cadastro_escopo_sim.sql` — `_rh_dados_cadastro_perm_val`; trigger preserva campos de contratação em edições via esta página.
-- Helpers: `lib/rhDadosCadastroHelpers.ts`.
+- Helpers: `lib/rhDadosCadastroHelpers.ts`, `lib/rhFormacaoCompetenciasConstants.ts`, `lib/rhFormacaoHistorico.ts`.
+- Migration formação: `20260602160000_rh_formacao_competencias.sql`.
 
 ---
 

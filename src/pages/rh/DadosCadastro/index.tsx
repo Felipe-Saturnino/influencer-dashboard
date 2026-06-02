@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { AlertTriangle, Briefcase, CheckCircle2, Contact, Download, FileText, History, Loader2, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { AlertTriangle, CheckCircle2, Download, Loader2, Trash2, Upload } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -40,9 +40,10 @@ import {
   FiltroBarTabButton,
   FiltroCalendarioStaffSelect,
   FiltroMeuCalendarioButton,
-  FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
+import { ABAS_CADASTRO, CADASTRO_TAB_ICONS, CADASTRO_TAB_IDS } from "./constants";
+import FormacaoCompetenciasPainel from "./FormacaoCompetencias";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
@@ -77,8 +78,6 @@ const TIPOS_CONTRATO_LABEL: Record<RhFuncionarioTipoContrato, string> = {
   Estagio: "Estágio",
   Temporario: "Temporário",
 };
-
-type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico";
 
 type FormState = {
   nome: string;
@@ -236,30 +235,12 @@ function validarCadastroSelf(form: FormState): Record<string, string> {
   return e;
 }
 
-const ABAS: { key: AbaCadastro; label: string }[] = [
-  { key: "trabalho", label: "Histórico de trabalho" },
-  { key: "cadastral", label: "Dados cadastrais" },
-  { key: "documentos", label: "Documentos" },
-  { key: "historico", label: "Histórico" },
-];
-
-const CADASTRO_TAB_ICONS: Record<AbaCadastro, ReactNode> = {
-  trabalho: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  documentos: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  historico: <History {...FILTRO_BAR_TAB_ICON_PROPS} />,
-};
-
 export default function RhDadosCadastroPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_dados_cadastro");
 
-  const [aba, setAba] = useRouteTab(
-    "rh_dados_cadastro",
-    "trabalho",
-    ["trabalho", "cadastral", "documentos", "historico"] as const,
-  );
+  const [aba, setAba] = useRouteTab("rh_dados_cadastro", "trabalho", CADASTRO_TAB_IDS);
   const [gateRedirectBanner] = useState(() => {
     if (typeof window === "undefined") return false;
     const flagged = sessionStorage.getItem(REVISAO_GATE_BANNER_KEY);
@@ -317,6 +298,7 @@ export default function RhDadosCadastroPage() {
 
   const visualizandoProprioCadastro = ehProprioCadastroDados(meuPrestadorId, row?.id ?? null);
   const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null);
+  const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
   const staffSelectItems = useMemo(
     () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
@@ -819,7 +801,7 @@ export default function RhDadosCadastroPage() {
 
   const abasCadastro = (
     <>
-      {ABAS.map((tb) => (
+      {ABAS_CADASTRO.map((tb) => (
         <FiltroBarTabButton
           key={tb.key}
           id={`tab-cadastro-${tb.key}`}
@@ -1053,7 +1035,7 @@ export default function RhDadosCadastroPage() {
             role="tablist"
             aria-label="Seções do cadastro"
             style={filterBarTabsRow(true)}
-            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_CADASTRO.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
           >
             {abasCadastro}
           </div>
@@ -1073,7 +1055,7 @@ export default function RhDadosCadastroPage() {
             ...getFilterBarRowStyle(),
             width: "100%",
           }}
-          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_CADASTRO.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
         >
           {abasCadastro}
         </div>
@@ -1692,12 +1674,19 @@ export default function RhDadosCadastroPage() {
         </section>
       ) : null}
 
+      {aba === "formacao" && row ? (
+        <FormacaoCompetenciasPainel
+          funcionarioId={row.id}
+          podeEditar={podeEditarFormacao}
+          usuarioLabel={user?.email ?? String(user?.id ?? "—")}
+          onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
+          onErro={setErroGlobal}
+        />
+      ) : null}
+
       {aba === "historico" ? (
         <section>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <History size={18} aria-hidden />
-            Histórico de RH
-          </h2>
+          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Histórico de RH</h2>
           <ListaHistoricoRh items={histItems} loading={histLoading} t={t} />
         </section>
       ) : null}
