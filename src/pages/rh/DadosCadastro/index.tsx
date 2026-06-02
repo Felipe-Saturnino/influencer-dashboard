@@ -808,35 +808,38 @@ export default function RhDadosCadastroPage() {
 
   const revisaoCadastralProximaNotice =
     !revisaoPendente && proximaRevisaoLabel && visualizandoProprioCadastro && row ? (
-      <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
-        Próxima revisão cadastral prevista em {proximaRevisaoLabel}.
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          lineHeight: 1.55,
+          textAlign: "center",
+          width: "100%",
+          maxWidth: "100%",
+        }}
+      >
+        Próxima revisão cadastral prevista em <strong>{proximaRevisaoLabel}</strong>.
         {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
           <>
             {" "}
-            Última revisão em {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
+            Última revisão em{" "}
+            <strong>{fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}</strong>
             {row.cadastro_revisao_tipo === "sem_alteracao" ? " (sem alterações declaradas)" : null}.
           </>
         ) : (
           <>
             {" "}
-            Referência atual: cadastro em Gestão de Prestadores ({fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}
-            ).
+            Referência atual: cadastro em Gestão de Prestadores (
+            <strong>{fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}</strong>).
           </>
         )}
       </p>
     ) : null;
 
   const revisaoCadastralProximaNoticeRow = revisaoCadastralProximaNotice ? (
-    <div
-      style={{
-        width: "100%",
-        paddingTop: 12,
-        marginTop: 12,
-        borderTop: `1px solid ${t.cardBorder}`,
-      }}
-    >
-      {revisaoCadastralProximaNotice}
-    </div>
+    <div className="app-cadastro-revisao-notice">{revisaoCadastralProximaNotice}</div>
   ) : null;
 
   const abasCadastro = (

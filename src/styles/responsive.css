@@ -256,6 +256,20 @@
   display: block;
 }
 
+/* Aviso de próxima revisão cadastral — bloco de filtros Dados de Cadastro */
+.app-cadastro-revisao-notice {
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .app-cadastro-revisao-notice {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
 /* Abas Dados de Cadastro — scroll horizontal em telas estreitas */
 .app-cadastro-tabs-row {
   max-width: 100%;
