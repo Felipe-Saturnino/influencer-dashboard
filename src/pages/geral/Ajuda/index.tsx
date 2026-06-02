@@ -827,7 +827,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Lista de operadoras",
         texto:
-          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. A tabela permite ordenação por qualquer coluna.",
+          "Exibe todas as operadoras cadastradas com status (Ativa ou Inativa), slug interno e data de criação. Os cards de resumo no topo mostram os totais. Use a busca abaixo do título do bloco para filtrar pelo nome da operadora. A tabela permite ordenação por qualquer coluna.",
       },
       {
         subtitulo: "Cadastrar ou editar operadora",

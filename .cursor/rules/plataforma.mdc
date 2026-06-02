@@ -231,7 +231,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 
 - `useDashboardBrand()` obrigatório: header, CTA, modal.
 - Cards de resumo (Total/Ativas/Inativas): exibir `"—"` enquanto `loading === true`.
-- Bloco **Operadoras:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) na mesma linha que `CtaCriarButton` **Nova Operadora** (`perm.canCriarOk`).
+- Bloco **Operadoras:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) na linha 1; linha 2 — `BarraPesquisaPagina` (`PAGE_SEARCH.operadoraNome`) + `CtaCriarButton` **Nova Operadora** (`perm.canCriarOk`, `flexShrink: 0` ao lado da busca).
 - **Tabela principal** e **sub-tabela de mesas** no modal **Operações:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - `app-table-wrap` + `getDataTableWrapStyle` — não `<div style={{ overflowX: "auto" }}>` solto.
 - `<caption style={{ display: "none" }}>` obrigatório; `scope="col"` em todas as colunas (incl. `SortTableTh` e Ações).

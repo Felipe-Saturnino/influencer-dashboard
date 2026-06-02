@@ -25,4 +25,5 @@ export const PAGE_SEARCH = {
   portalRh: `Buscar por palavras-chaves na postagem${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   informativos: `Buscar por palavras-chave no informativo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   glossario: `Buscar por termo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  operadoraNome: `Buscar por nome de operadora${SEARCH_PLACEHOLDER_ELLIPSIS}`,
 } as const;
