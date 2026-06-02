@@ -31,7 +31,7 @@ for (const file of componentFiles) {
   if (base === "index") continue;
   const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const importRe = new RegExp(
-    `from\\s+['\"][^'\"]*${escaped}['\"]|import\\s+\\{[^}]*\\b${escaped}\\b`,
+    String.raw`from\s+['"][^'"]*${escaped}['"]|import\s+\{[^}]*\b${escaped}\b`,
   );
   const usedInPages = importRe.test(pagesSrc) || pagesSrc.includes(`<${base}`);
   const usedInSrc = importRe.test(allSrc) || allSrc.includes(`<${base}`);

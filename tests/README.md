@@ -56,6 +56,10 @@ Artefacto HTML de cobertura: job CI → **coverage-report** (14 dias).
 
 Variáveis `VITE_*` no CI são placeholders; testes atuais não chamam Supabase real.
 
+## Varredura de componentes órfãos
+
+`node scripts/scan-unused-components.mjs` — lista `.tsx` em `src/components` sem import direto em `src/pages` (confirmar com `rg` antes de remover).
+
 ## Diagnóstico operacional (Status Técnico)
 
 Implementado à parte do Vitest: Edge `platform-health-check`, helpers em `platformHealthDiagnostics.ts`, testes em `tests/unit/lib/platformHealthDiagnostics.test.ts`. Deploy: `docs/SETUP-PLATFORM-HEALTH.md`.

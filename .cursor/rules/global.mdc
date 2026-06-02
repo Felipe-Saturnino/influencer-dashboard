@@ -142,7 +142,8 @@ components/     # Compartilhados — usar antes de criar local
   PageHeader.tsx
   FiltroInfluencerSelect.tsx
   FiltroModoVisualizacaoSelect.tsx
-  FiltroEntidadeMultiSelect.tsx
+  FiltroEntidadeBarSelect.tsx
+  FiltroCalendarioTimeSelect.tsx / FiltroCalendarioStaffSelect.tsx
   OperacoesModal.tsx (ModalBase, ModalHeader)
   CampoObrigatorioMark.tsx
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
@@ -220,7 +221,7 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
-**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`, **`BarraPesquisaPagina`** (busca de lista na página), **`BarraPesquisaFiltroPainel`** (busca no painel do filtro). Staff/Time na barra: `FiltroEntidadeMultiSelect` (legado temporário — refactor dedicado pendente).
+**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`, **`BarraPesquisaPagina`** (busca de lista na página), **`BarraPesquisaFiltroPainel`** (busca no painel do filtro). Staff/Time na barra: **`FiltroCalendarioTimeSelect`**, **`FiltroCalendarioStaffSelect`** ou **`FiltroEntidadeBarSelect`** (Brand §6).
 
 ```typescript
 import {
@@ -532,7 +533,7 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
 - **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`) com **`BarraPesquisaFiltroPainel`**.
-- **Staff / entidade genérica:** `FiltroEntidadeMultiSelect` com `enableSearch` — placeholder default **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
+- **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — busca no painel via **`BarraPesquisaFiltroPainel`** quando `> 5` opções; placeholder Staff: **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
 - **Outros domínios:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
 - Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
 - Filtrar por correspondência parcial no nome.
@@ -824,10 +825,10 @@ Pills semânticos — cor de negócio, não `--brand-primary`:
 
 Paleta de workflow por domínio (banca, pagamento, dealer, etc.) documentada no MDC da secção.
 
-### BlocoLabel e títulos internos
+### Rótulos internos de bloco
 
-- `BlocoLabel`: só texto — **sem** emoji no label.
-- Ícone opcional **fora** do componente, ao lado.
+- Rótulos de grupo dentro do bloco: texto simples ou `SectionTitle` com `sub` — **sem** emoji no label.
+- Ícone opcional **fora** do rótulo, ao lado (não no cabeçalho de bloco nível 3 — Global § Hierarquia visual).
 
 ### Loading de página inteira (boot)
 
@@ -928,7 +929,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Query de lista UGC sem `.limit()`.
 - CPF ou dado sensível sem máscara em tabela pública.
 - Expor infraestrutura (tabela, RPC, stack) na UI.
-- Emoji no `h1` ou em `BlocoLabel`.
+- Emoji no `h1` ou em rótulos internos de bloco.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
 - Hex ou `COR_*` local para **identidade de jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — usar `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx` (Global § Identidade visual por jogo); exceção **só** com pedido explícito de produto documentado no MDC da secção.
