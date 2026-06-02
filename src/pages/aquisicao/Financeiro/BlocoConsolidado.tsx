@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react"
+import { useMemo, useState, Fragment } from "react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { FONT } from "../../../constants/theme"
@@ -8,148 +8,36 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { supabase } from "../../../lib/supabase"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
 import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
-import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles"
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { ChevronRight, Loader2 } from "lucide-react"
 import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
-import { periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
-import { type FinanceiroAgenteDbRow, type FinanceiroHistoricoPagRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilRow, type FinanceiroProfileRow } from "./financeiroTypes"
-import type { BlocoFiltros } from "./financeiroFiltros"
+import type { FinanceiroHistoricoPagRow } from "./financeiroTypes"
+import type { FinanceiroMesData } from "./financeiroMesData"
 import { Badge } from "./financeiroUi"
 
-export function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
-  const { theme: t, user } = useApp();
+export function BlocoConsolidado({
+  mesData,
+  loadingMes,
+}: {
+  mesData: FinanceiroMesData | null;
+  loadingMes: boolean;
+}) {
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
-  const mes = historico ? "" : mesFiltro;
 
-  interface ConRow {
-    influencer_id: string;
-    nome_artistico: string;
-    email: string;
-    totalPago: number;
-    totalHoras: number;
-    pendente: number;
-    ultimoPagamento: string | null;
-    statusInfluencer: string;
-  }
-
-  interface AgentesRow { totalPago: number; pendente: number; ultimoPagamento: string | null; }
+  const rows = useMemo(
+    () => mesData?.consolidadoRows ?? [],
+    [mesData],
+  );
+  const agentesRow = mesData?.agentesRow ?? null;
 
   const [busca, setBusca] = useState("");
   type ConsolidSortCol = "influencer" | "totalPago" | "totalHoras" | "pendente" | "ultimoPag" | "status";
   const [sortCons, setSortCons] = useState<{ col: ConsolidSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
-  const [rows, setRows] = useState<ConRow[]>([]);
-  const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
-  const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, FinanceiroHistoricoPagRow[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
-
-  const carregar = useCallback(async () => {
-    setLoading(true);
-
-    const { data: perfis } = await supabase
-      .from("influencer_perfil")
-      .select("id, nome_artistico, status")
-      .order("nome_artistico");
-
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("role", [...ROLES_PARIDADE_INFLUENCER]);
-
-    if (!perfis) { setLoading(false); return; }
-
-    const emailMap: Record<string, string> = {};
-    for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
-      emailMap[p.id] = p.email ?? "";
-    }
-
-    let perfisFiltrados = (perfis as FinanceiroPerfilRow[]).filter((p) => podeVerInfluencer(p.id));
-    if (filterInfluencers.length > 0) perfisFiltrados = perfisFiltrados.filter((p) => filterInfluencers.includes(p.id));
-
-    const periodo = periodoDoMes(mes);
-    let cicloIds: string[] = [];
-    if (periodo) {
-      // Ciclos cujo último dia (data_fim) cai no período. Não usa fechado_em nem data de aprovação/pagamento.
-      const { data: ciclos } = await supabase
-        .from("ciclos_pagamento").select("id")
-        .gte("data_fim", periodo.inicio)
-        .lte("data_fim", periodo.fim);
-      cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
-    }
-
-    let pagamentosData: FinanceiroPagamentoDbRow[] = [];
-    let agentesData: FinanceiroAgenteDbRow[] = [];
-    const incluirAgentesConsolidado = podeVerPagamentosAgenteFinanceiro(user?.role);
-    if (!periodo || cicloIds.length > 0) {
-      const [{ data: pags }, { data: agts }] = await Promise.all([
-        periodo
-          ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
-          : supabase.from("pagamentos").select("*"),
-        incluirAgentesConsolidado
-          ? (periodo
-              ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
-              : supabase.from("pagamentos_agentes").select("*"))
-          : Promise.resolve({ data: [] as FinanceiroAgenteDbRow[] }),
-      ]);
-      pagamentosData = (pags ?? []) as FinanceiroPagamentoDbRow[];
-      agentesData = (agts ?? []) as FinanceiroAgenteDbRow[];
-    }
-    if (filtroOp?.length) {
-      pagamentosData = pagamentosData.filter((p) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
-      agentesData = agentesData.filter((a) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
-      const infIdsComPag = [...new Set(pagamentosData.map((p) => p.influencer_id))];
-      perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
-    } else if (filterOperadora && filterOperadora !== "todas") {
-      pagamentosData = pagamentosData.filter((p) => p.operadora_slug === filterOperadora);
-      agentesData = agentesData.filter((a) => a.operadora_slug === filterOperadora);
-      const infIdsComPag = [...new Set(pagamentosData.map((p) => p.influencer_id))];
-      perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
-    }
-
-    // Linha de agentes
-    const agtPagos = agentesData.filter(a => a.status === "pago");
-    const agtPendentes = agentesData.filter(a => a.status === "em_analise" || a.status === "a_pagar");
-    const agtTotalPago = agtPagos.reduce((a, x) => a + x.total, 0);
-    const agtPendente = agtPendentes.reduce((a, x) => a + x.total, 0);
-    const agtUltimoPag = agtPagos.sort((a, b) => (b.pago_em ?? "").localeCompare(a.pago_em ?? ""))[0]?.pago_em ?? null;
-
-    // Influencers — filtrar os que têm pelo menos algum valor
-    const resultado: ConRow[] = perfisFiltrados.map((perf) => {
-      const pags = pagamentosData.filter(p => p.influencer_id === perf.id);
-      const pagos = pags.filter(p => p.status === "pago");
-      const pendentes = pags.filter(p => p.status === "em_analise" || p.status === "a_pagar");
-      const totalPago = pagos.reduce((a, p) => a + p.total, 0);
-      const totalHoras = pags.reduce((a, p) => a + p.horas_realizadas, 0);
-      const pendente = pendentes.reduce((a, p) => a + p.total, 0);
-      const ultimoPag = pagos.sort((a, b) => (b.pago_em ?? "").localeCompare(a.pago_em ?? ""))[0]?.pago_em ?? null;
-      return {
-        influencer_id: perf.id,
-        nome_artistico: perf.nome_artistico ?? emailMap[perf.id] ?? perf.id,
-        email: emailMap[perf.id] ?? "",
-        totalPago, totalHoras, pendente,
-        ultimoPagamento: ultimoPag,
-        statusInfluencer: perf.status ?? "ativo",
-      };
-    }).filter(r => r.totalPago > 0 || r.totalHoras > 0 || r.pendente > 0);
-
-    // Linha especial de agentes (só operação interna; influencer e agência não veem)
-    setAgentesRow(
-      incluirAgentesConsolidado && (agtTotalPago > 0 || agtPendente > 0)
-        ? { totalPago: agtTotalPago, pendente: agtPendente, ultimoPagamento: agtUltimoPag }
-        : null
-    );
-
-    setRows(resultado);
-    setLoading(false);
-  }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
 
   async function toggleExpand(id: string) {
     if (expandido === id) { setExpandido(null); return; }
@@ -231,7 +119,7 @@ export function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
         />
       </div>
 
-      {loading ? (
+      {loadingMes ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
           <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
           Carregando...

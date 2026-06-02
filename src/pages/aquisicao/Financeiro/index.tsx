@@ -14,7 +14,7 @@ import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles"
-import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles"
+import { roleParidadeInfluencer } from "../../../lib/staffRoles"
 import {
   cicloAberto,
   cicloSemanalParaData,
@@ -33,6 +33,8 @@ import type { BlocoFiltros } from "./financeiroFiltros"
 import { BlocoKpis } from "./BlocoKpis"
 import { BlocoCiclos } from "./BlocoCiclos"
 import { BlocoConsolidado } from "./BlocoConsolidado"
+import { useFinanceiroCatalogos } from "./useFinanceiroCatalogos"
+import { useFinanceiroMes } from "./useFinanceiroMes"
 
 export default function Financeiro() {
   const { theme: t, user } = useApp();
@@ -44,9 +46,11 @@ export default function Financeiro() {
   const [loading, setLoading] = useState(true);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
   const [filterOperadora, setFilterOperadora] = useState<string>("todas");
-  const [influencerList, setInfluencerList] = useState<{ id: string; name: string }[]>([]);
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+  const {
+    influencerList,
+    operadorasList,
+    operadoraInfMap,
+  } = useFinanceiroCatalogos();
 
   const influencerListVisiveis = useMemo(() =>
     influencerList.filter((i) => podeVerInfluencer(i.id)),
@@ -96,28 +100,7 @@ export default function Financeiro() {
   function nextMes() {
     if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
   }
-  useEffect(() => {
-    supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER])
-      .then(({ data }) => { if (data) setInfluencerList(data); });
-  }, []);
-
-  useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
-      .then(({ data }) => { if (data) setOperadorasList(data); });
-  }, []);
-
-  useEffect(() => {
-    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
-      .then(({ data }) => {
-        if (!data) return;
-        const map: Record<string, string[]> = {};
-        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
-          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
-          map[row.operadora_slug].push(row.influencer_id);
-        });
-        setOperadoraInfMap(map);
-      });
-  }, []);
+  const { mesData, loadingMes, recarregarMes } = useFinanceiroMes(filtros, podeVerInfluencer, user?.role);
 
   const carregarCiclos = useCallback(async () => {
     setLoading(true);
@@ -235,6 +218,11 @@ export default function Financeiro() {
   useEffect(() => {
     void carregarCiclos();
   }, [carregarCiclos]);
+
+  const recarregarFinanceiro = useCallback(() => {
+    void carregarCiclos();
+    void recarregarMes();
+  }, [carregarCiclos, recarregarMes]);
 
   /** Cria ciclos que faltam para datas de lives realizadas não cobertas pelos existentes */
   async function complementarCiclos(existentes: CicloPagamento[]): Promise<CicloPagamento[]> {
@@ -399,9 +387,9 @@ export default function Financeiro() {
           </div>
       </div>
 
-      <BlocoKpis filtros={filtros} />
-      <BlocoCiclos ciclos={ciclosFiltradosPorMes} onRecarregar={carregarCiclos} filtros={filtros} />
-      <BlocoConsolidado filtros={filtros} />
+      <BlocoKpis mesData={mesData} loadingMes={loadingMes} />
+      <BlocoCiclos ciclos={ciclosFiltradosPorMes} onRecarregar={recarregarFinanceiro} filtros={filtros} />
+      <BlocoConsolidado mesData={mesData} loadingMes={loadingMes} />
     </div>
   );
 }
