@@ -533,7 +533,7 @@ export default function FormacaoCompetenciasPainel({
       {/* Idiomas */}
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
-          <SectionTitle sub="Catálogo fechado — um registro por idioma">Idiomas</SectionTitle>
+          <SectionTitle sub="Um registro por idioma">Idiomas</SectionTitle>
           {podeEditar && idsIdiomaCadastrados.size < catalogoIdiomas.length ? (
             <CtaCriarButton onClick={() => setModalIdioma("novo")}>Novo idioma</CtaCriarButton>
           ) : null}
@@ -666,7 +666,7 @@ export default function FormacaoCompetenciasPainel({
       {/* Portfólio */}
       <div style={pageBox}>
         <div style={getFormacaoSectionHeaderStyle()}>
-          <SectionTitle sub="Links ou arquivos — vídeo e áudio somente por URL">Portfólio</SectionTitle>
+          <SectionTitle sub="Links ou arquivos (vídeo e áudio somente por URL)">Portfólio</SectionTitle>
           {podeEditar ? <CtaCriarButton onClick={() => setModalPortfolio("novo")}>Novo item</CtaCriarButton> : null}
         </div>
         {loading ? (

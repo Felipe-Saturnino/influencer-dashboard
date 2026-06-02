@@ -688,6 +688,8 @@ export default function RhDadosCadastroPage() {
 
   const inputStyle: CSSProperties = {
     width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 10,
     border: `1px solid ${t.cardBorder}`,
@@ -698,6 +700,9 @@ export default function RhDadosCadastroPage() {
   };
 
   const readOnlyBox: CSSProperties = {
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 10,
     border: `1px solid ${t.cardBorder}`,
@@ -1036,6 +1041,7 @@ export default function RhDadosCadastroPage() {
           <div
             role="tablist"
             aria-label="Seções do cadastro"
+            className="app-cadastro-tabs-row"
             style={filterBarTabsRow(true)}
             onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_CADASTRO.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
           >
@@ -1046,14 +1052,11 @@ export default function RhDadosCadastroPage() {
         <div
           role="tablist"
           aria-label="Seções do cadastro"
+          className="app-cadastro-tabs-row"
           style={{
             display: "flex",
             gap: 8,
             marginBottom: PAGE_CONTENT_BOX_GAP,
-            flexWrap: "nowrap",
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            paddingBottom: 2,
             ...getFilterBarRowStyle(),
             width: "100%",
           }}
@@ -1071,7 +1074,7 @@ export default function RhDadosCadastroPage() {
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 16 }}>
             Estes dados são mantidos pelo RH e não podem ser alterados por aqui.
           </p>
-          <div className="app-grid-2-tight">
+          <div className="app-grid-form">
             {(
               [
                 ["Organograma", orgLabel],
@@ -1095,9 +1098,9 @@ export default function RhDadosCadastroPage() {
       ) : null}
 
       {aba === "cadastral" ? (
-        <section>
+        <section style={{ minWidth: 0, width: "100%" }}>
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Dados pessoais</h2>
-          <div className="app-grid-2-tight">
+          <div className="app-grid-form">
             <div style={{ marginBottom: 10 }}>
               <span id="dc-nome-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
                 Nome completo
@@ -1174,7 +1177,7 @@ export default function RhDadosCadastroPage() {
               />
               {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
             </div>
-            <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+            <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               <span id="dc-email-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
                 E-mail
               </span>
@@ -1186,7 +1189,7 @@ export default function RhDadosCadastroPage() {
           </div>
 
           <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Endereço residencial</h3>
-          <div className="app-grid-2-tight">
+          <div className="app-grid-form">
             <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>CEP</span>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -1199,7 +1202,7 @@ export default function RhDadosCadastroPage() {
                   placeholder="00000-000"
                   inputMode="numeric"
                   autoComplete="postal-code"
-                  style={{ ...inputStyle, flex: 1, minWidth: 120 }}
+                  style={{ ...inputStyle, flex: "1 1 120px", minWidth: 0 }}
                   aria-label="CEP residencial"
                 />
                 <button
@@ -1223,7 +1226,7 @@ export default function RhDadosCadastroPage() {
               </div>
               {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
             </div>
-            <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+            <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               <label htmlFor="dc-log" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                 Logradouro
               </label>
@@ -1298,7 +1301,7 @@ export default function RhDadosCadastroPage() {
           </div>
 
           <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Contato de emergência</h3>
-          <div className="app-grid-2-tight">
+          <div className="app-grid-form">
             <div style={{ marginBottom: 10 }}>
               <label htmlFor="dc-em-nome" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                 Nome
@@ -1342,7 +1345,7 @@ export default function RhDadosCadastroPage() {
           {isPj ? (
             <>
               <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Dados da empresa (PJ)</h3>
-              <div className="app-grid-2-tight">
+              <div className="app-grid-form">
                 <div style={{ marginBottom: 10 }}>
                   <label htmlFor="dc-emp-nome" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                     Nome da empresa
@@ -1379,7 +1382,7 @@ export default function RhDadosCadastroPage() {
                       onBlur={(e) => handleCepBlur("emp", e.target.value)}
                       placeholder="00000-000"
                       inputMode="numeric"
-                      style={{ ...inputStyle, flex: 1, minWidth: 120 }}
+                      style={{ ...inputStyle, flex: "1 1 120px", minWidth: 0 }}
                       aria-label="CEP da empresa"
                     />
                     <button
@@ -1403,7 +1406,7 @@ export default function RhDadosCadastroPage() {
                   </div>
                   {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
                 </div>
-                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
                   <label htmlFor="dc-emp-log" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                     Logradouro
                   </label>
@@ -1480,8 +1483,8 @@ export default function RhDadosCadastroPage() {
           ) : null}
 
           <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Dados bancários</h3>
-          <div className="app-grid-2-tight">
-            <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+          <div className="app-grid-form">
+            <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               <label htmlFor="dc-banco" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                 Banco
               </label>
@@ -1537,7 +1540,7 @@ export default function RhDadosCadastroPage() {
               />
               {fieldErr.conta_corrente ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.conta_corrente}</div> : null}
             </div>
-            <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+            <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               <label htmlFor="dc-pix" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                 PIX
               </label>
