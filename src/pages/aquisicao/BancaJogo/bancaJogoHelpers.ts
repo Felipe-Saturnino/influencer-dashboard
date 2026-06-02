@@ -1,6 +1,6 @@
-import type { BancaRowDb } from "./bancaJogoTypes";
-import { MESES_NOMES } from "./bancaJogoTypes";
-import type { BlocoFiltros } from "./bancaJogoFiltros";
+import type { BancaRowDb } from "./bancaJogoTypes"
+import { MESES_NOMES } from "./bancaJogoTypes"
+import type { BlocoFiltros } from "./bancaJogoFiltros"
 
 export function fmtMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

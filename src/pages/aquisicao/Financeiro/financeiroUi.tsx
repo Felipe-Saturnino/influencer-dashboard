@@ -1,7 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { BASE_COLORS, FONT } from "../../../constants/theme"
 
 // ── Componentes base ───────────────────────────────────────────────────────────
 

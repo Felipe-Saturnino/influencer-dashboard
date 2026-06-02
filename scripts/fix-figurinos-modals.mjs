@@ -18,10 +18,10 @@ if (!shared.includes("PrestadorRetiradaRow")) {
 
 for (const file of fs.readdirSync(dir).filter((f) => f.startsWith("Modal") && f.endsWith(".tsx"))) {
   let c = fs.readFileSync(path.join(dir, file), "utf8");
-  c = c.replace(/\n  labelCondicaoPeca,/g, "");
+  c = c.replace(/\n {2}labelCondicaoPeca,/g, "");
   if (!c.includes("labelCondicaoPeca")) {
     c = c.replace(
-      /(  pecaSlugsOperadoras,\n)(} from "\.\/figurinosPageHelpers")/,
+      /( {2}pecaSlugsOperadoras,\n)(} from "\.\/figurinosPageHelpers")/,
       "$1  labelCondicaoPeca,\n$2",
     );
   }

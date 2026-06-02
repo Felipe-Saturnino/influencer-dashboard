@@ -1,39 +1,27 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { useMediaQuery } from "../../../hooks/useMediaQuery";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { supabase } from "../../../lib/supabase";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { compareAtivoBoolean, compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { roleParidadeInfluencer } from "../../../lib/staffRoles";
-import { ModalConfirmDelete } from "../../../components/OperacoesModal";
-import type { BancaPerfilMapRow, BancaRowDb, BancaStatus, BancaStatusConta } from "./bancaJogoTypes";
-import { STATUS_BANCA } from "./bancaJogoTypes";
-import {
-  fmtMoeda,
-  formatarCPFVisivel,
-  mascaraCPF,
-  periodoDoMes,
-  rowInteressaConsolidado,
-  rowNoMesSolicitacao,
-  rowPassaFiltrosComunsBanca,
-  rowPassaFiltrosKpiBanca,
-} from "./bancaJogoHelpers";
-import type { BlocoFiltros } from "./bancaJogoFiltros";
-import { ModalAprovarBanca } from "./ModalAprovarBanca";
-import { ModalAlterarStatusConta } from "./ModalAlterarStatusConta";
-import { ModalBloqueioSolicitacaoCampanha } from "./ModalBloqueioSolicitacaoCampanha";
-import { ModalConfirmLiberar } from "./ModalConfirmLiberar";
-import { ModalSolicitar } from "./ModalSolicitar";
+import { useCallback, useMemo, useState, type MouseEvent } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useMediaQuery } from "../../../hooks/useMediaQuery"
+import { FONT } from "../../../constants/theme"
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { supabase } from "../../../lib/supabase"
+import { CtaCriarButton } from "../../../components/CtaCriarButton"
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
+import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
+import { Eye, EyeOff } from "lucide-react"
+import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate"
+import { roleParidadeInfluencer } from "../../../lib/staffRoles"
+import { ModalConfirmDelete } from "../../../components/OperacoesModal"
+import { type BancaPerfilMapRow, type BancaRowDb } from "./bancaJogoTypes"
+import { STATUS_BANCA } from "./bancaJogoTypes"
+import { fmtMoeda, formatarCPFVisivel, mascaraCPF, periodoDoMes, rowNoMesSolicitacao } from "./bancaJogoHelpers"
+import type { BlocoFiltros } from "./bancaJogoFiltros"
+import { ModalAprovarBanca } from "./ModalAprovarBanca"
+import { ModalBloqueioSolicitacaoCampanha } from "./ModalBloqueioSolicitacaoCampanha"
+import { ModalConfirmLiberar } from "./ModalConfirmLiberar"
+import { ModalSolicitar } from "./ModalSolicitar"
 
 export function BlocoSolicitacoes({
   filtros,

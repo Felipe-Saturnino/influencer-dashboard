@@ -10,7 +10,6 @@ import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
 import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
 import {
   formatarAgencia,
@@ -37,8 +36,23 @@ import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHi
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
-import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
+import {
+  FiltroBarTabButton,
+  FiltroCalendarioStaffSelect,
+  FiltroMeuCalendarioButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
+} from "../../../components/dashboard";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { getPageFilterBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import {
+  buildPayloadCadastralDadosCadastro,
+  dadosCadastroVistaCompleta,
+  ehProprioCadastroDados,
+  historicoVisivelAbaDadosCadastro,
+  podeEditarFuncionarioDadosCadastro,
+} from "../../../lib/rhDadosCadastroHelpers";
 import {
   MESES_CICLO_REVISAO_CADASTRO,
   payloadMarcarRevisaoCadastral,
@@ -52,8 +66,6 @@ import {
 
 const RH_SELF_MEDIA_BUCKET = "rh-prestador-self-media";
 
-const CNPJ_CONTEXTO_NAO_PJ = "00000000000191";
-
 const UFS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
   "RR", "SC", "SP", "SE", "TO",
@@ -65,15 +77,6 @@ const TIPOS_CONTRATO_LABEL: Record<RhFuncionarioTipoContrato, string> = {
   Estagio: "Estágio",
   Temporario: "Temporário",
 };
-
-/** Anotação do RH «Particular»: não listar na aba Histórico desta página (só no modal em Gestão de Prestadores). */
-function historicoVisivelAbaDadosCadastro(h: RhFuncionarioHistorico): boolean {
-  if (h.tipo !== "anotacao_rh") return true;
-  const d = h.detalhes;
-  if (!d || typeof d !== "object" || Array.isArray(d)) return true;
-  const tv = String((d as Record<string, unknown>).tipo_visibilidade ?? "").trim().toLowerCase();
-  return tv !== "particular";
-}
 
 type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico";
 
@@ -168,80 +171,6 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     conta_corrente: f.conta_corrente,
     pix: f.pix ?? "",
     observacao_rh: f.observacao_rh ?? "",
-  };
-}
-
-function buildPayloadFromForm(form: FormState, statusPrestador: RhFuncionario["status"]) {
-  const isPj = form.tipo_contrato === "PJ";
-  const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
-  const endResLinha = montarEnderecoResumoLine({
-    cep: form.res_cep,
-    logradouro: form.res_logradouro,
-    numero: form.res_numero,
-    complemento: form.res_complemento,
-    cidade: form.res_cidade,
-    estado: form.res_estado,
-  });
-  const endEmpLinha = montarEnderecoResumoLine({
-    cep: form.emp_cep,
-    logradouro: form.emp_logradouro,
-    numero: form.emp_numero,
-    complemento: form.emp_complemento,
-    cidade: form.emp_cidade,
-    estado: form.emp_estado,
-  });
-  const emergLinha = montarContatoEmergenciaLinha(
-    form.emerg_nome.trim(),
-    form.emerg_parentesco,
-    somenteDigitos(form.emerg_telefone),
-  );
-  const sal = numeroDeCentavosStr(form.salarioCentavos);
-  return {
-    status: statusPrestador,
-    nome: form.nome.trim(),
-    staff_nickname: form.staff_nickname.trim() || null,
-    rg: form.rg.trim(),
-    cpf: somenteDigitos(form.cpf),
-    telefone: somenteDigitos(form.telefone),
-    email: form.email.trim().toLowerCase(),
-    email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
-    data_nascimento: form.data_nascimento.trim() ? form.data_nascimento.trim().slice(0, 10) : null,
-    endereco_residencial: endResLinha,
-    res_cep: somenteDigitos(form.res_cep),
-    res_logradouro: form.res_logradouro.trim(),
-    res_numero: form.res_numero.trim(),
-    res_complemento: form.res_complemento.trim(),
-    res_cidade: form.res_cidade.trim(),
-    res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
-    contato_emergencia: emergLinha,
-    emerg_nome: form.emerg_nome.trim(),
-    emerg_parentesco: form.emerg_parentesco.trim(),
-    emerg_telefone: somenteDigitos(form.emerg_telefone),
-    setor: form.setor.trim(),
-    org_diretoria_id: form.org_diretoria_id || null,
-    org_gerencia_id: form.org_gerencia_id || null,
-    org_time_id: form.org_time_id || null,
-    cargo: form.cargo.trim(),
-    nivel: form.nivel.trim(),
-    salario: sal,
-    data_inicio: form.data_inicio,
-    data_funcao: form.data_funcao.trim() ? form.data_funcao.trim().slice(0, 10) : null,
-    escala: form.escala.trim(),
-    tipo_contrato: form.tipo_contrato,
-    nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
-    cnpj: cnpjFinal,
-    endereco_empresa: isPj ? endEmpLinha : "—",
-    emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
-    emp_logradouro: isPj ? form.emp_logradouro.trim() : "",
-    emp_numero: isPj ? form.emp_numero.trim() : "",
-    emp_complemento: isPj ? form.emp_complemento.trim() : "",
-    emp_cidade: isPj ? form.emp_cidade.trim() : "",
-    emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
-    banco: form.banco.trim(),
-    agencia: somenteDigitos(form.agencia),
-    conta_corrente: form.conta_corrente.trim(),
-    pix: form.pix.trim() || null,
-    observacao_rh: form.observacao_rh.trim() || null,
   };
 }
 
@@ -358,6 +287,12 @@ export default function RhDadosCadastroPage() {
   const [declaracaoSemAlteracao, setDeclaracaoSemAlteracao] = useState(false);
   const [confirmandoSemAlteracao, setConfirmandoSemAlteracao] = useState(false);
 
+  const vistaCompleta = !perm.loading && dadosCadastroVistaCompleta(perm.canView);
+  const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
+  const [meuPrestadorId, setMeuPrestadorId] = useState<string | null>(null);
+
   const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
 
   const revisaoPendente = useMemo(
@@ -380,7 +315,20 @@ export default function RhDadosCadastroPage() {
     return row.setor?.trim() || "—";
   }, [row, opcoesVinculoFlat, opcoesTimes]);
 
-  const carregarFuncionario = useCallback(async () => {
+  const visualizandoProprioCadastro = ehProprioCadastroDados(meuPrestadorId, row?.id ?? null);
+  const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null);
+  const meuCadastroAtivo = Boolean(
+    meuPrestadorId && filterStaffIds.length === 1 && filterStaffIds[0] === meuPrestadorId,
+  );
+  const staffSelectItems = useMemo(
+    () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
+    [prestadores],
+  );
+  const pageSubtitle = vistaCompleta
+    ? "Consulta e atualização cadastral de prestadores."
+    : "Atualização cadastral — apenas o seu cadastro";
+
+  const carregarFuncionarioProprio = useCallback(async () => {
     if (!user?.email?.trim()) {
       setRow(null);
       setForm(null);
@@ -423,9 +371,87 @@ export default function RhDadosCadastroPage() {
     setLoading(false);
   }, [user?.email]);
 
+  const carregarFuncionarioPorId = useCallback(async (funcionarioId: string) => {
+    setLoading(true);
+    setErroGlobal(null);
+    const { data, error } = await supabase.from("rh_funcionarios").select("*").eq("id", funcionarioId).maybeSingle();
+    if (error) {
+      setErroGlobal("Não foi possível carregar o cadastro selecionado.");
+      setRow(null);
+      setForm(null);
+      setLoading(false);
+      return;
+    }
+    if (!data) {
+      setRow(null);
+      setForm(null);
+      setLoading(false);
+      return;
+    }
+    const r = data as RhFuncionario;
+    setRow(r);
+    setForm(formDeFuncionario(r));
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    void carregarFuncionario();
-  }, [carregarFuncionario]);
+    if (perm.loading) return;
+    if (vistaCompleta) {
+      const id = filterStaffIds[0];
+      if (!id) {
+        setRow(null);
+        setForm(null);
+        setLoading(false);
+        return;
+      }
+      void carregarFuncionarioPorId(id);
+      return;
+    }
+    void carregarFuncionarioProprio();
+  }, [perm.loading, vistaCompleta, filterStaffIds, carregarFuncionarioProprio, carregarFuncionarioPorId]);
+
+  useEffect(() => {
+    if (perm.loading || !vistaCompleta) return;
+    setLoadingStaff(true);
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_funcionarios")
+        .select("id, nome, staff_nickname, email, email_spin, status")
+        .in("status", ["ativo", "indisponivel"])
+        .order("nome", { ascending: true });
+      if (cancelled) return;
+      if (error) {
+        setPrestadores([]);
+        setLoadingStaff(false);
+        return;
+      }
+      setPrestadores((data ?? []) as RhFuncionario[]);
+      setLoadingStaff(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, vistaCompleta]);
+
+  useEffect(() => {
+    if (perm.loading || !vistaCompleta || !user?.email?.trim()) {
+      if (!vistaCompleta) setMeuPrestadorId(null);
+      return;
+    }
+    let cancelled = false;
+    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((r) => {
+      if (!cancelled) setMeuPrestadorId(r?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, vistaCompleta, user?.email]);
+
+  useEffect(() => {
+    if (!vistaCompleta || !meuPrestadorId || filterStaffIds.length > 0) return;
+    setFilterStaffIds([meuPrestadorId]);
+  }, [vistaCompleta, meuPrestadorId, filterStaffIds.length]);
 
   useEffect(() => {
     let cancel = false;
@@ -441,7 +467,7 @@ export default function RhDadosCadastroPage() {
     };
   }, []);
 
-  const carregarHistorico = useCallback(async (fid: string) => {
+  const carregarHistorico = useCallback(async (fid: string, viewingSelf: boolean) => {
     setHistLoading(true);
     const { data, error } = await supabase
       .from("rh_funcionario_historico")
@@ -453,7 +479,11 @@ export default function RhDadosCadastroPage() {
       setHistItems([]);
       return;
     }
-    setHistItems(((data ?? []) as RhFuncionarioHistorico[]).filter(historicoVisivelAbaDadosCadastro));
+    setHistItems(
+      ((data ?? []) as RhFuncionarioHistorico[]).filter((h) =>
+        historicoVisivelAbaDadosCadastro(h, viewingSelf),
+      ),
+    );
   }, []);
 
   const carregarMedia = useCallback(async (fid: string) => {
@@ -471,9 +501,9 @@ export default function RhDadosCadastroPage() {
 
   useEffect(() => {
     if (!row?.id) return;
-    void carregarHistorico(row.id);
+    void carregarHistorico(row.id, visualizandoProprioCadastro);
     void carregarMedia(row.id);
-  }, [row?.id, carregarHistorico, carregarMedia]);
+  }, [row?.id, visualizandoProprioCadastro, carregarHistorico, carregarMedia]);
 
   const mediaDocs = useMemo(() => mediaRows.filter((m) => m.kind === "documento"), [mediaRows]);
 
@@ -543,7 +573,7 @@ export default function RhDadosCadastroPage() {
   };
 
   const confirmarSemAlteracoes = async () => {
-    if (!perm.canEditarOk || !row || !form || !declaracaoSemAlteracao) return;
+    if (!podeEditarSelecionado || !visualizandoProprioCadastro || !row || !form || !declaracaoSemAlteracao) return;
     const e = validarCadastroSelf(form);
     setFieldErr(e);
     if (Object.keys(e).length > 0) {
@@ -563,22 +593,27 @@ export default function RhDadosCadastroPage() {
     }
     setDeclaracaoSemAlteracao(false);
     setMsgOk("Revisão cadastral registrada. Nenhuma alteração informada neste período.");
-    await carregarFuncionario();
-    await carregarHistorico(row.id);
+    if (vistaCompleta && row.id) {
+      await carregarFuncionarioPorId(row.id);
+    } else {
+      await carregarFuncionarioProprio();
+    }
+    await carregarHistorico(row.id, true);
     notificarRevisaoCadastralAtualizada();
   };
 
   const salvarCadastro = async () => {
-    if (!perm.canEditarOk || !row || !form) return;
+    if (!podeEditarSelecionado || !row || !form) return;
     const e = validarCadastroSelf(form);
     setFieldErr(e);
     if (Object.keys(e).length > 0) return;
     setSalvando(true);
     setErroGlobal(null);
     setMsgOk(null);
+    const incluirRevisao = visualizandoProprioCadastro && prestadorExigeRevisaoCadastral(row.status);
     const payload = {
-      ...buildPayloadFromForm(form, row.status),
-      ...(prestadorExigeRevisaoCadastral(row.status) ? payloadMarcarRevisaoCadastral("alteracao") : {}),
+      ...buildPayloadCadastralDadosCadastro(form, row.status),
+      ...(incluirRevisao ? payloadMarcarRevisaoCadastral("alteracao") : {}),
     };
     const { data: atualizado, error } = await supabase.from("rh_funcionarios").update(payload).eq("id", row.id).select("*").maybeSingle();
     setSalvando(false);
@@ -590,17 +625,21 @@ export default function RhDadosCadastroPage() {
       }
       return;
     }
-    setMsgOk(revisaoPendente ? "Dados atualizados e revisão cadastral concluída." : "Dados atualizados.");
+    setMsgOk(revisaoPendente && visualizandoProprioCadastro ? "Dados atualizados e revisão cadastral concluída." : "Dados atualizados.");
     if (atualizado) {
       await syncGamePresenterDealerFromRhFuncionario(atualizado as RhFuncionario);
     }
-    await carregarFuncionario();
-    await carregarHistorico(row.id);
-    if (revisaoPendente) notificarRevisaoCadastralAtualizada();
+    if (vistaCompleta && row.id) {
+      await carregarFuncionarioPorId(row.id);
+    } else {
+      await carregarFuncionarioProprio();
+    }
+    await carregarHistorico(row.id, visualizandoProprioCadastro);
+    if (revisaoPendente && visualizandoProprioCadastro) notificarRevisaoCadastralAtualizada();
   };
 
   const uploadMidia = async (files: FileList | null) => {
-    if (!perm.canEditarOk || !row || !files?.length) return;
+    if (!podeEditarSelecionado || !row || !files?.length) return;
     setUploadingDoc(true);
     setErroGlobal(null);
     let uploaded = 0;
@@ -630,13 +669,17 @@ export default function RhDadosCadastroPage() {
         }
         uploaded += 1;
       }
-      if (uploaded > 0 && prestadorExigeRevisaoCadastral(row.status)) {
+      if (uploaded > 0 && visualizandoProprioCadastro && prestadorExigeRevisaoCadastral(row.status)) {
         const revErr = await marcarRevisaoCadastralNoBanco(row.id, true);
         if (revErr) {
           setErroGlobal(revErr.message);
         } else if (revisaoPendente) {
           setMsgOk("Documentos enviados e revisão cadastral concluída.");
-          await carregarFuncionario();
+          if (vistaCompleta && row.id) {
+            await carregarFuncionarioPorId(row.id);
+          } else {
+            await carregarFuncionarioProprio();
+          }
           notificarRevisaoCadastralAtualizada();
         }
       }
@@ -647,7 +690,7 @@ export default function RhDadosCadastroPage() {
   };
 
   const excluirMidia = async (m: RhFuncionarioSelfMedia) => {
-    if (!perm.canEditarOk || !row) return;
+    if (!podeEditarSelecionado || !row) return;
     setErroGlobal(null);
     const { error: rmErr } = await supabase.storage.from(RH_SELF_MEDIA_BUCKET).remove([m.storage_path]);
     if (rmErr) {
@@ -691,7 +734,7 @@ export default function RhDadosCadastroPage() {
     );
   }
 
-  if (perm.loading || loading) {
+  if (perm.loading || loading || (vistaCompleta && loadingStaff)) {
     return (
       <div className="app-page-shell" style={{ color: t.textMuted, fontFamily: FONT.body }}>
         <Loader2 size={18} className="app-lucide-spin" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
@@ -708,10 +751,49 @@ export default function RhDadosCadastroPage() {
     );
   }
 
+  if (vistaCompleta && !filterStaffIds[0]) {
+    return (
+      <div className="app-page-shell">
+        <PageHeader
+          icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
+          title={getPageMenuLabel("rh_dados_cadastro")}
+          subtitle={pageSubtitle}
+        />
+        <div style={getPageFilterBoxStyle(brand, t)}>
+          <div style={getFilterBarRowStyle({ width: "100%" })}>
+            <FiltroCalendarioStaffSelect
+              selected={filterStaffIds}
+              onChange={setFilterStaffIds}
+              items={staffSelectItems}
+              disabled={loadingStaff || staffSelectItems.length === 0}
+            />
+            {meuPrestadorId ? (
+              <FiltroMeuCalendarioButton
+                active={meuCadastroAtivo}
+                onClick={() => setFilterStaffIds([meuPrestadorId])}
+                ariaLabelActive="Mostrar lista completa de prestadores"
+                ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
+              >
+                Meu Cadastro
+              </FiltroMeuCalendarioButton>
+            ) : null}
+          </div>
+        </div>
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Selecione um prestador no filtro Staff para visualizar o cadastro.
+        </div>
+      </div>
+    );
+  }
+
   if (!row || !form) {
     return (
       <div className="app-page-shell">
-        <PageHeader icon={<PageMenuIcon pageKey="rh_dados_cadastro" />} title={getPageMenuLabel("rh_dados_cadastro")} subtitle="Atualização cadastral" />
+        <PageHeader
+          icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
+          title={getPageMenuLabel("rh_dados_cadastro")}
+          subtitle={pageSubtitle}
+        />
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
         </div>
@@ -730,9 +812,36 @@ export default function RhDadosCadastroPage() {
       : "—"
     : salarioFmt;
 
+  const filterBarTabsRow = (withTopBorder: boolean): CSSProperties => ({
+    ...getFilterBarRowStyle(),
+    width: "100%",
+    marginBottom: withTopBorder ? 0 : PAGE_CONTENT_BOX_GAP,
+    ...(withTopBorder ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` } : {}),
+  });
+
+  const abasCadastro = (
+    <>
+      {ABAS.map((tb) => (
+        <FiltroBarTabButton
+          key={tb.key}
+          id={`tab-cadastro-${tb.key}`}
+          active={aba === tb.key}
+          onClick={() => setAba(tb.key)}
+          icon={CADASTRO_TAB_ICONS[tb.key]}
+        >
+          {tb.label}
+        </FiltroBarTabButton>
+      ))}
+    </>
+  );
+
   return (
     <div className="app-page-shell app-page-shell--pb64">
-      <PageHeader icon={<PageMenuIcon pageKey="rh_dados_cadastro" />} title={getPageMenuLabel("rh_dados_cadastro")} subtitle="Atualização cadastral — apenas o seu cadastro" />
+      <PageHeader
+        icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
+        title={getPageMenuLabel("rh_dados_cadastro")}
+        subtitle={pageSubtitle}
+      />
 
       {erroGlobal ? (
         <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, border: `1px solid #e84025`, color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
@@ -759,7 +868,7 @@ export default function RhDadosCadastroPage() {
         </div>
       ) : null}
 
-      {gateRedirectBanner ? (
+      {gateRedirectBanner && visualizandoProprioCadastro ? (
         <div
           role="status"
           style={{
@@ -778,7 +887,7 @@ export default function RhDadosCadastroPage() {
         </div>
       ) : null}
 
-      {revisaoPendente ? (
+      {revisaoPendente && visualizandoProprioCadastro ? (
         <section
           aria-labelledby="revisao-cadastral-titulo"
           style={{
@@ -829,14 +938,14 @@ export default function RhDadosCadastroPage() {
                   fontSize: 13,
                   color: t.text,
                   fontFamily: FONT.body,
-                  cursor: perm.canEditarOk ? "pointer" : "default",
+                  cursor: podeEditarSelecionado ? "pointer" : "default",
                   marginBottom: 12,
                 }}
               >
                 <input
                   type="checkbox"
                   checked={declaracaoSemAlteracao}
-                  disabled={!perm.canEditarOk || confirmandoSemAlteracao || salvando}
+                  disabled={!podeEditarSelecionado || confirmandoSemAlteracao || salvando}
                   onChange={(ev) => setDeclaracaoSemAlteracao(ev.target.checked)}
                   aria-label="Confirmar que não houve alteração nos dados cadastrais neste período"
                   style={{ marginTop: 3, flexShrink: 0 }}
@@ -848,7 +957,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <button
                 type="button"
-                disabled={!perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando}
+                disabled={!podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando}
                 onClick={() => void confirmarSemAlteracoes()}
                 style={{
                   padding: "10px 16px",
@@ -861,11 +970,11 @@ export default function RhDadosCadastroPage() {
                   fontSize: 13,
                   fontWeight: 700,
                   cursor:
-                    !perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando
+                    !podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando
                       ? "not-allowed"
                       : "pointer",
                   opacity:
-                    !perm.canEditarOk || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando ? 0.55 : 1,
+                    !podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando ? 0.55 : 1,
                   fontFamily: FONT.body,
                   display: "inline-flex",
                   alignItems: "center",
@@ -884,7 +993,7 @@ export default function RhDadosCadastroPage() {
             </div>
           </div>
         </section>
-      ) : proximaRevisaoLabel ? (
+      ) : proximaRevisaoLabel && visualizandoProprioCadastro ? (
         <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
           Próxima revisão cadastral prevista em {proximaRevisaoLabel}.
           {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
@@ -903,32 +1012,73 @@ export default function RhDadosCadastroPage() {
         </p>
       ) : null}
 
-      <div
-        role="tablist"
-        aria-label="Seções do cadastro"
-        style={{
-          display: "flex",
-          gap: 8,
-          marginBottom: PAGE_CONTENT_BOX_GAP,
-          flexWrap: "nowrap",
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
-          paddingBottom: 2,
-        }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
-      >
-        {ABAS.map((tb) => (
-          <FiltroBarTabButton
-            key={tb.key}
-            id={`tab-cadastro-${tb.key}`}
-            active={aba === tb.key}
-            onClick={() => setAba(tb.key)}
-            icon={CADASTRO_TAB_ICONS[tb.key]}
+      {vistaCompleta && row && !podeEditarSelecionado ? (
+        <div
+          role="status"
+          style={{
+            marginBottom: PAGE_CONTENT_BOX_GAP,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            fontSize: 13,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+          }}
+        >
+          Visualização somente leitura — você não pode editar o cadastro deste prestador.
+        </div>
+      ) : null}
+
+      {vistaCompleta ? (
+        <div style={{ ...getPageFilterBoxStyle(brand, t), marginBottom: PAGE_CONTENT_BOX_GAP }}>
+          <div style={getFilterBarRowStyle({ width: "100%" })}>
+            <FiltroCalendarioStaffSelect
+              selected={filterStaffIds}
+              onChange={setFilterStaffIds}
+              items={staffSelectItems}
+              disabled={loadingStaff || staffSelectItems.length === 0}
+            />
+            {meuPrestadorId ? (
+              <FiltroMeuCalendarioButton
+                active={meuCadastroAtivo}
+                onClick={() => setFilterStaffIds([meuPrestadorId])}
+                ariaLabelActive="Mostrar lista completa de prestadores"
+                ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
+              >
+                Meu Cadastro
+              </FiltroMeuCalendarioButton>
+            ) : null}
+          </div>
+          <div
+            role="tablist"
+            aria-label="Seções do cadastro"
+            style={filterBarTabsRow(true)}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
           >
-            {tb.label}
-          </FiltroBarTabButton>
-        ))}
-      </div>
+            {abasCadastro}
+          </div>
+        </div>
+      ) : (
+        <div
+          role="tablist"
+          aria-label="Seções do cadastro"
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: PAGE_CONTENT_BOX_GAP,
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: 2,
+            ...getFilterBarRowStyle(),
+            width: "100%",
+          }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS.map((tb) => tb.key), setAba, (k) => `tab-cadastro-${k}`)}
+        >
+          {abasCadastro}
+        </div>
+      )}
 
       {aba === "trabalho" ? (
         <section aria-labelledby="sec-contratacao">
@@ -988,7 +1138,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-rg"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.rg}
                 onChange={(e) => setForm((s) => (s ? { ...s, rg: formatarRgInput(e.target.value) } : s))}
                 style={inputStyle}
@@ -1001,7 +1151,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-cpf"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.cpf}
                 onChange={(e) => setForm((s) => (s ? { ...s, cpf: formatarCpfDigitos(e.target.value) } : s))}
                 style={inputStyle}
@@ -1012,7 +1162,7 @@ export default function RhDadosCadastroPage() {
               <label htmlFor="dc-data-nasc" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
                 Data de nascimento
               </label>
-              {perm.canEditarOk ? (
+              {podeEditarSelecionado ? (
                 <input
                   id="dc-data-nasc"
                   type="date"
@@ -1034,7 +1184,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-tel"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.telefone}
                 onChange={(e) => setForm((s) => (s ? { ...s, telefone: formatarTelefoneBr(e.target.value) } : s))}
                 style={inputStyle}
@@ -1059,7 +1209,7 @@ export default function RhDadosCadastroPage() {
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <input
                   id="dc-cep-res"
-                  disabled={!perm.canEditarOk}
+                  disabled={!podeEditarSelecionado}
                   value={form.res_cep}
                   onChange={(e) => setForm((s) => (s ? { ...s, res_cep: formatarCepDigitos(e.target.value) } : s))}
                   onBlur={(e) => handleCepBlur("res", e.target.value)}
@@ -1071,7 +1221,7 @@ export default function RhDadosCadastroPage() {
                 />
                 <button
                   type="button"
-                  disabled={!perm.canEditarOk || somenteDigitos(form.res_cep).length !== 8}
+                  disabled={!podeEditarSelecionado || somenteDigitos(form.res_cep).length !== 8}
                   onClick={() => handleCepBlur("res", form.res_cep)}
                   style={{
                     padding: "8px 12px",
@@ -1081,7 +1231,7 @@ export default function RhDadosCadastroPage() {
                     color: t.text,
                     fontSize: 12,
                     fontWeight: 600,
-                    cursor: perm.canEditarOk ? "pointer" : "not-allowed",
+                    cursor: podeEditarSelecionado ? "pointer" : "not-allowed",
                     fontFamily: FONT.body,
                   }}
                 >
@@ -1096,7 +1246,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-log"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.res_logradouro}
                 onChange={(e) => setForm((s) => (s ? { ...s, res_logradouro: e.target.value } : s))}
                 style={inputStyle}
@@ -1109,7 +1259,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-num"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.res_numero}
                 onChange={(e) => setForm((s) => (s ? { ...s, res_numero: e.target.value } : s))}
                 style={inputStyle}
@@ -1122,7 +1272,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-compl"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.res_complemento}
                 onChange={(e) => setForm((s) => (s ? { ...s, res_complemento: e.target.value } : s))}
                 style={inputStyle}
@@ -1134,7 +1284,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-cid"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.res_cidade}
                 onChange={(e) => setForm((s) => (s ? { ...s, res_cidade: e.target.value } : s))}
                 style={inputStyle}
@@ -1147,7 +1297,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <select
                 id="dc-uf"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.res_estado}
                 onChange={(e) => setForm((s) => (s ? { ...s, res_estado: e.target.value.toUpperCase().slice(0, 2) } : s))}
                 style={inputStyle}
@@ -1172,7 +1322,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-em-nome"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.emerg_nome}
                 onChange={(e) => setForm((s) => (s ? { ...s, emerg_nome: e.target.value } : s))}
                 style={inputStyle}
@@ -1185,7 +1335,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-em-par"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.emerg_parentesco}
                 onChange={(e) => setForm((s) => (s ? { ...s, emerg_parentesco: e.target.value } : s))}
                 style={inputStyle}
@@ -1197,7 +1347,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-em-tel"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.emerg_telefone}
                 onChange={(e) => setForm((s) => (s ? { ...s, emerg_telefone: formatarTelefoneBr(e.target.value) } : s))}
                 style={inputStyle}
@@ -1216,7 +1366,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-emp-nome"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.nome_empresa}
                     onChange={(e) => setForm((s) => (s ? { ...s, nome_empresa: e.target.value } : s))}
                     style={inputStyle}
@@ -1229,7 +1379,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-cnpj"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.cnpj}
                     onChange={(e) => setForm((s) => (s ? { ...s, cnpj: formatarCnpjDigitos(e.target.value) } : s))}
                     style={inputStyle}
@@ -1240,7 +1390,7 @@ export default function RhDadosCadastroPage() {
                   <span style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>CEP</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <input
-                      disabled={!perm.canEditarOk}
+                      disabled={!podeEditarSelecionado}
                       value={form.emp_cep}
                       onChange={(e) => setForm((s) => (s ? { ...s, emp_cep: formatarCepDigitos(e.target.value) } : s))}
                       onBlur={(e) => handleCepBlur("emp", e.target.value)}
@@ -1251,7 +1401,7 @@ export default function RhDadosCadastroPage() {
                     />
                     <button
                       type="button"
-                      disabled={!perm.canEditarOk || somenteDigitos(form.emp_cep).length !== 8}
+                      disabled={!podeEditarSelecionado || somenteDigitos(form.emp_cep).length !== 8}
                       onClick={() => handleCepBlur("emp", form.emp_cep)}
                       style={{
                         padding: "8px 12px",
@@ -1261,7 +1411,7 @@ export default function RhDadosCadastroPage() {
                         color: t.text,
                         fontSize: 12,
                         fontWeight: 600,
-                        cursor: perm.canEditarOk ? "pointer" : "not-allowed",
+                        cursor: podeEditarSelecionado ? "pointer" : "not-allowed",
                         fontFamily: FONT.body,
                       }}
                     >
@@ -1276,7 +1426,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-emp-log"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.emp_logradouro}
                     onChange={(e) => setForm((s) => (s ? { ...s, emp_logradouro: e.target.value } : s))}
                     style={inputStyle}
@@ -1289,7 +1439,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-emp-num"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.emp_numero}
                     onChange={(e) => setForm((s) => (s ? { ...s, emp_numero: e.target.value } : s))}
                     style={inputStyle}
@@ -1302,7 +1452,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-emp-compl"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.emp_complemento}
                     onChange={(e) => setForm((s) => (s ? { ...s, emp_complemento: e.target.value } : s))}
                     style={inputStyle}
@@ -1314,7 +1464,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <input
                     id="dc-emp-cid"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.emp_cidade}
                     onChange={(e) => setForm((s) => (s ? { ...s, emp_cidade: e.target.value } : s))}
                     style={inputStyle}
@@ -1327,7 +1477,7 @@ export default function RhDadosCadastroPage() {
                   </label>
                   <select
                     id="dc-emp-uf"
-                    disabled={!perm.canEditarOk}
+                    disabled={!podeEditarSelecionado}
                     value={form.emp_estado}
                     onChange={(e) => setForm((s) => (s ? { ...s, emp_estado: e.target.value.toUpperCase().slice(0, 2) } : s))}
                     style={inputStyle}
@@ -1354,7 +1504,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <select
                 id="dc-banco"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={rhBancoParaSelectValue(form.banco)}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -1384,7 +1534,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-ag"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.agencia}
                 onChange={(e) => setForm((s) => (s ? { ...s, agencia: formatarAgencia(e.target.value) } : s))}
                 style={inputStyle}
@@ -1397,7 +1547,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-cc"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.conta_corrente}
                 onChange={(e) => setForm((s) => (s ? { ...s, conta_corrente: e.target.value } : s))}
                 style={inputStyle}
@@ -1410,7 +1560,7 @@ export default function RhDadosCadastroPage() {
               </label>
               <input
                 id="dc-pix"
-                disabled={!perm.canEditarOk}
+                disabled={!podeEditarSelecionado}
                 value={form.pix}
                 onChange={(e) => setForm((s) => (s ? { ...s, pix: e.target.value } : s))}
                 style={inputStyle}
@@ -1419,7 +1569,7 @@ export default function RhDadosCadastroPage() {
             </div>
           </div>
 
-          {perm.canEditarOk ? (
+          {podeEditarSelecionado ? (
             <div style={{ marginTop: 20 }}>
               <button
                 type="button"
@@ -1460,7 +1610,7 @@ export default function RhDadosCadastroPage() {
       {aba === "documentos" ? (
         <section>
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Documentos</h2>
-          {perm.canEditarOk ? (
+          {podeEditarSelecionado ? (
             <>
               <input
                 id="dc-upload-docs"
@@ -1525,7 +1675,7 @@ export default function RhDadosCadastroPage() {
                         </a>
                       </>
                     ) : null}
-                    {perm.canEditarOk ? (
+                    {podeEditarSelecionado ? (
                       <button
                         type="button"
                         onClick={() => void excluirMidia(m)}

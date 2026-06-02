@@ -1,4 +1,4 @@
-import type { PagamentoStatus } from "../../../types";
+import type { PagamentoStatus } from "../../../types"
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 

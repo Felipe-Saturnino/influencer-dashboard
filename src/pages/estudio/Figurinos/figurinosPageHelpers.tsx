@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
-import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
-import type { RhFigurinoCondition, RhFigurinoEmprestimo, RhFigurinoPeca } from "./types";
+import type { ReactNode } from "react"
+import { Loader2 } from "lucide-react"
+import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync"
+import type { RhFigurinoCondition, RhFigurinoEmprestimo, RhFigurinoPeca } from "./types"
 
 export function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";

@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { AlertTriangle, Banknote, CheckCircle2, Loader2, Plus, RotateCcw } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
-import { supabase } from "../../../lib/supabase";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import type { CicloPagamento } from "../../../types";
-import type { FinanceiroLiveComResultado, FinanceiroLiveRow, PagamentoRow } from "./financeiroTypes";
+import { useState } from "react"
+import { AlertTriangle, Banknote, Loader2, RotateCcw } from "lucide-react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { BASE_COLORS, FONT } from "../../../constants/theme"
+import { FONT_TITLE } from "../../../lib/dashboardConstants"
+import { fmtBRL } from "../../../lib/dashboardHelpers"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import { type PagamentoRow } from "./financeiroTypes"
 
 export function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
   row: PagamentoRow;

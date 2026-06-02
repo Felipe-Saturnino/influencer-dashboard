@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import { FileText, History } from "lucide-react";
-import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
-import type { RhFuncionario } from "../../../types/rhFuncionario";
+import type { ReactNode } from "react"
+import { FileText, History } from "lucide-react"
+import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles"
+import type { RhFuncionario } from "../../../types/rhFuncionario"
 
 export type AbaDetalheFig = "detalhes" | "historico";
 

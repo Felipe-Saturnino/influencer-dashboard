@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react"
 
 /** Renderiza Code128 a partir do valor numérico do barcode (payload da etiqueta). */
 export function BarcodeBlock({ value }: { value: string }) {

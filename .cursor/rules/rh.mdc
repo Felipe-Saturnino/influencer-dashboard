@@ -52,8 +52,16 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Dados de Cadastro (`rh_dados_cadastro`)
 
-- Documentos e metadados de cadastro.
-- **Handoff:** upload, exclusão, permissões.
+- `PageHeader`; subtítulo **Próprios:** «Atualização cadastral — apenas o seu cadastro» · **Ver Sim:** «Consulta e atualização cadastral de prestadores.»
+- **Permissões (Gestão de Usuários → `rh_dados_cadastro`):**
+  - **Ver/Editar Próprios:** entra direto no cadastro vinculado ao e-mail de login; sem filtro Staff nem botão **Meu Cadastro**.
+  - **Ver Sim + Editar Próprios:** barra com `FiltroCalendarioStaffSelect` + **Meu Cadastro** (`FiltroMeuCalendarioButton`); abas na linha 2 do bloco (`getPageFilterBoxStyle`); cadastro alheio **somente leitura**.
+  - **Ver Sim + Editar Sim:** mesma barra; edita abas **Dados cadastrais** e **Documentos** de qualquer prestador ativo/indisponível (sem depender de Gestão de Prestadores).
+- **Aba Histórico de trabalho:** sempre read-only para todos — contratação/organograma/remuneração só em **Gestão de Prestadores**.
+- **Revisão cadastral (6 meses):** banner e «Confirmar sem alterações» só no **próprio** cadastro.
+- **Histórico (aba):** anotações RH «Particulares» ocultas para o prestador no próprio cadastro; visíveis ao consultar terceiro com Ver Sim.
+- **RLS:** migration `20260602140000_rh_dados_cadastro_escopo_sim.sql` — `_rh_dados_cadastro_perm_val`; trigger preserva campos de contratação em edições via esta página.
+- Helpers: `lib/rhDadosCadastroHelpers.ts`.
 
 ---
 

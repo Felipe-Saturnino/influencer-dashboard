@@ -1,5 +1,5 @@
-import type { CicloPagamento, Role } from "../../../types";
-import { MESES_NOMES } from "./financeiroConstants";
+import type { CicloPagamento, Role } from "../../../types"
+import { MESES_NOMES } from "./financeiroConstants"
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

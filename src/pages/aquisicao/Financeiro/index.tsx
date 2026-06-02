@@ -1,20 +1,20 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { usePermission } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { supabase } from "../../../lib/supabase";
-import type { CicloPagamento } from "../../../types";
-import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
-import { PageHeader } from "../../../components/PageHeader";
-import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
+import { usePermission } from "../../../hooks/usePermission"
+import { BASE_COLORS, FONT } from "../../../constants/theme"
+import { FONT_TITLE } from "../../../lib/dashboardConstants"
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
+import { supabase } from "../../../lib/supabase"
+import type { CicloPagamento } from "../../../types"
+import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
+import { PageHeader } from "../../../components/PageHeader"
+import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles"
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles"
 import {
   cicloAberto,
   cicloSemanalParaData,
@@ -23,16 +23,16 @@ import {
   opcoesMesesDoCarrossel,
   periodoDoMes,
   podeVerPagamentosAgenteFinanceiro,
-} from "./financeiroCiclos";
+} from "./financeiroCiclos"
 import type {
   FinanceiroAgenteCicloEscopo,
   FinanceiroLiveEscopoRow,
   FinanceiroPagamentoCicloEscopo,
-} from "./financeiroTypes";
-import type { BlocoFiltros } from "./financeiroFiltros";
-import { BlocoKpis } from "./BlocoKpis";
-import { BlocoCiclos } from "./BlocoCiclos";
-import { BlocoConsolidado } from "./BlocoConsolidado";
+} from "./financeiroTypes"
+import type { BlocoFiltros } from "./financeiroFiltros"
+import { BlocoKpis } from "./BlocoKpis"
+import { BlocoCiclos } from "./BlocoCiclos"
+import { BlocoConsolidado } from "./BlocoConsolidado"
 
 export default function Financeiro() {
   const { theme: t, user } = useApp();

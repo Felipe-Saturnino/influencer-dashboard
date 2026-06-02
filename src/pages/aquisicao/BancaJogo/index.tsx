@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { usePermission } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { supabase } from "../../../lib/supabase";
-import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard";
-import { PageHeader } from "../../../components/PageHeader";
-import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
-import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
-import { fmtMoeda, gerarMeses, periodoDoMes, rowPassaFiltrosKpiBanca } from "./bancaJogoHelpers";
-import type { BancaPerfilMapRow, BancaRowDb, BancaStatusConta } from "./bancaJogoTypes";
-import { STATUS_BANCA } from "./bancaJogoTypes";
-import type { BlocoFiltros } from "./bancaJogoFiltros";
-import { BlocoSolicitacoes } from "./BlocoSolicitacoes";
-import { BlocoConsolidadoBanca } from "./BlocoConsolidadoBanca";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
+import { usePermission } from "../../../hooks/usePermission"
+import { FONT } from "../../../constants/theme"
+import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
+import { FONT_TITLE } from "../../../lib/dashboardConstants"
+import { supabase } from "../../../lib/supabase"
+import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
+import { PageHeader } from "../../../components/PageHeader"
+import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
+import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles"
+import { fmtMoeda, gerarMeses, periodoDoMes, rowPassaFiltrosKpiBanca } from "./bancaJogoHelpers"
+import type { BancaPerfilMapRow, BancaRowDb, BancaStatusConta } from "./bancaJogoTypes"
+import { STATUS_BANCA } from "./bancaJogoTypes"
+import type { BlocoFiltros } from "./bancaJogoFiltros"
+import { BlocoSolicitacoes } from "./BlocoSolicitacoes"
+import { BlocoConsolidadoBanca } from "./BlocoConsolidadoBanca"
 
 export default function BancaJogo() {
   const { theme: t, user } = useApp();

@@ -1,36 +1,20 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { useMediaQuery } from "../../../hooks/useMediaQuery";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { supabase } from "../../../lib/supabase";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { compareAtivoBoolean, compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
-import type { BancaPerfilMapRow, BancaRowDb, BancaStatus, BancaStatusConta } from "./bancaJogoTypes";
-import { STATUS_BANCA } from "./bancaJogoTypes";
-import {
-  fmtMoeda,
-  formatarCPFVisivel,
-  mascaraCPF,
-  periodoDoMes,
-  rowInteressaConsolidado,
-  rowNoMesSolicitacao,
-  rowPassaFiltrosComunsBanca,
-  rowPassaFiltrosKpiBanca,
-} from "./bancaJogoHelpers";
-import type { BlocoFiltros } from "./bancaJogoFiltros";
-import { ModalAprovarBanca } from "./ModalAprovarBanca";
-import { ModalAlterarStatusConta } from "./ModalAlterarStatusConta";
-import { ModalBloqueioSolicitacaoCampanha } from "./ModalBloqueioSolicitacaoCampanha";
-import { ModalConfirmLiberar } from "./ModalConfirmLiberar";
-import { ModalSolicitar } from "./ModalSolicitar";
+import { Fragment, useMemo, useState } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useMediaQuery } from "../../../hooks/useMediaQuery"
+import { FONT } from "../../../constants/theme"
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants"
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
+import { compareAtivoBoolean, compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
+import { ChevronRight } from "lucide-react"
+import { type BancaPerfilMapRow, type BancaRowDb, type BancaStatusConta } from "./bancaJogoTypes"
+import { STATUS_BANCA } from "./bancaJogoTypes"
+import { fmtMoeda, periodoDoMes, rowInteressaConsolidado } from "./bancaJogoHelpers"
+import type { BlocoFiltros } from "./bancaJogoFiltros"
+import { ModalAlterarStatusConta } from "./ModalAlterarStatusConta"
 
 export function BlocoConsolidadoBanca({
   filtros,

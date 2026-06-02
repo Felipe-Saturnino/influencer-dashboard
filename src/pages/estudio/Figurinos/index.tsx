@@ -1,26 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, FileText, HandHelping, History, Loader2, Package, ScanLine, Trash2, Wrench, XCircle } from "lucide-react";
-import { supabase } from "../../../lib/supabase";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { usePermission } from "../../../hooks/usePermission";
-import { useRouteTab } from "../../../hooks/useRouteTab";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
-import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
-import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
-import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
-import { PageHeader } from "../../../components/PageHeader";
-import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { AlertCircle, Loader2, ScanLine } from "lucide-react"
+import { supabase } from "../../../lib/supabase"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
+import { usePermission } from "../../../hooks/usePermission"
+import { useRouteTab } from "../../../hooks/useRouteTab"
+import { FONT } from "../../../constants/theme"
+import { FONT_TITLE } from "../../../lib/dashboardConstants"
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles"
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch"
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
+import { PageHeader } from "../../../components/PageHeader"
+import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants"
+import { CtaCriarButton } from "../../../components/CtaCriarButton"
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import {
   FiltroFigurinosCategoriaSelect,
   FiltroFigurinosTamanhoSelect,
@@ -28,47 +25,15 @@ import {
   FiltroOperadoraSelect,
   SortTableTh,
   type SortDir,
-} from "../../../components/dashboard";
-import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
-import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
-import type { Operadora } from "../../../types";
-import type { RhFuncionario } from "../../../types/rhFuncionario";
-import type {
-  RhFigurinoCondition,
-  RhFigurinoEmprestimo,
-  RhFigurinoPeca,
-  RhFigurinoStatus,
-  RhFigurinoStatusHist,
-  RhWithdrawalType,
-} from "./types";
-import { BarcodeBlock } from "./BarcodeBlock";
-
-import {
-  CATEGORIAS,
-  TAMANHOS,
-  emptyMsgAba,
-  labelAba,
-  labelStatusHistorico,
-  labelStatusPeca,
-  labelTipoRetirada,
-  TIPOS_MANUTENCAO,
-  type RhFigurinoTipoManutencao,
-} from "./figurinosConstants";
-
-type Aba = RhFigurinoStatus;
-
-const FIGURINOS_ABAS: Aba[] = ["available", "borrowed", "maintenance", "discarded"];
-
-const FIGURINOS_TAB_ICONS: Record<Aba, ReactNode> = {
-  available: <Package {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  borrowed: <HandHelping {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  maintenance: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  discarded: <Trash2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
-};
-
-import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico";
+} from "../../../components/dashboard"
+import { onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles"
+import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort"
+import type { Operadora } from "../../../types"
+import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types"
+import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada } from "./figurinosConstants";
+import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
 import {
   actorLabel,
   ctaButtonContent,
@@ -81,15 +46,15 @@ import {
   normNomeParaFiltroPrestadorFig,
   pecaSlugsOperadoras,
   tableRowHoverBg,
-} from "./figurinosPageHelpers";
-import { ModalCadastroPeca } from "./ModalCadastroPeca";
-import { ModalDescartarPeca } from "./ModalDescartarPeca";
-import { ModalDetalhe } from "./ModalDetalhe";
-import { ModalDevolucao } from "./ModalDevolucao";
-import { ModalManutencaoPeca } from "./ModalManutencaoPeca";
-import { ModalRetirada } from "./ModalRetirada";
-import { ModalScanner } from "./ModalScanner";
-import { ModalSucessoCadastro } from "./ModalSucessoCadastro";
+} from "./figurinosPageHelpers"
+import { ModalCadastroPeca } from "./ModalCadastroPeca"
+import { ModalDescartarPeca } from "./ModalDescartarPeca"
+import { ModalDetalhe } from "./ModalDetalhe"
+import { ModalDevolucao } from "./ModalDevolucao"
+import { ModalManutencaoPeca } from "./ModalManutencaoPeca"
+import { ModalRetirada } from "./ModalRetirada"
+import { ModalScanner } from "./ModalScanner"
+import { ModalSucessoCadastro } from "./ModalSucessoCadastro"
 
 export default function FigurinosPage() {
   const { theme: t, user, podeVerOperadora } = useApp();

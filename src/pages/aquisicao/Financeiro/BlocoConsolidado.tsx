@@ -1,43 +1,21 @@
-import { useCallback, useEffect, useMemo, useState, Fragment, type CSSProperties } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { useMediaQuery } from "../../../hooks/useMediaQuery";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { supabase } from "../../../lib/supabase";
-import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
-import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import type { CicloPagamento, PagamentoStatus } from "../../../types";
-import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../../../lib/classificacaoSort";
-import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
-import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
-import { AlertTriangle, Banknote, CheckCircle2, ChevronRight, Clock, Loader2, Plus, RotateCcw } from "lucide-react";
-import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants";
-import { cicloAberto, fmtCicloDatas, periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos";
-import type {
-  FinanceiroAgenteDbRow,
-  FinanceiroHistoricoPagRow,
-  FinanceiroLiveComResultado,
-  FinanceiroLiveEscopoRow,
-  FinanceiroLiveResultadoRow,
-  FinanceiroPagamentoCicloEscopo,
-  FinanceiroPagamentoDbRow,
-  FinanceiroPagamentoParcial,
-  FinanceiroPerfilCacheRow,
-  FinanceiroPerfilRow,
-  FinanceiroProfileRow,
-  PagamentoRow,
-} from "./financeiroTypes";
-import type { BlocoFiltros } from "./financeiroFiltros";
-import { Badge, BtnAcao, BtnPrimary, SelectInput } from "./financeiroUi";
-import { ModalAgente } from "./ModalAgente";
-import { ModalAnalisar } from "./ModalAnalisar";
-import { ModalPagar } from "./ModalPagar";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { FONT } from "../../../constants/theme"
+import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers"
+import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { supabase } from "../../../lib/supabase"
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
+import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
+import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles"
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
+import { ChevronRight, Loader2 } from "lucide-react"
+import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
+import { periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
+import { type FinanceiroAgenteDbRow, type FinanceiroHistoricoPagRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilRow, type FinanceiroProfileRow } from "./financeiroTypes"
+import type { BlocoFiltros } from "./financeiroFiltros"
+import { Badge } from "./financeiroUi"
 
 export function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();

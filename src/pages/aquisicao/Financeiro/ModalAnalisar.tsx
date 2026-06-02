@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { AlertTriangle, Banknote, CheckCircle2, Loader2, Plus, RotateCcw } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
-import { supabase } from "../../../lib/supabase";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import type { CicloPagamento } from "../../../types";
-import type { FinanceiroLiveComResultado, FinanceiroLiveRow, PagamentoRow } from "./financeiroTypes";
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { BASE_COLORS, FONT } from "../../../constants/theme"
+import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers"
+import { supabase } from "../../../lib/supabase"
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import type { CicloPagamento } from "../../../types"
+import type { FinanceiroLiveComResultado, FinanceiroLiveRow, PagamentoRow } from "./financeiroTypes"
 
 export function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   row: PagamentoRow;

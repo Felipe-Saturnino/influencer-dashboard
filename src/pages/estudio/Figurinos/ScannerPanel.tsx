@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
-import { Loader2 } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
-import { FONT } from "../../../constants/theme";
+import { useCallback, useEffect, useRef, useState } from "react"
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library"
+import { Loader2 } from "lucide-react"
+import { useApp } from "../../../context/AppContext"
+import { FONT } from "../../../constants/theme"
 
 type Props = {
   onDetect: (texto: string) => void;

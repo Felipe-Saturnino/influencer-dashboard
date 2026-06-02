@@ -1,45 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Loader2, ScanLine, XCircle } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT } from "../../../constants/theme";
-import { supabase } from "../../../lib/supabase";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import type { Operadora } from "../../../types";
-import type { RhFuncionario } from "../../../types/rhFuncionario";
-import type {
-  RhFigurinoCondition,
-  RhFigurinoEmprestimo,
-  RhFigurinoPeca,
-  RhFigurinoStatusHist,
-  RhWithdrawalType,
-} from "./types";
-import {
-  CATEGORIAS,
-  TAMANHOS,
-  TIPOS_MANUTENCAO,
-  labelStatusHistorico,
-  labelStatusPeca,
-  labelTipoRetirada,
-  type RhFigurinoTipoManutencao,
-} from "./figurinosConstants";
-import {
-  actorLabel,
-  ctaButtonContent,
-  emprestimoFigurinoEhDoProprioLogin,
-  fmtDataHora,
-  fmtDataSóDia,
-  labelEmprestadoParaTabela,
-  labelOperadorasPeca,
-  normNomeParaFiltroPrestadorFig,
-  pecaSlugsOperadoras,
-  labelCondicaoPeca,
-} from "./figurinosPageHelpers";
-import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico";
-import { BarcodeBlock } from "./BarcodeBlock";
+import { useMemo, useState } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { FONT } from "../../../constants/theme"
+import { supabase } from "../../../lib/supabase"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
+import { type RhFigurinoPeca } from "./types"
+import { TIPOS_MANUTENCAO, type RhFigurinoTipoManutencao } from "./figurinosConstants"
+import { ctaButtonContent, fmtDataHora } from "./figurinosPageHelpers"
+import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico"
 
 export function ModalManutencaoPeca({
   peca,

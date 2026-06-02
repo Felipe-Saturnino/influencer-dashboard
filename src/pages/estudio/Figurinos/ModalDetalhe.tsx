@@ -1,57 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Loader2, ScanLine, XCircle } from "lucide-react";
-import { FiltroBarTabButton } from "../../../components/dashboard";
-import { FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
-import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT } from "../../../constants/theme";
-import { supabase } from "../../../lib/supabase";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import type { Operadora } from "../../../types";
-import type { RhFuncionario } from "../../../types/rhFuncionario";
-import type {
-  RhFigurinoCondition,
-  RhFigurinoEmprestimo,
-  RhFigurinoPeca,
-  RhFigurinoStatusHist,
-  RhWithdrawalType,
-} from "./types";
-import {
-  CATEGORIAS,
-  TAMANHOS,
-  TIPOS_MANUTENCAO,
-  labelStatusHistorico,
-  labelStatusPeca,
-  labelTipoRetirada,
-  type RhFigurinoTipoManutencao,
-} from "./figurinosConstants";
-import {
-  actorLabel,
-  ctaButtonContent,
-  emprestimoFigurinoEhDoProprioLogin,
-  fmtDataHora,
-  fmtDataSóDia,
-  labelEmprestadoParaTabela,
-  labelOperadorasPeca,
-  normNomeParaFiltroPrestadorFig,
-  pecaSlugsOperadoras,
-  labelCondicaoPeca,
-  tableRowHoverBg,
-} from "./figurinosPageHelpers";
-import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico";
+import { useMemo, useState } from "react"
+import { Loader2 } from "lucide-react"
+import { FiltroBarTabButton } from "../../../components/dashboard"
+import { onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles"
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles"
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { FONT } from "../../../constants/theme"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
+import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types";
+import { labelStatusHistorico, labelStatusPeca, labelTipoRetirada } from "./figurinosConstants"
+import { ctaButtonContent, fmtDataHora, fmtDataSóDia, labelCondicaoPeca, tableRowHoverBg } from "./figurinosPageHelpers"
 import {
   DETALHE_ABAS,
   DETALHE_TAB_ICONS,
   DETALHE_TAB_LABELS,
   type AbaDetalheFig,
-} from "./figurinosModalShared";
-import { BarcodeBlock } from "./BarcodeBlock";
+} from "./figurinosModalShared"
+import { BarcodeBlock } from "./BarcodeBlock"
 
 export function ModalDetalhe({
   peca,

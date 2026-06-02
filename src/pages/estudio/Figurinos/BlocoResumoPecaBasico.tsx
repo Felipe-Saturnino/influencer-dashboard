@@ -1,8 +1,7 @@
-import type { ReactNode } from "react";
-import { useApp } from "../../../context/AppContext";
-import { FONT } from "../../../constants/theme";
-import type { RhFigurinoEmprestimo, RhFigurinoPeca } from "./types";
-import { fmtDataSóDia, labelCondicaoPeca, labelEmprestadoParaTabela } from "./figurinosPageHelpers";
+import { useApp } from "../../../context/AppContext"
+import { FONT } from "../../../constants/theme"
+import { type RhFigurinoPeca } from "./types"
+import { fmtDataSóDia, labelCondicaoPeca } from "./figurinosPageHelpers"
 
 export function BlocoResumoPecaBasico({
   peca,

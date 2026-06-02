@@ -1,75 +1,33 @@
-import { useState, useEffect, useMemo, type ReactNode } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
-import {
-  fmtBRL,
-  getIdxMesCarrosselPadrao,
-  getMesesDisponiveis,
-  getOntemIsoLocal,
-  getPeriodoComparativoMoM,
-  isCarrosselMesCivilAtual,
-} from "../../../lib/dashboardHelpers";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { useRouteTab } from "../../../hooks/useRouteTab";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import {
-  DashboardPageHeader,
-  FiltroHistoricoButton,
-  FiltroOperadoraSelect,
-  SectionTitle,
-  SkeletonKpiCard,
-  KpiCardDepositos,
-  SortTableTh,
-  FiltroBarTabButton,
-  type SortDir,
-} from "../../../components/dashboard";
-import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import {
-  PAGE_CONTENT_BOX_GAP,
-  getPageContentBoxStyle,
-  getPageFilterBoxStyle,
-} from "../../../lib/pageContentBoxStyles";
-import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
-import { supabase } from "../../../lib/supabase";
-import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  BarChart2,
-  Bookmark,
-  Clock,
-  Heart,
-  MessageCircle,
-  Mic,
-  Percent,
-  Play,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  GitCompare,
-  Share2,
-  TrendingDown,
-  Trophy,
-  TrendingUp,
-  CircleDollarSign,
-  UserPlus,
-} from "lucide-react";
+/* eslint-disable react-refresh/only-export-components -- helpers e componentes de bloco no mesmo módulo */
+import { useState, type ReactNode } from "react";
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { FONT } from "../../../constants/theme"
+import { BRAND } from "../../../lib/dashboardConstants"
+import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent"
+import { BarChart2, GitCompare, Share2, TrendingDown, TrendingUp } from "lucide-react";
 
-// ─── CONSTANTES DE MÊS ────────────────────────────────────────────────────────
-const MES_INICIO = { ano: 2026, mes: 0 }; // Janeiro 2026 — dados de mídias começam aqui
+/** Janeiro 2026 — dados de mídias começam aqui. */
+export const MES_INICIO = { ano: 2026, mes: 0 };
 
 /** Rótulo curto para período mensal (ex.: Abr/2026), alinhado ao modo histórico. */
 const MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"] as const;
 
+/** Série diária ou mensal (RPC get_campanha_funil_serie_temporal). */
+export interface FunilSerieRow {
+  periodo: string;
+  visitas: number;
+  registros: number;
+  ftds: number;
+  ftd_total: number;
+  deposit_count: number;
+  deposit_total: number;
+  withdrawal_count: number;
+  withdrawal_total: number;
+}
+
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
-interface KpiDaily {
+export interface KpiDaily {
   channel: string;
   date: string;
   followers: number | null;
@@ -82,45 +40,21 @@ interface KpiDaily {
   link_clicks: number | null;
 }
 
-/** Série diária ou mensal (RPC get_campanha_funil_serie_temporal). */
-interface FunilSerieRow {
-  periodo: string;
-  visitas: number;
-  registros: number;
-  ftds: number;
-  ftd_total: number;
-  deposit_count: number;
-  deposit_total: number;
-  withdrawal_count: number;
-  withdrawal_total: number;
-}
+export type SocialMediaTab = "overview" | "conversao" | "alcance";
 
-type SocialMediaTab = "overview" | "conversao" | "alcance";
-
-const TAB_LABELS: Record<SocialMediaTab, string> = {
+export const TAB_LABELS: Record<SocialMediaTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
   alcance: "Alcance",
 };
 
-const TAB_ICONS: Record<SocialMediaTab, typeof BarChart2> = {
+export const TAB_ICONS: Record<SocialMediaTab, typeof BarChart2> = {
   overview: BarChart2,
   conversao: GitCompare,
   alcance: Share2,
 };
 
-const COR_FUNIL_A = {
-  accent: "var(--brand-action, #7c3aed)",
-  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-  step: "color-mix(in srgb, var(--brand-action, #7c3aed) 7%, transparent)",
-} as const;
-const COR_FUNIL_B = {
-  accent: "var(--brand-contrast, #1e36f8)",
-  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
-  step: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 7%, transparent)",
-} as const;
-
-interface PostUnificado {
+export interface PostUnificado {
   canal: string;
   tipo: string;
   cor: string;
@@ -134,15 +68,27 @@ interface PostUnificado {
   thumbnailUrl: string | null;
 }
 
+export const COR_FUNIL_A = {
+  accent: "var(--brand-action, #7c3aed)",
+  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-action, #7c3aed) 7%, transparent)",
+} as const;
+
+export const COR_FUNIL_B = {
+  accent: "var(--brand-contrast, #1e36f8)",
+  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 7%, transparent)",
+} as const;
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const fmtNum = (n: number | null | undefined) => {
+export const fmtNum = (n: number | null | undefined) => {
   if (n == null) return "—";
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
   return n.toLocaleString("pt-BR");
 };
 
-const fmtPct = (n: number | null | undefined) =>
+export const fmtPct = (n: number | null | undefined) =>
   n != null ? `${(n * 100).toFixed(1)}%` : "—";
 
 export function totaisFromKpiRows(kpiData: KpiDaily[]) {

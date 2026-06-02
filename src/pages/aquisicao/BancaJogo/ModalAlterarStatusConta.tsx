@@ -1,17 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { supabase } from "../../../lib/supabase";
-import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { Loader2 } from "lucide-react";
-import type { BancaRowDb, BancaStatus, BancaStatusConta, BancaPerfilMapRow } from "./bancaJogoTypes";
-import { STATUS_BANCA } from "./bancaJogoTypes";
-import { fmtMoeda, formatarCPFVisivel, mascaraCPF } from "./bancaJogoHelpers";
-import type { BlocoFiltros } from "./bancaJogoFiltros";
+import { useEffect, useState } from "react"
+import { useApp } from "../../../context/AppContext"
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { BASE_COLORS, FONT } from "../../../constants/theme"
+import { supabase } from "../../../lib/supabase"
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
+import { type BancaStatusConta } from "./bancaJogoTypes"
 
 export function ModalAlterarStatusConta({
   influencerId,
