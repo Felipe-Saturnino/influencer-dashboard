@@ -12,7 +12,9 @@ export type RhHistoricoAcaoTipo =
   | "anotacao_rh"
   | "staff_gestao_edicao"
   | "dados_cadastro_self"
-  | "atualizacao_cadastral_sem_alteracao";
+  | "atualizacao_cadastral_sem_alteracao"
+  | "formacao_competencias"
+  | "experiencia_profissional";
 
 export type RhCadastroRevisaoTipo = "alteracao" | "sem_alteracao";
 

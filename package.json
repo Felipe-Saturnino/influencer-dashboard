@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:related": "vitest related --run",
     "ci": "npm run lint && npm run test && npm run build",
     "precommit": "lint-staged",
     "prepare": "node scripts/install-git-hooks.mjs"

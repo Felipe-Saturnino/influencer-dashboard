@@ -12,7 +12,6 @@ export {
   type FiltroOperadoraSelectProps,
   type OperadoraFiltroOption,
 } from "../FiltroOperadoraSelect";
-export { SingleDropdown, type SingleDropdownOption } from "./SingleDropdown";
 export { SkeletonKpiCard, SkeletonTableRow } from "./SkeletonCard";
 export { MarginBadge } from "./MarginBadge";
 export { RateCard } from "./RateCard";

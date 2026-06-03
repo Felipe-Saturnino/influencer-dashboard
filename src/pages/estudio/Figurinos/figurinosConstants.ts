@@ -1,4 +1,4 @@
-import type { RhFigurinoStatus, RhWithdrawalType } from "./types";
+import type { RhFigurinoStatus, RhWithdrawalType } from "./types"
 
 export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "Acessório"] as const;
 

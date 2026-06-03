@@ -66,3 +66,7 @@ verify_jwt = false
 [functions.prestador-ponto]
 verify_jwt = true
 # Ingestão RSS → spin_na_rede_mencao (service role). Proteger com SPIN_NA_REDE_INGEST_SECRET ou Bearer service_role.
+
+[functions.platform-health-check]
+verify_jwt = false
+# Diagnóstico Status Técnico; autorização admin/can_editar verificada dentro da função.

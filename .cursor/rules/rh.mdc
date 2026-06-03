@@ -40,11 +40,12 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Gestão de Prestadores (`rh_funcionarios`)
 
+- Pasta `rh/GestaoPrestador/`: `index.tsx` (página + modais), `gestaoPrestadorHelpers.ts`, `usePrestadorLista.ts` (carga, organograma, filtros, ordenação, KPIs de resumo), `RhFuncModalHeaderDetalhes.tsx`, `PrestadorKpiResumo.tsx`, `PrestadorFiltroBar.tsx`, `PrestadorTabelaColaboradores.tsx`.
 - `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
 - **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
-- **Barra de filtros** (`getFilterBarWrapperStyle` + `filterBarSection`): **Linha 1** — `FiltroBarCampoSelect` (Diretoria `FilterBarIcons.diretoria`; Gerência `Layers`; Setor `FilterBarIcons.time`; Contrato `FileSignature`; Status `FilterBarIcons.status` / «Todos Status» = valor `disponiveis`); **Linha 2** — `BarraPesquisaPagina`; **Linha 3** — abas (`ABAS_PAGINA_RH_FUNC`) + CTA na mesma fileira quando aplicável (`app-filter-bar-tabs-cta` em `responsive.css`): **Novo Prestador** em Head Count (`perm.canCriarOk` + `podeVerDadosSensiveis`); **RH Talks** em Anotações RH (`perm.canEditarOk`). Aba Ações RH: só abas centralizadas.
+- **Barra de filtros:** componente `PrestadorFiltroBar.tsx` — mesma estrutura (`getFilterBarWrapperStyle` + três fileiras): Diretoria/Gerência/Setor/Contrato/Status; busca; abas + CTAs (`Novo Prestador` / `RH Talks` conforme aba e permissão).
 - Sem filtro de operadora nesta página.
-- **Tabelas (Head Count, Ações de RH, Anotações RH):** padrão canónico `useDataTableBlock()` + `getDataTableWrapStyle` / `getDataTableStyle`; cabeçalhos `dataTable.thHeader` + `SortTableTh align="center"`; corpo `dataTable.tdCenter` + `dataTable.zebraRow(i)`; coluna Remuneração omitida nas abas Ações RH e Anotações RH; toggle Eye/EyeOff no cabeçalho de Remuneração quando `podeVerDadosSensiveis`; ações em ícone (`btnIconTabela`) centralizadas na célula.
+- **Tabela (Head Count, Ações de RH, Anotações RH):** `PrestadorTabelaColaboradores.tsx` — uma única tabela com flags por aba (`preencherAcoesHeadcount`, `tabelaAcoesRh`, `tabelaAnotacoesRh`, `tabelaSemSalario`); padrão canónico `useDataTableBlock()`; Remuneração com Eye/EyeOff quando `podeVerDadosSensiveis`; ações em ícone na célula.
 - CTA gradiente em ações primárias de linha quando aplicável.
 - **Handoff:** abas, headcount, fluxos de aprovação RH.
 
@@ -52,8 +53,20 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Dados de Cadastro (`rh_dados_cadastro`)
 
-- Documentos e metadados de cadastro.
-- **Handoff:** upload, exclusão, permissões.
+- `PageHeader`; subtítulo **Próprios:** «Atualização cadastral — apenas o seu cadastro» · **Ver Sim:** «Consulta e atualização cadastral de prestadores.»
+- **Permissões (Gestão de Usuários → `rh_dados_cadastro`):**
+  - **Ver/Editar Próprios:** entra direto no cadastro vinculado ao e-mail de login; sem filtro Staff nem botão **Meu Cadastro**.
+  - **Ver Sim + Editar Próprios:** barra com `FiltroCalendarioStaffSelect` (`mode="single"`) + **Meu Cadastro** (`FiltroMeuCalendarioButton`); abas na linha 2 do bloco (`getPageFilterBoxStyle`); cadastro alheio **somente leitura**.
+  - **Ver Sim + Editar Sim:** mesma barra; edita abas **Dados cadastrais**, **Documentos**, **Formação e Competências** e **Experiência Profissional** de qualquer prestador ativo/indisponível (sem depender de Gestão de Prestadores).
+- **Prestador encerrado:** abas Formação e Competências e Experiência Profissional em somente leitura (RLS + UI).
+- **Aba Formação e Competências:** quatro blocos — formação acadêmica, idiomas (catálogo fixo), cursos/certificações e portfólio (link ou arquivo no bucket `rh-prestador-self-media`, até 15 MB; vídeo/áudio só por URL). CRUD gera linha no histórico (`tipo: formacao_competencias`). **Sem** revisão cadastral de 6 meses nesta aba.
+- **Aba Experiência Profissional:** empregos **anteriores** (não confundir com **Histórico de trabalho**, read-only — vínculo Spin). Tabela Cargo · Empresa · Período (`jan/2022 — atual` quando sem data fim). CRUD → histórico (`tipo: experiencia_profissional`). **Sem** revisão 6 meses.
+- **Aba Histórico de trabalho:** sempre read-only para todos — contratação/organograma/remuneração só em **Gestão de Prestadores**.
+- **Revisão cadastral (6 meses):** banner e «Confirmar sem alterações» só no **próprio** cadastro.
+- **Histórico (aba):** anotações RH «Particulares» ocultas para o prestador no próprio cadastro; visíveis ao consultar terceiro com Ver Sim.
+- **RLS:** migration `20260602140000_rh_dados_cadastro_escopo_sim.sql` — `_rh_dados_cadastro_perm_val`; trigger preserva campos de contratação em edições via esta página.
+- Helpers: `lib/rhDadosCadastroHelpers.ts`, `lib/rhFormacaoCompetenciasConstants.ts`, `lib/rhFormacaoHistorico.ts`, `lib/rhExperienciaProfissionalConstants.ts`, `lib/rhExperienciaHistorico.ts`, `lib/rhExperienciaDates.ts`.
+- Migrations: `20260602160000_rh_formacao_competencias.sql`, `20260602180000_rh_experiencia_profissional.sql`.
 
 ---
 

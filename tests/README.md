@@ -1,44 +1,65 @@
 # Testes automatizados
 
-Esta pasta concentra a suíte **Vitest** + **Testing Library**. Não é necessário ambiente Supabase de staging: testes usam **lógica pura**, **mocks** (`tests/mocks/`) ou **jsdom** para UI isolada.
+Suíte **Vitest** + **Testing Library** — lógica pura, componentes isolados e smoke de rotas lazy. Não substitui diagnóstico operacional em produção (Status Técnico); complementa o CI.
 
 ## Comandos
 
 | Comando | Uso |
 |--------|-----|
-| `npm test` | Roda toda a suíte uma vez (CI e pré-push). |
-| `npm run test:watch` | Reexecuta ao salvar arquivos (desenvolvimento). |
-| `npm run test:coverage` | Relatório de cobertura em `coverage/` (opcional). |
+| `npm test` | Roda toda a suíte uma vez (CI e pre-commit). |
+| `npm run test:watch` | Reexecuta ao salvar (desenvolvimento). |
+| `npm run test:coverage` | Cobertura em `coverage/` + validação de thresholds em `src/lib/**`. |
+| `npm run test:related` | Só testes afetados pelos ficheiros em stage (git). |
+| `npm run ci` | lint + test + build (espelha CI sem coverage). |
 
-## Estrutura sugerida
+## Estrutura
 
 ```
 tests/
-  README.md          ← este arquivo
-  setup.ts           ← jest-dom / config global
-  mocks/             ← factories e vi.mock compartilhados
+  README.md
+  setup.ts              ← jest-dom global
+  mocks/                ← factories e vi.mock
+  smoke/
+    lazy-pages-import.test.ts   ← rotas lazy resolvem (core + páginas decompostas)
   unit/
-    lib/             ← funções sem rede (helpers, paginação, guards)
-    components/      ← React com RTL
-  integration/       ← (futuro) vários módulos mockados juntos
+    lib/                  ← helpers transversais (sort, datas, identidade jogo, …)
+    aquisicao/            ← Financeiro, Banca de Jogo
+    plataforma/           ← Status Técnico helpers
+    components/           ← ErrorBoundary, etc.
 ```
 
-Colocar `*.test.ts(x)` em `src/` também é válido (co-localização); o Vitest inclui ambos os padrões.
+Co-localização em `src/**/*.test.ts(x)` também é válida.
 
-## Como garantir que “de tempos em tempos” rode tudo
+## Automação
 
-1. **Todo push / PR** — o workflow `.github/workflows/ci.yml` executa `lint`, `test` e `build`. Falhou = não merge sem corrigir (política do time).
+| Momento | O quê |
+|---------|--------|
+| **Pre-commit** | `lint-staged` + `npm test` (suíte completa) |
+| **Push / PR** | `.github/workflows/ci.yml` — lint, test, **coverage**, build |
+| **Semanal** | `quality-periodic.yml` — mesma bateria base |
 
-2. **Agendamento (cron)** — o workflow `.github/workflows/quality-periodic.yml` roda **semanalmente** (ajuste o `cron` se quiser) a mesma bateria: dependências instaladas + lint + test + build. Útil para pegar regressões quando o repositório fica quieto. Pode disparar manualmente em **Actions → Quality periodic → Run workflow**.
+Artefacto HTML de cobertura: job CI → **coverage-report** (14 dias).
 
-3. **Localmente antes de commitar** — `npm test` (rápido) ou o mesmo trio do CI.
+## Prioridade ao adicionar testes
 
-Nenhum desses fluxos chama o Supabase real: variáveis `VITE_*` no CI são placeholders só para o bundler; os testes atuais não fazem rede.
+1. **`src/lib/**`** e helpers extraídos na decomposição de páginas (`*Helpers.ts`, `*filtros.ts`, `*Ciclos.ts`).
+2. **Hooks** — `renderHook` + mock de Supabase/contexto.
+3. **Componentes de filtro** — RTL (Operadora, Influencer, SortTableTh).
+4. **Smoke lazy** — incluir nova rota em `lazy-pages-import.test.ts` ao registrar página no `App.tsx`.
 
-## Expandindo a suíte (prioridades)
+## Metas de cobertura (incremental)
 
-1. **Helpers e lib** (`fmtBRL`, `fetchAllPages`, validadores) — máximo retorno, zero mock.
-2. **Hooks** — `renderHook` do RTL + mock de `supabase`.
-3. **Páginas grandes** — fatiar: uma função extraída testável por vez, depois componente pequeno.
+| Área | Meta Fase 1 | Threshold CI (`vitest.config.ts`) |
+|------|-------------|-----------------------------------|
+| `src/lib/**` | 25% lines | 10% (subir ~2 p.p. por sprint) |
+| Projeto global | 5% lines | sem gate global ainda |
 
-Quando existir projeto Supabase de **preview/staging**, dá para acrescentar uma job opcional de E2E (Playwright) contra essa URL, sem misturar com produção.
+Variáveis `VITE_*` no CI são placeholders; testes atuais não chamam Supabase real.
+
+## Varredura de componentes órfãos
+
+`node scripts/scan-unused-components.mjs` — lista `.tsx` em `src/components` sem import direto em `src/pages` (confirmar com `rg` antes de remover).
+
+## Diagnóstico operacional (Status Técnico)
+
+Implementado à parte do Vitest: Edge `platform-health-check`, helpers em `platformHealthDiagnostics.ts`, testes em `tests/unit/lib/platformHealthDiagnostics.test.ts`. Deploy: `docs/SETUP-PLATFORM-HEALTH.md`.

@@ -78,6 +78,8 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 | `DashboardOverview/index.tsx` | ~880 | ✅ KPIs, Funil, helpers extraídos |
 | `DashboardOverviewInfluencer/index.tsx` | ~620 | ✅ Usa componentes compartilhados |
 | `DashboardConversao/index.tsx` | ~850 | Pendente extração |
+| `OverviewSpin/index.tsx` | ~3 100 | ✅ Lógica em `overviewSpinLogic.ts` (~1 230 linhas); abas em `OverviewSpinAbaNav.tsx` |
+| `GestaoPrestador/index.tsx` | ~3 900 | ✅ Helpers em `gestaoPrestadorHelpers.ts`; KPIs em `PrestadorKpiResumo.tsx` |
 
 Componentes compartilhados criados:
 - `src/components/dashboard/` — KpiCard, KpiCardDepositos, SectionTitle, FunilVisual
@@ -109,3 +111,15 @@ Componentes compartilhados criados:
 - Revisar `useEffect` e dependências para evitar loops e re-fetches desnecessários.
 - Adicionar tratamento de erro em fetches críticos (ex.: Supabase).
 - Considerar React Query ou similar para cache e estado de requisições.
+
+### Testes automatizados (Vitest)
+
+| Aspecto | Status | Observação |
+|---------|--------|------------|
+| **CI** | ✅ | `npm test` + `npm run test:coverage` em `.github/workflows/ci.yml` |
+| **Pre-commit** | ✅ | Hook roda suíte completa após lint-staged |
+| **Cobertura** | ⚠️ Em expansão | Foco em `src/lib/**` e helpers de páginas decompostas; ver `tests/README.md` |
+
+Suíte atual: testes unitários de lib + smoke de import lazy (rotas core e páginas modularizadas). Regressões de UI/filtros ainda dependem de revisão manual até ampliar RTL nos componentes compartilhados.
+
+**Diagnóstico em produção:** botão **Executar diagnóstico** em Status Técnico → Edge `platform-health-check` → `tech_logs`. Deploy e tipos de log: `docs/SETUP-PLATFORM-HEALTH.md`. Complementa o Vitest; não o substitui.

@@ -7,7 +7,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'coverage', 'node_modules'],
+    ignores: [
+      'dist',
+      'coverage',
+      'node_modules',
+      'scripts/split-*.mjs',
+      'scripts/fix-*.mjs',
+      'scripts/prune-*.mjs',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

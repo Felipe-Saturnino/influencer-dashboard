@@ -188,3 +188,48 @@ def meta_token_renewal_hint() -> str:
         "Atualize o secret META_ACCESS_TOKEN no GitHub Actions (Settings → Secrets). "
         "Não use token de usuário pessoal que expira ao fazer logout."
     )
+
+
+def resolve_page_access_token(
+    page_id: str,
+    access_token: str,
+    timeout: int = 30,
+) -> tuple[str | None, str]:
+    """
+    Converte token de System User / usuário em Page Access Token.
+    Insights e posts do Facebook exigem Page token (#190 com user token).
+    """
+    page_id = (page_id or "").strip()
+    access_token = (access_token or "").strip()
+    if not page_id or not access_token:
+        return None, "META_PAGE_ID ou META_ACCESS_TOKEN ausente"
+
+    base = graph_base()
+    try:
+        r = requests.get(
+            f"{base}/{page_id}",
+            params={"fields": "access_token", "access_token": access_token},
+            timeout=timeout,
+        )
+        if r.status_code == 200:
+            pt = (r.json() or {}).get("access_token")
+            if pt:
+                return str(pt), ""
+        else:
+            err = meta_graph_error_message(r)
+
+        r2 = requests.get(
+            f"{base}/me/accounts",
+            params={"fields": "id,access_token", "access_token": access_token, "limit": 100},
+            timeout=timeout,
+        )
+        if r2.status_code == 200:
+            for acc in (r2.json() or {}).get("data") or []:
+                if str(acc.get("id")) == page_id and acc.get("access_token"):
+                    return str(acc["access_token"]), ""
+
+        if r.status_code == 200:
+            return None, "access_token da Página não retornado — confira ativos do System User na Page"
+        return None, err or meta_graph_error_message(r2)
+    except requests.RequestException as exc:
+        return None, str(exc)

@@ -94,7 +94,7 @@ import {
 } from "../../../components/dashboard";
 ```
 
-**Proibido na Agenda:** dropdown local de visualização (`SingleDropdown` duplicado); botão Hoje com `borderRadius: 10` ou ícone `Calendar`; usar `FiltroHistoricoButton` (modo acumulado de dashboards — Agenda não tem Histórico na barra).
+**Proibido na Agenda:** dropdown local de visualização (duplicar `FiltroModoVisualizacaoSelect`); botão Hoje com `borderRadius: 10` ou ícone `Calendar`; usar `FiltroHistoricoButton` (modo acumulado de dashboards — Agenda não tem Histórico na barra).
 
 Segunda linha: chips **Status** e **Plataforma** — **`FiltroStatusSemanticoPill`** e **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos). Cores de `STATUS_COLOR` / `PLAT_COLOR` da página; **não** redeclarar pill 999 inline.
 
@@ -416,27 +416,7 @@ style={{ minHeight: 140, padding: 8, ... }}
 )}
 ```
 
-**`SingleDropdown` (seletor de visualização) — Lucide para chevrons, ARIA completo:**
-```tsx
-<button
-  onClick={() => setOpen(!open)}
-  aria-haspopup="menu"
-  aria-expanded={open}
-  style={{ ... }}
->
-  {icon}
-  {current?.label}
-  {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" />
-        : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
-</button>
-<div role="menu" style={{ ... }}>
-  {options.map(opt => (
-    <button key={opt.value} role="menuitem" onClick={() => { onChange(opt.value); setOpen(false); }}>
-      {/* radio visual + label */}
-    </button>
-  ))}
-</div>
-```
+**Modo de visualização (Mês / Semana / Dia):** usar **`FiltroModoVisualizacaoSelect`** (`src/components/FiltroModoVisualizacaoSelect.tsx`) — pill 999, ícone `CalendarRange` 15px, `defaultValue` (Agenda: `"mes"`), ARIA `aria-haspopup` + `listbox`. Ver Global § Modo de visualização e implementação na Agenda.
 
 **Badge de ícone no `ModalLive` — sempre via `brand`:**
 ```tsx

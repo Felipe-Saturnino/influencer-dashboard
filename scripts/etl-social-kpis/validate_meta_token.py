@@ -19,15 +19,23 @@ import os
 import sys
 
 from meta_token_utils import (
+    days_until_expiry,
     format_expiry_label,
     inspect_meta_token,
     meta_preflight,
     meta_token_invalid_message,
     meta_token_renewal_hint,
-    days_until_expiry,
+    resolve_page_access_token,
 )
 
 WARN_DAYS = int(os.environ.get("META_TOKEN_WARN_DAYS", "14"))
+
+
+def _debug_token_transient_error(message: str | None) -> bool:
+    if not message:
+        return False
+    t = message.lower()
+    return "unexpected error" in t or "retry your request" in t
 
 
 def main() -> int:
@@ -51,10 +59,20 @@ def main() -> int:
 
     print("Preflight OK — token aceito pela Graph API para Page/IG.")
 
+    if page_id:
+        page_token, pt_err = resolve_page_access_token(page_id, token)
+        if page_token:
+            print("Page Access Token OK — Facebook insights/posts.")
+        else:
+            print(f"\nPage Access Token FALHOU: {pt_err}")
+            print(meta_token_renewal_hint())
+            return 1
+
     info = inspect_meta_token(token)
     if info.get("skipped_debug"):
         print(f"\nAviso: {info.get('error')}")
         print("Configure META_APP_ID + META_APP_SECRET para monitorar expiração automaticamente.")
+        print("\nToken Meta OK para o ETL.")
         return 0
 
     is_valid = info.get("is_valid")
@@ -67,7 +85,14 @@ def main() -> int:
         print(f"Escopos ({len(scopes)}): {', '.join(scopes[:12])}{'…' if len(scopes) > 12 else ''}")
 
     if is_valid is False:
-        print(f"\nErro debug_token: {info.get('error') or 'token inválido'}")
+        dbg_err = info.get("error")
+        if _debug_token_transient_error(str(dbg_err or "")):
+            print(
+                f"\nAviso debug_token (transitório): {dbg_err}"
+            )
+            print("\nToken Meta OK para o ETL (preflight + Page token confirmados).")
+            return 0
+        print(f"\nErro debug_token: {dbg_err or 'token inválido'}")
         print(meta_token_renewal_hint())
         return 1
 

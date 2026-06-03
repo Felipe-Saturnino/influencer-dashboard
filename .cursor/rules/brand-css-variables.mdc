@@ -276,10 +276,10 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 | **`FiltroSemanticoTabPill`** | `src/components/dashboard/FiltroSemanticoTabPill.tsx` | Chips **sem** bolinha — domínio (ex.: **Jogo** / Tipo no Roteiro de Mesa); ativo na cor do domínio, **não** marca |
 | **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
 | `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
-| `SingleDropdown` | `src/components/dashboard/SingleDropdown.tsx` | **Legado** — não usar; preferir `FiltroModoVisualizacaoSelect` |
 | **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
 | **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Multi na barra (ex.: tipos de denúncia) — ícone via catálogo ou domínio |
-| `FiltroEntidadeMultiSelect` | `src/components/FiltroEntidadeMultiSelect.tsx` | **Legado** Staff/Time — não usar para influencers; refactor dedicado pendente |
+| **`FiltroCalendarioTimeSelect`** | `src/components/FiltroCalendarioTimeSelect.tsx` | Time na barra (Calendário RH) |
+| **`FiltroCalendarioStaffSelect`** | `src/components/FiltroCalendarioStaffSelect.tsx` | Staff na barra (Calendário RH) |
 | Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
 
 **Catálogo de ícones (código):** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). **Sempre** importar daqui em componentes partilhados e em filtros novos; ícones só de domínio (ex.: `Newspaper` no Portal RH) ficam na página com o mesmo tamanho e documentados abaixo.
@@ -506,7 +506,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Aba de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone 16px dedicado, ou com estilo pill 20/999 em vez do layout Organograma (secção 6 — Abas).
 - Filtro de operadoras sem `FiltroOperadoraSelect` ou com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”) / label lateral “Operadora”.
 - `FiltroOperadoraSelect` alimentado com operadoras **inativas** na barra de filtros.
-- Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone`/`InfluencerDropdown` legado.
+- Filtro de influencers na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou `SelectComIcone` / dropdown local duplicado.
 - Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
 - Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).

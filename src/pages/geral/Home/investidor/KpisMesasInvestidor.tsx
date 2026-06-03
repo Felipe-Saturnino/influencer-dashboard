@@ -11,20 +11,21 @@ import { HomeKpiCard } from "../shared/HomeKpiCard";
 import { HomeSectionMesSubtitle } from "../shared/HomeSectionMesSubtitle";
 import { homeSectionTitleStyle, HOME_FOOTER_HINT, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
-export function KpisMesasInvestidor() {
+export function KpisMesasInvestidor({ sectionIdPrefix = "home-investidor" }: { sectionIdPrefix?: string }) {
   const { theme: t } = useApp();
   const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();
   const { loading, erro, data } = useHomeInvestidorKpisMesas();
   const box = getPageContentBoxStyle(brand, t);
+  const titleId = `${sectionIdPrefix}-kpis-title`;
 
   const fmtApostas = (n: number) => n.toLocaleString("pt-BR");
 
   const mesLabel = getHomeKpiReferenciaMes().label;
 
   return (
-    <section style={box} aria-labelledby="home-investidor-kpis-title">
-      <h2 id="home-investidor-kpis-title" style={homeSectionTitleStyle(t.sectionTitle)}>
+    <section style={box} aria-labelledby={titleId}>
+      <h2 id={titleId} style={homeSectionTitleStyle(t.sectionTitle)}>
         Principais KPIs
       </h2>
       <HomeSectionMesSubtitle label={mesLabel} />

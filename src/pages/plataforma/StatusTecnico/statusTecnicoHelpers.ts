@@ -48,6 +48,9 @@ export const ERRO_EMAIL_AGENDA =
 export const ERRO_REDE_EDGE =
   "Não foi possível chegar à Edge Function (rede, firewall, bloqueador ou CORS). Abra F12 → Rede, confira se a função está publicada no Supabase e tente novamente.";
 
+export const ERRO_DIAGNOSTICO_PLATAFORMA =
+  "Não foi possível executar o diagnóstico da plataforma. Verifique a Edge Function e tente novamente.";
+
 export const MODAL_OVERLAY_BG = "rgba(0,0,0,0.65)";
 
 export function ctaGradientStatus(

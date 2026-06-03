@@ -3,20 +3,11 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
-  ClipboardList,
-  Eye,
-  EyeOff,
   FileSignature,
   FolderOpen,
-  History,
   Landmark,
-  Layers,
   Loader2,
-  Pencil,
-  StickyNote,
-  Trash2,
   UserCircle2,
-  Users,
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -26,9 +17,6 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -44,12 +32,10 @@ import {
   formatarTelefoneBr,
   numeroDeCentavosStr,
   somenteDigitos,
-  validarCnpjDigitos,
   validarCpfDigitos,
   validarDataNascimentoOpcional,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
-import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
 import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
 import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import type {
@@ -61,11 +47,8 @@ import type {
   RhTipoTerminoPrestacao,
 } from "../../../types/rhFuncionario";
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
-import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
-import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
-import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
-import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { primeiroUltimoNome, syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
+import { encontrarVinculoParaFuncionarioRow } from "../../../lib/rhOrganogramaTree";
+import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
   mensagemFeedbackSyncPrestador,
   syncUsuarioPrestadorAposSalvarRh,
@@ -81,866 +64,60 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { FILTER_SEARCH_STAFF, PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import {
-  FiltroBarCampoSelect,
   FiltroBarTabButton,
   SkeletonTableRow,
-  SortTableTh,
-  type SortDir,
 } from "../../../components/dashboard";
 import {
   FILTRO_BAR_TAB_ICON_SIZE,
-  getFilterBarRowStyle,
-  getFilterBarWrapperStyle,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
-import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
-import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
-
-const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
-
-const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
-  { value: "CLT", label: "CLT" },
-  { value: "PJ", label: "PJ" },
-  { value: "Estagio", label: "Estágio" },
-  { value: "Temporario", label: "Temporário" },
-];
-
-const PRESTADOR_STATUS_FILTRO_EXTRA = [
-  { value: "ativo", label: "Ativos" },
-  { value: "indisponivel", label: "Indisponíveis" },
-  { value: "encerrado", label: "Encerrado" },
-] as const;
-
-type FiltroTipoAcaoHistoricoPrestador =
-  | "todos"
-  | "revisao_contrato"
-  | "indisponibilidade"
-  | "alinhamento_formal"
-  | "anotacao_rh";
-
-const FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS: { value: FiltroTipoAcaoHistoricoPrestador; label: string }[] = [
-  { value: "todos", label: "Todos os tipos" },
-  { value: "revisao_contrato", label: "Revisão de Contrato" },
-  { value: "indisponibilidade", label: "Indisponibilidade (saída e retorno)" },
-  { value: "alinhamento_formal", label: "Alinhamento" },
-  { value: "anotacao_rh", label: "Anotações" },
-];
-
-function historicoPrestadorPassaFiltroTipo(tipo: string, filtro: FiltroTipoAcaoHistoricoPrestador): boolean {
-  if (filtro === "todos") return true;
-  if (filtro === "revisao_contrato") return tipo === "revisao_contrato";
-  if (filtro === "indisponibilidade") {
-    return tipo === "periodo_indisponibilidade" || tipo === "retorno_indisponibilidade";
-  }
-  if (filtro === "alinhamento_formal") return tipo === "alinhamento_formal";
-  if (filtro === "anotacao_rh") return tipo === "anotacao_rh";
-  return true;
-}
-
-/** Valores permitidos para o campo Escala (cadastro de prestador). */
-const ESCALAS_PERMITIDAS = ["5x2", "3x3", "4x2", "5x1"] as const;
-
-function labelAreaAtuacao(a: RhAreaAtuacao | "" | null | undefined): string {
-  if (a === "estudio") return "Estúdio";
-  if (a === "escritorio") return "Escritório";
-  return "—";
-}
-
-function remuneracaoHoraCentavosDeRow(f: RhFuncionario): string {
-  const v = f.remuneracao_hora_centavos;
-  if (v == null || Number.isNaN(Number(v))) return "";
-  return String(Math.round(Number(v)));
-}
-
-/** ISO YYYY-MM-DD: Data da Função se preenchida; senão Data de início. */
-function dataFuncaoOuInicioIso(row: RhFuncionario): string {
-  const df = String(row.data_funcao ?? "").trim();
-  if (df) return df.slice(0, 10);
-  return String(row.data_inicio ?? "").trim().slice(0, 10);
-}
-
-function textoDataFuncaoColunaTabela(row: RhFuncionario): string {
-  return fmtDataIsoPtBr(dataFuncaoOuInicioIso(row));
-}
-
-function areaAtuacaoTabela(row: RhFuncionario): RhAreaAtuacao {
-  return row.area_atuacao === "estudio" || row.area_atuacao === "escritorio" ? row.area_atuacao : "escritorio";
-}
-
-/** Coluna «Remuneração»: mensal (escritório) ou por hora (estúdio), conforme área de atuação. */
-function textoRemuneracaoColunaTabela(row: RhFuncionario): { texto: string; title?: string } {
-  if (areaAtuacaoTabela(row) === "estudio") {
-    const rh = Number(row.remuneracao_hora_centavos ?? 0);
-    if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
-    return { texto: "—" };
-  }
-  const sal = Number(row.salario);
-  if (sal > 0) return { texto: fmtBRL(sal), title: "Remuneração mensal" };
-  return { texto: "—" };
-}
-
-/** Valor numérico para ordenar remuneração (mensal em reais; hora em centavos). */
-function valorRemuneracaoOrdenacao(row: RhFuncionario): number {
-  if (areaAtuacaoTabela(row) === "estudio") return Number(row.remuneracao_hora_centavos ?? 0);
-  return Math.round(Number(row.salario) * 100);
-}
-
-function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
-  return (ESCALAS_PERMITIDAS as readonly string[]).includes(s.trim());
-}
-
-/** Valor do `<select>`: opção válida, placeholder de legado ou vazio (— Selecione —). */
-function valorSelectEscala(raw: string): string | "__legacy__" {
-  const t = raw.trim();
-  if (escalaEhPermitida(raw)) return t;
-  if (t) return "__legacy__";
-  return "";
-}
-
-/** Ativos + indisponíveis (exclui encerrados). */
-type FiltroStatusPrestador = "disponiveis" | RhFuncionario["status"];
-
-function labelStatusPrestador(s: RhFuncionario["status"]): string {
-  if (s === "ativo") return "Ativo";
-  if (s === "indisponivel") return "Indisponível";
-  return "Encerrado";
-}
-
-function corStatusPrestador(s: RhFuncionario["status"]): string {
-  if (s === "ativo") return "#22c55e";
-  if (s === "indisponivel") return "#f59e0b";
-  return "#e84025";
-}
-
-type SliceContratacao = {
-  org_diretoria_id: string | null;
-  org_gerencia_id: string | null;
-  org_time_id: string | null;
-  setor: string;
-  cargo: string;
-  nivel: string;
-  area_atuacao: RhAreaAtuacao | "";
-  remuneracaoHoraCentavos: string;
-  staff_turno: string;
-  salarioCentavos: string;
-  tipo_contrato: RhFuncionarioTipoContrato;
-  escala: string;
-  data_funcao: string;
-  email_spin: string;
-};
-
-function sliceContratacaoDeForm(f: FormState): SliceContratacao {
-  return {
-    org_diretoria_id: f.org_diretoria_id,
-    org_gerencia_id: f.org_gerencia_id,
-    org_time_id: f.org_time_id,
-    setor: f.setor.trim(),
-    cargo: f.cargo.trim(),
-    nivel: f.nivel.trim(),
-    area_atuacao: (f.area_atuacao === "estudio" || f.area_atuacao === "escritorio" ? f.area_atuacao : "") as RhAreaAtuacao | "",
-    remuneracaoHoraCentavos: f.remuneracaoHoraCentavos,
-    staff_turno: (f.staff_turno ?? "").trim(),
-    salarioCentavos: f.salarioCentavos,
-    tipo_contrato: f.tipo_contrato,
-    escala: f.escala.trim(),
-    data_funcao: (f.data_funcao ?? "").trim().slice(0, 10),
-    email_spin: (f.email_spin ?? "").trim(),
-  };
-}
-
-function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
-  const cents = Math.round(Number(r.salario) * 100).toString();
-  const df = r.data_funcao ? String(r.data_funcao).slice(0, 10) : "";
-  const area: RhAreaAtuacao =
-    r.area_atuacao === "estudio" || r.area_atuacao === "escritorio" ? r.area_atuacao : "escritorio";
-  return {
-    org_diretoria_id: r.org_diretoria_id ?? null,
-    org_gerencia_id: r.org_gerencia_id ?? null,
-    org_time_id: r.org_time_id ?? null,
-    setor: r.setor.trim(),
-    cargo: r.cargo.trim(),
-    nivel: r.nivel.trim(),
-    area_atuacao: area,
-    remuneracaoHoraCentavos: remuneracaoHoraCentavosDeRow(r),
-    staff_turno: (r.staff_turno ?? "").trim(),
-    salarioCentavos: cents,
-    tipo_contrato: r.tipo_contrato,
-    escala: r.escala.trim(),
-    data_funcao: df,
-    email_spin: (r.email_spin ?? "").trim(),
-  };
-}
-
-function labelSliceOrganograma(
-  slice: SliceContratacao,
-  vinculos: RhOrgPrestadorVinculoOpcao[],
-  opcoesTimes: RhOrgTimeOpcao[],
-): string {
-  const v = encontrarVinculoParaFuncionarioRow(
-    {
-      org_time_id: slice.org_time_id,
-      org_gerencia_id: slice.org_gerencia_id,
-      org_diretoria_id: slice.org_diretoria_id,
-    },
-    vinculos,
-  );
-  if (v) return v.label;
-  if (slice.org_time_id) {
-    return opcoesTimes.find((o) => o.timeId === slice.org_time_id)?.label || slice.setor.trim() || "—";
-  }
-  return slice.setor.trim() || "—";
-}
-
-function diffContratacaoSlices(
-  antes: SliceContratacao,
-  depois: SliceContratacao,
-  vinculos: RhOrgPrestadorVinculoOpcao[],
-  opcoesTimes: RhOrgTimeOpcao[],
-  fmtSal: (cents: string) => string,
-): { campo: string; antes: string; depois: string }[] {
-  const out: { campo: string; antes: string; depois: string }[] = [];
-  const orgAntes = labelSliceOrganograma(antes, vinculos, opcoesTimes) || antes.setor || "—";
-  const orgDepois = labelSliceOrganograma(depois, vinculos, opcoesTimes) || depois.setor || "—";
-  if (orgAntes !== orgDepois || antes.setor !== depois.setor) {
-    out.push({ campo: "Organograma", antes: orgAntes, depois: orgDepois });
-  }
-  if (antes.cargo !== depois.cargo) out.push({ campo: "Função", antes: antes.cargo || "—", depois: depois.cargo || "—" });
-  if (antes.nivel !== depois.nivel) out.push({ campo: "Nível", antes: antes.nivel, depois: depois.nivel });
-  if (antes.area_atuacao !== depois.area_atuacao) {
-    out.push({
-      campo: "Área de atuação",
-      antes: labelAreaAtuacao(antes.area_atuacao),
-      depois: labelAreaAtuacao(depois.area_atuacao),
-    });
-  }
-  if (antes.salarioCentavos !== depois.salarioCentavos) {
-    out.push({
-      campo: "Remuneração mensal",
-      antes: fmtSal(antes.salarioCentavos),
-      depois: fmtSal(depois.salarioCentavos),
-    });
-  }
-  if (antes.remuneracaoHoraCentavos !== depois.remuneracaoHoraCentavos) {
-    out.push({
-      campo: "Remuneração por hora",
-      antes: fmtSal(antes.remuneracaoHoraCentavos),
-      depois: fmtSal(depois.remuneracaoHoraCentavos),
-    });
-  }
-  if (antes.staff_turno.trim() !== depois.staff_turno.trim()) {
-    out.push({
-      campo: "Turno",
-      antes: antes.staff_turno.trim() || "—",
-      depois: depois.staff_turno.trim() || "—",
-    });
-  }
-  if (antes.tipo_contrato !== depois.tipo_contrato) {
-    out.push({ campo: "Tipo de contrato", antes: antes.tipo_contrato, depois: depois.tipo_contrato });
-  }
-  if (antes.escala !== depois.escala) out.push({ campo: "Escala", antes: antes.escala, depois: depois.escala });
-  if (antes.data_funcao !== depois.data_funcao) {
-    out.push({
-      campo: "Data da Função",
-      antes: fmtDataIsoPtBr(antes.data_funcao),
-      depois: fmtDataIsoPtBr(depois.data_funcao),
-    });
-  }
-  if (antes.email_spin !== depois.email_spin) {
-    out.push({
-      campo: "E-mail Spin",
-      antes: antes.email_spin.trim() ? antes.email_spin : "—",
-      depois: depois.email_spin.trim() ? depois.email_spin : "—",
-    });
-  }
-  return out;
-}
-
-const UFS_BR = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
-  "RR", "SC", "SP", "SE", "TO",
-] as const;
-
-/** Cadastro considerado incompleto para o card de resumo (campos mínimos alinhados à validação de gravação). */
-function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): boolean {
-  if (!r.nome?.trim()) return true;
-  const cpf = somenteDigitos(r.cpf ?? "");
-  if (cpf.length !== 11 || !validarCpfDigitos(cpf)) return true;
-  if (!r.email?.trim() || !validarEmail(r.email)) return true;
-  const tel = somenteDigitos(r.telefone);
-  if (tel.length < 10 || tel.length > 11) return true;
-  if (!r.rg?.trim()) return true;
-  if (!r.res_logradouro?.trim() || !r.res_numero?.trim() || !r.res_cidade?.trim()) return true;
-  const uf = (r.res_estado ?? "").trim().toUpperCase();
-  if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) return true;
-  const cep = somenteDigitos(r.res_cep ?? "");
-  if (cep.length !== 8) return true;
-  const en = (r.emerg_nome ?? "").trim();
-  if (!en || en === "—") return true;
-  const telE = somenteDigitos(r.emerg_telefone ?? "");
-  if (telE.length < 10 || telE.length > 11) return true;
-  if (temOrganograma) {
-    if (!r.org_time_id && !r.org_gerencia_id && !r.org_diretoria_id && !r.setor?.trim()) return true;
-  } else if (!r.setor?.trim()) return true;
-  if (!r.cargo?.trim() || !r.nivel?.trim() || !r.escala?.trim()) return true;
-  if (!escalaEhPermitida(r.escala)) return true;
-  if (!r.data_inicio?.trim()) return true;
-  if (r.tipo_contrato === "PJ") {
-    const cnpj = somenteDigitos(r.cnpj);
-    if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj)) return true;
-    if (cnpj === CNPJ_CONTEXTO_NAO_PJ) return true;
-    const ne = (r.nome_empresa ?? "").trim();
-    if (!ne || ne.includes("completar")) return true;
-    if (!r.emp_logradouro?.trim() || !r.emp_numero?.trim() || !r.emp_cidade?.trim()) return true;
-    const ufe = (r.emp_estado ?? "").trim().toUpperCase();
-    if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) return true;
-    const cepE = somenteDigitos(r.emp_cep ?? "");
-    if (cepE.length !== 8) return true;
-  }
-  const bancoT = (r.banco ?? "").trim();
-  if (!bancoT || bancoT === "—" || !r.agencia?.trim() || !r.conta_corrente?.trim() || r.conta_corrente.trim() === "0") return true;
-  if (!String(r.pix ?? "").trim()) return true;
-  const area: RhAreaAtuacao =
-    r.area_atuacao === "estudio" || r.area_atuacao === "escritorio" ? r.area_atuacao : "escritorio";
-  if (area === "estudio") {
-    const hc = Number(r.remuneracao_hora_centavos ?? 0);
-    if (hc <= 0) return true;
-    if (!(r.staff_turno ?? "").trim()) return true;
-  } else if (Number(r.salario) <= 0) {
-    return true;
-  }
-  return false;
-}
-
-const blurSensivel: CSSProperties = {
-  filter: "blur(7px)",
-  userSelect: "none",
-};
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return getCtaCriarGradient(brand);
-}
-
-type FormState = {
-  nome: string;
-  rg: string;
-  cpf: string;
-  telefone: string;
-  email: string;
-  /** E-mail corporativo Spin (opcional). */
-  email_spin: string;
-  /** YYYY-MM-DD opcional. */
-  data_nascimento: string;
-  res_cep: string;
-  res_logradouro: string;
-  res_numero: string;
-  res_complemento: string;
-  res_cidade: string;
-  res_estado: string;
-  emerg_nome: string;
-  emerg_parentesco: string;
-  emerg_telefone: string;
-  setor: string;
-  org_diretoria_id: string | null;
-  org_gerencia_id: string | null;
-  org_time_id: string | null;
-  cargo: string;
-  nivel: string;
-  /** Vazio no «Novo» até o utilizador escolher. */
-  area_atuacao: "" | RhAreaAtuacao;
-  remuneracaoHoraCentavos: string;
-  staff_turno: string;
-  salarioCentavos: string;
-  data_inicio: string;
-  data_funcao: string;
-  escala: string;
-  tipo_contrato: RhFuncionarioTipoContrato;
-  nome_empresa: string;
-  cnpj: string;
-  emp_cep: string;
-  emp_logradouro: string;
-  emp_numero: string;
-  emp_complemento: string;
-  emp_cidade: string;
-  emp_estado: string;
-  banco: string;
-  agencia: string;
-  conta_corrente: string;
-  pix: string;
-  observacao_rh: string;
-};
-
-type AbaFuncModal =
-  | "pessoais"
-  | "contratacao"
-  | "empresa"
-  | "bancarios"
-  | "documentos";
-
-/** Aba do modal onde o campo aparece (para saltar à primeira com erro). */
-function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
-  const pessoal = new Set([
-    "nome",
-    "rg",
-    "cpf",
-    "data_nascimento",
-    "telefone",
-    "email",
-    "res_cep",
-    "res_logradouro",
-    "res_numero",
-    "res_cidade",
-    "res_estado",
-    "emerg_nome",
-    "emerg_telefone",
-  ]);
-  if (pessoal.has(campo)) return "pessoais";
-  const contr = new Set([
-    "org_time_id",
-    "setor",
-    "cargo",
-    "nivel",
-    "tipo_contrato",
-    "area_atuacao",
-    "email_spin",
-    "salarioCentavos",
-    "remuneracaoHoraCentavos",
-    "staff_turno",
-    "data_inicio",
-    "escala",
-  ]);
-  if (contr.has(campo)) return "contratacao";
-  const emp = new Set([
-    "nome_empresa",
-    "cnpj",
-    "emp_cep",
-    "emp_logradouro",
-    "emp_numero",
-    "emp_cidade",
-    "emp_estado",
-  ]);
-  if (formEhPJ && emp.has(campo)) return "empresa";
-  const banc = new Set(["banco", "agencia", "conta_corrente", "pix"]);
-  if (banc.has(campo)) return "bancarios";
-  return "pessoais";
-}
-
-type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
-
-/** Colunas ordenáveis da tabela principal (todas as abas). */
-type PrestadoresSortCol = "nome" | "cargo" | "lider" | "data_funcao" | "salario" | "status";
-
-const ABAS_PAGINA_RH_FUNC: { key: AbaPaginaRhFunc; label: string }[] = [
-  { key: "headcount", label: "Head Count" },
-  { key: "acoes_rh", label: "Ações de RH" },
-  { key: "anotacoes", label: "Anotações RH" },
-];
-
-/** CNPJ válido genérico para persistir quando o contrato não é PJ (aba de empresa oculta). */
-const CNPJ_CONTEXTO_NAO_PJ = "00000000000191";
-
-function estadoVazioForm(): FormState {
-  return {
-    nome: "",
-    rg: "",
-    cpf: "",
-    telefone: "",
-    email: "",
-    email_spin: "",
-    data_nascimento: "",
-    res_cep: "",
-    res_logradouro: "",
-    res_numero: "",
-    res_complemento: "",
-    res_cidade: "",
-    res_estado: "",
-    emerg_nome: "",
-    emerg_parentesco: "",
-    emerg_telefone: "",
-    setor: "",
-    org_diretoria_id: null,
-    org_gerencia_id: null,
-    org_time_id: null,
-    cargo: "",
-    nivel: "Junior",
-    area_atuacao: "",
-    remuneracaoHoraCentavos: "",
-    staff_turno: "",
-    salarioCentavos: "",
-    data_inicio: "",
-    data_funcao: "",
-    escala: "",
-    tipo_contrato: "PJ",
-    nome_empresa: "",
-    cnpj: "",
-    emp_cep: "",
-    emp_logradouro: "",
-    emp_numero: "",
-    emp_complemento: "",
-    emp_cidade: "",
-    emp_estado: "",
-    banco: "",
-    agencia: "",
-    conta_corrente: "",
-    pix: "",
-    observacao_rh: "",
-  };
-}
-
-function formDeFuncionario(f: RhFuncionario): FormState {
-  const cents = Math.round(Number(f.salario) * 100).toString();
-  const resLog = (f.res_logradouro ?? "").trim() || f.endereco_residencial;
-  const empLog = (f.emp_logradouro ?? "").trim() || f.endereco_empresa;
-  const emergNome = (f.emerg_nome ?? "").trim() || f.contato_emergencia;
-  return {
-    nome: f.nome,
-    rg: formatarRgInput(f.rg),
-    cpf: formatarCpfDigitos(f.cpf ?? ""),
-    telefone: formatarTelefoneBr(f.telefone),
-    email: f.email,
-    email_spin: (f.email_spin ?? "").trim(),
-    data_nascimento: f.data_nascimento ? String(f.data_nascimento).slice(0, 10) : "",
-    res_cep: formatarCepDigitos(f.res_cep ?? ""),
-    res_logradouro: resLog,
-    res_numero: f.res_numero ?? "",
-    res_complemento: f.res_complemento ?? "",
-    res_cidade: f.res_cidade ?? "",
-    res_estado: (f.res_estado ?? "").toUpperCase().slice(0, 2),
-    emerg_nome: emergNome,
-    emerg_parentesco: f.emerg_parentesco ?? "",
-    emerg_telefone: formatarTelefoneBr(f.emerg_telefone ?? ""),
-    setor: f.setor,
-    org_diretoria_id: f.org_diretoria_id ?? null,
-    org_gerencia_id: f.org_gerencia_id ?? null,
-    org_time_id: f.org_time_id ?? null,
-    cargo: f.cargo,
-    nivel: f.nivel,
-    area_atuacao:
-      f.area_atuacao === "estudio" || f.area_atuacao === "escritorio" ? f.area_atuacao : "escritorio",
-    remuneracaoHoraCentavos: remuneracaoHoraCentavosDeRow(f),
-    staff_turno: (f.staff_turno ?? "").trim(),
-    salarioCentavos: cents,
-    data_inicio: f.data_inicio,
-    data_funcao: f.data_funcao ? String(f.data_funcao).slice(0, 10) : "",
-    escala: f.escala,
-    tipo_contrato: f.tipo_contrato,
-    nome_empresa: f.nome_empresa,
-    cnpj: formatarCnpjDigitos(f.cnpj),
-    emp_cep: formatarCepDigitos(f.emp_cep ?? ""),
-    emp_logradouro: empLog,
-    emp_numero: f.emp_numero ?? "",
-    emp_complemento: f.emp_complemento ?? "",
-    emp_cidade: f.emp_cidade ?? "",
-    emp_estado: (f.emp_estado ?? "").toUpperCase().slice(0, 2),
-    banco: f.banco,
-    agencia: formatarAgencia(f.agencia),
-    conta_corrente: f.conta_corrente,
-    pix: f.pix ?? "",
-    observacao_rh: f.observacao_rh ?? "",
-  };
-}
-
-function tiposAcaoDisponiveis(status: RhFuncionario["status"]): { value: RhHistoricoAcaoTipo; label: string }[] {
-  const out: { value: RhHistoricoAcaoTipo; label: string }[] = [];
-  if (status !== "encerrado") {
-    out.push({ value: "revisao_contrato", label: "Revisão de Contrato" });
-  }
-  if (status === "ativo") {
-    out.push({ value: "periodo_indisponibilidade", label: "Período de Indisponibilidade" });
-    out.push({ value: "termino_prestacao", label: "Término da Prestação" });
-  }
-  if (status === "indisponivel") {
-    out.push({ value: "retorno_indisponibilidade", label: "Retorno de Indisponibilidade" });
-    out.push({ value: "termino_prestacao", label: "Término da Prestação" });
-  }
-  if (status === "encerrado") {
-    out.push({ value: "reativacao_prestacao", label: "Reativação da Prestação" });
-  }
-  if (status !== "encerrado") {
-    out.push({ value: "alinhamento_formal", label: "Alinhamento Formal" });
-  }
-  return out;
-}
-
-function buildRhFuncionarioPayloadFromState(
-  form: FormState,
-  statusPrestador: RhFuncionario["status"],
-  podeVerDadosSensiveis: boolean,
-  cadastroMinimoNovo = false,
-): Omit<RhFuncionario, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "data_desligamento"> & {
-  status: RhFuncionario["status"];
-  data_desligamento?: string | null;
-} {
-  const area: RhAreaAtuacao =
-    form.area_atuacao === "estudio" || form.area_atuacao === "escritorio" ? form.area_atuacao : "escritorio";
-  const isEstudio = area === "estudio";
-  const sal = isEstudio ? 0 : podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
-  const remuneracao_hora_centavos =
-    isEstudio && podeVerDadosSensiveis
-      ? centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos)
-      : isEstudio
-        ? 0
-        : null;
-  const staff_turno = isEstudio ? (form.staff_turno.trim() || null) : null;
-  const isPj = form.tipo_contrato === "PJ";
-  let cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
-  if (cadastroMinimoNovo && isPj && (cnpjFinal.length !== 14 || !validarCnpjDigitos(cnpjFinal))) {
-    cnpjFinal = CNPJ_CONTEXTO_NAO_PJ;
-  }
-
-  const endResLinhaRaw = montarEnderecoResumoLine({
-    cep: form.res_cep,
-    logradouro: form.res_logradouro,
-    numero: form.res_numero,
-    complemento: form.res_complemento,
-    cidade: form.res_cidade,
-    estado: form.res_estado,
-  });
-  let endResLinha = endResLinhaRaw;
-  if (cadastroMinimoNovo && (!form.res_logradouro.trim() || endResLinhaRaw === "—")) {
-    endResLinha = "Cadastro inicial — completar endereço residencial.";
-  }
-
-  let endEmpLinha = montarEnderecoResumoLine({
-    cep: form.emp_cep,
-    logradouro: form.emp_logradouro,
-    numero: form.emp_numero,
-    complemento: form.emp_complemento,
-    cidade: form.emp_cidade,
-    estado: form.emp_estado,
-  });
-  if (cadastroMinimoNovo && isPj && (!form.emp_logradouro.trim() || endEmpLinha === "—")) {
-    endEmpLinha = "Cadastro inicial — dados da empresa a completar.";
-  }
-
-  let emergNome = form.emerg_nome.trim();
-  let emergTel = somenteDigitos(form.emerg_telefone);
-  if (cadastroMinimoNovo) {
-    if (!emergNome) emergNome = "—";
-    if (emergTel.length < 10) emergTel = somenteDigitos(form.telefone);
-  }
-  const emergLinha = montarContatoEmergenciaLinha(emergNome, form.emerg_parentesco, emergTel);
-
-  let nomeEmpresa = isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—";
-  if (cadastroMinimoNovo && isPj && !nomeEmpresa) {
-    nomeEmpresa = "Cadastro PJ — completar na Gestão de Prestadores.";
-  }
-
-  let bancoV = form.banco.trim();
-  let agenciaV = somenteDigitos(form.agencia);
-  let contaV = form.conta_corrente.trim();
-  const pixV = form.pix.trim() || null;
-  if (cadastroMinimoNovo && podeVerDadosSensiveis) {
-    if (!bancoV) bancoV = "—";
-    if (!agenciaV) agenciaV = "0";
-    if (!contaV) contaV = "0";
-  }
-
-  const cpfDigits = somenteDigitos(form.cpf);
-  return {
-    status: statusPrestador,
-    nome: form.nome.trim(),
-    rg: form.rg.trim(),
-    cpf: cpfDigits.length === 0 ? null : cpfDigits,
-    telefone: somenteDigitos(form.telefone),
-    email: form.email.trim().toLowerCase(),
-    email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
-    data_nascimento: form.data_nascimento.trim() ? form.data_nascimento.trim().slice(0, 10) : null,
-    endereco_residencial: endResLinha,
-    res_cep: somenteDigitos(form.res_cep),
-    res_logradouro: form.res_logradouro.trim(),
-    res_numero: form.res_numero.trim(),
-    res_complemento: form.res_complemento.trim(),
-    res_cidade: form.res_cidade.trim(),
-    res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
-    contato_emergencia: emergLinha,
-    emerg_nome: emergNome,
-    emerg_parentesco: form.emerg_parentesco.trim(),
-    emerg_telefone: emergTel,
-    setor: form.setor.trim(),
-    org_diretoria_id: form.org_diretoria_id || null,
-    org_gerencia_id: form.org_gerencia_id || null,
-    org_time_id: form.org_time_id || null,
-    cargo: form.cargo.trim(),
-    nivel: form.nivel.trim(),
-    area_atuacao: area,
-    remuneracao_hora_centavos,
-    staff_turno,
-    salario: sal,
-    data_inicio: form.data_inicio,
-    data_funcao: form.data_funcao.trim() ? form.data_funcao.trim().slice(0, 10) : null,
-    escala: form.escala.trim(),
-    tipo_contrato: form.tipo_contrato,
-    nome_empresa: nomeEmpresa,
-    cnpj: cnpjFinal,
-    endereco_empresa: isPj ? endEmpLinha : "—",
-    emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
-    emp_logradouro: isPj ? form.emp_logradouro.trim() : "",
-    emp_numero: isPj ? form.emp_numero.trim() : "",
-    emp_complemento: isPj ? form.emp_complemento.trim() : "",
-    emp_cidade: isPj ? form.emp_cidade.trim() : "",
-    emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
-    banco: bancoV,
-    agencia: agenciaV,
-    conta_corrente: contaV,
-    pix: pixV,
-    observacao_rh: form.observacao_rh.trim() || null,
-  };
-}
-
-/** Insert/update em `rh_funcionarios`: mensagens amigáveis sem confundir outras violações de unicidade com CPF. */
-function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string; details?: string }): string {
-  const raw = error.message ?? "";
-  const det = typeof error.details === "string" ? error.details : "";
-  const lower = `${raw} ${det}`.toLowerCase();
-
-  if (error.code === "23514" && lower.includes("rh_funcionarios_cpf_digits")) {
-    return "CPF Inválido";
-  }
-
-  const duplicidadeCpf =
-    error.code === "23505" &&
-    (lower.includes("rh_funcionarios_cpf_unique") ||
-      lower.includes("key (cpf)") ||
-      (lower.includes("duplicate") && lower.includes("cpf")));
-  if (duplicidadeCpf) {
-    return "Já existe um funcionário cadastrado com este CPF.";
-  }
-
-  if (raw.trim()) return raw;
-  if (det.trim()) return det;
-  return "Erro ao salvar.";
-}
-
-function RhFuncModalHeaderDetalhes({
-  t,
-  perm,
-  editId,
-  lista,
-  modalVerExibirSensiveis,
-  setModalVerExibirSensiveis,
-  abrirEditar,
-  fecharModalFuncionario,
+import {
+  ESCALAS_PERMITIDAS,
+  FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS,
+  NIVEIS,
+  TIPOS_CONTRATO,
+  UFS_BR,
+  abaDoCampoRhModal,
+  blurSensivel,
+  buildRhFuncionarioPayloadFromState,
   ctaGradient,
-  brand,
-}: {
-  t: ReturnType<typeof useApp>["theme"];
-  perm: ReturnType<typeof usePermission>;
-  editId: string | null;
-  lista: RhFuncionario[];
-  modalVerExibirSensiveis: boolean;
-  setModalVerExibirSensiveis: (v: boolean) => void;
-  abrirEditar: (row: RhFuncionario) => void;
-  fecharModalFuncionario: () => void;
-  ctaGradient: (brand: ReturnType<typeof useDashboardBrand>) => string;
-  brand: ReturnType<typeof useDashboardBrand>;
-}) {
-  const titleId = useDialogTitleId();
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: 12,
-        marginBottom: 20,
-      }}
-    >
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-        <h2
-          id={titleId}
-          style={{
-            margin: 0,
-            fontSize: 17,
-            fontWeight: 900,
-            color: t.text,
-            fontFamily: FONT_TITLE,
-          }}
-        >
-          Detalhes do Prestador
-        </h2>
-        <button
-          type="button"
-          onClick={() => setModalVerExibirSensiveis(!modalVerExibirSensiveis)}
-          aria-label={modalVerExibirSensiveis ? "Ocultar dados sensíveis" : "Exibir dados sensíveis"}
-          title={modalVerExibirSensiveis ? "Ocultar" : "Ver"}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 10px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            cursor: "pointer",
-            fontFamily: FONT.body,
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          {modalVerExibirSensiveis ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-          {modalVerExibirSensiveis ? "Ocultar" : "Ver"}
-        </button>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        {perm.canEditarOk && editId ? (
-          <button
-            type="button"
-            onClick={() => {
-              const row = lista.find((x) => x.id === editId);
-              if (row) abrirEditar(row);
-            }}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              background: ctaGradient(brand),
-            }}
-          >
-            Editar
-          </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={fecharModalFuncionario}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: t.textMuted,
-          }}
-          aria-label="Fechar modal"
-        >
-          <X size={20} strokeWidth={2} aria-hidden />
-        </button>
-      </div>
-    </div>
-  );
-}
+  diffContratacaoSlices,
+  escalaEhPermitida,
+  estadoVazioForm,
+  formDeFuncionario,
+  historicoPrestadorPassaFiltroTipo,
+  labelStatusPrestador,
+  mensagemErroSupabaseRhFuncionarioSalvar,
+  sliceContratacaoDeForm,
+  sliceContratacaoDeRow,
+  tiposAcaoDisponiveis,
+  type AbaFuncModal,
+  type AbaPaginaRhFunc,
+  type FiltroStatusPrestador,
+  type FiltroTipoAcaoHistoricoPrestador,
+  type FormState,
+  type SliceContratacao,
+  valorSelectEscala,
+} from "./gestaoPrestadorHelpers";
+
+
+import { RhFuncModalHeaderDetalhes } from "./RhFuncModalHeaderDetalhes";
+import { PrestadorKpiResumo } from "./PrestadorKpiResumo";
+import { PrestadorFiltroBar } from "./PrestadorFiltroBar";
+import { PrestadorTabelaColaboradores } from "./PrestadorTabelaColaboradores";
+import { usePrestadorLista } from "./usePrestadorLista";
 
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_funcionarios");
-  const permOrg = usePermission("rh_organograma");
 
   const podeVerDadosSensiveis = user?.role === "admin" || perm.canEditarOk;
-  const [lista, setLista] = useState<RhFuncionario[]>([]);
-  const [loading, setLoading] = useState(true);
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
@@ -955,8 +132,6 @@ export default function RhPrestadoresPage() {
     "headcount",
     ["headcount", "acoes_rh", "anotacoes"] as const,
   );
-  const [sortPrestadores, setSortPrestadores] = useState<{ col: PrestadoresSortCol; dir: SortDir }>({ col: "nome", dir: "asc" });
-
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(estadoVazioForm);
@@ -964,9 +139,36 @@ export default function RhPrestadoresPage() {
   const [alertaValidacaoModal, setAlertaValidacaoModal] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
-  const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
+
+  const {
+    lista,
+    loading,
+    carregar,
+    erroCarregar,
+    opcoesTimes,
+    organogramaGrupos,
+    opcoesVinculoFlat,
+    opcoesFiltroDiretoria,
+    opcoesFiltroGerencia,
+    opcoesFiltroSetor,
+    gerenciasOpcoes,
+    filtrada,
+    resumoPrestadoresCards,
+    filtradaOrdenada,
+    liderImediatoLinha,
+    onSortPrestadores,
+    sortPrestadores,
+    permOrg,
+  } = usePrestadorLista({
+    busca,
+    filtroDiretoria,
+    filtroGerencia,
+    filtroSetor,
+    filtroContrato,
+    filtroStatus,
+    abaPagina,
+  });
   /** No modal Visualizar: false = dados sensíveis com blur (ocultar). */
   const [modalVerExibirSensiveis, setModalVerExibirSensiveis] = useState(false);
   const [tabelaSalarioVisivel, setTabelaSalarioVisivel] = useState(false);
@@ -1008,47 +210,9 @@ export default function RhPrestadoresPage() {
   const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
   const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
-  const kpiTileShell = getPageContentBoxShellStyle(brand, t);
-
   useEffect(() => {
-    if (permOrg.loading || permOrg.canView === "nao") {
-      setOpcoesTimes([]);
-      setOrganogramaGrupos([]);
-      return;
-    }
-    let cancel = false;
-    void (async () => {
-      const { opcoes, grupos, error } = await carregarOpcoesTimesOrganograma();
-      if (cancel) return;
-      if (error) {
-        setOpcoesTimes([]);
-        setOrganogramaGrupos([]);
-      } else {
-        setOpcoesTimes(opcoes);
-        setOrganogramaGrupos(grupos);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [permOrg.loading, permOrg.canView]);
-
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    setErroGlobal(null);
-    const { data, error } = await supabase.from("rh_funcionarios").select("*").order("nome", { ascending: true }).limit(5000);
-    if (error) setErroGlobal(error.message);
-    setLista((data ?? []) as RhFuncionario[]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
-
-  useEffect(() => {
-    setSortPrestadores({ col: "nome", dir: "asc" });
-  }, [abaPagina]);
+    if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
+  }, [filtroGerencia, gerenciasOpcoes]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
@@ -1085,49 +249,6 @@ export default function RhPrestadoresPage() {
     setAcaoForm(formDeFuncionario(acaoModalRow));
     acaoBaselineRef.current = sliceContratacaoDeRow(acaoModalRow);
   }, [acaoTipo, acaoModalRow]);
-
-  const setoresUnicos = useMemo(() => {
-    const s = new Set<string>();
-    lista.forEach((r) => {
-      if (r.setor.trim()) s.add(r.setor.trim());
-    });
-    return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [lista]);
-
-  const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
-
-  const diretoriasOpcoes = useMemo(() => {
-    const u = new Set<string>();
-    opcoesVinculoFlat.forEach((v) => u.add(v.diretoriaNome));
-    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesVinculoFlat]);
-
-  const gerenciasOpcoes = useMemo(() => {
-    const u = new Set<string>();
-    opcoesVinculoFlat.forEach((v) => {
-      if (!v.gerenciaNome) return;
-      if (filtroDiretoria && v.diretoriaNome !== filtroDiretoria) return;
-      u.add(v.gerenciaNome);
-    });
-    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesVinculoFlat, filtroDiretoria]);
-
-  const opcoesFiltroDiretoria = useMemo(
-    () => diretoriasOpcoes.map((d) => ({ value: d, label: d })),
-    [diretoriasOpcoes],
-  );
-  const opcoesFiltroGerencia = useMemo(
-    () => gerenciasOpcoes.map((g) => ({ value: g, label: g })),
-    [gerenciasOpcoes],
-  );
-  const opcoesFiltroSetor = useMemo(
-    () => setoresUnicos.map((s) => ({ value: s, label: s })),
-    [setoresUnicos],
-  );
-
-  useEffect(() => {
-    if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
-  }, [filtroGerencia, gerenciasOpcoes]);
 
   const usarSelectOrganograma = useMemo(
     () => permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0,
@@ -1196,48 +317,6 @@ export default function RhPrestadoresPage() {
     return c;
   }, [fieldErr, ehPJ]);
 
-  const filtrada = useMemo(() => {
-    const b = busca.trim().toLowerCase();
-    const digits = somenteDigitos(busca);
-    return lista.filter((r) => {
-      if (filtroStatus === "disponiveis") {
-        if (r.status === "encerrado") return false;
-      } else if (r.status !== filtroStatus) return false;
-      if (filtroContrato !== "todos" && r.tipo_contrato !== filtroContrato) return false;
-      if (filtroSetor && r.setor.trim() !== filtroSetor) return false;
-      if (filtroDiretoria) {
-        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
-        if (!o || o.diretoriaNome !== filtroDiretoria) return false;
-      }
-      if (filtroGerencia) {
-        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
-        if (!o || o.gerenciaNome !== filtroGerencia) return false;
-      }
-      if (!b) return true;
-      if (digits.length === 11 && r.cpf === digits) return true;
-      if (r.nome.toLowerCase().includes(b)) return true;
-      if (r.email.toLowerCase().includes(b)) return true;
-      if (r.cpf && r.cpf.includes(digits) && digits.length >= 3) return true;
-      return false;
-    });
-  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesVinculoFlat]);
-
-  const resumoPrestadoresCards = useMemo(() => {
-    const temOrganograma = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
-    const total = filtrada.length;
-    let ativo = 0;
-    let indisponivel = 0;
-    let encerrado = 0;
-    for (const r of filtrada) {
-      if (r.status === "ativo") ativo += 1;
-      else if (r.status === "indisponivel") indisponivel += 1;
-      else encerrado += 1;
-    }
-    const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
-    const revisaoPendente = filtrada.filter((r) => revisaoCadastralPendenteParaFuncionario(r));
-    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente };
-  }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
-
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim().toLowerCase();
     if (!q) return [];
@@ -1280,50 +359,6 @@ export default function RhPrestadoresPage() {
     setModalVerExibirSensiveis(false);
     setModalForm("ver");
   };
-
-  const liderImediatoLinha = useCallback(
-    (row: RhFuncionario) => {
-      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
-      if (o) return o.gestorNome;
-      if (row.org_time_id) return opcoesTimes.find((x) => x.timeId === row.org_time_id)?.gestorNome ?? "—";
-      return "—";
-    },
-    [opcoesTimes, opcoesVinculoFlat],
-  );
-
-  const onSortPrestadores = useCallback((col: PrestadoresSortCol) => {
-    setSortPrestadores((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
-  }, []);
-
-  const filtradaOrdenada = useMemo(() => {
-    const { col, dir } = sortPrestadores;
-    const mult = dir === "asc" ? 1 : -1;
-    const rows = [...filtrada];
-    rows.sort((a, b) => {
-      switch (col) {
-        case "nome":
-          return mult * primeiroUltimoNome(a.nome).localeCompare(primeiroUltimoNome(b.nome), "pt-BR");
-        case "cargo":
-          return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
-        case "lider":
-          return mult * liderImediatoLinha(a).localeCompare(liderImediatoLinha(b), "pt-BR");
-        case "data_funcao":
-          return mult * dataFuncaoOuInicioIso(a).localeCompare(dataFuncaoOuInicioIso(b), "pt-BR");
-        case "salario":
-          return mult * (valorRemuneracaoOrdenacao(a) - valorRemuneracaoOrdenacao(b));
-        case "status": {
-          const ord: Record<string, number> = { ativo: 0, indisponivel: 1, encerrado: 2 };
-          const oa = ord[a.status] ?? 99;
-          const ob = ord[b.status] ?? 99;
-          if (oa !== ob) return mult * (oa - ob);
-          return mult * a.nome.localeCompare(b.nome, "pt-BR");
-        }
-        default:
-          return 0;
-      }
-    });
-    return rows;
-  }, [filtrada, sortPrestadores, liderImediatoLinha]);
 
   const inserirHistorico = useCallback(
     async (
@@ -2219,13 +1254,6 @@ export default function RhPrestadoresPage() {
     if (k === "bancarios") return <Landmark {...p} />;
     return <FolderOpen {...p} />;
   };
-  const iconAbaPagina = (k: AbaPaginaRhFunc) => {
-    const sz = FILTRO_BAR_TAB_ICON_SIZE;
-    const p = { size: sz, strokeWidth: 2 as const, "aria-hidden": "true" as const };
-    if (k === "headcount") return <Users {...p} />;
-    if (k === "acoes_rh") return <ClipboardList {...p} />;
-    return <StickyNote {...p} />;
-  };
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
   const fecharModalFuncionario = () => {
     if (salvando) return;
@@ -2257,13 +1285,6 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
-    ...getFilterBarRowStyle(),
-    width: "100%",
-    ...(withTopBorder
-      ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
-      : {}),
-  });
   const idTabPagina = (k: AbaPaginaRhFunc) => `rh-gest-func-pag-${k}`;
   const panelPaginaRhId = "rh-gest-func-panel-pag";
   const legendaTabelaPorAba =
@@ -2281,32 +1302,6 @@ export default function RhPrestadoresPage() {
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 6 : 7;
 
-  const btnIconTabela: CSSProperties = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    cursor: "pointer",
-    fontSize: 12,
-    fontFamily: FONT.body,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-  const btnIconTabelaCta: CSSProperties = {
-    ...btnIconTabela,
-    border: "none",
-    color: "#fff",
-    fontWeight: 700,
-    background: ctaGradient(brand),
-  };
-  const btnIconTabelaPerigo: CSSProperties = {
-    ...btnIconTabela,
-    border: "1px solid rgba(232,64,37,0.45)",
-    color: "#e84025",
-  };
-
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
@@ -2315,7 +1310,7 @@ export default function RhPrestadoresPage() {
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
-      {erroGlobal && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
+      {(erroGlobal || erroCarregar) && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
         <div
           role="alert"
           style={{
@@ -2332,7 +1327,7 @@ export default function RhPrestadoresPage() {
           }}
         >
           <AlertCircle size={14} color="#e84025" aria-hidden />
-          {erroGlobal}
+          {erroGlobal ?? erroCarregar}
         </div>
       ) : null}
 
@@ -2357,575 +1352,70 @@ export default function RhPrestadoresPage() {
         </div>
       ) : null}
 
-      <div className="app-grid-3" style={{ gap: 16, ...getPageKpiSectionGapStyle() }}>
-        <div
-          style={{
-            ...kpiTileShell,
-            padding: 20,
-            marginBottom: 0,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: brand.useBrand ? brand.secondary : t.textMuted,
-              letterSpacing: "1px",
-              textTransform: "uppercase",
-              fontFamily: FONT.body,
-              marginBottom: 6,
-            }}
-          >
-            <Users size={13} aria-hidden style={{ color: brand.useBrand ? brand.secondary : t.textMuted }} />
-            Total de Prestadores
-          </div>
-          <div
-            style={{
-              fontSize: 36,
-              fontWeight: 900,
-              color: t.text,
-              fontFamily: FONT_TITLE,
-              marginBottom: filtroStatus === "disponiveis" ? 12 : 0,
-              lineHeight: 1,
-            }}
-          >
-            {resumoPrestadoresCards.total}
-          </div>
-          {filtroStatus === "disponiveis" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
-                  {resumoPrestadoresCards.porStatus.ativo}
-                </span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
-                  {resumoPrestadoresCards.porStatus.indisponivel}
-                </span>
-              </div>
-            </div>
-          ) : null}
-        </div>
+      <PrestadorKpiResumo
+        resumo={resumoPrestadoresCards}
+        filtroStatus={filtroStatus}
+        podeEditar={perm.canEditarOk}
+        onEditarPrestador={abrirEditar}
+      />
 
-        <div
-          style={{
-            ...kpiTileShell,
-            border: "1px solid rgba(232, 64, 37, 0.25)",
-            padding: 20,
-            marginBottom: 0,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#e84025",
-              letterSpacing: "1px",
-              textTransform: "uppercase",
-              fontFamily: FONT.body,
-              marginBottom: 6,
-            }}
-          >
-            <AlertCircle size={13} aria-hidden />
-            Cadastro incompleto
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: "#e84025", fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
-            {resumoPrestadoresCards.incompletos.length}
-          </div>
-          {resumoPrestadoresCards.incompletos.length === 0 ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#22c55e", fontFamily: FONT.body }}>
-              <CheckCircle2 size={14} aria-hidden />
-              Todos os cadastros filtrados estão completos.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                maxHeight: 220,
-                overflow: "auto",
-              }}
-            >
-              {resumoPrestadoresCards.incompletos.map((row) =>
-                perm.canEditarOk ? (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => abrirEditar(row)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
-                      textAlign: "left",
-                      fontSize: 13,
-                      color: "var(--brand-action, #7c3aed)",
-                      fontFamily: FONT.body,
-                      textDecoration: "underline",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {row.nome}
-                  </button>
-                ) : (
-                  <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                    {row.nome}
-                  </span>
-                ),
-              )}
-            </div>
-          )}
-        </div>
+      <PrestadorFiltroBar
+        brand={brand}
+        t={t}
+        filtroDiretoria={filtroDiretoria}
+        onFiltroDiretoriaChange={setFiltroDiretoria}
+        opcoesFiltroDiretoria={opcoesFiltroDiretoria}
+        filtroGerencia={filtroGerencia}
+        onFiltroGerenciaChange={setFiltroGerencia}
+        opcoesFiltroGerencia={opcoesFiltroGerencia}
+        filtroSetor={filtroSetor}
+        onFiltroSetorChange={setFiltroSetor}
+        opcoesFiltroSetor={opcoesFiltroSetor}
+        filtroContrato={filtroContrato}
+        onFiltroContratoChange={setFiltroContrato}
+        filtroStatus={filtroStatus}
+        onFiltroStatusChange={setFiltroStatus}
+        busca={busca}
+        onBuscaChange={setBusca}
+        abaPagina={abaPagina}
+        onAbaPaginaChange={setAbaPagina}
+        panelPaginaRhId={panelPaginaRhId}
+        mostrarCtaAbaPaginaRh={mostrarCtaAbaPaginaRh}
+        podeCriarHeadcount={perm.canCriarOk && podeVerDadosSensiveis}
+        podeRhTalks={perm.canEditarOk}
+        onNovoPrestador={abrirNovo}
+        onRhTalks={() => abrirModalRhTalks()}
+      />
 
-        <div
-          style={{
-            ...kpiTileShell,
-            border: "1px solid rgba(245, 158, 11, 0.35)",
-            padding: 20,
-            marginBottom: 0,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#f59e0b",
-              letterSpacing: "1px",
-              textTransform: "uppercase",
-              fontFamily: FONT.body,
-              marginBottom: 6,
-            }}
-          >
-            <AlertCircle size={13} aria-hidden />
-            Revisão cadastral pendente
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: "#f59e0b", fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
-            {resumoPrestadoresCards.revisaoPendente.length}
-          </div>
-          {resumoPrestadoresCards.revisaoPendente.length === 0 ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#22c55e", fontFamily: FONT.body }}>
-              <CheckCircle2 size={14} aria-hidden />
-              Todos os cadastros filtrados estão em dia na revisão de 6 meses.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                maxHeight: 220,
-                overflow: "auto",
-              }}
-            >
-              {resumoPrestadoresCards.revisaoPendente.map((row) => (
-                <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                  {row.nome}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>
-            <FiltroBarCampoSelect
-              id="rh-filtro-dir"
-              value={filtroDiretoria}
-              onChange={setFiltroDiretoria}
-              options={opcoesFiltroDiretoria}
-              icon={FilterBarIcons.diretoria}
-              ariaLabel="Diretorias"
-              todasLabel="Todas Diretorias"
-            />
-            <FiltroBarCampoSelect
-              id="rh-filtro-ger"
-              value={filtroGerencia}
-              onChange={setFiltroGerencia}
-              options={opcoesFiltroGerencia}
-              icon={<Layers size={15} strokeWidth={2} aria-hidden="true" />}
-              ariaLabel="Gerências"
-              todasLabel="Todas Gerências"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-setor"
-              value={filtroSetor}
-              onChange={setFiltroSetor}
-              options={opcoesFiltroSetor}
-              icon={FilterBarIcons.time}
-              ariaLabel="Setores"
-              todasLabel="Todos Setores"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-contrato"
-              value={filtroContrato}
-              onChange={(v) => setFiltroContrato(v as typeof filtroContrato)}
-              options={TIPOS_CONTRATO}
-              icon={<FileSignature size={15} strokeWidth={2} aria-hidden="true" />}
-              ariaLabel="Tipos de contrato"
-              todasValue="todos"
-              todasLabel="Todos Contratos"
-            />
-            <FiltroBarCampoSelect
-              id="rh-func-status"
-              value={filtroStatus}
-              onChange={(v) => setFiltroStatus(v as FiltroStatusPrestador)}
-              options={[]}
-              extraOptions={PRESTADOR_STATUS_FILTRO_EXTRA}
-              icon={FilterBarIcons.status}
-              ariaLabel="Status"
-              todasValue="disponiveis"
-              todasLabel="Todos Status"
-            />
-          </div>
-          <div style={filterBarSection(true)}>
-            <BarraPesquisaPagina
-              id="rh-func-busca"
-              value={busca}
-              onChange={setBusca}
-              placeholder={PAGE_SEARCH.nomeCpfEmail}
-              aria-label="Pesquisar por nome, CPF ou e-mail"
-              wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
-            />
-          </div>
-          <div style={filterBarSection(true)}>
-            {mostrarCtaAbaPaginaRh ? (
-              <div className="app-filter-bar-tabs-cta">
-                <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
-                <div
-                  role="tablist"
-                  aria-label="Módulos de gestão de colaboradores"
-                  className="app-filter-bar-tabs-cta__tabs"
-                >
-                  {ABAS_PAGINA_RH_FUNC.map((tb) => (
-                    <FiltroBarTabButton
-                      key={tb.key}
-                      id={idTabPagina(tb.key)}
-                      active={abaPagina === tb.key}
-                      aria-controls={panelPaginaRhId}
-                      onClick={() => setAbaPagina(tb.key)}
-                      onKeyDown={(e) =>
-                        handleFiltroBarTabsArrowKeyDown(
-                          e,
-                          ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                          tb.key,
-                          setAbaPagina,
-                          "rh-gest-func-pag-",
-                        )
-                      }
-                      icon={iconAbaPagina(tb.key)}
-                    >
-                      {tb.label}
-                    </FiltroBarTabButton>
-                  ))}
-                </div>
-                <div className="app-filter-bar-tabs-cta__actions">
-                  {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
-                    <CtaCriarButton type="button" onClick={abrirNovo}>
-                      Novo Prestador
-                    </CtaCriarButton>
-                  ) : null}
-                  {abaPagina === "anotacoes" && perm.canEditarOk ? (
-                    <CtaCriarButton type="button" onClick={() => abrirModalRhTalks()}>
-                      RH Talks
-                    </CtaCriarButton>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div
-                role="tablist"
-                aria-label="Módulos de gestão de colaboradores"
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                  width: "100%",
-                }}
-              >
-                {ABAS_PAGINA_RH_FUNC.map((tb) => (
-                  <FiltroBarTabButton
-                    key={tb.key}
-                    id={idTabPagina(tb.key)}
-                    active={abaPagina === tb.key}
-                    aria-controls={panelPaginaRhId}
-                    onClick={() => setAbaPagina(tb.key)}
-                    onKeyDown={(e) =>
-                      handleFiltroBarTabsArrowKeyDown(
-                        e,
-                        ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                        tb.key,
-                        setAbaPagina,
-                        "rh-gest-func-pag-",
-                      )
-                    }
-                    icon={iconAbaPagina(tb.key)}
-                  >
-                    {tb.label}
-                  </FiltroBarTabButton>
-                ))}
-              </div>
-            )}
-          </div>
-      </div>
-
-      <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
-        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-          <table style={getDataTableStyle({ minWidth: tabelaSemSalario ? 620 : 720 })}>
-            <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
-            <thead>
-              <tr>
-                <SortTableTh<PrestadoresSortCol>
-                  label="Nome"
-                  col="nome"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Função"
-                  col="cargo"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Líder Imediato"
-                  col="lider"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <SortTableTh<PrestadoresSortCol>
-                  label="Data da Função"
-                  col="data_funcao"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                {!tabelaSemSalario ? (
-                  <SortTableTh<PrestadoresSortCol>
-                    label="Remuneração"
-                    col="salario"
-                    sortCol={sortPrestadores.col}
-                    sortDir={sortPrestadores.dir}
-                    onSort={onSortPrestadores}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    endAdornment={
-                      podeVerDadosSensiveis ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTabelaSalarioVisivel((v) => !v);
-                          }}
-                          aria-label={
-                            tabelaSalarioVisivel
-                              ? "Ocultar valores de remuneração na tabela"
-                              : "Exibir valores de remuneração na tabela"
-                          }
-                          title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
-                          style={{
-                            padding: 4,
-                            borderRadius: 8,
-                            border: `1px solid ${t.cardBorder}`,
-                            background: t.inputBg,
-                            cursor: "pointer",
-                            color: t.textMuted,
-                            display: "inline-flex",
-                            alignItems: "center",
-                          }}
-                        >
-                          {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
-                        </button>
-                      ) : null
-                    }
-                  />
-                ) : null}
-                <SortTableTh<PrestadoresSortCol>
-                  label="Status"
-                  col="status"
-                  sortCol={sortPrestadores.col}
-                  sortDir={sortPrestadores.dir}
-                  onSort={onSortPrestadores}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                />
-                <th scope="col" style={dataTable.thHeader}>
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <>
-                  <SkeletonTableRow cols={colunasTabela} />
-                  <SkeletonTableRow cols={colunasTabela} />
-                </>
-              ) : filtrada.length === 0 ? (
-                <tr>
-                  <td colSpan={colunasTabela} style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}>
-                    Sem dados para o período selecionado.
-                  </td>
-                </tr>
-              ) : (
-                filtradaOrdenada.map((row, i) => {
-                  const nomeExibicao = primeiroUltimoNome(row.nome) || "—";
-                  const liderCompleto = liderImediatoLinha(row);
-                  const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
-                  const remCol = textoRemuneracaoColunaTabela(row);
-                  const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
-                  const zebraBg = dataTable.zebraRow(i);
-                  return (
-                    <tr
-                      key={row.id}
-                      style={{ background: zebraBg }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = zebraBg;
-                      }}
-                    >
-                      <td
-                        style={{
-                          ...dataTable.tdCenter,
-                          maxWidth: 200,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                        title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
-                      >
-                        {nomeExibicao}
-                        {revisaoCadastralPendenteParaFuncionario(row) ? (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              marginLeft: 8,
-                              padding: "2px 8px",
-                              borderRadius: 999,
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#f59e0b",
-                              border: "1px solid rgba(245, 158, 11, 0.45)",
-                              background: "rgba(245, 158, 11, 0.12)",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            Revisão pendente
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={dataTable.tdCenter}>{row.cargo}</td>
-                      <td
-                        style={{ ...dataTable.tdCenter, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}
-                        title={liderCompleto !== "—" ? liderCompleto : undefined}
-                      >
-                        {lider}
-                      </td>
-                      <td style={dataTable.tdCenter}>{dataFuncaoTxt}</td>
-                      {!tabelaSemSalario ? (
-                        <td
-                          title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
-                          style={{
-                            ...dataTable.tdCenter,
-                            ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
-                          }}
-                        >
-                          {podeVerDadosSensiveis ? remCol.texto : "—"}
-                        </td>
-                      ) : null}
-                      <td style={dataTable.tdCenter}>
-                        <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
-                      </td>
-                      <td style={dataTable.tdCenter}>
-                        {preencherAcoesHeadcount || tabelaAcoesRh || tabelaAnotacoesRh ? (
-                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => abrirVer(row)}
-                              style={btnIconTabela}
-                              aria-label={`Visualizar ${row.nome}`}
-                            >
-                              <Eye size={14} aria-hidden />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirModalHistorico(row)}
-                              style={btnIconTabela}
-                              aria-label={`Histórico de ${row.nome}`}
-                            >
-                              <History size={14} aria-hidden />
-                            </button>
-                            {preencherAcoesHeadcount && perm.canEditarOk ? (
-                              <button type="button" onClick={() => abrirEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
-                                <Pencil size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {tabelaAcoesRh && perm.canEditarOk ? (
-                              <button
-                                type="button"
-                                onClick={() => abrirModalRegistrarAcao(row)}
-                                style={btnIconTabelaCta}
-                                aria-label={`Registrar ação de RH para ${row.nome}`}
-                              >
-                                <ClipboardList size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {tabelaAnotacoesRh && perm.canEditarOk ? (
-                              <button
-                                type="button"
-                                onClick={() => abrirModalRegistrarAnotacao(row)}
-                                style={btnIconTabelaCta}
-                                aria-label={`Registrar anotação de RH para ${row.nome}`}
-                              >
-                                <StickyNote size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                            {perm.canExcluirOk ? (
-                              <button
-                                type="button"
-                                onClick={() => setPrestadorExcluirConfirm(row)}
-                                style={btnIconTabelaPerigo}
-                                aria-label={`Excluir ${row.nome}`}
-                              >
-                                <Trash2 size={14} aria-hidden />
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PrestadorTabelaColaboradores
+        brand={brand}
+        t={t}
+        panelPaginaRhId={panelPaginaRhId}
+        idTabPagina={idTabPagina(abaPagina)}
+        legendaTabelaPorAba={legendaTabelaPorAba}
+        tabelaSemSalario={tabelaSemSalario}
+        colunasTabela={colunasTabela}
+        preencherAcoesHeadcount={preencherAcoesHeadcount}
+        tabelaAcoesRh={tabelaAcoesRh}
+        tabelaAnotacoesRh={tabelaAnotacoesRh}
+        loading={loading}
+        filtrada={filtrada}
+        filtradaOrdenada={filtradaOrdenada}
+        sortPrestadores={sortPrestadores}
+        onSortPrestadores={onSortPrestadores}
+        liderImediatoLinha={liderImediatoLinha}
+        podeVerDadosSensiveis={podeVerDadosSensiveis}
+        tabelaSalarioVisivel={tabelaSalarioVisivel}
+        onToggleTabelaSalarioVisivel={() => setTabelaSalarioVisivel((v) => !v)}
+        podeEditar={perm.canEditarOk}
+        podeExcluir={perm.canExcluirOk}
+        onAbrirVer={abrirVer}
+        onAbrirHistorico={abrirModalHistorico}
+        onAbrirEditar={abrirEditar}
+        onRegistrarAcao={abrirModalRegistrarAcao}
+        onRegistrarAnotacao={abrirModalRegistrarAnotacao}
+        onConfirmarExclusao={setPrestadorExcluirConfirm}
+      />
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (
         <ModalBase maxWidth={720} onClose={fecharModalFuncionario}>
@@ -3398,8 +1888,8 @@ export default function RhPrestadoresPage() {
                         list="lista-setores"
                       />
                       <datalist id="lista-setores">
-                        {setoresUnicos.map((s) => (
-                          <option key={s} value={s} />
+                        {opcoesFiltroSetor.map((s) => (
+                          <option key={s.value} value={s.value} />
                         ))}
                       </datalist>
                       {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length === 0 && opcoesVinculoFlat.length === 0 ? (
@@ -4871,3 +3361,4 @@ export default function RhPrestadoresPage() {
     </div>
   );
 }
+

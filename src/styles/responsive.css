@@ -230,38 +230,91 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
-/* Home Investidor — quatro atalhos na mesma fileira (desktop) */
-.app-grid-atalhos-investidor {
+/** Formulários longos (Dados de Cadastro) — 1 col mobile, 2 cols fixas; evita auto-fit >2 colunas. */
+.app-grid-form {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
 }
 
-@media (max-width: 900px) {
-  .app-grid-atalhos-investidor {
+.app-grid-form > * {
+  min-width: 0;
+}
+
+.app-grid-form-span-full {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .app-grid-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 520px) {
-  .app-grid-atalhos-investidor {
-    grid-template-columns: 1fr;
+.app-grid-form label {
+  display: block;
+}
+
+/* Aviso de próxima revisão cadastral — bloco de filtros Dados de Cadastro */
+.app-cadastro-revisao-notice {
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .app-cadastro-revisao-notice {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
 
-/* Home Operador — dois atalhos lado a lado */
+/* Abas Dados de Cadastro — scroll horizontal em telas estreitas */
+.app-cadastro-tabs-row {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap !important;
+  justify-content: flex-start !important;
+  padding-bottom: 2px;
+}
+
+@media (min-width: 900px) {
+  .app-cadastro-tabs-row {
+    overflow-x: visible;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+}
+
+/* Home Investidor — atalhos (auto-fit evita sobreposição quando a área útil é estreita) */
+.app-grid-atalhos-investidor {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  width: 100%;
+  min-width: 0;
+}
+
+.app-grid-atalhos-investidor > * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Home Operador — dois atalhos */
 .app-grid-atalhos-operador {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 640px) {
-  .app-grid-atalhos-operador {
-    grid-template-columns: 1fr;
-  }
+.app-grid-atalhos-operador > * {
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Três colunas iguais (filtros etc.) */

@@ -51,6 +51,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Expand no Consolidado: `aria-expanded`; coluna **Perfil** para classificação de influencer.
 - Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
+- **Carga de dados:** `useFinanceiroCatalogos` (3 queries em `Promise.all`); KPIs + Consolidado via `useFinanceiroMes` → `financeiroMesData.ts` (`loadFinanceiroMesData`, uma rodada de queries partilhada por período/filtros). Ciclos: `carregarCiclos` no `index`; após mutação no ciclo, `onRecarregar` = `recarregarFinanceiro` (ciclos + mês). Expand no Consolidado: histórico por influencer continua fetch local (`toggleExpand`).
 
 ---
 
