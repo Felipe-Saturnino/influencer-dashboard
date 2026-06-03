@@ -1269,20 +1269,169 @@ def _parse_meta_actions_engagements(actions: list | None) -> int:
     return total
 
 
-def _paginate_meta_ads_insights(url: str, params: dict) -> list[dict]:
+def _paginate_graph_data(url: str, params: dict, label: str) -> list[dict]:
     out: list[dict] = []
     next_url: str | None = url
     next_params: dict | None = params
     while next_url:
         resp = requests.get(next_url, params=next_params, timeout=120)
         if resp.status_code != 200:
-            _log_api_error(resp, "Meta Ads insights")
+            _log_api_error(resp, label)
             resp.raise_for_status()
         data = resp.json()
         out.extend(data.get("data") or [])
         next_url = (data.get("paging") or {}).get("next")
         next_params = None
     return out
+
+
+def meta_ads_account_preflight() -> tuple[bool, str]:
+    """Valida acesso à conta de anúncios + insights (Marketing API)."""
+    if not META_AD_ACCOUNT_ID or not META_TOKEN:
+        return False, "META_AD_ACCOUNT_ID ou META_ACCESS_TOKEN não configurados"
+    ad_account = _normalize_ad_account_id(META_AD_ACCOUNT_ID)
+    acc_resp = requests.get(
+        f"{graph_base()}/{ad_account}",
+        params={
+            "fields": "name,account_status,currency,timezone_name",
+            "access_token": META_TOKEN,
+        },
+        timeout=30,
+    )
+    if acc_resp.status_code != 200:
+        msg = _meta_graph_error_message(acc_resp) or (acc_resp.text or "")[:400]
+        return False, f"Conta de anúncios inacessível: {msg}"
+    acc = acc_resp.json()
+    log.info(
+        "Meta Ads — conta OK: %s (%s, tz=%s)",
+        acc.get("name", ad_account),
+        acc.get("account_status", "?"),
+        acc.get("timezone_name", "?"),
+    )
+    ins_resp = requests.get(
+        f"{graph_base()}/{ad_account}/insights",
+        params={
+            "fields": "spend,impressions",
+            "level": "account",
+            "date_preset": "last_7d",
+            "access_token": META_TOKEN,
+        },
+        timeout=30,
+    )
+    if ins_resp.status_code != 200:
+        msg = _meta_graph_error_message(ins_resp) or (ins_resp.text or "")[:400]
+        return False, f"Marketing API insights recusado (ads_read / permissão BM?): {msg}"
+    return True, ""
+
+
+def _insights_metrics_fields() -> str:
+    return "spend,impressions,reach,clicks,inline_link_clicks,actions"
+
+
+def _fetch_meta_ads_insights_level_ad(ad_account: str, date_str: str) -> list[dict]:
+    time_range = json.dumps({"since": date_str, "until": date_str})
+    url = f"{graph_base()}/{ad_account}/insights"
+    params = {
+        "access_token": META_TOKEN,
+        "fields": f"ad_id,ad_name,campaign_name,{_insights_metrics_fields()}",
+        "level": "ad",
+        "time_range": time_range,
+        "limit": 500,
+    }
+    return _paginate_graph_data(url, params, "Meta Ads insights (level=ad)")
+
+
+def _fetch_meta_ads_via_ads_nested(ad_account: str, date_str: str) -> list[dict]:
+    """
+    Fallback quando act/insights level=ad vem vazio (comum com anúncios arquivados / boost antigo).
+    """
+    tr_nested = f"{{'since':'{date_str}','until':'{date_str}'}}"
+    metrics = _insights_metrics_fields()
+    fields = f"id,name,campaign{{name}},insights.time_range({tr_nested}){{{metrics}}}"
+    url = f"{graph_base()}/{ad_account}/ads"
+    params = {
+        "access_token": META_TOKEN,
+        "fields": fields,
+        "limit": 100,
+        "filtering": json.dumps(
+            [
+                {
+                    "field": "effective_status",
+                    "operator": "IN",
+                    "value": ["ACTIVE", "PAUSED", "ARCHIVED", "COMPLETED", "IN_PROCESS"],
+                }
+            ]
+        ),
+    }
+    ads_raw = _paginate_graph_data(url, params, "Meta Ads /ads nested insights")
+    rows: list[dict] = []
+    for ad in ads_raw:
+        ins_list = (ad.get("insights") or {}).get("data") or []
+        if not ins_list:
+            continue
+        ins = ins_list[0]
+        try:
+            spend = float(ins.get("spend") or 0)
+        except (TypeError, ValueError):
+            spend = 0.0
+        impr = int(ins.get("impressions") or 0)
+        if spend <= 0 and impr <= 0:
+            continue
+        campaign = ad.get("campaign") or {}
+        rows.append(
+            {
+                "ad_id": str(ad.get("id") or ""),
+                "ad_name": ad.get("name"),
+                "campaign_name": campaign.get("name"),
+                "spend": spend,
+                "impressions": impr,
+                "reach": int(ins.get("reach") or 0),
+                "clicks": int(ins.get("clicks") or 0),
+                "inline_link_clicks": int(ins.get("inline_link_clicks") or ins.get("clicks") or 0),
+                "actions": ins.get("actions"),
+            }
+        )
+    return rows
+
+
+def _meta_ads_row_to_post(date_str: str, row: dict) -> dict | None:
+    try:
+        spend = float(row.get("spend") or 0)
+    except (TypeError, ValueError):
+        spend = 0.0
+    impr = int(row.get("impressions") or 0)
+    if spend <= 0 and impr <= 0:
+        return None
+
+    ad_id = str(row.get("ad_id") or row.get("id") or "")
+    if not ad_id:
+        return None
+
+    eng = _parse_meta_actions_engagements(row.get("actions"))
+    link_clicks = int(row.get("inline_link_clicks") or row.get("clicks") or 0)
+    reach = int(row.get("reach") or 0)
+    clicks = int(row.get("clicks") or 0)
+
+    creative_info = _fetch_ad_creative_meta(ad_id, META_TOKEN)
+    post_id = creative_info.get("post_id")
+    platform = creative_info.get("platform") or "facebook"
+
+    return {
+        "ad_id": ad_id,
+        "post_id": post_id,
+        "platform": platform,
+        "date": date_str,
+        "ad_name": ((row.get("ad_name") or row.get("name") or "")[:500] or None),
+        "campaign_name": ((row.get("campaign_name") or "")[:500] or None),
+        "spend": round(spend, 2),
+        "impressions": impr,
+        "reach": reach,
+        "engagements": eng,
+        "link_clicks": link_clicks,
+        "permalink": None,
+        "thumbnail_url": (creative_info.get("thumbnail_url") or "")[:2048] or None,
+        "_clicks": clicks,
+    }
 
 
 def _fetch_ad_creative_meta(ad_id: str, token: str) -> dict:
@@ -1315,7 +1464,9 @@ def _fetch_ad_creative_meta(ad_id: str, token: str) -> dict:
 
 def fetch_meta_ads():
     if not META_AD_ACCOUNT_ID or not META_TOKEN:
-        log.warning("Meta Ads — META_AD_ACCOUNT_ID ou META_ACCESS_TOKEN não configurados, pulando")
+        msg = "META_AD_ACCOUNT_ID ou META_ACCESS_TOKEN não configurados"
+        log.warning("Meta Ads — %s, pulando", msg)
+        log_run("meta_ads", "error", 0, error=msg)
         return
 
     t0 = time.monotonic()
@@ -1323,17 +1474,22 @@ def fetch_meta_ads():
     date_str = TARGET_DATE.isoformat()
     log.info("Meta Ads — iniciando coleta para %s (conta %s)", date_str, ad_account)
 
-    time_range = json.dumps({"since": date_str, "until": date_str})
-    insights_url = f"{graph_base()}/{ad_account}/insights"
-    params = {
-        "access_token": META_TOKEN,
-        "fields": "ad_id,ad_name,spend,impressions,reach,clicks,inline_link_clicks,actions,campaign_name",
-        "level": "ad",
-        "time_range": time_range,
-        "limit": 100,
-    }
+    try:
+        ad_rows_raw = _fetch_meta_ads_insights_level_ad(ad_account, date_str)
+        source = "insights level=ad"
+        if not ad_rows_raw:
+            log.warning(
+                "Meta Ads — insights level=ad vazio para %s; tentando /ads com insights.time_range.",
+                date_str,
+            )
+            ad_rows_raw = _fetch_meta_ads_via_ads_nested(ad_account, date_str)
+            source = "ads nested insights"
+    except Exception as exc:
+        ms = int((time.monotonic() - t0) * 1000)
+        log_run("meta_ads", "error", 0, error=str(exc), ms=ms)
+        raise
 
-    ad_rows_raw = _paginate_meta_ads_insights(insights_url, params)
+    log.info("Meta Ads — fonte=%s, linhas brutas API=%d", source, len(ad_rows_raw))
 
     post_rows: list[dict] = []
     total_spend = 0.0
@@ -1345,53 +1501,21 @@ def fetch_meta_ads():
     distinct_posts: set[str] = set()
 
     for row in ad_rows_raw:
-        try:
-            spend = float(row.get("spend") or 0)
-        except (TypeError, ValueError):
-            spend = 0.0
-        impr = int(row.get("impressions") or 0)
-        if spend <= 0 and impr <= 0:
+        parsed = _meta_ads_row_to_post(date_str, row)
+        if not parsed:
             continue
-
-        ad_id = str(row.get("ad_id") or "")
-        if not ad_id:
-            continue
-
-        eng = _parse_meta_actions_engagements(row.get("actions"))
-        link_clicks = int(row.get("inline_link_clicks") or row.get("clicks") or 0)
-        reach = int(row.get("reach") or 0)
-        clicks = int(row.get("clicks") or 0)
-
-        creative_info = _fetch_ad_creative_meta(ad_id, META_TOKEN)
-        post_id = creative_info.get("post_id")
-        platform = creative_info.get("platform") or "facebook"
+        clicks = int(parsed.pop("_clicks", 0))
+        post_id = parsed.get("post_id")
         if post_id:
             distinct_posts.add(str(post_id))
 
-        total_spend += spend
-        total_impr += impr
-        total_reach += reach
+        total_spend += float(parsed["spend"])
+        total_impr += int(parsed["impressions"])
+        total_reach += int(parsed["reach"])
         total_clicks += clicks
-        total_link += link_clicks
-        total_eng += eng
-
-        post_rows.append(
-            {
-                "ad_id": ad_id,
-                "post_id": post_id,
-                "platform": platform,
-                "date": date_str,
-                "ad_name": ((row.get("ad_name") or "")[:500] or None),
-                "campaign_name": ((row.get("campaign_name") or "")[:500] or None),
-                "spend": round(spend, 2),
-                "impressions": impr,
-                "reach": reach,
-                "engagements": eng,
-                "link_clicks": link_clicks,
-                "permalink": None,
-                "thumbnail_url": (creative_info.get("thumbnail_url") or "")[:2048] or None,
-            }
-        )
+        total_link += int(parsed["link_clicks"])
+        total_eng += int(parsed["engagements"])
+        post_rows.append(parsed)
 
     daily_row = {
         "ad_account_id": ad_account,
@@ -1411,7 +1535,15 @@ def fetch_meta_ads():
         upsert("meta_boosted_posts", post_rows, "ad_id,date")
 
     ms = int((time.monotonic() - t0) * 1000)
-    log_run("meta_ads", "success", len(post_rows), ms=ms)
+    status = "success" if post_rows or total_spend > 0 else "partial"
+    warn = None
+    if not post_rows and total_spend <= 0:
+        warn = (
+            f"Nenhum anúncio com spend/impressões em {date_str} "
+            f"(fonte={source}). Confira timezone da conta de ads e se o boost usou esta act_."
+        )
+        log.warning("Meta Ads — %s", warn)
+    log_run("meta_ads", status, len(post_rows), error=warn, ms=ms)
     log.info(
         "Meta Ads — spend %.2f, %d anúncio(s), %d post(s) distinto(s) (%dms)",
         total_spend,

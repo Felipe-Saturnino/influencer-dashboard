@@ -138,6 +138,17 @@ def main():
                     err,
                 )
                 exit(1)
+        if "meta_ads" in channel_names:
+            if not etl.META_AD_ACCOUNT_ID:
+                log.error(
+                    "Backfill inclui meta_ads mas META_AD_ACCOUNT_ID não está definido. "
+                    "Cadastre o secret act_… no GitHub Actions."
+                )
+                exit(1)
+            ok_ads, err_ads = etl.meta_ads_account_preflight()
+            if not ok_ads:
+                log.error("Backfill abortado: Meta Ads inacessível. Detalhe: %s", err_ads)
+                exit(1)
 
     day_idx = 0
     for d in date_range(start_date, end_date):

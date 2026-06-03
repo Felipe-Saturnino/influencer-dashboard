@@ -14,9 +14,9 @@ on:
         required: true
         default: "2026-06-01"
       channels:
-        description: "Canais (vazio = todos): instagram,facebook,youtube,linkedin"
+        description: "Canais (vazio = todos): instagram,facebook,youtube,linkedin,meta_ads"
         required: false
-        default: "instagram,facebook"
+        default: "instagram,facebook,meta_ads"
       sleep_seconds:
         description: "Pausa entre dias (segundos) — rate limit Meta"
         required: false
@@ -53,6 +53,7 @@ jobs:
           META_IG_ACCOUNT_ID: ${{ secrets.META_IG_ACCOUNT_ID }}
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
         working-directory: scripts/etl-social-kpis
         run: python validate_meta_token.py
 
