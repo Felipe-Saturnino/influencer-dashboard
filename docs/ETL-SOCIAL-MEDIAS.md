@@ -72,7 +72,7 @@ Também pode rodar via **GitHub Actions** em: Actions → Backfill Social KPIs (
 1. **Token Meta antes de tudo** — Use **System User** no Business Manager (`META_ACCESS_TOKEN` no GitHub). O backfill valida **preflight + Page Access Token** (`meta_backfill_preflight`) antes do loop — Facebook exige Page token derivado do System User.
 2. **Janelas menores** — Para 6–12 meses, rode em blocos (ex.: Jan–Mar, depois Abr–Jun). Facilita reexecutar só o que falhou e reduz risco de rate limit.
 3. **Pausa entre dias** — Padrão 2 s (`BACKFILL_SLEEP_SECONDS` ou input no workflow). Se a Meta retornar throttling, use `4`.
-4. **Canais** — Workflow default: `instagram,facebook`. Para todos: deixe `channels` vazio ou `instagram,facebook,youtube,linkedin`.
+4. **Canais** — Workflow default: `instagram,facebook`. Para todos: deixe `channels` vazio ou `instagram,facebook,youtube,linkedin,meta_ads`.
 5. **Ambiente opcional**
    - `SKIP_META_PREFLIGHT=1` — pula a checagem inicial (só se souber o que está fazendo).
    - `BACKFILL_FAIL_FAST_META=1` — ao primeiro OAuth 190 / token expirado no Instagram/Facebook, encerra o job.
@@ -107,6 +107,7 @@ Configure os **Secrets** em: Repositório → Settings → Secrets and variables
 | `YOUTUBE_CHANNEL_ID` | Para YT | ID do canal do YouTube |
 | `LINKEDIN_ACCESS_TOKEN` | Para LI | Token de acesso à API do LinkedIn |
 | `LINKEDIN_ORG_ID` | Para LI | URN da organização (ex: `urn:li:organization:123456`) |
+| `META_AD_ACCOUNT_ID` | Para Impulsionamento | ID da conta de anúncios (ex: `act_123456789` ou só números) |
 
 ### Validar token Meta antes de depurar
 
@@ -129,7 +130,8 @@ Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6
 ## O que é coletado
 
 - **TARGET_DATE:** sempre o **dia anterior** (ontem).
-- **kpi_daily:** métricas agregadas diárias por canal.
+- **kpi_daily:** métricas agregadas diárias por canal (orgânico).
+- **meta_ads_daily / meta_boosted_posts:** mídia paga Meta (Impulsionamento) — spend, alcance e interações pagas.
 - **instagram_posts, facebook_posts, youtube_videos, linkedin_posts:** métricas por post/vídeo.
 - **pipeline_runs:** log de cada execução por canal.
 
@@ -192,6 +194,13 @@ Passos detalhados: [System Users — Marketing API](https://developers.facebook.
 1. Crie um app em [linkedin.com/developers](https://www.linkedin.com/developers).
 2. Solicite permissões: `r_organization_social`, `r_organization_admin`, etc.
 3. Gere um token de acesso para a organização (company page).
+
+### Meta Ads (Impulsionamento)
+
+1. Use o mesmo **System User** / `META_ACCESS_TOKEN` com permissão **`ads_read`**.
+2. Configure **`META_AD_ACCOUNT_ID`** com a conta do Ads Manager (`act_…`).
+3. O ETL grava **`meta_ads_daily`** (agregado) e **`meta_boosted_posts`** (nível anúncio) via Marketing API Insights (`level=ad`).
+4. Backfill: inclua `meta_ads` em `BACKFILL_CHANNELS` ou deixe vazio para todos os canais.
 
 ---
 

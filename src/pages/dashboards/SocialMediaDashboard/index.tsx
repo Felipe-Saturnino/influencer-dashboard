@@ -38,7 +38,7 @@ import {
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles"
 import { supabase } from "../../../lib/supabase"
 import { fetchAllPages } from "../../../lib/supabasePaginate"
-import { ArrowDownToLine, ArrowUpFromLine, Bookmark, Clock, Heart, MessageCircle, Mic, Percent, Play, Sparkles, ChevronLeft, ChevronRight, Trophy, TrendingUp, CircleDollarSign, UserPlus } from "lucide-react"
+import { ArrowDownToLine, ArrowUpFromLine, Bookmark, Clock, Heart, MessageCircle, Mic, Megaphone, MousePointerClick, Percent, Play, Sparkles, ChevronLeft, ChevronRight, Trophy, TrendingUp, CircleDollarSign, UserPlus, Eye } from "lucide-react"
 import {
   COR_FUNIL_A,
   COR_FUNIL_B,
@@ -59,7 +59,15 @@ import {
   pctCamp,
   postStatPill,
   sumCampanhasPerf,
+  aggregateBoostedPostsByAd,
+  totaisFromMetaAdsRows,
+  fmtRoiImpulsionamento,
   totaisFromKpiRows,
+  youtubeEngagementFromVideoSnapshots,
+  type YoutubeVideoRowLite,
+  type MetaAdsDaily,
+  type MetaBoostedPost,
+  type BoostSortCol,
   MES_INICIO,
   type CampCmpSortCol,
   type CampanhaPerfRow,
@@ -157,6 +165,7 @@ export default function SocialMediaDashboard() {
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
   const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
+  const [youtubeVideoRows, setYoutubeVideoRows] = useState<YoutubeVideoRowLite[]>([]);
   const [formatos, setFormatos] = useState<{ tipo: string; total: number }[]>([]);
   const [funilTotais, setFunilTotais] = useState<{
     visitas: number; registros: number; ftds: number; ftd_total: number;
@@ -164,11 +173,16 @@ export default function SocialMediaDashboard() {
   const [campanhasPerf, setCampanhasPerf] = useState<CampanhaPerfRow[]>([]);
   const [campanhasPerfPrev, setCampanhasPerfPrev] = useState<CampanhaPerfRow[]>([]);
   const [serieFunil, setSerieFunil] = useState<FunilSerieRow[]>([]);
-  const [aba, setAba] = useRouteTab("dash_midias_sociais", "overview", ["overview", "conversao", "alcance"] as const);
+  const [aba, setAba] = useRouteTab("dash_midias_sociais", "overview", ["overview", "conversao", "impulsionamento", "alcance"] as const);
   const [compCampA, setCompCampA] = useState<string>("");
   const [compCampB, setCompCampB] = useState<string>("");
   const [sortCampCmp, setSortCampCmp] = useState<{ col: CampCmpSortCol; dir: SortDir }>({ col: "ggr", dir: "desc" });
   const [sortTaxCmp, setSortTaxCmp] = useState<{ col: TaxCmpSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
+  const [sortBoost, setSortBoost] = useState<{ col: BoostSortCol; dir: SortDir }>({ col: "spend", dir: "desc" });
+  const [loadingImpulsionamento, setLoadingImpulsionamento] = useState(true);
+  const [metaAdsDaily, setMetaAdsDaily] = useState<MetaAdsDaily[]>([]);
+  const [metaAdsDailyPrev, setMetaAdsDailyPrev] = useState<MetaAdsDaily[]>([]);
+  const [metaBoostedPosts, setMetaBoostedPosts] = useState<MetaBoostedPost[]>([]);
 
   useEffect(() => {
     const withData = campanhasPerf.filter((c) => (Number(c.visitas) || 0) > 0 || (Number(c.ftds) || 0) > 0);
@@ -307,6 +321,14 @@ export default function SocialMediaDashboard() {
       ].sort(ordenarPostsRecentes);
 
       setPosts(postsUnif);
+      setYoutubeVideoRows(
+        yt.map((r) => ({
+          video_id: r.video_id,
+          date: r.date,
+          likes: r.likes,
+          comments: r.comments,
+        }))
+      );
       setFormatos(
         Object.entries(formatoCount)
           .map(([tipo, total]) => ({ tipo, total }))
@@ -315,6 +337,54 @@ export default function SocialMediaDashboard() {
       setLoadingAlcance(false);
     }
     loadAlcance();
+    return () => { cancelled = true; };
+  }, [start, end, startPrev, endPrev, historico]);
+
+  // ── Impulsionamento (Meta Ads) — global, sem operadora ───────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function loadImpulsionamento() {
+      setLoadingImpulsionamento(true);
+      const daily = await fetchAllPages<MetaAdsDaily>(async (from, to) =>
+        supabase
+          .from("meta_ads_daily")
+          .select("*")
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: true })
+          .range(from, to)
+      );
+      if (cancelled) return;
+      setMetaAdsDaily(daily);
+
+      const postsRes = await supabase
+        .from("meta_boosted_posts")
+        .select("*")
+        .gte("date", start)
+        .lte("date", end)
+        .order("spend", { ascending: false })
+        .limit(500);
+      if (cancelled) return;
+      setMetaBoostedPosts((postsRes.data ?? []) as MetaBoostedPost[]);
+
+      if (startPrev && endPrev) {
+        const dailyPrev = await fetchAllPages<MetaAdsDaily>(async (from, to) =>
+          supabase
+            .from("meta_ads_daily")
+            .select("*")
+            .gte("date", startPrev)
+            .lte("date", endPrev)
+            .order("date", { ascending: true })
+            .range(from, to)
+        );
+        if (cancelled) return;
+        setMetaAdsDailyPrev(dailyPrev);
+      } else {
+        setMetaAdsDailyPrev([]);
+      }
+      setLoadingImpulsionamento(false);
+    }
+    loadImpulsionamento();
     return () => { cancelled = true; };
   }, [start, end, startPrev, endPrev, historico]);
 
@@ -383,7 +453,22 @@ export default function SocialMediaDashboard() {
   }, [start, end, startPrev, endPrev, historico, operadoraParaRpc]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
-  const totais = useMemo(() => totaisFromKpiRows(kpiData), [kpiData]);
+  const youtubeEngFallback = useMemo(
+    () => youtubeEngagementFromVideoSnapshots(youtubeVideoRows),
+    [youtubeVideoRows]
+  );
+
+  const totais = useMemo(() => {
+    const base = totaisFromKpiRows(kpiData);
+    const ytKpiEng = (base.byChannel["youtube"] ?? []).reduce(
+      (a, r) => a + (Number(r.engagements) || 0),
+      0
+    );
+    const ytEng = Math.max(ytKpiEng, youtubeEngFallback);
+    const delta = ytEng - ytKpiEng;
+    if (delta <= 0) return base;
+    return { ...base, engagements: base.engagements + delta };
+  }, [kpiData, youtubeEngFallback]);
   const totaisAntMom = useMemo(() => totaisFromKpiRows(kpiAntRows), [kpiAntRows]);
 
   const totalImpr = totais.impressoes || 1;
@@ -402,6 +487,34 @@ export default function SocialMediaDashboard() {
   const cmpEngMedio =
     !historico && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
   const cmpPostagens = !historico ? fmtComparativoMoM(totais.postagens, totaisAntMom.postagens) : null;
+
+  const totaisImp = useMemo(
+    () => totaisFromMetaAdsRows(metaAdsDaily, metaBoostedPosts),
+    [metaAdsDaily, metaBoostedPosts]
+  );
+  const totaisImpAnt = useMemo(
+    () => totaisFromMetaAdsRows(metaAdsDailyPrev, []),
+    [metaAdsDailyPrev]
+  );
+  const cmpBoostPosts = !historico
+    ? fmtComparativoMoM(totaisImp.boosted_posts_count, totaisImpAnt.boosted_posts_count)
+    : null;
+  const cmpSpend = !historico ? fmtComparativoMoM(totaisImp.spend, totaisImpAnt.spend) : null;
+  const cmpImpEng = !historico
+    ? fmtComparativoMoM(totaisImp.engagements, totaisImpAnt.engagements)
+    : null;
+  const roiImp = fmtRoiImpulsionamento(totaisImp.attributed_ggr, totaisImp.spend);
+  const roiImpAnt = fmtRoiImpulsionamento(totaisImpAnt.attributed_ggr, totaisImpAnt.spend);
+  const cmpRoiImp =
+    !historico && roiImp !== "—" && roiImpAnt !== "—"
+      ? fmtComparativoMoM(
+          parseFloat(roiImp),
+          parseFloat(roiImpAnt)
+        )
+      : null;
+  const cpmImp = totaisImp.impressions > 0 ? (totaisImp.spend / totaisImp.impressions) * 1000 : null;
+  const custoPorEng =
+    totaisImp.engagements > 0 ? totaisImp.spend / totaisImp.engagements : null;
 
   const consolidado = useMemo(() => sumCampanhasPerf(campanhasPerf), [campanhasPerf]);
   const consolidadoPrev = useMemo(() => sumCampanhasPerf(campanhasPerfPrev), [campanhasPerfPrev]);
@@ -438,9 +551,12 @@ export default function SocialMediaDashboard() {
   const sumVal = (arr: KpiDaily[], f: keyof KpiDaily): number =>
     arr.reduce((a, r) => a + (Number(r[f]) || 0), 0);
 
+  const youtubeEngagements = (byCh: KpiDaily[]) =>
+    Math.max(sumVal(byCh, "engagements"), youtubeEngFallback);
+
   /** Taxa de engajamento agregada no período (evita depender de engagement_rate null no banco). */
-  const calcEngRate = (byCh: KpiDaily[]): string => {
-    const eng = sumVal(byCh, "engagements");
+  const calcEngRate = (byCh: KpiDaily[], channel?: string): string => {
+    const eng = channel === "youtube" ? youtubeEngagements(byCh) : sumVal(byCh, "engagements");
     const impr = sumVal(byCh, "impressions");
     if (impr > 0) return fmtPct(eng / impr);
     const views = sumVal(byCh, "video_views");
@@ -448,8 +564,8 @@ export default function SocialMediaDashboard() {
     return "—";
   };
 
-  const calcEngBadge = (byCh: KpiDaily[]): number => {
-    const eng = sumVal(byCh, "engagements");
+  const calcEngBadge = (byCh: KpiDaily[], channel?: string): number => {
+    const eng = channel === "youtube" ? youtubeEngagements(byCh) : sumVal(byCh, "engagements");
     const impr = sumVal(byCh, "impressions");
     if (impr > 0) return (eng / impr) * 100;
     const views = sumVal(byCh, "video_views");
@@ -485,8 +601,8 @@ export default function SocialMediaDashboard() {
         { label: "Visualizações", val: fmtNum(sumVal(byCh, "video_views"))   },
         // ETL não grava impressions no kpi_daily do YouTube (Analytics day não expõe); evitar "0" falso
         { label: "Impressões",    val: "—" },
-        { label: "Engajamento",   val: fmtNum(sumVal(byCh, "engagements"))   },
-        { label: "Taxa eng.",     val: calcEngRate(byCh) },
+        { label: "Engajamento",   val: fmtNum(youtubeEngagements(byCh))   },
+        { label: "Taxa eng.",     val: calcEngRate(byCh, "youtube") },
       ],
     },
   ];
@@ -571,6 +687,35 @@ export default function SocialMediaDashboard() {
   // ── Estilos base ─────────────────────────────────────────────────────────────
   const card = getPageContentBoxStyle(brand, t);
 
+  const onSortBoost = (col: BoostSortCol) => {
+    setSortBoost((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  };
+
+  const boostedPostsAgregados = useMemo(
+    () => aggregateBoostedPostsByAd(metaBoostedPosts),
+    [metaBoostedPosts]
+  );
+
+  const boostedPostsOrdenados = useMemo(() => {
+    const list = [...boostedPostsAgregados];
+    const { col, dir } = sortBoost;
+    const mul = dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      if (col === "nome") {
+        const na = (a.ad_name || a.campaign_name || a.ad_id).toLowerCase();
+        const nb = (b.ad_name || b.campaign_name || b.ad_id).toLowerCase();
+        return na.localeCompare(nb, "pt-BR") * mul;
+      }
+      if (col === "platform") {
+        return a.platform.localeCompare(b.platform, "pt-BR") * mul;
+      }
+      const va = Number(a[col]) || 0;
+      const vb = Number(b[col]) || 0;
+      return (va - vb) * mul;
+    });
+    return list;
+  }, [boostedPostsAgregados, sortBoost]);
+
   const dataTable = useDataTableBlock();
   const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
   const corFunilComparativoCampanhaB = COR_FUNIL_B;
@@ -610,7 +755,7 @@ export default function SocialMediaDashboard() {
     );
   }
 
-  const tabIds: SocialMediaTab[] = ["overview", "conversao", "alcance"];
+  const tabIds: SocialMediaTab[] = ["overview", "conversao", "impulsionamento", "alcance"];
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text, paddingBottom: 12 }}>
@@ -618,7 +763,7 @@ export default function SocialMediaDashboard() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="dash_midias_sociais" />}
         title={getPageMenuLabel("dash_midias_sociais")}
-        subtitle="Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas."
+        subtitle="Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas."
         brand={brand}
         t={t}
       />
@@ -656,7 +801,7 @@ export default function SocialMediaDashboard() {
             </button>
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
 
-            {showFiltroOperadora && aba !== "alcance" && (
+            {showFiltroOperadora && aba !== "alcance" && aba !== "impulsionamento" && (
               <FiltroOperadoraSelect
                 pill
                 value={filtroOperadora}
@@ -666,7 +811,7 @@ export default function SocialMediaDashboard() {
               />
             )}
 
-            {(loadingAlcance || loadingCampanhas) && (
+            {(loadingAlcance || loadingCampanhas || loadingImpulsionamento) && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
                 Carregando…
@@ -1145,6 +1290,183 @@ export default function SocialMediaDashboard() {
         )
       )}
 
+      {aba === "impulsionamento" && (
+        loadingImpulsionamento ? skeletonBloco : (
+          <>
+            <div style={card}>
+              <SectionTitle
+                sub={
+                  historico
+                    ? "acumulado · mídia paga Meta (Instagram e Facebook)"
+                    : "comparativo MTD vs mesmo período do mês anterior · mídia paga Meta"
+                }
+              >
+                KPIs de Impulsionamento
+              </SectionTitle>
+              <div style={{ display: "flex", flexDirection: "column", gap: PAGE_CONTENT_BOX_GAP }}>
+                <div className="app-grid-kpi-4">
+                  <SocialKpiCard
+                    label="Posts impulsionados"
+                    valor={fmtNum(totaisImp.boosted_posts_count)}
+                    accentVar="--brand-contrast"
+                    accentCor={BRAND.roxoVivo}
+                    icon={<Megaphone size={15} aria-hidden />}
+                    momComparativo={
+                      cmpBoostPosts
+                        ? {
+                            pctLabel: cmpBoostPosts.pctLabel,
+                            up: cmpBoostPosts.up,
+                            refLine: `vs ${fmtNum(totaisImpAnt.boosted_posts_count)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <SocialKpiCard
+                    label="Investimento"
+                    valor={fmtBRL(totaisImp.spend)}
+                    accentVar="--brand-action"
+                    accentCor={BRAND.ciano}
+                    icon={<CircleDollarSign size={15} aria-hidden />}
+                    momComparativo={
+                      cmpSpend
+                        ? {
+                            pctLabel: cmpSpend.pctLabel,
+                            up: cmpSpend.up,
+                            refLine: `vs ${fmtBRL(totaisImpAnt.spend)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <SocialKpiCard
+                    label="Interações (pagas)"
+                    valor={fmtNum(totaisImp.engagements)}
+                    accentVar="--brand-contrast"
+                    accentCor={BRAND.roxo}
+                    icon={<Sparkles size={15} aria-hidden />}
+                    momComparativo={
+                      cmpImpEng
+                        ? {
+                            pctLabel: cmpImpEng.pctLabel,
+                            up: cmpImpEng.up,
+                            refLine: `vs ${fmtNum(totaisImpAnt.engagements)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <SocialKpiCard
+                    label="ROI (GGR)"
+                    valor={roiImp}
+                    accentVar="--brand-action"
+                    accentCor={totaisImp.attributed_ggr != null ? BRAND.verde : BRAND.amarelo}
+                    icon={<TrendingUp size={15} aria-hidden />}
+                    momComparativo={
+                      cmpRoiImp
+                        ? {
+                            pctLabel: cmpRoiImp.pctLabel,
+                            up: cmpRoiImp.up,
+                            refLine: `vs ${roiImpAnt} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                </div>
+                <div className="app-grid-kpi-4">
+                  <SocialKpiCard
+                    label="Alcance pago"
+                    valor={fmtNum(totaisImp.reach)}
+                    accentVar="--brand-contrast"
+                    accentCor="#1877F2"
+                    icon={<Eye size={15} aria-hidden />}
+                  />
+                  <SocialKpiCard
+                    label="Impressões pagas"
+                    valor={fmtNum(totaisImp.impressions)}
+                    accentVar="--brand-contrast"
+                    accentCor="#E1306C"
+                    icon={<Bookmark size={15} aria-hidden />}
+                  />
+                  <SocialKpiCard
+                    label="CPM"
+                    valor={cpmImp != null ? fmtBRL(cpmImp) : "—"}
+                    accentVar="--brand-action"
+                    accentCor={BRAND.ciano}
+                    icon={<Percent size={15} aria-hidden />}
+                  />
+                  <SocialKpiCard
+                    label="Custo por interação"
+                    valor={custoPorEng != null ? fmtBRL(custoPorEng) : "—"}
+                    accentVar="--brand-action"
+                    accentCor={BRAND.roxoVivo}
+                    icon={<MousePointerClick size={15} aria-hidden />}
+                  />
+                </div>
+                {roiImp === "—" && totaisImp.spend > 0 && (
+                  <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                    ROI (GGR) indisponível até vincular UTMs dos anúncios às campanhas em Gestão de Links.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div style={card}>
+              <SectionTitle sub="anúncios com investimento no período">
+                Detalhamento por anúncio
+              </SectionTitle>
+              {boostedPostsOrdenados.length > 0 ? (
+                <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+                  <table style={getDataTableStyle({ minWidth: 920 })}>
+                    <caption style={{ display: "none" }}>Anúncios impulsionados no período.</caption>
+                    <thead>
+                      <tr>
+                        <SortTableTh<BoostSortCol>
+                          label="Anúncio / campanha"
+                          col="nome"
+                          sortCol={sortBoost.col}
+                          sortDir={sortBoost.dir}
+                          onSort={onSortBoost}
+                          thStyle={dataTable.thHeader}
+                          align="center"
+                        />
+                        <SortTableTh label="Plataforma" col="platform" sortCol={sortBoost.col} sortDir={sortBoost.dir} onSort={onSortBoost} thStyle={dataTable.thHeader} align="center" />
+                        <SortTableTh label="Investimento" col="spend" sortCol={sortBoost.col} sortDir={sortBoost.dir} onSort={onSortBoost} thStyle={dataTable.thHeader} align="center" />
+                        <SortTableTh label="Impressões" col="impressions" sortCol={sortBoost.col} sortDir={sortBoost.dir} onSort={onSortBoost} thStyle={dataTable.thHeader} align="center" />
+                        <SortTableTh label="Interações" col="engagements" sortCol={sortBoost.col} sortDir={sortBoost.dir} onSort={onSortBoost} thStyle={dataTable.thHeader} align="center" />
+                        <SortTableTh label="Cliques" col="link_clicks" sortCol={sortBoost.col} sortDir={sortBoost.dir} onSort={onSortBoost} thStyle={dataTable.thHeader} align="center" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {boostedPostsOrdenados.map((row, i) => {
+                        const nome = row.ad_name || row.campaign_name || row.ad_id;
+                        const platLabel = row.platform === "instagram" ? "Instagram" : "Facebook";
+                        return (
+                          <tr key={row.ad_id} style={{ background: dataTable.zebraRow(i) }}>
+                            <td
+                              style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}
+                              title={nome}
+                            >
+                              {nome}
+                            </td>
+                            <td style={dataTable.tdCenter}>{platLabel}</td>
+                            <td style={dataTable.tdCenter}>{fmtBRL(Number(row.spend) || 0)}</td>
+                            <td style={dataTable.tdCenter}>{fmtNum(row.impressions)}</td>
+                            <td style={dataTable.tdCenter}>{fmtNum(row.engagements)}</td>
+                            <td style={dataTable.tdCenter}>{fmtNum(row.link_clicks)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                  Nenhum impulsionamento registrado no período.
+                </div>
+              )}
+            </div>
+          </>
+        )
+      )}
+
       {aba === "alcance" && (
         loadingAlcance ? skeletonBloco : (
           <>
@@ -1227,7 +1549,7 @@ export default function SocialMediaDashboard() {
               {channelConfig.map((cfg) => {
                 const byCh   = totais.byChannel[cfg.channel] ?? [];
                 const stats  = cfg.stats(byCh);
-                const engVal = calcEngBadge(byCh);
+                const engVal = calcEngBadge(byCh, cfg.channel);
                 return (
                   <section
                     key={cfg.channel}

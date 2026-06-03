@@ -30,6 +30,7 @@ _ALL_CHANNELS: tuple[tuple[str, object], ...] = (
     ("facebook", etl.fetch_facebook),
     ("youtube", etl.fetch_youtube),
     ("linkedin", etl.fetch_linkedin),
+    ("meta_ads", etl.fetch_meta_ads),
 )
 
 

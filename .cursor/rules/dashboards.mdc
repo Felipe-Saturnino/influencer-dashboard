@@ -77,7 +77,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 |---|---|---|
 | `streamers` | Streamers | Acompanhe performance, conversão e financeiro do canal de influencers. |
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
-| `dash_midias_sociais` | Mídias Sociais | Monitore o alcance orgânico dos canais e a conversão das campanhas rastreadas. |
+| `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
@@ -124,12 +124,15 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 
 ## Mídias Sociais — Padrões Específicos
 
-- **3 abas:** Overview (KPIs + Detalhamento + Comparativo de campanha),
-  Conversão (Funil + Comparativo de funil + Comparativo de taxas), Alcance (KPIs sociais + Posts).
+- **4 abas:** Overview (KPIs + Detalhamento + Comparativo de campanha),
+  Conversão (Funil + Comparativo de funil + Comparativo de taxas),
+  **Impulsionamento** (KPIs Meta Ads + tabela por anúncio),
+  Alcance (KPIs sociais orgânicos + Posts).
 - **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
   Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
   Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.
-  **Alcance:** dados orgânicos (`kpi_daily`, posts) **sem** filtro operadora — canal Spin global. O `FiltroOperadoraSelect` **não** aparece na aba Alcance (só Overview/Conversão).
+  **Impulsionamento** e **Alcance:** dados globais (conta Meta Spin / canais orgânicos) — **sem** filtro operadora. O `FiltroOperadoraSelect` **não** aparece nessas abas.
+- **Impulsionamento — dados:** `meta_ads_daily`, `meta_boosted_posts` (ETL Marketing API, canal `meta_ads`). ROI (GGR) depende de `attributed_ggr` / UTMs mapeadas.
 - Campanhas legadas sem operadora: backfill `casa_apostas` (migração `20260601120000_midias_sociais_filtro_operadora.sql`).
 - **KpiCard local (`SocialKpiCard`):** interface diferente do `KpiCard` compartilhado.
   Aceita `valor` (string), `momComparativo` (objeto com `pctLabel`/`up`/`refLine`), `accentVar`, `accentCor`.

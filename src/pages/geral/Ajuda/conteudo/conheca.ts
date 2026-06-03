@@ -82,12 +82,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Mídias Sociais consolida o desempenho orgânico dos canais da Spin Gaming (Instagram, Facebook, YouTube) e os resultados de conversão das campanhas com UTMs mapeadas. Está dividido em três abas: Overview, Conversão e Alcance.",
+          "O dashboard de Mídias Sociais consolida o desempenho orgânico dos canais da Spin Gaming (Instagram, Facebook, YouTube), o impulsionamento pago via Meta Ads e os resultados de conversão das campanhas com UTMs mapeadas. Está dividido em quatro abas: Overview, Conversão, Impulsionamento e Alcance.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Na aba Alcance o filtro não é exibido — os dados orgânicos dos canais Spin (Instagram, Facebook, YouTube) são sempre globais.\n\nAs três abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Nas abas Impulsionamento e Alcance o filtro não é exibido — impulsionamento Meta e alcance orgânico são sempre globais (páginas Spin).\n\nAs quatro abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
@@ -98,6 +98,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Aba Conversão — Funis de Campanha",
         texto:
           "Apresenta o funil consolidado de todas as campanhas (Visitas → Registros → FTDs) e um comparativo lado a lado entre duas campanhas selecionadas nos menus acima. Funil e blocos de campanhas usam subtítulo \"acumulado\" no Histórico.\n\nA tabela de Comparativo de Taxas lista a taxa de conversão Visita→Registro, Registro→FTD e Visita→FTD por campanha. Ordene pelas colunas para identificar as campanhas com melhor ou pior conversão em cada etapa.",
+      },
+      {
+        subtitulo: "Aba Impulsionamento — Mídia paga Meta",
+        texto:
+          "Apresenta KPIs de anúncios impulsionados na conta Meta da Spin (Instagram e Facebook): posts impulsionados, investimento, interações pagas, ROI (GGR quando houver atribuição por UTM), alcance e impressões pagas, CPM e custo por interação.\n\nA tabela Detalhamento por anúncio lista cada anúncio com investimento, impressões, interações e cliques no período. Sem filtro de operadora — dados globais da conta de anúncios.\n\nROI (GGR) exige vínculo das UTMs dos anúncios às campanhas em Gestão de Links; enquanto não houver atribuição, o card exibe \"—\".",
       },
       {
         subtitulo: "Aba Alcance — Orgânico por Canal",
@@ -888,7 +893,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alertas automáticos",
         texto:
-          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. Alertas em vermelho indicam falha; em amarelo, atenção.",
+          "A plataforma detecta automaticamente condições anômalas: syncs atrasados (> 24h ou > 36h), taxas de erro acima de 5%, e e-mails operacionais não enviados no dia. O aviso de CDA sem dados recentes considera a data de métrica de ontem (D-1), pois o sync diário grava o dia anterior. Alertas em vermelho indicam falha; em amarelo, atenção.",
       },
       {
         subtitulo: "Redes permitidas — Check-in de prestadores",
