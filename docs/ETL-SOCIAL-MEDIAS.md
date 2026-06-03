@@ -76,7 +76,7 @@ Também pode rodar via **GitHub Actions** em: Actions → Backfill Social KPIs (
 5. **Ambiente opcional**
    - `SKIP_META_PREFLIGHT=1` — pula a checagem inicial (só se souber o que está fazendo).
    - `BACKFILL_FAIL_FAST_META=1` — ao primeiro OAuth 190 / token expirado no Instagram/Facebook, encerra o job.
-   - `BACKFILL_CHANNELS=instagram,facebook` — limita canais (útil se YouTube/LinkedIn não estiverem configurados).
+   - `BACKFILL_CHANNELS=instagram,facebook,meta_ads` — inclua **`meta_ads`** para Impulsionamento (default do workflow GitHub).
 
 ### 3. GitHub Actions (automático)
 

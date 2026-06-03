@@ -109,6 +109,20 @@ def main() -> int:
             return 1
         return 1
 
+    ad_account_id = os.environ.get("META_AD_ACCOUNT_ID", "").strip()
+    if ad_account_id:
+        print("\n--- Meta Ads (Impulsionamento) ---")
+        import etl
+
+        ok_ads, err_ads = etl.meta_ads_account_preflight()
+        if ok_ads:
+            print(f"Conta de anúncios OK ({ad_account_id}).")
+        else:
+            print(f"Meta Ads FALHOU: {err_ads}")
+            print("Impulsionamento será pulado até corrigir META_AD_ACCOUNT_ID / ads_read no System User.")
+    else:
+        print("\nMETA_AD_ACCOUNT_ID não definido — canal meta_ads (Impulsionamento) será pulado no ETL.")
+
     print("\nToken Meta OK para o ETL.")
     return 0
 
