@@ -997,6 +997,7 @@ export default function StatusTecnico() {
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
   const hojeIso = hojeIsoKpi;
+  const ontemIso = subDiasIso(hojeIso, 1);
   const alertas: Array<{ nivel: "erro" | "aviso"; msg: string }> = [];
   const vinteQuatroHoras = new Date();
   vinteQuatroHoras.setHours(vinteQuatroHoras.getHours() - 24);
@@ -1019,7 +1020,9 @@ export default function StatusTecnico() {
   if (parseFloat(taxaErroCda) > 5) {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA (${taxaErroCda}%)` });
   }
-  if (passouHorarioCda && registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
+  // Métricas CDA são D-1: o sync de hoje grava em influencer_metricas com data = ontem (SP).
+  const cdaMetricasOntem = fluxoDados.find((f) => f.data === ontemIso)?.cda ?? 0;
+  if (passouHorarioCda && cdaMetricasOntem === 0 && fluxoDados.some((f) => f.cda > 0)) {
     alertas.push({ nivel: "aviso", msg: "Sync CDA sem dados recentes" });
   }
 
@@ -1030,9 +1033,8 @@ export default function StatusTecnico() {
   });
   const techLogsSocial24h = techLogs.filter((l) => {
     const created = new Date(l.created_at);
-    return ["instagram", "facebook", "youtube", "linkedin"].includes(l.tipo) && created >= vinteQuatroHoras;
+    return ["instagram", "facebook", "youtube", "linkedin", "meta_ads"].includes(l.tipo) && created >= vinteQuatroHoras;
   });
-  const ontemIso = subDiasIso(hojeIso, 1);
   const anteontemIso = subDiasIso(hojeIso, 2);
   const socialTemDadosRecentes = fluxoDados.some((f) => (f.data === hojeIso || f.data === ontemIso || f.data === anteontemIso) && f.social > 0);
   const socialTeveDadosAntes = fluxoDados.some((f) => f.social > 0);
@@ -1343,6 +1345,7 @@ export default function StatusTecnico() {
           facebook: "Social Media (Facebook)",
           youtube: "Social Media (YouTube)",
           linkedin: "Social Media (LinkedIn)",
+          meta_ads: "Social Media (Impulsionamento Meta)",
           relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
           email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
           resend: "E-mail (Resend)",
@@ -2268,7 +2271,7 @@ export default function StatusTecnico() {
                   ["Nenhum Sync CDA com sucesso", "Último sync com falha, nenhum OK"],
                   ["Sync CDA não executou hoje (agendado 4h)", "Após 4h BRT, sem sync_logs OK na data civil de hoje (SP)"],
                   ["Taxa de erro alta no Sync CDA", "> 5%"],
-                  ["Sync CDA sem dados recentes", "Nenhum registro hoje (com histórico)"],
+                  ["Sync CDA sem dados recentes", "Após 4h BRT, sem influencer_metricas com data = ontem (D-1), com histórico"],
                   ["Erro no Sync Social Media", "pipeline_runs status=error (24h)"],
                   ["Sync Social Media com erro", "tech_logs canal (24h)"],
                   ["Sync Social Media sem dados recentes", "Sem kpi_daily em 3 dias (com histórico)"],

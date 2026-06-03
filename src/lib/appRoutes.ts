@@ -84,6 +84,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Mídias Sociais", "dash_midias_sociais", "MidiasSociais", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
+    { tabId: "impulsionamento", slug: "Impulsionamento", label: "Impulsionamento", access: "always" },
     { tabId: "alcance", slug: "Alcance", label: "Alcance", access: "always" },
   ]),
   page("Gestão de Links", "gestao_links", "GestaoDeLinks", [

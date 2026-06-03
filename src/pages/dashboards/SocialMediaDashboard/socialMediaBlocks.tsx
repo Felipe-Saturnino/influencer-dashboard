@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { FONT } from "../../../constants/theme"
 import { BRAND } from "../../../lib/dashboardConstants"
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent"
-import { BarChart2, GitCompare, Share2, TrendingDown, TrendingUp } from "lucide-react";
+import { BarChart2, GitCompare, Megaphone, Share2, TrendingDown, TrendingUp } from "lucide-react";
 
 /** Janeiro 2026 — dados de mídias começam aqui. */
 export const MES_INICIO = { ano: 2026, mes: 0 };
@@ -40,19 +40,102 @@ export interface KpiDaily {
   link_clicks: number | null;
 }
 
-export type SocialMediaTab = "overview" | "conversao" | "alcance";
+export type SocialMediaTab = "overview" | "conversao" | "impulsionamento" | "alcance";
 
 export const TAB_LABELS: Record<SocialMediaTab, string> = {
   overview: "Overview",
   conversao: "Conversão",
+  impulsionamento: "Impulsionamento",
   alcance: "Alcance",
 };
 
 export const TAB_ICONS: Record<SocialMediaTab, typeof BarChart2> = {
   overview: BarChart2,
   conversao: GitCompare,
+  impulsionamento: Megaphone,
   alcance: Share2,
 };
+
+export interface MetaAdsDaily {
+  date: string;
+  ad_account_id: string;
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  link_clicks: number;
+  engagements: number;
+  boosted_posts_count: number;
+  attributed_ggr: number | null;
+}
+
+export interface MetaBoostedPost {
+  ad_id: string;
+  post_id: string | null;
+  platform: string;
+  date: string;
+  ad_name: string | null;
+  campaign_name: string | null;
+  spend: number;
+  impressions: number;
+  reach: number;
+  engagements: number;
+  link_clicks: number;
+  permalink: string | null;
+  thumbnail_url: string | null;
+}
+
+export type BoostSortCol = "nome" | "platform" | "spend" | "impressions" | "engagements" | "link_clicks";
+
+export function totaisFromMetaAdsRows(daily: MetaAdsDaily[], posts: MetaBoostedPost[]) {
+  const sumDaily = (f: keyof MetaAdsDaily) =>
+    daily.reduce((a, r) => a + (Number(r[f]) || 0), 0);
+  const spend = sumDaily("spend");
+  const distinctPosts = new Set(
+    posts.map((p) => p.post_id || p.ad_id).filter(Boolean)
+  ).size;
+  const ggrSum = daily.reduce((a, r) => a + (Number(r.attributed_ggr) || 0), 0);
+  return {
+    spend,
+    impressions: sumDaily("impressions"),
+    reach: sumDaily("reach"),
+    clicks: sumDaily("clicks"),
+    link_clicks: sumDaily("link_clicks"),
+    engagements: sumDaily("engagements"),
+    boosted_posts_count: distinctPosts,
+    attributed_ggr: ggrSum > 0 ? ggrSum : null,
+  };
+}
+
+export function aggregateBoostedPostsByAd(posts: MetaBoostedPost[]): MetaBoostedPost[] {
+  const byAd = new Map<string, MetaBoostedPost>();
+  for (const p of posts) {
+    const cur = byAd.get(p.ad_id);
+    if (!cur) {
+      byAd.set(p.ad_id, { ...p });
+      continue;
+    }
+    byAd.set(p.ad_id, {
+      ...cur,
+      spend: Number(cur.spend) + Number(p.spend),
+      impressions: Number(cur.impressions) + Number(p.impressions),
+      reach: Number(cur.reach) + Number(p.reach),
+      engagements: Number(cur.engagements) + Number(p.engagements),
+      link_clicks: Number(cur.link_clicks) + Number(p.link_clicks),
+      date: p.date > cur.date ? p.date : cur.date,
+      ad_name: cur.ad_name || p.ad_name,
+      campaign_name: cur.campaign_name || p.campaign_name,
+      thumbnail_url: cur.thumbnail_url || p.thumbnail_url,
+      post_id: cur.post_id || p.post_id,
+    });
+  }
+  return [...byAd.values()];
+}
+
+export function fmtRoiImpulsionamento(attributedGgr: number | null, spend: number): string {
+  if (spend <= 0 || attributedGgr == null) return "—";
+  return `${(((attributedGgr - spend) / spend) * 100).toFixed(1)}%`;
+}
 
 export interface PostUnificado {
   canal: string;

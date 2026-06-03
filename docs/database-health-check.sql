@@ -34,6 +34,7 @@ WITH tabelas_esperadas AS (
     'relatorio_daily_summary', 'relatorio_monthly_summary', 'relatorio_por_tabela',
     'relatorio_uap_por_jogo', 'mesas_spin_cadastro',
     'kpi_daily', 'instagram_posts', 'facebook_posts', 'youtube_videos', 'linkedin_posts',
+    'meta_ads_daily', 'meta_boosted_posts',
     'alert_config'
   ]) AS nome
 )

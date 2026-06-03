@@ -21,6 +21,7 @@ v3 (Meta):
 - Facebook: métricas de insights de página uma por requisição (evita #100 se um nome do lote for inválido)
 """
 
+import json
 import os
 import re
 import time
@@ -71,6 +72,8 @@ _YT_UPLOADS_PLAYLIST_CACHE: dict[str, str] = {}
 
 LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
+
+META_AD_ACCOUNT_ID = os.environ.get("META_AD_ACCOUNT_ID", "")
 
 TARGET_DATE = date.today() - timedelta(days=1)
 # Backfill (`backfill.py`) atribui `INSIGHTS_DATE` por dia; no job diário insights FB/IG usam o mesmo dia que `TARGET_DATE`.
@@ -1229,6 +1232,196 @@ def fetch_youtube():
 
 
 # ------------------------------------------------------------
+# Meta Ads (Impulsionamento)
+# ------------------------------------------------------------
+def _normalize_ad_account_id(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    return s if s.startswith("act_") else f"act_{s}"
+
+
+def _parse_meta_actions_engagements(actions: list | None) -> int:
+    if not actions:
+        return 0
+    for a in actions:
+        if a.get("action_type") == "post_engagement":
+            try:
+                return int(float(a.get("value", 0)))
+            except (TypeError, ValueError):
+                pass
+    total = 0
+    types = {
+        "like",
+        "comment",
+        "post",
+        "post_reaction",
+        "share",
+        "onsite_conversion.post_save",
+        "video_view",
+    }
+    for a in actions:
+        if a.get("action_type") in types:
+            try:
+                total += int(float(a.get("value", 0)))
+            except (TypeError, ValueError):
+                pass
+    return total
+
+
+def _paginate_meta_ads_insights(url: str, params: dict) -> list[dict]:
+    out: list[dict] = []
+    next_url: str | None = url
+    next_params: dict | None = params
+    while next_url:
+        resp = requests.get(next_url, params=next_params, timeout=120)
+        if resp.status_code != 200:
+            _log_api_error(resp, "Meta Ads insights")
+            resp.raise_for_status()
+        data = resp.json()
+        out.extend(data.get("data") or [])
+        next_url = (data.get("paging") or {}).get("next")
+        next_params = None
+    return out
+
+
+def _fetch_ad_creative_meta(ad_id: str, token: str) -> dict:
+    resp = requests.get(
+        f"{graph_base()}/{ad_id}",
+        params={
+            "fields": "creative{effective_object_story_id,object_story_spec,thumbnail_url}",
+            "access_token": token,
+        },
+        timeout=60,
+    )
+    if resp.status_code != 200:
+        log.debug("Meta Ads — creative ad %s: %s", ad_id, resp.text[:200])
+        return {}
+    creative = (resp.json().get("creative") or {})
+    story_id = creative.get("effective_object_story_id")
+    spec = creative.get("object_story_spec") or {}
+    platform = (
+        "instagram"
+        if (spec.get("instagram_actor_id") or spec.get("instagram_user_id"))
+        else "facebook"
+    )
+    thumb = creative.get("thumbnail_url")
+    return {
+        "post_id": story_id,
+        "platform": platform,
+        "thumbnail_url": thumb,
+    }
+
+
+def fetch_meta_ads():
+    if not META_AD_ACCOUNT_ID or not META_TOKEN:
+        log.warning("Meta Ads — META_AD_ACCOUNT_ID ou META_ACCESS_TOKEN não configurados, pulando")
+        return
+
+    t0 = time.monotonic()
+    ad_account = _normalize_ad_account_id(META_AD_ACCOUNT_ID)
+    date_str = TARGET_DATE.isoformat()
+    log.info("Meta Ads — iniciando coleta para %s (conta %s)", date_str, ad_account)
+
+    time_range = json.dumps({"since": date_str, "until": date_str})
+    insights_url = f"{graph_base()}/{ad_account}/insights"
+    params = {
+        "access_token": META_TOKEN,
+        "fields": "ad_id,ad_name,spend,impressions,reach,clicks,inline_link_clicks,actions,campaign_name",
+        "level": "ad",
+        "time_range": time_range,
+        "limit": 100,
+    }
+
+    ad_rows_raw = _paginate_meta_ads_insights(insights_url, params)
+
+    post_rows: list[dict] = []
+    total_spend = 0.0
+    total_impr = 0
+    total_reach = 0
+    total_clicks = 0
+    total_link = 0
+    total_eng = 0
+    distinct_posts: set[str] = set()
+
+    for row in ad_rows_raw:
+        try:
+            spend = float(row.get("spend") or 0)
+        except (TypeError, ValueError):
+            spend = 0.0
+        impr = int(row.get("impressions") or 0)
+        if spend <= 0 and impr <= 0:
+            continue
+
+        ad_id = str(row.get("ad_id") or "")
+        if not ad_id:
+            continue
+
+        eng = _parse_meta_actions_engagements(row.get("actions"))
+        link_clicks = int(row.get("inline_link_clicks") or row.get("clicks") or 0)
+        reach = int(row.get("reach") or 0)
+        clicks = int(row.get("clicks") or 0)
+
+        creative_info = _fetch_ad_creative_meta(ad_id, META_TOKEN)
+        post_id = creative_info.get("post_id")
+        platform = creative_info.get("platform") or "facebook"
+        if post_id:
+            distinct_posts.add(str(post_id))
+
+        total_spend += spend
+        total_impr += impr
+        total_reach += reach
+        total_clicks += clicks
+        total_link += link_clicks
+        total_eng += eng
+
+        post_rows.append(
+            {
+                "ad_id": ad_id,
+                "post_id": post_id,
+                "platform": platform,
+                "date": date_str,
+                "ad_name": ((row.get("ad_name") or "")[:500] or None),
+                "campaign_name": ((row.get("campaign_name") or "")[:500] or None),
+                "spend": round(spend, 2),
+                "impressions": impr,
+                "reach": reach,
+                "engagements": eng,
+                "link_clicks": link_clicks,
+                "permalink": None,
+                "thumbnail_url": (creative_info.get("thumbnail_url") or "")[:2048] or None,
+            }
+        )
+
+    daily_row = {
+        "ad_account_id": ad_account,
+        "date": date_str,
+        "spend": round(total_spend, 2),
+        "impressions": total_impr,
+        "reach": total_reach,
+        "clicks": total_clicks,
+        "link_clicks": total_link,
+        "engagements": total_eng,
+        "boosted_posts_count": len(distinct_posts) if distinct_posts else len(post_rows),
+        "attributed_ggr": None,
+    }
+
+    upsert("meta_ads_daily", [daily_row], "ad_account_id,date")
+    if post_rows:
+        upsert("meta_boosted_posts", post_rows, "ad_id,date")
+
+    ms = int((time.monotonic() - t0) * 1000)
+    log_run("meta_ads", "success", len(post_rows), ms=ms)
+    log.info(
+        "Meta Ads — spend %.2f, %d anúncio(s), %d post(s) distinto(s) (%dms)",
+        total_spend,
+        len(post_rows),
+        daily_row["boosted_posts_count"],
+        ms,
+    )
+
+
+# ------------------------------------------------------------
 # LinkedIn
 # ------------------------------------------------------------
 def fetch_linkedin():
@@ -1375,10 +1568,11 @@ if __name__ == "__main__":
         "facebook": fetch_facebook,
         "youtube": fetch_youtube,
         "linkedin": fetch_linkedin,
+        "meta_ads": fetch_meta_ads,
     }
     for name, fn in channels.items():
         try:
-            if skip_meta and name in ("instagram", "facebook"):
+            if skip_meta and name in ("instagram", "facebook", "meta_ads"):
                 log.warning("Pulando %s — token Meta inválido no preflight.", name)
                 log_run(name, "error", 0, error=meta_skip_msg)
                 continue
