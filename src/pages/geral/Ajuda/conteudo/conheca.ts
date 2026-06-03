@@ -102,7 +102,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Impulsionamento — Mídia paga Meta",
         texto:
-          "Apresenta KPIs de anúncios impulsionados na conta Meta da Spin (Instagram e Facebook): posts impulsionados, investimento, interações pagas, ROI (GGR quando houver atribuição por UTM), alcance e impressões pagas, CPM e custo por interação.\n\nA tabela Detalhamento por anúncio lista cada anúncio com investimento, impressões, interações e cliques no período. Sem filtro de operadora — dados globais da conta de anúncios.\n\nROI (GGR) exige vínculo das UTMs dos anúncios às campanhas em Gestão de Links; enquanto não houver atribuição, o card exibe \"—\".",
+          "Apresenta KPIs de anúncios impulsionados na conta Meta da Spin (Instagram e Facebook): posts impulsionados, investimento, interações, alcance e impressões pagas, CPM (custo por mil impressões) e custo por interação.\n\nA tabela Detalhamento por anúncio lista cada campanha com investimento, impressões, interações e cliques no período. Sem filtro de operadora — dados globais da conta de anúncios.",
       },
       {
         subtitulo: "Aba Alcance — Orgânico por Canal",
