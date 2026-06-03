@@ -69,13 +69,14 @@ Também pode rodar via **GitHub Actions** em: Actions → Backfill Social KPIs (
 
 #### Backfill em período longo (reduzir taxa de erro)
 
-1. **Token Meta antes de tudo** — Page tokens “normais” expiram (~60 dias). Renove e atualize `META_ACCESS_TOKEN` **antes** de rodar janelas grandes. O script faz **pré-validação** (`meta_preflight`): se o token estiver ruim, o backfill **aborta no primeiro segundo** em vez de falhar em cada dia (evita `pipeline_runs` cheio de erro).
+1. **Token Meta antes de tudo** — Use **System User** no Business Manager (`META_ACCESS_TOKEN` no GitHub). O backfill valida **preflight + Page Access Token** (`meta_backfill_preflight`) antes do loop — Facebook exige Page token derivado do System User.
 2. **Janelas menores** — Para 6–12 meses, rode em blocos (ex.: Jan–Mar, depois Abr–Jun). Facilita reexecutar só o que falhou e reduz risco de rate limit.
-3. **Pausa entre dias** — Padrão 2 s. Se a Meta retornar throttling, aumente: `BACKFILL_SLEEP_SECONDS=4` (local ou adicione ao workflow).
-4. **Token que não expira (produção)** — No Meta Business: [System Users](https://developers.facebook.com/docs/marketing-api/system-users) + permissões na app + **Page Access Token** gerado para o System User pode ser configurado para não expirar (ver documentação atual da Meta para o seu tipo de app). Ideal para sync diário + backfills longos sem surpresa.
+3. **Pausa entre dias** — Padrão 2 s (`BACKFILL_SLEEP_SECONDS` ou input no workflow). Se a Meta retornar throttling, use `4`.
+4. **Canais** — Workflow default: `instagram,facebook`. Para todos: deixe `channels` vazio ou `instagram,facebook,youtube,linkedin`.
 5. **Ambiente opcional**
    - `SKIP_META_PREFLIGHT=1` — pula a checagem inicial (só se souber o que está fazendo).
-   - `BACKFILL_FAIL_FAST_META=1` — ao primeiro erro “expired” no Instagram/Facebook, encerra o job (padrão: não definido = continua os outros dias).
+   - `BACKFILL_FAIL_FAST_META=1` — ao primeiro OAuth 190 / token expirado no Instagram/Facebook, encerra o job.
+   - `BACKFILL_CHANNELS=instagram,facebook` — limita canais (útil se YouTube/LinkedIn não estiverem configurados).
 
 ### 3. GitHub Actions (automático)
 

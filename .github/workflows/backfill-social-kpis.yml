@@ -12,12 +12,25 @@ on:
       end_date:
         description: "Data final (YYYY-MM-DD)"
         required: true
-        default: "2026-03-17"
+        default: "2026-06-01"
+      channels:
+        description: "Canais (vazio = todos): instagram,facebook,youtube,linkedin"
+        required: false
+        default: "instagram,facebook"
+      sleep_seconds:
+        description: "Pausa entre dias (segundos) — rate limit Meta"
+        required: false
+        default: "2"
+      fail_fast_meta:
+        description: "Parar no primeiro erro de token Meta expirado"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    # Períodos longos (ex.: 90+ dias × 4 canais × pausas): até 6 h
+    # Períodos longos (ex.: 90+ dias × canais × pausas): até 6 h
     timeout-minutes: 360
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -33,6 +46,16 @@ jobs:
       - name: Instalar dependências
         run: pip install -r scripts/etl-social-kpis/requirements.txt
 
+      - name: Validar token Meta (preflight + Page token)
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_IG_ACCOUNT_ID: ${{ secrets.META_IG_ACCOUNT_ID }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+        working-directory: scripts/etl-social-kpis
+        run: python validate_meta_token.py
+
       - name: Executar backfill
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -41,6 +64,8 @@ jobs:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
           META_IG_ACCOUNT_ID: ${{ secrets.META_IG_ACCOUNT_ID }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
@@ -49,4 +74,7 @@ jobs:
           LINKEDIN_ORG_ID: ${{ secrets.LINKEDIN_ORG_ID }}
           BACKFILL_START_DATE: ${{ inputs.start_date }}
           BACKFILL_END_DATE: ${{ inputs.end_date }}
+          BACKFILL_CHANNELS: ${{ inputs.channels }}
+          BACKFILL_SLEEP_SECONDS: ${{ inputs.sleep_seconds }}
+          BACKFILL_FAIL_FAST_META: ${{ inputs.fail_fast_meta }}
         run: python scripts/etl-social-kpis/backfill.py

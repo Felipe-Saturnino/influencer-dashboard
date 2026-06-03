@@ -6,7 +6,8 @@ Roda via GitHub Actions todo dia às 06:00 BRT
 v2:
 - Instagram: follower_count removido dos insights → followers_count no objeto IG
 - Instagram/Facebook: engagement_rate limitado a 99.9999 (overflow no banco)
-- Facebook: page_impressions + page_post_engagements (page_engaged_users inválido na API); post_impressions nos posts
+- Facebook: page_media_view + page_post_engagements (page_impressions deprecado nov/2025); post_media_view nos posts
+- Facebook: Page Access Token derivado do System User (insights/posts exigem Page token #190)
 - YouTube: subscriberCount (Channels API); Analytics day report sem métrica impressions; followers no kpi_daily
 
 v3 (Meta):
@@ -36,6 +37,7 @@ from meta_token_utils import (
     meta_token_invalid_message,
     meta_token_invalid_response,
     meta_token_renewal_hint,
+    resolve_page_access_token,
 )
 
 # ------------------------------------------------------------
@@ -77,6 +79,7 @@ INSIGHTS_DATE = date.today() - timedelta(days=2)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 _MAX_ENGAGEMENT_RATE = 99.9999
+_CACHED_PAGE_ACCESS_TOKEN: str | None = None
 
 
 class MetaTokenExpiredError(Exception):
@@ -195,57 +198,117 @@ def _classify_video(duration: str, snippet: dict) -> str:
     return "upload"
 
 
+def _fetch_fb_insight_value(
+    base: str,
+    object_id: str,
+    metric: str,
+    token: str,
+    *,
+    period: str = "day",
+    since_ts: int | None = None,
+    until_ts: int | None = None,
+) -> int | None:
+    """Uma métrica por GET — evita #100 se um nome do lote for inválido."""
+    params: dict[str, str | int] = {
+        "metric": metric,
+        "period": period,
+        "access_token": token,
+    }
+    if since_ts is not None and until_ts is not None:
+        params["since"] = since_ts
+        params["until"] = until_ts
+    r = requests.get(f"{base}/{object_id}/insights", params=params, timeout=60)
+    if r.status_code != 200:
+        return None
+    for row in r.json().get("data", []):
+        if row.get("name") == metric and row.get("values"):
+            return int(row["values"][0]["value"] or 0)
+    return None
+
+
 def _fetch_fb_page_day_metrics(
     base: str, page_id: str, token: str, since_ts: int, until_ts: int
 ) -> dict[str, int]:
     """
     Insights de página com period=day, uma métrica por GET.
-    A Graph API rejeita o pedido inteiro se `metric=a,b` contiver um nome inválido (#100).
+    page_impressions deprecado (nov/2025) → page_media_view.
     """
     out: dict[str, int] = {}
-    for metric in ("page_impressions",):
-        r = requests.get(
-            f"{base}/{page_id}/insights",
-            params={
-                "metric": metric,
-                "period": "day",
-                "since": since_ts,
-                "until": until_ts,
-                "access_token": token,
-            },
-            timeout=60,
+    views_key = "page_media_view"
+    for i, metric in enumerate(("page_media_view", "page_impressions")):
+        val = _fetch_fb_insight_value(
+            base, page_id, metric, token, since_ts=since_ts, until_ts=until_ts
         )
-        if r.status_code == 200:
-            for row in r.json().get("data", []):
-                if row.get("name") == metric and row.get("values"):
-                    out[metric] = int(row["values"][0]["value"] or 0)
-        else:
-            _log_api_error(r, f"Facebook insights ({metric})")
+        if val is not None:
+            out[views_key] = val
+            break
+        if i == 1:
+            log.warning(
+                "Facebook — métricas page_media_view e page_impressions indisponíveis no dia."
+            )
 
     eng_key = "page_post_engagements"
     for i, metric in enumerate(("page_post_engagements", "page_engaged_users")):
+        val = _fetch_fb_insight_value(
+            base, page_id, metric, token, since_ts=since_ts, until_ts=until_ts
+        )
+        if val is not None:
+            out[eng_key] = val
+            break
+        if i == 0:
+            log.warning("Facebook — page_post_engagements indisponível no dia.")
+    return out
+
+
+def _fetch_fb_post_insights(base: str, post_id: str, token: str) -> dict:
+    """
+    Métricas lifetime por post. post_impressions deprecado → post_media_view.
+    """
+    out: dict = {}
+
+    for api_metric in ("post_media_view", "post_impressions"):
+        if out.get("views") is not None:
+            break
         r = requests.get(
-            f"{base}/{page_id}/insights",
-            params={
-                "metric": metric,
-                "period": "day",
-                "since": since_ts,
-                "until": until_ts,
-                "access_token": token,
-            },
+            f"{base}/{post_id}/insights",
+            params={"metric": api_metric, "period": "lifetime", "access_token": token},
             timeout=60,
         )
-        if r.status_code == 200:
-            for row in r.json().get("data", []):
-                if row.get("name") == metric and row.get("values"):
-                    out[eng_key] = int(row["values"][0]["value"] or 0)
-                    break
-            if eng_key in out:
+        if r.status_code != 200:
+            if api_metric == "post_impressions":
+                _log_api_error(r, f"Facebook post {post_id} views")
+            continue
+        for row in r.json().get("data", []):
+            if row.get("name") == api_metric and row.get("values"):
+                out["views"] = row["values"][0]["value"]
                 break
-        elif i == 0:
-            _log_api_error(r, f"Facebook insights ({metric})")
-        else:
-            log.debug("Facebook insights %s: %s", metric, (r.text or "")[:160])
+
+    for api_metric, key in (
+        ("post_reach", "reach"),
+        ("post_clicks", "clicks"),
+        ("post_shares", "shares"),
+    ):
+        val = _fetch_fb_insight_value(base, post_id, api_metric, token, period="lifetime")
+        if val is not None:
+            out[key] = val
+
+    r = requests.get(
+        f"{base}/{post_id}/insights",
+        params={
+            "metric": "post_reactions_by_type_total",
+            "period": "lifetime",
+            "access_token": token,
+        },
+        timeout=60,
+    )
+    if r.status_code == 200:
+        for row in r.json().get("data", []):
+            if row.get("name") == "post_reactions_by_type_total" and row.get("values"):
+                out["reactions"] = row["values"][0]["value"]
+                break
+    else:
+        _log_api_error(r, f"Facebook post {post_id} reactions")
+
     return out
 
 
@@ -420,6 +483,35 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
             ).execute()
         except Exception as e:
             log.warning("Falha ao registrar tech_log: %s", e)
+
+
+def get_meta_page_access_token(force_refresh: bool = False) -> tuple[str | None, str]:
+    """System User token → Page Access Token (cache por processo; backfill reutiliza)."""
+    global _CACHED_PAGE_ACCESS_TOKEN
+    if not force_refresh and _CACHED_PAGE_ACCESS_TOKEN:
+        return _CACHED_PAGE_ACCESS_TOKEN, ""
+    if not META_TOKEN or not META_PAGE_ID:
+        return None, "META_ACCESS_TOKEN ou META_PAGE_ID ausente"
+    pt, err = resolve_page_access_token(META_PAGE_ID, META_TOKEN)
+    if pt:
+        _CACHED_PAGE_ACCESS_TOKEN = pt
+    else:
+        _CACHED_PAGE_ACCESS_TOKEN = None
+    return pt, err
+
+
+def meta_backfill_preflight() -> tuple[bool, str]:
+    """Preflight diário + Page Access Token (obrigatório para Facebook no backfill)."""
+    ok, err = meta_preflight()
+    if not ok:
+        return False, err
+    if META_TOKEN and META_PAGE_ID:
+        pt, pt_err = get_meta_page_access_token()
+        if not pt:
+            msg = pt_err or "Page Access Token indisponível"
+            return False, msg
+        log.info("Meta Page Access Token OK (Facebook).")
+    return True, ""
 
 
 def meta_preflight() -> tuple[bool, str]:
@@ -859,23 +951,32 @@ def fetch_facebook():
         log.warning("Facebook — META_ACCESS_TOKEN e META_PAGE_ID não configurados, pulando")
         return
 
+    page_token, pt_err = get_meta_page_access_token()
+    if not page_token:
+        msg = pt_err or "Page Access Token indisponível"
+        log.error("Facebook — %s", msg)
+        log_run("facebook", "error", 0, _redact_secrets_for_log(msg))
+        return
+
     t0 = time.monotonic()
-    log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
+    log.info("Facebook — iniciando coleta para %s (Page Access Token)", TARGET_DATE)
     base = graph_base()
     day_start, day_end = _utc_day_unix_bounds(TARGET_DATE)
 
     page_resp = requests.get(
         f"{base}/{META_PAGE_ID}",
-        params={"fields": "fan_count", "access_token": META_TOKEN},
+        params={"fields": "fan_count", "access_token": page_token},
     )
     page_data = page_resp.json() if page_resp.status_code == 200 else {}
+    if page_resp.status_code != 200:
+        _log_api_error(page_resp, "Facebook page fan_count")
     followers_count = page_data.get("fan_count")
 
-    metrics = _fetch_fb_page_day_metrics(base, META_PAGE_ID, META_TOKEN, day_start, day_end)
+    metrics = _fetch_fb_page_day_metrics(base, META_PAGE_ID, page_token, day_start, day_end)
     if not metrics:
         log.warning("Facebook — insights de página não obtidos; continuando com posts apenas.")
 
-    posts_raw = _collect_fb_posts_for_day(META_PAGE_ID, META_TOKEN, day_start, day_end)
+    posts_raw = _collect_fb_posts_for_day(META_PAGE_ID, page_token, day_start, day_end)
 
     _STATUS_MAP = {
         "added_photos": "photo",
@@ -888,25 +989,9 @@ def fetch_facebook():
     post_rows = []
     total_eng = 0
     for p in posts_raw:
-        ins_resp_p = requests.get(
-            f"{base}/{p['id']}/insights",
-            params={
-                "metric": "post_impressions,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
-                "access_token": META_TOKEN,
-            },
-            timeout=60,
-        )
-        if ins_resp_p.status_code != 200:
-            _log_api_error(ins_resp_p, f"Facebook post {p.get('id')} insights")
-            ins_map = {}
-        else:
-            ins_map = {
-                i["name"]: i["values"][0]["value"]
-                for i in ins_resp_p.json().get("data", [])
-                if i.get("values")
-            }
+        ins_map = _fetch_fb_post_insights(base, p["id"], page_token)
 
-        val = ins_map.get("post_reactions_by_type_total")
+        val = ins_map.get("reactions")
         if isinstance(val, dict):
             reactions = sum(val.values())
         elif isinstance(val, (int, float)):
@@ -914,8 +999,11 @@ def fetch_facebook():
         else:
             reactions = 0
 
-        eng = reactions + ins_map.get("post_clicks", 0) + ins_map.get("post_shares", 0)
-        impr = ins_map.get("post_impressions", 1) or 1
+        clicks = ins_map.get("clicks") or 0
+        shares = ins_map.get("shares") or 0
+        eng = reactions + clicks + shares
+        views = ins_map.get("views")
+        impr = views if views not in (None, 0) else 1
         total_eng += eng
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
@@ -930,17 +1018,17 @@ def fetch_facebook():
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
                 "thumbnail_url": (thumb[:2048] if thumb else None),
-                "impressions": ins_map.get("post_impressions"),
-                "reach": ins_map.get("post_reach"),
+                "impressions": views if isinstance(views, (int, float)) else None,
+                "reach": ins_map.get("reach"),
                 "reactions": reactions,
                 "comments": 0,
-                "shares": ins_map.get("post_shares"),
-                "link_clicks": ins_map.get("post_clicks"),
+                "shares": shares if isinstance(shares, (int, float)) else None,
+                "link_clicks": clicks if isinstance(clicks, (int, float)) else None,
                 "engagement_rate": _cap_engagement_rate(eng / impr),
             }
         )
 
-    page_impressions = metrics.get("page_impressions", 1) or 1
+    page_views = metrics.get("page_media_view") or metrics.get("page_impressions") or 1
     engagements = metrics.get("page_post_engagements", total_eng)
     if engagements is None:
         engagements = total_eng
@@ -949,10 +1037,12 @@ def fetch_facebook():
         "channel": "facebook",
         "date": TARGET_DATE.isoformat(),
         "followers": followers_count,
-        "impressions": metrics.get("page_impressions"),
-        "reach": metrics.get("page_impressions"),
+        "impressions": metrics.get("page_media_view") or metrics.get("page_impressions"),
+        "reach": metrics.get("page_media_view") or metrics.get("page_impressions"),
         "engagements": engagements,
-        "engagement_rate": _cap_engagement_rate(int(engagements or 0) / max(1, int(page_impressions or 1))),
+        "engagement_rate": _cap_engagement_rate(
+            int(engagements or 0) / max(1, int(page_views or 1))
+        ),
         "posts_published": len(post_rows),
         "link_clicks": sum(r.get("link_clicks") or 0 for r in post_rows),
     }
