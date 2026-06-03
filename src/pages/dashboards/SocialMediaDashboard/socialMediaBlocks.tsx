@@ -91,6 +91,37 @@ export const fmtNum = (n: number | null | undefined) => {
 export const fmtPct = (n: number | null | undefined) =>
   n != null ? `${(n * 100).toFixed(1)}%` : "—";
 
+export type YoutubeVideoRowLite = {
+  video_id: string;
+  date: string;
+  likes: number | null;
+  comments: number | null;
+};
+
+/**
+ * Estima engajamento YouTube no período a partir de snapshots em youtube_videos.
+ * Usado quando kpi_daily.engagements veio zerado (Analytics atrasado ou backfill antigo).
+ */
+export function youtubeEngagementFromVideoSnapshots(rows: YoutubeVideoRowLite[]): number {
+  const byVideo = new Map<string, { date: string; eng: number }[]>();
+  for (const r of rows) {
+    const eng = (Number(r.likes) || 0) + (Number(r.comments) || 0);
+    const list = byVideo.get(r.video_id) ?? [];
+    list.push({ date: r.date, eng });
+    byVideo.set(r.video_id, list);
+  }
+  let total = 0;
+  for (const snaps of byVideo.values()) {
+    snaps.sort((a, b) => a.date.localeCompare(b.date));
+    if (snaps.length === 1) {
+      total += snaps[0].eng;
+    } else {
+      total += Math.max(0, snaps[snaps.length - 1].eng - snaps[0].eng);
+    }
+  }
+  return total;
+}
+
 export function totaisFromKpiRows(kpiData: KpiDaily[]) {
   const byCh: Record<string, KpiDaily[]> = {};
   for (const r of kpiData) {

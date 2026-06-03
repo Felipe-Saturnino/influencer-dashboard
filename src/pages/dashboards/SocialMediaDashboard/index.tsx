@@ -60,6 +60,8 @@ import {
   postStatPill,
   sumCampanhasPerf,
   totaisFromKpiRows,
+  youtubeEngagementFromVideoSnapshots,
+  type YoutubeVideoRowLite,
   MES_INICIO,
   type CampCmpSortCol,
   type CampanhaPerfRow,
@@ -157,6 +159,7 @@ export default function SocialMediaDashboard() {
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
   const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
+  const [youtubeVideoRows, setYoutubeVideoRows] = useState<YoutubeVideoRowLite[]>([]);
   const [formatos, setFormatos] = useState<{ tipo: string; total: number }[]>([]);
   const [funilTotais, setFunilTotais] = useState<{
     visitas: number; registros: number; ftds: number; ftd_total: number;
@@ -307,6 +310,14 @@ export default function SocialMediaDashboard() {
       ].sort(ordenarPostsRecentes);
 
       setPosts(postsUnif);
+      setYoutubeVideoRows(
+        yt.map((r) => ({
+          video_id: r.video_id,
+          date: r.date,
+          likes: r.likes,
+          comments: r.comments,
+        }))
+      );
       setFormatos(
         Object.entries(formatoCount)
           .map(([tipo, total]) => ({ tipo, total }))
@@ -383,7 +394,22 @@ export default function SocialMediaDashboard() {
   }, [start, end, startPrev, endPrev, historico, operadoraParaRpc]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
-  const totais = useMemo(() => totaisFromKpiRows(kpiData), [kpiData]);
+  const youtubeEngFallback = useMemo(
+    () => youtubeEngagementFromVideoSnapshots(youtubeVideoRows),
+    [youtubeVideoRows]
+  );
+
+  const totais = useMemo(() => {
+    const base = totaisFromKpiRows(kpiData);
+    const ytKpiEng = (base.byChannel["youtube"] ?? []).reduce(
+      (a, r) => a + (Number(r.engagements) || 0),
+      0
+    );
+    const ytEng = Math.max(ytKpiEng, youtubeEngFallback);
+    const delta = ytEng - ytKpiEng;
+    if (delta <= 0) return base;
+    return { ...base, engagements: base.engagements + delta };
+  }, [kpiData, youtubeEngFallback]);
   const totaisAntMom = useMemo(() => totaisFromKpiRows(kpiAntRows), [kpiAntRows]);
 
   const totalImpr = totais.impressoes || 1;
@@ -438,9 +464,12 @@ export default function SocialMediaDashboard() {
   const sumVal = (arr: KpiDaily[], f: keyof KpiDaily): number =>
     arr.reduce((a, r) => a + (Number(r[f]) || 0), 0);
 
+  const youtubeEngagements = (byCh: KpiDaily[]) =>
+    Math.max(sumVal(byCh, "engagements"), youtubeEngFallback);
+
   /** Taxa de engajamento agregada no período (evita depender de engagement_rate null no banco). */
-  const calcEngRate = (byCh: KpiDaily[]): string => {
-    const eng = sumVal(byCh, "engagements");
+  const calcEngRate = (byCh: KpiDaily[], channel?: string): string => {
+    const eng = channel === "youtube" ? youtubeEngagements(byCh) : sumVal(byCh, "engagements");
     const impr = sumVal(byCh, "impressions");
     if (impr > 0) return fmtPct(eng / impr);
     const views = sumVal(byCh, "video_views");
@@ -448,8 +477,8 @@ export default function SocialMediaDashboard() {
     return "—";
   };
 
-  const calcEngBadge = (byCh: KpiDaily[]): number => {
-    const eng = sumVal(byCh, "engagements");
+  const calcEngBadge = (byCh: KpiDaily[], channel?: string): number => {
+    const eng = channel === "youtube" ? youtubeEngagements(byCh) : sumVal(byCh, "engagements");
     const impr = sumVal(byCh, "impressions");
     if (impr > 0) return (eng / impr) * 100;
     const views = sumVal(byCh, "video_views");
@@ -485,8 +514,8 @@ export default function SocialMediaDashboard() {
         { label: "Visualizações", val: fmtNum(sumVal(byCh, "video_views"))   },
         // ETL não grava impressions no kpi_daily do YouTube (Analytics day não expõe); evitar "0" falso
         { label: "Impressões",    val: "—" },
-        { label: "Engajamento",   val: fmtNum(sumVal(byCh, "engagements"))   },
-        { label: "Taxa eng.",     val: calcEngRate(byCh) },
+        { label: "Engajamento",   val: fmtNum(youtubeEngagements(byCh))   },
+        { label: "Taxa eng.",     val: calcEngRate(byCh, "youtube") },
       ],
     },
   ];
@@ -1227,7 +1256,7 @@ export default function SocialMediaDashboard() {
               {channelConfig.map((cfg) => {
                 const byCh   = totais.byChannel[cfg.channel] ?? [];
                 const stats  = cfg.stats(byCh);
-                const engVal = calcEngBadge(byCh);
+                const engVal = calcEngBadge(byCh, cfg.channel);
                 return (
                   <section
                     key={cfg.channel}

@@ -440,6 +440,51 @@ def _parse_yt_analytics_report(payload: dict) -> dict[str, int]:
     return {}
 
 
+def _fetch_yt_analytics_for_day(
+    ana_base: str,
+    headers: dict,
+    channel_id: str,
+    date_str: str,
+) -> dict[str, int]:
+    """
+    Métricas diárias do canal. Tenta dimensions=day; se vier vazio (atraso comum),
+    repete sem dimensão (totais agregados do dia).
+    """
+    metrics = "views,estimatedMinutesWatched,likes,comments,shares,subscribersGained"
+    base_params = {
+        "ids": f"channel=={channel_id}",
+        "startDate": date_str,
+        "endDate": date_str,
+        "metrics": metrics,
+    }
+    for with_day in (True, False):
+        params = dict(base_params)
+        if with_day:
+            params["dimensions"] = "day"
+        resp = requests.get(f"{ana_base}/reports", headers=headers, params=params, timeout=60)
+        if resp.status_code != 200:
+            _log_api_error(resp, "YouTube Analytics")
+            if with_day:
+                log.warning(
+                    "YouTube — Analytics (dimensions=day) HTTP %s para %s; tentando agregado.",
+                    resp.status_code,
+                    date_str,
+                )
+                continue
+            resp.raise_for_status()
+        parsed = _parse_yt_analytics_report(resp.json())
+        if parsed:
+            if not with_day:
+                log.info("YouTube — Analytics agregado (sem dimensão day) para %s", date_str)
+            return parsed
+        if with_day:
+            log.warning(
+                "YouTube — Analytics sem linhas (dimensions=day) para %s; tentando agregado.",
+                date_str,
+            )
+    return {}
+
+
 def get_youtube_token() -> str:
     resp = requests.post(
         "https://oauth2.googleapis.com/token",
@@ -1085,40 +1130,19 @@ def fetch_youtube():
     else:
         log.warning("YouTube — falha ao buscar inscritos: %s", channel_resp.text[:200])
 
-    # YouTube Analytics v2: a métrica "impressions" não é válida com dimensions=day neste relatório
-    # (400 Unknown identifier). Métricas suportadas: views, estimatedMinutesWatched, likes, etc.
-    ana_resp = requests.get(
-        f"{ana_base}/reports",
-        headers=headers,
-        params={
-            "ids": f"channel=={YOUTUBE_CHANNEL_ID}",
-            "startDate": date_str,
-            "endDate": date_str,
-            "dimensions": "day",
-            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained",
-        },
-    )
-    if ana_resp.status_code != 200:
-        _log_api_error(ana_resp, "YouTube Analytics")
-        ana_resp.raise_for_status()
-
-    ana_payload = ana_resp.json()
-    am = _parse_yt_analytics_report(ana_payload)
+    # YouTube Analytics v2: impressions não entra neste report; likes/comments podem atrasar com dimensions=day.
+    am = _fetch_yt_analytics_for_day(ana_base, headers, YOUTUBE_CHANNEL_ID, date_str)
     views = int(am.get("views", 0) or 0)
     watch_min = float(am.get("estimatedMinutesWatched", 0) or 0)
     likes = int(am.get("likes", 0) or 0)
     comments = int(am.get("comments", 0) or 0)
     subs_gained = int(am.get("subscribersGained", 0) or 0)
     if not am:
-        log.warning(
-            "YouTube — Analytics sem linhas ou formato inesperado para %s (rows=%s).",
-            date_str,
-            len(ana_payload.get("rows") or []),
-        )
+        log.warning("YouTube — Analytics sem dados para %s (day + agregado).", date_str)
     channel_impressions = None  # não disponível neste report; dashboard usa video_views no fallback
     channel_ctr = None
 
-    shares = 0
+    shares = int(am.get("shares", 0) or 0)
 
     playlist_id = _youtube_uploads_playlist_id(base, YOUTUBE_CHANNEL_ID, headers)
     video_ids: list[str] = []
@@ -1173,13 +1197,15 @@ def fetch_youtube():
             v_views,
         )
         views = v_views
-    eng_total = likes + comments + shares
-    if eng_total == 0 and (v_likes + v_comments) > 0:
+    eng_analytics = likes + comments + shares
+    eng_videos = v_likes + v_comments
+    eng_total = max(eng_analytics, eng_videos)
+    if eng_videos > eng_analytics:
         log.warning(
-            "YouTube — KPI: engajamentos do Analytics = 0; usando likes+comentários dos vídeos do dia (%s).",
-            v_likes + v_comments,
+            "YouTube — KPI: engajamento Analytics=%s; usando max com likes+comentários dos vídeos do dia (%s).",
+            eng_analytics,
+            eng_videos,
         )
-        eng_total = v_likes + v_comments + shares
 
     eng_base = max(views, 1)
 
