@@ -78,7 +78,7 @@ export function ModalAgendarReuniaoCalendario({
     if (!reuniaoCom) return "Selecione com quem será a reunião.";
     if (!(motivo ?? "").trim()) return "Informe o motivo da reunião.";
     if (!diaIso) return "Selecione a data da reunião.";
-    if (!diaIsoEhEstritamenteFuturo(diaIso)) return "A data da reunião tem de ser um dia futuro.";
+    if (!diaIsoEhEstritamenteFuturo(diaIso)) return "A data da reunião deve ser um dia futuro.";
     const hit = diasEscalados.find((d) => d.iso === diaIso);
     if (!hit) return "Escolha um dia futuro em que está escalado neste mês.";
     return null;
@@ -227,7 +227,7 @@ export function ModalAgendarReuniaoCalendario({
             {gravando ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="#fff" />
-                A guardar…
+                Salvando…
               </span>
             ) : (
               "Agendar reunião"

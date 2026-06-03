@@ -185,7 +185,7 @@ export function SpinNaRedeHome({ sectionIdPrefix }: { sectionIdPrefix: string })
         </div>
       ) : erro ? (
         <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-          Não foi possível carregar as menções. Se o problema persistir, contate o suporte.
+          Não foi possível carregar as menções. Se o problema persistir, entre em contato com o suporte.
         </p>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>

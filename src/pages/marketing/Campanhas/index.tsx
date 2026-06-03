@@ -26,8 +26,8 @@ const COR = {
   cinza: "#6b7280",
 } as const;
 
-const MSG_ERRO_SALVAR = "Não foi possível salvar a campanha. Se o problema persistir, contate o suporte.";
-const MSG_ERRO_EXCLUIR = "Não foi possível excluir a campanha. Se o problema persistir, contate o suporte.";
+const MSG_ERRO_SALVAR = "Não foi possível salvar a campanha. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_EXCLUIR = "Não foi possível excluir a campanha. Se o problema persistir, entre em contato com o suporte.";
 
 export default function Campanhas() {
   const { theme: t } = useApp();

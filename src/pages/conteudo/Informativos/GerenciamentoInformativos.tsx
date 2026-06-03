@@ -57,12 +57,12 @@ const STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "aprovacao", "arquivado"
   label: INFORMATIVO_STATUS_LABEL[value],
 }));
 
-const ERRO_CARREGAR = "Não foi possível carregar os informativos. Se o problema persistir, contate o suporte.";
-const ERRO_APROVAR = "Não foi possível aprovar o informativo. Se o problema persistir, contate o suporte.";
+const ERRO_CARREGAR = "Não foi possível carregar os informativos. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_APROVAR = "Não foi possível aprovar o informativo. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_APROVAR_SEM_PERMISSAO =
   "Você não tem permissão para aprovar este informativo ou não pode aprovar a própria postagem.";
-const ERRO_ARQUIVAR = "Não foi possível arquivar o informativo. Se o problema persistir, contate o suporte.";
-const ERRO_EXCLUIR = "Não foi possível excluir o informativo. Se o problema persistir, contate o suporte.";
+const ERRO_ARQUIVAR = "Não foi possível arquivar o informativo. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_EXCLUIR = "Não foi possível excluir o informativo. Se o problema persistir, entre em contato com o suporte.";
 
 function compareTexto(a: string, b: string, dir: number): number {
   return dir * a.localeCompare(b, "pt-BR", { sensitivity: "base" });

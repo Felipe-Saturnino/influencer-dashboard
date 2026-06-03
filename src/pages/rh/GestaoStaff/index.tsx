@@ -416,7 +416,7 @@ function ModalStaffAnotacoes({
             </>
           ) : (
             <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.5 }}>
-              Apenas utilizadores com permissão de edição em Gestão de Staff podem registrar novas anotações.
+              Apenas usuários com permissão de edição em Gestão de Staff podem registrar novas anotações.
             </p>
           )}
         </div>

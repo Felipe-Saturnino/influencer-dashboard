@@ -148,7 +148,7 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
         aria-hidden
         style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
       />
-      <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+      <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando…</span>
     </div>
   </div>
 );
@@ -309,7 +309,7 @@ function Root() {
             aria-hidden
             style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
           />
-          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando…</span>
         </div>
       </div>
     );

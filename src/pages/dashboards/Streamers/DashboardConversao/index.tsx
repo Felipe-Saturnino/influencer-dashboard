@@ -756,7 +756,7 @@ export default function DashboardConversao() {
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+                <Clock size={12} aria-hidden /> Carregando…
               </span>
             )}
           </div>
@@ -843,7 +843,7 @@ export default function DashboardConversao() {
           Ranking FTD/Hora
         </SectionTitle>
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando…</div>
         ) : (
           <PodioFTDHora ranking={rankingFtdHora} />
         )}

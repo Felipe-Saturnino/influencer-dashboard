@@ -1454,7 +1454,7 @@ export default function StatusTecnico() {
         created_by: user?.id ?? null,
       });
       if (error) {
-        setCidrErroForm(error.message.includes("cidr") ? "CIDR inválido ou duplicado." : "Não foi possível guardar.");
+        setCidrErroForm(error.message.includes("cidr") ? "CIDR inválido ou duplicado." : "Não foi possível salvar.");
         return;
       }
       setModalCidrAdicionar(false);

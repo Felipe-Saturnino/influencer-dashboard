@@ -9,7 +9,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período — nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando...\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período — nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
@@ -345,7 +345,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo central do elenco de dealers de casino ao vivo da Spin Gaming. Reúne o cadastro completo de cada dealer — fotos, especialidades por jogo, turno, gênero e operadora vinculada — e centraliza as solicitações de troca ou feedback enviadas pelas operadoras ao estúdio.",
+          "Catálogo do elenco de dealers de cassino ao vivo da Spin Gaming vinculados a prestadores ativos em Gestão de Prestadores. Exibe fotos, especialidades por jogo, turno, gênero e operadora — em modo consulta (Ver) e, para operadoras, solicitações de troca ou feedback ao estúdio. O cadastro e a manutenção do perfil de dealer não são feitos nesta página.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -363,14 +363,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Operadores com escopo de operadora definido encontram dois botões adicionais em cada card:\n\n— Solicitar: abre o formulário de nova solicitação para aquele dealer. Escolha o tipo — 'Solicitar troca de dealer' ou 'Deixar feedback' — e descreva o pedido com pelo menos 10 caracteres. A solicitação é enviada ao estúdio Spin e ficará visível na Central de Notificações.\n\n— Histórico: lista todas as solicitações já enviadas para aquele dealer na sua operadora. Clique em qualquer item para abrir a thread completa da conversa.\n\nUm banner amarelo no topo da página informa quantas solicitações aguardam resposta da operadora. Clique em Ver no banner para acessar a primeira pendência diretamente.",
       },
       {
-        subtitulo: "Cadastrando e Editando um Dealer",
+        subtitulo: "Origem do cadastro no elenco",
         texto:
-          "Gestores e administradores com permissão de criação encontram o botão '+ Adicionar Dealer' no topo da página. O formulário requer nome real, nickname, pelo menos um jogo de especialidade e gênero.\n\nO campo Fotos aceita múltiplas imagens de uma vez — elas ficam disponíveis no carrossel do card e no modal Ver. Para remover uma foto já enviada, clique no ícone de exclusão sobre a miniatura.\n\nO campo Status (Aprovado / Pendente) aparece apenas ao editar dealers já cadastrados — novos dealers entram como Aprovado por padrão. O campo VIP marca o dealer com o badge de destaque na listagem.\n\nA operadora pode ser travada automaticamente quando o usuário tem escopo restrito a uma única parceira — nesse caso, o campo aparece preenchido e bloqueado para edição.",
+          "Um dealer só aparece nesta listagem quando existe vínculo com um prestador ativo em **Gestão de Prestadores** (perfil Game Presenter / sincronização com a tabela de dealers). Se o colaborador está cadastrado em RH mas não aparece aqui, confira o vínculo e o status do prestador — não há botão de criar ou editar dealer nesta página.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: acesso completo ao elenco de todas as operadoras. Pode criar, editar e visualizar qualquer dealer. Visualiza o histórico de solicitações de todas as operadoras.\n— Operador: visualiza apenas os dealers vinculados à sua operadora. Pode solicitar trocas ou deixar feedbacks. Não tem acesso ao botão Editar.\n— Executivo: visualização completa, sem ações de escrita.\n\nO botão Solicitar só aparece quando a operadora ativa está definida no escopo do usuário. O botão Histórico aparece para qualquer perfil com permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todas as operadoras e histórico de solicitações de todas as operadoras.\n— Operador: visualiza apenas os dealers da sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -447,7 +447,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Consolidado",
         texto:
-          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de secção) reúne operadora, categoria, tamanho, pesquisa, bipagem e abas de status.",
+          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de seção) reúne operadora, categoria, tamanho, pesquisa, bipagem e abas de status.",
       },
       {
         subtitulo: "Abas de Inventário",
@@ -506,12 +506,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem de can_criar, can_editar e can_excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
       },
     ],
   },
   playbook_influencers: {
-    titulo: "Playbook — Influencers",
+    titulo: "Playbook Influencers",
     blocos: [
       {
         texto:
@@ -530,7 +530,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Jogos — foco obrigatório",
         texto:
-          "Na aba Jogos, a seção «Foco obrigatório — Live Casino SPIN» exige que Blackjack, Roleta, Baccarat e Futebol Brasileiro ocorram exclusivamente nas mesas Spin Gaming — nunca em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou equivalentes). Slots seguem regra separada com limite de tempo por hora de live.",
+          "Na aba Jogos, a seção «Foco obrigatório — Live Cassino SPIN» exige que Blackjack, Roleta, Baccarat e Futebol Brasileiro ocorram exclusivamente nas mesas Spin Gaming — nunca em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou equivalentes). Slots seguem regra separada com limite de tempo por hora de live.",
       },
       {
         subtitulo: "Barra de Progresso",
@@ -612,7 +612,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Informativos permite criar avisos direcionados a um ou mais perfis da plataforma. O conteúdo publicado é exibido na Home dos utilizadores cujo perfil foi selecionado na postagem.",
+          "A página Informativos permite criar avisos direcionados a um ou mais perfis da plataforma. O conteúdo publicado é exibido na Home dos usuários cujo perfil foi selecionado na postagem.",
       },
       {
         subtitulo: "Aba Informativos",
@@ -622,7 +622,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Informativos",
         texto:
-          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro utilizador.",
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
       },
       {
         subtitulo: "Permissões",
@@ -685,7 +685,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Solicitações",
         texto:
-          "No bloco **Solicitações** (título de secção padrão), a tabela lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão **Solicitar Banca** na mesma linha do título (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
+          "No bloco **Solicitações** (título de seção padrão), a tabela lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão **Solicitar Banca** na mesma linha do título (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
       },
       {
         subtitulo: "Consolidado de Bancas",
@@ -787,7 +787,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ciclo de Pagamento",
         texto:
-          "O bloco **Ciclo de pagamento** (título de secção padrão) reúne o seletor de ciclo, ações e a tabela. Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
+          "O bloco **Ciclo de pagamento** (título de seção padrão) reúne o seletor de ciclo, ações e a tabela. Selecione um ciclo pelo dropdown para ver os pagamentos daquela semana. O ciclo atual aparece com a tag Atual e exibe uma prévia em tempo real — os valores são estimativas calculadas a partir das lives realizadas e dos cachês cadastrados. Os pagamentos definitivos são gerados ao encerrar o ciclo.\n\nNo ciclo fechado, a tabela exibe colunas de status e ação. Perfis com permissão de edição podem analisar (aprovar ou ajustar o valor) e registrar pagamentos. Um indicador na tabela mostra a data do pagamento quando o status é Pago.",
       },
       {
         subtitulo: "Pagamento de Agente",
@@ -806,7 +806,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Campanhas permite cadastrar as campanhas de mídia social utilizadas nas ações de marketing da plataforma. Cada campanha pode ser vinculada a uma operadora específica ou permanecer genérica. Os UTMs mapeados na Gestão de Links que são associados a uma campanha alimentam automaticamente o Dashboard de Mídias com dados de funil e performance.",
+          "A página Campanhas permite cadastrar as campanhas de mídia social utilizadas nas ações de marketing da plataforma. Cada campanha pode ser vinculada a uma operadora específica ou permanecer genérica. Os UTMs mapeados na Gestão de Links que são associados a uma campanha alimentam automaticamente a página **Mídias Sociais** com dados de funil e performance.",
       },
       {
         subtitulo: "Indicadores de Resumo",

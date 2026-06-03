@@ -120,7 +120,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Valor de remuneração do influencer por hora de live transmitida. Base de cálculo dos pagamentos no módulo Financeiro.",
         nota:
           "Alterações do cachê por hora são restritas a Admin e Gestor. O campo aparece bloqueado no formulário de edição para outros perfis.\n\nNo Scout, o campo correspondente é 'Cachê Negociado' — ao fechar a parceria, o valor é sincronizado automaticamente com o cachê por hora no cadastro do influencer em Influencers.",
-        referencia: "Influencers · Aquisição → Financeiro",
+        referencia: "Influencers · Financeiro",
       },
       {
         termo: "Perfil Incompleto",
@@ -142,8 +142,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Etapas do processo de negociação com um candidato a parceiro, desde o primeiro contato até o fechamento.",
         nota:
-          "Visualizado → Contato → Negociação → Fechado.\n\nCada etapa representa um avanço na negociação. Ao marcar como Fechado com todos os dados obrigatórios preenchidos, a plataforma cria automaticamente o usuário do influencer.",
-        referencia: "Scout",
+          "Visualizado → Contato → Negociação → Fechado.\n\nNo **Scout**, a criação do usuário influencer ocorre ao marcar **Fechado** com todos os campos obrigatórios preenchidos. No **Network** (afiliados), a criação pode ocorrer em qualquer etapa ao salvar um prospecto sem usuário — ver termo Network (Afiliados).",
+        referencia: "Scout · Network",
       },
       {
         termo: "Live Cassino",
@@ -198,28 +198,28 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Percentual de views que resultaram em acesso ao link. Taxa baixa indica que o influencer precisa divulgar mais o link durante a live.",
         formula: "Acessos ÷ Views × 100",
-        referencia: "Conversão",
+        referencia: "Streamers → Conversão",
       },
       {
         termo: "Taxa Acesso → Registro",
         definicao:
           "Percentual de acessos que resultaram em cadastro. Taxa baixa indica problema na conversão da landing page ou no perfil do público.",
         formula: "Registros ÷ Acessos × 100",
-        referencia: "Conversão",
+        referencia: "Streamers → Conversão",
       },
       {
         termo: "Taxa Registro → FTD",
         definicao:
           "Percentual de cadastros que realizaram o primeiro depósito. Taxa baixa indica que os jogadores captados não estão ativando a conta.",
         formula: "FTDs ÷ Registros × 100",
-        referencia: "Conversão",
+        referencia: "Streamers → Conversão",
       },
       {
         termo: "Taxa View → FTD",
         definicao:
           "Percentual de views que se converteram em primeiro depósito. Taxa geral de eficiência do funil completo.",
         formula: "FTDs ÷ Views × 100",
-        referencia: "Conversão",
+        referencia: "Streamers → Conversão",
       },
       {
         termo: "Taxa Acesso → FTD",
@@ -279,7 +279,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         nota:
           "O GGR é sempre calculado pelo canal de aquisição. Nas páginas de influencers, considera apenas jogadores captados via influencers. Em Overview Spin, considera todos os canais.",
         referencia:
-          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Aquisição → Financeiro",
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Financeiro",
       },
       {
         termo: "R$ FTD (Valor Total de FTDs)",
@@ -344,7 +344,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Valor total pago ao influencer no período (cachê por hora de live + bônus por performance, quando aplicável). Base para cálculo de ROI e custos unitários.",
         referencia:
-          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Aquisição → Financeiro",
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Financeiro",
       },
       {
         termo: "ROI (Return on Investment)",
@@ -643,8 +643,10 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Dealer",
         definicao:
-          "Profissional de casino ao vivo cadastrado no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
-        referencia: "Gestão de Dealers",
+          "Profissional de casino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
+        nota:
+          "O perfil é mantido via prestador em Gestão de Prestadores (Game Presenter). Gestão de Dealers exibe o catálogo e solicitações — não cadastra dealer na página.",
+        referencia: "Gestão de Dealers · Gestão de Prestadores",
       },
       {
         termo: "Bloco de Roteiro",
@@ -760,6 +762,178 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Registro de leitura de um comunicado ou documento pelo usuário, com data e hora. Usado para rastrear quais colaboradores já visualizaram comunicados obrigatórios.",
         referencia: "Portal de RH",
+      },
+    ],
+  },
+  {
+    key: "escala",
+    label: "Escala e Operação",
+    accentColor: "#f59e0b",
+    termos: [
+      {
+        termo: "Gestão de Escala",
+        definicao:
+          "Planejamento da escala diária por área (time), colaborador e dia do mês — alocação de turnos e aprovação de grades operacionais.",
+        referencia: "Gestão de Escala",
+      },
+      {
+        termo: "Gestão de Staff",
+        definicao:
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo.",
+        referencia: "Gestão de Staff",
+      },
+      {
+        termo: "Calendário (RH)",
+        definicao:
+          "Calendário operacional com turnos, trocas e compromissos — visibilidade da rotina de escala para gestores e colaboradores com permissão.",
+        referencia: "Calendário",
+      },
+      {
+        termo: "Marketplace",
+        definicao:
+          "Área de ofertas de venda e troca de turnos entre colaboradores — publicações abertas e as do próprio usuário.",
+        referencia: "Marketplace",
+      },
+      {
+        termo: "Solicitações (Escala)",
+        definicao:
+          "Fila de pedidos de escala em aberto e histórico arquivado, filtrável por período, time e colaborador.",
+        referencia: "Solicitações",
+      },
+    ],
+  },
+  {
+    key: "rh_prestadores",
+    label: "RH — Prestadores e vagas",
+    accentColor: "#22c55e",
+    termos: [
+      {
+        termo: "Gestão de Prestadores",
+        definicao:
+          "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
+        nota:
+          "É a origem do vínculo para dealers (Game Presenter) exibidos em Gestão de Dealers e para listas de retirada em Figurinos.",
+        referencia: "Gestão de Prestadores · Dados de Cadastro",
+      },
+      {
+        termo: "Dados de Cadastro",
+        definicao:
+          "Autoatendimento e consulta cadastral do prestador: dados pessoais, documentos, formação, experiência profissional anterior e histórico de movimentações.",
+        nota:
+          "Revisão cadastral de 6 meses aplica-se ao próprio cadastro. Histórico de trabalho (vínculo Spin) é somente leitura nesta página.",
+        referencia: "Dados de Cadastro",
+      },
+      {
+        termo: "Organograma",
+        definicao:
+          "Estrutura de diretorias, gerências, setores e times da operação — modos Visualização e Gerenciamento para RH e gestores.",
+        referencia: "Organograma",
+      },
+      {
+        termo: "Vagas",
+        definicao:
+          "Processos seletivos internos: vagas abertas, candidaturas em andamento e gerenciamento de publicações.",
+        referencia: "Vagas",
+      },
+      {
+        termo: "Revisão cadastral",
+        definicao:
+          "Ciclo obrigatório de atualização ou confirmação dos dados do prestador a cada seis meses, exibido em Dados de Cadastro no próprio cadastro.",
+        referencia: "Dados de Cadastro",
+      },
+    ],
+  },
+  {
+    key: "denuncias",
+    label: "Denúncias",
+    accentColor: "#e84025",
+    termos: [
+      {
+        termo: "Central de Denúncias",
+        definicao:
+          "Módulo interno (logado) para gestão de protocolos de denúncia: filtros por período, tipo e status, KPIs e atendimento pelos perfis autorizados.",
+        referencia: "Central de Denúncias",
+      },
+      {
+        termo: "Canal de Denúncias (público)",
+        definicao:
+          "Formulário em URL pública da Spin, fora do menu lateral — envio anônimo ou identificado sem login na plataforma. Não substitui a Central de Denúncias interna.",
+        nota:
+          "Quem já tem acesso logado deve usar a Central de Denúncias no menu RH para acompanhar protocolos internos.",
+        referencia: "Canal público Spin (sem PageKey no menu)",
+      },
+    ],
+  },
+  {
+    key: "permissoes_plataforma",
+    label: "Permissões e acesso",
+    accentColor: "#6b7280",
+    termos: [
+      {
+        termo: "Permissão Ver / Criar / Editar / Excluir",
+        definicao:
+          "Matriz por perfil (role) e página configurada em Gestão de Usuários. Define o que cada papel pode fazer em cada rota do menu.",
+        nota:
+          "Valores: Sim (irrestrito na página), Próprios (só registros do escopo do usuário), Não (bloqueado) ou vazio quando a coluna não se aplica à página.",
+        referencia: "Gestão de Usuários",
+      },
+      {
+        termo: "Administrador",
+        definicao:
+          "Perfil com acesso irrestrito a todas as páginas — não depende da matriz de permissões.",
+        referencia: "Gestão de Usuários",
+      },
+      {
+        termo: "Menu por perfil operacional",
+        definicao:
+          "Abas Operadora, Gestores e Prestadores em Gestão de Usuários definem quais itens do menu lateral cada grupo vê. O acesso efetivo é o cruzamento com a matriz Permissões.",
+        referencia: "Gestão de Usuários",
+      },
+    ],
+  },
+  {
+    key: "home_perfis",
+    label: "Home por perfil",
+    accentColor: "#7c3aed",
+    termos: [
+      {
+        termo: "Home Investidor / Executivo",
+        definicao:
+          "Painel pós-login com KPIs de mesas (MTD), aquisição, Spin na Rede e atalhos analíticos — sem a lista dinâmica completa do menu.",
+        referencia: "Home",
+      },
+      {
+        termo: "Home Operador",
+        definicao:
+          "Painel da operadora com KPIs MTD, comparativo MoM, informativos do escopo e atalhos (ex.: Overview Spin, Ajuda). Layout pode variar por template da operadora.",
+        referencia: "Home · Gestão de Operadoras",
+      },
+      {
+        termo: "Informativos na Home",
+        definicao:
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador) e exibidos no bloco de avisos da Home.",
+        referencia: "Informativos · Home",
+      },
+    ],
+  },
+  {
+    key: "whitelabel",
+    label: "Identidade operadora",
+    accentColor: "#1e36f8",
+    termos: [
+      {
+        termo: "Brandguide / Whitelabel",
+        definicao:
+          "Conjunto de cores, logo e fonte da operadora aplicados na interface quando o usuário tem perfil operador e operadora ativa — substitui a paleta Spin padrão.",
+        nota:
+          "Configurado na aba Brandguide em Gestão de Operadoras. Dashboards analíticos usam tokens --brand-action e --brand-contrast; identidade por jogo (Baccarat, Roleta, etc.) permanece fixa Spin.",
+        referencia: "Gestão de Operadoras",
+      },
+      {
+        termo: "Operadora ativa",
+        definicao:
+          "Parceira com status ativo e ao menos uma mesa cadastrada. Só operadoras ativas aparecem no filtro **Todas Operadoras** das listagens.",
+        referencia: "Gestão de Operadoras · Gestão de Mesas",
       },
     ],
   },

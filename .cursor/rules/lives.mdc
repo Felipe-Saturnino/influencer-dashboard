@@ -144,14 +144,14 @@ import { Loader2 } from "lucide-react";
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
   }}>
     <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-    Carregando...
+    Carregando…
   </div>
 ) : ( ... )}
 
 // Em botão CTA durante saving (nunca trocar o gradiente):
 <button disabled={saving} style={{ opacity: saving ? 0.65 : 1 }}>
   {saving
-    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando…</>
     : "Salvar"
   }
 </button>
@@ -348,18 +348,20 @@ Nunca fazer update optimista sem rollback. O usuário não pode ver um estado qu
 
 ## Idioma da Interface — PT-BR Exclusivo
 
-Toda string visível ao usuário deve estar em português do Brasil.
+Toda string visível ao usuário deve estar em português do Brasil. Padrão completo: **Global § Linguagem e copy (PT-BR)**.
 
 | ❌ Proibido | ✅ Correto |
 |---|---|
 | "Average Viewers" | "Média de Views" |
 | "Followers" | "Seguidores" |
-| "Loading..." | "Carregando..." |
+| "Loading..." / "A carregar" | "Carregando…" (U+2026) |
+| "Carregando..." (ASCII) | "Carregando…" |
+| "contate o suporte" | "entre em contato com o suporte" |
 | "N/A" | "—" (travessão) |
 | "Checkbox" | não aparece para o usuário |
 
 **Exceções:** Nomes de plataformas (Twitch, YouTube, TikTok), siglas do setor
-(GGR, FTD, ROI, UAP, ARPU, PVI, MoM, MTD), termos de jogo sem tradução (Blackjack, Baccarat).
+(GGR, FTD, ROI, UAP, ARPU, PVI, MoM, MTD), termos de jogo sem tradução (Blackjack, Baccarat), vocabulário de produto (Nickname, Live Cassino).
 
 ---
 
@@ -583,9 +585,9 @@ setCriandoUsuario(false);
 // Botão Salvar:
 <button disabled={saving}>
   {saving && criandoUsuario
-    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário…</>
     : saving
-    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando…</>
     : "Salvar"
   }
 </button>

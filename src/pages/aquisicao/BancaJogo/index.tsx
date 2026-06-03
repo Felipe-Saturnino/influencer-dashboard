@@ -178,7 +178,7 @@ export default function BancaJogo() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
         <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-        Carregando...
+        Carregando…
       </div>
     );
   }
@@ -195,7 +195,7 @@ export default function BancaJogo() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 10, color: t.textMuted, fontFamily: FONT.body }}>
         <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-        Carregando...
+        Carregando…
       </div>
     );
   }

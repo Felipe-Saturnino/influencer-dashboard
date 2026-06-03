@@ -41,7 +41,7 @@ export function ModalDescartarPeca({
     setLoading(false);
     if (error) {
       console.error("[Figurinos] Erro ao descartar peça:", error);
-      setErr("Não foi possível descartar a peça. Se o problema persistir, contate o suporte.");
+      setErr("Não foi possível descartar a peça. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     await onOk();

@@ -142,7 +142,7 @@ function AfiliadoModalTabs({
   return (
     <div
       role="tablist"
-      aria-label="Secções"
+      aria-label="Seções"
       style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}
       onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, setTab, (k) => `${tabIdPrefix}${k}`)}
     >
@@ -393,7 +393,7 @@ export default function Afiliados() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando..." />
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando…" />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ ...cardStyle, justifyContent: "center", padding: 48 }}>Nenhum afiliado encontrado.</div>

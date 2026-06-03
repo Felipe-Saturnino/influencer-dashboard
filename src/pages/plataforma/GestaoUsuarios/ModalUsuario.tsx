@@ -381,7 +381,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
             <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
               O acesso efetivo combina a aba <strong style={{ color: t.text }}>Permissões</strong> (perfil Prestadores) com
               a aba <strong style={{ color: t.text }}>Prestadores</strong>: só entram no menu as páginas permitidas para
-              as áreas selecionadas e que também estejam autorizadas nas permissões. Utilizadores com várias áreas veem a
+              as áreas selecionadas e que também estejam autorizadas nas permissões. Usuários com várias áreas veem a
               união das páginas das respectivas colunas na aba Prestadores.
             </p>
           </div>

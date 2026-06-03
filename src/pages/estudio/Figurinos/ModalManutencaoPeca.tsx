@@ -51,7 +51,7 @@ export function ModalManutencaoPeca({
     setLoading(false);
     if (error) {
       console.error("[Figurinos] Erro ao enviar para manutenção:", error);
-      setErr("Não foi possível enviar a peça para manutenção. Se o problema persistir, contate o suporte.");
+      setErr("Não foi possível enviar a peça para manutenção. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     await onOk();

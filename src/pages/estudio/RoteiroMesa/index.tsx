@@ -164,17 +164,17 @@ const CARD_SHADOW = (isDark: boolean) =>
   isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
 const MSG_ERRO_SALVAR_ROTEIRO =
-  "Não foi possível salvar o roteiro. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar o roteiro. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_SALVAR_CAMPANHA =
-  "Não foi possível salvar a campanha. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar a campanha. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_CONVERSA_ROTEIRO =
-  "Não foi possível salvar o roteiro: falha ao abrir a conversa com o estúdio. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar o roteiro: falha ao abrir a conversa com o estúdio. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_MSG_ROTEIRO =
-  "Não foi possível salvar o roteiro: falha ao registrar a primeira mensagem. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar o roteiro: falha ao registrar a primeira mensagem. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_CONVERSA_CAMPANHA =
-  "Não foi possível salvar a campanha: falha ao abrir a conversa com o estúdio. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar a campanha: falha ao abrir a conversa com o estúdio. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_MSG_CAMPANHA =
-  "Não foi possível salvar a campanha: falha ao registrar a primeira mensagem. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar a campanha: falha ao registrar a primeira mensagem. Se o problema persistir, entre em contato com o suporte.";
 
 // ─── Tags de jogo (paleta canónica — Global § Identidade por jogo) ───────────
 function jogoTagChipStyle(key: JogoTag, isDark: boolean): { bg: string; color: string; border: string } {

@@ -37,7 +37,7 @@ export function KpisMesasInvestidor({ sectionIdPrefix = "home-investidor" }: { s
         </div>
       ) : erro || !data ? (
         <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-          Não foi possível carregar os indicadores. Se o problema persistir, contate o suporte.
+          Não foi possível carregar os indicadores. Se o problema persistir, entre em contato com o suporte.
         </p>
       ) : (
         <>

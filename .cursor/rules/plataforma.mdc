@@ -316,7 +316,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - `t: Theme` como prop em abas ou `ModalUsuario` — usar `useApp()`.
 - Componentes (`MultiSelect`, etc.) declarados dentro de outro componente.
 - Matriz de permissões com `overflow: hidden` no tabpanel que corta scroll horizontal.
-- Texto “Carregando...” sem `Loader2` como estado principal de bloco.
+- Texto “Carregando…” (elipse Unicode) sem `Loader2` como estado principal de bloco — ou só texto ASCII `Carregando...`.
 - CTA salvando só com reticências — usar `Loader2` `#fff` + texto.
 - Modais sem `dialog` + Escape + foco inicial.
 - `backdropFilter: blur()` em overlay.

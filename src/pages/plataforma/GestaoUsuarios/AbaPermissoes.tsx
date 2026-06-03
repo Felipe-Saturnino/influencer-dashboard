@@ -239,8 +239,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
         <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
           Perfil <strong style={{ color: t.text }}>Gestor</strong>: aqui define-se por página o que o perfil pode{" "}
           <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
-          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong>. Cada
-          utilizador gestor precisa de pelo menos um <strong style={{ color: t.text }}>tipo de gestor</strong> (aba Usuários); o menu
+          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong>. Cada usuário gestor deve ter pelo menos um <strong style={{ color: t.text }}>tipo de gestor</strong> (aba Usuários); o menu
           operacional cruza estas permissões com a união das páginas marcadas para esses tipos na aba{" "}
           <strong style={{ color: t.text }}>Gestores</strong>.{" "}
           <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
@@ -252,7 +251,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
           Perfil <strong style={{ color: t.text }}>Prestadores</strong>: nesta aba configuram-se, por página,{" "}
           <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
           <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong> para
-          qualquer utilizador com este perfil. No cadastro (aba Usuários), cada prestador tem de ter pelo menos uma{" "}
+          qualquer usuário com este perfil. No cadastro (aba Usuários), cada prestador deve ter pelo menos uma{" "}
           <strong style={{ color: t.text }}>área de atuação</strong>; o menu cruza estas permissões com a união das páginas
           marcadas para essas áreas na aba <strong style={{ color: t.text }}>Prestadores</strong>.{" "}
           <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}

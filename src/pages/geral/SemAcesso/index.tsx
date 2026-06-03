@@ -8,9 +8,9 @@ import { AppPageLink } from "../../../components/AppPageLink";
 import { SEM_ACESSO_REASON_KEY, type SemAcessoReason } from "../../../lib/appRoutes";
 
 const MSG_NOT_FOUND =
-  "Esta página não existe! Acesse a página de Ajuda para ver as paginas existentes ou retorne para a Home.";
+  "Esta página não existe! Acesse a página de Ajuda para ver as páginas existentes ou retorne para a Home.";
 const MSG_FORBIDDEN =
-  "Você não tem acesso a esta página! Acesse a página de Ajuda para ver as paginas existentes ou retorne para a Home.";
+  "Você não tem acesso a esta página! Acesse a página de Ajuda para ver as páginas existentes ou retorne para a Home.";
 
 export default function SemAcesso() {
   const { theme: t } = useApp();

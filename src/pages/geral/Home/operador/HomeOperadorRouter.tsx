@@ -33,7 +33,7 @@ export default function HomeOperadorRouter() {
             aria-hidden
             style={{ marginBottom: 12 }}
           />
-          <div style={{ fontSize: 13 }}>Carregando...</div>
+          <div style={{ fontSize: 13 }}>Carregando…</div>
         </div>
       </div>
     );

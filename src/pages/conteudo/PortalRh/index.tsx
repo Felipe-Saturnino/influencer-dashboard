@@ -162,7 +162,7 @@ function receiptKey(ct: string, id: string): string {
 }
 
 const ERRO_CARREGAR_PORTAL =
-  "Não foi possível carregar o portal. Se o problema persistir, contate o suporte.";
+  "Não foi possível carregar o portal. Se o problema persistir, entre em contato com o suporte.";
 
 function tabsPortalRhKeys(canEditarOk: boolean): AbaPortal[] {
   const keys: AbaPortal[] = ["comunicados", "politicas", "rhtalks"];

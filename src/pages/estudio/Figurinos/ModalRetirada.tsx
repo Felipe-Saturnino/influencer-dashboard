@@ -53,7 +53,7 @@ export function ModalRetirada({
       if (cancelado) return;
       if (error) {
         console.error("[Figurinos] Erro ao carregar prestadores:", error);
-        setErroCargaPrestadores("Não foi possível carregar a lista de prestadores. Tente novamente ou contate o suporte.");
+        setErroCargaPrestadores("Não foi possível carregar a lista de prestadores. Tente novamente ou entre em contato com o suporte.");
         setPrestadores([]);
       } else {
         setPrestadores((data ?? []) as PrestadorRetiradaRow[]);
@@ -103,7 +103,7 @@ export function ModalRetirada({
     setLoading(false);
     if (error) {
       console.error("[Figurinos] Erro ao registrar retirada:", error);
-      setErr("Não foi possível registrar a retirada. Se o problema persistir, contate o suporte.");
+      setErr("Não foi possível registrar a retirada. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     await onOk();

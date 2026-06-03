@@ -47,9 +47,20 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
 
-**Proibido** inventar títulos longos na Ajuda quando o menu já tem nome curto (`Feedback de Lives`, `Agenda de Lives`, etc.), salvo **exceção documentada** no MDC da secção (ex.: Playbook — título visual `Playbook — Influencers` vs menu `Playbook Influencers` até unificação).
+**Proibido** inventar títulos longos na Ajuda quando o menu já tem nome curto (`Feedback de Lives`, `Agenda de Lives`, etc.), salvo **exceção documentada** no MDC da secção.
 
 Ao renomear item no menu, atualizar em cascata: `menu.ts`, `h1` da página, `titulo`/`label` na Ajuda, glossário e MDC da secção (tabela de subtítulos canónicos).
+
+### Copy em PT-BR (Ajuda e glossário)
+
+Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
+
+| Contexto | Regra |
+|----------|--------|
+| Permissões na Ajuda | **permissão de Ver / Criar / Editar / Excluir** — nunca `can_editar`, `can_criar`, etc. |
+| Loading citado na Ajuda | **`Carregando…`** (elipse Unicode) — alinhado à FilterBar e boot |
+| Erros citados na Ajuda | Fecho **`entre em contato com o suporte`** |
+| Dealers / cassino | **cassino ao vivo**; badge/campo **Live Cassino** |
 
 ### Ao adicionar página no menu
 

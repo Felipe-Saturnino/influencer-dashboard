@@ -6,7 +6,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os dados mudaram ao trocar de aba, mas eu não alterei os filtros?",
         texto:
-          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando...' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver na tablist.",
+          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando…' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver na tablist.",
       },
       {
         subtitulo: "O Comparativo de Funil não mostra nenhum influencer nas opções?",
@@ -351,7 +351,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um dealer não aparece na listagem?",
         texto:
-          "Verifique se há filtros ativos — turno, gênero, jogo ou operadora podem estar restringindo a listagem. O bloco consolidado exibe a contagem filtrada; compare com o total sem filtros para confirmar.\n\nO campo de busca aceita nome real e nickname. Se a busca estiver preenchida, ela se aplica em conjunto com os demais filtros — limpe o campo para ver todos os dealers do filtro atual.\n\nPara perfis com escopo de operadora restrito, apenas os dealers vinculados àquela operadora aparecem na listagem — isso é comportamento esperado.",
+          "A página lista apenas dealers já vinculados a um prestador ativo em **Gestão de Prestadores**. Se o colaborador existe em RH mas não aparece aqui, o vínculo Game Presenter / registro na tabela de dealers pode estar pendente — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, operadora ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers daquela parceira.",
       },
       {
         subtitulo: "O botão Solicitar não aparece no card?",
@@ -364,19 +364,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O botão Histórico requer permissão de visualização na Central de Notificações (configurada em Gestão de Usuários → Permissões). Verifique se a permissão de visualização para a página 'Central de Notificações' está ativa no perfil do usuário.\n\nPara o perfil Operador, o Histórico também exige que a operadora ativa esteja definida no escopo — sem ela, o botão não é renderizado.",
       },
       {
-        subtitulo: "Não consigo editar um dealer?",
+        subtitulo: "Não encontro botão para criar ou editar dealer?",
         texto:
-          "O botão Editar aparece apenas para perfis com permissão de edição configurada em Gestão de Usuários. Verifique se a permissão 'can_editar' está ativa para a página 'Gestão de Dealers'.\n\nPara perfis com edição restrita a 'próprios', o botão só aparece em dealers vinculados a operadoras dentro do escopo do usuário. Dealers sem operadora ou de outras operadoras não exibem o botão Editar.",
-      },
-      {
-        subtitulo: "Não consigo salvar um dealer — aparece mensagem de erro?",
-        texto:
-          "Verifique os campos obrigatórios:\n\n— Nome real: não pode estar em branco.\n— Nickname: não pode estar em branco.\n— Jogos: pelo menos um jogo de especialidade deve ser selecionado.\n\nSe o upload de foto falhar, o erro indicará o motivo. Confirme se o bucket 'dealer-photos' existe e está configurado no Supabase Storage. O erro pode ocorrer também por limite de tamanho de arquivo — tente com imagens menores.",
-      },
-      {
-        subtitulo: "A foto enviada não aparece no card?",
-        texto:
-          "Após o upload, a URL da foto é armazenada no campo 'fotos' do dealer. Se a foto não aparece após salvar, verifique:\n\n— Se o upload foi concluído antes de clicar em Salvar — o indicador 'Enviando...' deve ter desaparecido.\n— Se a URL gerada pelo Storage é pública. Acesse o Supabase → Storage → dealer-photos e confirme que o bucket está configurado como público.\n— Fotos enviadas mas não salvas (modal fechado antes do Salvar) são perdidas — o upload ocorre no Storage mas a URL não é vinculada ao dealer.",
+          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Crie ou atualize o prestador em **Gestão de Prestadores**; quando o vínculo de Game Presenter estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura). Fotos e dados de perfil são mantidos no fluxo de RH, não nesta tela.",
       },
       {
         subtitulo: "O histórico de solicitações do dealer está vazio?",
@@ -401,7 +391,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo responder na thread?",
         texto:
-          "O campo de texto e o botão de envio só aparecem quando:\n\n— A solicitação está com status diferente de 'resolvido' ou 'cancelado'.\n— O perfil tem permissão de edição ativa na Central de Notificações (Gestão de Usuários → Permissões → can_editar).\n\nSe a thread abre em modo somente leitura com a mensagem 'Sem permissão para responder nesta página', verifique a configuração de permissão na Gestão de Usuários.",
+          "O campo de texto e o botão de envio só aparecem quando:\n\n— A solicitação está com status diferente de 'resolvido' ou 'cancelado'.\n— O perfil tem permissão de edição ativa na Central de Notificações (Gestão de Usuários → Permissões → Editar).\n\nSe a thread abre em modo somente leitura com a mensagem 'Sem permissão para responder nesta página', verifique a configuração de permissão na Gestão de Usuários.",
       },
       {
         subtitulo: "A campanha não aparece para o Operador?",
@@ -411,7 +401,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão 'Marcar como resolvido' não aparece na thread?",
         texto:
-          "O botão de resolução só é exibido para perfis Staff (admin, gestor ou executivo) com permissão de edição ativa. Perfis Operador não têm acesso a essa ação — operadores podem enviar mensagens mas não podem encerrar solicitações.\n\nSe você é Gestor e o botão não aparece, verifique se a permissão 'can_editar' está ativa para a Central de Notificações na Gestão de Usuários.",
+          "O botão de resolução só é exibido para perfis Staff (admin, gestor ou executivo) com permissão de edição ativa. Perfis Operador não têm acesso a essa ação — operadores podem enviar mensagens mas não podem encerrar solicitações.\n\nSe você é Gestor e o botão não aparece, verifique se a permissão de Editar está ativa para a Central de Notificações na Gestão de Usuários.",
       },
       {
         subtitulo: "O banner de pendências na Gestão de Dealers não aparece?",
@@ -422,6 +412,36 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "As solicitações concluídas não aparecem na seção de histórico?",
         texto:
           "A seção 'Solicitações concluídas' exibe itens com status 'resolvido' cuja data de resolução está dentro do período selecionado. Se o período estiver no mês atual e as resoluções ocorreram em meses anteriores, os itens não aparecerão — ative Histórico para ver o acumulado completo.\n\nA seção só é exibida para o perfil Operador. Para Gestores, os itens resolvidos aparecem dentro das próprias abas do inbox, mesclados com os abertos.",
+      },
+    ],
+  },
+  rh_dados_cadastro: {
+    titulo: "Dados de Cadastro",
+    blocos: [
+      {
+        subtitulo: "Não encontro meu cadastro ou a página abre vazia?",
+        texto:
+          "Com **Ver/Editar Próprios**, a página abre direto no registro vinculado ao e-mail de login (pessoal ou E-mail Spin) — não há filtro Staff. Se nada carregar, confira se o prestador está ativo em Gestão de Prestadores e se o e-mail do login coincide com o cadastro.\n\nCom **Ver Sim**, use o filtro **Staff** (um prestador por vez) ou o botão **Meu Cadastro** para voltar ao seu registro.",
+      },
+      {
+        subtitulo: "Não consigo salvar alterações?",
+        texto:
+          "— **Editar Próprios:** salvar, enviar documentos e excluir arquivos só no **seu** cadastro; ao consultar outro prestador com Ver Sim, a tela fica somente leitura.\n— **Editar Sim:** exige permissão de Editar em Dados de Cadastro em Gestão de Usuários.\n— Prestador com vínculo encerrado: abas Formação e Competências e Experiência Profissional ficam em leitura.\n\nA aba **Histórico de trabalho** é sempre somente leitura — contratação e organograma são alterados em Gestão de Prestadores.",
+      },
+      {
+        subtitulo: "O banner de revisão cadastral não aparece ou não some?",
+        texto:
+          "A revisão obrigatória (ciclo de 6 meses) vale apenas quando você visualiza o **seu** cadastro — não aparece ao consultar terceiros. Para concluir: atualize dados ou documentos na aba correspondente, ou use **Confirmar sem alterações** na aba Documentos quando nada mudou. Formação e Experiência profissional anterior não entram nesse ciclo.",
+      },
+      {
+        subtitulo: "Falha ao enviar documento ou arquivo?",
+        texto:
+          "Limite de **15 MB** por arquivo na aba Documentos e nos anexos de formação/portfólio (exceto vídeo/áudio, que usam apenas link externo). Formatos aceitos conforme o tipo de item. Se o envio falhar, tente arquivo menor ou outro formato; mensagens ao usuário são genéricas — detalhes técnicos ficam no console para suporte.",
+      },
+      {
+        subtitulo: "Não apareço na Gestão de Dealers / Figurinos?",
+        texto:
+          "Essas páginas dependem do vínculo do prestador em Gestão de Prestadores (ex.: Game Presenter para elenco de dealers). Dados de Cadastro não substitui o cadastro operacional em RH — complete o que falta em Gestão de Prestadores ou fale com o time de RH.",
       },
     ],
   },
@@ -491,12 +511,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
-          "A exclusão exige permissão can_excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+          "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
       },
     ],
   },
   playbook_influencers: {
-    titulo: "Playbook — Influencers",
+    titulo: "Playbook Influencers",
     blocos: [
       {
         subtitulo: "O bloco de confirmação não aparece na aba?",
@@ -601,12 +621,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a aba Gerenciamento de Informativos?",
         texto:
-          "A aba só aparece para utilizadores com permissão de Editar em Informativos na Gestão de Usuários. Peça ao administrador para liberar Ver e Editar (e Criar/Excluir, se necessário).",
+          "A aba só aparece para usuários com permissão de Editar em Informativos na Gestão de Usuários. Peça ao administrador para liberar Ver e Editar (e Criar/Excluir, se necessário).",
       },
       {
         subtitulo: "Publiquei um informativo mas não aparece na Home?",
         texto:
-          "Confirme que o status está Publicado e que o perfil do utilizador foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
+          "Confirme que o status está Publicado e que o perfil do usuário foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
       },
     ],
   },
@@ -631,7 +651,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",
         texto:
-          "O badge Novo desaparece após o clique quando a operação é registrada com sucesso. Se voltou após recarregar a página, pode ter ocorrido uma falha no registro. Tente clicar em Lido novamente. Se o problema persistir, contate o suporte.",
+          "O badge Novo desaparece após o clique quando a operação é registrada com sucesso. Se voltou após recarregar a página, pode ter ocorrido uma falha no registro. Tente clicar em Lido novamente. Se o problema persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Tentei publicar uma postagem mas deu erro?",
@@ -906,7 +926,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao salvar permissões ou páginas?",
         texto:
-          "Verifique sua conexão com a internet. Se o erro persistir, recarregue a página antes de tentar novamente — isso evita salvar um estado inconsistente. Em caso de erro contínuo, contate o suporte técnico.",
+          "Verifique sua conexão com a internet. Se o erro persistir, recarregue a página antes de tentar novamente — isso evita salvar um estado inconsistente. Em caso de erro contínuo, entre em contato com o suporte técnico.",
       },
       {
         subtitulo: "Não consigo criar um novo usuário?",

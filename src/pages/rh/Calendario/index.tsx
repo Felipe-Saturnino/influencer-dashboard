@@ -1567,7 +1567,7 @@ export default function RhCalendarioPage() {
       if (res.code === "rede" || res.code === "config") {
         setPontoMsgModal(MSG_PRESTADOR_PONTO_REDE);
       } else {
-        setPontoMsgModal(res.error ?? "Não foi possível registar.");
+        setPontoMsgModal(res.error ?? "Não foi possível registrar.");
       }
       if (res.estado) setPontoEstado(res.estado);
     } finally {
@@ -1587,7 +1587,7 @@ export default function RhCalendarioPage() {
     pontoEstado?.proximoTipo != null;
   const pontoBotaoTitle = (() => {
     if (!mostrarBotaoPontoCalendario) return undefined;
-    if (pontoEstadoLoading) return "A carregar estado do ponto…";
+    if (pontoEstadoLoading) return "Carregando estado do ponto…";
     if (!pontoEstado) return "Não foi possível obter o estado do ponto.";
     if (!pontoEstado.rhFuncionarioId) {
       return "Não há colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).";
@@ -1781,7 +1781,7 @@ export default function RhCalendarioPage() {
                         }
                       }}
                       ariaLabelActive="Mostrar lista geral de staff"
-                      ariaLabelInactive="Filtrar controle de presença apenas para o meu utilizador"
+                      ariaLabelInactive="Filtrar controle de presença apenas para o meu usuário"
                     >
                       Meu Controle
                     </FiltroMeuCalendarioButton>
@@ -1874,7 +1874,7 @@ export default function RhCalendarioPage() {
 
           <div
             role="tablist"
-            aria-label="Secção do calendário"
+            aria-label="Seção do calendário"
             style={filterBarSection(true)}
             onKeyDown={(e) =>
               onFiltroBarTabsKeyDown(e, ["compromissos", "presenca"] as const, setAbaPrincipal, (k) => `tab-cal-${k}`)
@@ -2026,7 +2026,7 @@ export default function RhCalendarioPage() {
                     }}
                   >
                     <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                    Atualizando registos de ponto…
+                    Atualizando registros de ponto…
                   </div>
                 ) : null}
                 <table style={getDataTableStyle()}>

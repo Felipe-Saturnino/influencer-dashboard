@@ -43,7 +43,7 @@ function ctaGradient(useBrand: boolean): string {
 }
 
 const MSG_ERRO_MAPEAR =
-  "Não foi possível mapear o link. Se o problema persistir, contate o suporte.";
+  "Não foi possível mapear o link. Se o problema persistir, entre em contato com o suporte.";
 
 function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
   if (alias.ggr != null) return alias.ggr;
