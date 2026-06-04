@@ -145,6 +145,39 @@ function normalizeEspacosPainel(s: string): string {
     .trim();
 }
 
+function limparLinhaEditorialPainel(line: string): string {
+  return line
+    .replace(/^['"']?\s*>\s*/, "")
+    .replace(/\s*\([^)]*\bfoto\s*:[^)]*\)/gi, "")
+    .replace(/\s*\(\s*reprodução\s*\/?\s*foto\s*:[^)]*\)/gi, "")
+    .trim();
+}
+
+function linhaIrrelevantePainel(line: string): boolean {
+  const raw = line.trim();
+  if (!raw) return false;
+  if (/^['"']?\s*>\s/.test(raw)) return true;
+  if (/\(foto\s*:/i.test(raw)) return true;
+  const cleaned = limparLinhaEditorialPainel(raw);
+  if (!cleaned) return true;
+  const lower = cleaned.toLowerCase();
+  if (/^crédito\s*:/.test(lower)) return true;
+  if (/^fonte\s*:/.test(lower)) return true;
+  if (/^imagem\s*:/.test(lower)) return true;
+  if (cleaned.length < 95 && /^[\wÀ-ú''.\s-]+,\s*do\s+/i.test(cleaned)) return true;
+  return false;
+}
+
+function filtrarLinhasPainel(text: string): string {
+  return normalizeEspacosPainel(
+    text
+      .split("\n")
+      .map(limparLinhaEditorialPainel)
+      .filter((line) => !line.trim() || !linhaIrrelevantePainel(line))
+      .join("\n"),
+  );
+}
+
 function sanitizePainelHtml(raw: string | null | undefined): string {
   if (!raw?.trim()) return "";
   let s = raw
@@ -152,16 +185,23 @@ function sanitizePainelHtml(raw: string | null | undefined): string {
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/li>/gi, "\n")
+    .replace(/<ul\b[\s\S]*?<\/ul>/gi, "\n")
+    .replace(/<ol\b[\s\S]*?<\/ol>/gi, "\n")
+    .replace(/<\/?(?:ul|ol|figure|figcaption)\b[^>]*>/gi, "\n")
+    .replace(/<li\b[^>]*>/gi, "\n")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
   s = s.replace(new RegExp(`<${MEDIA_TAG_RE.source}[^>]*\\/?>`, "gi"), " ");
   s = s.replace(new RegExp(`<${MEDIA_TAG_RE.source}\\b[^>\\n]*`, "gi"), " ");
   s = s.replace(/<[^>]+>/g, " ");
-  s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*['"][^'"]*['"]/gi, " ");
+  s = s.replace(/\b(?:href|src|data-[\w-]+|alt|title|class|width|height)\s*=\s*['"][^'"]*['"]/gi, " ");
   s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*[^\s'"]+/gi, " ");
   s = s.replace(/https?:\/\/[^\s]+\.(?:webp|jpe?g|png|gif|svg|bmp)(?:\?[^\s]*)?/gi, " ");
   s = s.replace(/\bdata-[\w-]+(?:\.\.\.)?/gi, " ");
-  return normalizeEspacosPainel(unescapeXml(s));
+  s = unescapeXml(s);
+  s = s.replace(/['"']\s*>\s*/g, " ");
+  s = s.replace(/(?:^|\n)\s*>\s*/g, "\n");
+  return filtrarLinhasPainel(normalizeEspacosPainel(s));
 }
 
 function removeBoilerplatePainel(text: string, titulo?: string): string {
@@ -176,14 +216,15 @@ function removeBoilerplatePainel(text: string, titulo?: string): string {
         .split("\n")
         .filter((line) => {
           const nl = line.toLowerCase().trim();
-          if (!nl || nl === nt) return false;
+          if (!nl) return true;
+          if (nl === nt) return false;
           if (nl.startsWith("o post ") && nl.includes("apareceu primeiro em")) return false;
           return true;
         })
         .join("\n"),
     );
   }
-  return t;
+  return filtrarLinhasPainel(t);
 }
 
 function tituloUtilPainel(s: string): boolean {
@@ -204,9 +245,11 @@ function prepararItemArmazenamento(
     const frase = resumo.match(/^(.{24,220}?[.!?])(?:\s|\n|$)/s);
     if (frase && frase[1].length <= 200) {
       titulo = frase[1].trim();
-      resumo = normalizeEspacosPainel(resumo.slice(frase[1].length));
+      resumo = filtrarLinhasPainel(normalizeEspacosPainel(resumo.slice(frase[1].length)));
     }
   }
+
+  if (resumo) resumo = filtrarLinhasPainel(resumo) || null;
 
   if (resumo && titulo) {
     const nt = titulo.toLowerCase().trim();
@@ -338,6 +381,47 @@ function parseFeed(xml: string, feedUrl: string): ParsedItem[] {
   return parseRss2Items(xml, feedUrl);
 }
 
+function parseCharsetFromContentType(contentType: string | null): string | null {
+  if (!contentType?.trim()) return null;
+  const m = contentType.match(/charset\s*=\s*["']?([\w.-]+)/i);
+  return m ? m[1].trim().toLowerCase() : null;
+}
+
+function parseCharsetFromXmlDeclaration(head: string): string | null {
+  const m = head.match(/<\?xml[^>]+encoding\s*=\s*["']([^"']+)["']/i);
+  return m ? m[1].trim().toLowerCase() : null;
+}
+
+function normalizeRssCharset(label: string): string {
+  const c = label.toLowerCase().replace(/[^a-z0-9-]/g, "");
+  if (c === "utf8") return "utf-8";
+  if (c === "iso88591" || c === "latin1") return "iso-8859-1";
+  if (c === "windows1252" || c === "cp1252") return "windows-1252";
+  return label.toLowerCase();
+}
+
+function decodeRssFeedBody(body: ArrayBuffer, contentType: string | null): string {
+  const bytes = new Uint8Array(body);
+  if (bytes.length === 0) return "";
+
+  let charset = parseCharsetFromContentType(contentType);
+  if (!charset) {
+    const head = new TextDecoder("iso-8859-1").decode(bytes.slice(0, Math.min(bytes.length, 1024)));
+    charset = parseCharsetFromXmlDeclaration(head);
+  }
+  charset = normalizeRssCharset(charset ?? "utf-8");
+
+  try {
+    return new TextDecoder(charset).decode(bytes);
+  } catch {
+    try {
+      return new TextDecoder("iso-8859-1").decode(bytes);
+    } catch {
+      return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    }
+  }
+}
+
 async function fetchFeedXml(url: string): Promise<{ ok: true; xml: string } | { ok: false; erro: string }> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
@@ -351,7 +435,7 @@ async function fetchFeedXml(url: string): Promise<{ ok: true; xml: string } | { 
     });
     clearTimeout(id);
     if (!res.ok) return { ok: false, erro: `HTTP ${res.status} ${res.statusText}` };
-    const xml = await res.text();
+    const xml = decodeRssFeedBody(await res.arrayBuffer(), res.headers.get("content-type"));
     if (!xml.trim()) return { ok: false, erro: "Corpo vazio" };
     return { ok: true, xml };
   } catch (e) {

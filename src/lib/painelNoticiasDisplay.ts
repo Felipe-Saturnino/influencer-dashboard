@@ -5,6 +5,8 @@ import {
 
 export {
   formatTituloPainelNoticia,
+  filtrarLinhasPainelNoticia,
+  linhaIrrelevantePainelNoticia,
   prepararTextoPainelNoticia,
   removePainelNoticiaBoilerplate,
   sanitizePainelNoticiaHtml,
