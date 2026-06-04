@@ -23,7 +23,49 @@ function normalizeEspacos(s: string): string {
     .trim();
 }
 
-/** HTML RSS → texto legível (remove mídia, atributos soltos e URLs de imagem). */
+function limparLinhaEditorial(line: string): string {
+  return line
+    .replace(/^['"']?\s*>\s*/, "")
+    .replace(/\s*\([^)]*\bfoto\s*:[^)]*\)/gi, "")
+    .replace(/\s*\(\s*reprodução\s*\/?\s*foto\s*:[^)]*\)/gi, "")
+    .trim();
+}
+
+/** Linhas de galeria, crédito ou HTML quebrado — não são texto editorial. */
+export function linhaIrrelevantePainelNoticia(line: string): boolean {
+  const raw = line.trim();
+  if (!raw) return false;
+  if (/^['"']?\s*>\s/.test(raw)) return true;
+  if (/\(foto\s*:/i.test(raw)) return true;
+  if (/\(reprodução\s*\/?\s*foto\s*:/i.test(raw)) return true;
+
+  const cleaned = limparLinhaEditorial(raw);
+  if (!cleaned) return true;
+  const lower = cleaned.toLowerCase();
+  if (/^crédito\s*:/.test(lower)) return true;
+  if (/^fonte\s*:/.test(lower)) return true;
+  if (/^imagem\s*:/.test(lower)) return true;
+  if (/^veja\s+(também|mais)\b/.test(lower)) return true;
+  if (/^leia\s+também\b/.test(lower)) return true;
+
+  if (cleaned.length < 95 && /^[\wÀ-ú''.\s-]+,\s*do\s+/i.test(cleaned)) return true;
+
+  return false;
+}
+
+export function filtrarLinhasPainelNoticia(text: string): string {
+  const lines = text.split("\n").map(limparLinhaEditorial);
+  return normalizeEspacos(
+    lines
+      .filter((line) => {
+        if (!line.trim()) return true;
+        return !linhaIrrelevantePainelNoticia(line);
+      })
+      .join("\n"),
+  );
+}
+
+/** HTML RSS → texto legível (remove mídia, listas/galeria, atributos soltos). */
 export function sanitizePainelNoticiaHtml(raw: string | null | undefined): string {
   if (!raw?.trim()) return "";
 
@@ -32,18 +74,26 @@ export function sanitizePainelNoticiaHtml(raw: string | null | undefined): strin
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/li>/gi, "\n")
+    .replace(/<ul\b[\s\S]*?<\/ul>/gi, "\n")
+    .replace(/<ol\b[\s\S]*?<\/ol>/gi, "\n")
+    .replace(/<\/?(?:ul|ol|figure|figcaption)\b[^>]*>/gi, "\n")
+    .replace(/<li\b[^>]*>/gi, "\n")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
 
   s = s.replace(new RegExp(`<${MEDIA_TAG.source}[^>]*\\/?>`, "gi"), " ");
   s = s.replace(new RegExp(`<${MEDIA_TAG.source}\\b[^>\\n]*`, "gi"), " ");
   s = s.replace(/<[^>]+>/g, " ");
-  s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*['"][^'"]*['"]/gi, " ");
+  s = s.replace(/\b(?:href|src|data-[\w-]+|alt|title|class|width|height)\s*=\s*['"][^'"]*['"]/gi, " ");
   s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*[^\s'"]+/gi, " ");
   s = s.replace(/https?:\/\/[^\s]+\.(?:webp|jpe?g|png|gif|svg|bmp)(?:\?[^\s]*)?/gi, " ");
   s = s.replace(/\bdata-[\w-]+(?:\.\.\.)?/gi, " ");
 
-  return normalizeEspacos(decodeHtmlEntities(s));
+  s = decodeHtmlEntities(s);
+  s = s.replace(/['"']\s*>\s*/g, " ");
+  s = s.replace(/(?:^|\n)\s*>\s*/g, "\n");
+
+  return filtrarLinhasPainelNoticia(normalizeEspacos(s));
 }
 
 export function normalizePainelNoticiaTexto(s: string): string {
@@ -75,7 +125,7 @@ export function removePainelNoticiaBoilerplate(text: string, titulo?: string): s
     t = normalizeEspacos(lines.join("\n"));
   }
 
-  return t;
+  return filtrarLinhasPainelNoticia(t);
 }
 
 function pareceUrl(s: string): boolean {
@@ -88,12 +138,13 @@ function tituloUtil(s: string | null | undefined): boolean {
   if (pareceUrl(t)) return false;
   if (t.length < 8) return false;
   if (/^o post .+ apareceu primeiro em/i.test(t)) return false;
+  if (linhaIrrelevantePainelNoticia(t)) return false;
   return true;
 }
 
 /** Primeira frase ou linha utilizável como manchete. */
 export function extrairTituloDoConteudo(texto: string): { titulo: string; resto: string } {
-  const t = texto.trim();
+  const t = filtrarLinhasPainelNoticia(texto).trim();
   if (!t) return { titulo: "", resto: "" };
 
   const frase = t.match(/^(.{24,220}?[.!?])(?:\s|\n|$)/s);
@@ -126,8 +177,7 @@ export function formatTituloPainelNoticia(
   tituloRaw: string | null | undefined,
   resumoRaw: string | null | undefined,
 ): string {
-  let titulo = sanitizePainelNoticiaHtml(tituloRaw);
-  titulo = removePainelNoticiaBoilerplate(titulo);
+  const titulo = removePainelNoticiaBoilerplate(sanitizePainelNoticiaHtml(tituloRaw));
 
   if (tituloUtil(titulo)) return titulo;
 
@@ -172,6 +222,8 @@ export function prepararTextoPainelNoticia(
       corpo = corpo.replace(new RegExp(`^${esc}\\s*`, "i"), "").trim();
     }
   }
+
+  corpo = filtrarLinhasPainelNoticia(corpo);
 
   if (!tituloUtil(titulo)) titulo = "Notícia";
 

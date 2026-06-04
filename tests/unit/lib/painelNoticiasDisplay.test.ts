@@ -66,6 +66,20 @@ describe("sanitizePainelNoticiaHtml", () => {
     const out = removePainelNoticiaBoilerplate(sanitizePainelNoticiaHtml(desc), titulo);
     expect(out).toBe("");
   });
+
+  it("remove galeria de jogadores com HTML quebrado", () => {
+    const html =
+      "<p>A seleção tem confiança de chegar à final da Copa do Mundo, disse o técnico.</p>" +
+      "<ul><li' > Weverton, do Grêmio. (Foto: LUCAS UEBEL/GREMIO FBPA)</li>" +
+      "<li' > Ederson, do Fenerbahçe-TUR. (Foto: Rafael Ribeiro/CBF)</li></ul>";
+    const out = prepararExibicaoPainelNoticia(
+      row("3", "2026-06-03T10:00:00.000Z", "2026-06-03T20:00:00.000Z", "", html),
+    );
+    expect(out.titulo).toContain("seleção");
+    expect(out.detalhe).not.toContain("Weverton");
+    expect(out.detalhe).not.toContain("' >");
+    expect(out.detalhe).not.toMatch(/\(foto\s*:/i);
+  });
 });
 
 describe("prepararExibicaoPainelNoticia", () => {
