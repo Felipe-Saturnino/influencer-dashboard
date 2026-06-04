@@ -4,11 +4,23 @@ import {
   formatDetalhePainelNoticia,
   idsPainelNoticiasParaPurga,
   PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES,
+  prepararExibicaoPainelNoticia,
   type PainelNoticiaRow,
 } from "@/lib/painelNoticiasDisplay";
+import {
+  prepararTextoPainelNoticia,
+  removePainelNoticiaBoilerplate,
+  sanitizePainelNoticiaHtml,
+} from "@/lib/painelNoticiasSanitize";
 
-function row(id: string, visivel_desde: string, visivel_ate: string): PainelNoticiaRow {
-  return { id, titulo: id, resumo: null, visivel_desde, visivel_ate };
+function row(
+  id: string,
+  visivel_desde: string,
+  visivel_ate: string,
+  titulo = id,
+  resumo: string | null = null,
+): PainelNoticiaRow {
+  return { id, titulo, resumo, visivel_desde, visivel_ate };
 }
 
 describe("calcularPainelNoticiasExibicao", () => {
@@ -36,10 +48,51 @@ describe("calcularPainelNoticiasExibicao", () => {
   });
 });
 
+describe("sanitizePainelNoticiaHtml", () => {
+  it("remove HTML quebrado de imagem e atributos soltos", () => {
+    const html =
+      "<p>\"Trabalho duro sempre foi minha essência\", disse o goleiro.</p>" +
+      "href='https://static.gazetaesportiva.com/uploads/foto.webp' data-foo='bar'";
+    const out = sanitizePainelNoticiaHtml(html);
+    expect(out).toContain("Trabalho duro");
+    expect(out).not.toContain("href=");
+    expect(out).not.toContain("gazetaesportiva.com/uploads");
+  });
+
+  it("remove rodapé WordPress do detalhe", () => {
+    const titulo = "Veja reação de Luiz Henrique ao ser convocado para a Copa do Mundo";
+    const desc =
+      `O post ${titulo} apareceu primeiro em Gazeta Esportiva .`;
+    const out = removePainelNoticiaBoilerplate(sanitizePainelNoticiaHtml(desc), titulo);
+    expect(out).toBe("");
+  });
+});
+
+describe("prepararExibicaoPainelNoticia", () => {
+  it("não repete título no detalhe quando só há boilerplate", () => {
+    const titulo = "Veja reação de Luiz Henrique ao ser convocado para a Copa do Mundo";
+    const exibir = prepararExibicaoPainelNoticia(
+      row("1", "2026-06-03T10:00:00.000Z", "2026-06-03T20:00:00.000Z", titulo, `<p>O post ${titulo} apareceu primeiro em Gazeta Esportiva .</p>`),
+    );
+    expect(exibir.titulo).toBe(titulo);
+    expect(exibir.detalhe).toBe("");
+  });
+
+  it("deriva título da primeira frase quando o campo título vem vazio", () => {
+    const corpo =
+      '"Trabalho duro sempre foi minha essência", disse Alisson. Ele falou sobre a seleção brasileira.';
+    const exibir = prepararExibicaoPainelNoticia(
+      row("2", "2026-06-03T10:00:00.000Z", "2026-06-03T20:00:00.000Z", "", corpo),
+    );
+    expect(exibir.titulo).toContain("Trabalho duro");
+    expect(exibir.detalhe).toContain("Ele falou");
+  });
+});
+
 describe("formatDetalhePainelNoticia", () => {
   it("preserva quebras de parágrafo do HTML", () => {
     const html = "<p>Primeiro parágrafo.</p><p>Segundo parágrafo com mais contexto.</p>";
-    expect(formatDetalhePainelNoticia(html)).toBe(
+    expect(formatDetalhePainelNoticia(html, "Manchete da notícia")).toBe(
       "Primeiro parágrafo.\n\nSegundo parágrafo com mais contexto.",
     );
   });
@@ -49,6 +102,14 @@ describe("formatDetalhePainelNoticia", () => {
     const out = formatDetalhePainelNoticia(long);
     expect(out.endsWith("…")).toBe(true);
     expect(out.length).toBeLessThanOrEqual(PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES + 1);
+  });
+});
+
+describe("prepararTextoPainelNoticia", () => {
+  it("separa manchete e corpo quando resumo é longo sem título", () => {
+    const { titulo, corpo } = prepararTextoPainelNoticia("", "Primeira frase da matéria. Segunda frase com detalhes.");
+    expect(titulo).toBe("Primeira frase da matéria.");
+    expect(corpo).toBe("Segunda frase com detalhes.");
   });
 });
 

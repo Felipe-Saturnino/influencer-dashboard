@@ -10,7 +10,7 @@ import {
 } from "../../lib/painelNoticias";
 import {
   calcularPainelNoticiasExibicao,
-  formatDetalhePainelNoticia,
+  prepararExibicaoPainelNoticia,
   type PainelNoticiaRow,
 } from "../../lib/painelNoticiasDisplay";
 
@@ -65,8 +65,8 @@ function usePainelNoticiasNoIndex() {
   }, []);
 }
 
-function detalheNoticia(row: PainelNoticiaRow): string {
-  return formatDetalhePainelNoticia(row.resumo);
+function exibirNoticia(row: PainelNoticiaRow) {
+  return prepararExibicaoPainelNoticia(row);
 }
 
 const slideShellStyle = {
@@ -194,6 +194,9 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
 
   const animBase = `${SLIDE_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
+  const atualExibir = exibirNoticia(atual);
+  const proximoExibir = proximo ? exibirNoticia(proximo) : null;
+
   return (
     <div
       role="region"
@@ -203,10 +206,10 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
     >
       {!saindo && (
         <div style={{ ...slideShellStyle, transform: "translateY(0)", opacity: 1 }}>
-          <PainelNoticiaConteudo titulo={atual.titulo} detalhe={detalheNoticia(atual)} />
+          <PainelNoticiaConteudo titulo={atualExibir.titulo} detalhe={atualExibir.detalhe} />
         </div>
       )}
-      {saindo && proximo && (
+      {saindo && proximo && proximoExibir && (
         <>
           <div
             style={{
@@ -214,7 +217,7 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
               animation: `painelNoticiaSai ${animBase}`,
             }}
           >
-            <PainelNoticiaConteudo titulo={atual.titulo} detalhe={detalheNoticia(atual)} />
+            <PainelNoticiaConteudo titulo={atualExibir.titulo} detalhe={atualExibir.detalhe} />
           </div>
           <div
             style={{
@@ -222,7 +225,7 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
               animation: `painelNoticiaEntra ${animBase}`,
             }}
           >
-            <PainelNoticiaConteudo titulo={proximo.titulo} detalhe={detalheNoticia(proximo)} />
+            <PainelNoticiaConteudo titulo={proximoExibir.titulo} detalhe={proximoExibir.detalhe} />
           </div>
         </>
       )}
