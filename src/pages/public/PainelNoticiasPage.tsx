@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { FONT, FONT_TITLE } from "../../constants/theme";
@@ -10,7 +10,7 @@ import {
 } from "../../lib/painelNoticias";
 import {
   calcularPainelNoticiasExibicao,
-  stripHtmlPainelNoticia,
+  formatDetalhePainelNoticia,
   type PainelNoticiaRow,
 } from "../../lib/painelNoticiasDisplay";
 
@@ -66,8 +66,19 @@ function usePainelNoticiasNoIndex() {
 }
 
 function detalheNoticia(row: PainelNoticiaRow): string {
-  return row.resumo ? stripHtmlPainelNoticia(row.resumo) : "";
+  return formatDetalhePainelNoticia(row.resumo);
 }
+
+const slideShellStyle = {
+  position: "absolute" as const,
+  inset: 0,
+  display: "flex",
+  flexDirection: "column" as const,
+  justifyContent: "center",
+  alignItems: "center",
+  padding: "clamp(24px, 6vw, 64px)",
+  boxSizing: "border-box" as const,
+};
 
 function PainelNoticiaConteudo({ titulo, detalhe }: { titulo: string; detalhe: string }) {
   return (
@@ -100,12 +111,132 @@ function PainelNoticiaConteudo({ titulo, detalhe }: { titulo: string; detalhe: s
             fontFamily: FONT.body,
             maxWidth: "min(1100px, 90vw)",
             wordBreak: "break-word",
+            whiteSpace: "pre-line",
           }}
         >
           {detalhe}
         </p>
       )}
     </>
+  );
+}
+
+function preservarIndiceAtual(
+  listaAnterior: PainelNoticiaRow[],
+  indiceAnterior: number,
+  novaLista: PainelNoticiaRow[],
+): number {
+  if (novaLista.length === 0) return 0;
+  const idAtual = listaAnterior[indiceAnterior]?.id;
+  if (idAtual) {
+    const encontrado = novaLista.findIndex((x) => x.id === idAtual);
+    if (encontrado >= 0) return encontrado;
+  }
+  return Math.min(indiceAnterior, novaLista.length - 1);
+}
+
+function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
+  const [idx, setIdx] = useState(0);
+  const [saindo, setSaindo] = useState(false);
+  const idxRef = useRef(0);
+  const itensRef = useRef(itens);
+  const timerRef = useRef<number | null>(null);
+
+  const syncIdx = useCallback((next: number) => {
+    idxRef.current = next;
+    setIdx(next);
+  }, []);
+
+  useEffect(() => {
+    const prev = itensRef.current;
+    itensRef.current = itens;
+    syncIdx(preservarIndiceAtual(prev, idxRef.current, itens));
+  }, [itens, syncIdx]);
+
+  const limparTimer = useCallback(() => {
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const agendarProximo = useCallback(() => {
+    limparTimer();
+    if (itens.length <= 1) return;
+    timerRef.current = window.setTimeout(() => {
+      setSaindo(true);
+    }, PAINEL_NOTICIAS_SLIDE_MS);
+  }, [itens.length, limparTimer]);
+
+  useEffect(() => {
+    if (saindo) return undefined;
+    agendarProximo();
+    return limparTimer;
+  }, [idx, saindo, agendarProximo, limparTimer]);
+
+  useEffect(() => {
+    if (!saindo) return undefined;
+    const t = window.setTimeout(() => {
+      const lista = itensRef.current;
+      if (lista.length <= 1) {
+        setSaindo(false);
+        return;
+      }
+      syncIdx((idxRef.current + 1) % lista.length);
+      setSaindo(false);
+    }, SLIDE_TRANSITION_MS);
+    return () => window.clearTimeout(t);
+  }, [saindo, syncIdx]);
+
+  const atual = itens[idx];
+  const proximo = itens.length > 1 ? itens[(idx + 1) % itens.length] : null;
+  if (!atual) return null;
+
+  const animBase = `${SLIDE_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+
+  return (
+    <div
+      role="region"
+      aria-live="polite"
+      aria-label="Painel de notícias"
+      style={{ position: "relative", minHeight: "100dvh", overflow: "hidden" }}
+    >
+      {!saindo && (
+        <div style={{ ...slideShellStyle, transform: "translateY(0)", opacity: 1 }}>
+          <PainelNoticiaConteudo titulo={atual.titulo} detalhe={detalheNoticia(atual)} />
+        </div>
+      )}
+      {saindo && proximo && (
+        <>
+          <div
+            style={{
+              ...slideShellStyle,
+              animation: `painelNoticiaSai ${animBase}`,
+            }}
+          >
+            <PainelNoticiaConteudo titulo={atual.titulo} detalhe={detalheNoticia(atual)} />
+          </div>
+          <div
+            style={{
+              ...slideShellStyle,
+              animation: `painelNoticiaEntra ${animBase}`,
+            }}
+          >
+            <PainelNoticiaConteudo titulo={proximo.titulo} detalhe={detalheNoticia(proximo)} />
+          </div>
+        </>
+      )}
+      <style>{`
+        @keyframes painelNoticiaSai {
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(-100%); opacity: 0; }
+        }
+        @keyframes painelNoticiaEntra {
+          from { transform: translateY(100%); opacity: 0.35; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -116,8 +247,6 @@ export default function PainelNoticiasPage() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [itens, setItens] = useState<PainelNoticiaRow[]>([]);
-  const [idx, setIdx] = useState(0);
-  const [transicao, setTransicao] = useState(false);
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -133,8 +262,7 @@ export default function PainelNoticiasPage() {
       return;
     }
     setErro(false);
-    const exibir = calcularPainelNoticiasExibicao((data ?? []) as PainelNoticiaRow[]);
-    setItens(exibir);
+    setItens(calcularPainelNoticiasExibicao((data ?? []) as PainelNoticiaRow[]));
     setLoading(false);
   }, []);
 
@@ -151,25 +279,6 @@ export default function PainelNoticiasPage() {
       window.clearInterval(reload);
     };
   }, [carregar]);
-
-  useEffect(() => {
-    setIdx(0);
-  }, [itens]);
-
-  useEffect(() => {
-    if (itens.length <= 1) return undefined;
-    const tick = window.setInterval(() => {
-      setTransicao(true);
-      window.setTimeout(() => {
-        setIdx((i) => (i + 1) % itens.length);
-        setTransicao(false);
-      }, SLIDE_TRANSITION_MS);
-    }, PAINEL_NOTICIAS_SLIDE_MS);
-    return () => window.clearInterval(tick);
-  }, [itens.length]);
-
-  const atual = itens[idx];
-  const proximo = itens.length > 1 ? itens[(idx + 1) % itens.length] : null;
 
   return (
     <div
@@ -217,56 +326,9 @@ export default function PainelNoticiasPage() {
         >
           {erro ? ERRO_MSG : VAZIO_MSG}
         </div>
-      ) : atual ? (
-        <div
-          role="region"
-          aria-live="polite"
-          aria-label="Painel de notícias"
-          style={{ position: "relative", minHeight: "100dvh", overflow: "hidden" }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "clamp(24px, 6vw, 64px)",
-              boxSizing: "border-box",
-              transform: transicao ? "translateY(-100%)" : "translateY(0)",
-              opacity: transicao ? 0 : 1,
-              transition: `transform ${SLIDE_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${SLIDE_TRANSITION_MS}ms ease`,
-            }}
-          >
-            <PainelNoticiaConteudo titulo={atual.titulo} detalhe={detalheNoticia(atual)} />
-          </div>
-          {transicao && proximo && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: "clamp(24px, 6vw, 64px)",
-                boxSizing: "border-box",
-                transform: "translateY(0)",
-                animation: `painelNoticiaEntra ${SLIDE_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-              }}
-            >
-              <PainelNoticiaConteudo titulo={proximo.titulo} detalhe={detalheNoticia(proximo)} />
-            </div>
-          )}
-          <style>{`
-            @keyframes painelNoticiaEntra {
-              from { transform: translateY(100%); opacity: 0.4; }
-              to { transform: translateY(0); opacity: 1; }
-            }
-          `}</style>
-        </div>
-      ) : null}
+      ) : (
+        <PainelNoticiasCarrossel itens={itens} />
+      )}
     </div>
   );
 }
