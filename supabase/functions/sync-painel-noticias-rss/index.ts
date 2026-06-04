@@ -145,11 +145,29 @@ function extractCdataOrText(inner: string): string {
   return stripInnerTags(unescapeXml(raw)).trim();
 }
 
-function getTagBlock(block: string, tag: string): string | null {
+function getTagBlockRaw(block: string, tag: string): string | null {
   const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
   const m = block.match(re);
   if (!m) return null;
-  return extractCdataOrText(m[1]);
+  const c = m[1].match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
+  const raw = unescapeXml(c ? c[1] : m[1].trim()).trim();
+  return raw.length > 0 ? raw : null;
+}
+
+function getTagBlock(block: string, tag: string): string | null {
+  const raw = getTagBlockRaw(block, tag);
+  if (!raw) return null;
+  return extractCdataOrText(raw);
+}
+
+/** Escolhe o campo RSS mais longo (HTML preservado para o painel TV). */
+function pickResumoRss(block: string, tags: string[]): string | null {
+  const parts = tags
+    .map((tag) => getTagBlockRaw(block, tag))
+    .filter((v): v is string => Boolean(v?.trim()));
+  if (parts.length === 0) return null;
+  parts.sort((a, b) => b.length - a.length);
+  return parts[0].slice(0, MAX_RESUMO);
 }
 
 function getAtomLinkHref(entry: string): string | null {
@@ -191,8 +209,7 @@ function parseRss2Items(xml: string, feedUrl: string): ParsedItem[] {
     }
     if (!link) continue;
     link = resolveUrl(link, feedUrl);
-    const encoded = getTagBlock(block, "content:encoded") ?? getTagBlock(block, "description");
-    const resumo = encoded && encoded.length > 0 ? encoded.slice(0, MAX_RESUMO) : null;
+    const resumo = pickResumoRss(block, ["content:encoded", "description", "summary"]);
     titulo = titulo.slice(0, MAX_TITLE);
     if (!titulo) titulo = link;
     const pubRaw =
@@ -214,8 +231,7 @@ function parseAtomEntries(xml: string, feedUrl: string): ParsedItem[] {
     let link = getAtomLinkHref(block) ?? "";
     if (!link) continue;
     link = resolveUrl(link, feedUrl);
-    const summary = getTagBlock(block, "summary") ?? getTagBlock(block, "content");
-    const resumo = summary && summary.length > 0 ? summary.slice(0, MAX_RESUMO) : null;
+    const resumo = pickResumoRss(block, ["content", "summary"]);
     const pubRaw = getTagBlock(block, "updated") ?? getTagBlock(block, "published");
     out.push({ titulo: titulo || link, item_url: link, resumo, published_at: parsePubDateToIso(pubRaw) });
   }

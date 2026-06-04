@@ -11,7 +11,7 @@ export function isPainelNoticiasPublicPath(): boolean {
 }
 
 /** Intervalo do carrossel (ms). */
-export const PAINEL_NOTICIAS_SLIDE_MS = 30_000;
+export const PAINEL_NOTICIAS_SLIDE_MS = 20_000;
 
 /** Polling de dados (ms). */
 export const PAINEL_NOTICIAS_POLL_MS = 60_000;

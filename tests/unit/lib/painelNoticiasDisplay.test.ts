@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   calcularPainelNoticiasExibicao,
+  formatDetalhePainelNoticia,
   idsPainelNoticiasParaPurga,
+  PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES,
   type PainelNoticiaRow,
 } from "@/lib/painelNoticiasDisplay";
 
@@ -31,6 +33,22 @@ describe("calcularPainelNoticiasExibicao", () => {
     const v4 = row("v4", "2026-06-02T07:00:00.000Z", "2026-06-03T05:00:00.000Z");
     const exibir = calcularPainelNoticiasExibicao([v4, v3, v2, v1, fresca], now);
     expect(exibir.map((r) => r.id)).toEqual(["f1", "v1", "v2", "v3", "v4"]);
+  });
+});
+
+describe("formatDetalhePainelNoticia", () => {
+  it("preserva quebras de parágrafo do HTML", () => {
+    const html = "<p>Primeiro parágrafo.</p><p>Segundo parágrafo com mais contexto.</p>";
+    expect(formatDetalhePainelNoticia(html)).toBe(
+      "Primeiro parágrafo.\n\nSegundo parágrafo com mais contexto.",
+    );
+  });
+
+  it("limita tamanho sem cortar palavra no meio quando possível", () => {
+    const long = "a ".repeat(PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES + 40);
+    const out = formatDetalhePainelNoticia(long);
+    expect(out.endsWith("…")).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES + 1);
   });
 });
 

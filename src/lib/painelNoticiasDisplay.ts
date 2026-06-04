@@ -49,6 +49,36 @@ export function idsPainelNoticiasParaPurga(
     .map((r) => r.id);
 }
 
+/** Limite de caracteres do detalhe na TV (~6–8 linhas a 3 m). */
+export const PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES = 1500;
+
 export function stripHtmlPainelNoticia(s: string): string {
-  return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return formatDetalhePainelNoticia(s);
+}
+
+/** HTML ou texto do RSS → detalhe legível com quebras de linha para o painel. */
+export function formatDetalhePainelNoticia(raw: string | null | undefined): string {
+  if (!raw?.trim()) return "";
+  const t = raw
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (t.length <= PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES) return t;
+  const cut = t.slice(0, PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES);
+  const lastSpace = cut.lastIndexOf(" ");
+  const base = lastSpace > 400 ? cut.slice(0, lastSpace) : cut;
+  return `${base.trim()}…`;
 }
