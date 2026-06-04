@@ -1,3 +1,15 @@
+import {
+  prepararTextoPainelNoticia,
+  sanitizePainelNoticiaHtml,
+} from "./painelNoticiasSanitize";
+
+export {
+  formatTituloPainelNoticia,
+  prepararTextoPainelNoticia,
+  removePainelNoticiaBoilerplate,
+  sanitizePainelNoticiaHtml,
+} from "./painelNoticiasSanitize";
+
 /** Mínimo de notícias no ciclo do painel TV quando há histórico suficiente. */
 export const PAINEL_NOTICIAS_MIN_EXIBICAO = 5;
 
@@ -12,6 +24,14 @@ export type PainelNoticiaRow = {
 function parseMs(iso: string): number {
   const ms = Date.parse(iso);
   return Number.isNaN(ms) ? 0 : ms;
+}
+
+function truncarDetalhePainelNoticia(corpo: string): string {
+  if (corpo.length <= PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES) return corpo;
+  const cut = corpo.slice(0, PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES);
+  const lastSpace = cut.lastIndexOf(" ");
+  const base = lastSpace > 400 ? cut.slice(0, lastSpace) : cut;
+  return `${base.trim()}…`;
 }
 
 /** Lista ordenada por visivel_desde DESC (mais recente primeiro). */
@@ -53,32 +73,27 @@ export function idsPainelNoticiasParaPurga(
 export const PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES = 1500;
 
 export function stripHtmlPainelNoticia(s: string): string {
-  return formatDetalhePainelNoticia(s);
+  return sanitizePainelNoticiaHtml(s);
 }
 
-/** HTML ou texto do RSS → detalhe legível com quebras de linha para o painel. */
-export function formatDetalhePainelNoticia(raw: string | null | undefined): string {
-  if (!raw?.trim()) return "";
-  const t = raw
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/[ \t\f\v]+/g, " ")
-    .replace(/ *\n */g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+/** Texto do detalhe na TV — sem HTML, boilerplate nem repetição do título. */
+export function formatDetalhePainelNoticia(
+  resumoRaw: string | null | undefined,
+  tituloRaw?: string | null,
+): string {
+  const { corpo } = prepararTextoPainelNoticia(tituloRaw ?? null, resumoRaw);
+  if (!corpo) return "";
+  return truncarDetalhePainelNoticia(corpo);
+}
 
-  if (t.length <= PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES) return t;
-  const cut = t.slice(0, PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES);
-  const lastSpace = cut.lastIndexOf(" ");
-  const base = lastSpace > 400 ? cut.slice(0, lastSpace) : cut;
-  return `${base.trim()}…`;
+/** Título + detalhe prontos para exibição na TV. */
+export function prepararExibicaoPainelNoticia(row: PainelNoticiaRow): {
+  titulo: string;
+  detalhe: string;
+} {
+  const { titulo, corpo } = prepararTextoPainelNoticia(row.titulo, row.resumo);
+  return {
+    titulo,
+    detalhe: corpo ? truncarDetalhePainelNoticia(corpo) : "",
+  };
 }

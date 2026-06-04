@@ -135,6 +135,97 @@ function unescapeXml(s: string): string {
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
+const MEDIA_TAG_RE = /(?:img|figure|picture|iframe|video|audio|embed|source|object|svg|noscript|script|style)/i;
+
+function normalizeEspacosPainel(s: string): string {
+  return s
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function sanitizePainelHtml(raw: string | null | undefined): string {
+  if (!raw?.trim()) return "";
+  let s = raw
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ");
+  s = s.replace(new RegExp(`<${MEDIA_TAG_RE.source}[^>]*\\/?>`, "gi"), " ");
+  s = s.replace(new RegExp(`<${MEDIA_TAG_RE.source}\\b[^>\\n]*`, "gi"), " ");
+  s = s.replace(/<[^>]+>/g, " ");
+  s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*['"][^'"]*['"]/gi, " ");
+  s = s.replace(/\b(?:href|src|data-[\w-]+)\s*=\s*[^\s'"]+/gi, " ");
+  s = s.replace(/https?:\/\/[^\s]+\.(?:webp|jpe?g|png|gif|svg|bmp)(?:\?[^\s]*)?/gi, " ");
+  s = s.replace(/\bdata-[\w-]+(?:\.\.\.)?/gi, " ");
+  return normalizeEspacosPainel(unescapeXml(s));
+}
+
+function removeBoilerplatePainel(text: string, titulo?: string): string {
+  let t = text
+    .replace(/O post [\s\S]+? apareceu primeiro em [^\n.]+\.?\s*/gi, "")
+    .replace(/The post [\s\S]+? appeared first on [^\n.]+\.?\s*/gi, "");
+  t = normalizeEspacosPainel(t);
+  if (titulo) {
+    const nt = titulo.toLowerCase().trim();
+    t = normalizeEspacosPainel(
+      t
+        .split("\n")
+        .filter((line) => {
+          const nl = line.toLowerCase().trim();
+          if (!nl || nl === nt) return false;
+          if (nl.startsWith("o post ") && nl.includes("apareceu primeiro em")) return false;
+          return true;
+        })
+        .join("\n"),
+    );
+  }
+  return t;
+}
+
+function tituloUtilPainel(s: string): boolean {
+  if (!s.trim() || s.trim().length < 8) return false;
+  if (/^https?:\/\//i.test(s.trim())) return false;
+  if (/^o post .+ apareceu primeiro em/i.test(s.trim())) return false;
+  return true;
+}
+
+function prepararItemArmazenamento(
+  tituloRaw: string,
+  resumoRaw: string | null,
+): { titulo: string; resumo: string | null } {
+  let titulo = removeBoilerplatePainel(sanitizePainelHtml(tituloRaw));
+  let resumo = resumoRaw ? removeBoilerplatePainel(sanitizePainelHtml(resumoRaw), titulo) : null;
+
+  if (!tituloUtilPainel(titulo) && resumo) {
+    const frase = resumo.match(/^(.{24,220}?[.!?])(?:\s|\n|$)/s);
+    if (frase && frase[1].length <= 200) {
+      titulo = frase[1].trim();
+      resumo = normalizeEspacosPainel(resumo.slice(frase[1].length));
+    }
+  }
+
+  if (resumo && titulo) {
+    const nt = titulo.toLowerCase().trim();
+    const nr = resumo.toLowerCase().trim();
+    if (nr === nt) resumo = null;
+    else if (nr.startsWith(nt)) {
+      const esc = titulo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      resumo = resumo.replace(new RegExp(`^${esc}\\s*`, "i"), "").trim() || null;
+    }
+  }
+
+  if (!tituloUtilPainel(titulo)) {
+    titulo = tituloRaw.trim().slice(0, MAX_TITLE) || titulo;
+  }
+  if (resumo && resumo.length > MAX_RESUMO) resumo = resumo.slice(0, MAX_RESUMO);
+
+  return { titulo: titulo.slice(0, MAX_TITLE), resumo };
+}
+
 function stripInnerTags(s: string): string {
   return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -409,10 +500,11 @@ serve(async (req) => {
       const itemHost = hostDeUrl(it.item_url) ?? fh;
       if (!passaFiltro(texto, contemAlgum, contemTodos, excluir)) continue;
       if (!hostMatchesAllowlist(itemHost, allowlistHosts)) continue;
+      const prep = prepararItemArmazenamento(it.titulo, it.resumo);
       aceites.push({
         item_url: it.item_url,
-        titulo: it.titulo,
-        resumo: it.resumo,
+        titulo: prep.titulo,
+        resumo: prep.resumo,
         published_at: it.published_at,
         feed_url: feedUrl,
         fonte_host: itemHost,
