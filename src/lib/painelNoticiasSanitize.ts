@@ -132,6 +132,31 @@ function pareceUrl(s: string): boolean {
   return /^https?:\/\//i.test(s.trim());
 }
 
+/** ESPN e outros feeds enviam literalmente "null" no &lt;description&gt;. */
+export function normalizarResumoRssBruto(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const t = raw.trim();
+  if (/^(null|undefined|n\/a|none|-)$/i.test(t)) return null;
+  return raw;
+}
+
+export function tituloPareceTruncadoRss(titulo: string): boolean {
+  const t = titulo.trim();
+  if (!t) return true;
+  return t.endsWith("...") || t.endsWith("…");
+}
+
+/** Item apto para TV: tem resumo ou título completo (não truncado no RSS). */
+export function itemElegivelPainelNoticia(
+  titulo: string,
+  resumo: string | null | undefined,
+): boolean {
+  const t = titulo.trim();
+  if (t.length < 12 || pareceUrl(t)) return false;
+  if (normalizarResumoRssBruto(resumo)) return true;
+  return !tituloPareceTruncadoRss(t);
+}
+
 function tituloUtil(s: string | null | undefined): boolean {
   if (!s?.trim()) return false;
   const t = s.trim();
@@ -198,9 +223,10 @@ export function prepararTextoPainelNoticia(
   tituloRaw: string | null | undefined,
   resumoRaw: string | null | undefined,
 ): { titulo: string; corpo: string } {
-  let titulo = formatTituloPainelNoticia(tituloRaw, resumoRaw);
+  const resumoNorm = normalizarResumoRssBruto(resumoRaw);
+  let titulo = formatTituloPainelNoticia(tituloRaw, resumoNorm);
   let corpo = removePainelNoticiaBoilerplate(
-    sanitizePainelNoticiaHtml(resumoRaw),
+    sanitizePainelNoticiaHtml(resumoNorm),
     titulo || sanitizePainelNoticiaHtml(tituloRaw) || undefined,
   );
 

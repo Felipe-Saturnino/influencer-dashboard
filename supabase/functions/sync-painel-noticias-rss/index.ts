@@ -238,8 +238,11 @@ function prepararItemArmazenamento(
   tituloRaw: string,
   resumoRaw: string | null,
 ): { titulo: string; resumo: string | null } {
+  const bruto = resumoRaw?.trim() && !/^(null|undefined|n\/a|none|-)$/i.test(resumoRaw.trim())
+    ? resumoRaw
+    : null;
   let titulo = removeBoilerplatePainel(sanitizePainelHtml(tituloRaw));
-  let resumo = resumoRaw ? removeBoilerplatePainel(sanitizePainelHtml(resumoRaw), titulo) : null;
+  let resumo = bruto ? removeBoilerplatePainel(sanitizePainelHtml(bruto), titulo) : null;
 
   if (!tituloUtilPainel(titulo) && resumo) {
     const frase = resumo.match(/^(.{24,220}?[.!?])(?:\s|\n|$)/s);
@@ -295,10 +298,26 @@ function getTagBlock(block: string, tag: string): string | null {
 }
 
 /** Escolhe o campo RSS mais longo (HTML preservado para o painel TV). */
+function resumoRssBrutoUtil(raw: string | null | undefined): boolean {
+  if (!raw?.trim()) return false;
+  return !/^(null|undefined|n\/a|none|-)$/i.test(raw.trim());
+}
+
+function tituloPareceTruncadoPainel(titulo: string): boolean {
+  const t = titulo.trim();
+  return !t || t.endsWith("...") || t.endsWith("…");
+}
+
+function itemElegivelPainel(titulo: string, resumo: string | null): boolean {
+  if (titulo.trim().length < 12 || /^https?:\/\//i.test(titulo.trim())) return false;
+  if (resumo?.trim()) return true;
+  return !tituloPareceTruncadoPainel(titulo);
+}
+
 function pickResumoRss(block: string, tags: string[]): string | null {
   const parts = tags
     .map((tag) => getTagBlockRaw(block, tag))
-    .filter((v): v is string => Boolean(v?.trim()));
+    .filter((v): v is string => resumoRssBrutoUtil(v));
   if (parts.length === 0) return null;
   parts.sort((a, b) => b.length - a.length);
   return parts[0].slice(0, MAX_RESUMO);
@@ -585,6 +604,7 @@ serve(async (req) => {
       if (!passaFiltro(texto, contemAlgum, contemTodos, excluir)) continue;
       if (!hostMatchesAllowlist(itemHost, allowlistHosts)) continue;
       const prep = prepararItemArmazenamento(it.titulo, it.resumo);
+      if (!itemElegivelPainel(prep.titulo, prep.resumo)) continue;
       aceites.push({
         item_url: it.item_url,
         titulo: prep.titulo,
