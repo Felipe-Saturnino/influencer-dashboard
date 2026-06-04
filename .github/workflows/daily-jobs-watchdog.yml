@@ -64,6 +64,8 @@ jobs:
               dispatched.push(w.label);
             }
 
-            core.summary.add(`### Watchdog ${hojeBr} (${TZ})`);
-            core.summary.add(`- Re-disparados: ${dispatched.length ? dispatched.join(", ") : "nenhum"}`);
-            core.summary.add(`- Já OK hoje: ${skipped.length ? skipped.join(", ") : "nenhum"}`);
+            await core.summary
+              .addHeading(`Watchdog ${hojeBr} (${TZ})`, 3)
+              .addRaw(`- Re-disparados: ${dispatched.length ? dispatched.join(", ") : "nenhum"}`, true)
+              .addRaw(`- Já OK hoje: ${skipped.length ? skipped.join(", ") : "nenhum"}`, true)
+              .write();

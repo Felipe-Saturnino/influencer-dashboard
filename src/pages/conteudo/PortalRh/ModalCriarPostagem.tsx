@@ -44,7 +44,7 @@ type AcaoModal = "salvar" | "publicar";
 
 const ERRO_CARREGAR_EDICAO = "Não foi possível carregar a postagem para edição.";
 const ERRO_SALVAR =
-  "Não foi possível salvar a postagem. Se o problema persistir, contate o suporte.";
+  "Não foi possível salvar a postagem. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_UPLOAD = "Não foi possível enviar o arquivo. Tente novamente.";
 
 export function ModalCriarPostagem({

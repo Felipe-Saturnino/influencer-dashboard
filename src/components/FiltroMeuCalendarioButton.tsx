@@ -20,7 +20,7 @@ export function FiltroMeuCalendarioButton({
   onClick,
   children = "Meu Calendário",
   ariaLabelActive = "Mostrar calendário geral de todos os prestadores",
-  ariaLabelInactive = "Filtrar calendário apenas para o meu registo de prestador",
+  ariaLabelInactive = "Filtrar calendário apenas para o meu registro de prestador",
   style,
 }: FiltroMeuCalendarioButtonProps) {
   return (

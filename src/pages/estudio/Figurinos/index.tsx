@@ -142,7 +142,7 @@ export default function FigurinosPage() {
     ]);
     if (pr.error) {
       console.error("[Figurinos] Erro ao carregar inventário:", pr.error);
-      setErroGlobal("Não foi possível carregar o inventário. Se o problema persistir, contate o suporte.");
+      setErroGlobal("Não foi possível carregar o inventário. Se o problema persistir, entre em contato com o suporte.");
     }
     setPecas((pr.data ?? []) as RhFigurinoPeca[]);
     const emps = (er.data ?? []) as RhFigurinoEmprestimo[];
@@ -359,7 +359,7 @@ export default function FigurinosPage() {
     if (e2.error) {
       console.error("[Figurinos] Erro ao carregar histórico da peça:", e2.error);
       setHistStatus([]);
-      setHistErro("Não foi possível carregar o histórico desta peça. Se o problema persistir, contate o suporte.");
+      setHistErro("Não foi possível carregar o histórico desta peça. Se o problema persistir, entre em contato com o suporte.");
     } else {
       setHistStatus((e2.data ?? []) as RhFigurinoStatusHist[]);
     }
@@ -1066,7 +1066,7 @@ export default function FigurinosPage() {
                 setConcluindoManut(false);
                 if (error) {
                   console.error("[Figurinos] Erro ao concluir manutenção:", error);
-                  setErroGlobal("Não foi possível disponibilizar a peça. Se o problema persistir, contate o suporte.");
+                  setErroGlobal("Não foi possível disponibilizar a peça. Se o problema persistir, entre em contato com o suporte.");
                 } else {
                   setConcluirManutPeca(null);
                   await carregar();

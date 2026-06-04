@@ -18,7 +18,7 @@ A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, n
 
 Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
-1. **Este MDC (Global)** — tema, semântica, tabelas, filtros, permissões, estados, formatos.
+1. **Este MDC (Global)** — tema, semântica, **linguagem PT-BR**, tabelas, filtros, permissões, estados, formatos.
 2. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
 3. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
 
@@ -26,7 +26,7 @@ Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
 | MDC | Conteúdo |
 |-----|----------|
-| **Global** | Semântica de dados, **identidade visual por jogo**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
+| **Global** | Semântica de dados, **identidade visual por jogo**, **linguagem e copy (PT-BR)**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
@@ -45,6 +45,7 @@ Em **todo** desenvolvimento novo ou mudança de UX/fluxo/regra de negócio visí
 
 - Revisar `src/pages/geral/Ajuda/` (`index.tsx`, `glossarioData.ts` e entradas por `pageKey`).
 - **Incluir**, **alterar** ou **remover** textos de ajuda e termos do glossário conforme a mudança — não só quando a página fica em `geral/`.
+- **Copy PT-BR:** seguir § Linguagem e copy (PT-BR) — permissões como «permissão de Ver/Criar/Editar/Excluir», loading `Carregando…`, erros com «entre em contato com o suporte».
 - **Nomes de página:** em Ajuda, glossário e referências cruzadas, usar sempre o **`label` do menu** (`menu.ts`) — nunca título legado divergente (ex.: “Resultado de Lives” → “Resultados”). Detalhes: `geral.mdc`.
 - Detalhes de estrutura: `geral.mdc`.
 
@@ -345,7 +346,7 @@ supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
 )}
 ```
 
-**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`. Modais de edição podem carregar operadoras inativas quando o registo já estiver vinculado — **não** estender essa lista ao filtro da barra. **Gestão de Operadoras** e **Gestão de Usuários** (admin) listam todas por regra de domínio.
+**Exceção:** formulários/modais de cadastro com campo “Operadora” obrigatório (label + `CampoObrigatorioMark`) — **não** é filtro de lista; não usar `FiltroOperadoraSelect`. Modais de edição podem carregar operadoras inativas quando o registro já estiver vinculado — **não** estender essa lista ao filtro da barra. **Gestão de Operadoras** e **Gestão de Usuários** (admin) listam todas por regra de domínio.
 
 ### Botão Histórico (modo período / acumulado na barra) — obrigatório
 
@@ -678,6 +679,54 @@ fmtHorasTotal(h)          // 24:30
 
 ---
 
+## Linguagem e copy (PT-BR)
+
+**Escopo:** strings visíveis ao usuário — UI, validações, erros, placeholders, Ajuda, glossário e mensagens de Edge Functions voltadas ao usuário. Comentários de código, identificadores (`can_editar`, `PageKey`, etc.) e URLs de terceiros ficam de fora.
+
+### Ortografia e registro
+
+| Proibido (PT-PT / erro) | Usar (PT-BR) |
+|-------------------------|--------------|
+| utilizador / utilizadores | **usuário** / **usuários** |
+| secção / secções (UI, aria-label, Ajuda) | **seção** / **seções** |
+| registar / registo / registos | **registrar** / **registro** / **registros** |
+| guardar (ação de salvar dados) | **salvar** |
+| A carregar / a carregar | **Carregando…** |
+| tem de ser / tem de ter | **deve ser** / **deve ter** |
+| contate o suporte | **entre em contato com o suporte** |
+| palavras-chaves | **palavras-chave** (plural invariável) |
+| casino (copy de produto) | **cassino** |
+| Live Casino (rótulo de produto) | **Live Cassino** |
+
+### Loading e reticências
+
+| Contexto | Padrão |
+|----------|--------|
+| Loading visível (página, card, FilterBar secundária, boot) | **`Carregando…`** — elipse Unicode **U+2026** |
+| Placeholder de busca (`searchBarConstants`, Scout) | **`...`** — três pontos ASCII (`SEARCH_PLACEHOLDER_ELLIPSIS`) |
+| Ação em progresso em botão (Salvar, Emitir, …) | **`Salvando…`**, **`Emitindo…`**, etc. — elipse Unicode |
+
+**Proibido:** `"Carregando..."` (ASCII), `"Loading..."`, `"A carregar"`.
+
+### Erros persistentes (padrão canónico)
+
+```
+Não foi possível [ação]. Se o problema persistir, entre em contato com o suporte.
+```
+
+Variantes de domínio mantêm o mesmo fecho (`entre em contato com o suporte` ou `…com o suporte técnico`).
+
+### Ajuda e glossário
+
+- Textos de **Conheça** / **Troubleshooting**: linguagem de produto — **não** citar colunas técnicas (`can_editar`, `can_criar`, …). Usar **permissão de Ver / Criar / Editar / Excluir** e, quando útil, o caminho **Gestão de Usuários → Permissões**.
+- Glossário: termos de negócio em PT-BR; siglas analíticas (GGR, FTD, …) e nomes de menu em inglês permanecem quando forem vocabulário de produto.
+
+### Exceções intencionais (inglês permitido)
+
+KPIs e siglas (GGR, ROI, FTD, UAP, MoM, MTD, …); nomes de página/menu (Overview Spin, Streamers, Network, Scout, …); termos de streaming (Nickname, Views no funil Streamers); nomes internos de gerência (Game Floor, Operation Management); URLs e slugs de APIs externas (`live-casino`, etc.).
+
+---
+
 ## Acessibilidade — mínimo obrigatório
 
 ```tsx
@@ -838,7 +887,7 @@ Quando não houver skeleton para o bloco principal:
 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
   <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
     <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" style={{ marginBottom: 12 }} />
-    <div style={{ fontSize: 13 }}>Carregando...</div>
+    <div style={{ fontSize: 13 }}>Carregando…</div>
   </div>
 </div>
 ```
@@ -887,7 +936,7 @@ O `index.html` gerado **não** deve ter `modulepreload` para `vendor-*-icons-*`;
 | Sintoma | Causa provável | Ação |
 |--------|----------------|------|
 | **500** num `.js` referenciado no `index.html`, outros assets **200** | Asset não publicado ou chunk isolado problemático (histórico: ícones) | Rollback no Cloudflare → corrigir `vite.config.ts` (fundir chunk no `vendor-react` ou num vendor que já sobe) → novo deploy |
-| **404** em chunk após deploy com app já aberta | Hash antigo em cache | `ErrorBoundary` + listener em `main.tsx` recarregam; utilizador pode Ctrl+Shift+R |
+| **404** em chunk após deploy com app já aberta | Hash antigo em cache | `ErrorBoundary` + listener em `main.tsx` recarregam; usuário pode Ctrl+Shift+R |
 | Build CI verde, site quebrado | Desalinhamento CDN vs `index.html` | Validar Network no URL de **produção**, não só preview local |
 
 Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e validar esse ficheiro em `/assets/` antes de considerar estável.
@@ -932,6 +981,8 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Emoji no `h1` ou em rótulos internos de bloco.
 - Chunk isolado `vendor-icons` / `vendor-ui-icons` (ou grupo só para `lucide-react` + `react-icons`) em `vite.config.ts` — ícones ficam em `vendor-react` (§ Build Vite).
 - Alterar `codeSplitting.groups` sem validar deploy no Cloudflare (F12: 200 em todos os `.js` do `index.html`).
+- Copy visível em **PT-PT** ou erro ortográfico: *utilizador*, *secção* (UI), *registar/registo*, *guardar* (salvar), *A carregar*, *tem de*, *contate o suporte*, *Carregando...* (ASCII), *palavras-chaves*, *casino* (produto), *Live Casino* (usar **Live Cassino**) — ver § Linguagem e copy (PT-BR).
+- Expor `can_view` / `can_criar` / `can_editar` / `can_excluir` em Ajuda ou mensagens ao usuário — usar **permissão de Ver/Criar/Editar/Excluir**.
 - Hex ou `COR_*` local para **identidade de jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — usar `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx` (Global § Identidade visual por jogo); exceção **só** com pedido explícito de produto documentado no MDC da secção.
 - Tag, filtro, KPI ou gráfico por jogo com `--brand-*`, `brand.accent` ou pill única de marca — ver Brand §1.5.
 - Bloco de página com `marginBottom: 20` / `24`, `borderRadius: 16` fixo ou `const card` + `blockBg` inline em vez de `getPageContentBoxStyle` / `getPageFilterBoxStyle` (§ Blocos de página).

@@ -24,7 +24,7 @@ import type { InformativoStatus } from "../../../lib/informativosWorkflow";
 
 type AbaInformativos = "informativos" | "gerenciamento";
 
-const ERRO_CARREGAR = "Não foi possível carregar os informativos. Se o problema persistir, contate o suporte.";
+const ERRO_CARREGAR = "Não foi possível carregar os informativos. Se o problema persistir, entre em contato com o suporte.";
 
 function tabsInformativosKeys(canEditarOk: boolean): AbaInformativos[] {
   const keys: AbaInformativos[] = ["informativos"];

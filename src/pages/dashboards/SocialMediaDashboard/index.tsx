@@ -61,7 +61,6 @@ import {
   sumCampanhasPerf,
   aggregateBoostedPostsByAd,
   totaisFromMetaAdsRows,
-  fmtRoiImpulsionamento,
   totaisFromKpiRows,
   youtubeEngagementFromVideoSnapshots,
   type YoutubeVideoRowLite,
@@ -503,15 +502,6 @@ export default function SocialMediaDashboard() {
   const cmpImpEng = !historico
     ? fmtComparativoMoM(totaisImp.engagements, totaisImpAnt.engagements)
     : null;
-  const roiImp = fmtRoiImpulsionamento(totaisImp.attributed_ggr, totaisImp.spend);
-  const roiImpAnt = fmtRoiImpulsionamento(totaisImpAnt.attributed_ggr, totaisImpAnt.spend);
-  const cmpRoiImp =
-    !historico && roiImp !== "—" && roiImpAnt !== "—"
-      ? fmtComparativoMoM(
-          parseFloat(roiImp),
-          parseFloat(roiImpAnt)
-        )
-      : null;
   const cpmImp = totaisImp.impressions > 0 ? (totaisImp.spend / totaisImp.impressions) * 1000 : null;
   const custoPorEng =
     totaisImp.engagements > 0 ? totaisImp.spend / totaisImp.engagements : null;
@@ -702,8 +692,8 @@ export default function SocialMediaDashboard() {
     const mul = dir === "desc" ? -1 : 1;
     list.sort((a, b) => {
       if (col === "nome") {
-        const na = (a.ad_name || a.campaign_name || a.ad_id).toLowerCase();
-        const nb = (b.ad_name || b.campaign_name || b.ad_id).toLowerCase();
+        const na = (a.campaign_name || "—").toLowerCase();
+        const nb = (b.campaign_name || "—").toLowerCase();
         return na.localeCompare(nb, "pt-BR") * mul;
       }
       if (col === "platform") {
@@ -1295,16 +1285,12 @@ export default function SocialMediaDashboard() {
           <>
             <div style={card}>
               <SectionTitle
-                sub={
-                  historico
-                    ? "acumulado · mídia paga Meta (Instagram e Facebook)"
-                    : "comparativo MTD vs mesmo período do mês anterior · mídia paga Meta"
-                }
+                sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
               >
                 KPIs de Impulsionamento
               </SectionTitle>
               <div style={{ display: "flex", flexDirection: "column", gap: PAGE_CONTENT_BOX_GAP }}>
-                <div className="app-grid-kpi-4">
+                <div className="app-grid-kpi-3">
                   <SocialKpiCard
                     label="Posts impulsionados"
                     valor={fmtNum(totaisImp.boosted_posts_count)}
@@ -1338,7 +1324,7 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <SocialKpiCard
-                    label="Interações (pagas)"
+                    label="Interações"
                     valor={fmtNum(totaisImp.engagements)}
                     accentVar="--brand-contrast"
                     accentCor={BRAND.roxo}
@@ -1349,22 +1335,6 @@ export default function SocialMediaDashboard() {
                             pctLabel: cmpImpEng.pctLabel,
                             up: cmpImpEng.up,
                             refLine: `vs ${fmtNum(totaisImpAnt.engagements)} · mesmo período mês ant.`,
-                          }
-                        : null
-                    }
-                  />
-                  <SocialKpiCard
-                    label="ROI (GGR)"
-                    valor={roiImp}
-                    accentVar="--brand-action"
-                    accentCor={totaisImp.attributed_ggr != null ? BRAND.verde : BRAND.amarelo}
-                    icon={<TrendingUp size={15} aria-hidden />}
-                    momComparativo={
-                      cmpRoiImp
-                        ? {
-                            pctLabel: cmpRoiImp.pctLabel,
-                            up: cmpRoiImp.up,
-                            refLine: `vs ${roiImpAnt} · mesmo período mês ant.`,
                           }
                         : null
                     }
@@ -1386,7 +1356,7 @@ export default function SocialMediaDashboard() {
                     icon={<Bookmark size={15} aria-hidden />}
                   />
                   <SocialKpiCard
-                    label="CPM"
+                    label="CPM (custo / mil imp.)"
                     valor={cpmImp != null ? fmtBRL(cpmImp) : "—"}
                     accentVar="--brand-action"
                     accentCor={BRAND.ciano}
@@ -1400,11 +1370,6 @@ export default function SocialMediaDashboard() {
                     icon={<MousePointerClick size={15} aria-hidden />}
                   />
                 </div>
-                {roiImp === "—" && totaisImp.spend > 0 && (
-                  <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                    ROI (GGR) indisponível até vincular UTMs dos anúncios às campanhas em Gestão de Links.
-                  </p>
-                )}
               </div>
             </div>
 
@@ -1419,7 +1384,7 @@ export default function SocialMediaDashboard() {
                     <thead>
                       <tr>
                         <SortTableTh<BoostSortCol>
-                          label="Anúncio / campanha"
+                          label="Campanha"
                           col="nome"
                           sortCol={sortBoost.col}
                           sortDir={sortBoost.dir}
@@ -1436,15 +1401,15 @@ export default function SocialMediaDashboard() {
                     </thead>
                     <tbody>
                       {boostedPostsOrdenados.map((row, i) => {
-                        const nome = row.ad_name || row.campaign_name || row.ad_id;
+                        const campanha = row.campaign_name || "—";
                         const platLabel = row.platform === "instagram" ? "Instagram" : "Facebook";
                         return (
                           <tr key={row.ad_id} style={{ background: dataTable.zebraRow(i) }}>
                             <td
                               style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}
-                              title={nome}
+                              title={campanha}
                             >
-                              {nome}
+                              {campanha}
                             </td>
                             <td style={dataTable.tdCenter}>{platLabel}</td>
                             <td style={dataTable.tdCenter}>{fmtBRL(Number(row.spend) || 0)}</td>

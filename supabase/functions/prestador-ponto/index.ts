@@ -255,7 +255,7 @@ serve(async (req) => {
     })
     if (insErr) {
       console.error('prestador_ponto insert', insErr)
-      return new Response(JSON.stringify({ ok: false, error: 'Erro ao registar. Tente novamente.', estado }), {
+      return new Response(JSON.stringify({ ok: false, error: 'Erro ao registrar. Tente novamente.', estado }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })

@@ -729,7 +729,7 @@ export default function DashboardFinanceiro() {
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
-            {loading ? "Carregando..." : MSG_SEM_DADOS_FILTRO}
+            {loading ? "Carregando…" : MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>

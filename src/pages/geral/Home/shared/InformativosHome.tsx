@@ -29,7 +29,7 @@ export function InformativosHome({ perfil, sectionIdPrefix }: { perfil: Role; se
         </div>
       ) : erro ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
-          Não foi possível carregar os informativos. Se o problema persistir, contate o suporte.
+          Não foi possível carregar os informativos. Se o problema persistir, entre em contato com o suporte.
         </p>
       ) : lista.length === 0 ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>

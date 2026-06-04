@@ -372,8 +372,8 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (ciclo) void carregarDados(ciclo);
   }, [ciclo, carregarDados, refreshTrigger]);
 
-  const MSG_ERRO_APROVAR = "Não foi possível aprovar o pagamento. Se o problema persistir, contate o suporte.";
-  const MSG_ERRO_PAGAR = "Não foi possível registrar o pagamento. Se o problema persistir, contate o suporte.";
+  const MSG_ERRO_APROVAR = "Não foi possível aprovar o pagamento. Se o problema persistir, entre em contato com o suporte.";
+  const MSG_ERRO_PAGAR = "Não foi possível registrar o pagamento. Se o problema persistir, entre em contato com o suporte.";
 
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
     if (String(id).startsWith("preview_")) {
@@ -653,7 +653,7 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
           <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-          Carregando...
+          Carregando…
         </div>
       ) : (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>

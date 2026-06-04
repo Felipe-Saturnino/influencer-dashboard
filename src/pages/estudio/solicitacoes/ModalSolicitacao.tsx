@@ -57,7 +57,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
 
       if (e1 || !sol?.id) {
         console.error("[ModalSolicitacao] Erro ao criar solicitação:", e1);
-        setErr("Não foi possível criar a solicitação. Se o problema persistir, contate o suporte.");
+        setErr("Não foi possível criar a solicitação. Se o problema persistir, entre em contato com o suporte.");
         return;
       }
 
@@ -70,7 +70,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
 
       if (e2) {
         console.error("[ModalSolicitacao] Erro ao registrar mensagem:", e2);
-        setErr("Não foi possível registrar a mensagem. Se o problema persistir, contate o suporte.");
+        setErr("Não foi possível registrar a mensagem. Se o problema persistir, entre em contato com o suporte.");
         return;
       }
 

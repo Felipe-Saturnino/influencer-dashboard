@@ -187,7 +187,7 @@ serve(async (req) => {
   }
 
   if (r.afiliado_user_id) {
-    return new Response(JSON.stringify({ error: 'Já existe um utilizador afiliado vinculado a este card.' }), {
+    return new Response(JSON.stringify({ error: 'Já existe um usuário afiliado vinculado a este card.' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -201,7 +201,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Nome é obrigatório no card.' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
   if (!email) {
-    return new Response(JSON.stringify({ error: 'E-mail é obrigatório para criar o utilizador afiliado.' }), {
+    return new Response(JSON.stringify({ error: 'E-mail é obrigatório para criar o usuário afiliado.' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -220,7 +220,7 @@ serve(async (req) => {
 
   const { data: dup } = await supabase.from('profiles').select('id').ilike('email', email).maybeSingle()
   if (dup?.id) {
-    return new Response(JSON.stringify({ error: 'Já existe um utilizador com este e-mail.' }), {
+    return new Response(JSON.stringify({ error: 'Já existe um usuário com este e-mail.' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

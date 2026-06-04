@@ -12,7 +12,11 @@ import Header  from "./components/Header";
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
-import { isCanalDenunciasPublicPath } from "./lib/canalDenunciasSpin";
+import PainelNoticiasPage from "./pages/public/PainelNoticiasPage";
+import {
+  detectPublicUnauthenticatedRoute,
+  type PublicUnauthenticatedRoute,
+} from "./lib/publicRoutes";
 import {
   buildLoginPath,
   parseAppPathname,
@@ -148,7 +152,7 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
         aria-hidden
         style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
       />
-      <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+      <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando…</span>
     </div>
   </div>
 );
@@ -258,21 +262,22 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
-  const [publicCanal, setPublicCanal] = useState(() =>
-    typeof window !== "undefined" ? isCanalDenunciasPublicPath() : false,
+  const [publicRoute, setPublicRoute] = useState<PublicUnauthenticatedRoute | null>(() =>
+    typeof window !== "undefined" ? detectPublicUnauthenticatedRoute() : null,
   );
 
   useEffect(() => {
     const onPop = () => {
-      setPublicCanal(isCanalDenunciasPublicPath());
-      if (!isCanalDenunciasPublicPath()) applyPathFromLocation();
+      const detected = detectPublicUnauthenticatedRoute();
+      setPublicRoute(detected);
+      if (!detected) applyPathFromLocation();
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [applyPathFromLocation]);
 
   useEffect(() => {
-    if (checking || !routeReady || user || publicCanal) return;
+    if (checking || !routeReady || user || publicRoute) return;
     const parsed = parseAppPathname(window.location.pathname);
     if (parsed.kind === "special" && parsed.special === "login") return;
     if (parsed.kind === "app") {
@@ -283,7 +288,7 @@ function Root() {
     if (window.location.pathname !== loginPath) {
       window.history.replaceState({}, "", loginPath);
     }
-  }, [checking, routeReady, user, publicCanal]);
+  }, [checking, routeReady, user, publicRoute]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -309,12 +314,13 @@ function Root() {
             aria-hidden
             style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
           />
-          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando…</span>
         </div>
       </div>
     );
   }
-  if (publicCanal) return <CanalDenunciasSpinPage />;
+  if (publicRoute === "canal-denuncias") return <CanalDenunciasSpinPage />;
+  if (publicRoute === "painel-noticias") return <PainelNoticiasPage />;
   if (!user) return <Login onLogin={setUser} />;
   if (user.must_change_password) return <TrocarSenhaObrigatorio />;
   if (layoutView === "sem_acesso") {

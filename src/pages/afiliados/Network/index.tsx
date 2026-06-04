@@ -40,7 +40,7 @@ function NetworkModalTabs({
   setTab,
   tabIdPrefix,
   panelIdPrefix,
-  ariaLabel = "Secções do afiliado",
+  ariaLabel = "Seções do afiliado",
 }: {
   tab: NetworkModalTab;
   setTab: (k: NetworkModalTab) => void;
@@ -359,7 +359,7 @@ export default function AfiliadosNetwork() {
             gap: 8,
           }}
         >
-          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando..." />
+          <Loader2 size={16} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-label="Carregando…" />
         </div>
       ) : filtered.length === 0 ? (
         <div
@@ -923,7 +923,7 @@ function ModalEditar({
           </select>
         </div>
 
-        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" ariaLabel="Secções do cadastro" />
+        <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" ariaLabel="Seções do cadastro" />
 
         {error && (
           <div

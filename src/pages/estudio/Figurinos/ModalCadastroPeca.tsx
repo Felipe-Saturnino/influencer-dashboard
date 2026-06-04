@@ -82,7 +82,7 @@ export function ModalCadastroPeca({
     setLoading(false);
     if (error) {
       console.error("[Figurinos] Erro ao cadastrar peça:", error);
-      setErr("Não foi possível cadastrar a peça. Se o problema persistir, contate o suporte.");
+      setErr("Não foi possível cadastrar a peça. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     await onCreated(data as RhFigurinoPeca);

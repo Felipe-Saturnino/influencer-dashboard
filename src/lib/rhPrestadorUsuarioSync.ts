@@ -55,9 +55,9 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
     return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com o e-mail usado para login (E-mail Spin ou e-mail pessoal). Ajuste em Gestão de Usuários, se necessário.";
   }
   if (res.reason === "sem_email" || res.reason === "sem_email_spin") {
-    return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal no cadastro e guarde de novo).";
+    return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal no cadastro e salve de novo).";
   }
-  return `Prestador salvo, mas o utilizador não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
+  return `Prestador salvo, mas o usuário não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
 }
 
 /**

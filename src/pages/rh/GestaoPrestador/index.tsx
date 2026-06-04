@@ -810,7 +810,7 @@ export default function RhPrestadoresPage() {
 
     setSalvando(false);
     if (modalForm === "editar" && !editId) {
-      setErroGlobal("Não foi possível identificar o registo a atualizar. Feche o modal e abra novamente.");
+      setErroGlobal("Não foi possível identificar o registro a atualizar. Feche o modal e abra novamente.");
     }
   };
 
@@ -1471,7 +1471,7 @@ export default function RhPrestadoresPage() {
                 icon={iconAbaModal(tb.key)}
                 aria-label={
                   modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
-                    ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
+                    ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta seção`
                     : undefined
                 }
               >

@@ -236,7 +236,7 @@ export default function CentralDenunciasSpin() {
     return (
       <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
         <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle" }} />{" "}
-        Carregando...
+        Carregando…
       </div>
     );
   }
@@ -372,7 +372,7 @@ export default function CentralDenunciasSpin() {
       {/* Bloco 3 — cards */}
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden /> Carregando...
+          <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden /> Carregando…
         </div>
       ) : lista.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>

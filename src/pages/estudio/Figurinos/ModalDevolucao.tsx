@@ -66,7 +66,7 @@ export function ModalDevolucao({
     setLoading(false);
     if (error) {
       console.error("[Figurinos] Erro ao registrar devolução:", error);
-      setErr("Não foi possível registrar a devolução. Se o problema persistir, contate o suporte.");
+      setErr("Não foi possível registrar a devolução. Se o problema persistir, entre em contato com o suporte.");
       return;
     }
     await onOk();

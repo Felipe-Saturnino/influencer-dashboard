@@ -26,7 +26,7 @@ import {
   type SnapshotInformativoEdicao,
 } from "../../../lib/informativosWorkflow";
 const ERRO_CARREGAR = "Não foi possível carregar o informativo para edição.";
-const ERRO_SALVAR = "Não foi possível salvar o informativo. Se o problema persistir, contate o suporte.";
+const ERRO_SALVAR = "Não foi possível salvar o informativo. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_ACAO_PERFIL =
   "A combinação de perfis selecionada não permite esta ação. Ajuste os perfis ou escolha outra forma de envio.";
 

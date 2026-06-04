@@ -223,7 +223,7 @@ const ConteudoJogos: React.FC<{ dark: boolean }> = ({ dark }) => (
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
       O foco principal é atrair novos jogadores para as mesas da <strong>Spin Gaming</strong>. As regras abaixo são <strong>obrigatórias</strong>.
     </p>
-    <TituloSecao accent={BRAND.vermelho}>Foco obrigatório — Live Casino SPIN</TituloSecao>
+    <TituloSecao accent={BRAND.vermelho}>Foco obrigatório — Live Cassino SPIN</TituloSecao>
     <ListaOK dark={dark} items={[
       <>Blackjack nas mesas <strong>Spin Gaming</strong></>,
       <>Roleta nas mesas <strong>Spin Gaming</strong></>,

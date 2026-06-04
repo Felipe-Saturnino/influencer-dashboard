@@ -73,11 +73,11 @@ function compareDataIso(a: string | null, b: string | null, dir: number): number
 }
 
 const ERRO_CARREGAR_GERENCIAMENTO =
-  "Não foi possível carregar as postagens. Se o problema persistir, contate o suporte.";
+  "Não foi possível carregar as postagens. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_APROVAR =
-  "Não foi possível aprovar a postagem. Se o problema persistir, contate o suporte.";
+  "Não foi possível aprovar a postagem. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_ARQUIVAR =
-  "Não foi possível arquivar a postagem. Se o problema persistir, contate o suporte.";
+  "Não foi possível arquivar a postagem. Se o problema persistir, entre em contato com o suporte.";
 
 const POSTAGEM_TIPO_FILTRO_OPCOES = (["comunicado", "politica", "rh_talk"] as const).map((value) => ({
   value,

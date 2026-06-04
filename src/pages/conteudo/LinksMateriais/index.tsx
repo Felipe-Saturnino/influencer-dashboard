@@ -300,14 +300,14 @@ export default function LinksMateriais() {
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {
         console.error("[LinksMateriais] emitir:", error);
-        setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
+        setErro("Não foi possível emitir o link. Se o problema persistir, entre em contato com o suporte.");
         setSalvando(false);
         return;
       }
       const res = data as RpcResult | null;
       if (!res?.ok) {
         console.error("[LinksMateriais] emitir RPC:", res?.error);
-        setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
+        setErro("Não foi possível emitir o link. Se o problema persistir, entre em contato com o suporte.");
         setSalvando(false);
         return;
       }
@@ -316,7 +316,7 @@ export default function LinksMateriais() {
       setEmitido(true);
     } catch (e) {
       console.error("[LinksMateriais] emitir inesperado:", e);
-      setErro("Não foi possível emitir o link. Se o problema persistir, contate o suporte.");
+      setErro("Não foi possível emitir o link. Se o problema persistir, entre em contato com o suporte.");
     }
     setSalvando(false);
   }

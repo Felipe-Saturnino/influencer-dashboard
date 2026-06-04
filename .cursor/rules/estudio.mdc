@@ -51,7 +51,7 @@ alwaysApply: false
 ## Gestão de Dealers (`gestao_dealers`)
 
 - Grid de cards: `repeat(auto-fill, minmax(min(100%, 300px), 1fr))`.
-- **Skeleton** obrigatório no loading (6 placeholders) — nunca só texto “Carregando...”.
+- **Skeleton** obrigatório no loading (6 placeholders) — nunca só texto “Carregando…”.
 - `DealerCard`: `<article aria-label={...}>`, badge **PENDENTE** quando `status === "pendente"`.
 - Label **“Bio do Dealer”** — nunca “Perfil do Influencer”.
 - Query `dealer_observacoes`: sempre `.limit(20)`.

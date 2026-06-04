@@ -55,7 +55,7 @@ export function KpisMesasOperador() {
         </div>
       ) : erro || !data ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
-          Não foi possível carregar os indicadores. Se o problema persistir, contate o suporte.
+          Não foi possível carregar os indicadores. Se o problema persistir, entre em contato com o suporte.
         </p>
       ) : (
         <>

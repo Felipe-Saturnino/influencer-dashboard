@@ -166,7 +166,7 @@ serve(async (req) => {
     })
   }
   if (liveCassino == null) {
-    return new Response(JSON.stringify({ error: 'Live cassino deve ser sim ou nao.' }), {
+    return new Response(JSON.stringify({ error: 'Live cassino deve ser sim ou não.' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

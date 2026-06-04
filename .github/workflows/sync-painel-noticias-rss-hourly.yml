@@ -1,0 +1,45 @@
+# Painel de Notícias — ingestão RSS via Edge Function `sync-painel-noticias-rss`
+# A cada hora (minuto 5 UTC — ajuste conforme necessário)
+# Secrets: SUPABASE_URL, SUPABASE_ANON_KEY
+name: Sync Painel Notícias RSS (hourly)
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar sync-painel-noticias-rss
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Defina os secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/sync-painel-noticias-rss"
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | sed '$d')
+          echo "HTTP ${HTTP}"
+          echo "$BODY_RES" | head -c 2000
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "Falha HTTP"
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
+          if [ "$OK" != "true" ]; then
+            echo "Resposta com ok != true (feeds não configurados ou erro de ingestão)."
+            exit 1
+          fi
+          echo "Sync Painel Notícias RSS concluído com sucesso."

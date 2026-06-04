@@ -97,7 +97,7 @@ export function AbaPrestadores() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
         Para cada <strong style={{ color: t.text }}>área de atuação</strong>, marque em que páginas esse perfil pode entrar
-        no menu. O resultado efetivo para cada utilizador prestador é a{" "}
+        no menu. O resultado efetivo para cada usuário prestador é a{" "}
         <strong style={{ color: t.text }}>interseção</strong> entre estas marcações e a matriz da aba{" "}
         <strong style={{ color: t.text }}>Permissões</strong> (Ver / Criar / Editar / Excluir no perfil Prestadores).
         Quem tem várias áreas recebe a <strong>união</strong> das páginas permitidas por área, sempre cortada pelas

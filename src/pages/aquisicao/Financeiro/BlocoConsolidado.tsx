@@ -122,7 +122,7 @@ export function BlocoConsolidado({
       {loadingMes ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
           <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-          Carregando...
+          Carregando…
         </div>
       ) : (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -301,7 +301,7 @@ export function BlocoConsolidado({
                           {loadingHist === row.influencer_id ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.textMuted, fontSize: "12px" }}>
                               <Loader2 size={14} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-                              Carregando...
+                              Carregando…
                             </div>
                           ) : hist.length === 0 ? (
                             <div style={{ color: t.textMuted, fontSize: "12px" }}>Nenhum ciclo encontrado.</div>
