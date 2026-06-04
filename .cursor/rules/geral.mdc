@@ -25,6 +25,7 @@ alwaysApply: false
 | Ajuda | `geral/Ajuda/` | Textos por página + glossário |
 | Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
 | Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
+| Painel de notícias (público) | `public/PainelNoticiasPage.tsx` | Rota `/painel-noticias`; RSS TV; sem shell logado |
 
 Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou URL pública.
 
@@ -106,6 +107,18 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 - Fluxo bloqueante; mesmo padrão de CTA/spinner do Login.
 - **Handoff:** validações e mensagens de erro.
+
+---
+
+## Painel de notícias — público (`public/PainelNoticiasPage.tsx`)
+
+**Exceções ao padrão de página logada** (mesmo espírito do canal de denúncias):
+
+- Rota **`/painel-noticias`** — `isPainelNoticiasPublicPath()` / `detectPublicUnauthenticatedRoute()`.
+- **Sem** login, menu, `PageHeader`, `usePermission`.
+- Dados: `painel_noticia` via anon (RLS); ingestão RSS horária (`sync-painel-noticias-rss`).
+- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical ~30 s (sobe), polling 60 s.
+- Purge físico na base após janela de 4 h quando fora do conjunto mínimo de 5 exibíveis.
 
 ---
 

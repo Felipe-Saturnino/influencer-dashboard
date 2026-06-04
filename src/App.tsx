@@ -12,7 +12,11 @@ import Header  from "./components/Header";
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
-import { isCanalDenunciasPublicPath } from "./lib/canalDenunciasSpin";
+import PainelNoticiasPage from "./pages/public/PainelNoticiasPage";
+import {
+  detectPublicUnauthenticatedRoute,
+  type PublicUnauthenticatedRoute,
+} from "./lib/publicRoutes";
 import {
   buildLoginPath,
   parseAppPathname,
@@ -258,21 +262,22 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
-  const [publicCanal, setPublicCanal] = useState(() =>
-    typeof window !== "undefined" ? isCanalDenunciasPublicPath() : false,
+  const [publicRoute, setPublicRoute] = useState<PublicUnauthenticatedRoute | null>(() =>
+    typeof window !== "undefined" ? detectPublicUnauthenticatedRoute() : null,
   );
 
   useEffect(() => {
     const onPop = () => {
-      setPublicCanal(isCanalDenunciasPublicPath());
-      if (!isCanalDenunciasPublicPath()) applyPathFromLocation();
+      const detected = detectPublicUnauthenticatedRoute();
+      setPublicRoute(detected);
+      if (!detected) applyPathFromLocation();
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [applyPathFromLocation]);
 
   useEffect(() => {
-    if (checking || !routeReady || user || publicCanal) return;
+    if (checking || !routeReady || user || publicRoute) return;
     const parsed = parseAppPathname(window.location.pathname);
     if (parsed.kind === "special" && parsed.special === "login") return;
     if (parsed.kind === "app") {
@@ -283,7 +288,7 @@ function Root() {
     if (window.location.pathname !== loginPath) {
       window.history.replaceState({}, "", loginPath);
     }
-  }, [checking, routeReady, user, publicCanal]);
+  }, [checking, routeReady, user, publicRoute]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -314,7 +319,8 @@ function Root() {
       </div>
     );
   }
-  if (publicCanal) return <CanalDenunciasSpinPage />;
+  if (publicRoute === "canal-denuncias") return <CanalDenunciasSpinPage />;
+  if (publicRoute === "painel-noticias") return <PainelNoticiasPage />;
   if (!user) return <Login onLogin={setUser} />;
   if (user.must_change_password) return <TrocarSenhaObrigatorio />;
   if (layoutView === "sem_acesso") {
