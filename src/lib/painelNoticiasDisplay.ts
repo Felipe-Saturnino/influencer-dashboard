@@ -1,4 +1,5 @@
 import {
+  itemElegivelPainelNoticia,
   prepararTextoPainelNoticia,
   sanitizePainelNoticiaHtml,
 } from "./painelNoticiasSanitize";
@@ -6,10 +7,13 @@ import {
 export {
   formatTituloPainelNoticia,
   filtrarLinhasPainelNoticia,
+  itemElegivelPainelNoticia,
   linhaIrrelevantePainelNoticia,
+  normalizarResumoRssBruto,
   prepararTextoPainelNoticia,
   removePainelNoticiaBoilerplate,
   sanitizePainelNoticiaHtml,
+  tituloPareceTruncadoRss,
 } from "./painelNoticiasSanitize";
 
 /** Mínimo de notícias no ciclo do painel TV quando há histórico suficiente. */
@@ -51,10 +55,12 @@ export function calcularPainelNoticiasExibicao(
   now: Date = new Date(),
 ): PainelNoticiaRow[] {
   const nowMs = now.getTime();
-  const ordenadas = ordenarPainelNoticias(rows);
-  const frescas = ordenadas.filter((r) => parseMs(r.visivel_ate) > nowMs);
+  const elegiveis = ordenarPainelNoticias(rows).filter((r) =>
+    itemElegivelPainelNoticia(r.titulo, r.resumo),
+  );
+  const frescas = elegiveis.filter((r) => parseMs(r.visivel_ate) > nowMs);
   if (frescas.length >= PAINEL_NOTICIAS_MIN_EXIBICAO) return frescas;
-  const vencidas = ordenadas.filter((r) => parseMs(r.visivel_ate) <= nowMs);
+  const vencidas = elegiveis.filter((r) => parseMs(r.visivel_ate) <= nowMs);
   const faltam = PAINEL_NOTICIAS_MIN_EXIBICAO - frescas.length;
   return [...frescas, ...vencidas.slice(0, faltam)];
 }

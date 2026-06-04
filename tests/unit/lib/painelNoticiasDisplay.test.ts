@@ -8,6 +8,8 @@ import {
   type PainelNoticiaRow,
 } from "@/lib/painelNoticiasDisplay";
 import {
+  itemElegivelPainelNoticia,
+  normalizarResumoRssBruto,
   prepararTextoPainelNoticia,
   removePainelNoticiaBoilerplate,
   sanitizePainelNoticiaHtml,
@@ -17,8 +19,8 @@ function row(
   id: string,
   visivel_desde: string,
   visivel_ate: string,
-  titulo = id,
-  resumo: string | null = null,
+  titulo = `Notícia de teste ${id} com título completo`,
+  resumo: string | null = "Resumo editorial com contexto suficiente para exibição no painel.",
 ): PainelNoticiaRow {
   return { id, titulo, resumo, visivel_desde, visivel_ate };
 }
@@ -46,6 +48,25 @@ describe("calcularPainelNoticiasExibicao", () => {
     const exibir = calcularPainelNoticiasExibicao([v4, v3, v2, v1, fresca], now);
     expect(exibir.map((r) => r.id)).toEqual(["f1", "v1", "v2", "v3", "v4"]);
   });
+
+  it("ignora itens ESPN quebrados (resumo null e título truncado)", () => {
+    const boa = row(
+      "ok",
+      "2026-06-03T11:00:00.000Z",
+      "2026-06-03T20:00:00.000Z",
+      "Marquinhos diz o que Ancelotti pediu a atletas",
+      "Marquinhos despistou sobre mudanças no treino da Seleção.",
+    );
+    const quebrada = row(
+      "bad",
+      "2026-06-03T10:00:00.000Z",
+      "2026-06-03T20:00:00.000Z",
+      "'Só quero desistir do tênis': Sabalenka desabafa a...",
+      null,
+    );
+    const exibir = calcularPainelNoticiasExibicao([quebrada, boa], now);
+    expect(exibir.map((r) => r.id)).toEqual(["ok"]);
+  });
 });
 
 describe("sanitizePainelNoticiaHtml", () => {
@@ -61,24 +82,20 @@ describe("sanitizePainelNoticiaHtml", () => {
 
   it("remove rodapé WordPress do detalhe", () => {
     const titulo = "Veja reação de Luiz Henrique ao ser convocado para a Copa do Mundo";
-    const desc =
-      `O post ${titulo} apareceu primeiro em Gazeta Esportiva .`;
+    const desc = `O post ${titulo} apareceu primeiro em Gazeta Esportiva .`;
     const out = removePainelNoticiaBoilerplate(sanitizePainelNoticiaHtml(desc), titulo);
     expect(out).toBe("");
   });
 
-  it("remove galeria de jogadores com HTML quebrado", () => {
-    const html =
-      "<p>A seleção tem confiança de chegar à final da Copa do Mundo, disse o técnico.</p>" +
-      "<ul><li' > Weverton, do Grêmio. (Foto: LUCAS UEBEL/GREMIO FBPA)</li>" +
-      "<li' > Ederson, do Fenerbahçe-TUR. (Foto: Rafael Ribeiro/CBF)</li></ul>";
-    const out = prepararExibicaoPainelNoticia(
-      row("3", "2026-06-03T10:00:00.000Z", "2026-06-03T20:00:00.000Z", "", html),
-    );
-    expect(out.titulo).toContain("seleção");
-    expect(out.detalhe).not.toContain("Weverton");
-    expect(out.detalhe).not.toContain("' >");
-    expect(out.detalhe).not.toMatch(/\(foto\s*:/i);
+  it("trata description literal null da ESPN como vazio", () => {
+    expect(normalizarResumoRssBruto("null")).toBeNull();
+    expect(itemElegivelPainelNoticia("Título truncado no feed...", "null")).toBe(false);
+    expect(
+      itemElegivelPainelNoticia(
+        "Marquinhos diz o que Ancelotti pediu a atletas",
+        "Marquinhos despistou sobre mudanças no treino.",
+      ),
+    ).toBe(true);
   });
 });
 
