@@ -13,6 +13,8 @@ export {
   prepararTextoPainelNoticia,
   removePainelNoticiaBoilerplate,
   sanitizePainelNoticiaHtml,
+  resumoUtilPainel,
+  substituirTituloTruncadoPorResumo,
   tituloPareceTruncadoRss,
 } from "./painelNoticiasSanitize";
 

@@ -1,5 +1,8 @@
 /** Limpeza de HTML/boilerplate RSS para título e detalhe do painel TV. */
 
+/** Resumo mínimo quando o título do RSS vem truncado (ex.: ESPN com "..."). */
+export const PAINEL_NOTICIAS_RESUMO_MIN_CARACTERES = 40;
+
 const MEDIA_TAG =
   /(?:img|figure|picture|iframe|video|audio|embed|source|object|svg|noscript|script|style)/i;
 
@@ -146,15 +149,45 @@ export function tituloPareceTruncadoRss(titulo: string): boolean {
   return t.endsWith("...") || t.endsWith("…");
 }
 
-/** Item apto para TV: tem resumo ou título completo (não truncado no RSS). */
+export function resumoUtilPainel(resumo: string | null | undefined): boolean {
+  const r = normalizarResumoRssBruto(resumo);
+  if (!r) return false;
+  return sanitizePainelNoticiaHtml(r).length >= PAINEL_NOTICIAS_RESUMO_MIN_CARACTERES;
+}
+
+/** Item apto para TV: título completo ou resumo longo o bastante (ESPN). */
 export function itemElegivelPainelNoticia(
   titulo: string,
   resumo: string | null | undefined,
 ): boolean {
   const t = titulo.trim();
   if (t.length < 12 || pareceUrl(t)) return false;
-  if (normalizarResumoRssBruto(resumo)) return true;
-  return !tituloPareceTruncadoRss(t);
+  if (tituloPareceTruncadoRss(t)) return resumoUtilPainel(resumo);
+  return true;
+}
+
+/** ESPN trunca &lt;title&gt;; usa o resumo como manchete na TV. */
+export function substituirTituloTruncadoPorResumo(
+  titulo: string,
+  corpo: string,
+): { titulo: string; corpo: string } {
+  if (!tituloPareceTruncadoRss(titulo) || corpo.length < PAINEL_NOTICIAS_RESUMO_MIN_CARACTERES) {
+    return { titulo, corpo };
+  }
+
+  const split = extrairTituloDoConteudo(corpo);
+  if (split.titulo && !tituloPareceTruncadoRss(split.titulo) && tituloUtil(split.titulo)) {
+    return { titulo: split.titulo, corpo: split.resto };
+  }
+
+  if (corpo.length <= 220) {
+    return { titulo: corpo, corpo: "" };
+  }
+
+  return {
+    titulo: split.titulo && !tituloPareceTruncadoRss(split.titulo) ? split.titulo : corpo,
+    corpo: split.resto,
+  };
 }
 
 function tituloUtil(s: string | null | undefined): boolean {
@@ -250,6 +283,10 @@ export function prepararTextoPainelNoticia(
   }
 
   corpo = filtrarLinhasPainelNoticia(corpo);
+
+  const ajuste = substituirTituloTruncadoPorResumo(titulo, corpo);
+  titulo = ajuste.titulo;
+  corpo = ajuste.corpo;
 
   if (!tituloUtil(titulo)) titulo = "Notícia";
 
