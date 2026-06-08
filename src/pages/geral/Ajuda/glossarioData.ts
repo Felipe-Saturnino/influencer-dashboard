@@ -779,7 +779,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo.",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. No topo, cards consolidados indicam perfis com lacunas operacionais (Nickname, Turno ou ID Operacional), cadastrais (Gênero, Bio ou Fotos) ou de jogo (Live no Estúdio ou skills inativas).",
         referencia: "Gestão de Staff",
       },
       {
