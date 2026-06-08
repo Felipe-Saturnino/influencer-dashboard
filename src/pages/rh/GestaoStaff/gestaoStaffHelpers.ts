@@ -1,4 +1,8 @@
-import { readStaffDealerBioForUi, readStaffDealerFotosForUi } from "../../../lib/rhGamePresenterDealerSync";
+import {
+  isGamePresenterTimeNome,
+  readStaffDealerBioForUi,
+  readStaffDealerFotosForUi,
+} from "../../../lib/rhGamePresenterDealerSync";
 import { turnoRhCoerenteComEscala, turnoStaffEhComercial5x2 } from "../../../lib/rhEscalaTurnos";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 
@@ -91,6 +95,7 @@ export function calcularResumoStaffCards(
 
   for (const row of rows) {
     const nomeTime = row.org_time_id ? nomePorTimeId.get(row.org_time_id) ?? "" : "";
+    if (!isGamePresenterTimeNome(nomeTime)) continue;
     if (staffSemDadosOperacionais(row)) semDadosOperacionais.push(row);
     if (staffSemDadosCadastrais(row, nomeTime)) semDadosCadastrais.push(row);
     if (staffSemDadosJogo(row)) semDadosJogo.push(row);

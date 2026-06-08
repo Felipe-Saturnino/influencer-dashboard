@@ -113,7 +113,7 @@ export function StaffKpiResumo({
         cor="#e84025"
         borda="1px solid rgba(232, 64, 37, 0.25)"
         rows={resumo.semDadosOperacionais}
-        mensagemOk="Todos os perfis filtrados têm Nickname, Turno e ID Operacional."
+        mensagemOk="Todos os Game Presenters filtrados têm Nickname, Turno e ID Operacional."
         podeEditar={podeEditar}
         onEditar={onEditarStaff}
       />
@@ -122,7 +122,7 @@ export function StaffKpiResumo({
         cor="#e84025"
         borda="1px solid rgba(232, 64, 37, 0.25)"
         rows={resumo.semDadosCadastrais}
-        mensagemOk="Todos os perfis filtrados têm Gênero, Bio do Dealer e Fotos (quando aplicável ao time)."
+        mensagemOk="Todos os Game Presenters filtrados têm Gênero, Bio do Dealer e Fotos."
         podeEditar={podeEditar}
         onEditar={onEditarStaff}
       />
@@ -131,7 +131,7 @@ export function StaffKpiResumo({
         cor="#f59e0b"
         borda="1px solid rgba(245, 158, 11, 0.35)"
         rows={resumo.semDadosJogo}
-        mensagemOk="Todos os perfis filtrados têm Live no Estúdio e ao menos um jogo ativo ou em treinamento."
+        mensagemOk="Todos os Game Presenters filtrados têm Live no Estúdio e ao menos um jogo ativo ou em treinamento."
         podeEditar={podeEditar}
         onEditar={onEditarStaff}
       />

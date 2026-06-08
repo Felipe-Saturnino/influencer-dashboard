@@ -734,6 +734,12 @@ export default function RhGestaoStaffPage() {
     [linhasTabela, nomePorTimeId],
   );
 
+  const mostrarKpisGamePresenter = useMemo(() => {
+    if (todosTimes) return true;
+    const row = times[idxTime];
+    return row ? isGamePresenterTimeNome(row.nome) : false;
+  }, [todosTimes, times, idxTime]);
+
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
     const row = times[idxTime];
@@ -799,11 +805,13 @@ export default function RhGestaoStaffPage() {
         </div>
       )}
 
-      <StaffKpiResumo
-        resumo={resumoStaffCards}
-        podeEditar={perm.canEditarOk}
-        onEditarStaff={setModalEditar}
-      />
+      {mostrarKpisGamePresenter ? (
+        <StaffKpiResumo
+          resumo={resumoStaffCards}
+          podeEditar={perm.canEditarOk}
+          onEditarStaff={setModalEditar}
+        />
+      ) : null}
 
       <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={getFilterBarRowStyle()}>
