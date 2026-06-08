@@ -1,10 +1,11 @@
-import { Suspense, lazy, useState, useEffect, type ComponentType, type LazyExoticComponent } from "react";
+import { Suspense, lazy, useState, useEffect, useCallback, type ComponentType, type LazyExoticComponent } from "react";
 import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
 import { useRevisaoCadastralGate } from "./hooks/useRevisaoCadastralGate";
+import { useIdleSessionTimeout } from "./hooks/useIdleSessionTimeout";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -285,10 +286,13 @@ function Root() {
     }
   }, [checking, routeReady, user, publicRoute]);
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
-  }
+  }, [setUser]);
+
+  useIdleSessionTimeout(!!user && routeReady && !checking, handleLogout);
+
   if (checking || !routeReady) {
     return (
       <div
