@@ -13,10 +13,7 @@ import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
 import PainelNoticiasPage from "./pages/public/PainelNoticiasPage";
-import {
-  detectPublicUnauthenticatedRoute,
-  type PublicUnauthenticatedRoute,
-} from "./lib/publicRoutes";
+import { detectPublicUnauthenticatedRoute } from "./lib/publicRoutes";
 import {
   buildLoginPath,
   parseAppPathname,
@@ -262,15 +259,13 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
-  const [publicRoute, setPublicRoute] = useState<PublicUnauthenticatedRoute | null>(() =>
-    typeof window !== "undefined" ? detectPublicUnauthenticatedRoute() : null,
-  );
+  const [, setNavEpoch] = useState(0);
+  const publicRoute = detectPublicUnauthenticatedRoute();
 
   useEffect(() => {
     const onPop = () => {
-      const detected = detectPublicUnauthenticatedRoute();
-      setPublicRoute(detected);
-      if (!detected) applyPathFromLocation();
+      setNavEpoch((n) => n + 1);
+      if (!detectPublicUnauthenticatedRoute()) applyPathFromLocation();
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
