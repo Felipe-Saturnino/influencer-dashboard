@@ -5,7 +5,6 @@ import type { RhFuncionario, RhFuncionarioTipoContrato } from "../../../types/rh
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
 import { revisaoCadastralPendenteParaFuncionario } from "../../../lib/rhCadastroRevisao";
 import { prestadorCadastroIncompleto } from "./gestaoPrestadorHelpers";
 import { somenteDigitos } from "../../../lib/rhFuncionarioValidators";
@@ -195,7 +194,7 @@ export function usePrestadorLista({
     rows.sort((a, b) => {
       switch (col) {
         case "nome":
-          return mult * primeiroUltimoNome(a.nome).localeCompare(primeiroUltimoNome(b.nome), "pt-BR");
+          return mult * a.nome.localeCompare(b.nome, "pt-BR");
         case "cargo":
           return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
         case "lider":

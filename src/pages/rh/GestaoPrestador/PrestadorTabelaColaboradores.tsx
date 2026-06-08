@@ -12,7 +12,6 @@ import type { Theme } from "../../../constants/theme";
 import { FONT } from "../../../constants/theme";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync";
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { revisaoCadastralPendenteParaFuncionario } from "../../../lib/rhCadastroRevisao";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
@@ -235,7 +234,7 @@ export function PrestadorTabelaColaboradores({
               </tr>
             ) : (
               filtradaOrdenada.map((row, i) => {
-                const nomeExibicao = primeiroUltimoNome(row.nome) || "—";
+                const nomeExibicao = row.nome.trim() || "—";
                 const liderCompleto = liderImediatoLinha(row);
                 const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                 const remCol = textoRemuneracaoColunaTabela(row);
@@ -261,7 +260,7 @@ export function PrestadorTabelaColaboradores({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                       }}
-                      title={row.nome.trim() !== nomeExibicao ? row.nome : undefined}
+                      title={nomeExibicao !== "—" ? row.nome.trim() : undefined}
                     >
                       {nomeExibicao}
                       {revisaoCadastralPendenteParaFuncionario(row) ? (

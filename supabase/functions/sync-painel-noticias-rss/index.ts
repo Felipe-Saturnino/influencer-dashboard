@@ -264,6 +264,10 @@ function prepararItemArmazenamento(
     }
   }
 
+  const ajuste = substituirTituloTruncadoArmazenamento(titulo, resumo);
+  titulo = ajuste.titulo;
+  resumo = ajuste.resumo;
+
   if (!tituloUtilPainel(titulo)) {
     titulo = tituloRaw.trim().slice(0, MAX_TITLE) || titulo;
   }
@@ -308,10 +312,35 @@ function tituloPareceTruncadoPainel(titulo: string): boolean {
   return !t || t.endsWith("...") || t.endsWith("…");
 }
 
+function resumoUtilPainel(resumo: string | null): boolean {
+  if (!resumo?.trim() || /^(null|undefined|n\/a|none|-)$/i.test(resumo.trim())) return false;
+  return sanitizePainelHtml(resumo).length >= 40;
+}
+
+function substituirTituloTruncadoArmazenamento(
+  titulo: string,
+  resumo: string | null,
+): { titulo: string; resumo: string | null } {
+  if (!resumo || !tituloPareceTruncadoPainel(titulo) || resumo.length < 40) {
+    return { titulo, resumo };
+  }
+  const frase = resumo.match(/^(.{24,220}?[.!?])(?:\s|\n|$)/s);
+  if (frase && frase[1].length <= 200 && !tituloPareceTruncadoPainel(frase[1].trim())) {
+    return {
+      titulo: frase[1].trim(),
+      resumo: filtrarLinhasPainel(normalizeEspacosPainel(resumo.slice(frase[1].length))) || null,
+    };
+  }
+  if (resumo.length <= 220) {
+    return { titulo: resumo, resumo: null };
+  }
+  return { titulo: resumo, resumo: null };
+}
+
 function itemElegivelPainel(titulo: string, resumo: string | null): boolean {
   if (titulo.trim().length < 12 || /^https?:\/\//i.test(titulo.trim())) return false;
-  if (resumo?.trim()) return true;
-  return !tituloPareceTruncadoPainel(titulo);
+  if (tituloPareceTruncadoPainel(titulo)) return resumoUtilPainel(resumo);
+  return true;
 }
 
 function pickResumoRss(block: string, tags: string[]): string | null {

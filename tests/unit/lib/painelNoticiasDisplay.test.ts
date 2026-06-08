@@ -49,7 +49,7 @@ describe("calcularPainelNoticiasExibicao", () => {
     expect(exibir.map((r) => r.id)).toEqual(["f1", "v1", "v2", "v3", "v4"]);
   });
 
-  it("ignora itens ESPN quebrados (resumo null e título truncado)", () => {
+  it("ignora itens ESPN quebrados (resumo curto e título truncado)", () => {
     const boa = row(
       "ok",
       "2026-06-03T11:00:00.000Z",
@@ -64,7 +64,14 @@ describe("calcularPainelNoticiasExibicao", () => {
       "'Só quero desistir do tênis': Sabalenka desabafa a...",
       null,
     );
-    const exibir = calcularPainelNoticiasExibicao([quebrada, boa], now);
+    const resumoCurto = row(
+      "short",
+      "2026-06-03T10:00:00.000Z",
+      "2026-06-03T20:00:00.000Z",
+      "Título cortado no feed da ESPN...",
+      "Volante d",
+    );
+    const exibir = calcularPainelNoticiasExibicao([quebrada, resumoCurto, boa], now);
     expect(exibir.map((r) => r.id)).toEqual(["ok"]);
   });
 });
@@ -117,6 +124,21 @@ describe("prepararExibicaoPainelNoticia", () => {
     );
     expect(exibir.titulo).toContain("Trabalho duro");
     expect(exibir.detalhe).toContain("Ele falou");
+  });
+
+  it("substitui título truncado da ESPN pelo resumo completo", () => {
+    const exibir = prepararExibicaoPainelNoticia(
+      row(
+        "espn",
+        "2026-06-03T10:00:00.000Z",
+        "2026-06-03T20:00:00.000Z",
+        "Recuperação avança, e Espanha deve ter Yamal e Nic...",
+        "Principais jogadores da Fúria ainda se recuperam de lesões musculares",
+      ),
+    );
+    expect(exibir.titulo).not.toMatch(/\.\.\.|…$/);
+    expect(exibir.titulo).toContain("Principais jogadores");
+    expect(exibir.detalhe).toBe("");
   });
 });
 
