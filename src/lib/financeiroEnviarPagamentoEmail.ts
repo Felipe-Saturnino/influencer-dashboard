@@ -6,7 +6,8 @@ export type EnviarPagamentoEmailResult =
 
 /**
  * Notifica (e-mail) beneficiários com pagamento aguardando no ciclo fechado.
- * TODO: Edge Function, provedor de e-mail, template, destinatários por linha a_pagar, idempotência.
+ * **Stub** — não envia e-mail; ver `.cursor/rules/emails.mdc` § Inventário.
+ * TODO: Edge Function, Resend, template, destinatários por linha a_pagar, idempotência.
  */
 export async function enviarPagamentoEmailCiclo(
   _client: SupabaseClient,

@@ -1,8 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
+import { enviarEmailRecuperacaoSenhaConta } from './enviarRecuperacaoSenha.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
-// Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password
+// Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password + e-mail
 // Usa service_role; apenas admins (JWT) podem chamar.
 
 type Acao = 'desativar' | 'ativar' | 'reset_senha'
@@ -83,6 +85,7 @@ async function goTrueGetUserId(
 interface Body {
   userId?: string
   action?: string
+  loginUrl?: string
 }
 
 function corsHeaders(req: Request) {
@@ -174,6 +177,7 @@ serve(async (req) => {
 
   const userId = (body.userId ?? '').trim()
   const action = body.action as Acao | undefined
+  const loginUrl = (body.loginUrl ?? '').trim() || DEFAULT_LOGIN_URL
 
   const acoesValidas: Acao[] = ['desativar', 'ativar', 'reset_senha']
   if (!userId || !action || !acoesValidas.includes(action)) {
@@ -220,6 +224,27 @@ serve(async (req) => {
         })
       }
     } else if (action === 'reset_senha') {
+      const { data: targetProfile, error: targetErr } = await supabase
+        .from('profiles')
+        .select('name, email')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (targetErr) {
+        return new Response(JSON.stringify({ error: `Erro ao buscar usuário: ${targetErr.message}` }), {
+          status: 500,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const targetEmail = (targetProfile?.email as string | null)?.trim().toLowerCase() ?? ''
+      if (!targetEmail) {
+        return new Response(JSON.stringify({ error: 'Usuário sem e-mail cadastrado — não foi possível redefinir a senha.' }), {
+          status: 400,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
       const { error: authErr } = await supabase.auth.admin.updateUserById(userId, {
         password: senhaPadrao,
       })
@@ -239,6 +264,33 @@ serve(async (req) => {
           headers: { ...cors, 'Content-Type': 'application/json' },
         })
       }
+
+      const nome = (targetProfile?.name as string | null)?.trim() || targetEmail
+      const mail = await enviarEmailRecuperacaoSenhaConta({
+        supabaseUrl,
+        to: targetEmail,
+        nome,
+        senhaTemporaria: senhaPadrao,
+        loginUrl,
+      })
+
+      if (!mail.ok) {
+        console.error('[admin-usuario-acao] Falha ao enviar e-mail de senha redefinida:', mail.error)
+        return new Response(
+          JSON.stringify({
+            success: true,
+            emailEnviado: false,
+            emailErro:
+              'Senha redefinida, mas não foi possível enviar o e-mail. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.',
+          }),
+          { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      return new Response(JSON.stringify({ success: true, emailEnviado: true }), {
+        status: 200,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
     }
 
     return new Response(JSON.stringify({ success: true }), {

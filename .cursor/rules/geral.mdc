@@ -92,7 +92,8 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 - Fora do `app-page-shell` logado.
 - CTA com gradiente Brand; spinner `#fff` dentro do botão.
-- **Handoff:** fluxos whitelabel, recuperação de senha, erros inline.
+- **Esqueci senha:** link «Esqueceu sua senha?» abaixo do campo senha → modal «Reset de senha» → Edge `recuperar-senha` (senha padrão + e-mail Resend + `must_change_password`). E-mail inexistente: mensagem explícita + link «entre em contato» (`lib/loginAccessContact.ts`).
+- **Handoff:** fluxos whitelabel adicionais, erros inline.
 
 ---
 

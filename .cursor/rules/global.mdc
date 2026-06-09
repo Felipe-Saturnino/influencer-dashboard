@@ -22,12 +22,19 @@ Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 2. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
 3. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
 
-**Não** duplicar regras de marca no Global nem regras de secção no Brand. Secções **não** citam outras secções para padrões transversais — citam Global + Brand.
+Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cron, transacional, disparo manual na plataforma — ex.: Status Técnico, criar usuário, recuperar senha):
+
+1. **Este MDC (Global)** — copy PT-BR, formatos, mensagens de erro.
+2. **`emails.mdc` (Envio de e-mail)** — template HTML, remetente/destinatários (Secrets), `sendResendEmail`, layout canônico.
+3. **`docs/SETUP-RESEND.md`** — secrets e deploy.
+
+**Não** duplicar regras de marca no Global nem regras de secção no Brand. Secções **não** citam outras secções para padrões transversais — citam Global + Brand (+ **`emails.mdc`** quando o fluxo enviar e-mail).
 
 | MDC | Conteúdo |
 |-----|----------|
 | **Global** | Semântica de dados, **identidade visual por jogo**, **linguagem e copy (PT-BR)**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
+| **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
 ### Manutenção dos MDCs de secção

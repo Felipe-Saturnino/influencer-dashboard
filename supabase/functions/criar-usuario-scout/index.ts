@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 type SupabaseAdmin = ReturnType<typeof createClient>
 
@@ -375,7 +377,24 @@ serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({ success: true, userId: uid }), {
+    const loginUrl = (typeof raw.loginUrl === 'string' ? raw.loginUrl : '').trim() || DEFAULT_LOGIN_URL
+    const mail = await enviarEmailBoasVindasConta({
+      supabaseUrl,
+      to: email,
+      nome,
+      senhaTemporaria: senhaPadrao,
+      loginUrl,
+    })
+    if (!mail.ok) {
+      console.error('[criar-usuario-scout] Erro ao enviar e-mail:', mail.error)
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      userId: uid,
+      emailEnviado: mail.ok,
+      ...(mail.ok ? {} : { emailErro: 'Não foi possível enviar o e-mail de boas-vindas. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.' }),
+    }), {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })

@@ -51,6 +51,12 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTab
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
+import {
+  calcularResumoStaffCards,
+  staffUiTimeSemOperadoraHorarioModaisRestritos,
+  staffUiTimeShufflerOcultarBioFotosVer,
+} from "./gestaoStaffHelpers";
+import { StaffKpiResumo } from "./StaffKpiResumo";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -89,32 +95,6 @@ function fmtDataHora(iso: string): string {
 function dataIsoParaInputDate(iso: string | null | undefined): string {
   if (!iso?.trim()) return "";
   return String(iso).trim().slice(0, 10);
-}
-
-/** Nome do time do organograma normalizado para regras de UI (acentos, espaços). */
-function normStaffNomeTimeUi(nome: string | null | undefined): string {
-  return (nome ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/\s+/g, " ");
-}
-
-/** Times em que a tabela (vista time a time) troca Operadora por Horário do Turno e os modais ocultam operadora/bio/fotos. */
-function staffUiTimeSemOperadoraHorarioModaisRestritos(nomeTime: string): boolean {
-  const n = normStaffNomeTimeUi(nomeTime);
-  return (
-    n === "service manager" ||
-    n === "customer service" ||
-    n === "shift leader" ||
-    n === "performance coach"
-  );
-}
-
-/** Shuffler: só ocultar Bio e Fotos na aba Dados de função (visualizar). */
-function staffUiTimeShufflerOcultarBioFotosVer(nomeTime: string): boolean {
-  return normStaffNomeTimeUi(nomeTime) === "shuffler";
 }
 
 type OpTurnosStaffPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
@@ -749,6 +729,17 @@ export default function RhGestaoStaffPage() {
     });
   }, [linhasTabela, sortCol, sortDir, nomePorTimeId, opTurnosPorSlug]);
 
+  const resumoStaffCards = useMemo(
+    () => calcularResumoStaffCards(linhasTabela, nomePorTimeId),
+    [linhasTabela, nomePorTimeId],
+  );
+
+  const mostrarKpisGamePresenter = useMemo(() => {
+    if (todosTimes) return true;
+    const row = times[idxTime];
+    return row ? isGamePresenterTimeNome(row.nome) : false;
+  }, [todosTimes, times, idxTime]);
+
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
     const row = times[idxTime];
@@ -813,6 +804,14 @@ export default function RhGestaoStaffPage() {
           {erroTimes}
         </div>
       )}
+
+      {mostrarKpisGamePresenter ? (
+        <StaffKpiResumo
+          resumo={resumoStaffCards}
+          podeEditar={perm.canEditarOk}
+          onEditarStaff={setModalEditar}
+        />
+      ) : null}
 
       <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={getFilterBarRowStyle()}>

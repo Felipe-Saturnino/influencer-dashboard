@@ -8,6 +8,10 @@
 verify_jwt = false
 # Evita 401 do gateway quando o browser envia o JWT — a função usa service_role internamente
 
+[functions.recuperar-senha]
+verify_jwt = false
+# Reset de senha na tela de login (anon + service_role internamente)
+
 [functions.atualizar-perfil]
 verify_jwt = false
 # Verificação de admin é feita manualmente dentro da função

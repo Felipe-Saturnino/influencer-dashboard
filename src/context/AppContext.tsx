@@ -17,6 +17,7 @@ import {
   type PermissaoAcoes,
   type PermissoesAcoesMapa,
 } from "../lib/appRoutes";
+import { isPublicUnauthenticatedPath } from "../lib/publicRoutes";
 import {
   ROLES_SEM_RESTRICAO_ESCOPO,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
@@ -518,6 +519,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const applyPathFromLocation = useCallback(
     (options?: { replace?: boolean }) => {
+      if (isPublicUnauthenticatedPath()) return;
+
       const parsed = parseAppPathname(window.location.pathname);
       const u = userRef.current;
 

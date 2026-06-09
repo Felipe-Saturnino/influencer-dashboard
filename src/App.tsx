@@ -1,10 +1,11 @@
-import { Suspense, lazy, useState, useEffect, type ComponentType, type LazyExoticComponent } from "react";
+import { Suspense, lazy, useState, useEffect, useCallback, type ComponentType, type LazyExoticComponent } from "react";
 import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
 import { useRevisaoCadastralGate } from "./hooks/useRevisaoCadastralGate";
+import { useIdleSessionTimeout } from "./hooks/useIdleSessionTimeout";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -13,10 +14,7 @@ import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
 import PainelNoticiasPage from "./pages/public/PainelNoticiasPage";
-import {
-  detectPublicUnauthenticatedRoute,
-  type PublicUnauthenticatedRoute,
-} from "./lib/publicRoutes";
+import { detectPublicUnauthenticatedRoute } from "./lib/publicRoutes";
 import {
   buildLoginPath,
   parseAppPathname,
@@ -262,15 +260,13 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
-  const [publicRoute, setPublicRoute] = useState<PublicUnauthenticatedRoute | null>(() =>
-    typeof window !== "undefined" ? detectPublicUnauthenticatedRoute() : null,
-  );
+  const [, setNavEpoch] = useState(0);
+  const publicRoute = detectPublicUnauthenticatedRoute();
 
   useEffect(() => {
     const onPop = () => {
-      const detected = detectPublicUnauthenticatedRoute();
-      setPublicRoute(detected);
-      if (!detected) applyPathFromLocation();
+      setNavEpoch((n) => n + 1);
+      if (!detectPublicUnauthenticatedRoute()) applyPathFromLocation();
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -290,10 +286,13 @@ function Root() {
     }
   }, [checking, routeReady, user, publicRoute]);
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
-  }
+  }, [setUser]);
+
+  useIdleSessionTimeout(!!user && routeReady && !checking, handleLogout);
+
   if (checking || !routeReady) {
     return (
       <div

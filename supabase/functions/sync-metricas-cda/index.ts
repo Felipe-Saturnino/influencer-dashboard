@@ -189,30 +189,9 @@ class TokenExpiradoError extends Error {
   }
 }
 
-async function enviarAlertaAuthCda(): Promise<void> {
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return
-  const usaBasicAuth = !!(Deno.env.get('SMARTICO_USERNAME') && Deno.env.get('SMARTICO_PASSWORD'))
-  const usaApiKey = !!Deno.env.get('CDA_INFLUENCERS_API_KEY')
-  const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-  const html = (usaApiKey || usaBasicAuth)
-    ? `<div><h2>⚠️ Sync CDA Interrompido</h2><p>Falhou às ${agora}. Motivo: 403 Forbidden — credencial inválida.</p></div>`
-    : `<div><h2>⚠️ Sync CDA Interrompido</h2><p>Falhou às ${agora}. Token expirado.</p></div>`
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Data Intelligence <onboarding@resend.dev>',
-        to: ['felipe.saturnino@spingaming.com.br'],
-        subject: '⚠️ [Data Intelligence] Erro de autenticação CDA (403)',
-        html,
-      }),
-    })
-    if (!res.ok) console.error(`[sync-metricas-cda] Falha e-mail: ${res.status}`)
-  } catch (e) {
-    console.error(`[sync-metricas-cda] Erro Resend: ${e}`)
-  }
+/** Registra falha 403 na CDA — monitoramento via tech_logs / sync_logs / Status Técnico (sem e-mail). */
+function logAlertaAuthCda(motivo: string): void {
+  console.warn(`[sync-metricas-cda] Auth CDA (403): ${motivo}`)
 }
 
 type CdaAuthInput = {
@@ -556,7 +535,7 @@ serve(async (req: Request) => {
           lastErr = err instanceof Error ? err : new Error(String(err))
           if (String(lastErr.message).includes('Access to this label')) continue
           if (err instanceof TokenExpiradoError) {
-            await enviarAlertaAuthCda()
+            logAlertaAuthCda('403 na Reporting API')
             await gravarTechLog(supabase, 'auth', '403 na Reporting API')
             await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: 0, erros_count: 1, mensagem_erro: '403', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
             return new Response(JSON.stringify({ ok: false, erro: '403 - Verifique CDA_INFLUENCERS_API_KEY' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -630,7 +609,7 @@ serve(async (req: Request) => {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaAuthCda()
+          logAlertaAuthCda(msg)
           await gravarTechLog(supabase, 'auth', msg)
           await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: msg, duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
           return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -656,7 +635,7 @@ serve(async (req: Request) => {
         orfaosAtualizados = resultado.atualizados
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaAuthCda()
+          logAlertaAuthCda('403 na varredura de UTMs')
           await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: '403 varredura', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
           return new Response(JSON.stringify({ ok: false, erro: '403 na varredura' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         }

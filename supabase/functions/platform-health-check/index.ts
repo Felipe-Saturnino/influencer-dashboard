@@ -3,200 +3,21 @@
  * Diagnóstico operacional (leitura + secrets) — grava entradas em tech_logs.
  * Autorização: admin ou can_editar em status_tecnico (Gestão de Usuários).
  *
- * Deploy no painel Supabase envia só este ficheiro — lógica de diagnóstico inline abaixo.
- * Ao alterar regras, atualizar também src/lib/platformHealthDiagnostics.ts (fonte para app + Vitest).
+ * Ficheiros no painel Supabase: `index.ts` + `platformHealthDiagnostics.ts` (mesmo nível).
+ * Manter `platformHealthDiagnostics.ts` alinhado a `src/lib/platformHealthDiagnostics.ts`.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-type DiagnosticSeverity = "ok" | "aviso" | "erro";
-
-const TIPO_DIAGNOSTICO_RESUMO = "diagnostico_plataforma";
-const TIPO_DIAGNOSTICO_OK = "diagnostico_ok";
-const TIPO_DIAGNOSTICO_AVISO = "diagnostico_aviso";
-const TIPO_DIAGNOSTICO_ERRO = "diagnostico_erro";
-
-interface TechLogInsertRow {
-  integracao_slug: string | null;
-  tipo: string;
-  descricao: string;
-}
-
-interface PlatformHealthSecretsSnapshot {
-  cdaConfigurado: boolean;
-  githubSocialConfigurado: boolean;
-  resendConfigurado: boolean;
-}
-
-interface PlatformHealthIntegrationSnapshot {
-  slug: string | null;
-  nome: string;
-  integracaoSlugFk: string | null;
-  ultimoStatus: "ok" | "falha" | "success" | "error" | null;
-  ultimoEm: string | null;
-  okHoje: boolean;
-  teveHistorico: boolean;
-  erros24h: number;
-}
-
-interface PlatformHealthSnapshot {
-  hojeIso: string;
-  passouHorarioCda: boolean;
-  passouHorarioSocial: boolean;
-  secrets: PlatformHealthSecretsSnapshot;
-  integracoes: PlatformHealthIntegrationSnapshot[];
-}
-
-function tipoPorSeveridade(s: DiagnosticSeverity): string {
-  if (s === "ok") return TIPO_DIAGNOSTICO_OK;
-  if (s === "aviso") return TIPO_DIAGNOSTICO_AVISO;
-  return TIPO_DIAGNOSTICO_ERRO;
-}
-
-function pushProbe(
-  out: TechLogInsertRow[],
-  probe: {
-    nome: string;
-    severidade: DiagnosticSeverity;
-    descricao: string;
-    integracaoSlugFk: string | null;
-  },
-): void {
-  out.push({
-    integracao_slug: probe.integracaoSlugFk,
-    tipo: tipoPorSeveridade(probe.severidade),
-    descricao: `${probe.nome}: ${probe.descricao}`.slice(0, 2000),
-  });
-}
-
-function buildPlatformHealthTechLogs(snapshot: PlatformHealthSnapshot): TechLogInsertRow[] {
-  const out: TechLogInsertRow[] = [];
-  let ok = 0;
-  let aviso = 0;
-  let erro = 0;
-
-  if (!snapshot.secrets.cdaConfigurado) {
-    pushProbe(out, {
-      nome: "Configuração CDA",
-      severidade: "erro",
-      descricao: "Credencial da API CDA não configurada nos secrets do projeto.",
-      integracaoSlugFk: "casa_apostas",
-    });
-    erro++;
-  } else {
-    pushProbe(out, {
-      nome: "Configuração CDA",
-      severidade: "ok",
-      descricao: "Credencial ou modo Reporting API presente.",
-      integracaoSlugFk: "casa_apostas",
-    });
-    ok++;
-  }
-
-  if (!snapshot.secrets.githubSocialConfigurado) {
-    pushProbe(out, {
-      nome: "Configuração Social Media",
-      severidade: "aviso",
-      descricao: "Token ou repositório GitHub ausente — sync social manual pode falhar.",
-      integracaoSlugFk: null,
-    });
-    aviso++;
-  } else {
-    pushProbe(out, {
-      nome: "Configuração Social Media",
-      severidade: "ok",
-      descricao: "Secrets do disparo de workflow configurados.",
-      integracaoSlugFk: null,
-    });
-    ok++;
-  }
-
-  if (!snapshot.secrets.resendConfigurado) {
-    pushProbe(out, {
-      nome: "Configuração e-mail (Resend)",
-      severidade: "aviso",
-      descricao: "Chave Resend ausente — relatório e agenda por e-mail podem falhar.",
-      integracaoSlugFk: null,
-    });
-    aviso++;
-  } else {
-    pushProbe(out, {
-      nome: "Configuração e-mail (Resend)",
-      severidade: "ok",
-      descricao: "Chave Resend configurada.",
-      integracaoSlugFk: null,
-    });
-    ok++;
-  }
-
-  for (const integ of snapshot.integracoes) {
-    let severidade: DiagnosticSeverity = "ok";
-    let detalhe = "Última execução dentro do esperado.";
-
-    if (!integ.teveHistorico && !integ.ultimoEm) {
-      severidade = "aviso";
-      detalhe = "Sem histórico de execução registrado.";
-    } else if (integ.ultimoStatus === "falha" || integ.ultimoStatus === "error") {
-      severidade = "erro";
-      detalhe = "Última execução com falha.";
-    } else if (integ.erros24h > 0) {
-      severidade = "aviso";
-      detalhe = `${integ.erros24h} ocorrência(s) de erro nas últimas 24 horas.`;
-    } else if (integ.teveHistorico && !integ.okHoje) {
-      const atraso =
-        integ.nome.includes("CDA") && snapshot.passouHorarioCda
-          ? "Job diário (4h BRT) ainda não registrou sucesso hoje."
-          : (integ.nome.includes("Social") || integ.nome.includes("RSS") || integ.nome.includes("E-mail")) &&
-              snapshot.passouHorarioSocial
-            ? "Job agendado (6h BRT) ainda não registrou sucesso hoje."
-            : "Sem sucesso registrado na data civil de hoje.";
-      severidade = "aviso";
-      detalhe = atraso;
-    }
-
-    if (severidade === "ok") ok++;
-    else if (severidade === "aviso") aviso++;
-    else erro++;
-
-    pushProbe(out, {
-      nome: integ.nome,
-      severidade,
-      descricao: detalhe,
-      integracaoSlugFk: integ.integracaoSlugFk,
-    });
-  }
-
-  const resumo =
-    erro > 0
-      ? `Diagnóstico manual concluído: ${erro} falha(s), ${aviso} atenção(ões), ${ok} OK. Revise as linhas abaixo.`
-      : aviso > 0
-        ? `Diagnóstico manual concluído: ${ok} OK, ${aviso} atenção(ões). Nenhuma falha crítica.`
-        : `Diagnóstico manual concluído: ${ok} verificação(ões) OK. Nenhuma falha ou atenção.`;
-
-  out.unshift({
-    integracao_slug: null,
-    tipo: TIPO_DIAGNOSTICO_RESUMO,
-    descricao: resumo.slice(0, 2000),
-  });
-
-  return out;
-}
-
-function countDiagnosticSummary(logs: TechLogInsertRow[]): {
-  ok: number;
-  aviso: number;
-  erro: number;
-} {
-  let ok = 0;
-  let aviso = 0;
-  let erro = 0;
-  for (const l of logs) {
-    if (l.tipo === TIPO_DIAGNOSTICO_OK) ok++;
-    else if (l.tipo === TIPO_DIAGNOSTICO_AVISO) aviso++;
-    else if (l.tipo === TIPO_DIAGNOSTICO_ERRO) erro++;
-  }
-  return { ok, aviso, erro };
-}
+import {
+  buildPlatformHealthTechLogs,
+  countDiagnosticSummary,
+  readPlatformHealthSecrets,
+  TIPO_DIAGNOSTICO_RESUMO,
+} from "./platformHealthDiagnostics.ts";
+import type {
+  PlatformHealthIntegrationSnapshot,
+  PlatformHealthSnapshot,
+} from "./platformHealthDiagnostics.ts";
 
 const TZ_BR = "America/Sao_Paulo";
 const MS_24H = 24 * 60 * 60 * 1000;
@@ -470,22 +291,11 @@ serve(async (req) => {
     erros24h: countTechTipo((t) => t === "email_agenda_diaria"),
   });
 
-  const cdaConfigured = !!(
-    Deno.env.get("CDA_INFLUENCERS_API_KEY")?.trim() ||
-    Deno.env.get("CDA_USE_REPORTING_API")?.trim() === "true"
-  );
-  const githubOk = !!(Deno.env.get("GITHUB_TOKEN")?.trim() && Deno.env.get("GITHUB_REPO")?.trim());
-  const resendOk = !!Deno.env.get("RESEND_API_KEY")?.trim();
-
   const snapshot: PlatformHealthSnapshot = {
     hojeIso,
     passouHorarioCda,
     passouHorarioSocial,
-    secrets: {
-      cdaConfigurado: cdaConfigured,
-      githubSocialConfigurado: githubOk,
-      resendConfigurado: resendOk,
-    },
+    secrets: readPlatformHealthSecrets((key) => Deno.env.get(key)),
     integracoes,
   };
 
@@ -505,7 +315,7 @@ serve(async (req) => {
     );
   }
 
-  const resumo = rows.find((r) => r.tipo === "diagnostico_plataforma")?.descricao ?? "Diagnóstico concluído.";
+  const resumo = rows.find((r) => r.tipo === TIPO_DIAGNOSTICO_RESUMO)?.descricao ?? "Diagnóstico concluído.";
 
   return json({
     ok: true,

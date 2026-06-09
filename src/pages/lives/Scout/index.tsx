@@ -373,6 +373,7 @@ export default function Scout() {
             link_whatsapp: effective.link_whatsapp ?? "",
             link_telegram: effective.link_telegram ?? "",
             operadora_slug: (effective.operadora_slug ?? "").trim() || undefined,
+            ...(typeof window !== "undefined" ? { loginUrl: window.location.origin } : {}),
           }),
         });
         const fnData = await res.json().catch(() => ({}));
@@ -1149,6 +1150,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         link_whatsapp: s.link_whatsapp ?? "",
         link_telegram: s.link_telegram ?? "",
         operadora_slug: (s.operadora_slug ?? "").toString().trim() || undefined,
+        ...(typeof window !== "undefined" ? { loginUrl: window.location.origin } : {}),
       }),
     });
     const fnData = await res.json().catch(() => ({}));

@@ -140,16 +140,35 @@ export function AbaUsuarios({
       setFeedbackAcao(null);
       setAcaoEmAndamento(`${u.id}:${action}`);
       try {
-        await callSupabaseEdgeFunction("admin-usuario-acao", { userId: u.id, action });
+        const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
+        const res = await callSupabaseEdgeFunction<{
+          success?: boolean;
+          emailEnviado?: boolean;
+          emailErro?: string;
+        }>("admin-usuario-acao", { userId: u.id, action, loginUrl });
         setModalDesativar(null);
         setModalResetSenha(null);
-        const okMsg =
-          action === "reset_senha"
-            ? "Senha redefinida para a padrão. No próximo login o usuário deverá definir uma nova senha."
-            : action === "desativar"
+        if (action === "reset_senha") {
+          if (res.emailEnviado === false) {
+            setFeedbackAcao({
+              tipo: "erro",
+              msg:
+                res.emailErro ??
+                "Senha redefinida, mas não foi possível enviar o e-mail ao usuário. Verifique a configuração de e-mail no Supabase.",
+            });
+          } else {
+            setFeedbackAcao({
+              tipo: "ok",
+              msg: "Senha redefinida para a padrão e e-mail enviado ao usuário. No próximo login será obrigatório definir uma nova senha.",
+            });
+          }
+        } else {
+          const okMsg =
+            action === "desativar"
               ? "Usuário desativado. O acesso à plataforma foi bloqueado."
               : "Usuário ativado novamente.";
-        setFeedbackAcao({ tipo: "ok", msg: okMsg });
+          setFeedbackAcao({ tipo: "ok", msg: okMsg });
+        }
         await carregar();
       } catch (e) {
         console.error("[GestaoUsuarios] admin-usuario-acao:", e);
@@ -510,7 +529,7 @@ export function AbaUsuarios({
       {modoAdmin && podeEditarUsuario && modalResetSenha && (
         <ModalConfirmDelete
           title="Redefinir senha"
-          texto={`A senha de ${modalResetSenha.name} voltará à senha padrão (mesma do cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.`}
+          texto={`A senha de ${modalResetSenha.name} voltará à senha padrão (mesma do cadastro de novos usuários). Enviaremos um e-mail com os dados de acesso. No próximo login será obrigatório definir uma nova senha.`}
           onCancel={() => {
             if (!acaoEmAndamento) setModalResetSenha(null);
           }}
@@ -531,7 +550,10 @@ export function AbaUsuarios({
           editando={editando}
           operadoras={operadoras}
           onClose={() => setModalOpen(false)}
-          onSalvo={carregar}
+          onSalvo={(aviso) => {
+            void carregar();
+            if (aviso) setFeedbackAcao({ tipo: "erro", msg: aviso });
+          }}
         />
       )}
     </div>
