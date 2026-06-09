@@ -167,7 +167,7 @@ export function OrgChartHierarquico({
               const nPrest = prestadoresCountPorDiretoriaId[d.id] ?? 0;
               const inativo = d.status === "inativo";
               return (
-                <li key={d.id} className="app-org-dir-card-item" style={{ minWidth: 0, height: "100%" }}>
+                <li key={d.id} className="app-org-dir-card-item">
                   <button
                     type="button"
                     className="app-org-dir-card-btn"
@@ -179,7 +179,7 @@ export function OrgChartHierarquico({
                     className="app-org-dir-card-bordered"
                     style={{
                       borderTop: "4px solid var(--brand-action, #7c3aed)",
-                      borderRadius: "14px 14px 0 0",
+                      borderRadius: 14,
                       borderLeft: "2px solid var(--brand-action, #7c3aed)",
                       borderRight: "2px solid var(--brand-action, #7c3aed)",
                       borderBottom: "2px solid var(--brand-action, #7c3aed)",
