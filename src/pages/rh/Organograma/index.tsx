@@ -14,7 +14,6 @@ import {
   contarTimesAtivosSobDiretoria,
   montarArvoreOrganograma,
 } from "../../../lib/rhOrganogramaTree";
-import { uploadDiretorFotoDiretoria } from "../../../lib/rhOrgDiretorFoto";
 import type {
   RhOrgDiretoria,
   RhOrgDiretoriaComFilhos,
@@ -132,9 +131,7 @@ export default function RhOrganogramaPage() {
 
   const [filtroDiretoriaId, setFiltroDiretoriaId] = useState<FiltroDiretoriaOrganograma>(ORG_FILTRO_TODAS_DIRETORIAS);
 
-  const [diretorSobre, setDiretorSobre] = useState("");
-  const [fotoDiretorFile, setFotoDiretorFile] = useState<File | null>(null);
-  const [fotoDiretorPreviewUrl, setFotoDiretorPreviewUrl] = useState<string | null>(null);
+  const [sobreDiretoria, setSobreDiretoria] = useState("");
 
   const [sobreGerencia, setSobreGerencia] = useState("");
 
@@ -186,16 +183,6 @@ export default function RhOrganogramaPage() {
     if (perm.loading) return;
     if (!perm.canEditarOk && modo !== "visual") setModo("visual");
   }, [perm.loading, perm.canEditarOk, modo, setModo]);
-
-  useEffect(() => {
-    if (!fotoDiretorFile) {
-      setFotoDiretorPreviewUrl(null);
-      return;
-    }
-    const u = URL.createObjectURL(fotoDiretorFile);
-    setFotoDiretorPreviewUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [fotoDiretorFile]);
 
   const nomePorFuncId = useMemo(() => {
     const m = new Map<string, string>();
@@ -385,8 +372,7 @@ export default function RhOrganogramaPage() {
   const abrirNovaDiretoria = () => {
     setNomeDir("");
     setFidDir("");
-    setDiretorSobre("");
-    setFotoDiretorFile(null);
+    setSobreDiretoria("");
     setDraftDirId(crypto.randomUUID());
     setMdDir("new");
   };
@@ -395,8 +381,7 @@ export default function RhOrganogramaPage() {
     setDraftDirId(null);
     setNomeDir(row.nome);
     setFidDir(row.diretor_funcionario_id ?? "");
-    setDiretorSobre(row.diretor_sobre ?? "");
-    setFotoDiretorFile(null);
+    setSobreDiretoria(row.sobre_diretoria ?? "");
     setMdDir(row);
   };
 
@@ -405,8 +390,8 @@ export default function RhOrganogramaPage() {
       setErroGlobal("Informe o nome da diretoria.");
       return;
     }
-    if (!diretorSobre.trim()) {
-      setErroGlobal("Preencha o texto Sobre o Diretor(a).");
+    if (!sobreDiretoria.trim()) {
+      setErroGlobal("Preencha o texto Sobre a Diretoria.");
       return;
     }
     if (!fidDir.trim()) {
@@ -420,29 +405,14 @@ export default function RhOrganogramaPage() {
       nome: nomeDir.trim(),
       diretor_funcionario_id: fidDir.trim(),
       diretor_nome_livre,
-      diretor_sobre: diretorSobre.trim(),
+      sobre_diretoria: sobreDiretoria.trim(),
     };
     if (mdDir === "new") {
       const newId = draftDirId ?? crypto.randomUUID();
-      let diretor_foto_url: string | null = null;
-      if (fotoDiretorFile) {
-        const up = await uploadDiretorFotoDiretoria(newId, fotoDiretorFile);
-        if (!up.ok) {
-          setSalvandoDir(false);
-          setErroGlobal(up.message);
-          return;
-        }
-        diretor_foto_url = up.publicUrl;
-      }
-      if (!diretor_foto_url?.trim()) {
-        setSalvandoDir(false);
-        setErroGlobal("Envie a foto do Diretor(a).");
-        return;
-      }
       const centro_custos = proximoCentroCustosDiretoria(diretorias);
       const { error } = await supabase
         .from("rh_org_diretorias")
-        .insert({ id: newId, ...payloadBase, diretor_foto_url, status: "ativo", centro_custos });
+        .insert({ id: newId, ...payloadBase, status: "ativo", centro_custos });
       setSalvandoDir(false);
       if (error) {
         if (error.code === "23505") setErroGlobal("Este funcionário já é diretor(a) de outra diretoria ativa.");
@@ -452,24 +422,9 @@ export default function RhOrganogramaPage() {
       setSucessoMsg("Diretoria criada.");
     } else if (mdDir !== null && typeof mdDir === "object") {
       const row = mdDir;
-      let diretor_foto_url: string | null = row.diretor_foto_url;
-      if (fotoDiretorFile) {
-        const up = await uploadDiretorFotoDiretoria(row.id, fotoDiretorFile);
-        if (!up.ok) {
-          setSalvandoDir(false);
-          setErroGlobal(up.message);
-          return;
-        }
-        diretor_foto_url = up.publicUrl;
-      }
-      if (!diretor_foto_url?.trim()) {
-        setSalvandoDir(false);
-        setErroGlobal("Envie a foto do Diretor(a).");
-        return;
-      }
       const { error } = await supabase
         .from("rh_org_diretorias")
-        .update({ ...payloadBase, diretor_foto_url })
+        .update(payloadBase)
         .eq("id", row.id);
       setSalvandoDir(false);
       if (error) {
@@ -481,8 +436,7 @@ export default function RhOrganogramaPage() {
     }
     setMdDir(null);
     setDraftDirId(null);
-    setFotoDiretorFile(null);
-    setDiretorSobre("");
+    setSobreDiretoria("");
     await carregar();
   };
 
@@ -979,8 +933,7 @@ export default function RhOrganogramaPage() {
             if (!salvandoDir) {
               setMdDir(null);
               setDraftDirId(null);
-              setFotoDiretorFile(null);
-              setDiretorSobre("");
+              setSobreDiretoria("");
             }
           }}
         >
@@ -990,8 +943,7 @@ export default function RhOrganogramaPage() {
               if (!salvandoDir) {
                 setMdDir(null);
                 setDraftDirId(null);
-                setFotoDiretorFile(null);
-                setDiretorSobre("");
+                setSobreDiretoria("");
               }
             }}
           />
@@ -1023,6 +975,20 @@ export default function RhOrganogramaPage() {
             />
           </div>
           <div style={{ marginBottom: 12 }}>
+            <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
+              Sobre a Diretoria
+              <CampoObrigatorioMark />
+            </label>
+            <textarea
+              id="org-sobre-dir"
+              value={sobreDiretoria}
+              onChange={(e) => setSobreDiretoria(e.target.value)}
+              style={textareaStyle}
+              rows={4}
+              aria-required
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Diretor(a)
               <CampoObrigatorioMark />
@@ -1039,42 +1005,6 @@ export default function RhOrganogramaPage() {
               {optsFunc}
             </select>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="org-foto-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Foto do Diretor(a)
-              <CampoObrigatorioMark />
-            </label>
-            <input
-              id="org-foto-dir"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setFotoDiretorFile(e.target.files?.[0] ?? null)}
-              style={{ ...inputStyle, padding: 8 }}
-            />
-            {fotoDiretorPreviewUrl || (typeof mdDir === "object" && mdDir.diretor_foto_url) ? (
-              <div style={{ marginTop: 10 }}>
-                <img
-                  src={fotoDiretorPreviewUrl ?? (typeof mdDir === "object" ? mdDir.diretor_foto_url! : "")}
-                  alt={fidDir.trim() ? `Foto de ${nomeResponsavel(fidDir, null)}` : "Pré-visualização da foto do diretor(a)"}
-                  style={{ maxWidth: "100%", maxHeight: 160, borderRadius: 10, border: `1px solid ${t.cardBorder}` }}
-                />
-              </div>
-            ) : null}
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Sobre o Diretor(a)
-              <CampoObrigatorioMark />
-            </label>
-            <textarea
-              id="org-sobre-dir"
-              value={diretorSobre}
-              onChange={(e) => setDiretorSobre(e.target.value)}
-              style={textareaStyle}
-              rows={5}
-              aria-required
-            />
-          </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
             <button
               type="button"
@@ -1082,8 +1012,7 @@ export default function RhOrganogramaPage() {
               onClick={() => {
                 setMdDir(null);
                 setDraftDirId(null);
-                setFotoDiretorFile(null);
-                setDiretorSobre("");
+                setSobreDiretoria("");
               }}
               style={{ ...btnSecondaryStyle, cursor: salvandoDir ? "not-allowed" : "pointer", opacity: salvandoDir ? 0.65 : 1 }}
             >

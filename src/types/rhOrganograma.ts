@@ -5,8 +5,9 @@ export interface RhOrgDiretoria {
   nome: string;
   diretor_funcionario_id: string | null;
   diretor_nome_livre: string | null;
+  /** Legado — não exibido na UI. */
   diretor_foto_url: string | null;
-  diretor_sobre: string;
+  sobre_diretoria: string;
   /** Código numérico 3 dígitos (ex.: 001). */
   centro_custos: string;
   status: RhOrgStatus;

@@ -64,13 +64,6 @@ function textoOuTraco(s: string): string {
   return x ? x : "—";
 }
 
-function iniciaisNome(nome: string): string {
-  const p = nome.trim().split(/\s+/).filter(Boolean);
-  if (p.length === 0) return "?";
-  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
-  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
-}
-
 function badgeInativo() {
   return (
     <span
@@ -90,7 +83,7 @@ function badgeInativo() {
   );
 }
 
-/** Visão geral: grid de cards de diretoria (foto, diretor, contagens). */
+/** Visão geral: grid de cards de diretoria (nome, diretor, contagens). */
 export function OrgChartHierarquico({
   arvore,
   t,
@@ -172,7 +165,6 @@ export function OrgChartHierarquico({
               const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
               const nPrest = prestadoresCountPorDiretoriaId[d.id] ?? 0;
               const inativo = d.status === "inativo";
-              const altFoto = `Foto de ${diretor}`;
               return (
                 <li key={d.id} className="app-org-dir-card-item" style={{ minWidth: 0, height: "100%" }}>
                   <button
@@ -195,28 +187,6 @@ export function OrgChartHierarquico({
                     }}
                   >
                     <div className="app-org-dir-card-row">
-                      <div
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          overflow: "hidden",
-                          flexShrink: 0,
-                          border: "2px solid var(--brand-action, #7c3aed)",
-                          background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {d.diretor_foto_url ? (
-                          <img src={d.diretor_foto_url} alt={altFoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <span aria-hidden="true" style={{ fontSize: 16, fontWeight: 800, fontFamily: FONT_TITLE, color: "var(--brand-action, #7c3aed)" }}>
-                            {iniciaisNome(diretor)}
-                          </span>
-                        )}
-                      </div>
                       <div className="app-org-dir-card-textcol">
                         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{d.nome}</span>

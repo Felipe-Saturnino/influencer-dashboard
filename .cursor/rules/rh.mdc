@@ -72,7 +72,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Organograma (`rh_organograma`)
 
-- Árvore de times/cargos; componentes de organograma em `lib/`.
+- Árvore de times/cargos; componentes de organograma em `lib/`. Diretorias: texto **Sobre a Diretoria** (institucional, como **Sobre a Gerência**); sem foto do diretor na visualização nem no cadastro.
 - Barra de diretorias (`OrgFiltroBarDiretorias`): carrossel + pill **Todas as diretorias** via `FiltroBarPillButton` (mesmo contrato que Histórico na barra), ícone `FilterBarIcons.diretoria` (`Building2`); `aria-pressed` quando agregador ativo.
 - Painel (`getPageContentBoxStyle`): **Visualização** — `SectionTitle` «Diretorias» + `sub` em `OrgChartHierarquico`; **Gerenciamento** — `SectionTitle` «Gerenciamento» (`compact`) + `CtaCriarButton` **Nova diretoria** na mesma linha (`perm.canEditarOk`), accordion sem título legado.
 - **Handoff:** edição, filtros, export.
