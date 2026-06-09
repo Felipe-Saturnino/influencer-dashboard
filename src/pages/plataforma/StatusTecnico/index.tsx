@@ -7,7 +7,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import {
   AlertCircle,
@@ -45,6 +45,12 @@ import {
 } from "./statusTecnicoHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
+import { StatusIntegracaoTable } from "./statusTecnicoIntegracaoTable";
+import {
+  ordenarLinhasIntegracao,
+  type IntegracaoSortCol,
+  type StatusIntegracaoRow,
+} from "./statusTecnicoIntegracaoTypes";
 import {
   getPageContentBoxStyle,
   getPageKpiSectionGapStyle,
@@ -59,10 +65,6 @@ import {
 } from "../../../lib/dateBrasil";
 import {
   labelTipoTechLog,
-  TIPO_DIAGNOSTICO_AVISO,
-  TIPO_DIAGNOSTICO_ERRO,
-  TIPO_DIAGNOSTICO_OK,
-  TIPO_DIAGNOSTICO_RESUMO,
 } from "../../../lib/platformHealthDiagnostics";
 import type { CSSProperties } from "react";
 
@@ -157,12 +159,11 @@ export default function StatusTecnico() {
   const [emailUltimoBoasVindas, setEmailUltimoBoasVindas] = useState<string | null>(null);
   const [emailUltimoReset, setEmailUltimoReset] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
-  const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
-  type IntegracaoSortCol = "integracao" | "ultimoSync" | "registros" | "erros" | "status";
   const [sortIntegracao, setSortIntegracao] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
     col: "ultimoSync",
     dir: "desc",
   });
+  const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
@@ -1271,102 +1272,70 @@ export default function StatusTecnico() {
     };
   }, [emailUltimoReset, fluxoHojeSocial, techLogs]);
 
-  const diagnosticoPlataformaRow = useMemo(() => {
-    const ultimoResumo = techLogs.find((l) => l.tipo === TIPO_DIAGNOSTICO_RESUMO);
-    const ultimoSync = ultimoResumo?.created_at ?? null;
-    let registrosUltima = 0;
-    let errosUltima = 0;
-    let status: "ok" | "warning" | "falha" = "warning";
+  const pickIntegracaoRow = useCallback(
+    (slug: string): StatusIntegracaoRow | null => {
+      const r = statusPorIntegracao.find((i) => i.slug === slug);
+      if (!r) return null;
+      return {
+        slug: r.slug,
+        nome: r.nome,
+        ultimoSync: r.ultimoSync,
+        registrosHoje: r.registrosHoje,
+        erros: r.erros,
+        status: r.status,
+        syncTipo: r.syncTipo === "none" ? "none" : r.syncTipo,
+      };
+    },
+    [statusPorIntegracao],
+  );
 
-    if (ultimoResumo) {
-      const t0 = new Date(ultimoResumo.created_at).getTime();
-      const batch = techLogs.filter((l) => {
-        const t = new Date(l.created_at).getTime();
-        return (
-          t >= t0 - 3000 &&
-          t <= t0 + 120_000 &&
-          (l.tipo === TIPO_DIAGNOSTICO_OK ||
-            l.tipo === TIPO_DIAGNOSTICO_AVISO ||
-            l.tipo === TIPO_DIAGNOSTICO_ERRO ||
-            l.tipo === TIPO_DIAGNOSTICO_RESUMO)
-        );
-      });
-      registrosUltima = batch.filter((l) => l.tipo !== TIPO_DIAGNOSTICO_RESUMO).length;
-      errosUltima = batch.filter((l) => l.tipo === TIPO_DIAGNOSTICO_ERRO).length;
-      // OK = execução concluída; avisos/achados ficam na coluna Erros e nos Logs Recentes.
-      status = "ok";
-    }
+  const linhasOperadoras = useMemo(
+    () =>
+      ordenarLinhasIntegracao(
+        (["casa_apostas", "lobby_blaze", "lobby_cda"] as const)
+          .map((slug) => pickIntegracaoRow(slug))
+          .filter(Boolean) as StatusIntegracaoRow[],
+        sortIntegracao,
+      ),
+    [pickIntegracaoRow, sortIntegracao],
+  );
 
-    return {
-      slug: "diagnostico_plataforma",
-      nome: "Diagnóstico da Plataforma",
-      ultimoSync,
-      registrosHoje: registrosUltima,
-      erros: errosUltima,
-      status,
-      syncTipo: "diagnostico" as const,
-    };
-  }, [techLogs]);
+  const linhasExternas = useMemo(
+    () =>
+      ordenarLinhasIntegracao(
+        [
+          pickIntegracaoRow("spin_na_rede_rss"),
+          pickIntegracaoRow("painel_noticias_rss"),
+          {
+            slug: socialKpisRow.slug,
+            nome: socialKpisRow.nome,
+            ultimoSync: socialKpisRow.ultimoSync,
+            registrosHoje: socialKpisRow.registrosHoje,
+            erros: socialKpisRow.erros,
+            status: socialKpisRow.status,
+            syncTipo: "social" as const,
+          },
+        ].filter(Boolean) as StatusIntegracaoRow[],
+        sortIntegracao,
+      ),
+    [pickIntegracaoRow, socialKpisRow, sortIntegracao],
+  );
 
-  const statusIntegracaoRank = (s: string | null | undefined) => {
-    if (s === "ok") return 0;
-    if (s === "warning") return 1;
-    if (s === "falha") return 2;
-    return 3;
-  };
+  const linhasEmails = useMemo(
+    () =>
+      ordenarLinhasIntegracao(
+        [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow] as StatusIntegracaoRow[],
+        sortIntegracao,
+      ),
+    [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow, sortIntegracao],
+  );
 
-  const linhasCompletasOrdenadas = useMemo(() => {
-    const arr = [
-      ...statusPorIntegracao,
-      socialKpisRow,
-      emailDiretoriaRow,
-      emailAgendaRow,
-      emailBoasVindasRow,
-      emailResetRow,
-      diagnosticoPlataformaRow,
-    ];
-    const { col, dir } = sortIntegracao;
-    arr.sort((a, b) => {
-      let c = 0;
-      switch (col) {
-        case "integracao":
-          c = compareLocaleTexto(a.nome ?? "", b.nome ?? "", dir);
-          break;
-        case "ultimoSync": {
-          const ta = "ultimoSync" in a && a.ultimoSync ? String(a.ultimoSync) : "";
-          const tb = "ultimoSync" in b && b.ultimoSync ? String(b.ultimoSync) : "";
-          c = compareLocaleTexto(ta, tb, dir);
-          break;
-        }
-        case "registros":
-          c = compareNumber(
-            "registrosHoje" in a ? Number(a.registrosHoje) : 0,
-            "registrosHoje" in b ? Number(b.registrosHoje) : 0,
-            dir,
-          );
-          break;
-        case "erros":
-          c = compareNumber(
-            "erros" in a ? Number(a.erros) : 0,
-            "erros" in b ? Number(b.erros) : 0,
-            dir,
-          );
-          break;
-        case "status":
-          c = compareNumber(
-            statusIntegracaoRank("status" in a ? (a.status as string) : null),
-            statusIntegracaoRank("status" in b ? (b.status as string) : null),
-            dir,
-          );
-          break;
-        default:
-          c = 0;
-      }
-      if (c !== 0) return c;
-      return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
-    });
-    return arr;
-  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, emailBoasVindasRow, emailResetRow, diagnosticoPlataformaRow, sortIntegracao]);
+  const handleSortIntegracao = useCallback((col: IntegracaoSortCol) => {
+    setSortIntegracao((s) => ({
+      col,
+      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+    }));
+  }, []);
 
   const techLogsFiltrados = useMemo(() => {
     const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
@@ -1402,6 +1371,7 @@ export default function StatusTecnico() {
           recuperar_senha: "E-mail — Reset de senha",
           resend: "E-mail (Resend)",
           spin_na_rede_rss: "Spin na Rede (RSS)",
+          painel_noticias_rss: "Painel de Notícias (RSS)",
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
           diagnostico_plataforma: "Diagnóstico da plataforma",
@@ -1492,6 +1462,25 @@ export default function StatusTecnico() {
       return `Hoje ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
     }
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  };
+
+  const tabelaIntegracaoProps = {
+    sortIntegracao,
+    onSortChange: handleSortIntegracao,
+    mostrarColunaAcao,
+    dataTable,
+    t,
+    formatarHora,
+    tableRowHoverBg,
+    btnAcao,
+    syncExecutando,
+    syncSocialExecutando,
+    syncSpinRssExecutando,
+    emailEnviando,
+    emailAgendaEnviando,
+    canEditarOk: perm.canEditarOk,
+    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss") => setConfirmarSync(tipo),
+    onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
 
   const salvarCidrAllowlist = async () => {
@@ -1644,19 +1633,16 @@ export default function StatusTecnico() {
         ))}
       </div>
 
-      {/* ── Status das Integrações ── */}
-      <div style={pageBox}>
-        <SectionTitle sub="pipelines, e-mails e diagnóstico manual da plataforma">
-          Status das Integrações
-        </SectionTitle>
-        {(diagnosticoMensagem ||
-          syncMensagem ||
-          syncSocialMensagem ||
-          syncSpinRssMensagem ||
-          syncLobbyBlazeMensagem ||
-          emailMensagem ||
-          emailAgendaMensagem) && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      {/* ── Mensagens de sync / e-mail / diagnóstico ── */}
+      {(diagnosticoMensagem ||
+        syncMensagem ||
+        syncSocialMensagem ||
+        syncSpinRssMensagem ||
+        syncLobbyBlazeMensagem ||
+        emailMensagem ||
+        emailAgendaMensagem) && (
+        <div style={{ ...pageBox, marginBottom: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
               diagnosticoMensagem && { prefix: "Diagnóstico", msg: diagnosticoMensagem },
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
@@ -1691,214 +1677,60 @@ export default function StatusTecnico() {
                 );
               })}
           </div>
-        )}
+        </div>
+      )}
+
+      <div style={pageBox}>
+        <SectionTitle sub="CDA e lobbies de operadoras">Status das Integrações de Operadoras</SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
-          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle()}>
-              <caption style={{ display: "none" }}>Status das integrações de dados</caption>
-              <thead>
-                <tr>
-                  <SortTableTh<IntegracaoSortCol>
-                    label="Integração"
-                    col="integracao"
-                    sortCol={sortIntegracao.col}
-                    sortDir={sortIntegracao.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortIntegracao((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<IntegracaoSortCol>
-                    label="Último Sync"
-                    col="ultimoSync"
-                    sortCol={sortIntegracao.col}
-                    sortDir={sortIntegracao.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortIntegracao((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<IntegracaoSortCol>
-                    label="Registros Hoje"
-                    col="registros"
-                    sortCol={sortIntegracao.col}
-                    sortDir={sortIntegracao.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortIntegracao((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<IntegracaoSortCol>
-                    label="Erros"
-                    col="erros"
-                    sortCol={sortIntegracao.col}
-                    sortDir={sortIntegracao.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortIntegracao((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<IntegracaoSortCol>
-                    label="Status"
-                    col="status"
-                    sortCol={sortIntegracao.col}
-                    sortDir={sortIntegracao.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortIntegracao((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  {mostrarColunaAcao && (
-                    <th scope="col" style={dataTable.thHeader}>
-                      Ação
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {linhasCompletasOrdenadas.map((row, idx) => {
-                  const isCda = row.syncTipo === "cda";
-                  const isSocial = row.syncTipo === "social";
-                  const isSpinRss = row.syncTipo === "spin_rss";
-                  const isLobbyBlaze = row.syncTipo === "lobby_blaze";
-                  const isLobbyCda = row.syncTipo === "lobby_cda";
-                  const isEmailDir = row.syncTipo === "email";
-                  const isEmailAgenda = row.syncTipo === "email_agenda";
-                  const isEmailTrack = row.syncTipo === "email_track";
-                  const isDiagnostico = row.syncTipo === "diagnostico";
-                  const syncExecutandoRow = isCda
-                    ? syncExecutando
-                    : isSocial
-                      ? syncSocialExecutando
-                      : isSpinRss
-                        ? syncSpinRssExecutando
-                        : false;
-                  const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
-                  const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
-                  const erros = "erros" in row ? row.erros : 0;
-                  const status = "status" in row ? row.status : null;
-                  const zebra = dataTable.zebraRow(idx);
-                  return (
-                    <tr
-                      key={row.slug}
-                      style={{ background: zebra }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = zebra;
-                      }}
-                    >
-                      <td style={dataTable.tdCenter}>{row.nome}</td>
-                      <td style={dataTable.tdCenter}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
-                      <td style={dataTable.tdCenter}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>{erros as number}</td>
-                      <td style={dataTable.tdCenter}>
-                        {status && (
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", gap: 6,
-                            background: status === "ok" ? `${BRAND.verde}18` : status === "warning" ? `${BRAND.amarelo}18` : `${BRAND.vermelho}18`,
-                            color: status === "ok" ? BRAND.verde : status === "warning" ? BRAND.amarelo : BRAND.vermelho,
-                            borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700,
-                            border: `1px solid ${status === "ok" ? `${BRAND.verde}44` : status === "warning" ? `${BRAND.amarelo}44` : `${BRAND.vermelho}44`}`,
-                          }}>
-                            {status === "ok" && <CheckCircle2 size={13} aria-hidden="true" />}
-                            {status === "warning" && <AlertTriangle size={13} aria-hidden="true" />}
-                            {status === "falha" && <XCircle size={13} aria-hidden="true" />}
-                            {status === "ok" ? "OK" : status === "warning" ? "Atenção" : "Falha"}
-                          </span>
-                        )}
-                      </td>
-                      {mostrarColunaAcao && (
-                      <td style={dataTable.tdCenter}>
-                        {(isLobbyBlaze || isLobbyCda || isEmailTrack) && (
-                          <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
-                        )}
-                        {(isCda || isSocial || isSpinRss) && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setConfirmarSync(
-                                isCda ? "cda" : isSocial ? "social" : "spin_rss",
-                              )}
-                            disabled={syncExecutandoRow || !perm.canEditarOk}
-                            style={btnAcao(syncExecutandoRow)}
-                          >
-                            <AcaoCtaContent
-                              executando={syncExecutandoRow}
-                              label="Sync"
-                              labelExecutando="Sincronizando..."
-                              icon={<RefreshCw size={13} aria-hidden="true" />}
-                            />
-                          </button>
-                        )}
-                        {isEmailDir && (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmarEmail("diretoria")}
-                            disabled={emailEnviando || !perm.canEditarOk}
-                            style={btnAcao(emailEnviando)}
-                          >
-                            <AcaoCtaContent executando={emailEnviando} label="Enviar" labelExecutando="Enviando..." />
-                          </button>
-                        )}
-                        {isEmailAgenda && (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmarEmail("agenda")}
-                            disabled={emailAgendaEnviando || !perm.canEditarOk}
-                            style={btnAcao(emailAgendaEnviando)}
-                          >
-                            <AcaoCtaContent executando={emailAgendaEnviando} label="Enviar" labelExecutando="Enviando..." />
-                          </button>
-                        )}
-                        {isDiagnostico && (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmarDiagnostico(true)}
-                            disabled={diagnosticoExecutando || !perm.canEditarOk}
-                            style={btnAcao(diagnosticoExecutando)}
-                            aria-label="Executar diagnóstico da plataforma"
-                            title="Executar diagnóstico da plataforma"
-                          >
-                            <AcaoCtaContent
-                              executando={diagnosticoExecutando}
-                              label="Executar"
-                              labelExecutando="Executando..."
-                              icon={<RefreshCw size={13} aria-hidden="true" />}
-                            />
-                          </button>
-                        )}
-                      </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <StatusIntegracaoTable
+            caption="Status das integrações de operadoras"
+            rows={linhasOperadoras}
+            headers={{
+              col1: "Integração",
+              col2: "Último Sync",
+              col3: "Registros Hoje",
+            }}
+            {...tabelaIntegracaoProps}
+          />
+        )}
+      </div>
+
+      <div style={pageBox}>
+        <SectionTitle sub="RSS e mídias sociais">Status de Integrações Externas</SectionTitle>
+        {loading ? (
+          <StatusTecnicoLoadingBlock />
+        ) : (
+          <StatusIntegracaoTable
+            caption="Status de integrações externas"
+            rows={linhasExternas}
+            headers={{
+              col1: "Integração",
+              col2: "Último Sync",
+              col3: "Registros Hoje",
+            }}
+            {...tabelaIntegracaoProps}
+          />
+        )}
+      </div>
+
+      <div style={pageBox}>
+        <SectionTitle sub="transacionais e crons operacionais">Status dos E-mails</SectionTitle>
+        {loading ? (
+          <StatusTecnicoLoadingBlock />
+        ) : (
+          <StatusIntegracaoTable
+            caption="Status dos e-mails transacionais e operacionais"
+            rows={linhasEmails}
+            headers={{
+              col1: "E-mail",
+              col2: "Último envio",
+              col3: "Envios Hoje",
+            }}
+            {...tabelaIntegracaoProps}
+          />
         )}
       </div>
 
@@ -2029,7 +1861,35 @@ export default function StatusTecnico() {
       </div>
 
       <div style={pageBox}>
-        <SectionTitle>Alertas</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: alertas.length === 0 ? 0 : 16,
+          }}
+        >
+          <SectionTitle compact>Alertas</SectionTitle>
+          {mostrarColunaAcao && (
+            <button
+              type="button"
+              onClick={() => setConfirmarDiagnostico(true)}
+              disabled={diagnosticoExecutando}
+              style={btnAcao(diagnosticoExecutando)}
+              aria-label="Executar diagnóstico da plataforma"
+              title="Executar diagnóstico da plataforma"
+            >
+              <AcaoCtaContent
+                executando={diagnosticoExecutando}
+                label="Executar Diagnóstico"
+                labelExecutando="Executando..."
+                icon={<RefreshCw size={13} aria-hidden="true" />}
+              />
+            </button>
+          )}
+        </div>
         {alertas.length === 0 ? (
           <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
