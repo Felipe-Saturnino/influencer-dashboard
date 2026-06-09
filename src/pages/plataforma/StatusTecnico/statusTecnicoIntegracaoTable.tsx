@@ -43,7 +43,7 @@ export function StatusIntegracaoTable({
   dataTable: DataTableBlock;
   t: { isDark?: boolean; text: string; textMuted: string };
   formatarHora: (iso: string) => string;
-  tableRowHoverBg: (isDark?: boolean) => string;
+  tableRowHoverBg: (isDark: boolean) => string;
   btnAcao: (disabled: boolean) => CSSProperties;
   syncExecutando: boolean;
   syncSocialExecutando: boolean;
@@ -196,7 +196,7 @@ export function StatusIntegracaoTable({
                 key={row.slug}
                 style={{ background: zebra }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                  e.currentTarget.style.background = tableRowHoverBg(!!t.isDark);
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = zebra;

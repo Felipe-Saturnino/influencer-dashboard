@@ -360,9 +360,8 @@ export default function StatusTecnico() {
   }, []);
 
   useEffect(() => {
-    carregar();
-    const interval = setInterval(carregar, 60000); // refresh a cada 1 min
-    return () => clearInterval(interval);
+    if (perm.canView === "nao") return;
+    void carregar();
   }, [carregar, perm.canView]);
 
   useEffect(() => {
