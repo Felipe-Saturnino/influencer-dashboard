@@ -1,5 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  sendResendEmail,
+  SECRET_DEST_EMAIL_AGENDA,
+  resolveDestinatarios,
+} from './resendMail.ts'
+import { MARCA_PRODUTO, subtituloEmailComData } from './emailTemplates/emailBrand.ts'
 
 // Edge Function: email-agenda-diaria
 // E-mail operacional: apenas bloco "Agenda do dia" (sem consolidado).
@@ -26,6 +32,15 @@ function corsHeaders(req: Request) {
 
 function hojeISO(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
+function formatarDiaMesExtenso(iso: string): string {
+  const [, m, d] = iso.split('-')
+  const meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ]
+  return `${parseInt(d, 10)} de ${meses[parseInt(m, 10) - 1]}`
 }
 
 function formatarData(iso: string): string {
@@ -138,10 +153,10 @@ function gerarHTMLAgenda(
     <div class="email-header">
       ${logoDarkMode}${logoLightMode}
       <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;">
-        Agenda do dia — Influencers
+        Agenda do dia — Streamers
       </h1>
       <p class="subtitle" style="margin:0;font-size:13px;letter-spacing:0.02em;">
-        ${dataHojeFmt} · Time operacional · Data Intelligence Spin Gaming
+        ${subtituloEmailComData(dataHojeFmt)}
       </p>
     </div>
 
@@ -158,7 +173,7 @@ function gerarHTMLAgenda(
           <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;text-align:center;">
             Dados operacionais do dia. Painel completo em
             <a href="https://data-intelligence.spingaming.com.br/" style="color:#1e36f8;font-weight:700;text-decoration:none;">
-              Data Intelligence Spin Gaming
+              ${MARCA_PRODUTO}
             </a>.
           </p>
         </div>`,
@@ -167,7 +182,7 @@ function gerarHTMLAgenda(
 
     <div style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
       <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
-        Data Intelligence Spin Gaming · E-mail automático (agenda) ·
+        ${MARCA_PRODUTO} · E-mail automático (agenda) ·
         Enviado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
       </p>
     </div>
@@ -181,17 +196,6 @@ async function enviarAgenda(
   dataHoje: string,
   agenda: LiveAgenda[],
 ): Promise<{ ok: boolean; error?: string }> {
-  const resendKey = Deno.env.get('RESEND_API_KEY')
-  if (!resendKey) return { ok: false, error: 'RESEND_API_KEY não configurada' }
-
-  const fromSpecific = (Deno.env.get('EMAIL_AGENDA_FROM') ?? '').trim()
-  const fromFallback = (Deno.env.get('RESEND_FROM') ?? '').trim()
-  const fromRaw = fromSpecific || fromFallback
-  const from =
-    fromRaw && /@[\w.-]+\.[a-z]{2,}/i.test(fromRaw)
-      ? fromRaw
-      : 'Data Intelligence <onboarding@resend.dev>'
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
   const logoUrl = supabaseUrl
     ? `${supabaseUrl}/storage/v1/object/public/logos/Logo%20Spin%20Gaming%20White.png`
@@ -201,21 +205,15 @@ async function enviarAgenda(
     : ''
 
   const html = gerarHTMLAgenda(dataHoje, agenda, logoUrl, logoUrlDark)
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from,
-      to: destinatarios,
-      subject: `Agenda do dia - ${formatarData(dataHoje)} | Influencers`,
-      html,
-    }),
+  const result = await sendResendEmail({
+    to: destinatarios,
+    subject: `Agenda do dia - ${formatarDiaMesExtenso(dataHoje)} | Streamers`,
+    html,
+    fromKind: 'relatorios',
   })
 
-  if (res.ok) return { ok: true }
-  const errText = await res.text()
-  return { ok: false, error: `Resend ${res.status}: ${errText}` }
+  if (result.ok) return { ok: true }
+  return { ok: false, error: result.error }
 }
 
 serve(async (req) => {
@@ -237,17 +235,11 @@ serve(async (req) => {
       }
     }
 
-    let destinatarios = body.destinatarios?.filter((e) => typeof e === 'string' && e.includes('@')) ?? []
-    if (destinatarios.length === 0) {
-      const envDest = Deno.env.get('EMAIL_AGENDA_DESTINATARIOS')
-      if (envDest) {
-        destinatarios = envDest.split(/[,;]/).map((e) => e.trim().toLowerCase()).filter(Boolean)
-      }
-    }
-    if (destinatarios.length === 0) {
+    const destinatarios = resolveDestinatarios(SECRET_DEST_EMAIL_AGENDA, body)
+    if (!destinatarios?.length) {
       return new Response(
         JSON.stringify({
-          error: 'Configure EMAIL_AGENDA_DESTINATARIOS ou envie destinatarios no body.',
+          error: `Configure ${SECRET_DEST_EMAIL_AGENDA} ou envie destinatarios no body.`,
         }),
         { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
       )

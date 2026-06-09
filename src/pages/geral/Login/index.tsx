@@ -3,16 +3,21 @@ import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { lerEmailLoginDaUrl } from "../../../lib/rhLoginDadosCadastroDeepLink";
 import { canalDenunciasPublicPath } from "../../../lib/canalDenunciasSpin";
+import {
+  LOGIN_ACCESS_CONTACT_LINK_COLOR,
+  LOGIN_ACCESS_CONTACT_MAILTO,
+} from "../../../lib/loginAccessContact";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 import { useApp } from "../../../context/AppContext";
 import { User } from "../../../types";
+import { LoginEsqueciSenhaModal } from "./LoginEsqueciSenhaModal";
 
 interface Props {
   onLogin: (u: User) => void;
 }
 
-const CONTACT_LINK_COLOR = "var(--brand-icon, #70cae4)";
+const CONTACT_LINK_COLOR = LOGIN_ACCESS_CONTACT_LINK_COLOR;
 
 export default function Login({ onLogin }: Props) {
   const { theme: t } = useApp();
@@ -21,6 +26,7 @@ export default function Login({ onLogin }: Props) {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [esqueciSenhaOpen, setEsqueciSenhaOpen] = useState(false);
 
   async function handleSubmit() {
     setError("");
@@ -242,6 +248,25 @@ export default function Login({ onLogin }: Props) {
                 {showPass ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
               </button>
             </div>
+            <div style={{ marginTop: 10, textAlign: "right" }}>
+              <button
+                type="button"
+                onClick={() => setEsqueciSenhaOpen(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: CONTACT_LINK_COLOR,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  fontFamily: FONT.body,
+                }}
+              >
+                Esqueceu sua senha?
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -324,7 +349,7 @@ export default function Login({ onLogin }: Props) {
             <p style={{ color: "#e5dce1", fontSize: "12px", margin: 0 }}>
               Caso precise de acesso{" "}
               <a
-                href="mailto:felipe.saturnino@spingaming.com.br?subject=Solicitação de Acesso — Data Intelligence"
+                href={LOGIN_ACCESS_CONTACT_MAILTO}
                 style={{ color: CONTACT_LINK_COLOR, fontWeight: 600, textDecoration: "underline" }}
               >
                 entre em contato
@@ -348,6 +373,12 @@ export default function Login({ onLogin }: Props) {
           </a>
         </div>
       </div>
+
+      <LoginEsqueciSenhaModal
+        open={esqueciSenhaOpen}
+        onClose={() => setEsqueciSenhaOpen(false)}
+        initialEmail={email}
+      />
     </div>
   );
 }

@@ -1,9 +1,19 @@
-# Relatório Diário — Diretoria
+# Relatório Diário — Diretoria (Aquisição)
 
-E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)** para a diretoria, contendo:
+E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)** para a diretoria.
 
-1. **Agenda do dia** — lives agendadas para hoje
-2. **Consolidado do dia anterior** — resultados de influencers (lives, horas, views, acessos, registros, FTDs, depósitos, GGR)
+**Assunto:** `Relatório Diário - {data} | Aquisição`
+
+## Conteúdo
+
+1. **Consolidado de Resultados (MTD)** — mês de referência = mês de `dataOntem`
+   - Resultado por Operadoras (linha TOTAL + operadoras)
+   - Resultado de Streamers (visão global)
+   - Resultado de Mídias Sociais (investimento = Meta Ads)
+2. **Posicionamento** — última leitura antes do envio (Mesas Blaze e Casa de Apostas)
+3. **Streamers**
+   - Agenda do dia (`dataHoje`)
+   - Resultado de Influencers do dia anterior (`dataOntem`)
 
 ---
 
@@ -14,7 +24,7 @@ E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)**
 | Secret | Descrição |
 |-------|-----------|
 | `RESEND_API_KEY` | Chave da API Resend (ver `docs/SETUP-RESEND.md`) |
-| `RESEND_FROM` | Remetente (ex: `Data Intelligence <noreply@spingaming.com.br>`) |
+| `RESEND_FROM_RELATORIOS` | Remetente (ex: `Data Intelligence <relatorios@data-intelligence.spingaming.com.br>`) — ou legado `RESEND_FROM` |
 | `RELATORIO_DIRETORIA_DESTINATARIOS` | E-mails separados por vírgula (ex: `dir1@empresa.com,dir2@empresa.com`) |
 
 ### 2. Deploy
@@ -65,10 +75,10 @@ Invoke-RestMethod -Uri $url -Method Post -Headers @{
 
 ## Conteúdo do e-mail
 
-- **Header:** Título + data
-- **Agenda:** Tabela com horário, influencer, plataforma, link
-- **Consolidado:** Tabela por influencer com métricas do dia anterior
-- **Totais:** Resumo em destaque (lives, horas, views, FTDs, depósitos, GGR)
+- **Header:** Relatório Diário — Aquisição + data
+- **Bloco 1:** Consolidado MTD (operadoras, streamers, mídias sociais)
+- **Bloco 2:** Posicionamento de mesas (Blaze e Casa de Apostas)
+- **Bloco 3:** Agenda do dia + influencers D-1
 - **Footer:** Timestamp de envio
 
 Layout profissional, adequado para apresentação à diretoria.

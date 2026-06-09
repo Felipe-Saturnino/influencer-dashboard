@@ -1,0 +1,379 @@
+---
+description: Padrão de envio de e-mail (Resend + Edge Functions) — template HTML, secrets, relatórios e transacionais.
+globs:
+  - supabase/functions/**/emailTemplates/**
+  - supabase/functions/**/relatorioEmails/**
+  - supabase/functions/**/resendMail.ts
+  - supabase/functions/README.md
+  - supabase/functions/relatorio-diario-diretoria/**
+  - supabase/functions/email-agenda-diaria/**
+  - supabase/functions/criar-usuario/**
+  - supabase/functions/criar-usuario-scout/**
+  - supabase/functions/recuperar-senha/**
+  - supabase/functions/admin-usuario-acao/**
+  - supabase/functions/criar-afiliado-network/**
+  - supabase/functions/sync-rh-prestador-auth-user/**
+  - supabase/functions/enviar-email-teste/**
+  - src/lib/financeiroEnviarPagamentoEmail.ts
+  - docs/SETUP-RESEND.md
+  - docs/SETUP-CRIAR-USUARIO.md
+  - docs/SETUP-RELATORIO-DIARIO-DIRETORIA.md
+  - docs/previews/**
+alwaysApply: false
+---
+
+# E-mails — Spin Gaming Data Intelligence (Resend)
+
+**Antes de implementar ou alterar envio de e-mail:** `global.mdc` (copy PT-BR, formatos, erros) → **este MDC** → `docs/SETUP-RESEND.md`.
+
+**Marca canônica em todo e-mail:** **`Spin Gaming Data Intelligence`** — constante `MARCA_PRODUTO` em `emailTemplates/emailBrand.ts` (cópia local em cada function com e-mail). **Proibido** inverter para “Data Intelligence Spin Gaming” em subtítulo, rodapé, CTA ou copy.
+
+**Layout do repo:** cada Edge Function é **autocontida** — ver inventário em `supabase/functions/README.md` (sem pasta `_shared` global; alinhado ao painel Supabase **+ Add File**).
+
+**Referência visual canônica (crons):** `relatorio-diario-diretoria` + `email-agenda-diaria`. Preview estático: `docs/previews/relatorio-diario-diretoria-aquisicao-preview.html`.
+
+**Escopo:** HTML enviado via **Resend** a partir de **Supabase Edge Functions**. Não usar templates no painel Resend — o HTML é montado no repositório.
+
+---
+
+## Infraestrutura — Resend vs Supabase
+
+| O quê | Onde configurar |
+|-------|-----------------|
+| Domínio verificado, SPF/DKIM, API Key | **Resend** (painel) |
+| `RESEND_API_KEY`, remetentes, listas de destinatários | **Supabase** → Edge Functions → **Secrets** |
+| HTML, assunto, queries de dados | **Código** (`supabase/functions/`) |
+
+Sem domínio **Verified** no Resend, o envio falha independentemente das Secrets.
+
+---
+
+## Tipos de e-mail
+
+| Tipo | Remetente (`sendResendEmail`) | Template |
+|------|------------------------------|----------|
+| **Relatórios / crons operacionais** | `fromKind: 'relatorios'` → **`RESEND_FROM_RELATORIOS`** | `relatorioEmails/*` — § Template canônico (shell crons) |
+| **Transacionais** (conta, reset) | `fromKind: 'sistema'` → **`RESEND_FROM_SISTEMA`** | `emailTemplates/transacionalShell.ts` + `boasVindasUsuario.ts` / `recuperacaoSenha.ts` |
+
+**Envio Resend:** `resendMail.ts` na **mesma pasta** da function → `sendResendEmail`. Não há outro provedor nem `fetch` direto ao Resend fora desse helper. Ao alterar, replicar em todas as functions que enviam e-mail (ver README).
+
+---
+
+## Inventário — o que envia e-mail (varredura canónica)
+
+### Envia via Resend (produção)
+
+| ID | Edge Function / origem | Tipo | Helper / template | Destinatário |
+|----|------------------------|------|-------------------|--------------|
+| **Cron R1** | `relatorio-diario-diretoria` | Cron | `gerarHTMLRelatorioDiretoria` | Secret `RELATORIO_DIRETORIA_DESTINATARIOS` |
+| **Cron R2** | `email-agenda-diaria` | Cron | `gerarHTMLAgenda` (inline) | Secret `EMAIL_AGENDA_DESTINATARIOS` |
+| **T1** | `criar-usuario` | Transacional | `enviarEmailBoasVindasConta` | E-mail do novo usuário |
+| **T2** | `criar-usuario-scout` (conta nova) | Transacional | `enviarEmailBoasVindasConta` | E-mail do prospecto fechado |
+| **T3** | `sync-rh-prestador-auth-user` (criação) | Transacional | `enviarEmailBoasVindasConta` | E-mail do prestador |
+| **T4** | `criar-afiliado-network` | Transacional | `enviarEmailBoasVindasConta` | E-mail do afiliado |
+| **T5** | `recuperar-senha` | Transacional | `enviarEmailRecuperacaoSenhaConta` | Quem solicitou no Login |
+| **T6** | `admin-usuario-acao` (`reset_senha`) | Transacional | `enviarEmailRecuperacaoSenhaConta` | Usuário alvo do reset |
+| **Dev** | `enviar-email-teste` | Teste | `buildEmailBoasVindasHtml` (`isPreview`) | Body + secret `EMAIL_TESTE_SECRET` |
+
+Workflows GitHub: `sync-metricas-daily.yml` chama **sync de métricas**, não envia e-mail; crons de e-mail são workflows separados (relatório / agenda — ver `docs/SETUP-RESEND.md`).
+
+### Não envia e-mail (confirmado)
+
+| Superfície | Motivo |
+|------------|--------|
+| `sync-metricas-cda` | Sync CDA; alerta 403 por e-mail **desativado** — só `tech_logs` / `sync_logs` |
+| `criar-usuario-scout` (`vincular_operadora`) | Usuário já existe; não cria credenciais |
+| `enviarPagamentoEmailCiclo` (`src/lib/financeiroEnviarPagamentoEmail.ts`) | **Stub** — retorna `{ ok: true }`; botão Financeiro ainda sem implementação |
+| Demais Edge Functions (`aprovar-pagamento`, `monitor-lobby-*`, RSS, `platform-health-check`, etc.) | Sem `sendResendEmail` no código |
+
+**Antes de adicionar envio novo:** usar helpers canónicos, documentar linha nesta tabela e atualizar este MDC.
+
+**Funções cron / relatório (remetente `relatorios`):**
+
+| Função | Secret destinatários |
+|--------|---------------------|
+| `relatorio-diario-diretoria` | `RELATORIO_DIRETORIA_DESTINATARIOS` |
+| `email-agenda-diaria` | `EMAIL_AGENDA_DESTINATARIOS` |
+
+Produção (GitHub Actions): body `{}` → **somente** a secret da função. Body `destinatarios` **só** para teste manual.
+
+### Remetentes (secrets distintas)
+
+| Secret | Uso | Fallback no código |
+|--------|-----|-------------------|
+| **`RESEND_FROM_SISTEMA`** | Boas-vindas, reset de senha (`fromKind: 'sistema'`) | `sistema@data-intelligence.spingaming.com.br` |
+| **`RESEND_FROM_RELATORIOS`** | Crons agenda + relatório diretoria (`fromKind: 'relatorios'`) | `relatorios@data-intelligence.spingaming.com.br` |
+
+Formato: `Spin Gaming Data Intelligence <endereco@dominio>` (ou label curto acordado com produto).
+
+### Boas-vindas — fluxos cobertos
+
+Helper único: **`enviarEmailBoasVindasConta`** → template `boasVindasUsuario.ts`.
+
+| Campo | Valor canônico |
+|-------|----------------|
+| **Assunto** | `Conta criada \| Spin Gaming Data Intelligence` |
+| **Cabeçalho interno (`h1`)** | `Boas Vindas` |
+| **Link Ajuda (corpo)** | `{origin}/Ajuda/ConhecaAPlataforma` — `resolveAjudaConhecaUrl(loginUrl)` em `transacionalShell.ts` |
+
+| Fluxo | Edge Function |
+|-------|---------------|
+| Admin manual | `criar-usuario` |
+| Scout (conta nova) | `criar-usuario-scout` |
+| Scout (`vincular_operadora` only) | **Sem e-mail** |
+| RH prestador | `sync-rh-prestador-auth-user` |
+| Network afiliado | `criar-afiliado-network` |
+
+Exceção Scout: modo `vincular_operadora` — usuário Auth já existia; **não** reenvia boas-vindas.
+
+Detalhes e exceções: `docs/SETUP-CRIAR-USUARIO.md`.
+
+### Senha redefinida — fluxos cobertos
+
+Helper único: **`enviarEmailRecuperacaoSenhaConta`** → template `recuperacaoSenha.ts`.
+
+| Campo | Valor canônico |
+|-------|----------------|
+| **Assunto** | `Senha redefinida \| Spin Gaming Data Intelligence` |
+| **Cabeçalho interno (`h1`)** | `Redefinição de senha` |
+| **Copy pós-credenciais** | Aviso de segurança (sem link Ajuda — diferente de boas-vindas) |
+
+| Fluxo | Edge Function |
+|-------|---------------|
+| Login «Esqueci senha» | `recuperar-senha` |
+| Gestão de Usuários — reset admin | `admin-usuario-acao` (`action: reset_senha`) |
+
+---
+
+## API de código — obrigatório em e-mails novos
+
+```typescript
+// Imports relativos à pasta da Edge Function (cópia local — ver supabase/functions/README.md)
+import {
+  sendResendEmail,
+  resolveDestinatarios,
+  SECRET_DEST_RELATORIO_DIRETORIA,
+  SECRET_DEST_EMAIL_AGENDA,
+} from './resendMail.ts'
+
+import {
+  formatarData,
+  mesExtenso,
+  fmtMoeda,
+  fmtNum,
+  fmtPct,
+  TH, TD, TD_R, TD_C,
+  secao, subtitulo, tituloSecao, tituloSubSecao,
+  emailHeaderStyles,
+  trStyle, corGGR,
+} from './relatorioEmails/common.ts'
+
+import { MARCA_PRODUTO, subtituloEmailComData } from './emailTemplates/emailBrand.ts'
+```
+
+| Helper | Ficheiro (na function) | Uso |
+|--------|------------------------|-----|
+| Envio + remetente | `resendMail.ts` | **`sendResendEmail`** — nunca `fetch` direto ao Resend em código novo |
+| Destinatários | `resolveDestinatarios(secretName, body)` | Cron vs teste |
+| **Marca + subtítulo** | `emailTemplates/emailBrand.ts` | **`MARCA_PRODUTO`**, **`subtituloEmailComData(data)`** |
+| Layout transacional | `emailTemplates/transacionalShell.ts` | Shell boas-vindas / reset |
+| Boas-vindas | `emailTemplates/enviarBoasVindas.ts` | **`enviarEmailBoasVindasConta`** |
+| Reset senha | `emailTemplates/enviarRecuperacaoSenha.ts` | **`enviarEmailRecuperacaoSenhaConta`** |
+| Layout + formatos | `relatorioEmails/common.ts` | Estilos, datas, moeda, seções |
+| Template diretoria | `relatorioEmails/templateRelatorioDiretoria.ts` | Referência multi-bloco |
+
+**Proibido em código novo:** `onboarding@resend.dev`, `RESEND_FROM` hardcoded, `window`/React no HTML, expor nomes de tabela/RPC/`error.message` do Resend na UI do e-mail.
+
+---
+
+## Template canônico — shell HTML
+
+Estrutura comum aos crons (**Agenda** e **Relatório Diretoria**):
+
+```
+<body fundo #f0eef8>
+  <div card max-width 740px, radius 16px, shadow roxa, borda #e5e7eb>
+    <header .email-header>   ← gradiente Spin + logo + h1 + subtítulo
+    <div fundo #ffffff>       ← blocos de conteúdo
+    <footer faixa #f9f7ff>   ← timestamp BRT
+```
+
+### Logo (duplo — dark / light mode)
+
+URLs públicas Supabase Storage (mesmas das funções atuais):
+
+- **Dark header:** `…/logos/Logo%20Spin%20Gaming%20White.png` — classe `header-logo-dark`
+- **Light header:** `…/logos/Logo%20Spin%20Gaming.png` — classe `header-logo-light`
+
+Largura **160px**, centralizado. Usar `emailHeaderStyles()` de `common.ts` (`prefers-color-scheme: light` inverte fundo do header e troca logo).
+
+### Cabeçalho (`h1` + subtítulo)
+
+| Elemento | Regra |
+|----------|--------|
+| **`h1`** | `22px`, peso **800**, `uppercase`, `letter-spacing: 0.04em` — título fixo do produto do e-mail (ex.: `Relatório Diário — Aquisição`, `Agenda do dia — Streamers`) |
+| **Subtítulo** | `{data formatada} · Spin Gaming Data Intelligence` — helper `subtituloEmailComData(formatarData(iso))`; **sem** “Time operacional” nem texto técnico |
+| **Fundo header** | Gradiente `#4a2082` → `#1e36f8`; light mode: `#f0eef8` + `h1` `#4a2082` |
+
+### Assunto (linha do cliente de e-mail)
+
+Padrão: `{Título curto} - {data} | {Produto}`
+
+| E-mail | Assunto canônico |
+|--------|------------------|
+| Relatório Diretoria | `Relatório Diário - {formatarData(dataHoje)} \| Aquisição` |
+| Agenda do dia | `Agenda do dia - {dia de Mês por extenso} \| Streamers` — ex.: `Agenda do dia - 9 de Junho \| Streamers` |
+
+Implementação agenda: helper local `formatarDiaMesExtenso(iso)` (`9 de Junho`, sem ano).
+
+---
+
+## Formatos de data e valores
+
+Fuso de referência: **`America/Sao_Paulo`**. ISO interno: `en-CA` (`YYYY-MM-DD`) via `hojeISO()` / `ontemISO()`.
+
+| Uso | Formato | Exemplo | Helper |
+|-----|---------|---------|--------|
+| Subtítulo header, corpo, coluna dia | Abreviado | `9 Jun 2026` | `formatarData(iso)` |
+| Título de bloco mensal | Mês por extenso + ano | `Junho 2026` | `mesExtenso(iso)` |
+| Assunto agenda | Dia + mês por extenso | `9 de Junho` | `formatarDiaMesExtenso` (agenda) |
+| Timestamp última leitura | Data abreviada + hora | `9 Jun 2026 · 05:42` | `fmtUltimaLeitura(iso)` — **sem** sufixo “BRT” |
+| Moeda BRL | `R$` + inteiro | `R$ 12.450` | `fmtMoeda` |
+| Contagens grandes | K / M | `1,2M` | `fmtNum` |
+| Percentual | 1 casa, vírgula | `15,6%` / `+100,9%` ROI | `fmtPct` |
+| Horas acumuladas | `H:MM` | `318:30` | `fmtHorasTotal` |
+| Impossível / vazio | Travessão | `—` (U+2014) | — |
+
+**Cabeçalhos de tabela (relatórios analíticos):** **sem** prefixo `R$` ou `#` nos rótulos — ex.: `GGR`, `Turnover`, `Apostas`. Valores nas células mantêm `R$` via `fmtMoeda`.
+
+**Exceção documentada:** tabela **Resultado de Influencers do dia anterior** mantém `# Depósitos`, `R$ Depósitos`, `# Saques`, `R$ Saques` (legado operacional streamers).
+
+---
+
+## Hierarquia de blocos
+
+Três níveis dentro do corpo branco:
+
+| Nível | Componente | Estilo |
+|-------|------------|--------|
+| **1 — Bloco** | `secao(tituloSecao(...), conteúdo)` | `padding: 28px 32px`; separador `border-top: 1px solid #e5e7eb` (exceto primeiro bloco) |
+| **2 — Título de bloco** | `tituloSecao` | `17px`, peso **800**, `#111827`; **pode** incluir emoji prefixo (📊 📍 🎬 📅) |
+| **3 — Subtítulo de bloco** | `subtitulo` | `13px`, `#6b7280`, *itálico*, margem inferior 16px |
+| **4 — Subsecção** | `tituloSubSecao` | `13px`, peso **700**, `#4a2082`, **uppercase**, `letter-spacing: 0.08em` |
+
+Ordem típica Relatório Diretoria: **Consolidado MTD** → **Posicionamento** → **Streamers** (agenda + D-1).
+
+---
+
+## Tabelas
+
+Wrapper scroll horizontal quando larga: `overflow-x:auto` + `min-width` na `<table>`.
+
+| Item | Valor |
+|------|--------|
+| Borda / radius | `border: 1px solid #e5e7eb`, `border-radius: 8px` |
+| Cabeçalho `<th>` | `TH` — `11px`, uppercase, `#6b7280`, fundo `#f9fafb`, borda inferior `2px #e5e7eb` |
+| Células | `TD` / `TD_R` / `TD_C` — corpo `13px`, `#111827` |
+| Zebra | Ímpar `#f9f7ff`, par `#ffffff` — `trStyle(i)` |
+| Linha **TOTAL** | Fundo `#f0eef8`, nome `font-weight: 800` |
+| Vazio (analítico período) | `Sem dados para o período selecionado.` |
+| Vazio (lista operacional) | Mensagem específica — ex.: *Não há lives agendadas…*, *Sem leitura disponível.* |
+
+**Colunas:** cabeçalhos centralizados ou alinhados ao tipo (texto à esquerda, números à direita, contagens ao centro). Links de live: `Abrir →`, cor `#1e36f8`, peso 600.
+
+**Aviso agenda (abaixo da tabela):** texto `12px`, `#9ca3af`, itálico — horários previstos podem alterar.
+
+---
+
+## Cores semânticas (e-mail)
+
+Alinhadas ao Global — **não** usar `--brand-*` em HTML de e-mail (inline fixo):
+
+| Uso | Hex |
+|-----|-----|
+| GGR / ROI positivo | `#166534` |
+| GGR / ROI negativo | `#e84025` |
+| Destaque horário / posição mesa | `#4a2082` |
+| Links | `#1e36f8` |
+| Texto muted | `#6b7280` / `#9ca3af` |
+| Fundo CTA box | `#f0eef8`, borda `#ddd6fe` |
+
+---
+
+## Ícones
+
+- **Blocos:** emoji Unicode no `tituloSecao` (📊 consolidado, 📍 posicionamento, 🎬 streamers, 📅 agenda) — permitido **só** em e-mail, não confundir com regra de `h1` de página logada.
+- **Sem** Lucide/SVG em e-mail (compatibilidade cliente).
+- **Sem** emoji no rodapé ou cabeçalho `h1`.
+
+---
+
+## Rodapé e CTA
+
+**Faixa inferior** (`#f9f7ff`, `11px`, `#9ca3af`, centralizado):
+
+```
+Spin Gaming Data Intelligence · {rótulo do tipo} · Enviado em {toLocaleString pt-BR, America/Sao_Paulo}
+```
+
+Rótulos: `Relatório automático` (diretoria) · `E-mail automático (agenda)` (agenda) · `E-mail sistêmico` (transacionais conta/reset).
+
+**Copy PT-BR (transacionais):** acentuação correta (`E-mail sistêmico`, `página de Ajuda`); boas-vindas usa «No **primeiro** acesso»; reset usa «No **próximo login**» (usuário já tinha conta). Proibido `sistemico` sem acento, PT-PT (`utilizador`, `secção`) e expor infra no corpo.
+
+**Caixa CTA** (penúltimo bloco): fundo `#f0eef8`, link **Spin Gaming Data Intelligence** → `https://data-intelligence.spingaming.com.br/`.
+
+Copy diretoria: *Estes são os dados sumarizados do dia…*  
+Copy agenda: *Dados operacionais do dia. Painel completo em…*
+
+---
+
+## Observabilidade
+
+| Evento | Onde |
+|--------|------|
+| Envio cron ok | `email_envios` (`tipo`: `relatorio_diretoria` \| `email_agenda_diaria`) |
+| Falha Resend | `tech_logs` + `console.error` — descrição **sem** stack exposta ao usuário final |
+
+Registrar `destinatarios_count`; **não** gravar lista de e-mails em log público.
+
+---
+
+## Checklist — e-mail cron novo
+
+1. Template HTML segue § shell + blocos + tabelas + rodapé.
+2. `sendResendEmail` + `fromKind: 'relatorios'`.
+3. Secret **própria** de destinatários + constante em `resendMail.ts`.
+4. Documentar em `docs/SETUP-RESEND.md` e workflow GitHub se houver cron.
+5. Preview HTML em `docs/previews/` quando layout for novo ou complexo.
+6. Copy PT-BR — Global § Linguagem e copy.
+
+---
+
+## Exceções — template e remetente
+
+| Superfície | Regra |
+|------------|--------|
+| **`criar-usuario`**, **`criar-usuario-scout`** (conta nova), **`sync-rh-prestador-auth-user`**, **`criar-afiliado-network`** | Boas-vindas via **`enviarEmailBoasVindasConta`** + `boasVindasUsuario.ts` |
+| **`recuperar-senha`**, **`admin-usuario-acao`** (`reset_senha`) | **`enviarEmailRecuperacaoSenhaConta`** + `recuperacaoSenha.ts` |
+| **`sync-metricas-cda`** | **Sem e-mail** — monitoramento em logs |
+| **`enviarPagamentoEmailCiclo`** | **Stub** — sem Resend até produto definir template |
+| **Cabeçalhos `#` / `R$`** | Somente tabela Influencers D-1 no relatório diretoria |
+| **Template Resend hosted** | Não usar |
+
+Transacionais migrados para `transacionalShell.ts` — **não** listar como «pendente migração».
+
+---
+
+## Anti-patterns
+
+- `fetch('https://api.resend.com/…')` duplicado — usar `sendResendEmail`.
+- Remetente `relatorios` hardcoded ou secret `EMAIL_AGENDA_FROM` separada — crons usam **`RESEND_FROM_RELATORIOS`** único.
+- Misturar listas de destinatários entre funções.
+- `error.message` do Resend no HTML.
+- Tabelas sem estado vazio.
+- Datas fora de BRT ou formato divergente do § Formatos.
+- Cabeçalhos de coluna com `R$`/`#` em blocos analíticos (exceto exceção Influencers D-1).
+- Marca invertida **“Data Intelligence Spin Gaming”** em subtítulo, rodapé ou CTA — usar **`MARCA_PRODUTO`** (`Spin Gaming Data Intelligence`).
+- Rodapé transacional **`E-mail sistemico`** sem acento — usar **`E-mail sistêmico`**.
+- Copy de reset com «primeiro acesso» — usar **«próximo login»** em `recuperacaoSenha.ts`.
+- Novo envio Resend fora de `sendResendEmail` ou sem entrada no § Inventário deste MDC.

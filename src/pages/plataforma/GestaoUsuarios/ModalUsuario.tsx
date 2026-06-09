@@ -19,7 +19,7 @@ interface ModalUsuarioProps {
   editando: UsuarioCompleto | null;
   operadoras: Operadora[];
   onClose: () => void;
-  onSalvo: () => void;
+  onSalvo: (aviso?: string) => void;
 }
 
 export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
@@ -219,9 +219,10 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           scopeGestorTipos: scopeGestorTiposArr,
           scopePrestadorTipos: scopePrestadorTiposArr,
         });
+        onSalvo();
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const fnData = await callSupabaseEdgeFunction<{ userId?: string }>("criar-usuario", {
+        const fnData = await callSupabaseEdgeFunction<{ userId?: string; emailEnviado?: boolean; emailErro?: string }>("criar-usuario", {
           email: email.trim().toLowerCase(),
           nome: nome.trim(),
           role,
@@ -235,8 +236,15 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
         });
         uid = fnData.userId ?? "";
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
+        if (fnData.emailEnviado === false) {
+          onSalvo(
+            fnData.emailErro ??
+              "Usuário criado, mas o e-mail de boas-vindas não foi enviado. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase, ou redefina a senha manualmente.",
+          );
+        } else {
+          onSalvo();
+        }
       }
-      onSalvo();
       onClose();
     } catch (e: unknown) {
       console.error("[GestaoUsuarios] salvar usuário:", e);
