@@ -105,26 +105,8 @@ Os três fluxos usam o **mesmo** e-mail de boas-vindas (`Conta criada | Spin Gam
 
 ---
 
-## Teste de layout (sem criar usuário)
+## Preview de layout (sem criar usuário)
 
-1. Secret **`EMAIL_TESTE_SECRET`** no Supabase (string longa aleatória).
-2. Deploy: `supabase functions deploy enviar-email-teste`
-3. PowerShell:
+Abra `docs/previews/boas-vindas-usuario-preview.html` no navegador para revisar o HTML do e-mail de boas-vindas.
 
-```powershell
-$url = "https://SEU_PROJETO.supabase.co/functions/v1/enviar-email-teste"
-$key = "sua-anon-key"
-$secret = "valor-de-EMAIL_TESTE_SECRET"
-$body = @{
-  secret = $secret
-  template = "boas_vindas"
-  to = "seu-email@spingaming.com.br"
-  loginUrl = "https://data-intelligence.spingaming.com.br"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri $url -Method Post `
-  -Headers @{ Authorization = "Bearer $key"; apikey = $key; "Content-Type" = "application/json" } `
-  -Body $body
-```
-
-Assunto do teste: `[Teste] Conta criada | Spin Gaming Data Intelligence` (senha fictícia no corpo).
+Para testar envio real, crie um usuário de teste em ambiente controlado (function `criar-usuario`) ou solicite reset de senha (`recuperar-senha`).

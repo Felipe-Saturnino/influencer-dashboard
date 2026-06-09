@@ -69,34 +69,21 @@ supabase functions deploy recuperar-senha
 supabase functions deploy criar-afiliado-network
 supabase functions deploy sync-rh-prestador-auth-user
 supabase functions deploy sync-metricas-cda
-supabase functions deploy enviar-email-teste  # preview transacionais (exige EMAIL_TESTE_SECRET)
+supabase functions deploy sync-metricas-cda
 ```
 
 ---
 
 ## 6. Teste
 
-### 6.1 E-mail boas-vindas (sem criar usuário)
+### 6.1 Layout transacional (sem enviar e-mail)
 
-1. Secret **`EMAIL_TESTE_SECRET`** (string longa) no Supabase.
-2. Deploy `enviar-email-teste` (ver acima).
-3. PowerShell — substitua `SEU_PROJETO`, anon key e secret:
+Abra no navegador os HTML estáticos em `docs/previews/`:
 
-```powershell
-$url = "https://SEU_PROJETO.supabase.co/functions/v1/enviar-email-teste"
-$key = "sua-anon-key"
-$body = @{
-  secret = "valor-de-EMAIL_TESTE_SECRET"
-  template = "boas_vindas"
-  to = "felipe.saturnino@spingaming.com.br"
-} | ConvertTo-Json
+- `boas-vindas-usuario-preview.html`
+- `recuperacao-senha-preview.html`
 
-Invoke-RestMethod -Uri $url -Method Post `
-  -Headers @{ Authorization = "Bearer $key"; apikey = $key; "Content-Type" = "application/json" } `
-  -Body $body
-```
-
-Detalhes: `docs/SETUP-CRIAR-USUARIO.md`.
+Para validar envio real, use criar usuário de teste ou reset de senha em ambiente controlado (functions `criar-usuario` / `recuperar-senha`).
 
 ### 6.2 Relatório diretoria (destinatário de teste)
 

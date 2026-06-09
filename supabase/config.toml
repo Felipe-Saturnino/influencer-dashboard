@@ -56,10 +56,6 @@ verify_jwt = false
 verify_jwt = false
 # Agenda do dia (operacional); destinatários em EMAIL_AGENDA_DESTINATARIOS
 
-[functions.enviar-email-teste]
-verify_jwt = false
-# Preview de e-mails transacionais; exige EMAIL_TESTE_SECRET no body
-
 [functions.sync-spin-na-rede-rss]
 verify_jwt = false
 

@@ -13,7 +13,6 @@ globs:
   - supabase/functions/admin-usuario-acao/**
   - supabase/functions/criar-afiliado-network/**
   - supabase/functions/sync-rh-prestador-auth-user/**
-  - supabase/functions/enviar-email-teste/**
   - src/lib/financeiroEnviarPagamentoEmail.ts
   - docs/SETUP-RESEND.md
   - docs/SETUP-CRIAR-USUARIO.md
@@ -73,7 +72,6 @@ Sem domínio **Verified** no Resend, o envio falha independentemente das Secrets
 | **T4** | `criar-afiliado-network` | Transacional | `enviarEmailBoasVindasConta` | E-mail do afiliado |
 | **T5** | `recuperar-senha` | Transacional | `enviarEmailRecuperacaoSenhaConta` | Quem solicitou no Login |
 | **T6** | `admin-usuario-acao` (`reset_senha`) | Transacional | `enviarEmailRecuperacaoSenhaConta` | Usuário alvo do reset |
-| **Dev** | `enviar-email-teste` | Teste | `buildEmailBoasVindasHtml` (`isPreview`) | Body + secret `EMAIL_TESTE_SECRET` |
 
 Workflows GitHub: `sync-metricas-daily.yml` chama **sync de métricas**, não envia e-mail; crons de e-mail são workflows separados (relatório / agenda — ver `docs/SETUP-RESEND.md`).
 
