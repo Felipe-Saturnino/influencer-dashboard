@@ -106,8 +106,8 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
       {phase === "form" && (
         <>
           <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, lineHeight: 1.55, fontFamily: FONT.body }}>
-            Informe o e-mail da sua conta. Se estiver cadastrado, redefiniremos sua senha para a senha
-            temporária padrão e enviaremos um e-mail com os passos para acessar a plataforma.
+            Informe o e-mail da sua conta. Se estiver cadastrado, redefiniremos sua senha e enviaremos um
+            e-mail com os passos para acessar a plataforma novamente.
           </p>
 
           <label

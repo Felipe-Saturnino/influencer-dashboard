@@ -248,7 +248,7 @@ export default function Login({ onLogin }: Props) {
                 {showPass ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
               </button>
             </div>
-            <div style={{ marginTop: 10, textAlign: "right" }}>
+            <div style={{ marginTop: 10, textAlign: "center" }}>
               <button
                 type="button"
                 onClick={() => setEsqueciSenhaOpen(true)}
