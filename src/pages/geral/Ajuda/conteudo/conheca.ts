@@ -878,7 +878,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/registros e erros. Com permissão de Editar, use **Executar** na coluna Ação da linha de diagnóstico (não dispara sync nem e-mail; o resultado entra em **Logs Recentes**). Sync e envios nas demais linhas exigem confirmação antes de executar.",
+          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico.",
       },
       {
         subtitulo: "Logs Recentes",

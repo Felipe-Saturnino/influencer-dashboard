@@ -471,6 +471,7 @@ serve(async (req) => {
 
     const mail = await enviarEmailBoasVindasConta({
       supabaseUrl,
+      supabase,
       to: email.trim().toLowerCase(),
       nome: nome.trim(),
       senhaTemporaria: senhaPadrao,

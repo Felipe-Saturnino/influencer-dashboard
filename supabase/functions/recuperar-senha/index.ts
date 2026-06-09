@@ -133,6 +133,7 @@ serve(async (req) => {
 
   const mail = await enviarEmailRecuperacaoSenhaConta({
     supabaseUrl,
+    supabase,
     to: email,
     nome,
     senhaTemporaria: senhaPadrao,
@@ -141,15 +142,6 @@ serve(async (req) => {
 
   if (!mail.ok) {
     console.error('[recuperar-senha] Falha Resend:', mail.error)
-    try {
-      await supabase.from('tech_logs').insert({
-        integracao_slug: null,
-        tipo: 'recuperar_senha',
-        descricao: mail.error,
-      })
-    } catch (e) {
-      console.warn('[recuperar-senha] Falha ao registrar tech_log:', e)
-    }
     return new Response(JSON.stringify({ status: 'email_error' satisfies Status }), {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
