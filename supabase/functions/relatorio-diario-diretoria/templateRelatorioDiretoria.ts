@@ -1,5 +1,5 @@
 import type { RelatorioDiretoriaData } from './fetchRelatorioDiretoriaData.ts'
-import { MARCA_PRODUTO, subtituloEmailComData } from '../emailTemplates/emailBrand.ts'
+import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 import {
   TD,
   TD_C,

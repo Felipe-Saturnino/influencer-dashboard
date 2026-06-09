@@ -1,9 +1,9 @@
 ---
 description: Padrão de envio de e-mail (Resend + Edge Functions) — template HTML, secrets, relatórios e transacionais.
 globs:
-  - supabase/functions/**/emailTemplates/**
-  - supabase/functions/**/relatorioEmails/**
   - supabase/functions/**/resendMail.ts
+  - supabase/functions/**/emailBrand.ts
+  - supabase/functions/**/common.ts
   - supabase/functions/README.md
   - supabase/functions/relatorio-diario-diretoria/**
   - supabase/functions/email-agenda-diaria/**
@@ -28,7 +28,7 @@ alwaysApply: false
 
 **Marca canônica em todo e-mail:** **`Spin Gaming Data Intelligence`** — constante `MARCA_PRODUTO` em `emailTemplates/emailBrand.ts` (cópia local em cada function com e-mail). **Proibido** inverter para “Data Intelligence Spin Gaming” em subtítulo, rodapé, CTA ou copy.
 
-**Layout do repo:** cada Edge Function é **autocontida** — ver inventário em `supabase/functions/README.md` (sem pasta `_shared` global; alinhado ao painel Supabase **+ Add File**).
+**Layout do repo:** cada Edge Function é **autocontida** — todos os ficheiros **no mesmo nível** que `index.ts` (painel Supabase não suporta subpastas). Inventário: `supabase/functions/README.md`.
 
 **Referência visual canônica (crons):** `relatorio-diario-diretoria` + `email-agenda-diaria`. Preview estático: `docs/previews/relatorio-diario-diretoria-aquisicao-preview.html`.
 
@@ -166,21 +166,21 @@ import {
   secao, subtitulo, tituloSecao, tituloSubSecao,
   emailHeaderStyles,
   trStyle, corGGR,
-} from './relatorioEmails/common.ts'
+} from './common.ts'
 
-import { MARCA_PRODUTO, subtituloEmailComData } from './emailTemplates/emailBrand.ts'
+import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 ```
 
-| Helper | Ficheiro (na function) | Uso |
-|--------|------------------------|-----|
+| Helper | Ficheiro (mesmo nível que `index.ts`) | Uso |
+|--------|----------------------------------------|-----|
 | Envio + remetente | `resendMail.ts` | **`sendResendEmail`** — nunca `fetch` direto ao Resend em código novo |
 | Destinatários | `resolveDestinatarios(secretName, body)` | Cron vs teste |
-| **Marca + subtítulo** | `emailTemplates/emailBrand.ts` | **`MARCA_PRODUTO`**, **`subtituloEmailComData(data)`** |
-| Layout transacional | `emailTemplates/transacionalShell.ts` | Shell boas-vindas / reset |
-| Boas-vindas | `emailTemplates/enviarBoasVindas.ts` | **`enviarEmailBoasVindasConta`** |
-| Reset senha | `emailTemplates/enviarRecuperacaoSenha.ts` | **`enviarEmailRecuperacaoSenhaConta`** |
-| Layout + formatos | `relatorioEmails/common.ts` | Estilos, datas, moeda, seções |
-| Template diretoria | `relatorioEmails/templateRelatorioDiretoria.ts` | Referência multi-bloco |
+| **Marca + subtítulo** | `emailBrand.ts` | **`MARCA_PRODUTO`**, **`subtituloEmailComData(data)`** |
+| Layout transacional | `transacionalShell.ts` | Shell boas-vindas / reset |
+| Boas-vindas | `enviarBoasVindas.ts` | **`enviarEmailBoasVindasConta`** |
+| Reset senha | `enviarRecuperacaoSenha.ts` | **`enviarEmailRecuperacaoSenhaConta`** |
+| Layout + formatos | `common.ts` | Estilos, datas, moeda, seções |
+| Template diretoria | `templateRelatorioDiretoria.ts` | Referência multi-bloco |
 
 **Proibido em código novo:** `onboarding@resend.dev`, `RESEND_FROM` hardcoded, `window`/React no HTML, expor nomes de tabela/RPC/`error.message` do Resend na UI do e-mail.
 

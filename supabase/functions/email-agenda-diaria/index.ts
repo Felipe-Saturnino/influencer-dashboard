@@ -5,7 +5,7 @@ import {
   SECRET_DEST_EMAIL_AGENDA,
   resolveDestinatarios,
 } from './resendMail.ts'
-import { MARCA_PRODUTO, subtituloEmailComData } from './emailTemplates/emailBrand.ts'
+import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 
 // Edge Function: email-agenda-diaria
 // E-mail operacional: apenas bloco "Agenda do dia" (sem consolidado).

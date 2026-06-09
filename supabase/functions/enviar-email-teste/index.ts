@@ -3,8 +3,8 @@ import { sendResendEmail } from './resendMail.ts'
 import {
   ASSUNTO_BOAS_VINDAS,
   buildEmailBoasVindasHtml,
-} from './emailTemplates/boasVindasUsuario.ts'
-import { DEFAULT_LOGIN_URL } from './emailTemplates/transacionalShell.ts'
+} from './boasVindasUsuario.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 /**
  * Envio de preview de e-mails transacionais — somente com secret EMAIL_TESTE_SECRET.

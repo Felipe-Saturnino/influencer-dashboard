@@ -1,4 +1,4 @@
-import { sendResendEmail } from '../resendMail.ts'
+import { sendResendEmail } from './resendMail.ts'
 import { ASSUNTO_BOAS_VINDAS, buildEmailBoasVindasHtml } from './boasVindasUsuario.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 

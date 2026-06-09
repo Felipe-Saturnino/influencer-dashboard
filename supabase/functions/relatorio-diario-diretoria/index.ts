@@ -1,9 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendResendEmail, SECRET_DEST_RELATORIO_DIRETORIA, resolveDestinatarios } from './resendMail.ts'
-import { formatarData } from './relatorioEmails/common.ts'
-import { fetchRelatorioDiretoriaData } from './relatorioEmails/fetchRelatorioDiretoriaData.ts'
-import { gerarHTMLRelatorioDiretoria } from './relatorioEmails/templateRelatorioDiretoria.ts'
+import { formatarData } from './common.ts'
+import { fetchRelatorioDiretoriaData } from './fetchRelatorioDiretoriaData.ts'
+import { gerarHTMLRelatorioDiretoria } from './templateRelatorioDiretoria.ts'
 
 const EMAIL_TIPO = 'relatorio_diretoria' as const
 

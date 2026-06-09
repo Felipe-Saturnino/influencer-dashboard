@@ -2,8 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
-import { enviarEmailBoasVindasConta } from './emailTemplates/enviarBoasVindas.ts'
-import { DEFAULT_LOGIN_URL } from './emailTemplates/transacionalShell.ts'
+import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 /**
  * Edge: sync-rh-prestador-auth-user

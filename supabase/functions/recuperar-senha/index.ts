@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { enviarEmailRecuperacaoSenhaConta } from './emailTemplates/enviarRecuperacaoSenha.ts'
-import { DEFAULT_LOGIN_URL } from './emailTemplates/transacionalShell.ts'
+import { enviarEmailRecuperacaoSenhaConta } from './enviarRecuperacaoSenha.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },

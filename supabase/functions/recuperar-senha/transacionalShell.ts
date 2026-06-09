@@ -1,4 +1,4 @@
-import { emailHeaderStyles, formatarData, hojeISO } from '../relatorioEmails/common.ts'
+import { emailHeaderStyles, formatarData, hojeISO } from './common.ts'
 import { MARCA_PRODUTO } from './emailBrand.ts'
 
 export const DEFAULT_LOGIN_URL = 'https://data-intelligence.spingaming.com.br'

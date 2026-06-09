@@ -1,4 +1,4 @@
-import { formatarData, hojeISO, secao } from '../relatorioEmails/common.ts'
+import { formatarData, hojeISO, secao } from './common.ts'
 import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 import {
   DEFAULT_LOGIN_URL,

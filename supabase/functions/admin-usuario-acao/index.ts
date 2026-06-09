@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
-import { enviarEmailRecuperacaoSenhaConta } from './emailTemplates/enviarRecuperacaoSenha.ts'
-import { DEFAULT_LOGIN_URL } from './emailTemplates/transacionalShell.ts'
+import { enviarEmailRecuperacaoSenhaConta } from './enviarRecuperacaoSenha.ts'
+import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 // Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password + e-mail
 // Usa service_role; apenas admins (JWT) podem chamar.
