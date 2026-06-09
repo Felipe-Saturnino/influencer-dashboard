@@ -415,7 +415,7 @@ export default function RhOrganogramaPage() {
         .insert({ id: newId, ...payloadBase, status: "ativo", centro_custos });
       setSalvandoDir(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é diretor(a) de outra diretoria ativa.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
         else setErroGlobal(error.message);
         return;
       }
@@ -428,7 +428,7 @@ export default function RhOrganogramaPage() {
         .eq("id", row.id);
       setSalvandoDir(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é diretor(a) de outra diretoria ativa.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
         else setErroGlobal(error.message);
         return;
       }
@@ -548,7 +548,7 @@ export default function RhOrganogramaPage() {
         .insert({ id: newId, ...payload, gerencia_id: mdTime.gerenciaId, status: "ativo", centro_custos });
       setSalvandoTime(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outro time ativo.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
         else setErroGlobal(error.message);
         return;
       }
@@ -557,7 +557,7 @@ export default function RhOrganogramaPage() {
       const { error } = await supabase.from("rh_org_times").update(payload).eq("id", mdTime.row.id);
       setSalvandoTime(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outro time ativo.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
         else setErroGlobal(error.message);
         return;
       }
@@ -595,7 +595,7 @@ export default function RhOrganogramaPage() {
       tipo: "time",
       row: ti,
       titulo: "Desativar time",
-      corpo: `O time "${ti.nome}" ficará inativo. ${q} funcionário(s) ativo(s) ainda podem estar vinculados a este time no cadastro — revise o cadastro de funcionários.`,
+      corpo: `O time "${ti.nome}" ficará inativo. ${q} prestador(es) ainda podem estar vinculados a este time no cadastro — revise em Gestão de Prestadores.`,
     });
   };
 
@@ -624,7 +624,7 @@ export default function RhOrganogramaPage() {
       titulo: "Excluir time",
       corpo: `O time "${ti.nome}" será removido definitivamente do organograma.${
         q > 0
-          ? ` ${q} funcionário(s) ativo(s) com vínculo a este time ficarão sem time (campo esvaziado automaticamente).`
+          ? ` ${q} prestador(es) com vínculo a este time ficarão sem time (campo esvaziado automaticamente).`
           : ""
       } Esta ação não pode ser desfeita.`,
     });
@@ -641,7 +641,7 @@ export default function RhOrganogramaPage() {
       row: g,
       titulo: "Excluir gerência",
       corpo: `A gerência "${g.nome}" e ${nTimes} time(s) abaixo dela serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
+        nFunc > 0 ? ` ${nFunc} prestador(es) perderão o vínculo de time.` : ""
       } Esta ação não pode ser desfeita.`,
     });
   };
@@ -659,7 +659,7 @@ export default function RhOrganogramaPage() {
       row: d,
       titulo: "Excluir diretoria",
       corpo: `A diretoria "${d.nome}", ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
+        nFunc > 0 ? ` ${nFunc} prestador(es) perderão o vínculo de time.` : ""
       } Esta ação não pode ser desfeita.`,
     });
   };
@@ -725,8 +725,28 @@ export default function RhOrganogramaPage() {
 
   if (perm.loading) {
     return (
-      <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-        <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
+      <div
+        className="app-page-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 200,
+          color: t.textMuted,
+          fontSize: 13,
+          fontFamily: FONT.body,
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <Loader2
+            className="app-lucide-spin"
+            size={22}
+            color="var(--brand-action, #7c3aed)"
+            aria-hidden
+            style={{ marginBottom: 12 }}
+          />
+          <div>Carregando…</div>
+        </div>
       </div>
     );
   }
@@ -811,8 +831,15 @@ export default function RhOrganogramaPage() {
         style={{ ...orgPanelBox, minHeight: 200 }}
       >
         {loading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
+          <div style={{ textAlign: "center", padding: 40, color: t.textMuted, fontSize: 13 }}>
+            <Loader2
+              className="app-lucide-spin"
+              size={22}
+              color="var(--brand-action, #7c3aed)"
+              aria-hidden
+              style={{ marginBottom: 12 }}
+            />
+            <div>Carregando…</div>
           </div>
         ) : (
           <>

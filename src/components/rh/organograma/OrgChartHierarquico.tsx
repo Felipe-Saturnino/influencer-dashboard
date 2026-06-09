@@ -4,6 +4,7 @@ import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import SectionTitle from "../../dashboard/SectionTitle";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { ORG_MSG_BUSCA_SEM_RESULTADO, ORG_MSG_SEM_DIRETORIAS } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
 
@@ -106,7 +107,7 @@ export function OrgChartHierarquico({
   if (arvore.length === 0) {
     return (
       <div style={{ padding: "32px 16px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body, fontSize: 14 }}>
-        Sem dados para o período selecionado.
+        {ORG_MSG_SEM_DIRETORIAS}
       </div>
     );
   }
@@ -132,7 +133,7 @@ export function OrgChartHierarquico({
     <div style={{ fontFamily: FONT.body }}>
       <section aria-labelledby="org-hierarquia-titulo">
         <div id="org-hierarquia-titulo">
-          <SectionTitle sub="Selecione uma diretoria para ver gerências, times e equipe.">
+          <SectionTitle sub="Selecione uma diretoria para ver gerências, times e prestadores.">
             Diretorias
           </SectionTitle>
         </div>
@@ -157,7 +158,7 @@ export function OrgChartHierarquico({
               lineHeight: 1.5,
             }}
           >
-            Sem dados para o período selecionado.
+            {ORG_MSG_BUSCA_SEM_RESULTADO}
           </div>
         ) : (
           <ul className="app-org-dir-cards" aria-label="Lista de diretorias" style={{ listStyle: "none", margin: 0, padding: 0 }}>

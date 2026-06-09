@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { FONT } from "../../../constants/theme";
+import { ORG_MSG_SEM_DIRETORIAS } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
@@ -67,7 +68,7 @@ export function OrgAccordion({
   if (arvore.length === 0) {
     return (
       <div style={{ padding: "32px 16px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body, fontSize: 14 }}>
-        Nenhuma diretoria cadastrada.
+        {ORG_MSG_SEM_DIRETORIAS}
       </div>
     );
   }
@@ -158,7 +159,7 @@ export function OrgAccordion({
             <div style={{ padding: "6px 14px 0", fontSize: 12, color: t.textMuted }}>
               {respD ? `Diretor(a): ${respD}` : `Diretor(a): —`}
               <br />
-              Centro de Custos: {d.centro_custos}
+              Centro de custos: {d.centro_custos}
             </div>
             {openD ? (
               <div id={`panel-${kd}`} role="region" aria-labelledby={kd} style={{ padding: "10px 12px 12px" }}>
@@ -248,7 +249,7 @@ export function OrgAccordion({
                         <div style={{ padding: "4px 12px 0", fontSize: 12, color: t.textMuted }}>
                           Líder imediato: {respG.trim() ? respG : "—"}
                           <br />
-                          Centro de Custos: {g.centro_custos}
+                          Centro de custos: {g.centro_custos}
                         </div>
                         {openG ? (
                           <div id={`panel-${kg}`} role="region" aria-labelledby={kg} style={{ padding: "8px 10px 10px" }}>
@@ -280,11 +281,11 @@ export function OrgAccordion({
                                         <div style={{ fontSize: 11, color: t.textMuted }}>
                                           Líder imediato: {respT.trim() ? respT : "—"}
                                           <br />
-                                          Centro de Custos: {ti.centro_custos}
+                                          Centro de custos: {ti.centro_custos}
                                           {q > 0 ? (
                                             <>
                                               <br />
-                                              {q} funcionário(s) ativo(s)
+                                              {q} prestador(es)
                                             </>
                                           ) : null}
                                         </div>

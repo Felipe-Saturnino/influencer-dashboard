@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { ORG_MSG_SEM_GERENCIAS, ORG_MSG_SEM_PRESTADORES } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
@@ -194,7 +195,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                       <>
                         <h4 style={{ ...linhaEstilo.sobreTitulo, marginBottom: 8 }}>Prestadores</h4>
                         {listaPrestadoresSemTime.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+                          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{ORG_MSG_SEM_PRESTADORES}</p>
                         ) : (
                           <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.55 }}>
                             {listaPrestadoresSemTime.map((n, i) => (
@@ -250,7 +251,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                                   >
                                     {membros.length === 0 ? (
                                       <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                                        Sem dados para o período selecionado.
+                                        {ORG_MSG_SEM_PRESTADORES}
                                       </p>
                                     ) : (
                                       <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.5 }}>
@@ -274,7 +275,7 @@ export function OrgVisualizacaoDiretoriaUnica({
           </div>
         </section>
       ) : (
-        <p style={{ margin: "0 0 24px", fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+        <p style={{ margin: "0 0 24px", fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>{ORG_MSG_SEM_GERENCIAS}</p>
       )}
     </div>
   );
