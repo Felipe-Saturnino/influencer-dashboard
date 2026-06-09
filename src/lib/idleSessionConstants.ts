@@ -1,5 +1,5 @@
 /** Tempo máximo sem interação antes do logout automático. */
-export const IDLE_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+export const IDLE_SESSION_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** Intervalo mínimo entre gravações de atividade no localStorage (sincronização entre abas). */
 export const IDLE_SESSION_ACTIVITY_THROTTLE_MS = 15_000;
