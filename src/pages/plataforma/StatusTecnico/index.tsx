@@ -1111,13 +1111,13 @@ export default function StatusTecnico() {
     : "0";
 
   if (syncLogsSpinRss.length > 0 && !ultimoSyncSpinRssOk && ultimoSyncSpinRssFalha) {
-    alertas.push({ nivel: "erro", msg: "Nenhum ingest Spin na Rede (RSS) com sucesso" });
+    alertas.push({ nivel: "erro", msg: "Nenhuma ingestão Spin na Rede (RSS) com sucesso" });
   }
   if (passouHorarioSocial && spinRssTeveHistorico && !spinRssOkHoje) {
-    alertas.push({ nivel: "erro", msg: "Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)" });
+    alertas.push({ nivel: "erro", msg: "Ingestão Spin na Rede (RSS) não executou hoje (agendado 6h)" });
   }
   if (parseFloat(taxaErroSpinRss) > 5 && syncLogsSpinRss.length > 0) {
-    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no ingest Spin na Rede RSS (${taxaErroSpinRss}%)` });
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta na ingestão Spin na Rede (RSS) (${taxaErroSpinRss}%)` });
   }
 
   // ── Lobby Blaze ──
@@ -1648,8 +1648,8 @@ export default function StatusTecnico() {
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
               syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
-              emailMensagem && { prefix: "E-mail Diretoria", msg: emailMensagem },
-              emailAgendaMensagem && { prefix: "E-mail Agenda", msg: emailAgendaMensagem },
+              emailMensagem && { prefix: "E-mail de Relatório", msg: emailMensagem },
+              emailAgendaMensagem && { prefix: "E-mail de Agenda", msg: emailAgendaMensagem },
             ]
               .filter(Boolean)
               .map((item, i) => {
@@ -1680,7 +1680,7 @@ export default function StatusTecnico() {
       )}
 
       <div style={pageBox}>
-        <SectionTitle sub="CDA e lobbies de operadoras">Status das Integrações de Operadoras</SectionTitle>
+        <SectionTitle sub="Aquisição e Lobby das Operadoras">Status das Integrações de Operadoras</SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
@@ -1698,12 +1698,12 @@ export default function StatusTecnico() {
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="RSS e mídias sociais">Status de Integrações Externas</SectionTitle>
+        <SectionTitle sub="RSS e mídias sociais">Status das Integrações Externas</SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
           <StatusIntegracaoTable
-            caption="Status de integrações externas"
+            caption="Status das integrações externas"
             rows={linhasExternas}
             headers={{
               col1: "Integração",
@@ -1716,12 +1716,12 @@ export default function StatusTecnico() {
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="transacionais e crons operacionais">Status dos E-mails</SectionTitle>
+        <SectionTitle sub="transacionais, sistêmicos e operacionais">Status dos E-mails</SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
           <StatusIntegracaoTable
-            caption="Status dos e-mails transacionais e operacionais"
+            caption="Status dos e-mails transacionais, sistêmicos e operacionais"
             rows={linhasEmails}
             headers={{
               col1: "E-mail",
@@ -1744,10 +1744,10 @@ export default function StatusTecnico() {
             { key: "spin_rss", label: "Spin RSS" },
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
-            { key: "relatorio_diretoria", label: "E-mail Relatório" },
-            { key: "email_agenda_diaria", label: "E-mail Agenda" },
+            { key: "relatorio_diretoria", label: "E-mail de Relatório" },
+            { key: "email_agenda_diaria", label: "E-mail de Agenda" },
             { key: "boas_vindas", label: "Boas-vindas" },
-            { key: "recuperar_senha", label: "Reset senha" },
+            { key: "recuperar_senha", label: "Reset de senha" },
           ].map((item) => (
             <span key={item.key} style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: fluxoCor(item.key), flexShrink: 0, display: "inline-block" }} />
@@ -2200,9 +2200,9 @@ export default function StatusTecnico() {
                   ["E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo email_agenda_diaria)"],
                   ["Erro ao enviar E-mail de Boas-vindas (Resend)", "tech_logs boas_vindas (24h)"],
                   ["Erro ao enviar E-mail de Reset de Senha (Resend)", "tech_logs recuperar_senha (24h)"],
-                  ["Nenhum ingest Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
-                  ["Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
-                  ["Taxa de erro alta no ingest Spin na Rede RSS", "> 5% em sync_logs (slug spin_na_rede_rss)"],
+                  ["Nenhuma ingestão Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
+                  ["Ingestão Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
+                  ["Taxa de erro alta na ingestão Spin na Rede (RSS)", "> 5% em sync_logs (slug spin_na_rede_rss)"],
                   ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
                   ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
@@ -2264,10 +2264,10 @@ export default function StatusTecnico() {
             <h2 id="status-tecnico-confirm-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
-              {confirmarSync === "spin_rss" && "Confirmar ingest Spin na Rede (RSS)"}
+              {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
-              {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
-              {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
+              {confirmarEmail === "diretoria" && "Confirmar envio — E-mail de Relatório"}
+              {confirmarEmail === "agenda" && "Confirmar envio — E-mail de Agenda"}
               {confirmarDiagnostico && "Executar diagnóstico da plataforma"}
             </h2>
             <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.textMuted, marginBottom: 0 }}>
