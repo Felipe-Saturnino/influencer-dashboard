@@ -160,6 +160,10 @@ export function labelTipoTechLog(tipo: string): string {
     [TIPO_DIAGNOSTICO_OK]: "Diagnóstico OK",
     [TIPO_DIAGNOSTICO_AVISO]: "Diagnóstico atenção",
     [TIPO_DIAGNOSTICO_ERRO]: "Diagnóstico falha",
+    boas_vindas: "E-mail boas-vindas",
+    recuperar_senha: "E-mail reset senha",
+    relatorio_diretoria: "E-mail relatório",
+    email_agenda_diaria: "E-mail agenda",
   };
   return map[tipo] ?? tipo;
 }

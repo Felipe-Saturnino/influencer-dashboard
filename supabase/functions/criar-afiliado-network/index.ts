@@ -270,6 +270,7 @@ serve(async (req) => {
 
     const mail = await enviarEmailBoasVindasConta({
       supabaseUrl,
+      supabase,
       to: email,
       nome,
       senhaTemporaria: senhaPadrao,

@@ -380,6 +380,7 @@ serve(async (req) => {
     const loginUrl = (typeof raw.loginUrl === 'string' ? raw.loginUrl : '').trim() || DEFAULT_LOGIN_URL
     const mail = await enviarEmailBoasVindasConta({
       supabaseUrl,
+      supabase,
       to: email,
       nome,
       senhaTemporaria: senhaPadrao,

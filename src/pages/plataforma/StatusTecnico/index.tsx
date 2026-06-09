@@ -154,6 +154,8 @@ export default function StatusTecnico() {
   const [registrosHoje, setRegistrosHoje] = useState(0);
   const [emailUltimoDiretoria, setEmailUltimoDiretoria] = useState<string | null>(null);
   const [emailUltimoAgenda, setEmailUltimoAgenda] = useState<string | null>(null);
+  const [emailUltimoBoasVindas, setEmailUltimoBoasVindas] = useState<string | null>(null);
+  const [emailUltimoReset, setEmailUltimoReset] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   type IntegracaoSortCol = "integracao" | "ultimoSync" | "registros" | "erros" | "status";
@@ -309,6 +311,8 @@ export default function StatusTecnico() {
       }, null);
     setEmailUltimoDiretoria(ultimoPorTipo("relatorio_diretoria"));
     setEmailUltimoAgenda(ultimoPorTipo("email_agenda_diaria"));
+    setEmailUltimoBoasVindas(ultimoPorTipo("boas_vindas"));
+    setEmailUltimoReset(ultimoPorTipo("recuperar_senha"));
     setEmailEnviosCount((resEmails.data ?? []).length);
 
     const datasSet = new Set<string>([
@@ -988,7 +992,10 @@ export default function StatusTecnico() {
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
-    l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
+    l.tipo === "relatorio_diretoria" ||
+    l.tipo === "email_agenda_diaria" ||
+    l.tipo === "boas_vindas" ||
+    l.tipo === "recuperar_senha",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
   const totalTentativas = cdaTotal + spinRssTotal + lobbyBlazeTotal + lobbyCdaTotal + socialTotal + Math.max(emailTotal, 1);
@@ -1075,6 +1082,22 @@ export default function StatusTecnico() {
   }
   if (passouHorarioSocial && !emailAgendaHoje) {
     alertas.push({ nivel: "erro", msg: "E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)" });
+  }
+
+  const techLogsBoasVindas24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return l.tipo === "boas_vindas" && created >= vinteQuatroHoras;
+  });
+  if (techLogsBoasVindas24h.length > 0) {
+    alertas.push({ nivel: "aviso", msg: "Erro ao enviar E-mail de Boas-vindas (Resend)" });
+  }
+
+  const techLogsResetSenha24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return l.tipo === "recuperar_senha" && created >= vinteQuatroHoras;
+  });
+  if (techLogsResetSenha24h.length > 0) {
+    alertas.push({ nivel: "aviso", msg: "Erro ao enviar E-mail de Reset de Senha (Resend)" });
   }
 
   // ── Ingest Spin na Rede (RSS) — Actions 6h BRT ──
@@ -1199,7 +1222,7 @@ export default function StatusTecnico() {
   const emailDiretoriaRow = useMemo(
     () => ({
       slug: "email_diretoria",
-      nome: "Enviar e-mail para diretoria",
+      nome: "E-mail de Relatório",
       ultimoSync: emailUltimoDiretoria,
       registrosHoje: fluxoHojeSocial?.emails?.relatorio_diretoria ?? 0,
       erros: techLogs.filter((l) => l.tipo === "relatorio_diretoria").length,
@@ -1212,7 +1235,7 @@ export default function StatusTecnico() {
   const emailAgendaRow = useMemo(
     () => ({
       slug: "email_agenda",
-      nome: "Enviar e-mail de Agenda",
+      nome: "E-mail de Agenda",
       ultimoSync: emailUltimoAgenda,
       registrosHoje: fluxoHojeSocial?.emails?.email_agenda_diaria ?? 0,
       erros: techLogs.filter((l) => l.tipo === "email_agenda_diaria").length,
@@ -1222,12 +1245,37 @@ export default function StatusTecnico() {
     [emailUltimoAgenda, fluxoHojeSocial, techLogs, emailStatusAgendaOk],
   );
 
+  const emailBoasVindasRow = useMemo(() => {
+    const erros = techLogs.filter((l) => l.tipo === "boas_vindas").length;
+    return {
+      slug: "email_boas_vindas",
+      nome: "E-mail de Boas-vindas",
+      ultimoSync: emailUltimoBoasVindas,
+      registrosHoje: fluxoHojeSocial?.emails?.boas_vindas ?? 0,
+      erros,
+      status: (erros > 0 ? "warning" : "ok") as "ok" | "warning" | "falha",
+      syncTipo: "email_track" as const,
+    };
+  }, [emailUltimoBoasVindas, fluxoHojeSocial, techLogs]);
+
+  const emailResetRow = useMemo(() => {
+    const erros = techLogs.filter((l) => l.tipo === "recuperar_senha").length;
+    return {
+      slug: "email_reset_senha",
+      nome: "E-mail de Reset de Senha",
+      ultimoSync: emailUltimoReset,
+      registrosHoje: fluxoHojeSocial?.emails?.recuperar_senha ?? 0,
+      erros,
+      status: (erros > 0 ? "warning" : "ok") as "ok" | "warning" | "falha",
+      syncTipo: "email_track" as const,
+    };
+  }, [emailUltimoReset, fluxoHojeSocial, techLogs]);
+
   const diagnosticoPlataformaRow = useMemo(() => {
     const ultimoResumo = techLogs.find((l) => l.tipo === TIPO_DIAGNOSTICO_RESUMO);
     const ultimoSync = ultimoResumo?.created_at ?? null;
     let registrosUltima = 0;
     let errosUltima = 0;
-    let avisosUltima = 0;
     let status: "ok" | "warning" | "falha" = "warning";
 
     if (ultimoResumo) {
@@ -1245,8 +1293,8 @@ export default function StatusTecnico() {
       });
       registrosUltima = batch.filter((l) => l.tipo !== TIPO_DIAGNOSTICO_RESUMO).length;
       errosUltima = batch.filter((l) => l.tipo === TIPO_DIAGNOSTICO_ERRO).length;
-      avisosUltima = batch.filter((l) => l.tipo === TIPO_DIAGNOSTICO_AVISO).length;
-      status = errosUltima > 0 ? "falha" : avisosUltima > 0 ? "warning" : "ok";
+      // OK = execução concluída; avisos/achados ficam na coluna Erros e nos Logs Recentes.
+      status = "ok";
     }
 
     return {
@@ -1273,6 +1321,8 @@ export default function StatusTecnico() {
       socialKpisRow,
       emailDiretoriaRow,
       emailAgendaRow,
+      emailBoasVindasRow,
+      emailResetRow,
       diagnosticoPlataformaRow,
     ];
     const { col, dir } = sortIntegracao;
@@ -1316,7 +1366,7 @@ export default function StatusTecnico() {
       return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
     });
     return arr;
-  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, diagnosticoPlataformaRow, sortIntegracao]);
+  }, [statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, emailBoasVindasRow, emailResetRow, diagnosticoPlataformaRow, sortIntegracao]);
 
   const techLogsFiltrados = useMemo(() => {
     const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
@@ -1348,6 +1398,8 @@ export default function StatusTecnico() {
           meta_ads: "Social Media (Impulsionamento Meta)",
           relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
           email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
+          boas_vindas: "E-mail — Boas-vindas",
+          recuperar_senha: "E-mail — Reset de senha",
           resend: "E-mail (Resend)",
           spin_na_rede_rss: "Spin na Rede (RSS)",
           lobby_blaze: "Lobby Blaze",
@@ -1396,8 +1448,10 @@ export default function StatusTecnico() {
       spin_rss: "Spin na Rede (RSS)",
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
-      relatorio_diretoria: "E-mail: Relatório Diretoria",
-      email_agenda_diaria: "E-mail: Agenda do dia",
+      relatorio_diretoria: "E-mail: Relatório",
+      email_agenda_diaria: "E-mail: Agenda",
+      boas_vindas: "E-mail: Boas-vindas",
+      recuperar_senha: "E-mail: Reset de senha",
     }[k] ?? `E-mail: ${k}`);
   const fluxoCor = (k: string) =>
     ({
@@ -1408,6 +1462,8 @@ export default function StatusTecnico() {
       lobby_cda: "#0ea5e9",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
+      boas_vindas: "#8b5cf6",
+      recuperar_senha: "#6366f1",
     }[k] ?? "#10b981");
 
   const corIntegracoes = integracoesAtivasCount === totalIntegracoes ? BRAND.verde : integracoesAtivasCount > 0 ? BRAND.amarelo : BRAND.vermelho;
@@ -1730,6 +1786,7 @@ export default function StatusTecnico() {
                   const isLobbyCda = row.syncTipo === "lobby_cda";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
+                  const isEmailTrack = row.syncTipo === "email_track";
                   const isDiagnostico = row.syncTipo === "diagnostico";
                   const syncExecutandoRow = isCda
                     ? syncExecutando
@@ -1776,7 +1833,7 @@ export default function StatusTecnico() {
                       </td>
                       {mostrarColunaAcao && (
                       <td style={dataTable.tdCenter}>
-                        {(isLobbyBlaze || isLobbyCda) && (
+                        {(isLobbyBlaze || isLobbyCda || isEmailTrack) && (
                           <span style={{ color: t.textMuted, fontFamily: FONT.body }}>—</span>
                         )}
                         {(isCda || isSocial || isSpinRss) && (
@@ -1856,8 +1913,10 @@ export default function StatusTecnico() {
             { key: "spin_rss", label: "Spin RSS" },
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
-            { key: "relatorio_diretoria", label: "E-mail Diretoria" },
+            { key: "relatorio_diretoria", label: "E-mail Relatório" },
             { key: "email_agenda_diaria", label: "E-mail Agenda" },
+            { key: "boas_vindas", label: "Boas-vindas" },
+            { key: "recuperar_senha", label: "Reset senha" },
           ].map((item) => (
             <span key={item.key} style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: fluxoCor(item.key), flexShrink: 0, display: "inline-block" }} />
@@ -2280,6 +2339,8 @@ export default function StatusTecnico() {
                   ["E-mail - Relatório de Influencers (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo relatorio_diretoria)"],
                   ["Erro ao enviar E-mail - Agenda do dia (Resend)", "tech_logs email_agenda_diaria (24h)"],
                   ["E-mail - Agenda do dia (Resend) não enviado hoje (agendado 6h)", "Após 6h BRT, sem email_envios na data civil de hoje (tipo email_agenda_diaria)"],
+                  ["Erro ao enviar E-mail de Boas-vindas (Resend)", "tech_logs boas_vindas (24h)"],
+                  ["Erro ao enviar E-mail de Reset de Senha (Resend)", "tech_logs recuperar_senha (24h)"],
                   ["Nenhum ingest Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
                   ["Ingest Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
                   ["Taxa de erro alta no ingest Spin na Rede RSS", "> 5% em sync_logs (slug spin_na_rede_rss)"],

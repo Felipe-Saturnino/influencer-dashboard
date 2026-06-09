@@ -268,6 +268,7 @@ serve(async (req) => {
       const nome = (targetProfile?.name as string | null)?.trim() || targetEmail
       const mail = await enviarEmailRecuperacaoSenhaConta({
         supabaseUrl,
+        supabase,
         to: targetEmail,
         nome,
         senhaTemporaria: senhaPadrao,
