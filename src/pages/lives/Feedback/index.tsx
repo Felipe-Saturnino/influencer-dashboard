@@ -9,13 +9,16 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import {
-  X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2,
+  X, Pencil, Calendar, User, ChevronLeft, ChevronRight, Loader2,
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { FiltroInfluencerSelect } from "../../../components/dashboard";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
+  FiltroInfluencerSelect,
   FiltroOperadoraSelect,
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
@@ -119,7 +122,7 @@ function LiveCard({
   onEditar,
   onRefresh,
 }: LiveCardProps) {
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const isRealizada = live.status === "realizada";
   const statusColor = isRealizada ? BRAND.verde : BRAND.vermelho;
   const platColor = PLAT_COLOR[live.plataforma];
@@ -134,7 +137,7 @@ function LiveCard({
     await supabase.from("live_resultados").delete().eq("live_id", live.id);
     const { error } = await supabase.from("lives").delete().eq("id", live.id);
     setExcluindo(null);
-    setConfirmExcluir(false);
+    setModalExcluirAberto(false);
     if (!error) onRefresh();
   }
 
@@ -244,41 +247,30 @@ function LiveCard({
               </button>
             )}
             {podeExcluir && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!confirmExcluir) {
-                    setConfirmExcluir(true);
-                    return;
-                  }
-                  void handleExcluirConfirmado();
-                }}
-                onBlur={() => setConfirmExcluir(false)}
+              <BtnExcluirLinha
+                descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
                 disabled={isExcluindo}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${BRAND.vermelho}50`,
-                  background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
-                  color: confirmExcluir ? "#fff" : BRAND.vermelho,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: isExcluindo ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  opacity: isExcluindo ? 0.6 : 1,
-                  transition: "all 0.15s",
-                }}
-              >
-                <Trash2 size={11} aria-hidden="true" />
-                {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
-              </button>
+                onClick={() => setModalExcluirAberto(true)}
+              />
             )}
           </div>
         )}
       </div>
+
+      {modalExcluirAberto ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a live de",
+            live.influencer_name,
+            `em ${fmtData(live.data)} às ${live.horario?.slice(0, 5) ?? "—"}`,
+          )}
+          onCancel={() => {
+            if (!isExcluindo) setModalExcluirAberto(false);
+          }}
+          onConfirm={() => void handleExcluirConfirmado()}
+          loading={isExcluindo}
+        />
+      ) : null}
 
       {live.observacao && (
         <div

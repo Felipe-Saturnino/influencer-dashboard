@@ -3,12 +3,12 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useModalEscape } from "../../../hooks/useModalEscape";
-import { usePermission, type Permissoes } from "../../../hooks/usePermission";
+import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora, Role } from "../../../types";
-import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Trash2, Contact, Briefcase, Coins, History } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Users, AlertCircle, CheckCircle, Building2, Contact, Briefcase, Coins, History } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isAfiliadoPerfilIncompleto } from "../../../lib/afiliadoPerfilCompleto";
@@ -449,7 +449,7 @@ export default function Afiliados() {
         <ModalVer row={modal.row} operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} />
       )}
       {modal?.mode === "editar" && modal.row && (
-        <ModalEditar row={modal.row} operadorasList={operadorasNoEscopo} perm={perm} currentUserId={user?.id} onClose={() => setModal(null)} onSaved={() => { setModal(null); void loadData(); }} podeAlterarStatus={podeAlterarStatus} />
+        <ModalEditar row={modal.row} operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} onSaved={() => { setModal(null); void loadData(); }} podeAlterarStatus={podeAlterarStatus} />
       )}
     </div>
   );
@@ -552,12 +552,10 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
 }
 
 function ModalEditar({
-  row, operadorasList, perm, currentUserId, onClose, onSaved, podeAlterarStatus,
+  row, operadorasList, onClose, onSaved, podeAlterarStatus,
 }: {
   row: AfiliadoRow;
   operadorasList: Operadora[];
-  perm: Permissoes;
-  currentUserId?: string;
   onClose: () => void;
   onSaved: () => void;
   podeAlterarStatus: boolean;
@@ -584,8 +582,6 @@ function ModalEditar({
   const [tab, setTab] = useState<AfiliadoModalTab>("cadastral");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
-
   useEffect(() => {
     setEditNomeCompleto(row.perfil?.nome_completo ?? "");
     setForm(row.perfil ?? emptyPerfil(row.id));
@@ -652,15 +648,6 @@ function ModalEditar({
       }
     }
     setSaving(false);
-    onSaved();
-  }
-
-  async function handleExcluir() {
-    if (!perm.canExcluirOk) return;
-    if (perm.canExcluir === "proprios" && row.id !== currentUserId) return;
-    if (!confirmExcluir) { setConfirmExcluir(true); return; }
-    const { error: e1 } = await supabase.from("profiles").update({ ativo: false }).eq("id", row.id).eq("role", "afiliado");
-    if (e1) { setError(e1.message); setConfirmExcluir(false); return; }
     onSaved();
   }
 
@@ -766,13 +753,7 @@ function ModalEditar({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>
-          {perm.canExcluirOk && (perm.canExcluir !== "proprios" || row.id === currentUserId) && (
-            <button type="button" onClick={() => void handleExcluir()} disabled={saving} onBlur={() => setConfirmExcluir(false)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 10, border: `1px solid ${confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}80`}`, background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}18`, color: confirmExcluir ? "#fff" : BRAND.vermelho, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer" }}>
-              <Trash2 size={14} aria-hidden="true" /> {confirmExcluir ? "Confirmar exclusão?" : "Excluir"}
-            </button>
-          )}
-          <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
           <button type="button" onClick={() => void handleSave()} disabled={saving} style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: ctaSalvar, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="#fff" /> Salvando…</> : "Salvar"}

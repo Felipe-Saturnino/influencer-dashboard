@@ -76,7 +76,7 @@ export const PAGES: {
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Afiliados
-  { key: "afiliados", label: "Afiliados", secao: "Afiliados", hasCriar: false, hasEditar: true, hasExcluir: true },
+  { key: "afiliados", label: "Afiliados", secao: "Afiliados", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "afiliados_network", label: "Network", secao: "Afiliados", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Aquisição
   { key: "financeiro", label: "Financeiro", secao: "Aquisição", hasCriar: false, hasEditar: true, hasExcluir: false },

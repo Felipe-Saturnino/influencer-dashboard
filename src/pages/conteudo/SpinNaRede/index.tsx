@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -8,6 +10,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { getPageContentBoxShellStyle } from "../../../lib/pageContentBoxStyles";
 import { usePermission } from "../../../hooks/usePermission";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 
 type SpinNaRedeMencaoRow = {
@@ -112,6 +115,8 @@ export default function SpinNaRede() {
   const [itens, setItens] = useState<SpinNaRedeMencaoRow[]>([]);
   /** Fase de carregamento da miniatura por item (retry com referrer antes de esconder). */
   const [thumbPhase, setThumbPhase] = useState<Record<string, ThumbLoadPhase>>({});
+  const [alvoExcluir, setAlvoExcluir] = useState<SpinNaRedeMencaoRow | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   const carregar = useCallback(async () => {
     if (perm.loading || perm.canView === "nao") return;
@@ -137,6 +142,28 @@ export default function SpinNaRede() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  async function confirmarExclusaoMencao() {
+    if (!alvoExcluir) return;
+    setExcluindo(true);
+    setErro(null);
+    const id = alvoExcluir.id;
+    const { error } = await supabase.from("spin_na_rede_mencao").delete().eq("id", id);
+    if (error) {
+      console.error("[SpinNaRede] excluir menção", error.message);
+      setErro("Não foi possível excluir a menção. Tente novamente.");
+      setExcluindo(false);
+      return;
+    }
+    setItens((prev) => prev.filter((item) => item.id !== id));
+    setThumbPhase((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setAlvoExcluir(null);
+    setExcluindo(false);
+  }
 
   if (perm.loading) {
     return (
@@ -211,6 +238,13 @@ export default function SpinNaRede() {
                 key={row.id}
                 style={listItemBox}
               >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
                 <div
                   style={{
                     display: "flex",
@@ -293,31 +327,61 @@ export default function SpinNaRede() {
                         {resumoCard}
                       </p>
                     )}
-                    <a
-                      href={row.item_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Ir para a matéria: ${imgAlt}`}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "var(--brand-primary, #7c3aed)",
-                        textDecoration: "none",
-                      }}
-                    >
-                      <ExternalLink size={14} aria-hidden="true" />
-                      Ir para a matéria
-                    </a>
                   </div>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    width: "100%",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <a
+                    href={row.item_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Ir para a matéria: ${imgAlt}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--brand-primary, #7c3aed)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                    Ir para a matéria
+                  </a>
+                  {perm.canExcluirOk ? (
+                    <BtnExcluirLinha
+                      descricaoItem={descricaoBotaoExcluir("menção", row.titulo)}
+                      disabled={excluindo}
+                      onClick={() => setAlvoExcluir(row)}
+                    />
+                  ) : null}
+                </div>
                 </div>
               </li>
             );
           })}
         </ul>
       )}
+
+      {alvoExcluir ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem("a menção", alvoExcluir.titulo)}
+          onCancel={() => {
+            if (!excluindo) setAlvoExcluir(null);
+          }}
+          onConfirm={() => void confirmarExclusaoMencao()}
+          loading={excluindo}
+        />
+      ) : null}
     </div>
   );
 }

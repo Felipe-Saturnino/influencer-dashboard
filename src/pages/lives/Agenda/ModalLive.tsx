@@ -9,7 +9,10 @@ import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { Live, Plataforma, type Role } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
-import { X, Trash2, Lock, Video, Loader2 } from "lucide-react";
+import { X, Lock, Video, Loader2 } from "lucide-react";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -33,7 +36,12 @@ function tomorrowISOLocal(): string {
   return dateToISOLocal(d);
 }
 
-// ─── TIPOS ────────────────────────────────────────────────────────────────────
+function fmtDataLive(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
 interface Props {
   live?:   Live;
   onClose: () => void;
@@ -70,7 +78,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   });
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
-  const [confirm, setConfirm] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
   const [bloqueioAgenda, setBloqueioAgenda] = useState<{
@@ -199,6 +207,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     setSaving(true);
     await supabase.from("lives").delete().eq("id", live!.id);
     setSaving(false);
+    setModalExcluirAberto(false);
     onSave();
   }
 
@@ -425,32 +434,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
         {/* Botões de ação */}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          {podeExcluir && (
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirm) { setConfirm(true); return; }
-                void handleDelete();
-                setConfirm(false);
-              }}
-              onBlur={() => {
-                window.setTimeout(() => setConfirm(false), 180);
-              }}
+          {podeExcluir && live && (
+            <BtnExcluirComTexto
+              descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
               disabled={saving}
-              style={{
-                flex: 1, padding: 12, borderRadius: 10,
-                border: `1px solid ${confirm ? "none" : `${BRAND.vermelho}`}`,
-                background: confirm ? BRAND.vermelho : `${BRAND.vermelho}11`,
-                color: confirm ? "#fff" : BRAND.vermelho,
-                fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer",
-                fontFamily: FONT.body,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                transition: "all 0.15s",
-              }}
-            >
-              {!confirm && <Trash2 size={14} aria-hidden="true" />}
-              {confirm ? "Confirmar exclusão?" : "Excluir"}
-            </button>
+              onClick={() => setModalExcluirAberto(true)}
+            />
           )}
           {(podeCriar || podeEditar) && (
             <button
@@ -493,6 +482,22 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         </div>
       </div>
     </div>
+
+    {modalExcluirAberto && live ? (
+      <ModalConfirmExcluirPadrao
+        descricaoItem={descricaoModalExcluirItem(
+          "a live de",
+          live.influencer_name,
+          `em ${fmtDataLive(live.data)} às ${live.horario?.slice(0, 5) ?? "—"}`,
+        )}
+        onCancel={() => {
+          if (!saving) setModalExcluirAberto(false);
+        }}
+        onConfirm={() => void handleDelete()}
+        loading={saving}
+        zIndex={1100}
+      />
+    ) : null}
 
     <ModalBloqueioAgendaLive
       open={bloqueioAgenda !== null}

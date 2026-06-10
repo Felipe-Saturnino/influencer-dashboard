@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { BtnExcluirLinha } from "../../../../components/BtnExcluirLinha";
+import { ModalConfirmExcluirPadrao } from "../../../../components/OperacoesModal";
 import { supabase } from "../../../../lib/supabase";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
@@ -7,7 +9,7 @@ import { FONT } from "../../../../constants/theme";
 import { CtaCriarButton } from "../../../../components/CtaCriarButton";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SortTableTh, SkeletonTableRow } from "../../../../components/dashboard";
-import { ModalConfirmDelete } from "../../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../../lib/excluirItemUi";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -240,15 +242,10 @@ export default function ExperienciaProfissionalPainel({
                         >
                           <Pencil size={13} aria-hidden />
                         </button>
-                        <button
-                          type="button"
-                          style={btnIcon}
+                        <BtnExcluirLinha
+                          descricaoItem={descricaoBotaoExcluir("experiência", `${row.cargo} na ${row.empresa}`)}
                           onClick={() => setDeleteRow(row)}
-                          aria-label={`Excluir ${row.cargo}`}
-                          title={`Excluir ${row.cargo}`}
-                        >
-                          <Trash2 size={13} aria-hidden color="#e84025" />
-                        </button>
+                        />
                       </div>
                     </td>
                   ) : null}
@@ -270,8 +267,11 @@ export default function ExperienciaProfissionalPainel({
       ) : null}
 
       {deleteRow ? (
-        <ModalConfirmDelete
-          texto="Esta ação não pode ser desfeita."
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a experiência",
+            `${deleteRow.cargo} na ${deleteRow.empresa}`,
+          )}
           onCancel={() => setDeleteRow(null)}
           onConfirm={() => void confirmarExclusao()}
           loading={deleting}

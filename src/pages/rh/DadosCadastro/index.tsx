@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Download, Loader2, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Loader2, Upload } from "lucide-react";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -264,6 +267,8 @@ export default function RhDadosCadastroPage() {
   const [histLoading, setHistLoading] = useState(false);
 
   const [mediaRows, setMediaRows] = useState<RhFuncionarioSelfMedia[]>([]);
+  const [midiaExcluir, setMidiaExcluir] = useState<RhFuncionarioSelfMedia | null>(null);
+  const [excluindoMidia, setExcluindoMidia] = useState(false);
   const [signedById, setSignedById] = useState<Record<string, string>>({});
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [declaracaoSemAlteracao, setDeclaracaoSemAlteracao] = useState(false);
@@ -670,19 +675,25 @@ export default function RhDadosCadastroPage() {
     }
   };
 
-  const excluirMidia = async (m: RhFuncionarioSelfMedia) => {
-    if (!podeEditarSelecionado || !row) return;
+  const confirmarExcluirMidia = async () => {
+    if (!podeEditarSelecionado || !row || !midiaExcluir) return;
     setErroGlobal(null);
+    setExcluindoMidia(true);
+    const m = midiaExcluir;
     const { error: rmErr } = await supabase.storage.from(RH_SELF_MEDIA_BUCKET).remove([m.storage_path]);
     if (rmErr) {
       setErroGlobal(rmErr.message);
+      setExcluindoMidia(false);
       return;
     }
     const { error: delErr } = await supabase.from("rh_funcionario_self_media").delete().eq("id", m.id);
     if (delErr) {
       setErroGlobal(delErr.message);
+      setExcluindoMidia(false);
       return;
     }
+    setMidiaExcluir(null);
+    setExcluindoMidia(false);
     await carregarMedia(row.id);
   };
 
@@ -1687,14 +1698,10 @@ export default function RhDadosCadastroPage() {
                       </>
                     ) : null}
                     {podeEditarSelecionado ? (
-                      <button
-                        type="button"
-                        onClick={() => void excluirMidia(m)}
-                        aria-label={`Excluir ${m.file_name}`}
-                        style={{ border: "none", background: "transparent", color: "#e84025", cursor: "pointer", padding: 4 }}
-                      >
-                        <Trash2 size={16} aria-hidden />
-                      </button>
+                      <BtnExcluirLinha
+                        descricaoItem={descricaoBotaoExcluir("documento", m.file_name)}
+                        onClick={() => setMidiaExcluir(m)}
+                      />
                     ) : null}
                   </li>
                 );
@@ -1729,6 +1736,17 @@ export default function RhDadosCadastroPage() {
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Histórico de RH</h2>
           <ListaHistoricoRh items={histItems} loading={histLoading} t={t} />
         </section>
+      ) : null}
+
+      {midiaExcluir ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem("o documento", midiaExcluir.file_name)}
+          onCancel={() => {
+            if (!excluindoMidia) setMidiaExcluir(null);
+          }}
+          onConfirm={() => void confirmarExcluirMidia()}
+          loading={excluindoMidia}
+        />
       ) : null}
     </div>
   );

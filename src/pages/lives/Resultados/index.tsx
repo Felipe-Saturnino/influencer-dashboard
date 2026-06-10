@@ -7,6 +7,9 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
@@ -19,7 +22,6 @@ import {
   CheckCircle,
   Info,
   Loader2,
-  Trash2,
   X,
 } from "lucide-react";
 
@@ -102,7 +104,7 @@ function LiveCard({
   onValidar,
   onLiveDeleted,
 }: LiveCardProps) {
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
   const platColor = PLAT_COLOR[live.plataforma];
   const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
@@ -115,7 +117,7 @@ function LiveCard({
     await supabase.from("live_resultados").delete().eq("live_id", live.id);
     const { error } = await supabase.from("lives").delete().eq("id", live.id);
     setExcluindo(null);
-    setConfirmExcluir(false);
+    setModalExcluirAberto(false);
     if (!error) onLiveDeleted(live);
   }
 
@@ -182,32 +184,29 @@ function LiveCard({
             </button>
           )}
           {podeExcluir && (
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirmExcluir) { setConfirmExcluir(true); return; }
-                void handleExcluirConfirmado();
-              }}
-              onBlur={() => setConfirmExcluir(false)}
+            <BtnExcluirLinha
+              descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
               disabled={isExcluindo}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                padding: "8px 16px", borderRadius: 10,
-                border: `1px solid ${BRAND.vermelho}50`,
-                background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
-                color: confirmExcluir ? "#fff" : BRAND.vermelho,
-                fontSize: 12, fontWeight: 600,
-                cursor: isExcluindo ? "not-allowed" : "pointer",
-                fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
-                transition: "all 0.15s",
-              }}
-            >
-              <Trash2 size={12} aria-hidden="true" />
-              {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
-            </button>
+              onClick={() => setModalExcluirAberto(true)}
+            />
           )}
         </div>
       </div>
+
+      {modalExcluirAberto ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a live de",
+            live.influencer_name,
+            `em ${fmtData(live.data)} às ${live.horario?.slice(0, 5) ?? "—"}`,
+          )}
+          onCancel={() => {
+            if (!isExcluindo) setModalExcluirAberto(false);
+          }}
+          onConfirm={() => void handleExcluirConfirmado()}
+          loading={isExcluindo}
+        />
+      ) : null}
     </div>
   );
 }

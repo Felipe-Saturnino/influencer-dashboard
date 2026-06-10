@@ -29,7 +29,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
 import {
   OrgFiltroBarDiretorias,
@@ -58,8 +58,7 @@ type ModalExcluir =
   | {
       tipo: "diretoria" | "gerencia" | "time";
       row: RhOrgDiretoria | RhOrgGerencia | RhOrgTime;
-      titulo: string;
-      corpo: string;
+      descricaoItem: string;
     };
 
 const DELETE_CHUNK = 200;
@@ -621,12 +620,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "time",
       row: ti,
-      titulo: "Excluir time",
-      corpo: `O time "${ti.nome}" será removido definitivamente do organograma.${
-        q > 0
-          ? ` ${q} prestador(es) com vínculo a este time ficarão sem time (campo esvaziado automaticamente).`
-          : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `o time «${ti.nome}» do organograma${
+        q > 0 ? ` (${q} prestador(es) ficarão sem time)` : ""
+      }`,
     });
   };
 
@@ -639,10 +635,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "gerencia",
       row: g,
-      titulo: "Excluir gerência",
-      corpo: `A gerência "${g.nome}" e ${nTimes} time(s) abaixo dela serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} prestador(es) perderão o vínculo de time.` : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `a gerência «${g.nome}» e ${nTimes} time(s) vinculados${
+        nFunc > 0 ? ` (${nFunc} prestador(es) perderão o vínculo de time)` : ""
+      }`,
     });
   };
 
@@ -657,10 +652,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "diretoria",
       row: d,
-      titulo: "Excluir diretoria",
-      corpo: `A diretoria "${d.nome}", ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} prestador(es) perderão o vínculo de time.` : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `a diretoria «${d.nome}», ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) vinculados${
+        nFunc > 0 ? ` (${nFunc} prestador(es) perderão o vínculo de time)` : ""
+      }`,
     });
   };
 
@@ -1307,39 +1301,12 @@ export default function RhOrganogramaPage() {
       ) : null}
 
       {modalExcluir ? (
-        <ModalBase maxWidth={480} onClose={() => !excluindo && setModalExcluir(null)}>
-          <ModalHeader title={modalExcluir.titulo} onClose={() => !excluindo && setModalExcluir(null)} />
-          <ModalFocusBody>
-          <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>{modalExcluir.corpo}</p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-            <button
-              type="button"
-              disabled={excluindo}
-              onClick={() => setModalExcluir(null)}
-              style={{ ...btnSecondaryStyle, cursor: excluindo ? "not-allowed" : "pointer", opacity: excluindo ? 0.65 : 1 }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={excluindo}
-              onClick={() => void executarExcluir()}
-              style={{
-                ...inputStyle,
-                width: "auto",
-                border: "none",
-                background: "#e84025",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: excluindo ? "wait" : "pointer",
-              }}
-            >
-              {excluindo ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-              Excluir definitivamente
-            </button>
-          </div>
-          </ModalFocusBody>
-        </ModalBase>
+        <ModalConfirmExcluirPadrao
+          descricaoItem={modalExcluir.descricaoItem}
+          onCancel={() => !excluindo && setModalExcluir(null)}
+          onConfirm={() => void executarExcluir()}
+          loading={excluindo}
+        />
       ) : null}
     </div>
   );

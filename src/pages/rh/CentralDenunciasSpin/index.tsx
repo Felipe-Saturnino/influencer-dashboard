@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, TriangleAlert } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -22,7 +22,10 @@ import {
 } from "../../../lib/canalDenunciasSpin";
 import type { DenunciaListRow, AnexoRow } from "./types";
 import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
-import { ModalAtenderDenuncia, ModalConfirmarExclusao } from "./ModalsAtender";
+import { ModalAtenderDenuncia } from "./ModalsAtender";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -430,7 +433,10 @@ export default function CentralDenunciasSpin() {
                   <Btn icone={<Eye size={16} aria-hidden />} label="Ver" onClick={() => setModalVer(row)} t={t} />
                   <Btn icone={<History size={16} aria-hidden />} label="Histórico" onClick={() => setModalHist(row)} t={t} />
                   {perm.canExcluirOk ? (
-                    <Btn icone={<Trash2 size={16} aria-hidden />} label="Excluir" onClick={() => setDelRow(row)} t={t} danger />
+                    <BtnExcluirComTexto
+                      descricaoItem={descricaoBotaoExcluir("denúncia", row.protocolo)}
+                      onClick={() => setDelRow(row)}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -468,14 +474,16 @@ export default function CentralDenunciasSpin() {
         protocolo={modalHist?.protocolo ?? ""}
         t={t}
       />
-      <ModalConfirmarExclusao
-        open={!!delRow}
-        onClose={() => setDelRow(null)}
-        protocolo={delRow?.protocolo ?? ""}
-        t={t}
-        onConfirm={() => void confirmarExclusao()}
-        loading={delLoading}
-      />
+      {delRow ? (
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem("a denúncia", delRow.protocolo)}
+          onCancel={() => {
+            if (!delLoading) setDelRow(null);
+          }}
+          onConfirm={() => void confirmarExclusao()}
+          loading={delLoading}
+        />
+      ) : null}
     </div>
   );
 }

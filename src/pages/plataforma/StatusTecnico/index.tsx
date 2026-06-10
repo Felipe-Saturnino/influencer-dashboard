@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Loader2,
   RefreshCw,
-  Trash2,
   XCircle,
 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
@@ -23,7 +22,9 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { tabAtivaPrincipalStyle } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import {
@@ -2135,32 +2136,13 @@ export default function StatusTecnico() {
                   ) : null}
                 </div>
                 {perm.canEditarOk && (
-                  <button
-                    type="button"
+                  <BtnExcluirLinha
+                    descricaoItem={descricaoBotaoExcluir("prefixo", String(row.cidr))}
                     onClick={() => {
                       setCidrErroExcluir(null);
                       setCidrExcluir(row);
                     }}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      border: `1px solid ${BRAND.vermelho}55`,
-                      background: `${BRAND.vermelho}14`,
-                      color: BRAND.vermelho,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      flexShrink: 0,
-                    }}
-                    aria-label={`Remover prefixo ${String(row.cidr)}`}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                    Excluir
-                  </button>
+                  />
                 )}
               </li>
             ))}
@@ -2503,8 +2485,12 @@ export default function StatusTecnico() {
       )}
 
       {cidrExcluir && (
-        <ModalConfirmDelete
-          texto={`Remover o prefixo ${String(cidrExcluir.cidr)} da lista?`}
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "o prefixo",
+            String(cidrExcluir.cidr),
+            "da lista de allowlist",
+          )}
           onCancel={() => {
             if (!cidrExcluindo) setCidrExcluir(null);
             setCidrErroExcluir(null);

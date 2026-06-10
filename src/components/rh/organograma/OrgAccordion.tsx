@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserX } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Plus, UserX } from "lucide-react";
+import { BtnExcluirLinha } from "../../BtnExcluirLinha";
+import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
 import { FONT } from "../../../constants/theme";
 import { ORG_MSG_SEM_DIRETORIAS } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
@@ -57,12 +59,6 @@ export function OrgAccordion({
     cursor: "pointer",
     fontSize: 12,
     fontFamily: FONT.body,
-  };
-
-  const rowBtnExcluir: CSSProperties = {
-    ...rowBtn,
-    borderColor: "rgba(232,64,37,0.45)",
-    color: "#e84025",
   };
 
   if (arvore.length === 0) {
@@ -145,14 +141,10 @@ export function OrgAccordion({
                   </>
                 ) : null}
                 {podeExcluir ? (
-                  <button
-                    type="button"
-                    style={rowBtnExcluir}
-                    aria-label={`Excluir definitivamente a diretoria ${d.nome}`}
+                  <BtnExcluirLinha
+                    descricaoItem={descricaoBotaoExcluir("diretoria", d.nome)}
                     onClick={() => onExcluirDiretoria(d)}
-                  >
-                    <Trash2 size={14} aria-hidden />
-                  </button>
+                  />
                 ) : null}
               </div>
             </div>
@@ -235,14 +227,10 @@ export function OrgAccordion({
                               </>
                             ) : null}
                             {podeExcluir ? (
-                              <button
-                                type="button"
-                                style={rowBtnExcluir}
-                                aria-label={`Excluir definitivamente a gerência ${g.nome}`}
+                              <BtnExcluirLinha
+                                descricaoItem={descricaoBotaoExcluir("gerência", g.nome)}
                                 onClick={() => onExcluirGerencia(g)}
-                              >
-                                <Trash2 size={14} aria-hidden />
-                              </button>
+                              />
                             ) : null}
                           </div>
                         </div>
@@ -308,14 +296,10 @@ export function OrgAccordion({
                                             </>
                                           ) : null}
                                           {podeExcluir ? (
-                                            <button
-                                              type="button"
-                                              style={rowBtnExcluir}
-                                              aria-label={`Excluir definitivamente o time ${ti.nome}`}
+                                            <BtnExcluirLinha
+                                              descricaoItem={descricaoBotaoExcluir("time", ti.nome)}
                                               onClick={() => onExcluirTime(ti)}
-                                            >
-                                              <Trash2 size={14} aria-hidden />
-                                            </button>
+                                            />
                                           ) : null}
                                         </div>
                                       ) : null}
