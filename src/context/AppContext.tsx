@@ -18,6 +18,7 @@ import {
   type PermissoesAcoesMapa,
 } from "../lib/appRoutes";
 import { isPublicUnauthenticatedPath } from "../lib/publicRoutes";
+import { writeIdleSessionLastActivity } from "../lib/idleSessionConstants";
 import {
   ROLES_SEM_RESTRICAO_ESCOPO,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
@@ -677,6 +678,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
+    if (u) {
+      // Login explícito — reinicia o timer de inatividade (evita logout imediato com timestamp stale no localStorage).
+      writeIdleSessionLastActivity(Date.now());
+    }
     setUserState(u);
     userRef.current = u;
     if (u) {
