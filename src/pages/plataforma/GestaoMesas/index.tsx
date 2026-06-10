@@ -3,10 +3,10 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT, FONT_TITLE, BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
+import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { Pencil, Loader2, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -15,7 +15,9 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
@@ -510,29 +512,13 @@ export default function GestaoMesas() {
                             </button>
                           )}
                           {perm.canExcluirOk && (
-                            <button
-                              type="button"
-                              aria-label={`Excluir mesa ${r.nome_mesa}`}
-                              title={`Excluir mesa ${r.nome_mesa}`}
+                            <BtnExcluirLinha
+                              descricaoItem={descricaoBotaoExcluir("mesa", r.nome_mesa)}
                               onClick={() => {
                                 setDeleteError(null);
                                 setDeleteTarget(r);
                               }}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 32,
-                                height: 32,
-                                background: "transparent",
-                                border: `1px solid rgba(232,64,37,0.35)`,
-                                borderRadius: 10,
-                                cursor: "pointer",
-                                color: BRAND.vermelho,
-                              }}
-                            >
-                              <Trash2 size={14} aria-hidden="true" />
-                            </button>
+                            />
                           )}
                         </div>
                       </td>
@@ -558,9 +544,13 @@ export default function GestaoMesas() {
       )}
 
       {deleteTarget && (
-        <ModalConfirmDelete
+        <ModalConfirmExcluirPadrao
           zIndex={1100}
-          texto={`Remover a mesa «${deleteTarget.nome_mesa}» (ID Spin: ${deleteTarget.mesa_identificacao})? Esta ação não pode ser desfeita.`}
+          descricaoItem={descricaoModalExcluirItem(
+            "a mesa",
+            deleteTarget.nome_mesa,
+            `(ID Spin: ${deleteTarget.mesa_identificacao})`,
+          )}
           onCancel={() => {
             if (!deleteLoading) setDeleteTarget(null);
           }}

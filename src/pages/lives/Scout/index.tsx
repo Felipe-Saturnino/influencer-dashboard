@@ -29,7 +29,10 @@ import {
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+import { X, Eye, Pencil, ChevronDown, Loader2, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 
 type ScoutModalTab = "contato" | "canais" | "anotacoes";
 
@@ -900,7 +903,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [criandoUsuario, setCriandoUsuario] = useState(false);
 
   useEffect(() => {
@@ -1160,15 +1163,23 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
     return uid;
   }
 
-  async function handleExcluir() {
+  async function handleExcluirConfirmado() {
     if (!scout?.id || !perm.canExcluirOk) return;
     if (perm.canExcluir === "proprios" && scout.created_by !== user?.id) return;
-    if (!confirmExcluir) { setConfirmExcluir(true); return; }
-
+    setSaving(true);
     const { error } = await supabase.from("scout_anotacoes").delete().eq("scout_id", scout.id);
-    if (error) { setError(error.message); setConfirmExcluir(false); return; }
+    if (error) {
+      setError(error.message);
+      setSaving(false);
+      return;
+    }
     const { error: err2 } = await supabase.from("scout_influencer").delete().eq("id", scout.id);
-    if (err2) { setError(err2.message); setConfirmExcluir(false); return; }
+    if (err2) {
+      setError(err2.message);
+      setSaving(false);
+      return;
+    }
+    setModalExcluirAberto(false);
     onSaved();
   }
 
@@ -1199,6 +1210,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   const row: CSSProperties = { marginBottom: 14 };
 
   return (
+    <>
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
         ref={containerRef}
@@ -1402,24 +1414,11 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
 
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (
-            <button
-              type="button"
-              onClick={() => void handleExcluir()}
+            <BtnExcluirComTexto
+              descricaoItem={descricaoBotaoExcluir("scout", scout.nome_artistico)}
               disabled={saving}
-              onBlur={() => setConfirmExcluir(false)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 10,
-                border: `1px solid ${confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}80`}`,
-                background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}18`,
-                color: confirmExcluir ? "#fff" : BRAND.vermelho,
-                fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-                cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1,
-                transition: "all 0.15s",
-              }}
-            >
-              <Trash2 size={14} aria-hidden="true" />
-              {confirmExcluir ? "Confirmar exclusão?" : "Excluir"}
-            </button>
+              onClick={() => setModalExcluirAberto(true)}
+            />
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
           <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
@@ -1436,5 +1435,17 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         </div>
       </div>
     </div>
+    {modalExcluirAberto && scout ? (
+      <ModalConfirmExcluirPadrao
+        descricaoItem={descricaoModalExcluirItem("o scout", scout.nome_artistico)}
+        onCancel={() => {
+          if (!saving) setModalExcluirAberto(false);
+        }}
+        onConfirm={() => void handleExcluirConfirmado()}
+        loading={saving}
+        zIndex={1100}
+      />
+    ) : null}
+    </>
   );
 }

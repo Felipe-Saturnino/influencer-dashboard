@@ -19,7 +19,10 @@ import {
   getPageFilterBoxStyle,
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
-import { X, Eye, Pencil, Trash2, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
+import { X, Eye, Pencil, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 
 type NetworkModalTab = "contato" | "operacao" | "anotacoes";
 
@@ -692,7 +695,7 @@ function ModalEditar({
   const [anotacoes, setAnotacoes] = useState<AfiliadoAnotacao[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   useModalEscape(onClose, true);
 
   useEffect(() => {
@@ -802,25 +805,23 @@ function ModalEditar({
     }
   }
 
-  async function handleExcluir() {
+  async function handleExcluirConfirmado() {
     if (!row?.id || !perm.canExcluirOk) return;
     if (perm.canExcluir === "proprios" && row.created_by !== user?.id) return;
-    if (!confirmExcluir) {
-      setConfirmExcluir(true);
-      return;
-    }
+    setSaving(true);
     const { error: e1 } = await supabase.from("afiliados_network_anotacoes").delete().eq("afiliado_id", row.id);
     if (e1) {
       setError(e1.message);
-      setConfirmExcluir(false);
+      setSaving(false);
       return;
     }
     const { error: e2 } = await supabase.from("afiliados_network").delete().eq("id", row.id);
     if (e2) {
       setError(e2.message);
-      setConfirmExcluir(false);
+      setSaving(false);
       return;
     }
+    setModalExcluirAberto(false);
     onSaved();
   }
 
@@ -863,6 +864,7 @@ function ModalEditar({
   const rowS: CSSProperties = { marginBottom: 14 };
 
   return (
+    <>
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
       onClick={(e) => {
@@ -1066,31 +1068,11 @@ function ModalEditar({
 
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
           {row && perm.canExcluirOk && (perm.canExcluir !== "proprios" || row.created_by === user?.id) && (
-            <button
-              type="button"
-              onClick={() => void handleExcluir()}
+            <BtnExcluirComTexto
+              descricaoItem={descricaoBotaoExcluir("cadastro", row.nome)}
               disabled={saving}
-              onBlur={() => setConfirmExcluir(false)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: `1px solid ${confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}80`}`,
-                background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}18`,
-                color: confirmExcluir ? "#fff" : BRAND.vermelho,
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.6 : 1,
-                transition: "all 0.15s",
-              }}
-            >
-              <Trash2 size={14} aria-hidden="true" />
-              {confirmExcluir ? "Confirmar exclusão?" : "Excluir"}
-            </button>
+              onClick={() => setModalExcluirAberto(true)}
+            />
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
           <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>
@@ -1128,5 +1110,17 @@ function ModalEditar({
         </div>
       </div>
     </div>
+    {modalExcluirAberto && row ? (
+      <ModalConfirmExcluirPadrao
+        descricaoItem={descricaoModalExcluirItem("o cadastro de", row.nome)}
+        onCancel={() => {
+          if (!saving) setModalExcluirAberto(false);
+        }}
+        onConfirm={() => void handleExcluirConfirmado()}
+        loading={saving}
+        zIndex={1100}
+      />
+    ) : null}
+    </>
   );
 }

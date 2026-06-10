@@ -5,8 +5,9 @@ import {
   History,
   Pencil,
   StickyNote,
-  Trash2,
 } from "lucide-react";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../../constants/theme";
 import { FONT } from "../../../constants/theme";
@@ -109,11 +110,6 @@ export function PrestadorTabelaColaboradores({
     color: "#fff",
     fontWeight: 700,
     background: ctaGradient(brand),
-  };
-  const btnIconTabelaPerigo: CSSProperties = {
-    ...btnIconTabela,
-    border: "1px solid rgba(232,64,37,0.45)",
-    color: "#e84025",
   };
 
   return (
@@ -370,14 +366,10 @@ export function PrestadorTabelaColaboradores({
                             </button>
                           ) : null}
                           {podeExcluir ? (
-                            <button
-                              type="button"
+                            <BtnExcluirLinha
+                              descricaoItem={descricaoBotaoExcluir("prestador", row.nome)}
                               onClick={() => onConfirmarExclusao(row)}
-                              style={btnIconTabelaPerigo}
-                              aria-label={`Excluir ${row.nome}`}
-                            >
-                              <Trash2 size={14} aria-hidden />
-                            </button>
+                            />
                           ) : null}
                         </div>
                       ) : null}

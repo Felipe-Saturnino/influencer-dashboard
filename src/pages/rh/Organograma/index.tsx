@@ -14,7 +14,6 @@ import {
   contarTimesAtivosSobDiretoria,
   montarArvoreOrganograma,
 } from "../../../lib/rhOrganogramaTree";
-import { uploadDiretorFotoDiretoria } from "../../../lib/rhOrgDiretorFoto";
 import type {
   RhOrgDiretoria,
   RhOrgDiretoriaComFilhos,
@@ -30,7 +29,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
 import {
   OrgFiltroBarDiretorias,
@@ -59,8 +58,7 @@ type ModalExcluir =
   | {
       tipo: "diretoria" | "gerencia" | "time";
       row: RhOrgDiretoria | RhOrgGerencia | RhOrgTime;
-      titulo: string;
-      corpo: string;
+      descricaoItem: string;
     };
 
 const DELETE_CHUNK = 200;
@@ -132,9 +130,7 @@ export default function RhOrganogramaPage() {
 
   const [filtroDiretoriaId, setFiltroDiretoriaId] = useState<FiltroDiretoriaOrganograma>(ORG_FILTRO_TODAS_DIRETORIAS);
 
-  const [diretorSobre, setDiretorSobre] = useState("");
-  const [fotoDiretorFile, setFotoDiretorFile] = useState<File | null>(null);
-  const [fotoDiretorPreviewUrl, setFotoDiretorPreviewUrl] = useState<string | null>(null);
+  const [sobreDiretoria, setSobreDiretoria] = useState("");
 
   const [sobreGerencia, setSobreGerencia] = useState("");
 
@@ -186,16 +182,6 @@ export default function RhOrganogramaPage() {
     if (perm.loading) return;
     if (!perm.canEditarOk && modo !== "visual") setModo("visual");
   }, [perm.loading, perm.canEditarOk, modo, setModo]);
-
-  useEffect(() => {
-    if (!fotoDiretorFile) {
-      setFotoDiretorPreviewUrl(null);
-      return;
-    }
-    const u = URL.createObjectURL(fotoDiretorFile);
-    setFotoDiretorPreviewUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [fotoDiretorFile]);
 
   const nomePorFuncId = useMemo(() => {
     const m = new Map<string, string>();
@@ -385,8 +371,7 @@ export default function RhOrganogramaPage() {
   const abrirNovaDiretoria = () => {
     setNomeDir("");
     setFidDir("");
-    setDiretorSobre("");
-    setFotoDiretorFile(null);
+    setSobreDiretoria("");
     setDraftDirId(crypto.randomUUID());
     setMdDir("new");
   };
@@ -395,8 +380,7 @@ export default function RhOrganogramaPage() {
     setDraftDirId(null);
     setNomeDir(row.nome);
     setFidDir(row.diretor_funcionario_id ?? "");
-    setDiretorSobre(row.diretor_sobre ?? "");
-    setFotoDiretorFile(null);
+    setSobreDiretoria(row.sobre_diretoria ?? "");
     setMdDir(row);
   };
 
@@ -405,8 +389,8 @@ export default function RhOrganogramaPage() {
       setErroGlobal("Informe o nome da diretoria.");
       return;
     }
-    if (!diretorSobre.trim()) {
-      setErroGlobal("Preencha o texto Sobre o Diretor(a).");
+    if (!sobreDiretoria.trim()) {
+      setErroGlobal("Preencha o texto Sobre a Diretoria.");
       return;
     }
     if (!fidDir.trim()) {
@@ -420,60 +404,30 @@ export default function RhOrganogramaPage() {
       nome: nomeDir.trim(),
       diretor_funcionario_id: fidDir.trim(),
       diretor_nome_livre,
-      diretor_sobre: diretorSobre.trim(),
+      sobre_diretoria: sobreDiretoria.trim(),
     };
     if (mdDir === "new") {
       const newId = draftDirId ?? crypto.randomUUID();
-      let diretor_foto_url: string | null = null;
-      if (fotoDiretorFile) {
-        const up = await uploadDiretorFotoDiretoria(newId, fotoDiretorFile);
-        if (!up.ok) {
-          setSalvandoDir(false);
-          setErroGlobal(up.message);
-          return;
-        }
-        diretor_foto_url = up.publicUrl;
-      }
-      if (!diretor_foto_url?.trim()) {
-        setSalvandoDir(false);
-        setErroGlobal("Envie a foto do Diretor(a).");
-        return;
-      }
       const centro_custos = proximoCentroCustosDiretoria(diretorias);
       const { error } = await supabase
         .from("rh_org_diretorias")
-        .insert({ id: newId, ...payloadBase, diretor_foto_url, status: "ativo", centro_custos });
+        .insert({ id: newId, ...payloadBase, status: "ativo", centro_custos });
       setSalvandoDir(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é diretor(a) de outra diretoria ativa.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
         else setErroGlobal(error.message);
         return;
       }
       setSucessoMsg("Diretoria criada.");
     } else if (mdDir !== null && typeof mdDir === "object") {
       const row = mdDir;
-      let diretor_foto_url: string | null = row.diretor_foto_url;
-      if (fotoDiretorFile) {
-        const up = await uploadDiretorFotoDiretoria(row.id, fotoDiretorFile);
-        if (!up.ok) {
-          setSalvandoDir(false);
-          setErroGlobal(up.message);
-          return;
-        }
-        diretor_foto_url = up.publicUrl;
-      }
-      if (!diretor_foto_url?.trim()) {
-        setSalvandoDir(false);
-        setErroGlobal("Envie a foto do Diretor(a).");
-        return;
-      }
       const { error } = await supabase
         .from("rh_org_diretorias")
-        .update({ ...payloadBase, diretor_foto_url })
+        .update(payloadBase)
         .eq("id", row.id);
       setSalvandoDir(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é diretor(a) de outra diretoria ativa.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é diretor(a) de outra diretoria ativa.");
         else setErroGlobal(error.message);
         return;
       }
@@ -481,8 +435,7 @@ export default function RhOrganogramaPage() {
     }
     setMdDir(null);
     setDraftDirId(null);
-    setFotoDiretorFile(null);
-    setDiretorSobre("");
+    setSobreDiretoria("");
     await carregar();
   };
 
@@ -594,7 +547,7 @@ export default function RhOrganogramaPage() {
         .insert({ id: newId, ...payload, gerencia_id: mdTime.gerenciaId, status: "ativo", centro_custos });
       setSalvandoTime(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outro time ativo.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
         else setErroGlobal(error.message);
         return;
       }
@@ -603,7 +556,7 @@ export default function RhOrganogramaPage() {
       const { error } = await supabase.from("rh_org_times").update(payload).eq("id", mdTime.row.id);
       setSalvandoTime(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outro time ativo.");
+        if (error.code === "23505") setErroGlobal("Este prestador já é líder imediato de outro time ativo.");
         else setErroGlobal(error.message);
         return;
       }
@@ -641,7 +594,7 @@ export default function RhOrganogramaPage() {
       tipo: "time",
       row: ti,
       titulo: "Desativar time",
-      corpo: `O time "${ti.nome}" ficará inativo. ${q} funcionário(s) ativo(s) ainda podem estar vinculados a este time no cadastro — revise o cadastro de funcionários.`,
+      corpo: `O time "${ti.nome}" ficará inativo. ${q} prestador(es) ainda podem estar vinculados a este time no cadastro — revise em Gestão de Prestadores.`,
     });
   };
 
@@ -667,12 +620,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "time",
       row: ti,
-      titulo: "Excluir time",
-      corpo: `O time "${ti.nome}" será removido definitivamente do organograma.${
-        q > 0
-          ? ` ${q} funcionário(s) ativo(s) com vínculo a este time ficarão sem time (campo esvaziado automaticamente).`
-          : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `o time «${ti.nome}» do organograma${
+        q > 0 ? ` (${q} prestador(es) ficarão sem time)` : ""
+      }`,
     });
   };
 
@@ -685,10 +635,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "gerencia",
       row: g,
-      titulo: "Excluir gerência",
-      corpo: `A gerência "${g.nome}" e ${nTimes} time(s) abaixo dela serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `a gerência «${g.nome}» e ${nTimes} time(s) vinculados${
+        nFunc > 0 ? ` (${nFunc} prestador(es) perderão o vínculo de time)` : ""
+      }`,
     });
   };
 
@@ -703,10 +652,9 @@ export default function RhOrganogramaPage() {
     setModalExcluir({
       tipo: "diretoria",
       row: d,
-      titulo: "Excluir diretoria",
-      corpo: `A diretoria "${d.nome}", ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) serão removidos definitivamente.${
-        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
-      } Esta ação não pode ser desfeita.`,
+      descricaoItem: `a diretoria «${d.nome}», ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) vinculados${
+        nFunc > 0 ? ` (${nFunc} prestador(es) perderão o vínculo de time)` : ""
+      }`,
     });
   };
 
@@ -771,8 +719,28 @@ export default function RhOrganogramaPage() {
 
   if (perm.loading) {
     return (
-      <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-        <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
+      <div
+        className="app-page-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 200,
+          color: t.textMuted,
+          fontSize: 13,
+          fontFamily: FONT.body,
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <Loader2
+            className="app-lucide-spin"
+            size={22}
+            color="var(--brand-action, #7c3aed)"
+            aria-hidden
+            style={{ marginBottom: 12 }}
+          />
+          <div>Carregando…</div>
+        </div>
       </div>
     );
   }
@@ -857,8 +825,15 @@ export default function RhOrganogramaPage() {
         style={{ ...orgPanelBox, minHeight: 200 }}
       >
         {loading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
+          <div style={{ textAlign: "center", padding: 40, color: t.textMuted, fontSize: 13 }}>
+            <Loader2
+              className="app-lucide-spin"
+              size={22}
+              color="var(--brand-action, #7c3aed)"
+              aria-hidden
+              style={{ marginBottom: 12 }}
+            />
+            <div>Carregando…</div>
           </div>
         ) : (
           <>
@@ -979,8 +954,7 @@ export default function RhOrganogramaPage() {
             if (!salvandoDir) {
               setMdDir(null);
               setDraftDirId(null);
-              setFotoDiretorFile(null);
-              setDiretorSobre("");
+              setSobreDiretoria("");
             }
           }}
         >
@@ -990,8 +964,7 @@ export default function RhOrganogramaPage() {
               if (!salvandoDir) {
                 setMdDir(null);
                 setDraftDirId(null);
-                setFotoDiretorFile(null);
-                setDiretorSobre("");
+                setSobreDiretoria("");
               }
             }}
           />
@@ -1023,6 +996,20 @@ export default function RhOrganogramaPage() {
             />
           </div>
           <div style={{ marginBottom: 12 }}>
+            <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
+              Sobre a Diretoria
+              <CampoObrigatorioMark />
+            </label>
+            <textarea
+              id="org-sobre-dir"
+              value={sobreDiretoria}
+              onChange={(e) => setSobreDiretoria(e.target.value)}
+              style={textareaStyle}
+              rows={4}
+              aria-required
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Diretor(a)
               <CampoObrigatorioMark />
@@ -1039,42 +1026,6 @@ export default function RhOrganogramaPage() {
               {optsFunc}
             </select>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="org-foto-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Foto do Diretor(a)
-              <CampoObrigatorioMark />
-            </label>
-            <input
-              id="org-foto-dir"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setFotoDiretorFile(e.target.files?.[0] ?? null)}
-              style={{ ...inputStyle, padding: 8 }}
-            />
-            {fotoDiretorPreviewUrl || (typeof mdDir === "object" && mdDir.diretor_foto_url) ? (
-              <div style={{ marginTop: 10 }}>
-                <img
-                  src={fotoDiretorPreviewUrl ?? (typeof mdDir === "object" ? mdDir.diretor_foto_url! : "")}
-                  alt={fidDir.trim() ? `Foto de ${nomeResponsavel(fidDir, null)}` : "Pré-visualização da foto do diretor(a)"}
-                  style={{ maxWidth: "100%", maxHeight: 160, borderRadius: 10, border: `1px solid ${t.cardBorder}` }}
-                />
-              </div>
-            ) : null}
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Sobre o Diretor(a)
-              <CampoObrigatorioMark />
-            </label>
-            <textarea
-              id="org-sobre-dir"
-              value={diretorSobre}
-              onChange={(e) => setDiretorSobre(e.target.value)}
-              style={textareaStyle}
-              rows={5}
-              aria-required
-            />
-          </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
             <button
               type="button"
@@ -1082,8 +1033,7 @@ export default function RhOrganogramaPage() {
               onClick={() => {
                 setMdDir(null);
                 setDraftDirId(null);
-                setFotoDiretorFile(null);
-                setDiretorSobre("");
+                setSobreDiretoria("");
               }}
               style={{ ...btnSecondaryStyle, cursor: salvandoDir ? "not-allowed" : "pointer", opacity: salvandoDir ? 0.65 : 1 }}
             >
@@ -1351,39 +1301,12 @@ export default function RhOrganogramaPage() {
       ) : null}
 
       {modalExcluir ? (
-        <ModalBase maxWidth={480} onClose={() => !excluindo && setModalExcluir(null)}>
-          <ModalHeader title={modalExcluir.titulo} onClose={() => !excluindo && setModalExcluir(null)} />
-          <ModalFocusBody>
-          <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>{modalExcluir.corpo}</p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-            <button
-              type="button"
-              disabled={excluindo}
-              onClick={() => setModalExcluir(null)}
-              style={{ ...btnSecondaryStyle, cursor: excluindo ? "not-allowed" : "pointer", opacity: excluindo ? 0.65 : 1 }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={excluindo}
-              onClick={() => void executarExcluir()}
-              style={{
-                ...inputStyle,
-                width: "auto",
-                border: "none",
-                background: "#e84025",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: excluindo ? "wait" : "pointer",
-              }}
-            >
-              {excluindo ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-              Excluir definitivamente
-            </button>
-          </div>
-          </ModalFocusBody>
-        </ModalBase>
+        <ModalConfirmExcluirPadrao
+          descricaoItem={modalExcluir.descricaoItem}
+          onCancel={() => !excluindo && setModalExcluir(null)}
+          onConfirm={() => void executarExcluir()}
+          loading={excluindo}
+        />
       ) : null}
     </div>
   );

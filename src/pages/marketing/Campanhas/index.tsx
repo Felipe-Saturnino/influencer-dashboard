@@ -8,12 +8,14 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { Campanha } from "../../../types";
-import { Pencil, AlertCircle, Trash2, Loader2 } from "lucide-react";
+import { Pencil, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
@@ -360,29 +362,13 @@ export default function Campanhas() {
                                 </button>
                               ) : null}
                               {perm.canExcluirOk ? (
-                                <button
-                                  type="button"
+                                <BtnExcluirLinha
+                                  descricaoItem={descricaoBotaoExcluir("campanha", c.nome)}
                                   onClick={() => {
                                     setErroExcluirCampanha(null);
                                     setCampanhaParaExcluir(c);
                                   }}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    background: "transparent",
-                                    border: `1px solid ${COR.vermelho}66`,
-                                    borderRadius: 10,
-                                    padding: "6px 14px",
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                    fontSize: 12,
-                                    color: COR.vermelho,
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  <Trash2 size={13} aria-hidden /> Excluir
-                                </button>
+                                />
                               ) : null}
                             </div>
                           </td>
@@ -406,8 +392,12 @@ export default function Campanhas() {
       )}
 
       {campanhaParaExcluir ? (
-        <ModalConfirmDelete
-          texto={`Excluir permanentemente a campanha «${campanhaParaExcluir.nome}»? Os vínculos desta campanha na Gestão de Links serão desfeitos.`}
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a campanha",
+            campanhaParaExcluir.nome,
+            "(os vínculos na Gestão de Links serão desfeitos)",
+          )}
           onCancel={() => {
             if (!excluindoCampanha) {
               setErroExcluirCampanha(null);

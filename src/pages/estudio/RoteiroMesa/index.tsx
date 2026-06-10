@@ -6,7 +6,8 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
+import { BookOpen, Megaphone, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
@@ -15,12 +16,13 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
@@ -640,17 +642,20 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   );
 }
 
+function truncarTextoRoteiro(texto: string, max: number): string {
+  if (texto.length <= max) return texto;
+  return `${texto.slice(0, max)}…`;
+}
+
 // ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
-function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor }: {
+function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, operadoraNome, operadoraCor }: {
   sugestao: RoteiroSugestao; podeExcluir: boolean;
-  onExcluir: (s: RoteiroSugestao) => void;
+  onPedirExcluir: (s: RoteiroSugestao) => void;
   dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
 }) {
   const tipo      = sugestao.tipo ?? "script";
   const jogosList = sugestao.jogos ?? ["todos"];
   const cfg       = TIPO_CONFIG[tipo];
-  const [hover,   setHover] = useState(false);
-  const [excluirConfirmando, setExcluirConfirmando] = useState(false);
   const IconComponent = TIPO_ICON[tipo];
   const isOrientacao = tipo === "orientacao";
   const rowBg = isOrientacao
@@ -703,58 +708,21 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
         </div>
       </div>
       {podeExcluir && (
-        <button
-          type="button"
-          onClick={() => {
-            if (!excluirConfirmando) {
-              setExcluirConfirmando(true);
-              return;
-            }
-            onExcluir(sugestao);
-            setExcluirConfirmando(false);
-          }}
-          onBlur={() => setExcluirConfirmando(false)}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          title={`Excluir: ${sugestao.texto.slice(0, 50)}${sugestao.texto.length > 50 ? "…" : ""}`}
-          aria-label={`${excluirConfirmando ? "Confirmar exclusão:" : "Excluir sugestão:"} ${sugestao.texto.slice(0, 60)}${sugestao.texto.length > 60 ? "…" : ""}`}
-          style={{
-            width: "auto",
-            minWidth: 34,
-            height: 34,
-            padding: excluirConfirmando ? "0 8px" : 0,
-            borderRadius: 8,
-            flexShrink: 0,
-            border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
-            background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-            color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            transition: "all 0.15s",
-            fontSize: 10,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-          }}
-        >
-          <Trash2 size={13} aria-hidden />
-          {excluirConfirmando ? <span>Confirmar?</span> : null}
-        </button>
+        <BtnExcluirLinha
+          descricaoItem={descricaoBotaoExcluir("sugestão", truncarTextoRoteiro(sugestao.texto, 50))}
+          onClick={() => onPedirExcluir(sugestao)}
+        />
       )}
     </div>
   );
 }
 
 // ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
-function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor }: {
+function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, operadoraNome, operadoraCor }: {
   campanha: RoteiroCampanha; podeExcluir: boolean;
-  onExcluir: (c: RoteiroCampanha) => void;
+  onPedirExcluir: (c: RoteiroCampanha) => void;
   dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
 }) {
-  const [hover,    setHover]    = useState(false);
-  const [excluirConfirmando, setExcluirConfirmando] = useState(false);
   const cianoText = dark ? "#70cae4" : "#0f6a8a";
   const formatDate = (d?: string) => {
     if (!d) return null;
@@ -802,45 +770,10 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
       </div>
       <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
         {podeExcluir && (
-          <button
-            type="button"
-            onClick={() => {
-              if (!excluirConfirmando) {
-                setExcluirConfirmando(true);
-                return;
-              }
-              onExcluir(campanha);
-              setExcluirConfirmando(false);
-            }}
-            onBlur={() => setExcluirConfirmando(false)}
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            title={`Excluir campanha: ${campanha.titulo}`}
-            aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
-            style={{
-              width: "auto",
-              minWidth: 34,
-              height: 34,
-              padding: excluirConfirmando ? "0 8px" : 0,
-              borderRadius: 8,
-              flexShrink: 0,
-              border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
-              background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-              color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              transition: "all 0.15s",
-              fontSize: 10,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-            }}
-          >
-            <Trash2 size={13} aria-hidden />
-            {excluirConfirmando ? <span>Confirmar?</span> : null}
-          </button>
+          <BtnExcluirLinha
+            descricaoItem={descricaoBotaoExcluir("campanha", campanha.titulo)}
+            onClick={() => onPedirExcluir(campanha)}
+          />
         )}
       </div>
     </div>
@@ -856,10 +789,18 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 }) {
   const { theme: t } = useApp();
   const [modalAberto, setModalAberto] = useState(false);
+  const [excluirTarget, setExcluirTarget] = useState<RoteiroSugestao | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
-  const handleExcluir = async (s: RoteiroSugestao) => {
-    const { error } = await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", s.id);
-    if (!error) onCarregar();
+  const confirmarExcluir = async () => {
+    if (!excluirTarget) return;
+    setExcluindo(true);
+    const { error } = await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", excluirTarget.id);
+    setExcluindo(false);
+    if (!error) {
+      setExcluirTarget(null);
+      onCarregar();
+    }
   };
 
   const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
@@ -895,13 +836,23 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
           sugestoes.map((s) => {
             const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug) : undefined;
             return (
-              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.brand_action} />
+              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onPedirExcluir={setExcluirTarget} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.brand_action} />
             );
           })
         )}
       </div>
     </div>
     {modalAberto && <ModalRoteiro operadoraSlug={operadoraSlug} operadorasList={operadorasList} bloco={bloco} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    {excluirTarget ? (
+      <ModalConfirmExcluirPadrao
+        descricaoItem={descricaoModalExcluirItem("a sugestão de roteiro", truncarTextoRoteiro(excluirTarget.texto, 80))}
+        onCancel={() => {
+          if (!excluindo) setExcluirTarget(null);
+        }}
+        onConfirm={() => void confirmarExcluir()}
+        loading={excluindo}
+      />
+    ) : null}
     </>
   );
 }
@@ -918,13 +869,21 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
   const brand = useDashboardBrand();
   const cianoTitle = dark ? "#70cae4" : "#0f6a8a";
   const [modalAberto, setModalAberto] = useState(false);
+  const [excluirTarget, setExcluirTarget] = useState<RoteiroCampanha | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const btnNovaCampanhaBg = brand.useBrand
     ? "var(--brand-primary)"
     : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
 
-  const handleExcluir = async (c: RoteiroCampanha) => {
-    const { error } = await supabase.from("roteiro_mesa_campanhas").delete().eq("id", c.id);
-    if (!error) onCarregar();
+  const confirmarExcluir = async () => {
+    if (!excluirTarget) return;
+    setExcluindo(true);
+    const { error } = await supabase.from("roteiro_mesa_campanhas").delete().eq("id", excluirTarget.id);
+    setExcluindo(false);
+    if (!error) {
+      setExcluirTarget(null);
+      onCarregar();
+    }
   };
 
   if (!operadoraSlug) return null;
@@ -963,7 +922,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
                 key={c.id}
                 campanha={c}
                 podeExcluir={podeExcluir}
-                onExcluir={handleExcluir}
+                onPedirExcluir={setExcluirTarget}
                 dark={dark}
                 operadoraNome={op?.nome}
                 operadoraCor={op?.brand_action}
@@ -985,6 +944,16 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
         podeVerOperadora={podeVerOperadora}
       />
     )}
+    {excluirTarget ? (
+      <ModalConfirmExcluirPadrao
+        descricaoItem={descricaoModalExcluirItem("a campanha", excluirTarget.titulo)}
+        onCancel={() => {
+          if (!excluindo) setExcluirTarget(null);
+        }}
+        onConfirm={() => void confirmarExcluir()}
+        loading={excluindo}
+      />
+    ) : null}
     </>
   );
 }

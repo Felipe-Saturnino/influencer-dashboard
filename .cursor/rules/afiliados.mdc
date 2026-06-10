@@ -82,6 +82,7 @@ Botão **Adicionar Anotação** (Network): `var(--brand-secondary)` com `brand.u
 - `useModalEscape(onClose, true)` — `src/hooks/useModalEscape.ts`
 - Tabs: `tablist`, `id`, `aria-controls`, `tabIndex`, `ArrowLeft`/`ArrowRight` com `preventDefault`, `role="tabpanel"`
 - Prospecto sem usuário: microcopy no modal de edição explicando e-mail/operadora obrigatórios ao salvar
+- **Afiliados:** **sem** ação Excluir no modal de edição — a página não expõe exclusão (`hasExcluir: false` em Gestão de Usuários). **Network** mantém exclusão via `BtnExcluirComTexto` + modal padrão.
 
 ---
 

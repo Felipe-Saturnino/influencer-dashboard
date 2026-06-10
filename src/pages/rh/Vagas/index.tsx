@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { FiltroBarCampoOption } from "../../../components/FiltroBarCampoSelect";
-import { CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -30,7 +30,9 @@ import {
 } from "../../../lib/rhVagasFiltroConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { getPageContentBoxShellStyle, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
@@ -330,32 +332,6 @@ export default function RhVagasPage() {
     </button>
   );
 
-  const btnPerigo = (label: string, onClick: () => void) => (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "8px 14px",
-        borderRadius: 10,
-        border: "1px solid rgba(232,64,37,0.45)",
-        background: t.inputBg,
-        color: "#e84025",
-        fontWeight: 600,
-        fontSize: 13,
-        fontFamily: FONT.body,
-        cursor: "pointer",
-        marginRight: 8,
-        marginTop: 12,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-      }}
-    >
-      <Trash2 size={14} aria-hidden />
-      {label}
-    </button>
-  );
-
   const tipoInterna = (tipo: RhVagaTipo) => tipo === "interna" || tipo === "mista";
   const tipoExterna = (tipo: RhVagaTipo) => tipo === "externa" || tipo === "mista";
 
@@ -506,7 +482,14 @@ export default function RhVagasPage() {
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
                       <CampoVaga k="Candidato selecionado" v={nomeCand} t={t} />
                       <div style={{ marginTop: 4 }}>
-                        {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
+                        {perm.canExcluirOk ? (
+                          <div style={{ marginTop: 12 }}>
+                            <BtnExcluirComTexto
+                              descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                              onClick={() => setVagaExcluirConfirm(v)}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -527,7 +510,14 @@ export default function RhVagasPage() {
                       <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
                       <div style={{ marginTop: 4 }}>
                         {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
-                        {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
+                        {perm.canExcluirOk ? (
+                          <div style={{ marginTop: 12 }}>
+                            <BtnExcluirComTexto
+                              descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                              onClick={() => setVagaExcluirConfirm(v)}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -536,7 +526,14 @@ export default function RhVagasPage() {
                   v,
                   <div style={{ marginTop: 4 }}>
                     {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
-                    {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
+                    {perm.canExcluirOk ? (
+                      <div style={{ marginTop: 12 }}>
+                        <BtnExcluirComTexto
+                          descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                          onClick={() => setVagaExcluirConfirm(v)}
+                        />
+                      </div>
+                    ) : null}
                   </div>,
                   { statusLabel: labelStatusVaga(st) },
                 );
@@ -579,61 +576,14 @@ export default function RhVagasPage() {
       />
 
       {vagaExcluirConfirm ? (
-        <ModalBase maxWidth={440} onClose={() => !excluindoVaga && setVagaExcluirConfirm(null)}>
-          <ModalHeader
-            title="Excluir vaga?"
-            onClose={() => {
-              if (!excluindoVaga) setVagaExcluirConfirm(null);
-            }}
-          />
-          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
-            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
-              Esta ação remove permanentemente a vaga <strong>{vagaExcluirConfirm.titulo}</strong>. Não é possível desfazer.
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                disabled={excluindoVaga}
-                onClick={() => setVagaExcluirConfirm(null)}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: excluindoVaga ? "not-allowed" : "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={excluindoVaga}
-                onClick={() => void executarExclusaoVaga()}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: "#e84025",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: excluindoVaga ? "wait" : "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {excluindoVaga ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-                Excluir
-              </button>
-            </div>
-          </div>
-        </ModalBase>
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem("a vaga", vagaExcluirConfirm.titulo)}
+          onCancel={() => {
+            if (!excluindoVaga) setVagaExcluirConfirm(null);
+          }}
+          onConfirm={() => void executarExclusaoVaga()}
+          loading={excluindoVaga}
+        />
       ) : null}
 
       {modalStub ? (

@@ -400,7 +400,7 @@
   }
 }
 
-/* Organograma RH — visão geral: lista scrollável no estreito, grid a partir de 768px */
+/* Organograma RH — visão geral: lista no mobile; 2 colunas (480+) e 3 colunas (900+) com última linha centrada */
 .app-org-dir-cards {
   display: flex;
   flex-direction: column;
@@ -411,22 +411,40 @@
   -webkit-overflow-scrolling: touch;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 480px) {
   .app-org-dir-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-    gap: 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 14px;
     max-height: none;
     overflow: visible;
-    align-items: stretch;
+  }
+
+  .app-org-dir-card-item {
+    width: calc((100% - 14px) / 2);
+    max-width: 520px;
   }
 }
 
-/* Cards de diretoria: mesma altura na linha da grid + conteúdo em coluna flex */
+@media (min-width: 900px) {
+  .app-org-dir-cards {
+    gap: 14px;
+  }
+
+  .app-org-dir-card-item {
+    width: calc((100% - 28px) / 3);
+    max-width: 400px;
+  }
+}
+
+/* Cards de diretoria: mesma altura na linha + conteúdo em coluna flex */
 .app-org-dir-card-item {
   display: flex;
   min-width: 0;
   min-height: 100%;
+  box-sizing: border-box;
 }
 
 .app-org-dir-card-btn {

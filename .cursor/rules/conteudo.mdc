@@ -26,7 +26,7 @@ alwaysApply: false
 |---|---|---|
 | LinksMateriais | Influencer / Gestor | Gerar link UTM de rastreamento e baixar QR Code branded |
 | PlaybookInfluencers | Influencer (leitura + ciência) / Gestor (auditoria) | Garantir leitura e confirmação das seções obrigatórias antes de transmitir |
-| SpinNaRede | Todos (leitura) | Vitrine de menções públicas à Spin via RSS |
+| SpinNaRede | Todos (leitura) / gestão (excluir menção) | Vitrine de menções públicas à Spin via RSS |
 | PortalRh | Colaborador (leitura) / Gestor RH (CRUD + aprovação) | Comunicados, políticas, RH Talks e gerenciamento |
 | RoteiroMesa | Gestor / Admin | CRUD de roteiros e campanhas de mesa por bloco e operadora |
 
@@ -373,8 +373,9 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ### SpinNaRede (`src/pages/conteudo/SpinNaRede/index.tsx`)
 
-- Header: `Radio` (Lucide), `h1` **18px**; somente leitura.
-- Lista: `<ul>` / `<li>`; cards com `t.cardBg`, `t.cardBorder`, `cardShadow` via `t.isDark`.
+- Header: `Radio` (Lucide), `h1` **18px**; listagem de menções filtradas (`passou_filtro`).
+- Lista: `<ul>` / `<li>`; cards com `getPageContentBoxShellStyle`.
+- Rodapé do cartão: link **Ir para a matéria** (esquerda) + **`BtnExcluirLinha`** (direita) quando `perm.canExcluirOk` — pop-up **`ModalConfirmExcluirPadrao`**; delete em `spin_na_rede_mencao`.
 - Loading: `"Carregando menções…"` (PT-BR — nunca `"A carregar"`).
 - Link externo: `var(--brand-primary, #7c3aed)` — não `brand.accent`; `target="_blank"` + `rel="noopener noreferrer"`.
 - Miniatura: `<a tabIndex={-1} aria-hidden>` quando o link de texto cobre o mesmo destino; `<img width={160} height={90} alt="" />` decorativa.

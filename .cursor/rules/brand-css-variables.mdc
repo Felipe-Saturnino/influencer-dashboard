@@ -459,8 +459,56 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 
 - **`aria-label` descritivo** obrigatório (ex.: `` `Editar ${nome}` ``).
 - **`title`** com o mesmo texto (ou rótulo curto) para tooltip no hover.
-- Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px**.
-- Estilo base: quadrado ~28–32px, `borderRadius: 8`, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `btnIconTabela` em RH.
+- Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px** para ações neutras (Editar).
+- Estilo base (Editar e demais): quadrado ~28–32px, `borderRadius` 8–10, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `btnIconTabela` em RH.
+
+### Exclusão — só ícone (lista / card / tabela)
+
+Usar **`BtnExcluirLinha`** + **`ModalConfirmExcluirPadrao`** — contrato completo (visual, copy, helpers) em **Global § Modais → Exclusão**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto) ou `Trash2` solto sem modal.
+
+| Propriedade | Valor |
+|-------------|--------|
+| Componente | **`BtnExcluirLinha`** |
+| Ícone | **`Trash2`** 14px, `aria-hidden` |
+| Dimensões | **32×32**, `borderRadius` **10** |
+| Cor | **`#e84025`**, borda `rgba(232,64,37,0.35)`, fundo transparente |
+| Tooltip / `aria-label` / `title` | **`Excluir {tipo} {nome}`** — `labelTooltipExcluir` + `descricaoBotaoExcluir` |
+| Clique | Abre **`ModalConfirmExcluirPadrao`** (título **Excluir**, CTAs Cancelar / Excluir) |
+
+```tsx
+import { BtnExcluirLinha } from "../components/BtnExcluirLinha";
+
+<BtnExcluirLinha
+  descricaoItem={descricaoBotaoExcluir("operadora", op.nome)}
+  onClick={() => setAlvoExcluir(op)}
+/>
+```
+
+**Referência visual:** Gestão de Mesas.
+
+### Exclusão — ícone + texto «Excluir»
+
+**Única diferença** face ao só ícone: rótulo visível **`Excluir`** ao lado do **`Trash2`**. Mesma cor, borda, pop-up e helpers.
+
+| Propriedade | Valor |
+|-------------|--------|
+| Componente | **`BtnExcluirComTexto`** |
+| Texto visível | **`Excluir`** (`BTN_EXCLUIR_COM_TEXTO_LABEL`) |
+| Layout | `padding` **10px 18px**, `gap` **6**, `fontSize` **13**, peso **700** |
+| Demais | Igual **`BtnExcluirLinha`** + **`ModalConfirmExcluirPadrao`** |
+
+**Quando usar:** cards/listas com ações rotuladas (**Vagas**, **Central de Denúncias**) ou rodapé de **modal de edição** (**Agenda** `ModalLive`, **Scout** / **Network** `ModalEditar`). Pop-up sobre modal: `zIndex` **≥ 1100**.
+
+```tsx
+import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
+
+<BtnExcluirComTexto
+  descricaoItem={descricaoBotaoExcluir("denúncia", row.protocolo)}
+  onClick={() => setAlvoExcluir(row)}
+/>
+```
+
+**Legado a migrar:** botão Excluir inline (pill vermelho, 2º clique «Confirmar exclusão?») fora destes componentes.
 
 ### Catálogo de ações comuns (Lucide) — uso em **linha**
 
@@ -471,11 +519,12 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 | Histórico / thread | `Clock` ou `History` | `Histórico de {identificador}` |
 | Aprovar | `Check` | `Aprovar {identificador}` |
 | Arquivar | `Archive` | `Arquivar {identificador}` — 2º clique: incluir “Confirmar arquivamento” no label |
-| Excluir | `Trash2` | `Excluir {identificador}` — 2º clique: “Confirmar exclusão” |
+| Excluir (lista/card/tabela) | `Trash2` via **`BtnExcluirLinha`** | `Excluir {tipo} {nome}` — Global § Exclusão |
+| Excluir (card rotulado / modal editar) | `Trash2` + texto via **`BtnExcluirComTexto`** | Idem + rótulo visível **Excluir**; pop-up **`ModalConfirmExcluirPadrao`** |
 | Link externo | `ExternalLink` | `Abrir {destino} em nova aba` |
 | Expandir linha | `ChevronRight` rotacionado | Nunca `▶` textual |
 
-**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques pode mostrar microtexto “Confirmar?” ao lado do ícone (Portal RH Arquivar).
+**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques com microtexto (ex.: Portal RH **Arquivar**) — **não** aplicar a **Excluir** (usar `BtnExcluirLinha`, `BtnExcluirComTexto` + modal).
 
 **Legado a migrar (linha):** botões com texto “Ver”, “Editar”, “Aprovar” em células de tabela (ex. Afiliados) → ícone + `aria-label` + `title`. **Não** migrar toolbars de fluxo para ícone.
 
@@ -511,6 +560,7 @@ Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …
 - Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
 - Ação de **linha** só com texto, sem ícone (código novo).
+- **Excluir** sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** ou com confirmação em 2 cliques no botão.
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
 - Título diferente do menu ou página sem subtítulo.
 - `blockBg` na barra de filtros.

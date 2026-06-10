@@ -767,7 +767,7 @@ role="alert" + aria-live="polite" em erros inline
 
 Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — já incluem `role="dialog"`, `aria-modal`, Escape, foco inicial e `aria-labelledby` via `useId()` interno.
 
-- **Nunca** `window.confirm()` — confirmação de exclusão: modal dedicado ou fluxo em 2 cliques (ver Brand para toolbar vs linha).
+- **Nunca** `window.confirm()` — confirmação de exclusão em lista/card/tabela: **`ModalConfirmExcluirPadrao`** (ver § abaixo); demais fluxos: modal dedicado (ver Brand §8).
 - **Nunca** `alert()` — erros com estado local + bloco inline:
 
 ```tsx
@@ -783,6 +783,72 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - Mensagens ao usuário: PT fixo + `console.error` — **nunca** `error.message`, nomes de tabela/RPC/função no DOM.
 - `autoFocus` em input de modal: `ref` + `setTimeout(..., 100)` — evitar `autoFocus` direto (iOS).
 - Modais com `useApp()` + `useDashboardBrand()` **internamente** — não passar props `t` / `brand` salvo exceção documentada na secção.
+
+### Exclusão — padrão canónico (ícone ou ícone + texto)
+
+Dois variantes partilham **mesma cor**, **ícone `Trash2`**, **helpers** (`excluirItemUi.ts`) e **pop-up** **`ModalConfirmExcluirPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto) ou `window.confirm()`.
+
+| Variante | Componente | Texto visível | Quando usar |
+|----------|------------|---------------|-------------|
+| **Só ícone** | **`BtnExcluirLinha`** | Nenhum | Linha de tabela, card ou lista densa na página (referência: Gestão de Mesas) |
+| **Ícone + texto** | **`BtnExcluirComTexto`** | **`Excluir`** fixo | Card/lista com botões já rotulados (Vagas, Central de Denúncias) ou **rodapé de modal de edição** (Agenda `ModalLive`, Scout `ModalEditar`, Network `ModalEditar`) |
+
+| Peça | Implementação |
+|------|----------------|
+| Pop-up | **`ModalConfirmExcluirPadrao`** (`OperacoesModal.tsx`) |
+| Copy / helpers | **`src/lib/excluirItemUi.ts`** — título, tooltip, corpo do modal, constantes visuais |
+
+**Visual comum:** cor **`#e84025`**, borda `rgba(232,64,37,0.35)`, ícone **14px**, `borderRadius` **10**, fundo transparente. Constantes: `BTN_EXCLUIR_LINHA_*` e `BTN_EXCLUIR_COM_TEXTO_*` em `excluirItemUi.ts`.
+
+**Só ícone:** botão **32×32** (`BtnExcluirLinha`).
+
+**Ícone + texto:** `padding` **10px 18px**, `gap` **6**, rótulo **`Excluir`** (`BtnExcluirComTexto`) — demais propriedades iguais ao só ícone.
+
+**Tooltip / `aria-label` / `title` (ambos):** `labelTooltipExcluir(descricaoBotao)` → **`Excluir {fragmento}`**. Fragmento curto via **`descricaoBotaoExcluir(tipo, nome)`** — padrão `{tipo} {nome}`, **sem** artigo, **sem** «» (ex.: `mesa Speed Baccarat`, `vaga Analista`).
+
+**Pop-up (ambos):**
+
+| Campo | Valor |
+|-------|--------|
+| Título | **`Excluir`** (`MODAL_EXCLUIR_TITULO`) |
+| Corpo | `Deseja excluir {fragmento}?\n\nEsta ação não poderá ser desfeita.` (`textoModalExcluir`) |
+| Fragmento modal | **`descricaoModalExcluirItem(artigoTipo, nome, sufixo?)`** — artigo + tipo + «nome» + detalhe opcional (ex.: `a live de «Nome» em 01/05/2026 às 20:00`) |
+| CTAs | **Cancelar** / **Excluir** (botão destrutivo `#e84025`) |
+
+**Pop-up sobre modal de edição:** `zIndex` **1100** (ou superior ao overlay do modal pai).
+
+```tsx
+import { BtnExcluirLinha } from "../components/BtnExcluirLinha";
+import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
+import { ModalConfirmExcluirPadrao } from "../components/OperacoesModal";
+import {
+  descricaoBotaoExcluir,
+  descricaoModalExcluirItem,
+} from "../lib/excluirItemUi";
+
+// Só ícone (linha de tabela)
+<BtnExcluirLinha
+  descricaoItem={descricaoBotaoExcluir("mesa", row.nome_mesa)}
+  onClick={() => setAlvoExcluir(row)}
+/>
+
+// Ícone + texto (card ou rodapé de modal)
+<BtnExcluirComTexto
+  descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+  onClick={() => setAlvoExcluir(v)}
+/>
+
+{alvoExcluir ? (
+  <ModalConfirmExcluirPadrao
+    descricaoItem={descricaoModalExcluirItem("a mesa", alvoExcluir.nome_mesa, `(ID Spin: ${alvoExcluir.mesa_identificacao})`)}
+    onCancel={() => setAlvoExcluir(null)}
+    onConfirm={() => void confirmarExclusao()}
+    loading={excluindo}
+  />
+) : null}
+```
+
+**Referência só ícone:** Gestão de Mesas. **Referência ícone + texto:** Vagas, Central de Denúncias, `ModalLive` (Agenda), `ModalEditar` (Scout, Network). **Exceção:** fluxos de domínio que **não** são exclusão (ex.: **Recusar** banca) mantêm `ModalConfirmDelete` com título e copy próprios.
 
 ---
 
@@ -979,6 +1045,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Ajuda/glossário com nome de página divergente do menu (ex.: “Resultado de Lives” em vez de “Resultados”).
 - CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
+- Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.

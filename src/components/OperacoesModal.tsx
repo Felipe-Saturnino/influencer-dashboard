@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
+import { MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../lib/excluirItemUi";
 
 const DialogTitleIdContext = createContext<string>("");
 
@@ -192,6 +193,7 @@ export function ModalConfirmDelete({
           fontFamily: FONT.body,
           lineHeight: 1.55,
           margin: "0 0 24px",
+          whiteSpace: "pre-line",
         }}
       >
         {texto}
@@ -240,7 +242,7 @@ export function ModalConfirmDelete({
             borderRadius: 10,
             border: "none",
             background: destructive
-              ? "#ef4444"
+              ? "#e84025"
               : brand.useBrand
                 ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
                 : "linear-gradient(135deg, #4a2082, #1e36f8)",
@@ -255,5 +257,35 @@ export function ModalConfirmDelete({
         </button>
       </div>
     </ModalBase>
+  );
+}
+
+/** Pop-up canónico: título «Excluir», corpo padronizado, Cancelar / Excluir. */
+export function ModalConfirmExcluirPadrao({
+  descricaoItem,
+  onCancel,
+  onConfirm,
+  loading,
+  zIndex = 1000,
+  error,
+}: {
+  descricaoItem: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  loading?: boolean;
+  zIndex?: number;
+  error?: string | null;
+}) {
+  return (
+    <ModalConfirmDelete
+      title={MODAL_EXCLUIR_TITULO}
+      texto={textoModalExcluir(descricaoItem)}
+      confirmLabel="Excluir"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      loading={loading}
+      zIndex={zIndex}
+      error={error}
+    />
   );
 }

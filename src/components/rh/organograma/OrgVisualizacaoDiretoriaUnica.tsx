@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { ORG_MSG_SEM_GERENCIAS, ORG_MSG_SEM_PRESTADORES } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
@@ -9,13 +10,6 @@ type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: str
 function textoOuTraco(s: string): string {
   const x = s.trim();
   return x ? x : "—";
-}
-
-function iniciaisNome(nome: string): string {
-  const p = nome.trim().split(/\s+/).filter(Boolean);
-  if (p.length === 0) return "?";
-  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
-  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
 function totalPrestadoresNaGerencia(
@@ -58,8 +52,7 @@ export function OrgVisualizacaoDiretoriaUnica({
   membrosPorGerenciaId: Record<string, string[]>;
 }) {
   const nomeDir = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
-  const altFoto = `Foto de ${nomeDir}`;
-  const sobreDir = d.diretor_sobre.trim();
+  const sobreDir = d.sobre_diretoria.trim();
   const [timesExpandidos, setTimesExpandidos] = useState<Record<string, boolean>>({});
 
   const toggleTime = useCallback((timeId: string) => {
@@ -135,86 +128,27 @@ export function OrgVisualizacaoDiretoriaUnica({
           Diretoria
         </h2>
         <div style={heroCard}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "flex-start" }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: "50%",
-                overflow: "hidden",
-                flexShrink: 0,
-                border: "2px solid var(--brand-action, #7c3aed)",
-                background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {d.diretor_foto_url ? (
-                <img src={d.diretor_foto_url} alt={altFoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    fontFamily: FONT_TITLE,
-                    color: "var(--brand-action, #7c3aed)",
-                  }}
-                >
-                  {iniciaisNome(nomeDir)}
-                </span>
-              )}
-            </div>
-            <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 20,
-                  fontWeight: 800,
-                  color: t.text,
-                  fontFamily: FONT_TITLE,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {textoOuTraco(nomeDir)}
-              </p>
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{d.nome}</p>
-              {sobreDir ? (
-                <p
-                  style={{
-                    margin: "12px 0 0",
-                    fontSize: 14,
-                    color: t.text,
-                    lineHeight: 1.55,
-                    whiteSpace: "pre-wrap",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  {sobreDir}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        {sobreDir ? (
-          <div
+          <p
             style={{
-              marginTop: 14,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 14,
-              padding: 16,
-              background: t.inputBg,
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 800,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              letterSpacing: "0.02em",
+              lineHeight: 1.35,
             }}
           >
-            <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Sobre o Diretor(a)</h3>
-            <p style={{ margin: 0, fontSize: 14, color: t.text, lineHeight: 1.55, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{sobreDir}</p>
+            {d.nome}
+          </p>
+          <p style={{ ...linhaEstilo.liderLabel, marginTop: 8 }}>
+            Diretor(a): <span style={linhaEstilo.liderNome}>{textoOuTraco(nomeDir)}</span>
+          </p>
+          <div style={{ marginTop: 14 }}>
+            <h4 style={linhaEstilo.sobreTitulo}>Sobre a Diretoria</h4>
+            <p style={linhaEstilo.sobreTexto}>{sobreDir ? d.sobre_diretoria : "—"}</p>
           </div>
-        ) : null}
+        </div>
       </section>
 
       {d.gerencias.length > 0 ? (
@@ -261,7 +195,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                       <>
                         <h4 style={{ ...linhaEstilo.sobreTitulo, marginBottom: 8 }}>Prestadores</h4>
                         {listaPrestadoresSemTime.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+                          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{ORG_MSG_SEM_PRESTADORES}</p>
                         ) : (
                           <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.55 }}>
                             {listaPrestadoresSemTime.map((n, i) => (
@@ -317,7 +251,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                                   >
                                     {membros.length === 0 ? (
                                       <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                                        Sem dados para o período selecionado.
+                                        {ORG_MSG_SEM_PRESTADORES}
                                       </p>
                                     ) : (
                                       <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.5 }}>
@@ -341,7 +275,7 @@ export function OrgVisualizacaoDiretoriaUnica({
           </div>
         </section>
       ) : (
-        <p style={{ margin: "0 0 24px", fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+        <p style={{ margin: "0 0 24px", fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>{ORG_MSG_SEM_GERENCIAS}</p>
       )}
     </div>
   );

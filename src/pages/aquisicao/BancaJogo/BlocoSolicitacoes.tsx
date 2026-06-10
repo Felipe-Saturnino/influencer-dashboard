@@ -13,7 +13,9 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { Eye, EyeOff } from "lucide-react"
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate"
 import { roleParidadeInfluencer } from "../../../lib/staffRoles"
-import { ModalConfirmDelete } from "../../../components/OperacoesModal"
+import { ModalConfirmDelete, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal"
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha"
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi"
 import { type BancaPerfilMapRow, type BancaRowDb } from "./bancaJogoTypes"
 import { STATUS_BANCA } from "./bancaJogoTypes"
 import { fmtMoeda, formatarCPFVisivel, mascaraCPF, periodoDoMes, rowNoMesSolicitacao } from "./bancaJogoHelpers"
@@ -452,19 +454,14 @@ export function BlocoSolicitacoes({
                           <div style={{ width: 1, height: 20, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
                         ) : null}
                         {showExcluir ? (
-                          <button
-                            type="button"
+                          <BtnExcluirLinha
+                            descricaoItem={descricaoBotaoExcluir(
+                              "solicitação de",
+                              perfilMap[r.influencer_id]?.nome ?? "influencer",
+                            )}
                             disabled={excluindoId === r.id}
-                            aria-disabled={excluindoId === r.id}
                             onClick={() => setConfirmExcluir(r)}
-                            style={{
-                              padding: "5px 12px", borderRadius: 8, border: "1px solid #ef444444", background: "#ef444415",
-                              color: "#ef4444", fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
-                              cursor: excluindoId === r.id ? "not-allowed" : "pointer", opacity: excluindoId === r.id ? 0.65 : 1,
-                            }}
-                          >
-                            {excluindoId === r.id ? "…" : "Excluir"}
-                          </button>
+                          />
                         ) : null}
                         {semAcao ? <span style={{ color: t.textMuted, fontSize: 11 }}>—</span> : null}
                       </div>
@@ -526,8 +523,12 @@ export function BlocoSolicitacoes({
         />
       ) : null}
       {confirmExcluir ? (
-        <ModalConfirmDelete
-          texto={`Excluir a solicitação de ${perfilMap[confirmExcluir.influencer_id]?.nome ?? "influencer"} no valor de ${fmtMoeda(Number(confirmExcluir.valor))}? Esta ação é irreversível.`}
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a solicitação de",
+            perfilMap[confirmExcluir.influencer_id]?.nome ?? "influencer",
+            `no valor de ${fmtMoeda(Number(confirmExcluir.valor))}`,
+          )}
           onCancel={() => setConfirmExcluir(null)}
           onConfirm={() => void excluirSolicitacao(confirmExcluir)}
           loading={excluindoId === confirmExcluir.id}

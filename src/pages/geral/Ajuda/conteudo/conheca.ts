@@ -601,9 +601,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Os itens são exibidos do mais recente ao mais antigo. Não há filtros por período — toda a listagem disponível é mostrada de uma vez.\n\nPara acessar a matéria completa, clique em Ir para a matéria, que abre o artigo original em uma nova aba.",
       },
       {
+        subtitulo: "Excluir menção",
+        texto:
+          "Perfis com permissão de Excluir veem o ícone vermelho no canto inferior direito de cada cartão. O clique abre a confirmação padrão da plataforma; ao confirmar, a menção sai da listagem local — o artigo na fonte externa não é alterado.",
+      },
+      {
         subtitulo: "Permissões",
         texto:
-          "A visualização da Spin na Rede está disponível para todos os perfis que têm acesso à seção Conteúdo. Não há ações de escrita nesta página — é exclusivamente de leitura.",
+          "A visualização está disponível para perfis com permissão de Ver em Spin na Rede. Quem tem permissão de Excluir vê o ícone de exclusão no canto inferior direito de cada cartão — abre o pop-up padrão de confirmação antes de remover a menção do índice. Criar e editar seguem a matriz em Gestão de Usuários (ingestão RSS é automática).",
       },
     ],
   },
@@ -724,7 +729,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Status e Permissões",
         texto:
-          "Alteração de status (Ativo/Inativo/Cancelado) é restrita a Gestores e Admin. Afiliados visualizam e editam apenas seu próprio perfil. Operadores visualizam apenas os afiliados de sua operadora.",
+          "Alteração de status (Ativo/Inativo/Cancelado) é restrita a Gestores e Admin. Afiliados visualizam e editam apenas seu próprio perfil. Operadores visualizam apenas os afiliados de sua operadora. Esta página não oferece exclusão de cadastro — use Network para remover prospectos ou contate um administrador para desativar acesso.",
       },
     ],
   },

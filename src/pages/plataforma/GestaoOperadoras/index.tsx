@@ -5,14 +5,16 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { Pencil, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -353,29 +355,13 @@ export default function GestaoOperadoras() {
                           </button>
                         ) : null}
                         {perm.canExcluirOk ? (
-                          <button
-                            type="button"
-                            aria-label={`Excluir operadora ${op.nome ?? op.slug}`}
-                            title={`Excluir operadora ${op.nome ?? op.slug}`}
+                          <BtnExcluirLinha
+                            descricaoItem={descricaoBotaoExcluir("operadora", op.nome ?? op.slug)}
                             onClick={() => {
                               setErroExcluirOperadora(null);
                               setOperadoraParaExcluir(op);
                             }}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: 32,
-                              height: 32,
-                              background: "transparent",
-                              border: `1px solid ${BRAND.vermelho}66`,
-                              borderRadius: 10,
-                              cursor: "pointer",
-                              color: BRAND.vermelho,
-                            }}
-                          >
-                            <Trash2 size={14} aria-hidden="true" />
-                          </button>
+                          />
                         ) : null}
                       </div>
                     </td>
@@ -399,8 +385,12 @@ export default function GestaoOperadoras() {
       )}
 
       {operadoraParaExcluir ? (
-        <ModalConfirmDelete
-          texto={`Excluir permanentemente a operadora «${operadoraParaExcluir.nome ?? operadoraParaExcluir.slug}» (${operadoraParaExcluir.slug})? Só é possível se não houver dados vinculados no sistema.`}
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "a operadora",
+            operadoraParaExcluir.nome ?? operadoraParaExcluir.slug,
+            `(${operadoraParaExcluir.slug})`,
+          )}
           onCancel={() => {
             if (!excluindoOperadora) {
               setErroExcluirOperadora(null);

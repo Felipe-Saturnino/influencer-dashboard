@@ -217,31 +217,15 @@ const [error, setError] = useState("");
 
 ## Confirmação de Exclusão — nunca usar `confirm()`
 
-Padrão de dois cliques sem modal. O `onBlur` cancela o estado de confirmação caso o
-usuário clique fora sem confirmar.
+**Padrão canónico:** **`BtnExcluirLinha`** (só ícone) ou **`BtnExcluirComTexto`** (ícone + «Excluir») + **`ModalConfirmExcluirPadrao`** — ver Global § Modais → Exclusão e Brand §8.
 
-```tsx
-const [confirmando, setConfirmando] = useState(false);
+| Contexto | Componente |
+|----------|------------|
+| Resultados (card), Feedback, … | **`BtnExcluirLinha`** |
+| **Agenda** `ModalLive` (rodapé editar) | **`BtnExcluirComTexto`** + modal `zIndex` **1100** |
+| **Scout** / **Network** `ModalEditar` | Idem |
 
-<button
-  onClick={() => {
-    if (!confirmando) { setConfirmando(true); return; }
-    handleDelete();
-    setConfirmando(false);
-  }}
-  onBlur={() => setConfirmando(false)}
-  style={{
-    color: confirmando ? "#fff" : BRAND.vermelho,
-    background: confirmando ? BRAND.vermelho : `${BRAND.vermelho}10`,
-    border: `1px solid ${confirmando ? BRAND.vermelho : `${BRAND.vermelho}50`}`,
-    transition: "all 0.15s",
-    // ... resto do estilo
-  }}
->
-  <Trash2 size={14} aria-hidden="true" />
-  {confirmando ? "Confirmar exclusão?" : "Excluir"}
-</button>
-```
+**Legado (migrar):** dois cliques no botão (`Confirmar exclusão?`) sem modal — ex.: **Afiliados** `ModalEditar` até migração.
 
 ---
 

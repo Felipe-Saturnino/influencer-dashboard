@@ -66,7 +66,8 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import {
   FiltroBarTabButton,
   SkeletonTableRow,
@@ -3310,52 +3311,18 @@ export default function RhPrestadoresPage() {
       ) : null}
 
       {prestadorExcluirConfirm ? (
-        <ModalBase
-          maxWidth={440}
-          onClose={() => {
+        <ModalConfirmExcluirPadrao
+          descricaoItem={descricaoModalExcluirItem(
+            "o cadastro de",
+            prestadorExcluirConfirm.nome,
+            `(CPF ${somenteDigitos(prestadorExcluirConfirm.cpf ?? "") || "—"})`,
+          )}
+          onCancel={() => {
             if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
           }}
-        >
-          <ModalHeader
-            title="Excluir prestador?"
-            onClose={() => {
-              if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
-            }}
-          />
-          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
-            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
-              Esta ação remove permanentemente o cadastro de{" "}
-              <strong>{prestadorExcluirConfirm.nome}</strong> (CPF {somenteDigitos(prestadorExcluirConfirm.cpf ?? "") || "—"}). Não é possível desfazer.
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                disabled={excluindoPrestador}
-                onClick={() => setPrestadorExcluirConfirm(null)}
-                style={{ ...inputStyle, width: "auto", cursor: excluindoPrestador ? "not-allowed" : "pointer" }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={excluindoPrestador}
-                onClick={() => void executarExclusaoPrestador()}
-                style={{
-                  ...inputStyle,
-                  width: "auto",
-                  border: "none",
-                  background: "#e84025",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: excluindoPrestador ? "wait" : "pointer",
-                }}
-              >
-                {excluindoPrestador ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-                Excluir
-              </button>
-            </div>
-          </div>
-        </ModalBase>
+          onConfirm={() => void executarExclusaoPrestador()}
+          loading={excluindoPrestador}
+        />
       ) : null}
 
     </div>
