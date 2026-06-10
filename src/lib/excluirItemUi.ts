@@ -47,14 +47,10 @@ export function labelTooltipExcluir(descricaoItem: string): string {
 
  */
 
-export function descricaoBotaoExcluir(tipoEntidade: string, nome: string): string {
-
+export function descricaoBotaoExcluir(tipoEntidade: string, nome?: string | null): string {
   const tipo = tipoEntidade.trim();
-
-  const item = nome.trim();
-
+  const item = (nome ?? "").trim();
   return item ? `${tipo} ${item}` : tipo;
-
 }
 
 
@@ -74,19 +70,13 @@ export function descricaoBotaoExcluir(tipoEntidade: string, nome: string): strin
  */
 
 export function descricaoModalExcluirItem(
-
   artigoTipo: string,
-
-  nome: string,
-
+  nome?: string | null,
   sufixo?: string,
-
 ): string {
-
-  const core = `${artigoTipo.trim()} «${nome.trim()}»`;
-
+  const label = (nome ?? "").trim() || "—";
+  const core = `${artigoTipo.trim()} «${label}»`;
   return sufixo?.trim() ? `${core} ${sufixo.trim()}` : core;
-
 }
 
 
