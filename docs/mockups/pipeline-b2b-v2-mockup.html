@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup v2.2 — Pipeline B2B (Comercial)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f4f8; --text: #1a1a2e; --text-muted: #6b7280; --card-bg: #ffffff; --card-border: #e5e7eb;
+      --input-bg: #f9fafb; --brand-primary: #7c3aed; --brand-secondary: #1e36f8; --radius-box: 14px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07); --disp: #6b7280; --con: #1e36f8; --neg: #f59e0b; --fech: #22c55e; --purple: #a78bfa;
+    }
+    [data-theme="dark"] {
+      --bg: #0f0f1a; --text: #fff; --text-muted: #9ca3af; --card-bg: #1a1a2e; --card-border: #3a3a5c;
+      --input-bg: #252540; --shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, sans-serif; background: var(--bg); color: var(--text); }
+
+    .banner {
+      background: #1a1a2e; color: #fff; padding: 10px 24px; font-size: 12px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .banner strong { color: #c4b5fd; }
+    .banner button { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+
+    .shell { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 12px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      color: var(--brand-primary); display: flex; align-items: center; justify-content: center;
+    }
+    .page-header h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); }
+    .subtitle { margin: 5px 0 0 44px; font-size: 13px; color: var(--text-muted); }
+
+    .box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box); box-shadow: var(--shadow); margin-bottom: 14px; }
+    .filter-box { padding: 12px 20px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+    .filter-row + .filter-row { margin-top: 10px; }
+    .search-row { justify-content: center; }
+    .search-row .search-wrap { flex: 1; min-width: 240px; max-width: 560px; }
+    .pill-select {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; min-height: 36px; flex-shrink: 0;
+    }
+    .pill-select select { border: none; background: transparent; font: inherit; color: inherit; cursor: pointer; max-width: 160px; }
+
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .search-wrap input {
+      width: 100%; padding: 10px 12px 10px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-family: inherit;
+    }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text-muted);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .tab-btn.active {
+      color: var(--brand-secondary); border-color: var(--brand-secondary); font-weight: 700;
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
+    }
+
+    .content-box { padding: 20px; }
+    .section-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .section-title { margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-secondary { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
+    .btn-criar {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+
+    .hier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 900px) { .hier-grid { grid-template-columns: repeat(2, 1fr); } }
+    .hier-group { border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; }
+    .hier-group-head { padding: 14px 16px; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid var(--card-border); }
+    .hier-group-head .total { font-size: 22px; display: block; margin-top: 4px; }
+    .hier-group.disp .hier-group-head { border-left: 3px solid var(--disp); color: var(--disp); }
+    .hier-group.con .hier-group-head { border-left: 3px solid var(--con); color: var(--con); }
+    .hier-group.neg .hier-group-head { border-left: 3px solid var(--neg); color: var(--neg); }
+    .hier-group.fech .hier-group-head { border-left: 3px solid var(--fech); color: var(--fech); }
+    .hier-line { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent); }
+    .hier-line:last-child { border-bottom: none; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .kpi-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 16px 20px; box-shadow: var(--shadow); cursor: pointer; }
+    .kpi-card.active { outline: 2px solid var(--brand-secondary); outline-offset: 2px; }
+    .kpi-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .kpi-card .value { font-family: "Barlow Condensed", sans-serif; font-size: 28px; font-weight: 800; margin-top: 4px; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-box); border: 1px solid var(--card-border); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 960px; font-size: 13px; }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%);
+      padding: 10px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      text-align: center; border-bottom: 1px solid var(--card-border); white-space: nowrap;
+    }
+    .th-inner { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .sort-btn {
+      width: 22px; height: 22px; border: none; background: transparent; cursor: pointer; color: var(--text-muted);
+      border-radius: 6px; font-size: 11px; line-height: 1; padding: 0;
+    }
+    .sort-btn:hover { background: color-mix(in srgb, var(--brand-primary) 10%, transparent); color: var(--text); }
+    .sort-btn.active { color: var(--brand-secondary); font-weight: 700; }
+
+    tbody td {
+      padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--card-border);
+      vertical-align: middle; font-variant-numeric: tabular-nums;
+    }
+    tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-secondary) 8%); }
+    tbody tr:hover td { background: color-mix(in srgb, var(--brand-primary) 6%, var(--card-bg)); }
+    td.merged-razao {
+      text-align: left; font-weight: 600; vertical-align: middle; border-right: 1px solid color-mix(in srgb, var(--card-border) 80%, transparent);
+      max-width: 150px; position: relative;
+    }
+    .razao-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
+    .cell-left { text-align: left !important; }
+
+    .marca-link { color: var(--brand-secondary); font-weight: 700; text-decoration: none; }
+    .marca-link:hover { text-decoration: underline; }
+
+    .contact-stack { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .contact-link {
+      background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: var(--brand-secondary);
+      cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .contact-link:hover { color: var(--brand-primary); }
+    .btn-add-contato {
+      width: 28px; height: 28px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--brand-secondary) 45%, var(--card-border));
+      background: transparent; color: var(--brand-secondary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      padding: 0; flex-shrink: 0;
+    }
+    .btn-add-contato:hover { background: color-mix(in srgb, var(--brand-secondary) 10%, transparent); border-style: solid; }
+
+    .cell-editable { cursor: pointer; border-radius: 8px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+    .cell-editable:hover { background: color-mix(in srgb, var(--brand-secondary) 8%, transparent); outline: 1px dashed color-mix(in srgb, var(--brand-secondary) 35%, transparent); }
+
+    .badge { display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .badge-disp { background: color-mix(in srgb, var(--disp) 13%, transparent); color: var(--disp); border: 1px solid color-mix(in srgb, var(--disp) 27%, transparent); }
+    .badge-con { background: color-mix(in srgb, var(--con) 13%, transparent); color: var(--con); border: 1px solid color-mix(in srgb, var(--con) 27%, transparent); }
+    .badge-neg { background: color-mix(in srgb, var(--neg) 13%, transparent); color: var(--neg); border: 1px solid color-mix(in srgb, var(--neg) 27%, transparent); }
+    .badge-fech { background: color-mix(in srgb, var(--fech) 13%, transparent); color: var(--fech); border: 1px solid color-mix(in srgb, var(--fech) 27%, transparent); }
+    .badge-prod { background: color-mix(in srgb, var(--purple) 13%, transparent); color: var(--purple); border: 1px solid color-mix(in srgb, var(--purple) 27%, transparent); }
+
+    .btn-icon { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); cursor: pointer; font-size: 12px; margin: 0 2px; }
+
+    .tooltip-cnpj {
+      display: none; position: absolute; left: 0; top: 100%; z-index: 20; margin-top: 6px;
+      padding: 8px 12px; background: #1a1a2e; color: #fff; font-size: 12px; border-radius: 8px;
+      white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: 500;
+    }
+    .tooltip-cnpj::before {
+      content: ""; position: absolute; top: -5px; left: 16px; border: 5px solid transparent; border-bottom-color: #1a1a2e;
+    }
+    td.merged-razao:hover .tooltip-cnpj, .razao-cell-wrap:hover .tooltip-cnpj { display: block; }
+    .razao-cell-wrap { position: relative; display: inline-block; max-width: 100%; }
+
+    .popover-backdrop { position: fixed; inset: 0; z-index: 900; }
+    .cell-popover {
+      position: fixed; z-index: 901; background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 10px; box-shadow: var(--shadow); padding: 6px; min-width: 180px; max-height: 240px; overflow-y: auto;
+    }
+    .cell-popover button {
+      display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent;
+      font: inherit; font-size: 13px; border-radius: 8px; cursor: pointer; color: var(--text);
+    }
+    .cell-popover button:hover, .cell-popover button.selected { background: color-mix(in srgb, var(--brand-secondary) 12%, transparent); font-weight: 600; }
+
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box);
+      width: 100%; max-width: 520px; max-height: 90dvh; overflow: auto; padding: 24px;
+    }
+    .modal--wide { max-width: 560px; }
+    .modal-header { margin-bottom: 20px; }
+    .modal-header h2 { margin: 0 0 6px; font-family: "Barlow Condensed", sans-serif; font-size: 16px; text-transform: uppercase; color: var(--brand-primary); line-height: 1.25; }
+    .modal-header .modal-sub { margin: 0; font-size: 13px; color: var(--text-muted); }
+    .modal-close-x {
+      float: right; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; margin: -4px -4px 0 8px;
+    }
+    .form-field { margin-bottom: 14px; }
+    .form-field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .req { color: #e84025; margin-left: 2px; }
+    .form-field input, .form-field textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .form-field input:disabled, .form-field textarea:disabled { opacity: 0.65; cursor: not-allowed; }
+    .multi-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .multi-row input { flex: 1; }
+    .phone-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; width: 100%; }
+    .ddi-field {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      padding: 8px 10px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .ddi-flag { font-size: 18px; line-height: 1; }
+    .ddi-select {
+      border: none; background: transparent; font-size: 13px; font-family: inherit; color: var(--text);
+      cursor: pointer; min-width: 72px; max-width: 120px; padding: 0; font-weight: 600;
+    }
+    .ddi-select:disabled { cursor: not-allowed; opacity: 0.65; }
+    .phone-num {
+      flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .phone-num:disabled { opacity: 0.65; cursor: not-allowed; }
+    .btn-row-mini {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      cursor: pointer; color: var(--text-muted); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .btn-add-field {
+      display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--card-border);
+      background: transparent; font-size: 12px; font-weight: 600; color: var(--brand-secondary); cursor: pointer; margin-top: 4px;
+    }
+    .modal-footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--card-border); }
+    .modal-footer--between { justify-content: space-between; }
+    .btn-excluir {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 10px;
+      border: 1px solid rgba(232,64,37,0.35); background: transparent; color: #e84025;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn-excluir:hover { background: color-mix(in srgb, #e84025 8%, transparent); }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .form-error { font-size: 12px; color: #e84025; margin-top: 6px; display: none; }
+    .form-error.visible { display: block; }
+    .perm-badge {
+      display: inline-block; font-size: 11px; padding: 4px 8px; border-radius: 8px; margin-bottom: 12px;
+      background: color-mix(in srgb, var(--brand-secondary) 10%, transparent); color: var(--brand-secondary); border: 1px solid color-mix(in srgb, var(--brand-secondary) 25%, transparent);
+    }
+
+    .note { margin-top: 16px; padding: 14px; border: 1px dashed var(--card-border); border-radius: 10px; font-size: 12px; color: var(--text-muted); }
+    .note h3 { margin: 0 0 8px; font-size: 13px; color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <span><strong>MOCKUP v2.2</strong> — Pipeline B2B · modais de contato</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="toggleReadonly" /> Somente leitura (contato)</label>
+      <button type="button" id="toggleTheme">Alternar tema</button>
+    </span>
+  </div>
+
+  <div class="shell">
+    <header class="page-header">
+      <div class="page-header-row">
+        <div class="page-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+        </div>
+        <h1>Pipeline B2B</h1>
+      </div>
+      <p class="subtitle">Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B.</p>
+    </header>
+
+    <div class="box filter-box">
+      <div class="filter-row search-row">
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="busca" placeholder="Buscar por CNPJ, nome da empresa ou marca..." aria-label="Buscar pipeline" />
+        </div>
+        <label class="pill-select">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <select id="filtroComercial" aria-label="Comercial">
+            <option value="todos">Todos Comerciais</option>
+            <option value="nenhum">Nenhum</option>
+            <option value="marcus">Marcus Morin</option>
+            <option value="fred">Fred Ring</option>
+          </select>
+        </label>
+      </div>
+      <div class="filter-row" role="tablist" aria-label="Abas do pipeline">
+        <button type="button" class="tab-btn active" data-tab="todos" role="tab" aria-selected="true">Todos</button>
+        <button type="button" class="tab-btn" data-tab="disponiveis" role="tab">Disponíveis</button>
+        <button type="button" class="tab-btn" data-tab="conexao" role="tab">Conexão</button>
+        <button type="button" class="tab-btn" data-tab="negociacao" role="tab">Negociação</button>
+        <button type="button" class="tab-btn" data-tab="fechado" role="tab">Fechado</button>
+      </div>
+    </div>
+
+    <div id="consolidado-todos" class="box content-box panel active">
+      <div class="hier-grid">
+        <div class="hier-group disp"><div class="hier-group-head">Disponíveis<span class="total">24</span></div><div class="hier-line"><span>Site Ativo</span><span>14</span></div><div class="hier-line"><span>Site Offline</span><span>10</span></div></div>
+        <div class="hier-group con"><div class="hier-group-head">Conexão<span class="total">18</span></div><div class="hier-line"><span>Iniciada</span><span>7</span></div><div class="hier-line"><span>Realizada</span><span>11</span></div></div>
+        <div class="hier-group neg"><div class="hier-group-head">Negociação<span class="total">12</span></div><div class="hier-line"><span>Interessado</span><span>8</span></div><div class="hier-line"><span>Sem Interesse</span><span>4</span></div></div>
+        <div class="hier-group fech"><div class="hier-group-head">Fechado<span class="total">6</span></div><div class="hier-line"><span>Assinado</span><span>2</span></div><div class="hier-line"><span>Ativo</span><span>4</span></div></div>
+      </div>
+    </div>
+    <div id="consolidado-disponiveis" class="box content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="site_ativo" style="border-left:3px solid var(--disp)"><div class="label">Site Ativo</div><div class="value" style="color:var(--disp)">14</div></div><div class="kpi-card" data-filter="site_offline" style="border-left:3px solid var(--disp)"><div class="label">Site Offline</div><div class="value" style="color:var(--disp)">10</div></div><div class="kpi-card" data-filter="sem_contato" style="border-left:3px solid var(--disp)"><div class="label">Sem contato</div><div class="value" style="color:var(--disp)">5</div></div></div></div>
+    <div id="consolidado-conexao" class="box content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="conexao_iniciada" style="border-left:3px solid var(--con)"><div class="label">Iniciada</div><div class="value" style="color:var(--con)">7</div></div><div class="kpi-card" data-filter="conexao_realizada" style="border-left:3px solid var(--con)"><div class="label">Realizada</div><div class="value" style="color:var(--con)">11</div></div></div></div>
+    <div id="consolidado-negociacao" class="box content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="neg_enviar" style="border-left:3px solid var(--neg)"><div class="label">Enviar contrato</div><div class="value" style="color:var(--neg)">3</div></div><div class="kpi-card" data-filter="neg_interessado" style="border-left:3px solid var(--neg)"><div class="label">Interessado</div><div class="value" style="color:var(--neg)">8</div></div><div class="kpi-card" data-filter="neg_sem" style="border-left:3px solid var(--neg)"><div class="label">Sem interesse</div><div class="value" style="color:var(--neg)">4</div></div></div></div>
+    <div id="consolidado-fechado" class="box content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="fech_enviado" style="border-left:3px solid var(--fech)"><div class="label">Contrato enviado</div><div class="value" style="color:var(--fech)">2</div></div><div class="kpi-card" data-filter="fech_assinado" style="border-left:3px solid var(--fech)"><div class="label">Assinado</div><div class="value" style="color:var(--fech)">2</div></div><div class="kpi-card" data-filter="fech_ativo" style="border-left:3px solid var(--fech)"><div class="label">Ativo</div><div class="value" style="color:var(--fech)">4</div></div></div></div>
+
+    <div class="box content-box">
+      <div class="section-head">
+        <h2 class="section-title" id="tableTitle">Todas as Marcas</h2>
+        <div class="toolbar">
+          <button type="button" class="btn-secondary">Comunicar</button>
+          <button type="button" class="btn-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption style="display:none">Pipeline B2B</caption>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="note">
+        <h3>Interações v2.2</h3>
+        Coluna Contato: ícone + · modais Contato/Adicionar · telefone com DDI (bandeira +55 BR) + DDD/número · e-mail múltiplos · Excluir padrão plataforma · edição inline Comercial/Status/Dedicada/Network.
+      </div>
+    </div>
+  </div>
+
+  <div id="popoverRoot"></div>
+
+  <div class="overlay" id="modalMarca" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="modalMarcaTitle">Visualizar marca</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px" id="modalMarcaSub"></p>
+      <p style="font-size:13px">Implementação: ModalBase + abas Empresa / Marca / Contatos / Produtos / Anotações.</p>
+      <button type="button" class="btn-secondary" style="margin-top:16px" onclick="closeModal('modalMarca')">Fechar</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalContato" role="dialog" aria-modal="true" aria-labelledby="modalContatoTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="closeContatoModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+        <h2 id="modalContatoTitle">Contato</h2>
+        <p class="modal-sub" id="modalContatoSub"></p>
+      </div>
+      <div id="modalContatoPerm" class="perm-badge" style="display:none">Campos bloqueados — perfil sem permissão de Editar</div>
+      <form id="formContato" onsubmit="return false;">
+        <div class="form-field">
+          <label for="contatoNome">Nome<span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="contatoNome" autocomplete="name" required aria-required="true" oninput="setContatoNomeErro('')" />
+          <div id="contatoNomeErro" class="form-error" role="alert" aria-live="polite">Nome é obrigatório.</div>
+        </div>
+        <div class="form-field">
+          <label>Telefone</label>
+          <div id="contatoTelefones"></div>
+          <button type="button" class="btn-add-field" id="btnAddTelContato" onclick="addTelefoneField('contatoTelefones')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar telefone
+          </button>
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <div id="contatoEmails"></div>
+          <button type="button" class="btn-add-field" id="btnAddEmailContato" onclick="addMultiField('contatoEmails')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar e-mail
+          </button>
+        </div>
+        <div class="form-field">
+          <label for="contatoLinkedin">LinkedIn</label>
+          <input type="url" id="contatoLinkedin" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-field">
+          <label for="contatoInstagram">Instagram</label>
+          <input type="text" id="contatoInstagram" placeholder="@usuario" />
+        </div>
+        <div class="form-field">
+          <label for="contatoAniversario">Data de Nascimento</label>
+          <input type="date" id="contatoAniversario" />
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn-excluir" id="btnExcluirContato" onclick="confirmExcluirContato()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalAddContato" role="dialog" aria-modal="true" aria-labelledby="modalAddContatoTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="dismissAddContatoModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+        <h2 id="modalAddContatoTitle">Adicionar Contato</h2>
+        <p class="modal-sub" id="modalAddContatoSub"></p>
+      </div>
+      <form id="formAddContato" onsubmit="return false;">
+        <div class="form-field">
+          <label for="addContatoNome">Nome<span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="addContatoNome" autocomplete="name" required aria-required="true" oninput="setAddContatoNomeErro('')" />
+          <div id="addContatoNomeErro" class="form-error" role="alert" aria-live="polite">Nome é obrigatório.</div>
+        </div>
+        <div class="form-field">
+          <label>Telefone</label>
+          <div id="addContatoTelefones"></div>
+          <button type="button" class="btn-add-field" onclick="addTelefoneField('addContatoTelefones')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar telefone
+          </button>
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <div id="addContatoEmails"></div>
+          <button type="button" class="btn-add-field" onclick="addMultiField('addContatoEmails')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar e-mail
+          </button>
+        </div>
+        <div class="form-field">
+          <label for="addContatoLinkedin">LinkedIn</label>
+          <input type="url" id="addContatoLinkedin" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-field">
+          <label for="addContatoInstagram">Instagram</label>
+          <input type="text" id="addContatoInstagram" placeholder="@usuario" />
+        </div>
+        <div class="form-field">
+          <label for="addContatoAniversario">Data de Nascimento</label>
+          <input type="date" id="addContatoAniversario" />
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn-criar" onclick="saveAddContatoModal()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalConfirmExcluir" role="dialog" aria-modal="true" style="z-index:1100">
+    <div class="modal" style="max-width:400px">
+      <h2 style="margin:0 0 12px">Excluir</h2>
+      <p style="font-size:13px;margin:0 0 20px;line-height:1.5;color:var(--text)" id="modalConfirmExcluirBody"></p>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('modalConfirmExcluir')">Cancelar</button>
+        <button type="button" class="btn-excluir" onclick="executarExcluirContato()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var OPCOES = {
+      comercial: [
+        { key: "nenhum", label: "Nenhum", display: "—" },
+        { key: "marcus", label: "Marcus Morin" },
+        { key: "fred", label: "Fred Ring" },
+      ],
+      status: [
+        { key: "disponiveis", label: "Disponíveis", badge: "badge-disp" },
+        { key: "conexao", label: "Conexão", badge: "badge-con" },
+        { key: "negociacao", label: "Negociação", badge: "badge-neg" },
+        { key: "fechado", label: "Fechado", badge: "badge-fech" },
+      ],
+      produto: [
+        { key: "none", label: "—", display: "—" },
+        { key: "sem_proposta", label: "Sem proposta" },
+        { key: "em_negociacao", label: "Em negociação" },
+        { key: "sem_interesse", label: "Sem interesse" },
+        { key: "contrato_enviado", label: "Contrato enviado" },
+        { key: "contrato_assinado", label: "Contrato Assinado" },
+        { key: "ativo", label: "Ativo" },
+      ],
+    };
+
+    var ROWS = [
+      { id: 1, razao: "Grupo Aposta Verde LTDA", cnpj: "12.345.678/0001-90", marca: "Verde Cassino", site: "https://verdecassino.bet", contatos: [
+        { id: "c1", nome: "Marcos Oliveira", telefones: [
+          { iso: "BR", ddi: "+55", numero: "(11) 98765-4321" },
+          { iso: "BR", ddi: "+55", numero: "(11) 3456-7890" },
+        ], emails: ["marcos@verdecassino.bet"], linkedin: "https://linkedin.com/in/marcos-oliveira", instagram: "@marcos.verde", aniversario: "1988-03-15" },
+        { id: "c2", nome: "Julia Comercial", telefones: [{ iso: "BR", ddi: "+55", numero: "(11) 91234-5678" }], emails: ["julia@verdecassino.bet"], linkedin: "", instagram: "", aniversario: "" },
+      ], comercialKey: "marcus", statusKey: "negociacao", statusKeyLeaf: "neg_interessado", dedicadaKey: "em_negociacao", networkKey: "sem_proposta", ultima: "08/06/2026" },
+      { id: 2, razao: "Grupo Aposta Verde LTDA", cnpj: "12.345.678/0001-90", marca: "Sorte Grande", site: "", contatos: [], comercialKey: "nenhum", statusKey: "disponiveis", statusKeyLeaf: "sem_contato", dedicadaKey: "none", networkKey: "none", ultima: "—" },
+      { id: 3, razao: "Blaze Gaming Brasil SA", cnpj: "98.765.432/0001-11", marca: "Blaze Bet", site: "https://blaze.bet.br", contatos: [
+        { id: "c3", nome: "Ana Costa", telefones: [{ iso: "BR", ddi: "+55", numero: "(21) 99876-5432" }], emails: ["ana.costa@blaze.bet.br", "comercial@blaze.bet.br"], linkedin: "https://linkedin.com/in/ana-costa", instagram: "@anacosta", aniversario: "1992-11-22" },
+      ], comercialKey: "fred", statusKey: "conexao", statusKeyLeaf: "conexao_realizada", dedicadaKey: "none", networkKey: "none", ultima: "05/06/2026" },
+      { id: 4, razao: "Royal Entertainment LTDA", cnpj: "45.678.901/0001-22", marca: "Royal Live", site: "https://royallive.com", contatos: [
+        { id: "c4", nome: "Paulo Dias", telefones: [{ iso: "PT", ddi: "+351", numero: "912 345 678" }], emails: ["paulo@royallive.com"], linkedin: "", instagram: "@paulodias", aniversario: "1985-07-08" },
+      ], comercialKey: "marcus", statusKey: "fechado", statusKeyLeaf: "fech_ativo", dedicadaKey: "ativo", networkKey: "ativo", ultima: "01/06/2026" },
+      { id: 5, razao: "Nova Bet Holding", cnpj: "11.222.333/0001-44", marca: "Nova Bet", site: "https://novabet.example", contatos: [
+        { id: "c5", nome: "Julia Lima", telefones: [{ iso: "BR", ddi: "+55", numero: "" }], emails: ["julia@novabet.example"], linkedin: "", instagram: "", aniversario: "" },
+      ], comercialKey: "fred", statusKey: "disponiveis", statusKeyLeaf: "site_offline", dedicadaKey: "none", networkKey: "none", ultima: "30/05/2026" },
+      { id: 6, razao: "Bet Union LTDA", cnpj: "77.888.999/0001-00", marca: "Union Play", site: "https://unionplay.example", contatos: [
+        { id: "c6", nome: "Carlos M.", telefones: [{ iso: "BR", ddi: "+55", numero: "(41) 99999-1111" }], emails: ["carlos@unionplay.example"], linkedin: "", instagram: "", aniversario: "" },
+        { id: "c7", nome: "Renata S.", telefones: [{ iso: "BR", ddi: "+55", numero: "(41) 98888-2222" }], emails: ["renata@unionplay.example"], linkedin: "https://linkedin.com/in/renata-s", instagram: "@renata.union", aniversario: "1990-01-30" },
+      ], comercialKey: "marcus", statusKey: "negociacao", statusKeyLeaf: "neg_enviar", dedicadaKey: "sem_proposta", networkKey: "none", ultima: "20/05/2026" },
+      { id: 7, razao: "Elite Gaming", cnpj: "22.333.444/0001-55", marca: "Elite Cassino", site: "https://elitecassino.example", contatos: [
+        { id: "c8", nome: "Luiza P.", telefones: [{ iso: "US", ddi: "+1", numero: "(305) 555-0199" }], emails: ["luiza@elitecassino.example"], linkedin: "", instagram: "@luizap", aniversario: "1993-09-12" },
+      ], comercialKey: "fred", statusKey: "fechado", statusKeyLeaf: "fech_enviado", dedicadaKey: "contrato_enviado", networkKey: "contrato_enviado", ultima: "15/05/2026" },
+    ];
+
+    var DDI_OPCOES = [
+      { iso: "BR", flag: "\uD83C\uDDE7\uD83C\uDDF7", label: "Brasil", ddi: "+55" },
+      { iso: "US", flag: "\uD83C\uDDFA\uD83C\uDDF8", label: "Estados Unidos", ddi: "+1" },
+      { iso: "PT", flag: "\uD83C\uDDF5\uD83C\uDDF9", label: "Portugal", ddi: "+351" },
+      { iso: "AR", flag: "\uD83C\uDDE6\uD83C\uDDF7", label: "Argentina", ddi: "+54" },
+      { iso: "MX", flag: "\uD83C\uDDF2\uD83C\uDDFD", label: "M\u00e9xico", ddi: "+52" },
+      { iso: "GB", flag: "\uD83C\uDDEC\uD83C\uDDE7", label: "Reino Unido", ddi: "+44" },
+    ];
+
+    var TAB_CONFIG = {
+      todos: { title: "Todas as Marcas", grupos: null, cols: ["razao","marca","contato","comercial","status","dedicada","network","ultima","acao"] },
+      disponiveis: { title: "Marcas Disponíveis", grupos: ["disponiveis"], cols: ["razao","marca","contato","comercial","ultima","acao"] },
+      conexao: { title: "Marcas em Conexão", grupos: ["conexao"], cols: ["razao","marca","contato","comercial","ultima","acao"] },
+      negociacao: { title: "Marcas em Negociação", grupos: ["negociacao"], cols: ["razao","marca","contato","comercial","dedicada","network","ultima","acao"] },
+      fechado: { title: "Marcas com Contrato", grupos: ["fechado"], cols: ["razao","marca","contato","comercial","dedicada","network","ultima","acao"] },
+    };
+
+    var COL_LABEL = { razao: "Razão Social", marca: "Marca", contato: "Contato", comercial: "Comercial", status: "Status", dedicada: "Dedicada", network: "Network", ultima: "Última Comunicação", acao: "Ação" };
+    var SORTABLE = { razao: 1, marca: 1, contato: 1, comercial: 1, status: 1, dedicada: 1, network: 1, ultima: 1 };
+
+    var currentTab = "todos";
+    var kpiFilter = null;
+    var sortCol = null;
+    var sortDir = 1;
+    var contatoCtx = { rowId: null, contactIdx: null };
+    var addContatoRowId = null;
+    var nextContactId = 100;
+    var contatoReadonly = false;
+
+    function isContatoReadonly() {
+      return contatoReadonly || document.getElementById("toggleReadonly").checked;
+    }
+
+    function newContactId() {
+      nextContactId += 1;
+      return "c" + nextContactId;
+    }
+
+    function emptyContact(nome) {
+      return { id: newContactId(), nome: nome || "", telefones: [defaultTelefone()], emails: [""], linkedin: "", instagram: "", aniversario: "" };
+    }
+
+    function defaultTelefone() {
+      return { iso: "BR", ddi: "+55", numero: "" };
+    }
+
+    function normalizeTelefone(t) {
+      if (!t) return defaultTelefone();
+      if (typeof t === "string") return { iso: "BR", ddi: "+55", numero: t };
+      var opt = DDI_OPCOES.find(function(d) { return d.iso === t.iso; });
+      return { iso: t.iso || "BR", ddi: t.ddi || (opt && opt.ddi) || "+55", numero: t.numero || "" };
+    }
+
+    function ddiOptByIso(iso) {
+      return DDI_OPCOES.find(function(d) { return d.iso === iso; }) || DDI_OPCOES[0];
+    }
+
+    function buildPhoneRow(containerId, tel, readonly, idx, totalRows) {
+      tel = normalizeTelefone(tel);
+      var row = document.createElement("div");
+      row.className = "phone-row";
+      row.dataset.idx = String(idx);
+
+      var ddiWrap = document.createElement("div");
+      ddiWrap.className = "ddi-field";
+
+      var flagSpan = document.createElement("span");
+      flagSpan.className = "ddi-flag";
+      flagSpan.setAttribute("aria-hidden", "true");
+
+      var select = document.createElement("select");
+      select.className = "ddi-select";
+      select.setAttribute("aria-label", "DDI do pa\u00eds");
+      select.disabled = readonly;
+
+      DDI_OPCOES.forEach(function(opt) {
+        var o = document.createElement("option");
+        o.value = opt.iso;
+        o.textContent = opt.ddi;
+        o.title = opt.label;
+        if (opt.iso === tel.iso) o.selected = true;
+        select.appendChild(o);
+      });
+
+      function syncFlag() {
+        flagSpan.textContent = ddiOptByIso(select.value).flag;
+      }
+      select.addEventListener("change", syncFlag);
+      syncFlag();
+
+      ddiWrap.appendChild(flagSpan);
+      ddiWrap.appendChild(select);
+
+      var numInput = document.createElement("input");
+      numInput.type = "tel";
+      numInput.className = "phone-num";
+      numInput.value = tel.numero || "";
+      numInput.placeholder = "(00) 00000-0000";
+      numInput.disabled = readonly;
+      numInput.setAttribute("aria-label", "DDD e telefone");
+
+      row.appendChild(ddiWrap);
+      row.appendChild(numInput);
+
+      if (!readonly && totalRows > 1) {
+        var rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "btn-row-mini";
+        rm.setAttribute("aria-label", "Remover telefone");
+        rm.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>';
+        rm.onclick = function() { removeTelefoneField(containerId, idx); };
+        row.appendChild(rm);
+      }
+
+      return row;
+    }
+
+    function renderTelefoneFields(containerId, telefones, readonly) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      var list = telefones && telefones.length ? telefones.map(normalizeTelefone) : [defaultTelefone()];
+      container.innerHTML = "";
+      list.forEach(function(tel, idx) {
+        container.appendChild(buildPhoneRow(containerId, tel, readonly, idx, list.length));
+      });
+    }
+
+    function readTelefoneFields(containerId, persist) {
+      var container = document.getElementById(containerId);
+      if (!container) return persist ? [] : [defaultTelefone()];
+      var rows = container.querySelectorAll(".phone-row");
+      var list = Array.prototype.map.call(rows, function(row) {
+        var select = row.querySelector(".ddi-select");
+        var iso = select ? select.value : "BR";
+        var opt = ddiOptByIso(iso);
+        var num = row.querySelector(".phone-num");
+        return { iso: iso, ddi: opt.ddi, numero: num ? num.value.trim() : "" };
+      });
+      var filtered = list.filter(function(t) { return t.numero; });
+      if (persist) return filtered;
+      return filtered.length ? filtered : [defaultTelefone()];
+    }
+
+    function addTelefoneField(containerId) {
+      if (isContatoReadonly() && containerId.indexOf("add") < 0) return;
+      var current = readTelefoneFields(containerId);
+      current.push(defaultTelefone());
+      renderTelefoneFields(containerId, current, false);
+      var container = document.getElementById(containerId);
+      var last = container && container.querySelector(".phone-row:last-child .phone-num");
+      if (last) last.focus();
+    }
+
+    function removeTelefoneField(containerId, idx) {
+      var current = readTelefoneFields(containerId);
+      current.splice(idx, 1);
+      if (!current.length) current = [defaultTelefone()];
+      var readonly = isContatoReadonly() && containerId.indexOf("add") < 0;
+      renderTelefoneFields(containerId, current, readonly);
+    }
+
+    function plusIconBtn(rowId) {
+      return '<button type="button" class="btn-add-contato" title="Adicionar contato" aria-label="Adicionar contato para marca" onclick="openAddContatoModal(' + rowId + ')">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>';
+    }
+
+    function renderMultiFields(containerId, values, readonly) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      var list = values && values.length ? values : [""];
+      container.innerHTML = "";
+      list.forEach(function(val, idx) {
+        var row = document.createElement("div");
+        row.className = "multi-row";
+        var input = document.createElement("input");
+        input.type = "email";
+        input.value = val || "";
+        input.placeholder = "email@empresa.com";
+        input.disabled = readonly;
+        input.dataset.idx = String(idx);
+        row.appendChild(input);
+        if (!readonly && list.length > 1) {
+          var rm = document.createElement("button");
+          rm.type = "button";
+          rm.className = "btn-row-mini";
+          rm.setAttribute("aria-label", "Remover e-mail");
+          rm.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>';
+          rm.onclick = function() { removeMultiField(containerId, idx); };
+          row.appendChild(rm);
+        }
+        container.appendChild(row);
+      });
+    }
+
+    function readMultiFields(containerId, persist) {
+      var container = document.getElementById(containerId);
+      if (!container) return persist ? [] : [""];
+      var vals = Array.prototype.map.call(container.querySelectorAll("input"), function(inp) { return inp.value.trim(); });
+      var filtered = vals.filter(function(v) { return v; });
+      if (persist) return filtered;
+      return filtered.length ? filtered : [""];
+    }
+
+    function addMultiField(containerId) {
+      if (isContatoReadonly() && containerId.indexOf("add") < 0) return;
+      var current = readMultiFields(containerId);
+      current.push("");
+      renderMultiFields(containerId, current, false);
+      var container = document.getElementById(containerId);
+      var last = container && container.querySelector(".multi-row:last-child input");
+      if (last) last.focus();
+    }
+
+    function removeMultiField(containerId, idx) {
+      var current = readMultiFields(containerId);
+      current.splice(idx, 1);
+      if (!current.length) current = [""];
+      var readonly = isContatoReadonly() && containerId.indexOf("add") < 0;
+      renderMultiFields(containerId, current, readonly);
+    }
+
+    function setAddContatoNomeErro(msg) {
+      var el = document.getElementById("addContatoNomeErro");
+      var input = document.getElementById("addContatoNome");
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("visible");
+        if (input) input.style.borderColor = "#e84025";
+      } else {
+        el.classList.remove("visible");
+        if (input) input.style.borderColor = "";
+      }
+    }
+
+    function setContatoNomeErro(msg) {
+      var el = document.getElementById("contatoNomeErro");
+      var input = document.getElementById("contatoNome");
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("visible");
+        if (input) input.style.borderColor = "#e84025";
+      } else {
+        el.classList.remove("visible");
+        if (input) input.style.borderColor = "";
+      }
+    }
+
+    function setContatoFormReadonly(readonly) {
+      ["contatoNome","contatoLinkedin","contatoInstagram","contatoAniversario"].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.disabled = readonly;
+      });
+      document.getElementById("modalContatoPerm").style.display = readonly ? "inline-block" : "none";
+      document.getElementById("btnAddTelContato").style.display = readonly ? "none" : "inline-flex";
+      document.getElementById("btnAddEmailContato").style.display = readonly ? "none" : "inline-flex";
+      document.getElementById("btnExcluirContato").style.display = readonly ? "none" : "inline-flex";
+    }
+
+    function labelComercial(key) {
+      var o = OPCOES.comercial.find(function(x) { return x.key === key; });
+      if (!o) return "—";
+      return o.display !== undefined ? o.display : o.label;
+    }
+    function labelStatus(key) {
+      var o = OPCOES.status.find(function(x) { return x.key === key; });
+      return o ? o.label : key;
+    }
+    function badgeStatus(key) {
+      var o = OPCOES.status.find(function(x) { return x.key === key; });
+      return o ? o.badge : "badge-disp";
+    }
+    function labelProduto(key) {
+      var o = OPCOES.produto.find(function(x) { return x.key === key; });
+      if (!o || o.key === "none") return "—";
+      return o.label;
+    }
+
+    function getVisibleRows() {
+      var com = document.getElementById("filtroComercial").value;
+      var q = document.getElementById("busca").value.trim().toLowerCase();
+      var cfg = TAB_CONFIG[currentTab];
+      return ROWS.filter(function(r) {
+        if (cfg.grupos && cfg.grupos.indexOf(r.statusKey) < 0) return false;
+        if (com !== "todos") {
+          if (com === "nenhum" && r.comercialKey !== "nenhum") return false;
+          if (com !== "nenhum" && r.comercialKey !== com) return false;
+        }
+        if (kpiFilter && r.statusKeyLeaf !== kpiFilter) return false;
+        if (q && !(r.razao.toLowerCase().includes(q) || r.cnpj.includes(q) || r.marca.toLowerCase().includes(q))) return false;
+        return true;
+      });
+    }
+
+    function sortRows(rows) {
+      if (!sortCol || !SORTABLE[sortCol]) return rows;
+      var copy = rows.slice();
+      copy.sort(function(a, b) {
+        var va, vb;
+        if (sortCol === "comercial") { va = labelComercial(a.comercialKey); vb = labelComercial(b.comercialKey); }
+        else if (sortCol === "status") { va = labelStatus(a.statusKey); vb = labelStatus(b.statusKey); }
+        else if (sortCol === "dedicada") { va = labelProduto(a.dedicadaKey); vb = labelProduto(b.dedicadaKey); }
+        else if (sortCol === "network") { va = labelProduto(a.networkKey); vb = labelProduto(b.networkKey); }
+        else if (sortCol === "contato") { va = (a.contatos[0] && a.contatos[0].nome) || ""; vb = (b.contatos[0] && b.contatos[0].nome) || ""; }
+        else { va = a[sortCol] || ""; vb = b[sortCol] || ""; }
+        if (va < vb) return -1 * sortDir;
+        if (va > vb) return 1 * sortDir;
+        return 0;
+      });
+      return copy;
+    }
+
+    function closePopover() {
+      document.getElementById("popoverRoot").innerHTML = "";
+    }
+
+    function openCellPopover(anchor, rowId, field, options, currentKey) {
+      closePopover();
+      var rect = anchor.getBoundingClientRect();
+      var backdrop = document.createElement("div");
+      backdrop.className = "popover-backdrop";
+      backdrop.onclick = closePopover;
+      var pop = document.createElement("div");
+      pop.className = "cell-popover";
+      pop.style.left = Math.min(rect.left, window.innerWidth - 200) + "px";
+      pop.style.top = (rect.bottom + 4) + "px";
+      options.forEach(function(opt) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = opt.label;
+        if (opt.key === currentKey) btn.classList.add("selected");
+        btn.onclick = function() {
+          var row = ROWS.find(function(r) { return r.id === rowId; });
+          if (row) row[field] = opt.key;
+          closePopover();
+          renderTable();
+        };
+        pop.appendChild(btn);
+      });
+      var root = document.getElementById("popoverRoot");
+      root.appendChild(backdrop);
+      root.appendChild(pop);
+    }
+
+    function renderContatos(row) {
+      var html = '<div class="contact-stack">';
+      if (!row.contatos.length) {
+        html += plusIconBtn(row.id);
+      } else {
+        row.contatos.forEach(function(c, i) {
+          html += '<button type="button" class="contact-link" onclick="openContatoModal(' + row.id + ',' + i + ')">' + escapeHtml(c.nome) + '</button>';
+        });
+        html += plusIconBtn(row.id);
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    }
+
+    function renderTable() {
+      var cfg = TAB_CONFIG[currentTab];
+      document.getElementById("tableTitle").textContent = cfg.title;
+      var rows = sortRows(getVisibleRows());
+      var hasRazao = cfg.cols.indexOf("razao") >= 0;
+
+      document.getElementById("tableHead").innerHTML = "<tr>" + cfg.cols.map(function(c) {
+        var sortBtn = SORTABLE[c] ? '<button type="button" class="sort-btn' + (sortCol === c ? " active" : "") + '" onclick="toggleSort(\'' + c + '\')" aria-label="Ordenar por ' + COL_LABEL[c] + '">' + (sortCol === c ? (sortDir > 0 ? "▾" : "▴") : "▾") + '</button>' : "";
+        return '<th scope="col"><span class="th-inner">' + COL_LABEL[c] + sortBtn + '</span></th>';
+      }).join("") + "</tr>";
+
+      var mergeMap = {};
+      if (hasRazao) {
+        rows.forEach(function(r) {
+          if (!mergeMap[r.cnpj]) mergeMap[r.cnpj] = [];
+          mergeMap[r.cnpj].push(r.id);
+        });
+      }
+      var renderedCnpj = {};
+
+      var body = document.getElementById("tableBody");
+      body.innerHTML = "";
+
+      rows.forEach(function(r) {
+        var tr = document.createElement("tr");
+        cfg.cols.forEach(function(c) {
+          if (c === "razao") {
+            if (renderedCnpj[r.cnpj]) return;
+            var span = mergeMap[r.cnpj].length;
+            renderedCnpj[r.cnpj] = true;
+            var td = document.createElement("td");
+            td.className = "merged-razao";
+            td.rowSpan = span;
+            td.innerHTML = '<div class="razao-cell-wrap"><span class="razao-text">' + escapeHtml(r.razao) + '</span><div class="tooltip-cnpj">CNPJ: ' + escapeHtml(r.cnpj) + '</div></div>';
+            tr.appendChild(td);
+            return;
+          }
+          var td = document.createElement("td");
+          if (c === "marca") {
+            td.className = "cell-left";
+            if (r.site) td.innerHTML = '<a class="marca-link" href="' + escapeHtml(r.site) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(r.marca) + '</a>';
+            else td.innerHTML = "<strong>" + escapeHtml(r.marca) + "</strong>";
+          } else if (c === "contato") {
+            td.innerHTML = renderContatos(r);
+          } else if (c === "comercial") {
+            td.innerHTML = '<div class="cell-editable" onclick="editComercial(event,' + r.id + ')">' + escapeHtml(labelComercial(r.comercialKey)) + '</div>';
+          } else if (c === "status") {
+            td.innerHTML = '<div class="cell-editable" onclick="editStatus(event,' + r.id + ')"><span class="badge ' + badgeStatus(r.statusKey) + '">' + escapeHtml(labelStatus(r.statusKey)) + '</span></div>';
+          } else if (c === "dedicada") {
+            var dl = labelProduto(r.dedicadaKey);
+            td.innerHTML = '<div class="cell-editable" onclick="editProduto(event,' + r.id + ',\'dedicadaKey\')">' + (dl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(dl) + '</span>') + '</div>';
+          } else if (c === "network") {
+            var nl = labelProduto(r.networkKey);
+            td.innerHTML = '<div class="cell-editable" onclick="editProduto(event,' + r.id + ',\'networkKey\')">' + (nl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(nl) + '</span>') + '</div>';
+          } else if (c === "ultima") {
+            td.textContent = r.ultima;
+          } else if (c === "acao") {
+            td.innerHTML = '<button type="button" class="btn-icon" title="Ver ' + escapeHtml(r.marca) + '" aria-label="Ver ' + escapeHtml(r.marca) + '" onclick="openMarcaModal(' + r.id + ',\'ver\')">Ver</button><button type="button" class="btn-icon" title="Editar ' + escapeHtml(r.marca) + '" aria-label="Editar ' + escapeHtml(r.marca) + '" onclick="openMarcaModal(' + r.id + ',\'editar\')">Editar</button>';
+          }
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function toggleSort(col) {
+      if (sortCol === col) sortDir = sortDir * -1;
+      else { sortCol = col; sortDir = 1; }
+      renderTable();
+    }
+
+    function editComercial(ev, id) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, "comercialKey", OPCOES.comercial, row.comercialKey);
+    }
+    function editStatus(ev, id) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, "statusKey", OPCOES.status, row.statusKey);
+    }
+    function editProduto(ev, id, field) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, field, OPCOES.produto, row[field]);
+    }
+
+    function openMarcaModal(id, modo) {
+      var row = ROWS.find(function(r) { return r.id === id; });
+      document.getElementById("modalMarcaTitle").textContent = (modo === "ver" ? "Visualizar — " : "Editar — ") + row.marca;
+      document.getElementById("modalMarcaSub").textContent = row.razao + " · CNPJ " + row.cnpj;
+      document.getElementById("modalMarca").classList.add("open");
+    }
+
+    function openContatoModal(rowId, contactIdx) {
+      var row = ROWS.find(function(r) { return r.id === rowId; });
+      var c = row.contatos[contactIdx];
+      contatoCtx = { rowId: rowId, contactIdx: contactIdx };
+      setContatoNomeErro("");
+      document.getElementById("modalContatoTitle").textContent = "Contato — " + c.nome;
+      document.getElementById("modalContatoSub").textContent = row.razao + " — " + row.marca;
+      document.getElementById("contatoNome").value = c.nome || "";
+      document.getElementById("contatoLinkedin").value = c.linkedin || "";
+      document.getElementById("contatoInstagram").value = c.instagram || "";
+      document.getElementById("contatoAniversario").value = c.aniversario || "";
+      var ro = isContatoReadonly();
+      setContatoFormReadonly(ro);
+      renderTelefoneFields("contatoTelefones", c.telefones, ro);
+      renderMultiFields("contatoEmails", c.emails, ro);
+      document.getElementById("modalContato").classList.add("open");
+      setTimeout(function() { document.getElementById("contatoNome").focus(); }, 100);
+    }
+
+    function saveContatoFromForm() {
+      if (isContatoReadonly()) return true;
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (!row || contatoCtx.contactIdx == null) return true;
+      var c = row.contatos[contatoCtx.contactIdx];
+      var nome = document.getElementById("contatoNome").value.trim();
+      if (!nome) {
+        setContatoNomeErro("Nome é obrigatório.");
+        document.getElementById("contatoNome").focus();
+        return false;
+      }
+      setContatoNomeErro("");
+      c.nome = nome;
+      c.telefones = readTelefoneFields("contatoTelefones", true);
+      c.emails = readMultiFields("contatoEmails", true);
+      c.linkedin = document.getElementById("contatoLinkedin").value.trim();
+      c.instagram = document.getElementById("contatoInstagram").value.trim();
+      c.aniversario = document.getElementById("contatoAniversario").value.trim();
+      document.getElementById("modalContatoTitle").textContent = "Contato — " + nome;
+      return true;
+    }
+
+    function closeContatoModal() {
+      if (!saveContatoFromForm()) return;
+      document.getElementById("modalContato").classList.remove("open");
+      contatoCtx = { rowId: null, contactIdx: null };
+      renderTable();
+    }
+
+    function openAddContatoModal(rowId) {
+      var row = ROWS.find(function(r) { return r.id === rowId; });
+      addContatoRowId = rowId;
+      setAddContatoNomeErro("");
+      document.getElementById("modalAddContatoTitle").textContent = "Adicionar Contato — " + row.marca;
+      document.getElementById("modalAddContatoSub").textContent = row.razao;
+      document.getElementById("addContatoNome").value = "";
+      document.getElementById("addContatoLinkedin").value = "";
+      document.getElementById("addContatoInstagram").value = "";
+      document.getElementById("addContatoAniversario").value = "";
+      renderTelefoneFields("addContatoTelefones", [defaultTelefone()], false);
+      renderMultiFields("addContatoEmails", [""], false);
+      document.getElementById("modalAddContato").classList.add("open");
+      setTimeout(function() { document.getElementById("addContatoNome").focus(); }, 100);
+    }
+
+    function dismissAddContatoModal() {
+      document.getElementById("modalAddContato").classList.remove("open");
+      addContatoRowId = null;
+      setAddContatoNomeErro("");
+    }
+
+    function saveAddContatoModal() {
+      var nome = document.getElementById("addContatoNome").value.trim();
+      if (!nome) {
+        setAddContatoNomeErro("Nome é obrigatório.");
+        document.getElementById("addContatoNome").focus();
+        return;
+      }
+      if (!addContatoRowId) return;
+      var row = ROWS.find(function(r) { return r.id === addContatoRowId; });
+      if (row) {
+        row.contatos.push({
+          id: newContactId(),
+          nome: nome,
+          telefones: readTelefoneFields("addContatoTelefones", true),
+          emails: readMultiFields("addContatoEmails", true),
+          linkedin: document.getElementById("addContatoLinkedin").value.trim(),
+          instagram: document.getElementById("addContatoInstagram").value.trim(),
+          aniversario: document.getElementById("addContatoAniversario").value.trim(),
+        });
+      }
+      dismissAddContatoModal();
+      renderTable();
+    }
+
+    function confirmExcluirContato() {
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (!row || contatoCtx.contactIdx == null) return;
+      var c = row.contatos[contatoCtx.contactIdx];
+      document.getElementById("modalConfirmExcluirBody").innerHTML =
+        "Deseja excluir o contato «" + escapeHtml(c.nome) + "»?<br><br>Esta ação não poderá ser desfeita.";
+      document.getElementById("modalConfirmExcluir").classList.add("open");
+    }
+
+    function executarExcluirContato() {
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (row && contatoCtx.contactIdx != null) {
+        row.contatos.splice(contatoCtx.contactIdx, 1);
+      }
+      closeModal("modalConfirmExcluir");
+      document.getElementById("modalContato").classList.remove("open");
+      contatoCtx = { rowId: null, contactIdx: null };
+      renderTable();
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+    function setTab(tab) {
+      currentTab = tab;
+      kpiFilter = null;
+      document.querySelectorAll(".tab-btn").forEach(function(b) {
+        b.classList.toggle("active", b.dataset.tab === tab);
+        b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false");
+      });
+      ["todos","disponiveis","conexao","negociacao","fechado"].forEach(function(t) {
+        document.getElementById("consolidado-" + t).classList.toggle("active", t === tab);
+      });
+      document.querySelectorAll(".kpi-card").forEach(function(k) { k.classList.remove("active"); });
+      renderTable();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() { setTab(btn.dataset.tab); });
+    });
+    document.querySelectorAll(".kpi-card").forEach(function(card) {
+      card.addEventListener("click", function() {
+        var f = card.dataset.filter;
+        kpiFilter = kpiFilter === f ? null : f;
+        card.parentElement.querySelectorAll(".kpi-card").forEach(function(k) { k.classList.remove("active"); });
+        if (kpiFilter) card.classList.add("active");
+        renderTable();
+      });
+    });
+    document.getElementById("filtroComercial").addEventListener("change", renderTable);
+    document.getElementById("busca").addEventListener("input", renderTable);
+    document.getElementById("toggleTheme").onclick = function() {
+      document.documentElement.dataset.theme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    };
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        closePopover();
+        closeModal("modalMarca");
+        closeModal("modalConfirmExcluir");
+        if (document.getElementById("modalAddContato").classList.contains("open")) dismissAddContatoModal();
+        else if (document.getElementById("modalContato").classList.contains("open")) closeContatoModal();
+      }
+    });
+    document.getElementById("toggleReadonly").addEventListener("change", function() {
+      if (document.getElementById("modalContato").classList.contains("open")) {
+        var ro = isContatoReadonly();
+        setContatoFormReadonly(ro);
+        var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+        if (row && contatoCtx.contactIdx != null) {
+          var c = row.contatos[contatoCtx.contactIdx];
+          renderTelefoneFields("contatoTelefones", c.telefones, ro);
+          renderMultiFields("contatoEmails", c.emails, ro);
+        }
+      }
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>
