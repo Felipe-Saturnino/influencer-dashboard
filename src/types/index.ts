@@ -42,6 +42,7 @@ export type PageKey =
   | "banca_jogo"
   | "gestao_links"
   | "campanhas"
+  | "comercial_pipeline_b2b"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_mesas"

@@ -92,6 +92,12 @@ export const MENU: MenuSection[] = [
     ],
   },
   {
+    section: "Comercial",
+    items: [
+      { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
+    ],
+  },
+  {
     section: "Estúdio",
     items: [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: UserRound },

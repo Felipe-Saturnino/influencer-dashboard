@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup v3 — Pipeline B2B (Global + Brand)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f4f8; --text: #1a1a2e; --text-muted: #6b7280; --card-bg: #ffffff; --card-border: #e5e7eb;
+      --input-bg: #f9fafb;
+      --brand-primary: #7c3aed; --brand-accent: #1e36f8; --brand-action: #7c3aed;
+      --brand-icon-bg: color-mix(in srgb, #7c3aed 12%, transparent);
+      --brand-icon-border: 1px solid color-mix(in srgb, #7c3aed 25%, transparent);
+      --page-gap: 14px; --radius-box: 14px; --radius-box-dark: 18px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --disp: #6b7280; --con: #1e36f8; --neg: #f59e0b; --fech: #22c55e; --purple: #a78bfa;
+      --danger: #e84025;
+      --cta-gradient: linear-gradient(135deg, #4a2082, #1e36f8);
+    }
+    [data-theme="dark"] {
+      --bg: #0f0f1a; --text: #fff; --text-muted: #9ca3af; --card-bg: #1a1a2e; --card-border: #3a3a5c;
+      --input-bg: #252540; --shadow: 0 4px 20px rgba(0,0,0,0.25); --radius-box: 18px;
+      --brand-icon-bg: color-mix(in srgb, #7c3aed 18%, transparent);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, sans-serif; background: var(--bg); color: var(--text); }
+
+    .banner {
+      background: #1a1a2e; color: #fff; padding: 10px 24px; font-size: 12px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .banner strong { color: #c4b5fd; }
+    .banner button { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+
+    .shell { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+    .app-page-shell { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 8px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: var(--brand-icon-bg); border: var(--brand-icon-border);
+      color: var(--brand-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .page-header h1 {
+      margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 18px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-primary);
+    }
+    .subtitle { margin: 5px 0 0 40px; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+
+    .page-box {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box);
+      box-shadow: var(--shadow); margin-bottom: var(--page-gap);
+    }
+    .page-filter-box { padding: 12px 20px; }
+    .page-content-box { padding: 20px; }
+    .box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-box); box-shadow: var(--shadow); margin-bottom: var(--page-gap); }
+    .filter-box { padding: 12px 20px; }
+    .content-box { padding: 20px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+    .filter-row + .filter-row { margin-top: 10px; }
+    .search-row { justify-content: center; }
+    .pill-select {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-weight: 400;
+      min-height: 36px; flex-shrink: 0; color: var(--text);
+    }
+    .pill-select select { border: none; background: transparent; font: inherit; color: inherit; cursor: pointer; max-width: 168px; outline: none; }
+
+    .search-wrap { position: relative; flex: 1; min-width: 240px; max-width: 560px; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+    .search-wrap input {
+      width: 100%; box-sizing: border-box; padding: 10px 16px 10px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-family: inherit; color: var(--text); outline: none;
+    }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text-muted);
+      font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+    }
+    .tab-btn svg { flex-shrink: 0; }
+    .tab-btn.active {
+      color: var(--brand-accent); border-color: var(--brand-accent); font-weight: 700;
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+    }
+
+    .section-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .section-title-wrap { display: inline-flex; align-items: baseline; flex-wrap: wrap; column-gap: 6px; row-gap: 4px; }
+    .section-title {
+      margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 14px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-primary);
+    }
+    .section-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .btn-secondary { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); font-family: inherit; }
+    .btn-criar {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; border: none;
+      background: var(--cta-gradient); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+
+    .hier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 900px) { .hier-grid { grid-template-columns: repeat(2, 1fr); } }
+    .hier-group { border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; }
+    .hier-group-head { padding: 14px 16px; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid var(--card-border); }
+    .hier-group-head .total { font-size: 22px; display: block; margin-top: 4px; }
+    .hier-group.disp .hier-group-head { border-left: 3px solid var(--disp); color: var(--disp); }
+    .hier-group.con .hier-group-head { border-left: 3px solid var(--con); color: var(--con); }
+    .hier-group.neg .hier-group-head { border-left: 3px solid var(--neg); color: var(--neg); }
+    .hier-group.fech .hier-group-head { border-left: 3px solid var(--fech); color: var(--fech); }
+    .hier-line { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent); }
+    .hier-line:last-child { border-bottom: none; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .kpi-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 16px 20px; box-shadow: var(--shadow); cursor: pointer; }
+    .kpi-card.active { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+    .kpi-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .kpi-card .value { font-family: "Barlow Condensed", sans-serif; font-size: 28px; font-weight: 800; margin-top: 4px; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .app-table-wrap { overflow-x: auto; border-radius: 14px; }
+    .table-wrap { overflow-x: auto; border-radius: 14px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 960px; font-size: 13px; }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-action) 14%);
+      padding: 9px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      text-align: center; border-bottom: 1px solid var(--card-border); white-space: nowrap; color: var(--text);
+    }
+    .th-inner { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .sort-btn {
+      width: 22px; height: 22px; border: none; background: transparent; cursor: pointer; color: var(--text-muted);
+      border-radius: 6px; font-size: 11px; line-height: 1; padding: 0;
+    }
+    .sort-btn:hover { background: color-mix(in srgb, var(--brand-primary) 10%, transparent); color: var(--text); }
+    .sort-btn.active { color: var(--brand-accent); font-weight: 700; }
+
+    tbody td {
+      padding: 9px 12px; text-align: center; border-bottom: 1px solid var(--card-border);
+      vertical-align: middle; font-variant-numeric: tabular-nums; color: var(--text);
+    }
+    tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-accent) 8%); }
+    tbody tr:hover td { background: color-mix(in srgb, var(--brand-primary) 6%, var(--card-bg)); }
+    td.merged-razao {
+      text-align: left; font-weight: 600; vertical-align: middle; border-right: 1px solid color-mix(in srgb, var(--card-border) 80%, transparent);
+      max-width: 150px; position: relative;
+    }
+    .razao-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
+    .cell-left { text-align: left !important; }
+
+    .marca-link { color: var(--brand-accent); font-weight: 700; text-decoration: none; }
+    .marca-link:hover { text-decoration: underline; }
+
+    .contact-stack { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .contact-link {
+      background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: var(--brand-accent);
+      cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .contact-link:hover { color: var(--brand-primary); }
+    .btn-add-contato {
+      width: 32px; height: 32px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--brand-accent) 45%, var(--card-border));
+      background: transparent; color: var(--brand-accent); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      padding: 0; flex-shrink: 0;
+    }
+    .btn-add-contato:hover { background: color-mix(in srgb, var(--brand-accent) 10%, transparent); border-style: solid; }
+
+    .cell-editable { cursor: pointer; border-radius: 8px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+    .cell-editable:hover { background: color-mix(in srgb, var(--brand-accent) 8%, transparent); outline: 1px dashed color-mix(in srgb, var(--brand-accent) 35%, transparent); }
+
+    .badge { display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .badge-disp { background: color-mix(in srgb, var(--disp) 13%, transparent); color: var(--disp); border: 1px solid color-mix(in srgb, var(--disp) 27%, transparent); }
+    .badge-con { background: color-mix(in srgb, var(--con) 13%, transparent); color: var(--con); border: 1px solid color-mix(in srgb, var(--con) 27%, transparent); }
+    .badge-neg { background: color-mix(in srgb, var(--neg) 13%, transparent); color: var(--neg); border: 1px solid color-mix(in srgb, var(--neg) 27%, transparent); }
+    .badge-fech { background: color-mix(in srgb, var(--fech) 13%, transparent); color: var(--fech); border: 1px solid color-mix(in srgb, var(--fech) 27%, transparent); }
+    .badge-prod { background: color-mix(in srgb, var(--purple) 13%, transparent); color: var(--purple); border: 1px solid color-mix(in srgb, var(--purple) 27%, transparent); }
+
+    .btn-acao-linha {
+      width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+      cursor: pointer; margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); padding: 0;
+    }
+    .btn-acao-linha:hover { color: var(--text); background: color-mix(in srgb, var(--brand-primary) 8%, var(--input-bg)); }
+    .btn-icon { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); cursor: pointer; font-size: 12px; margin: 0 2px; }
+
+    .tooltip-cnpj {
+      display: none; position: absolute; left: 0; top: 100%; z-index: 20; margin-top: 6px;
+      padding: 8px 12px; background: #1a1a2e; color: #fff; font-size: 12px; border-radius: 8px;
+      white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-weight: 500;
+    }
+    .tooltip-cnpj::before {
+      content: ""; position: absolute; top: -5px; left: 16px; border: 5px solid transparent; border-bottom-color: #1a1a2e;
+    }
+    td.merged-razao:hover .tooltip-cnpj, .razao-cell-wrap:hover .tooltip-cnpj { display: block; }
+    .razao-cell-wrap { position: relative; display: inline-block; max-width: 100%; }
+
+    .popover-backdrop { position: fixed; inset: 0; z-index: 900; }
+    .cell-popover {
+      position: fixed; z-index: 901; background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 10px; box-shadow: var(--shadow); padding: 6px; min-width: 180px; max-height: 240px; overflow-y: auto;
+    }
+    .cell-popover button {
+      display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent;
+      font: inherit; font-size: 13px; border-radius: 8px; cursor: pointer; color: var(--text);
+    }
+    .cell-popover button:hover, .cell-popover button.selected { background: color-mix(in srgb, var(--brand-accent) 12%, transparent); font-weight: 600; }
+
+    .overlay { display: none; position: fixed; inset: 0; background: #00000090; z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px;
+      width: 100%; max-width: 440px; max-height: 90dvh; overflow: auto; padding: 28px;
+    }
+    .modal--wide { max-width: 560px; }
+    .modal-header { margin-bottom: 20px; }
+    .modal-header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .modal-header-text { min-width: 0; flex: 1; }
+    .modal-header h2 {
+      margin: 0 0 6px; font-family: "Barlow Condensed", sans-serif; font-size: 17px; font-weight: 900;
+      color: var(--text); line-height: 1.25; text-transform: none; letter-spacing: normal;
+    }
+    .modal-header .modal-sub { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+    .modal-close-x {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; padding: 4px; flex-shrink: 0;
+    }
+    .modal-close-x:hover { color: var(--text); }
+    .form-field { margin-bottom: 14px; }
+    .form-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); font-family: inherit; }
+    .campo-obg { color: var(--danger); margin-left: 2px; }
+    .req { color: var(--danger); margin-left: 2px; }
+    .form-field input, .form-field textarea {
+      width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-family: inherit; color: var(--text); outline: none;
+    }
+    .form-field input:disabled, .form-field textarea:disabled { opacity: 0.65; cursor: not-allowed; }
+    .multi-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .multi-row input { flex: 1; }
+    .phone-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; width: 100%; }
+    .ddi-field {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      padding: 8px 10px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .ddi-flag { font-size: 18px; line-height: 1; }
+    .ddi-select {
+      border: none; background: transparent; font-size: 13px; font-family: inherit; color: var(--text);
+      cursor: pointer; min-width: 72px; max-width: 120px; padding: 0; font-weight: 600;
+    }
+    .ddi-select:disabled { cursor: not-allowed; opacity: 0.65; }
+    .phone-num {
+      flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .phone-num:disabled { opacity: 0.65; cursor: not-allowed; }
+    .btn-row-mini {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--input-bg);
+      cursor: pointer; color: var(--text-muted); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .btn-add-field {
+      display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--card-border);
+      background: transparent; font-size: 12px; font-weight: 600; color: var(--brand-accent); cursor: pointer; margin-top: 4px; font-family: inherit;
+    }
+    .modal-footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--card-border); }
+    .btn-excluir {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 10px;
+      border: 1px solid rgba(232,64,37,0.35); background: transparent; color: var(--danger);
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .btn-excluir:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .form-error { font-size: 12px; color: var(--danger); margin-top: 6px; display: none; font-family: inherit; }
+    .form-error.visible { display: block; }
+    .perm-badge {
+      display: inline-block; font-size: 11px; padding: 4px 8px; border-radius: 8px; margin-bottom: 12px;
+      background: color-mix(in srgb, var(--brand-accent) 10%, transparent); color: var(--brand-accent);
+      border: 1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent);
+    }
+
+    .modal-tabs {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%;
+      margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--card-border);
+    }
+    .registro-tab-panel { display: none; }
+    .registro-tab-panel.active { display: block; }
+    .anotacoes-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; max-height: 320px; overflow-y: auto; }
+    .anotacao-item {
+      padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); text-align: left;
+    }
+    .anotacao-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+    .anotacao-meta strong { color: var(--text); font-weight: 600; }
+    .anotacao-texto { font-size: 13px; line-height: 1.5; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    .ver-empty { padding: 32px 16px; text-align: center; font-size: 13px; color: var(--text-muted); }
+    .historico-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--card-border); }
+    .historico-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 480px; font-size: 13px; }
+    .historico-table thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-action) 14%);
+      padding: 9px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      text-align: center; border-bottom: 1px solid var(--card-border); color: var(--text);
+    }
+    .historico-table tbody td {
+      padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--card-border);
+      vertical-align: middle; font-variant-numeric: tabular-nums; color: var(--text);
+    }
+    .historico-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-accent) 8%); }
+    .historico-table td.hist-campo { font-weight: 600; text-align: left; }
+    .historico-table td.hist-alteracao { text-align: left; font-size: 12px; line-height: 1.45; }
+    .hist-de { color: var(--text-muted); text-decoration: line-through; }
+    .hist-arrow { color: var(--text-muted); margin: 0 4px; }
+    .hist-para { font-weight: 600; }
+
+    .ver-tab-panel { display: none; }
+    .ver-tab-panel.active { display: block; }
+    .ver-read-grid { display: grid; gap: 14px; }
+    .ver-read-field label {
+      display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .ver-read-value { font-size: 13px; color: var(--text); line-height: 1.5; word-break: break-word; }
+    .ver-read-value a { color: var(--brand-accent); font-weight: 600; text-decoration: none; }
+    .ver-read-value a:hover { text-decoration: underline; }
+    .ver-status-ok {
+      display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      background: color-mix(in srgb, #22c55e 13%, transparent); color: #22c55e; border: 1px solid color-mix(in srgb, #22c55e 27%, transparent);
+    }
+    .ver-status-inativo {
+      display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      background: color-mix(in srgb, var(--disp) 13%, transparent); color: var(--disp); border: 1px solid color-mix(in srgb, var(--disp) 27%, transparent);
+    }
+    .ver-portaria-block {
+      padding: 12px 14px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .ver-retificacoes { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--text); line-height: 1.55; }
+    .ver-retificacoes li { margin-bottom: 4px; }
+    .ver-contato-card {
+      padding: 14px 16px; border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+      margin-bottom: 12px; text-align: left;
+    }
+    .ver-contato-card:last-child { margin-bottom: 0; }
+    .ver-contato-nome { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; font-family: "Barlow Condensed", sans-serif; }
+    .ver-contato-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+    @media (max-width: 560px) { .ver-contato-grid { grid-template-columns: 1fr; } }
+    .ver-contato-grid .ver-read-field { margin: 0; }
+    .ver-link-marca {
+      background: none; border: none; padding: 0; font: inherit; font-size: 13px; font-weight: 700;
+      color: var(--brand-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .ver-link-marca:hover { color: var(--brand-primary); }
+
+    .note { margin-top: 16px; padding: 14px; border: 1px dashed var(--card-border); border-radius: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .note h3 { margin: 0 0 8px; font-size: 13px; color: var(--text); font-weight: 700; }
+    .note code { font-size: 11px; background: var(--input-bg); padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <span><strong>MOCKUP v3</strong> — Pipeline B2B · visual alinhado a Global + Brand (Spin light) · mesmos fluxos do v2</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="toggleReadonly" /> Somente leitura (contato)</label>
+      <button type="button" id="toggleTheme">Alternar tema</button>
+    </span>
+  </div>
+
+  <div class="app-page-shell">
+    <header class="page-header">
+      <div class="page-header-row">
+        <div class="page-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+        </div>
+        <h1>Pipeline B2B</h1>
+      </div>
+      <p class="subtitle">Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B.</p>
+    </header>
+
+    <div class="page-box page-filter-box">
+      <div class="filter-row search-row">
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="busca" placeholder="Buscar por CNPJ, razão social ou marca..." aria-label="Buscar por CNPJ, razão social ou marca" />
+        </div>
+        <label class="pill-select">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <select id="filtroComercial" aria-label="Comercial">
+            <option value="todos">Todos Comerciais</option>
+            <option value="nenhum">Nenhum</option>
+            <option value="marcus">Marcus Morin</option>
+            <option value="fred">Fred Ring</option>
+          </select>
+        </label>
+      </div>
+      <div class="filter-row" role="tablist" aria-label="Abas do pipeline">
+        <button type="button" class="tab-btn active" data-tab="todos" role="tab" aria-selected="true" id="tab-pipeline-todos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18"/><path d="M3 12h18"/><path d="M3 19h18"/></svg> Todos</button>
+        <button type="button" class="tab-btn" data-tab="disponiveis" role="tab" id="tab-pipeline-disponiveis"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> Disponíveis</button>
+        <button type="button" class="tab-btn" data-tab="conexao" role="tab" id="tab-pipeline-conexao"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Conexão</button>
+        <button type="button" class="tab-btn" data-tab="negociacao" role="tab" id="tab-pipeline-negociacao"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg> Negociação</button>
+        <button type="button" class="tab-btn" data-tab="fechado" role="tab" id="tab-pipeline-fechado"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg> Fechado</button>
+      </div>
+    </div>
+
+    <div id="consolidado-todos" class="page-box page-content-box panel active">
+      <div class="hier-grid">
+        <div class="hier-group disp"><div class="hier-group-head">Disponíveis<span class="total">24</span></div><div class="hier-line"><span>Site Ativo</span><span>14</span></div><div class="hier-line"><span>Site Offline</span><span>10</span></div></div>
+        <div class="hier-group con"><div class="hier-group-head">Conexão<span class="total">18</span></div><div class="hier-line"><span>Iniciada</span><span>7</span></div><div class="hier-line"><span>Realizada</span><span>11</span></div></div>
+        <div class="hier-group neg"><div class="hier-group-head">Negociação<span class="total">12</span></div><div class="hier-line"><span>Interessado</span><span>8</span></div><div class="hier-line"><span>Sem Interesse</span><span>4</span></div></div>
+        <div class="hier-group fech"><div class="hier-group-head">Fechado<span class="total">6</span></div><div class="hier-line"><span>Assinado</span><span>2</span></div><div class="hier-line"><span>Ativo</span><span>4</span></div></div>
+      </div>
+    </div>
+    <div id="consolidado-disponiveis" class="page-box page-content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="site_ativo" style="border-left:3px solid var(--disp)"><div class="label">Site Ativo</div><div class="value" style="color:var(--disp)">14</div></div><div class="kpi-card" data-filter="site_offline" style="border-left:3px solid var(--disp)"><div class="label">Site Offline</div><div class="value" style="color:var(--disp)">10</div></div><div class="kpi-card" data-filter="sem_contato" style="border-left:3px solid var(--disp)"><div class="label">Sem contato</div><div class="value" style="color:var(--disp)">5</div></div></div></div>
+    <div id="consolidado-conexao" class="page-box page-content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="conexao_iniciada" style="border-left:3px solid var(--con)"><div class="label">Iniciada</div><div class="value" style="color:var(--con)">7</div></div><div class="kpi-card" data-filter="conexao_realizada" style="border-left:3px solid var(--con)"><div class="label">Realizada</div><div class="value" style="color:var(--con)">11</div></div></div></div>
+    <div id="consolidado-negociacao" class="page-box page-content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="neg_enviar" style="border-left:3px solid var(--neg)"><div class="label">Enviar contrato</div><div class="value" style="color:var(--neg)">3</div></div><div class="kpi-card" data-filter="neg_interessado" style="border-left:3px solid var(--neg)"><div class="label">Interessado</div><div class="value" style="color:var(--neg)">8</div></div><div class="kpi-card" data-filter="neg_sem" style="border-left:3px solid var(--neg)"><div class="label">Sem interesse</div><div class="value" style="color:var(--neg)">4</div></div></div></div>
+    <div id="consolidado-fechado" class="page-box page-content-box panel"><div class="kpi-grid"><div class="kpi-card" data-filter="fech_enviado" style="border-left:3px solid var(--fech)"><div class="label">Contrato enviado</div><div class="value" style="color:var(--fech)">2</div></div><div class="kpi-card" data-filter="fech_assinado" style="border-left:3px solid var(--fech)"><div class="label">Assinado</div><div class="value" style="color:var(--fech)">2</div></div><div class="kpi-card" data-filter="fech_ativo" style="border-left:3px solid var(--fech)"><div class="label">Ativo</div><div class="value" style="color:var(--fech)">4</div></div></div></div>
+
+    <div class="page-box page-content-box">
+      <div class="section-head">
+        <div class="section-title-wrap">
+          <h2 class="section-title" id="tableTitle">Todas as Marcas</h2>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="btn-secondary">Comunicar</button>
+        </div>
+      </div>
+      <div class="app-table-wrap table-wrap">
+        <table>
+          <caption style="display:none">Pipeline B2B</caption>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="note">
+        <h3>Referência v3 — Global + Brand</h3>
+        Aproximação estática dos tokens Spin. Ações na linha: <strong>Registro</strong> (<code>ScrollText</code> — anotações e histórico) e <strong>Ver</strong> (<code>Eye</code> — dados da marca, licença compartilhada e contatos).
+      </div>
+    </div>
+  </div>
+
+  <div id="popoverRoot"></div>
+
+  <div class="overlay" id="modalRegistroMarca" role="dialog" aria-modal="true" aria-labelledby="modalRegistroMarcaTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div class="modal-header-text">
+            <h2 id="modalRegistroMarcaTitle">Registro — Marca</h2>
+            <p class="modal-sub" id="modalRegistroMarcaSub"></p>
+          </div>
+          <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="closeRegistroMarcaModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Abas do registro da marca">
+        <button type="button" class="tab-btn active" role="tab" aria-selected="true" id="tab-registro-anotacoes" aria-controls="panelRegistroAnotacoes" onclick="setRegistroMarcaTab('anotacoes')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>
+          Anotações
+        </button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" id="tab-registro-historico" aria-controls="panelRegistroHistorico" onclick="setRegistroMarcaTab('historico')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          Histórico
+        </button>
+      </div>
+      <div id="panelRegistroAnotacoes" class="registro-tab-panel active" role="tabpanel" aria-labelledby="tab-registro-anotacoes">
+        <div class="form-field">
+          <label for="registroNovaAnotacao">Nova anotação</label>
+          <textarea id="registroNovaAnotacao" rows="3" placeholder="Registre uma observação sobre esta marca..." oninput="setRegistroAnotacaoErro('')"></textarea>
+          <div id="registroAnotacaoErro" class="form-error" role="alert" aria-live="polite">Digite o texto da anotação.</div>
+        </div>
+        <div class="modal-footer" style="border-top:none;padding-top:0;margin-top:0;justify-content:flex-end">
+          <button type="button" class="btn-criar" onclick="salvarAnotacaoMarca()">Salvar</button>
+        </div>
+        <div id="registroAnotacoesLista" class="anotacoes-list"></div>
+      </div>
+      <div id="panelRegistroHistorico" class="registro-tab-panel" role="tabpanel" aria-labelledby="tab-registro-historico" hidden>
+        <div id="registroHistoricoConteudo"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalVerMarca" role="dialog" aria-modal="true" aria-labelledby="modalVerMarcaTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div class="modal-header-text">
+            <h2 id="modalVerMarcaTitle">Marca</h2>
+            <p class="modal-sub" id="modalVerMarcaSub"></p>
+          </div>
+          <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="closeVerMarcaModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="modalVerMarcaTabs" class="modal-tabs" role="tablist" aria-label="Abas de visualização da marca"></div>
+      <div id="modalVerMarcaPanels"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalContato" role="dialog" aria-modal="true" aria-labelledby="modalContatoTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div class="modal-header-text">
+            <h2 id="modalContatoTitle">Contato</h2>
+            <p class="modal-sub" id="modalContatoSub"></p>
+          </div>
+          <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="closeContatoModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="modalContatoPerm" class="perm-badge" style="display:none">Campos bloqueados — perfil sem permissão de Editar</div>
+      <form id="formContato" onsubmit="return false;">
+        <div class="form-field">
+          <label for="contatoNome">Nome<span class="campo-obg" aria-hidden="true">*</span></label>
+          <input type="text" id="contatoNome" autocomplete="name" required aria-required="true" oninput="setContatoNomeErro('')" />
+          <div id="contatoNomeErro" class="form-error" role="alert" aria-live="polite">Nome é obrigatório.</div>
+        </div>
+        <div class="form-field">
+          <label>Telefone</label>
+          <div id="contatoTelefones"></div>
+          <button type="button" class="btn-add-field" id="btnAddTelContato" onclick="addTelefoneField('contatoTelefones')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar telefone
+          </button>
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <div id="contatoEmails"></div>
+          <button type="button" class="btn-add-field" id="btnAddEmailContato" onclick="addMultiField('contatoEmails')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar e-mail
+          </button>
+        </div>
+        <div class="form-field">
+          <label for="contatoLinkedin">LinkedIn</label>
+          <input type="url" id="contatoLinkedin" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-field">
+          <label for="contatoInstagram">Instagram</label>
+          <input type="text" id="contatoInstagram" placeholder="@usuario" />
+        </div>
+        <div class="form-field">
+          <label for="contatoAniversario">Data de Nascimento</label>
+          <input type="date" id="contatoAniversario" />
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn-excluir" id="btnExcluirContato" onclick="confirmExcluirContato()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalAddContato" role="dialog" aria-modal="true" aria-labelledby="modalAddContatoTitle">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div class="modal-header-text">
+            <h2 id="modalAddContatoTitle">Adicionar Contato</h2>
+            <p class="modal-sub" id="modalAddContatoSub"></p>
+          </div>
+          <button type="button" class="modal-close-x" aria-label="Fechar modal" onclick="dismissAddContatoModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <form id="formAddContato" onsubmit="return false;">
+        <div class="form-field">
+          <label for="addContatoNome">Nome<span class="campo-obg" aria-hidden="true">*</span></label>
+          <input type="text" id="addContatoNome" autocomplete="name" required aria-required="true" oninput="setAddContatoNomeErro('')" />
+          <div id="addContatoNomeErro" class="form-error" role="alert" aria-live="polite">Nome é obrigatório.</div>
+        </div>
+        <div class="form-field">
+          <label>Telefone</label>
+          <div id="addContatoTelefones"></div>
+          <button type="button" class="btn-add-field" onclick="addTelefoneField('addContatoTelefones')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar telefone
+          </button>
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <div id="addContatoEmails"></div>
+          <button type="button" class="btn-add-field" onclick="addMultiField('addContatoEmails')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar e-mail
+          </button>
+        </div>
+        <div class="form-field">
+          <label for="addContatoLinkedin">LinkedIn</label>
+          <input type="url" id="addContatoLinkedin" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-field">
+          <label for="addContatoInstagram">Instagram</label>
+          <input type="text" id="addContatoInstagram" placeholder="@usuario" />
+        </div>
+        <div class="form-field">
+          <label for="addContatoAniversario">Data de Nascimento</label>
+          <input type="date" id="addContatoAniversario" />
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn-criar" onclick="saveAddContatoModal()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modalConfirmExcluir" role="dialog" aria-modal="true" style="z-index:1100">
+    <div class="modal" style="max-width:400px">
+      <h2 style="margin:0 0 12px;font-size:17px;font-weight:900;color:var(--text);font-family:'Barlow Condensed',sans-serif">Excluir</h2>
+      <p style="font-size:13px;margin:0 0 20px;line-height:1.5;color:var(--text)" id="modalConfirmExcluirBody"></p>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('modalConfirmExcluir')">Cancelar</button>
+        <button type="button" class="btn-excluir" onclick="executarExcluirContato()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var ICON_REGISTRO = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 12h6"/><path d="M15 6h6"/><path d="m12 18-2 2-2-2"/><path d="M8 12H2"/><path d="M8 18H2"/><path d="M8 6H2"/><path d="M12 2v20"/></svg>';
+    var ICON_EYE = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+    var VER_TAB_ICONS = {
+      dados: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+      licenca: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
+      contatos: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    };
+
+    var EMPRESAS = {
+      "12.345.678/0001-90": {
+        portaria: "Portaria SPA/MF nº 1.234, de 15 de março de 2024",
+        retificacoes: [
+          "Retificação nº 56, de 10 de janeiro de 2025",
+          "Retificação nº 89, de 22 de abril de 2026",
+        ],
+        requerimentoNumero: "789456",
+        requerimentoAno: "2023",
+      },
+      "98.765.432/0001-11": {
+        portaria: "Portaria SPA/MF nº 567, de 8 de junho de 2022",
+        retificacoes: [],
+        requerimentoNumero: "334455",
+        requerimentoAno: "2021",
+      },
+      "45.678.901/0001-22": {
+        portaria: "Portaria SPA/MF nº 890, de 3 de novembro de 2023",
+        retificacoes: ["Retificação nº 12, de 5 de fevereiro de 2025"],
+        requerimentoNumero: "112233",
+        requerimentoAno: "2022",
+      },
+    };
+
+    var OPCOES = {
+      comercial: [
+        { key: "nenhum", label: "Nenhum", display: "—" },
+        { key: "marcus", label: "Marcus Morin" },
+        { key: "fred", label: "Fred Ring" },
+      ],
+      status: [
+        { key: "disponiveis", label: "Disponíveis", badge: "badge-disp" },
+        { key: "conexao", label: "Conexão", badge: "badge-con" },
+        { key: "negociacao", label: "Negociação", badge: "badge-neg" },
+        { key: "fechado", label: "Fechado", badge: "badge-fech" },
+      ],
+      produto: [
+        { key: "none", label: "—", display: "—" },
+        { key: "sem_proposta", label: "Sem proposta" },
+        { key: "em_negociacao", label: "Em negociação" },
+        { key: "sem_interesse", label: "Sem interesse" },
+        { key: "contrato_enviado", label: "Contrato enviado" },
+        { key: "contrato_assinado", label: "Contrato Assinado" },
+        { key: "ativo", label: "Ativo" },
+      ],
+    };
+
+    var ROWS = [
+      { id: 1, razao: "Grupo Aposta Verde LTDA", cnpj: "12.345.678/0001-90", marca: "Verde Cassino", site: "https://verdecassino.bet", statusDominio: "ok", contatos: [
+        { id: "c1", nome: "Marcos Oliveira", telefones: [
+          { iso: "BR", ddi: "+55", numero: "(11) 98765-4321" },
+          { iso: "BR", ddi: "+55", numero: "(11) 3456-7890" },
+        ], emails: ["marcos@verdecassino.bet"], linkedin: "https://linkedin.com/in/marcos-oliveira", instagram: "@marcos.verde", aniversario: "1988-03-15" },
+        { id: "c2", nome: "Julia Comercial", telefones: [{ iso: "BR", ddi: "+55", numero: "(11) 91234-5678" }], emails: ["julia@verdecassino.bet"], linkedin: "", instagram: "", aniversario: "" },
+      ], comercialKey: "marcus", statusKey: "negociacao", statusKeyLeaf: "neg_interessado", dedicadaKey: "em_negociacao", networkKey: "sem_proposta", ultima: "08/06/2026",
+        anotacoes: [
+          { id: "a1", texto: "Reunião agendada com Marcos para apresentação de mesa dedicada.", usuario: "Marcus Morin", ts: "2026-06-08T14:30:00" },
+          { id: "a2", texto: "Cliente pediu proposta em PDF com tabela de GGR.", usuario: "Fred Ring", ts: "2026-06-05T10:15:00" },
+        ],
+        historico: [
+          { id: "h1", campo: "Comercial", de: "—", para: "Marcus Morin", usuario: "Felipe Saturnino", ts: "2026-06-01T09:00:00" },
+          { id: "h2", campo: "Status", de: "Conexão", para: "Negociação", usuario: "Marcus Morin", ts: "2026-06-07T16:45:00" },
+          { id: "h3", campo: "Dedicada", de: "—", para: "Em negociação", usuario: "Marcus Morin", ts: "2026-06-08T11:20:00" },
+        ] },
+      { id: 2, razao: "Grupo Aposta Verde LTDA", cnpj: "12.345.678/0001-90", marca: "Sorte Grande", site: "", statusDominio: "inativo", contatos: [], comercialKey: "nenhum", statusKey: "disponiveis", statusKeyLeaf: "sem_contato", dedicadaKey: "none", networkKey: "none", ultima: "—", anotacoes: [], historico: [] },
+      { id: 3, razao: "Blaze Gaming Brasil SA", cnpj: "98.765.432/0001-11", marca: "Blaze Bet", site: "https://blaze.bet.br", statusDominio: "ok", contatos: [
+        { id: "c3", nome: "Ana Costa", telefones: [{ iso: "BR", ddi: "+55", numero: "(21) 99876-5432" }], emails: ["ana.costa@blaze.bet.br", "comercial@blaze.bet.br"], linkedin: "https://linkedin.com/in/ana-costa", instagram: "@anacosta", aniversario: "1992-11-22" },
+      ], comercialKey: "fred", statusKey: "conexao", statusKeyLeaf: "conexao_realizada", dedicadaKey: "none", networkKey: "none", ultima: "05/06/2026",
+        anotacoes: [
+          { id: "a3", texto: "Ana confirmou interesse em mesa network — enviar material comercial.", usuario: "Fred Ring", ts: "2026-06-05T09:00:00" },
+        ],
+        historico: [
+          { id: "h4", campo: "Comercial", de: "—", para: "Fred Ring", usuario: "Fred Ring", ts: "2026-06-03T08:30:00" },
+          { id: "h5", campo: "Status", de: "Disponíveis", para: "Conexão", usuario: "Fred Ring", ts: "2026-06-04T15:10:00" },
+        ] },
+      { id: 4, razao: "Royal Entertainment LTDA", cnpj: "45.678.901/0001-22", marca: "Royal Live", site: "https://royallive.com", statusDominio: "ok", contatos: [
+        { id: "c4", nome: "Paulo Dias", telefones: [{ iso: "PT", ddi: "+351", numero: "912 345 678" }], emails: ["paulo@royallive.com"], linkedin: "", instagram: "@paulodias", aniversario: "1985-07-08" },
+      ], comercialKey: "marcus", statusKey: "fechado", statusKeyLeaf: "fech_ativo", dedicadaKey: "ativo", networkKey: "ativo", ultima: "01/06/2026", anotacoes: [], historico: [] },
+      { id: 5, razao: "Nova Bet Holding", cnpj: "11.222.333/0001-44", marca: "Nova Bet", site: "https://novabet.example", statusDominio: "inativo", contatos: [
+        { id: "c5", nome: "Julia Lima", telefones: [{ iso: "BR", ddi: "+55", numero: "" }], emails: ["julia@novabet.example"], linkedin: "", instagram: "", aniversario: "" },
+      ], comercialKey: "fred", statusKey: "disponiveis", statusKeyLeaf: "site_offline", dedicadaKey: "none", networkKey: "none", ultima: "30/05/2026", anotacoes: [], historico: [] },
+      { id: 6, razao: "Bet Union LTDA", cnpj: "77.888.999/0001-00", marca: "Union Play", site: "https://unionplay.example", statusDominio: "ok", contatos: [
+        { id: "c6", nome: "Carlos M.", telefones: [{ iso: "BR", ddi: "+55", numero: "(41) 99999-1111" }], emails: ["carlos@unionplay.example"], linkedin: "", instagram: "", aniversario: "" },
+        { id: "c7", nome: "Renata S.", telefones: [{ iso: "BR", ddi: "+55", numero: "(41) 98888-2222" }], emails: ["renata@unionplay.example"], linkedin: "https://linkedin.com/in/renata-s", instagram: "@renata.union", aniversario: "1990-01-30" },
+      ], comercialKey: "marcus", statusKey: "negociacao", statusKeyLeaf: "neg_enviar", dedicadaKey: "sem_proposta", networkKey: "none", ultima: "20/05/2026", anotacoes: [], historico: [] },
+      { id: 7, razao: "Elite Gaming", cnpj: "22.333.444/0001-55", marca: "Elite Cassino", site: "https://elitecassino.example", statusDominio: "ok", contatos: [
+        { id: "c8", nome: "Luiza P.", telefones: [{ iso: "US", ddi: "+1", numero: "(305) 555-0199" }], emails: ["luiza@elitecassino.example"], linkedin: "", instagram: "@luizap", aniversario: "1993-09-12" },
+      ], comercialKey: "fred", statusKey: "fechado", statusKeyLeaf: "fech_enviado", dedicadaKey: "contrato_enviado", networkKey: "contrato_enviado", ultima: "15/05/2026", anotacoes: [], historico: [] },
+    ];
+
+    var DDI_OPCOES = [
+      { iso: "BR", flag: "\uD83C\uDDE7\uD83C\uDDF7", label: "Brasil", ddi: "+55" },
+      { iso: "US", flag: "\uD83C\uDDFA\uD83C\uDDF8", label: "Estados Unidos", ddi: "+1" },
+      { iso: "PT", flag: "\uD83C\uDDF5\uD83C\uDDF9", label: "Portugal", ddi: "+351" },
+      { iso: "AR", flag: "\uD83C\uDDE6\uD83C\uDDF7", label: "Argentina", ddi: "+54" },
+      { iso: "MX", flag: "\uD83C\uDDF2\uD83C\uDDFD", label: "M\u00e9xico", ddi: "+52" },
+      { iso: "GB", flag: "\uD83C\uDDEC\uD83C\uDDE7", label: "Reino Unido", ddi: "+44" },
+    ];
+
+    var TAB_CONFIG = {
+      todos: { title: "Todas as Marcas", grupos: null, cols: ["razao","marca","contato","comercial","status","dedicada","network","ultima","acao"] },
+      disponiveis: { title: "Marcas Disponíveis", grupos: ["disponiveis"], cols: ["razao","marca","contato","comercial","ultima","acao"] },
+      conexao: { title: "Marcas em Conexão", grupos: ["conexao"], cols: ["razao","marca","contato","comercial","ultima","acao"] },
+      negociacao: { title: "Marcas em Negociação", grupos: ["negociacao"], cols: ["razao","marca","contato","comercial","dedicada","network","ultima","acao"] },
+      fechado: { title: "Marcas com Contrato", grupos: ["fechado"], cols: ["razao","marca","contato","comercial","dedicada","network","ultima","acao"] },
+    };
+
+    var COL_LABEL = { razao: "Razão Social", marca: "Marca", contato: "Contato", comercial: "Comercial", status: "Status", dedicada: "Dedicada", network: "Network", ultima: "Última Comunicação", acao: "Ação" };
+    var SORTABLE = { razao: 1, marca: 1, contato: 1, comercial: 1, status: 1, dedicada: 1, network: 1, ultima: 1 };
+
+    var currentTab = "todos";
+    var kpiFilter = null;
+    var sortCol = null;
+    var sortDir = 1;
+    var contatoCtx = { rowId: null, contactIdx: null };
+    var addContatoRowId = null;
+    var nextContactId = 100;
+    var contatoReadonly = false;
+    var registroMarcaRowId = null;
+    var registroMarcaTab = "anotacoes";
+    var verMarcaRowId = null;
+    var verMarcaTab = "dados";
+    var verMarcaTabKeys = ["dados"];
+    var nextAnotacaoId = 10;
+    var nextHistoricoId = 100;
+    var MOCK_USUARIO_ATUAL = "Felipe Saturnino";
+    var FIELD_HISTORICO = { comercialKey: "Comercial", statusKey: "Status", dedicadaKey: "Dedicada", networkKey: "Network" };
+
+    function isContatoReadonly() {
+      return contatoReadonly || document.getElementById("toggleReadonly").checked;
+    }
+
+    function newContactId() {
+      nextContactId += 1;
+      return "c" + nextContactId;
+    }
+
+    function emptyContact(nome) {
+      return { id: newContactId(), nome: nome || "", telefones: [defaultTelefone()], emails: [""], linkedin: "", instagram: "", aniversario: "" };
+    }
+
+    function defaultTelefone() {
+      return { iso: "BR", ddi: "+55", numero: "" };
+    }
+
+    function normalizeTelefone(t) {
+      if (!t) return defaultTelefone();
+      if (typeof t === "string") return { iso: "BR", ddi: "+55", numero: t };
+      var opt = DDI_OPCOES.find(function(d) { return d.iso === t.iso; });
+      return { iso: t.iso || "BR", ddi: t.ddi || (opt && opt.ddi) || "+55", numero: t.numero || "" };
+    }
+
+    function ddiOptByIso(iso) {
+      return DDI_OPCOES.find(function(d) { return d.iso === iso; }) || DDI_OPCOES[0];
+    }
+
+    function buildPhoneRow(containerId, tel, readonly, idx, totalRows) {
+      tel = normalizeTelefone(tel);
+      var row = document.createElement("div");
+      row.className = "phone-row";
+      row.dataset.idx = String(idx);
+
+      var ddiWrap = document.createElement("div");
+      ddiWrap.className = "ddi-field";
+
+      var flagSpan = document.createElement("span");
+      flagSpan.className = "ddi-flag";
+      flagSpan.setAttribute("aria-hidden", "true");
+
+      var select = document.createElement("select");
+      select.className = "ddi-select";
+      select.setAttribute("aria-label", "DDI do pa\u00eds");
+      select.disabled = readonly;
+
+      DDI_OPCOES.forEach(function(opt) {
+        var o = document.createElement("option");
+        o.value = opt.iso;
+        o.textContent = opt.ddi;
+        o.title = opt.label;
+        if (opt.iso === tel.iso) o.selected = true;
+        select.appendChild(o);
+      });
+
+      function syncFlag() {
+        flagSpan.textContent = ddiOptByIso(select.value).flag;
+      }
+      select.addEventListener("change", syncFlag);
+      syncFlag();
+
+      ddiWrap.appendChild(flagSpan);
+      ddiWrap.appendChild(select);
+
+      var numInput = document.createElement("input");
+      numInput.type = "tel";
+      numInput.className = "phone-num";
+      numInput.value = tel.numero || "";
+      numInput.placeholder = "(00) 00000-0000";
+      numInput.disabled = readonly;
+      numInput.setAttribute("aria-label", "DDD e telefone");
+
+      row.appendChild(ddiWrap);
+      row.appendChild(numInput);
+
+      if (!readonly && totalRows > 1) {
+        var rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "btn-row-mini";
+        rm.setAttribute("aria-label", "Remover telefone");
+        rm.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>';
+        rm.onclick = function() { removeTelefoneField(containerId, idx); };
+        row.appendChild(rm);
+      }
+
+      return row;
+    }
+
+    function renderTelefoneFields(containerId, telefones, readonly) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      var list = telefones && telefones.length ? telefones.map(normalizeTelefone) : [defaultTelefone()];
+      container.innerHTML = "";
+      list.forEach(function(tel, idx) {
+        container.appendChild(buildPhoneRow(containerId, tel, readonly, idx, list.length));
+      });
+    }
+
+    function readTelefoneFields(containerId, persist) {
+      var container = document.getElementById(containerId);
+      if (!container) return persist ? [] : [defaultTelefone()];
+      var rows = container.querySelectorAll(".phone-row");
+      var list = Array.prototype.map.call(rows, function(row) {
+        var select = row.querySelector(".ddi-select");
+        var iso = select ? select.value : "BR";
+        var opt = ddiOptByIso(iso);
+        var num = row.querySelector(".phone-num");
+        return { iso: iso, ddi: opt.ddi, numero: num ? num.value.trim() : "" };
+      });
+      var filtered = list.filter(function(t) { return t.numero; });
+      if (persist) return filtered;
+      return filtered.length ? filtered : [defaultTelefone()];
+    }
+
+    function addTelefoneField(containerId) {
+      if (isContatoReadonly() && containerId.indexOf("add") < 0) return;
+      var current = readTelefoneFields(containerId);
+      current.push(defaultTelefone());
+      renderTelefoneFields(containerId, current, false);
+      var container = document.getElementById(containerId);
+      var last = container && container.querySelector(".phone-row:last-child .phone-num");
+      if (last) last.focus();
+    }
+
+    function removeTelefoneField(containerId, idx) {
+      var current = readTelefoneFields(containerId);
+      current.splice(idx, 1);
+      if (!current.length) current = [defaultTelefone()];
+      var readonly = isContatoReadonly() && containerId.indexOf("add") < 0;
+      renderTelefoneFields(containerId, current, readonly);
+    }
+
+    function plusIconBtn(rowId) {
+      return '<button type="button" class="btn-add-contato" title="Adicionar contato" aria-label="Adicionar contato para marca" onclick="openAddContatoModal(' + rowId + ')">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>';
+    }
+
+    function renderMultiFields(containerId, values, readonly) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      var list = values && values.length ? values : [""];
+      container.innerHTML = "";
+      list.forEach(function(val, idx) {
+        var row = document.createElement("div");
+        row.className = "multi-row";
+        var input = document.createElement("input");
+        input.type = "email";
+        input.value = val || "";
+        input.placeholder = "email@empresa.com";
+        input.disabled = readonly;
+        input.dataset.idx = String(idx);
+        row.appendChild(input);
+        if (!readonly && list.length > 1) {
+          var rm = document.createElement("button");
+          rm.type = "button";
+          rm.className = "btn-row-mini";
+          rm.setAttribute("aria-label", "Remover e-mail");
+          rm.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>';
+          rm.onclick = function() { removeMultiField(containerId, idx); };
+          row.appendChild(rm);
+        }
+        container.appendChild(row);
+      });
+    }
+
+    function readMultiFields(containerId, persist) {
+      var container = document.getElementById(containerId);
+      if (!container) return persist ? [] : [""];
+      var vals = Array.prototype.map.call(container.querySelectorAll("input"), function(inp) { return inp.value.trim(); });
+      var filtered = vals.filter(function(v) { return v; });
+      if (persist) return filtered;
+      return filtered.length ? filtered : [""];
+    }
+
+    function addMultiField(containerId) {
+      if (isContatoReadonly() && containerId.indexOf("add") < 0) return;
+      var current = readMultiFields(containerId);
+      current.push("");
+      renderMultiFields(containerId, current, false);
+      var container = document.getElementById(containerId);
+      var last = container && container.querySelector(".multi-row:last-child input");
+      if (last) last.focus();
+    }
+
+    function removeMultiField(containerId, idx) {
+      var current = readMultiFields(containerId);
+      current.splice(idx, 1);
+      if (!current.length) current = [""];
+      var readonly = isContatoReadonly() && containerId.indexOf("add") < 0;
+      renderMultiFields(containerId, current, readonly);
+    }
+
+    function setAddContatoNomeErro(msg) {
+      var el = document.getElementById("addContatoNomeErro");
+      var input = document.getElementById("addContatoNome");
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("visible");
+        if (input) input.style.borderColor = msg ? "var(--danger)" : "";
+      } else {
+        el.classList.remove("visible");
+        if (input) input.style.borderColor = "";
+      }
+    }
+
+    function setContatoNomeErro(msg) {
+      var el = document.getElementById("contatoNomeErro");
+      var input = document.getElementById("contatoNome");
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("visible");
+        if (input) input.style.borderColor = msg ? "var(--danger)" : "";
+      } else {
+        el.classList.remove("visible");
+        if (input) input.style.borderColor = "";
+      }
+    }
+
+    function setContatoFormReadonly(readonly) {
+      ["contatoNome","contatoLinkedin","contatoInstagram","contatoAniversario"].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.disabled = readonly;
+      });
+      document.getElementById("modalContatoPerm").style.display = readonly ? "inline-block" : "none";
+      document.getElementById("btnAddTelContato").style.display = readonly ? "none" : "inline-flex";
+      document.getElementById("btnAddEmailContato").style.display = readonly ? "none" : "inline-flex";
+      document.getElementById("btnExcluirContato").style.display = readonly ? "none" : "inline-flex";
+    }
+
+    function labelComercial(key) {
+      var o = OPCOES.comercial.find(function(x) { return x.key === key; });
+      if (!o) return "—";
+      return o.display !== undefined ? o.display : o.label;
+    }
+    function labelStatus(key) {
+      var o = OPCOES.status.find(function(x) { return x.key === key; });
+      return o ? o.label : key;
+    }
+    function badgeStatus(key) {
+      var o = OPCOES.status.find(function(x) { return x.key === key; });
+      return o ? o.badge : "badge-disp";
+    }
+    function labelProduto(key) {
+      var o = OPCOES.produto.find(function(x) { return x.key === key; });
+      if (!o || o.key === "none") return "—";
+      return o.label;
+    }
+
+    function ensureRowMeta(row) {
+      if (!row.anotacoes) row.anotacoes = [];
+      if (!row.historico) row.historico = [];
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return "—";
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var data = d.toLocaleDateString("pt-BR");
+      var hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      return data + " às " + hora;
+    }
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function getFieldDisplay(field, key) {
+      if (field === "comercialKey") return labelComercial(key);
+      if (field === "statusKey") return labelStatus(key);
+      if (field === "dedicadaKey" || field === "networkKey") return labelProduto(key);
+      return key || "—";
+    }
+
+    function pushHistorico(row, campo, deVal, paraVal, usuario) {
+      ensureRowMeta(row);
+      nextHistoricoId += 1;
+      row.historico.unshift({
+        id: "h" + nextHistoricoId,
+        campo: campo,
+        de: deVal,
+        para: paraVal,
+        usuario: usuario || MOCK_USUARIO_ATUAL,
+        ts: nowIso(),
+      });
+      if (registroMarcaRowId === row.id && document.getElementById("modalRegistroMarca").classList.contains("open") && registroMarcaTab === "historico") {
+        renderRegistroHistorico(row);
+      }
+    }
+
+    function renderRegistroAnotacoes(row) {
+      ensureRowMeta(row);
+      var lista = document.getElementById("registroAnotacoesLista");
+      if (!row.anotacoes.length) {
+        lista.innerHTML = '<div class="ver-empty">Nenhuma anotação registrada.</div>';
+        return;
+      }
+      var sorted = row.anotacoes.slice().sort(function(a, b) {
+        return new Date(b.ts).getTime() - new Date(a.ts).getTime();
+      });
+      lista.innerHTML = sorted.map(function(a) {
+        return '<article class="anotacao-item"><div class="anotacao-meta"><strong>' + escapeHtml(a.usuario) + '</strong> · ' + escapeHtml(formatDateTime(a.ts)) + '</div><div class="anotacao-texto">' + escapeHtml(a.texto) + '</div></article>';
+      }).join("");
+    }
+
+    function renderRegistroHistorico(row) {
+      ensureRowMeta(row);
+      var root = document.getElementById("registroHistoricoConteudo");
+      if (!row.historico.length) {
+        root.innerHTML = '<div class="ver-empty">Nenhuma alteração registrada.</div>';
+        return;
+      }
+      var sorted = row.historico.slice().sort(function(a, b) {
+        return new Date(b.ts).getTime() - new Date(a.ts).getTime();
+      });
+      root.innerHTML = '<div class="historico-wrap"><table class="historico-table"><caption style="display:none">Histórico de alterações</caption><thead><tr><th scope="col">Data e hora</th><th scope="col">Usuário</th><th scope="col">Campo</th><th scope="col">Alteração</th></tr></thead><tbody>' +
+        sorted.map(function(h) {
+          return '<tr><td>' + escapeHtml(formatDateTime(h.ts)) + '</td><td>' + escapeHtml(h.usuario) + '</td><td class="hist-campo">' + escapeHtml(h.campo) + '</td><td class="hist-alteracao"><span class="hist-de">' + escapeHtml(h.de) + '</span><span class="hist-arrow">→</span><span class="hist-para">' + escapeHtml(h.para) + '</span></td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }
+
+    function setRegistroMarcaTab(tab) {
+      registroMarcaTab = tab;
+      document.getElementById("tab-registro-anotacoes").classList.toggle("active", tab === "anotacoes");
+      document.getElementById("tab-registro-historico").classList.toggle("active", tab === "historico");
+      document.getElementById("tab-registro-anotacoes").setAttribute("aria-selected", tab === "anotacoes" ? "true" : "false");
+      document.getElementById("tab-registro-historico").setAttribute("aria-selected", tab === "historico" ? "true" : "false");
+      document.getElementById("panelRegistroAnotacoes").classList.toggle("active", tab === "anotacoes");
+      document.getElementById("panelRegistroHistorico").classList.toggle("active", tab === "historico");
+      document.getElementById("panelRegistroAnotacoes").hidden = tab !== "anotacoes";
+      document.getElementById("panelRegistroHistorico").hidden = tab !== "historico";
+      if (tab === "historico" && registroMarcaRowId) {
+        var row = ROWS.find(function(r) { return r.id === registroMarcaRowId; });
+        if (row) renderRegistroHistorico(row);
+      }
+    }
+
+    function setRegistroAnotacaoErro(msg) {
+      var el = document.getElementById("registroAnotacaoErro");
+      var input = document.getElementById("registroNovaAnotacao");
+      if (!el) return;
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("visible");
+        if (input) input.style.borderColor = "var(--danger)";
+      } else {
+        el.classList.remove("visible");
+        if (input) input.style.borderColor = "";
+      }
+    }
+
+    function openRegistroMarcaModal(id) {
+      var row = ROWS.find(function(r) { return r.id === id; });
+      if (!row) return;
+      registroMarcaRowId = id;
+      setRegistroAnotacaoErro("");
+      document.getElementById("registroNovaAnotacao").value = "";
+      document.getElementById("modalRegistroMarcaTitle").textContent = "Registro — " + row.marca;
+      document.getElementById("modalRegistroMarcaSub").textContent = row.razao + " · CNPJ " + row.cnpj;
+      renderRegistroAnotacoes(row);
+      renderRegistroHistorico(row);
+      setRegistroMarcaTab("anotacoes");
+      document.getElementById("modalRegistroMarca").classList.add("open");
+      setTimeout(function() { document.getElementById("registroNovaAnotacao").focus(); }, 100);
+    }
+
+    function closeRegistroMarcaModal() {
+      document.getElementById("modalRegistroMarca").classList.remove("open");
+      registroMarcaRowId = null;
+      setRegistroAnotacaoErro("");
+    }
+
+    function salvarAnotacaoMarca() {
+      if (!registroMarcaRowId) return;
+      var texto = document.getElementById("registroNovaAnotacao").value.trim();
+      if (!texto) {
+        setRegistroAnotacaoErro("Digite o texto da anotação.");
+        document.getElementById("registroNovaAnotacao").focus();
+        return;
+      }
+      var row = ROWS.find(function(r) { return r.id === registroMarcaRowId; });
+      if (!row) return;
+      ensureRowMeta(row);
+      nextAnotacaoId += 1;
+      row.anotacoes.unshift({
+        id: "a" + nextAnotacaoId,
+        texto: texto,
+        usuario: MOCK_USUARIO_ATUAL,
+        ts: nowIso(),
+      });
+      document.getElementById("registroNovaAnotacao").value = "";
+      setRegistroAnotacaoErro("");
+      renderRegistroAnotacoes(row);
+    }
+
+    function getEmpresaByCnpj(cnpj) {
+      return EMPRESAS[cnpj] || null;
+    }
+
+    function getMarcasMesmoCnpj(row) {
+      return ROWS.filter(function(r) { return r.cnpj === row.cnpj && r.id !== row.id; });
+    }
+
+    function labelStatusDominio(key) {
+      return key === "ok" ? "Ok" : "Inativo";
+    }
+
+    function renderStatusDominioBadge(key) {
+      var cls = key === "ok" ? "ver-status-ok" : "ver-status-inativo";
+      return '<span class="' + cls + '">' + escapeHtml(labelStatusDominio(key || "inativo")) + '</span>';
+    }
+
+    function formatTelefonesDisplay(telefones) {
+      if (!telefones || !telefones.length) return "—";
+      var parts = telefones.map(function(t) {
+        t = normalizeTelefone(t);
+        if (!t.numero) return null;
+        return escapeHtml((t.ddi ? t.ddi + " " : "") + t.numero);
+      }).filter(Boolean);
+      return parts.length ? parts.join("<br>") : "—";
+    }
+
+    function formatEmailsDisplay(emails) {
+      if (!emails || !emails.length) return "—";
+      var parts = emails.map(function(e) { return e ? escapeHtml(e) : null; }).filter(Boolean);
+      return parts.length ? parts.join("<br>") : "—";
+    }
+
+    function formatAniversarioDisplay(iso) {
+      if (!iso) return "—";
+      var p = iso.split("-");
+      if (p.length === 3) return p[2] + "/" + p[1] + "/" + p[0];
+      return escapeHtml(iso);
+    }
+
+    function renderVerDadosPanel(row) {
+      var empresa = getEmpresaByCnpj(row.cnpj);
+      var dominioHtml = row.site
+        ? '<a href="' + escapeHtml(row.site) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(row.site.replace(/^https?:\/\//, "")) + '</a>'
+        : "—";
+      var portariaHtml = empresa && empresa.portaria
+        ? '<div class="ver-portaria-block"><div class="ver-read-value">' + escapeHtml(empresa.portaria) + '</div>'
+          + (empresa.retificacoes && empresa.retificacoes.length
+            ? '<div class="ver-read-value" style="margin-top:10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Retificações</div><ul class="ver-retificacoes">'
+              + empresa.retificacoes.map(function(r) { return "<li>" + escapeHtml(r) + "</li>"; }).join("")
+              + "</ul>"
+            : "")
+          + "</div>"
+        : "—";
+      var reqHtml = empresa && empresa.requerimentoNumero
+        ? escapeHtml(empresa.requerimentoNumero + " / " + empresa.requerimentoAno)
+        : "—";
+      return '<div class="ver-read-grid">'
+        + '<div class="ver-read-field"><label>Domínio</label><div class="ver-read-value">' + dominioHtml + '</div></div>'
+        + '<div class="ver-read-field"><label>Status do Domínio</label><div class="ver-read-value">' + renderStatusDominioBadge(row.statusDominio) + '</div></div>'
+        + '<div class="ver-read-field"><label>Portaria de Autorização</label>' + (portariaHtml === "—" ? '<div class="ver-read-value">—</div>' : portariaHtml) + '</div>'
+        + '<div class="ver-read-field"><label>Número e Ano do Requerimento</label><div class="ver-read-value">' + reqHtml + '</div></div>'
+        + '</div>';
+    }
+
+    function renderVerLicencaPanel(row) {
+      var outras = getMarcasMesmoCnpj(row);
+      if (!outras.length) return '<div class="ver-empty">Nenhuma outra marca compartilha este CNPJ.</div>';
+      return '<div class="historico-wrap"><table class="historico-table"><caption style="display:none">Licença compartilhada</caption><thead><tr>'
+        + '<th scope="col">Marca</th><th scope="col">Status</th><th scope="col">Dedicada</th><th scope="col">Network</th>'
+        + '</tr></thead><tbody>'
+        + outras.map(function(r) {
+          var dl = labelProduto(r.dedicadaKey);
+          var nl = labelProduto(r.networkKey);
+          return '<tr>'
+            + '<td class="hist-campo"><button type="button" class="ver-link-marca" onclick="openVerMarcaModal(' + r.id + ')">' + escapeHtml(r.marca) + '</button></td>'
+            + '<td><span class="badge ' + badgeStatus(r.statusKey) + '">' + escapeHtml(labelStatus(r.statusKey)) + '</span></td>'
+            + '<td>' + (dl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(dl) + '</span>') + '</td>'
+            + '<td>' + (nl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(nl) + '</span>') + '</td>'
+            + '</tr>';
+        }).join("")
+        + '</tbody></table></div>';
+    }
+
+    function renderVerContatosPanel(row) {
+      if (!row.contatos.length) return '<div class="ver-empty">Nenhum contato associado a esta marca.</div>';
+      return row.contatos.map(function(c) {
+        var linkedin = c.linkedin
+          ? '<a href="' + escapeHtml(c.linkedin) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(c.linkedin.replace(/^https?:\/\//, "")) + '</a>'
+          : "—";
+        return '<article class="ver-contato-card">'
+          + '<div class="ver-contato-nome">' + escapeHtml(c.nome) + '</div>'
+          + '<div class="ver-contato-grid">'
+          + '<div class="ver-read-field"><label>Telefones</label><div class="ver-read-value">' + formatTelefonesDisplay(c.telefones) + '</div></div>'
+          + '<div class="ver-read-field"><label>E-mail</label><div class="ver-read-value">' + formatEmailsDisplay(c.emails) + '</div></div>'
+          + '<div class="ver-read-field"><label>LinkedIn</label><div class="ver-read-value">' + linkedin + '</div></div>'
+          + '<div class="ver-read-field"><label>Instagram</label><div class="ver-read-value">' + (c.instagram ? escapeHtml(c.instagram) : "—") + '</div></div>'
+          + '<div class="ver-read-field"><label>Data de Nascimento</label><div class="ver-read-value">' + formatAniversarioDisplay(c.aniversario) + '</div></div>'
+          + '</div></article>';
+      }).join("");
+    }
+
+    function getVerMarcaTabDefs(row) {
+      var tabs = [{ key: "dados", label: "Dados da Marca" }];
+      if (getMarcasMesmoCnpj(row).length) tabs.push({ key: "licenca", label: "Licença Compartilhada" });
+      if (row.contatos.length) tabs.push({ key: "contatos", label: "Dados dos Contatos" });
+      return tabs;
+    }
+
+    function renderVerMarcaModalContent(row) {
+      var tabs = getVerMarcaTabDefs(row);
+      verMarcaTabKeys = tabs.map(function(t) { return t.key; });
+      var tabsEl = document.getElementById("modalVerMarcaTabs");
+      var panelsEl = document.getElementById("modalVerMarcaPanels");
+      tabsEl.innerHTML = tabs.map(function(t, i) {
+        return '<button type="button" class="tab-btn' + (i === 0 ? " active" : "") + '" role="tab" aria-selected="' + (i === 0 ? "true" : "false") + '" id="tab-ver-' + t.key + '" aria-controls="panelVer' + t.key.charAt(0).toUpperCase() + t.key.slice(1) + '" onclick="setVerMarcaTab(\'' + t.key + '\')">'
+          + VER_TAB_ICONS[t.key] + ' ' + escapeHtml(t.label) + '</button>';
+      }).join("");
+      panelsEl.innerHTML = tabs.map(function(t, i) {
+        var panelId = "panelVer" + t.key.charAt(0).toUpperCase() + t.key.slice(1);
+        var content = t.key === "dados" ? renderVerDadosPanel(row)
+          : t.key === "licenca" ? renderVerLicencaPanel(row)
+          : renderVerContatosPanel(row);
+        return '<div id="' + panelId + '" class="ver-tab-panel' + (i === 0 ? " active" : "") + '" role="tabpanel" aria-labelledby="tab-ver-' + t.key + '"' + (i === 0 ? "" : " hidden") + '>' + content + '</div>';
+      }).join("");
+    }
+
+    function setVerMarcaTab(tab) {
+      if (verMarcaTabKeys.indexOf(tab) < 0) tab = verMarcaTabKeys[0] || "dados";
+      verMarcaTab = tab;
+      verMarcaTabKeys.forEach(function(key) {
+        var btn = document.getElementById("tab-ver-" + key);
+        var panelId = "panelVer" + key.charAt(0).toUpperCase() + key.slice(1);
+        var panel = document.getElementById(panelId);
+        var active = key === tab;
+        if (btn) {
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-selected", active ? "true" : "false");
+        }
+        if (panel) {
+          panel.classList.toggle("active", active);
+          panel.hidden = !active;
+        }
+      });
+    }
+
+    function openVerMarcaModal(id) {
+      var row = ROWS.find(function(r) { return r.id === id; });
+      if (!row) return;
+      verMarcaRowId = id;
+      document.getElementById("modalVerMarcaTitle").textContent = row.marca;
+      document.getElementById("modalVerMarcaSub").textContent = row.razao + " · CNPJ " + row.cnpj;
+      renderVerMarcaModalContent(row);
+      setVerMarcaTab("dados");
+      document.getElementById("modalVerMarca").classList.add("open");
+    }
+
+    function closeVerMarcaModal() {
+      document.getElementById("modalVerMarca").classList.remove("open");
+      verMarcaRowId = null;
+    }
+
+    function getVisibleRows() {
+      var com = document.getElementById("filtroComercial").value;
+      var q = document.getElementById("busca").value.trim().toLowerCase();
+      var cfg = TAB_CONFIG[currentTab];
+      return ROWS.filter(function(r) {
+        if (cfg.grupos && cfg.grupos.indexOf(r.statusKey) < 0) return false;
+        if (com !== "todos") {
+          if (com === "nenhum" && r.comercialKey !== "nenhum") return false;
+          if (com !== "nenhum" && r.comercialKey !== com) return false;
+        }
+        if (kpiFilter && r.statusKeyLeaf !== kpiFilter) return false;
+        if (q && !(r.razao.toLowerCase().includes(q) || r.cnpj.includes(q) || r.marca.toLowerCase().includes(q))) return false;
+        return true;
+      });
+    }
+
+    function sortRows(rows) {
+      if (!sortCol || !SORTABLE[sortCol]) return rows;
+      var copy = rows.slice();
+      copy.sort(function(a, b) {
+        var va, vb;
+        if (sortCol === "comercial") { va = labelComercial(a.comercialKey); vb = labelComercial(b.comercialKey); }
+        else if (sortCol === "status") { va = labelStatus(a.statusKey); vb = labelStatus(b.statusKey); }
+        else if (sortCol === "dedicada") { va = labelProduto(a.dedicadaKey); vb = labelProduto(b.dedicadaKey); }
+        else if (sortCol === "network") { va = labelProduto(a.networkKey); vb = labelProduto(b.networkKey); }
+        else if (sortCol === "contato") { va = (a.contatos[0] && a.contatos[0].nome) || ""; vb = (b.contatos[0] && b.contatos[0].nome) || ""; }
+        else { va = a[sortCol] || ""; vb = b[sortCol] || ""; }
+        if (va < vb) return -1 * sortDir;
+        if (va > vb) return 1 * sortDir;
+        return 0;
+      });
+      return copy;
+    }
+
+    function closePopover() {
+      document.getElementById("popoverRoot").innerHTML = "";
+    }
+
+    function openCellPopover(anchor, rowId, field, options, currentKey) {
+      closePopover();
+      var rect = anchor.getBoundingClientRect();
+      var backdrop = document.createElement("div");
+      backdrop.className = "popover-backdrop";
+      backdrop.onclick = closePopover;
+      var pop = document.createElement("div");
+      pop.className = "cell-popover";
+      pop.style.left = Math.min(rect.left, window.innerWidth - 200) + "px";
+      pop.style.top = (rect.bottom + 4) + "px";
+      options.forEach(function(opt) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = opt.label;
+        if (opt.key === currentKey) btn.classList.add("selected");
+        btn.onclick = function() {
+          var row = ROWS.find(function(r) { return r.id === rowId; });
+          if (row && opt.key !== currentKey) {
+            var campo = FIELD_HISTORICO[field] || field;
+            pushHistorico(row, campo, getFieldDisplay(field, currentKey), getFieldDisplay(field, opt.key));
+            row[field] = opt.key;
+          }
+          closePopover();
+          renderTable();
+        };
+        pop.appendChild(btn);
+      });
+      var root = document.getElementById("popoverRoot");
+      root.appendChild(backdrop);
+      root.appendChild(pop);
+    }
+
+    function renderContatos(row) {
+      var html = '<div class="contact-stack">';
+      if (!row.contatos.length) {
+        html += plusIconBtn(row.id);
+      } else {
+        row.contatos.forEach(function(c, i) {
+          html += '<button type="button" class="contact-link" onclick="openContatoModal(' + row.id + ',' + i + ')">' + escapeHtml(c.nome) + '</button>';
+        });
+        html += plusIconBtn(row.id);
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    }
+
+    function renderTable() {
+      var cfg = TAB_CONFIG[currentTab];
+      document.getElementById("tableTitle").textContent = cfg.title;
+      var rows = sortRows(getVisibleRows());
+      var hasRazao = cfg.cols.indexOf("razao") >= 0;
+
+      document.getElementById("tableHead").innerHTML = "<tr>" + cfg.cols.map(function(c) {
+        var sortBtn = SORTABLE[c] ? '<button type="button" class="sort-btn' + (sortCol === c ? " active" : "") + '" onclick="toggleSort(\'' + c + '\')" aria-label="Ordenar por ' + COL_LABEL[c] + '">' + (sortCol === c ? (sortDir > 0 ? "▾" : "▴") : "▾") + '</button>' : "";
+        return '<th scope="col"><span class="th-inner">' + COL_LABEL[c] + sortBtn + '</span></th>';
+      }).join("") + "</tr>";
+
+      var mergeMap = {};
+      if (hasRazao) {
+        rows.forEach(function(r) {
+          if (!mergeMap[r.cnpj]) mergeMap[r.cnpj] = [];
+          mergeMap[r.cnpj].push(r.id);
+        });
+      }
+      var renderedCnpj = {};
+
+      var body = document.getElementById("tableBody");
+      body.innerHTML = "";
+
+      rows.forEach(function(r) {
+        var tr = document.createElement("tr");
+        cfg.cols.forEach(function(c) {
+          if (c === "razao") {
+            if (renderedCnpj[r.cnpj]) return;
+            var span = mergeMap[r.cnpj].length;
+            renderedCnpj[r.cnpj] = true;
+            var td = document.createElement("td");
+            td.className = "merged-razao";
+            td.rowSpan = span;
+            td.innerHTML = '<div class="razao-cell-wrap"><span class="razao-text">' + escapeHtml(r.razao) + '</span><div class="tooltip-cnpj">CNPJ: ' + escapeHtml(r.cnpj) + '</div></div>';
+            tr.appendChild(td);
+            return;
+          }
+          var td = document.createElement("td");
+          if (c === "marca") {
+            td.className = "cell-left";
+            if (r.site) td.innerHTML = '<a class="marca-link" href="' + escapeHtml(r.site) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(r.marca) + '</a>';
+            else td.innerHTML = "<strong>" + escapeHtml(r.marca) + "</strong>";
+          } else if (c === "contato") {
+            td.innerHTML = renderContatos(r);
+          } else if (c === "comercial") {
+            td.innerHTML = '<div class="cell-editable" onclick="editComercial(event,' + r.id + ')">' + escapeHtml(labelComercial(r.comercialKey)) + '</div>';
+          } else if (c === "status") {
+            td.innerHTML = '<div class="cell-editable" onclick="editStatus(event,' + r.id + ')"><span class="badge ' + badgeStatus(r.statusKey) + '">' + escapeHtml(labelStatus(r.statusKey)) + '</span></div>';
+          } else if (c === "dedicada") {
+            var dl = labelProduto(r.dedicadaKey);
+            td.innerHTML = '<div class="cell-editable" onclick="editProduto(event,' + r.id + ',\'dedicadaKey\')">' + (dl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(dl) + '</span>') + '</div>';
+          } else if (c === "network") {
+            var nl = labelProduto(r.networkKey);
+            td.innerHTML = '<div class="cell-editable" onclick="editProduto(event,' + r.id + ',\'networkKey\')">' + (nl === "—" ? "—" : '<span class="badge badge-prod">' + escapeHtml(nl) + '</span>') + '</div>';
+          } else if (c === "ultima") {
+            td.textContent = r.ultima;
+          } else if (c === "acao") {
+            td.innerHTML = '<button type="button" class="btn-acao-linha" title="Registro de ' + escapeHtml(r.marca) + '" aria-label="Registro de ' + escapeHtml(r.marca) + '" onclick="openRegistroMarcaModal(' + r.id + ')">' + ICON_REGISTRO + '</button><button type="button" class="btn-acao-linha" title="Ver ' + escapeHtml(r.marca) + '" aria-label="Ver ' + escapeHtml(r.marca) + '" onclick="openVerMarcaModal(' + r.id + ')">' + ICON_EYE + '</button>';
+          }
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function toggleSort(col) {
+      if (sortCol === col) sortDir = sortDir * -1;
+      else { sortCol = col; sortDir = 1; }
+      renderTable();
+    }
+
+    function editComercial(ev, id) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, "comercialKey", OPCOES.comercial, row.comercialKey);
+    }
+    function editStatus(ev, id) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, "statusKey", OPCOES.status, row.statusKey);
+    }
+    function editProduto(ev, id, field) {
+      ev.stopPropagation();
+      var row = ROWS.find(function(r) { return r.id === id; });
+      openCellPopover(ev.currentTarget, id, field, OPCOES.produto, row[field]);
+    }
+
+    function openMarcaModal(id, modo) {
+      if (modo === "registro") openRegistroMarcaModal(id);
+      else openVerMarcaModal(id);
+    }
+
+    function openContatoModal(rowId, contactIdx) {
+      var row = ROWS.find(function(r) { return r.id === rowId; });
+      var c = row.contatos[contactIdx];
+      contatoCtx = { rowId: rowId, contactIdx: contactIdx };
+      setContatoNomeErro("");
+      document.getElementById("modalContatoTitle").textContent = "Contato — " + c.nome;
+      document.getElementById("modalContatoSub").textContent = row.razao + " — " + row.marca;
+      document.getElementById("contatoNome").value = c.nome || "";
+      document.getElementById("contatoLinkedin").value = c.linkedin || "";
+      document.getElementById("contatoInstagram").value = c.instagram || "";
+      document.getElementById("contatoAniversario").value = c.aniversario || "";
+      var ro = isContatoReadonly();
+      setContatoFormReadonly(ro);
+      renderTelefoneFields("contatoTelefones", c.telefones, ro);
+      renderMultiFields("contatoEmails", c.emails, ro);
+      document.getElementById("modalContato").classList.add("open");
+      setTimeout(function() { document.getElementById("contatoNome").focus(); }, 100);
+    }
+
+    function saveContatoFromForm() {
+      if (isContatoReadonly()) return true;
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (!row || contatoCtx.contactIdx == null) return true;
+      var c = row.contatos[contatoCtx.contactIdx];
+      var nome = document.getElementById("contatoNome").value.trim();
+      if (!nome) {
+        setContatoNomeErro("Nome é obrigatório.");
+        document.getElementById("contatoNome").focus();
+        return false;
+      }
+      setContatoNomeErro("");
+      var nomeAntigo = c.nome;
+      c.nome = nome;
+      c.telefones = readTelefoneFields("contatoTelefones", true);
+      c.emails = readMultiFields("contatoEmails", true);
+      c.linkedin = document.getElementById("contatoLinkedin").value.trim();
+      c.instagram = document.getElementById("contatoInstagram").value.trim();
+      c.aniversario = document.getElementById("contatoAniversario").value.trim();
+      if (nomeAntigo !== nome) {
+        pushHistorico(row, "Contato", nomeAntigo || "—", nome);
+      }
+      document.getElementById("modalContatoTitle").textContent = "Contato — " + nome;
+      return true;
+    }
+
+    function closeContatoModal() {
+      if (!saveContatoFromForm()) return;
+      document.getElementById("modalContato").classList.remove("open");
+      contatoCtx = { rowId: null, contactIdx: null };
+      renderTable();
+    }
+
+    function openAddContatoModal(rowId) {
+      var row = ROWS.find(function(r) { return r.id === rowId; });
+      addContatoRowId = rowId;
+      setAddContatoNomeErro("");
+      document.getElementById("modalAddContatoTitle").textContent = "Adicionar Contato — " + row.marca;
+      document.getElementById("modalAddContatoSub").textContent = row.razao;
+      document.getElementById("addContatoNome").value = "";
+      document.getElementById("addContatoLinkedin").value = "";
+      document.getElementById("addContatoInstagram").value = "";
+      document.getElementById("addContatoAniversario").value = "";
+      renderTelefoneFields("addContatoTelefones", [defaultTelefone()], false);
+      renderMultiFields("addContatoEmails", [""], false);
+      document.getElementById("modalAddContato").classList.add("open");
+      setTimeout(function() { document.getElementById("addContatoNome").focus(); }, 100);
+    }
+
+    function dismissAddContatoModal() {
+      document.getElementById("modalAddContato").classList.remove("open");
+      addContatoRowId = null;
+      setAddContatoNomeErro("");
+    }
+
+    function saveAddContatoModal() {
+      var nome = document.getElementById("addContatoNome").value.trim();
+      if (!nome) {
+        setAddContatoNomeErro("Nome é obrigatório.");
+        document.getElementById("addContatoNome").focus();
+        return;
+      }
+      if (!addContatoRowId) return;
+      var row = ROWS.find(function(r) { return r.id === addContatoRowId; });
+      if (row) {
+        row.contatos.push({
+          id: newContactId(),
+          nome: nome,
+          telefones: readTelefoneFields("addContatoTelefones", true),
+          emails: readMultiFields("addContatoEmails", true),
+          linkedin: document.getElementById("addContatoLinkedin").value.trim(),
+          instagram: document.getElementById("addContatoInstagram").value.trim(),
+          aniversario: document.getElementById("addContatoAniversario").value.trim(),
+        });
+        pushHistorico(row, "Contato", "—", nome);
+      }
+      dismissAddContatoModal();
+      renderTable();
+    }
+
+    function confirmExcluirContato() {
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (!row || contatoCtx.contactIdx == null) return;
+      var c = row.contatos[contatoCtx.contactIdx];
+      document.getElementById("modalConfirmExcluirBody").innerHTML =
+        "Deseja excluir o contato «" + escapeHtml(c.nome) + "»?<br><br>Esta ação não poderá ser desfeita.";
+      document.getElementById("modalConfirmExcluir").classList.add("open");
+    }
+
+    function executarExcluirContato() {
+      var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+      if (row && contatoCtx.contactIdx != null) {
+        var nome = row.contatos[contatoCtx.contactIdx].nome;
+        pushHistorico(row, "Contato", nome || "—", "—");
+        row.contatos.splice(contatoCtx.contactIdx, 1);
+      }
+      closeModal("modalConfirmExcluir");
+      document.getElementById("modalContato").classList.remove("open");
+      contatoCtx = { rowId: null, contactIdx: null };
+      renderTable();
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+    function setTab(tab) {
+      currentTab = tab;
+      kpiFilter = null;
+      document.querySelectorAll(".tab-btn").forEach(function(b) {
+        b.classList.toggle("active", b.dataset.tab === tab);
+        b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false");
+      });
+      ["todos","disponiveis","conexao","negociacao","fechado"].forEach(function(t) {
+        document.getElementById("consolidado-" + t).classList.toggle("active", t === tab);
+      });
+      document.querySelectorAll(".kpi-card").forEach(function(k) { k.classList.remove("active"); });
+      renderTable();
+    }
+
+    document.querySelectorAll('[role="tablist"][aria-label="Abas do pipeline"] .tab-btn').forEach(function(btn) {
+      btn.addEventListener("click", function() { setTab(btn.dataset.tab); });
+    });
+    document.querySelectorAll(".kpi-card").forEach(function(card) {
+      card.addEventListener("click", function() {
+        var f = card.dataset.filter;
+        kpiFilter = kpiFilter === f ? null : f;
+        card.parentElement.querySelectorAll(".kpi-card").forEach(function(k) { k.classList.remove("active"); });
+        if (kpiFilter) card.classList.add("active");
+        renderTable();
+      });
+    });
+    document.getElementById("filtroComercial").addEventListener("change", renderTable);
+    document.getElementById("busca").addEventListener("input", renderTable);
+    document.getElementById("toggleTheme").onclick = function() {
+      document.documentElement.dataset.theme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    };
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        closePopover();
+        if (document.getElementById("modalRegistroMarca").classList.contains("open")) closeRegistroMarcaModal();
+        if (document.getElementById("modalVerMarca").classList.contains("open")) closeVerMarcaModal();
+        closeModal("modalConfirmExcluir");
+        if (document.getElementById("modalAddContato").classList.contains("open")) dismissAddContatoModal();
+        else if (document.getElementById("modalContato").classList.contains("open")) closeContatoModal();
+      }
+    });
+    document.getElementById("toggleReadonly").addEventListener("change", function() {
+      if (document.getElementById("modalContato").classList.contains("open")) {
+        var ro = isContatoReadonly();
+        setContatoFormReadonly(ro);
+        var row = ROWS.find(function(r) { return r.id === contatoCtx.rowId; });
+        if (row && contatoCtx.contactIdx != null) {
+          var c = row.contatos[contatoCtx.contactIdx];
+          renderTelefoneFields("contatoTelefones", c.telefones, ro);
+          renderMultiFields("contatoEmails", c.emails, ro);
+        }
+      }
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>

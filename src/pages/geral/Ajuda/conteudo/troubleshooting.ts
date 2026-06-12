@@ -845,6 +845,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_pipeline_b2b: {
+    titulo: "Pipeline B2B",
+    blocos: [
+      {
+        subtitulo: "Não vejo a página Pipeline B2B no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e se a página está liberada na aba Gestores (tipo de gestor) ou Operadora, conforme seu perfil. Administradores têm acesso total.",
+      },
+      {
+        subtitulo: "Não consigo editar Comercial, Status ou produtos na tabela?",
+        texto:
+          "A edição inline exige permissão de Editar na página Pipeline B2B. Sem essa permissão, os modais de contato e Ver funcionam em modo consulta.",
+      },
+      {
+        subtitulo: "A tabela está vazia após aplicar filtros?",
+        texto:
+          "Revise a busca, o filtro Comercial e os KPIs clicáveis na aba atual — eles restringem o detalhe por substatus. Limpe a busca, selecione **Todos Comerciais** e clique novamente no KPI ativo para remover o filtro.",
+      },
+      {
+        subtitulo: "Erro ao salvar contato ou anotação?",
+        texto:
+          "Verifique conexão e permissão de Editar. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.",
+      },
+    ],
+  },
   gestao_operadoras: {
     titulo: "Gestão de Operadoras",
     blocos: [

@@ -830,6 +830,30 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_pipeline_b2b: {
+    titulo: "Pipeline B2B",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline B2B** substitui a planilha comercial da Spin Gaming: concentra empresas licenciadas, marcas (sites), contatos, status do funil e propostas de mesa **Dedicada** e **Network** de Live Cassino. O acesso depende da permissão de Ver em Gestão de Usuários; edição inline, contatos e anotações exigem permissão de Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+      },
+      {
+        subtitulo: "Tabela e edição",
+        texto:
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.",
+      },
+      {
+        subtitulo: "Comunicar",
+        texto:
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Última Comunicação** — fluxo em implementação posterior.",
+      },
+    ],
+  },
   gestao_operadoras: {
     titulo: "Gestão de Operadoras",
     blocos: [

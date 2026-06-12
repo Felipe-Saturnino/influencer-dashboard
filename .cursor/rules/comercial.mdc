@@ -1,0 +1,89 @@
+---
+description: Regras para páginas da seção Comercial. Pasta comercial/. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/comercial/**/*.tsx
+  - src/pages/comercial/**/*.ts
+alwaysApply: false
+---
+
+# Seção Comercial
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers:** Brand MDC — não duplicar aqui.
+
+---
+
+## Cabeçalho — título e subtítulo
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
+
+---
+
+## Identificação
+
+| PageKey | Página | Caminho |
+|---------|--------|---------|
+| `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` |
+
+Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos exceto Admin — liberar em Gestão de Usuários.
+
+---
+
+## Pipeline B2B (`comercial_pipeline_b2b`)
+
+### Filtros (bloco nível 2)
+
+- **Busca:** `BarraPesquisaPagina` — CNPJ, razão social ou marca (`...` ASCII no placeholder).
+- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais**, opção **Nenhum**, lista de gestores ativos (`profiles.role = gestor`).
+- **Abas:** `FiltroBarTabButton` + `useRouteTab` — `todos | disponiveis | conexao | negociacao | fechado` (URLs em `appRoutes.ts`).
+- **Alinhamento:** centralizado (`justifyContent: center`, `width: 100%`) — Global § Filtros.
+
+### Consolidado (bloco nível 3)
+
+- **Aba Todos:** grelha hierárquica 4 colunas (Disponíveis, Conexão, Negociação, Fechado) com subtotais por `status_folha` — cores de pipeline em `constants.ts` (`PIPELINE_COLOR`), não semântica KPI.
+- **Demais abas:** KPIs clicáveis (`aria-pressed`) filtram a tabela por `status_folha`; segundo clique limpa o filtro.
+
+### Tabela
+
+- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ.
+- Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
+- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
+- **Ação:** só ícone — **Registro** (`ScrollText` → modal anotações/histórico) e **Ver** (`Eye` → modal dados/licença/contatos). Sem modal de edição de marca.
+- **Contatos:** nome clicável → modal editar; botão `+` → adicionar contato (`BtnExcluirComTexto` + `ModalConfirmExcluirPadrao` na exclusão).
+- Toolbar da tabela: **Comunicar** (fluxo futuro — modal e automações fora do MVP).
+
+### Modais
+
+| Modal | Abas | Edição |
+|-------|------|--------|
+| Registro | Anotações, Histórico | Anotações exige Editar |
+| Ver | Dados da Marca; Licença Compartilhada (se >1 marca/CNPJ); Dados dos Contatos (se houver) | Somente leitura |
+| Contato / Adicionar Contato | — | Editar; X no editar salva ao fechar via Salvar |
+
+### Dados (Supabase)
+
+Tabelas: `comercial_empresas`, `comercial_marcas`, `comercial_marca_contatos`, `comercial_marca_produtos`, `comercial_marca_anotacoes`, `comercial_marca_historico`. RLS: `_comercial_pipeline_b2b_perm`.
+
+---
+
+## Estados de interface
+
+| Estado | Mensagem |
+|--------|----------|
+| Tabela filtrada vazia | `Nenhuma marca encontrada para os filtros selecionados.` |
+| Anotações vazias (modal) | `Nenhuma anotação registrada.` |
+| Histórico vazio (modal) | `Nenhuma alteração registrada.` |
+| Sem permissão | String Global |
+
+---
+
+## Anti-patterns (Comercial)
+
+- Abas do pipeline sem `FiltroBarTabButton` / `useRouteTab`.
+- Filtro Comercial com `SelectComIcone` manual ou sem agregadora **Todos Comerciais**.
+- Exclusão de contato sem `BtnExcluirComTexto` + `ModalConfirmExcluirPadrao`.
+- Botão Excluir ou Editar marca na linha (fora do escopo atual).
+- CTA **Adicionar** marca na toolbar (cadastro em fluxo futuro).
