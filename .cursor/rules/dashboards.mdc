@@ -98,7 +98,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
 - **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde).
 - **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
-- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / vermelho / amarelo); **não** tokens whitelabel.
+- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel.
 
 **Identidade por jogo (regra global):** paleta canónica **obrigatória** em todo bloco que distingue os quatro jogos — Global § Identidade visual por jogo + Brand §1.5. **Exceção:** somente com pedido explícito de produto — registrar em «Exceções — identidade de jogo» neste MDC antes de codar.
 
