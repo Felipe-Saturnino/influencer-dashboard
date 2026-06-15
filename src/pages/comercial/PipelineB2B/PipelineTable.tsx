@@ -33,7 +33,6 @@ import {
   produtoDisplay,
   produtoStatus,
 } from "./helpers";
-import { COMERCIAL_FILTRO_NENHUM_LABEL } from "./constants";
 import { CellSelectPopover } from "./CellSelectPopover";
 
 type PopoverKind = "comercial" | "status" | "dedicada" | "network";

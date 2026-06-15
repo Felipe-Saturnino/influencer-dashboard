@@ -36,6 +36,7 @@ import {
   ERRO_SYNC_CDA,
   ERRO_SYNC_COMERCIAL_SPA,
   LABEL_UI_COMERCIAL_SPA_LISTA,
+  LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_LOBBY_BLAZE,
@@ -719,7 +720,7 @@ export default function StatusTecnico() {
 
       setSyncComercialDominioMensagem({
         tipo: "ok",
-        texto: `Pipeline B2B — Validação de domínios: ${resData.verificadas ?? 0} verificada(s), ${resData.atualizadas ?? 0} atualizada(s) (${resData.ativas ?? 0} ativa(s), ${resData.inativas ?? 0} inativa(s)).`,
+        texto: `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}: ${resData.verificadas ?? 0} verificada(s), ${resData.atualizadas ?? 0} atualizada(s) (${resData.ativas ?? 0} ativa(s), ${resData.inativas ?? 0} inativa(s)).`,
       });
       void carregar();
     } catch (e) {
@@ -1149,7 +1150,7 @@ export default function StatusTecnico() {
   if (ultimoSyncComercialDominioLog?.executado_em) {
     timestamps.push({
       ts: ultimoSyncComercialDominioLog.executado_em,
-      label: "Pipeline B2B — Validação de domínios",
+      label: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
     });
   }
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
@@ -1366,15 +1367,18 @@ export default function StatusTecnico() {
     !ultimoSyncComercialDominioOk &&
     ultimoSyncComercialDominioFalha
   ) {
-    alertas.push({ nivel: "erro", msg: "Nenhuma validação Pipeline B2B — domínios com sucesso" });
+    alertas.push({ nivel: "erro", msg: `Nenhuma ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} com sucesso` });
   }
   if (passouHorarioComercialDominio && comercialDominioTeveHistorico && !comercialDominioOkHoje) {
-    alertas.push({ nivel: "erro", msg: "Validação de domínios Pipeline B2B não executou hoje (agendado 8h)" });
+    alertas.push({
+      nivel: "erro",
+      msg: `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} não executou hoje (agendado 8h)`,
+    });
   }
   if (parseFloat(taxaErroComercialDominio) > 5 && syncLogsComercialDominio.length > 0) {
     alertas.push({
       nivel: "erro",
-      msg: `Taxa de erro alta na validação de domínios Pipeline B2B (${taxaErroComercialDominio}%)`,
+      msg: `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} (${taxaErroComercialDominio}%)`,
     });
   }
 
@@ -1614,9 +1618,7 @@ export default function StatusTecnico() {
           integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
           (log.integracao_slug === "spin_na_rede_rss"
             ? "Spin na Rede (RSS)"
-            : log.integracao_slug === "comercial_dominio_validacao"
-                ? "Pipeline B2B — Validação de domínios"
-              : log.integracao_slug === "lobby_blaze"
+            : log.integracao_slug === "lobby_blaze"
               ? "Lobby Blaze"
               : log.integracao_slug === "lobby_cda"
                 ? "Lobby Casa de Apostas"
@@ -1637,7 +1639,7 @@ export default function StatusTecnico() {
           resend: "E-mail (Resend)",
           spin_na_rede_rss: "Spin na Rede (RSS)",
           comercial_spa_lista: LABEL_UI_COMERCIAL_SPA_LISTA,
-          comercial_dominio_validacao: "Pipeline B2B — Validação de domínios",
+          comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
           painel_noticias_rss: "Painel de Notícias (RSS)",
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
@@ -1922,7 +1924,7 @@ export default function StatusTecnico() {
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
               syncComercialSpaMensagem && { prefix: LABEL_UI_COMERCIAL_SPA_LISTA, msg: syncComercialSpaMensagem },
               syncComercialDominioMensagem && {
-                prefix: "Pipeline B2B — Validação de domínios",
+                prefix: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
                 msg: syncComercialDominioMensagem,
               },
               syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
@@ -2466,15 +2468,15 @@ export default function StatusTecnico() {
                   ["Importação Lista SPA/MF não executou hoje (agendado 7h30)", "Após 7h BRT, sem sync_logs OK na data civil de hoje (slug comercial_spa_lista)"],
                   ["Taxa de erro alta na importação Lista SPA/MF", "> 5% em sync_logs (slug comercial_spa_lista)"],
                   [
-                    "Nenhuma validação Pipeline B2B — domínios com sucesso",
+                    `Nenhuma ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} com sucesso`,
                     "Último sync_logs com falha, nenhum OK (slug comercial_dominio_validacao)",
                   ],
                   [
-                    "Validação de domínios Pipeline B2B não executou hoje (agendado 8h)",
+                    `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} não executou hoje (agendado 8h)`,
                     "Após 8h BRT, sem sync_logs OK na data civil de hoje (slug comercial_dominio_validacao)",
                   ],
                   [
-                    "Taxa de erro alta na validação de domínios Pipeline B2B",
+                    `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`,
                     "> 5% em sync_logs (slug comercial_dominio_validacao)",
                   ],
                   ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
@@ -2541,7 +2543,7 @@ export default function StatusTecnico() {
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
               {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
               {confirmarSync === "comercial_dominio" &&
-                "Confirmar validação HTTP dos domínios Pipeline B2B"}
+                `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail de Relatório"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail de Agenda"}

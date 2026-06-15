@@ -37,8 +37,12 @@ export const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta
 /** Rótulo na UI de Status Técnico (slug `comercial_spa_lista`); automação/DB mantém nome legado. */
 export const LABEL_UI_COMERCIAL_SPA_LISTA = "Lista SPA";
 
+/** Rótulo na UI de Status Técnico (slug `comercial_dominio_validacao`); automação/DB mantém nome legado. */
+export const LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO = "Validação de domínios de Marcas";
+
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
+  if (slug === "comercial_dominio_validacao") return LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO;
   return nome;
 }
 
