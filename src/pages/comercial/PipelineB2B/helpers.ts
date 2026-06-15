@@ -4,6 +4,10 @@ import {
   STATUS_FOLHA_LABEL,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
+  COMERCIAL_FILTRO_NENHUM,
+  COMERCIAL_FILTRO_NENHUM_LABEL,
+  COMERCIAL_FILTRO_TODOS,
+  PIPELINE_COMERCIAL_NOMES,
   type PipelineTab,
   type StatusFolha,
   type StatusPipeline,
@@ -13,7 +17,56 @@ import {
   TAB_TABLE_CONFIG,
   FOLHA_BY_PIPELINE,
 } from "./constants";
-import type { ComercialContato, PipelineMarcaRow } from "./types";
+import type { ComercialContato, ComercialOpcao, PipelineMarcaRow } from "./types";
+
+export function buildPipelineComerciais(
+  profiles: { id: string; name: string }[],
+): ComercialOpcao[] {
+  const byName = new Map(profiles.map((p) => [p.name, p]));
+  return PIPELINE_COMERCIAL_NOMES.flatMap((name) => {
+    const p = byName.get(name);
+    return p ? [{ id: p.id, name }] : [];
+  });
+}
+
+export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<string> {
+  return new Set(comerciais.map((c) => c.id));
+}
+
+/** Rótulo da coluna — apenas Marcus Morin, Fred Ring ou «—». */
+export function pipelineComercialDisplayNome(
+  row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome">,
+  comerciais: ComercialOpcao[],
+): string {
+  if (!row.comercial_user_id) return "—";
+  const nome =
+    row.comercial_nome ??
+    comerciais.find((c) => c.id === row.comercial_user_id)?.name ??
+    null;
+  if (nome && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nome)) return nome;
+  return "—";
+}
+
+export function pipelineComercialNomePorId(
+  userId: string | null,
+  comerciais: ComercialOpcao[],
+): string | null {
+  if (!userId) return null;
+  return comerciais.find((c) => c.id === userId)?.name ?? null;
+}
+
+export function buildComercialFiltroExtraOptions(
+  comerciais: ComercialOpcao[],
+): { value: string; label: string }[] {
+  const opts: { value: string; label: string }[] = [
+    { value: COMERCIAL_FILTRO_NENHUM, label: COMERCIAL_FILTRO_NENHUM_LABEL },
+  ];
+  for (const name of PIPELINE_COMERCIAL_NOMES) {
+    const c = comerciais.find((x) => x.name === name);
+    opts.push({ value: c?.id ?? `__missing__:${name}`, label: name });
+  }
+  return opts;
+}
 
 export function fmtDataPipeline(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -99,9 +152,11 @@ export function filterMarcas(
   busca: string,
   comercialFiltro: string,
   kpiFolha: StatusFolha | null,
+  comerciais: ComercialOpcao[] = [],
 ): PipelineMarcaRow[] {
   const cfg = TAB_TABLE_CONFIG[tab];
   let list = rows;
+  const canonicalIds = pipelineComercialCanonicoIds(comerciais);
 
   if (cfg.pipelines) {
     list = list.filter((r) => cfg.pipelines!.includes(r.status_pipeline));
@@ -111,9 +166,11 @@ export function filterMarcas(
     list = list.filter((r) => r.status_folha === kpiFolha);
   }
 
-  if (comercialFiltro === "nenhum") {
-    list = list.filter((r) => !r.comercial_user_id);
-  } else if (comercialFiltro !== "todos") {
+  if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
+    list = list.filter(
+      (r) => !r.comercial_user_id || !canonicalIds.has(r.comercial_user_id),
+    );
+  } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
     list = list.filter((r) => r.comercial_user_id === comercialFiltro);
   }
 
@@ -169,6 +226,7 @@ export function sortMarcas(
   rows: PipelineMarcaRow[],
   col: TableCol,
   dir: SortDir,
+  comerciais: ComercialOpcao[] = [],
 ): PipelineMarcaRow[] {
   const sorted = [...rows];
   sorted.sort((a, b) => {
@@ -179,8 +237,13 @@ export function sortMarcas(
         return compareLocaleTexto(a.nome, b.nome, dir);
       case "contato":
         return compareLocaleTexto(contatoPrincipalNome(a), contatoPrincipalNome(b), dir);
-      case "comercial":
-        return compareLocaleTexto(a.comercial_nome ?? "", b.comercial_nome ?? "", dir);
+      case "comercial": {
+        const sortKey = (r: PipelineMarcaRow) => {
+          const label = pipelineComercialDisplayNome(r, comerciais);
+          return label === "—" ? "" : label;
+        };
+        return compareLocaleTexto(sortKey(a), sortKey(b), dir);
+      }
       case "status":
         return compareLocaleTexto(
           STATUS_PIPELINE_LABEL[a.status_pipeline],

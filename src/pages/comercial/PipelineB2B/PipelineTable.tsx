@@ -24,9 +24,13 @@ import {
 import {
   buildRazaoMerge,
   fmtDataPipeline,
+  pipelineComercialDisplayNome,
   produtoDisplay,
   produtoStatus,
 } from "./helpers";
+import {
+  COMERCIAL_FILTRO_NENHUM_LABEL,
+} from "./constants";
 import { CellSelectPopover } from "./CellSelectPopover";
 
 type PopoverKind = "comercial" | "status" | "dedicada" | "network";
@@ -121,7 +125,10 @@ export function PipelineTable({
     setPopover({ kind, row, rect, produto });
   }
 
-  const comercialOpts = useMemo(() => ["", ...comerciais.map((c) => c.id)] as const, [comerciais]);
+  const comercialOpts = useMemo(
+    () => ["", ...comerciais.map((c) => c.id)] as const,
+    [comerciais],
+  );
 
   if (rows.length === 0) {
     return (
@@ -293,7 +300,7 @@ export function PipelineTable({
                             : undefined
                         }
                       >
-                        {row.comercial_nome ?? "—"}
+                        {pipelineComercialDisplayNome(row, comerciais)}
                       </div>
                     </td>
                   ) : null}
@@ -388,7 +395,7 @@ export function PipelineTable({
           onSelect={(v) => onUpdateComercial(popover.row, v || null)}
           onClose={() => setPopover(null)}
           labelOption={(v) => {
-            if (!v) return "—";
+            if (!v) return COMERCIAL_FILTRO_NENHUM_LABEL;
             return comerciais.find((c) => c.id === v)?.name ?? "—";
           }}
           t={t}

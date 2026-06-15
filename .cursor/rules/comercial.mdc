@@ -37,7 +37,7 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 ### Filtros (bloco nível 2)
 
 - **Busca:** `BarraPesquisaPagina` — CNPJ, razão social ou marca (`...` ASCII no placeholder).
-- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais**, opção **Nenhum**, lista de gestores ativos (`profiles.role = gestor`).
+- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais** (default), opções **Nenhum**, **Marcus Morin** e **Fred Ring** (`PIPELINE_COMERCIAL_NOMES` em `constants.ts`; perfis `gestor` ativos resolvidos por nome). Coluna e popover inline: só esses nomes ou **—** (sem atribuição ou comercial legado).
 - **Abas:** `FiltroBarTabButton` + `useRouteTab` — `todos | disponiveis | conexao | negociacao | fechado` (URLs em `appRoutes.ts`).
 - **Alinhamento:** centralizado (`justifyContent: center`, `width: 100%`) — Global § Filtros.
 

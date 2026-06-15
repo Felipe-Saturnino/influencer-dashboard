@@ -28,6 +28,7 @@ export function StatusIntegracaoTable({
   syncExecutando,
   syncSocialExecutando,
   syncSpinRssExecutando,
+  syncComercialSpaExecutando,
   emailEnviando,
   emailAgendaEnviando,
   canEditarOk,
@@ -48,10 +49,11 @@ export function StatusIntegracaoTable({
   syncExecutando: boolean;
   syncSocialExecutando: boolean;
   syncSpinRssExecutando: boolean;
+  syncComercialSpaExecutando: boolean;
   emailEnviando: boolean;
   emailAgendaEnviando: boolean;
   canEditarOk: boolean;
-  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss") => void;
+  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa") => void;
   onConfirmarEmail: (tipo: "diretoria" | "agenda") => void;
 }) {
   const handleSort = (col: IntegracaoSortCol) => {
@@ -62,6 +64,7 @@ export function StatusIntegracaoTable({
     const isCda = row.syncTipo === "cda";
     const isSocial = row.syncTipo === "social";
     const isSpinRss = row.syncTipo === "spin_rss";
+    const isComercialSpa = row.syncTipo === "comercial_spa";
     const isEmailDir = row.syncTipo === "email";
     const isEmailAgenda = row.syncTipo === "email_agenda";
     const syncExecutandoRow = isCda
@@ -70,13 +73,19 @@ export function StatusIntegracaoTable({
         ? syncSocialExecutando
         : isSpinRss
           ? syncSpinRssExecutando
-          : false;
+          : isComercialSpa
+            ? syncComercialSpaExecutando
+            : false;
 
-    if (isCda || isSocial || isSpinRss) {
+    if (isCda || isSocial || isSpinRss || isComercialSpa) {
       return (
         <button
           type="button"
-          onClick={() => onConfirmarSync(isCda ? "cda" : isSocial ? "social" : "spin_rss")}
+          onClick={() =>
+            onConfirmarSync(
+              isCda ? "cda" : isSocial ? "social" : isComercialSpa ? "comercial_spa" : "spin_rss",
+            )
+          }
           disabled={syncExecutandoRow || !canEditarOk}
           style={btnAcao(syncExecutandoRow)}
         >

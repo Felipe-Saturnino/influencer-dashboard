@@ -6,6 +6,7 @@ export const HORARIO_AGENDADO_BR = {
   cda: 4,
   social: 6,
   spinRss: 6,
+  comercialSpa: 7,
   emailDiretoria: 6,
   emailAgenda: 6,
 } as const;
@@ -38,6 +39,8 @@ export const ERRO_SYNC_SOCIAL =
   "Não foi possível disparar o sync de Social Media. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_COMERCIAL_SPA =
+  "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_LOBBY_BLAZE =
   "Não foi possível executar o monitor Lobby Blaze. Verifique a Edge Function e tente novamente.";
 export const ERRO_EMAIL_DIRETORIA =
