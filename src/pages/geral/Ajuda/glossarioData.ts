@@ -850,7 +850,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Origem (contratação)",
         definicao:
           "Canal pelo qual o prestador chegou à Spin — LinkedIn, Indicação, Site de Vagas, Instagram ou Site Spin. Preenchido na aba Dados de contratação.",
-        nota: "Quando a origem é Indicação, informe também quem indicou.",
+        nota: "Quando a origem é Indicação, o campo Quem indicou? é obrigatório.",
         referencia: "Gestão de Prestadores",
       },
       {

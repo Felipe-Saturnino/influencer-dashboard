@@ -46,7 +46,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - **Barra de filtros:** componente `PrestadorFiltroBar.tsx` — mesma estrutura (`getFilterBarWrapperStyle` + três fileiras): Diretoria/Gerência/Setor/Contrato/Status; busca; abas + CTAs (`Novo Prestador` / `RH Talks` conforme aba e permissão).
 - Sem filtro de operadora nesta página.
 - **Tabela (Head Count, Ações de RH, Anotações RH):** `PrestadorTabelaColaboradores.tsx` — uma única tabela com flags por aba (`preencherAcoesHeadcount`, `tabelaAcoesRh`, `tabelaAnotacoesRh`, `tabelaSemSalario`); padrão canónico `useDataTableBlock()`; Remuneração com Eye/EyeOff quando `podeVerDadosSensiveis`; ações em ícone na célula.
-- **Modal — aba Dados de contratação:** campos opcionais **Origem** (`linkedin` | `indicacao` | `site_vagas` | `instagram` | `site_spin`) e **Quem indicou?** (texto livre; visível só quando Origem = Indicação). Colunas `origem_contratacao` e `quem_indicou` em `rh_funcionarios`; alterações entram no diff de Revisão de Contrato.
+- **Modal — aba Dados de contratação:** **Origem** (`linkedin` | `indicacao` | `site_vagas` | `instagram` | `site_spin`, opcional) e **Quem indicou?** (texto livre; visível e **obrigatório** só quando Origem = Indicação). Colunas `origem_contratacao` e `quem_indicou` em `rh_funcionarios`; alterações entram no diff de Revisão de Contrato.
 - CTA gradiente em ações primárias de linha quando aplicável.
 - **Handoff:** abas, headcount, fluxos de aprovação RH.
 

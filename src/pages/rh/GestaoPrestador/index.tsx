@@ -651,6 +651,9 @@ export default function RhPrestadoresPage() {
       if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
         e.data_nascimento = "Data de nascimento inválida.";
       }
+      if (form.origem_contratacao === "indicacao" && !form.quem_indicou.trim()) {
+        e.quem_indicou = "Quem indicou? é obrigatório.";
+      }
 
       const telD = somenteDigitos(form.telefone);
       if (telD.length > 0 && (telD.length < 10 || telD.length > 11)) e.telefone = "Telefone inválido.";
@@ -2166,7 +2169,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 {form.origem_contratacao === "indicacao" ? (
                   <div style={{ marginBottom: 10, gridColumn: leitura ? "1 / -1" : undefined }}>
-                    {lbl("f-quem-indicou", "Quem indicou?")}
+                    {lblReqCad("f-quem-indicou", "Quem indicou?")}
                     <input
                       id="f-quem-indicou"
                       disabled={desabilitarCampos}
@@ -2174,7 +2177,11 @@ export default function RhPrestadoresPage() {
                       onChange={(e) => setForm((s) => ({ ...s, quem_indicou: e.target.value }))}
                       style={inputStyle}
                       aria-label="Quem indicou"
+                      aria-required={!leitura}
                     />
+                    {fieldErr.quem_indicou ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.quem_indicou}</div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

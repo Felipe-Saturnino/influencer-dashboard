@@ -479,6 +479,8 @@ export function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModa
     "staff_turno",
     "data_inicio",
     "escala",
+    "origem_contratacao",
+    "quem_indicou",
   ]);
   if (contr.has(campo)) return "contratacao";
   const emp = new Set([
