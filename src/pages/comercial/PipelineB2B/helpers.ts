@@ -122,6 +122,78 @@ export function produtoDisplay(row: PipelineMarcaRow, tipo: ProdutoTipo): string
   return STATUS_PRODUTO_LABEL[st];
 }
 
+function algumProdutoStatus(row: PipelineMarcaRow, statuses: StatusProduto[]): boolean {
+  const d = produtoStatus(row, "mesa_dedicada");
+  const n = produtoStatus(row, "mesa_network");
+  return (d !== null && statuses.includes(d)) || (n !== null && statuses.includes(n));
+}
+
+function algumProdutoComValor(row: PipelineMarcaRow): boolean {
+  return produtoStatus(row, "mesa_dedicada") !== null || produtoStatus(row, "mesa_network") !== null;
+}
+
+function produtosAmbosVazios(row: PipelineMarcaRow): boolean {
+  return !algumProdutoComValor(row);
+}
+
+/** Classificação dos KPIs / linhas do consolidado — derivada da tabela, não de `status_folha` no banco. */
+export function rowMatchesConsolidadoFolha(
+  row: PipelineMarcaRow,
+  folha: StatusFolha,
+  context: "hierarchy" | "kpi" = "kpi",
+): boolean {
+  switch (folha) {
+    case "site_ativo":
+      return row.status_pipeline === "disponiveis" && row.status_dominio === "ok";
+    case "site_offline":
+      return row.status_pipeline === "disponiveis" && row.status_dominio === "inativo";
+    case "sem_contato":
+      return row.status_pipeline === "disponiveis" && row.contatos.length === 0;
+    case "conexao_iniciada":
+      return row.status_pipeline === "conexao" && produtosAmbosVazios(row);
+    case "conexao_realizada":
+      return row.status_pipeline === "conexao" && algumProdutoComValor(row);
+    case "neg_sem":
+      return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+    case "neg_enviar":
+      if (row.status_pipeline !== "negociacao") return false;
+      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      return algumProdutoStatus(row, ["sem_proposta"]) || produtosAmbosVazios(row);
+    case "neg_interessado":
+      if (row.status_pipeline !== "negociacao") return false;
+      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (context === "hierarchy") {
+        return algumProdutoComValor(row);
+      }
+      return algumProdutoComValor(row) && !algumProdutoStatus(row, ["sem_proposta"]);
+    case "fech_ativo":
+      return row.status_pipeline === "fechado" && algumProdutoStatus(row, ["ativo"]);
+    case "fech_assinado":
+      return (
+        row.status_pipeline === "fechado" &&
+        !algumProdutoStatus(row, ["ativo"]) &&
+        algumProdutoStatus(row, ["contrato_assinado"])
+      );
+    case "fech_enviado":
+      return (
+        row.status_pipeline === "fechado" &&
+        !algumProdutoStatus(row, ["ativo"]) &&
+        !algumProdutoStatus(row, ["contrato_assinado"]) &&
+        algumProdutoStatus(row, ["contrato_enviado"])
+      );
+    default:
+      return false;
+  }
+}
+
+export function countByConsolidadoFolha(
+  rows: PipelineMarcaRow[],
+  folha: StatusFolha,
+  context: "hierarchy" | "kpi" = "kpi",
+): number {
+  return rows.filter((r) => rowMatchesConsolidadoFolha(r, folha, context)).length;
+}
+
 export function normalizeTelefones(raw: unknown): import("./types").TelefoneContato[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((t) => {
@@ -176,7 +248,7 @@ export function filterMarcas(
   }
 
   if (kpiFolha) {
-    list = list.filter((r) => r.status_folha === kpiFolha);
+    list = list.filter((r) => rowMatchesConsolidadoFolha(r, kpiFolha, "kpi"));
   }
 
   if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
@@ -208,10 +280,6 @@ export function filterMarcas(
   }
 
   return list;
-}
-
-export function countByFolha(rows: PipelineMarcaRow[], folha: StatusFolha): number {
-  return rows.filter((r) => r.status_folha === folha).length;
 }
 
 export function countByPipeline(rows: PipelineMarcaRow[], pipeline: StatusPipeline): number {

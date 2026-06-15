@@ -43,8 +43,18 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 
 ### Consolidado (bloco nível 3)
 
-- **Aba Todos:** grelha hierárquica 4 colunas (Disponíveis, Conexão, Negociação, Fechado) com subtotais por `status_folha` — cores de pipeline em `constants.ts` (`PIPELINE_COLOR`), não semântica KPI.
-- **Demais abas:** KPIs clicáveis (`aria-pressed`) filtram a tabela por `status_folha`; segundo clique limpa o filtro.
+Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em `helpers.ts`) — **não** do campo `status_folha` no banco.
+
+- **Aba Todos:** total por **Status** (coluna pipeline); sublinhas:
+  - **Disponíveis:** Site Offline = `status_dominio` inativo; Site Ativo = domínio ativo.
+  - **Conexão:** Iniciada = Dedicada e Network vazias; Realizada = valor em ≥1 coluna.
+  - **Negociação:** Sem Interesse = `sem_interesse` em ≥1 produto; Interessado = valor em ≥1 (exceto sem interesse).
+  - **Fechado:** Ativo / Assinado por produto; demais só no total da coluna.
+- **Disponíveis:** Site Ativo / Site Offline = `status_dominio`; Sem contato = zero contatos.
+- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos.
+- **Negociação:** Sem interesse → `sem_interesse`; Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido.
+- **Fechado:** Contrato enviado / Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado > Enviado).
+- KPIs clicáveis (`aria-pressed`) filtram a tabela; segundo clique limpa.
 
 ### Tabela
 
