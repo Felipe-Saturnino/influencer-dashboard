@@ -49,7 +49,8 @@ export interface PipelineMarcaRow {
 }
 
 export interface ComercialOpcao {
-  id: string;
+  /** UUID em `profiles`; null se o usuário canónico ainda não existir no cadastro. */
+  id: string | null;
   name: string;
 }
 

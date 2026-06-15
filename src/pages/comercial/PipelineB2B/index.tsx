@@ -123,7 +123,7 @@ export default function PipelineB2B() {
   const [rows, setRows] = useState<PipelineMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "marca", dir: "asc" });
+  const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "razao", dir: "asc" });
 
   const [registroMarca, setRegistroMarca] = useState<PipelineMarcaRow | null>(null);
   const [verMarca, setVerMarca] = useState<PipelineMarcaRow | null>(null);
@@ -153,17 +153,19 @@ export default function PipelineB2B() {
       supabase
         .from("profiles")
         .select("id, name")
-        .eq("role", "gestor")
-        .eq("ativo", true)
-        .in("name", [...PIPELINE_COMERCIAL_NOMES]),
+        .in("name", [...PIPELINE_COMERCIAL_NOMES])
+        .or("ativo.is.null,ativo.eq.true"),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
+    if (gestoresRes.error) console.error(gestoresRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
 
-    const names = Object.fromEntries(comercialList.map((c) => [c.id, c.name]));
+    const names = Object.fromEntries(
+      comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
+    );
     const mapped = (marcasRes.data ?? []).map((r) => mapRow(r as Record<string, unknown>, names));
     setRows(mapped);
     setLoading(false);

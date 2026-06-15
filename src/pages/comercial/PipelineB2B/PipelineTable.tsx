@@ -19,16 +19,19 @@ import {
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
-  COMERCIAL_FILTRO_NENHUM_LABEL,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
 } from "./constants";
 import {
   buildRazaoMerge,
+  buildPipelineComercialPopoverOptions,
   fmtDataPipeline,
   pipelineComercialDisplayNome,
+  pipelineComercialIsMissingOptionValue,
   pipelineComercialIsSiteOffline,
+  pipelineComercialPopoverLabel,
+  pipelineComercialPopoverUserId,
   pipelineComercialPodeEditar,
   produtoDisplay,
   produtoStatus,
@@ -128,7 +131,7 @@ export function PipelineTable({
   }
 
   const comercialOpts = useMemo(
-    () => ["", ...comerciais.map((c) => c.id)] as const,
+    () => buildPipelineComercialPopoverOptions(comerciais),
     [comerciais],
   );
 
@@ -411,12 +414,14 @@ export function PipelineTable({
           anchorRect={popover.rect}
           options={comercialOpts}
           value={popover.row.comercial_user_id ?? ""}
-          onSelect={(v) => onUpdateComercial(popover.row, v || null)}
-          onClose={() => setPopover(null)}
-          labelOption={(v) => {
-            if (!v) return COMERCIAL_FILTRO_NENHUM_LABEL;
-            return comerciais.find((c) => c.id === v)?.name ?? "—";
+          onSelect={(v) => {
+            if (pipelineComercialIsMissingOptionValue(v)) return;
+            onUpdateComercial(popover.row, pipelineComercialPopoverUserId(v));
           }}
+          onClose={() => setPopover(null)}
+          labelOption={(v) => pipelineComercialPopoverLabel(v, comerciais)}
+          isOptionDisabled={pipelineComercialIsMissingOptionValue}
+          disabledOptionTitle="Usuário não encontrado no cadastro — crie o perfil com este nome em Gestão de Usuários."
           t={t}
         />
       ) : null}

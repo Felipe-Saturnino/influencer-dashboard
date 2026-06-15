@@ -9,6 +9,8 @@ export function CellSelectPopover<T extends string>({
   onSelect,
   onClose,
   labelOption,
+  isOptionDisabled,
+  disabledOptionTitle,
   t,
 }: {
   open: boolean;
@@ -18,7 +20,9 @@ export function CellSelectPopover<T extends string>({
   onSelect: (v: T) => void;
   onClose: () => void;
   labelOption: (v: T) => string;
-  t: { cardBg: string; cardBorder: string; text: string };
+  isOptionDisabled?: (v: T) => boolean;
+  disabledOptionTitle?: string;
+  t: { cardBg: string; cardBorder: string; text: string; textMuted?: string };
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -63,13 +67,19 @@ export function CellSelectPopover<T extends string>({
           padding: 6,
         }}
       >
-        {options.map((opt) => (
+        {options.map((opt) => {
+          const disabled = isOptionDisabled?.(opt) ?? false;
+          return (
           <button
-            key={opt}
+            key={opt || "__none__"}
             type="button"
             role="option"
             aria-selected={opt === value}
+            aria-disabled={disabled}
+            disabled={disabled}
+            title={disabled ? disabledOptionTitle : undefined}
             onClick={() => {
+              if (disabled) return;
               onSelect(opt);
               onClose();
             }}
@@ -84,16 +94,18 @@ export function CellSelectPopover<T extends string>({
                 opt === value
                   ? "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)"
                   : "transparent",
-              color: t.text,
+              color: disabled ? (t.textMuted ?? t.text) : t.text,
               fontSize: 13,
               fontFamily: FONT.body,
               fontWeight: opt === value ? 700 : 500,
-              cursor: "pointer",
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.55 : 1,
             }}
           >
             {labelOption(opt)}
           </button>
-        ))}
+          );
+        })}
       </div>
     </>
   );

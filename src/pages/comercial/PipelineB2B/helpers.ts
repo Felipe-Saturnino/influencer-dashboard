@@ -20,18 +20,62 @@ import {
 } from "./constants";
 import type { ComercialContato, ComercialOpcao, PipelineMarcaRow } from "./types";
 
+function normalizePipelineComercialNome(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export function buildPipelineComerciais(
   profiles: { id: string; name: string }[],
 ): ComercialOpcao[] {
-  const byName = new Map(profiles.map((p) => [p.name, p]));
-  return PIPELINE_COMERCIAL_NOMES.flatMap((name) => {
-    const p = byName.get(name);
-    return p ? [{ id: p.id, name }] : [];
+  const byName = new Map(
+    profiles.map((p) => [normalizePipelineComercialNome(p.name), p]),
+  );
+  return PIPELINE_COMERCIAL_NOMES.map((name) => {
+    const p = byName.get(normalizePipelineComercialNome(name));
+    return { id: p?.id ?? null, name };
   });
 }
 
+/** Valor sintético no popover quando o perfil canónico ainda não foi resolvido. */
+export function pipelineComercialMissingOptionValue(name: string): string {
+  return `__missing__:${name}`;
+}
+
+export function pipelineComercialIsMissingOptionValue(value: string): boolean {
+  return value.startsWith("__missing__:");
+}
+
+/** Opções fixas do popover inline — Nenhum + PIPELINE_COMERCIAL_NOMES (sempre visíveis). */
+export function buildPipelineComercialPopoverOptions(
+  comerciais: ComercialOpcao[],
+): string[] {
+  return [
+    "",
+    ...PIPELINE_COMERCIAL_NOMES.map((name) => {
+      const c = comerciais.find((x) => x.name === name);
+      return c?.id ?? pipelineComercialMissingOptionValue(name);
+    }),
+  ];
+}
+
+export function pipelineComercialPopoverLabel(
+  value: string,
+  comerciais: ComercialOpcao[],
+): string {
+  if (!value) return COMERCIAL_FILTRO_NENHUM_LABEL;
+  if (pipelineComercialIsMissingOptionValue(value)) {
+    return value.slice("__missing__:".length);
+  }
+  return comerciais.find((c) => c.id === value)?.name ?? "—";
+}
+
+export function pipelineComercialPopoverUserId(value: string): string | null {
+  if (!value || pipelineComercialIsMissingOptionValue(value)) return null;
+  return value;
+}
+
 export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<string> {
-  return new Set(comerciais.map((c) => c.id));
+  return new Set(comerciais.map((c) => c.id).filter((id): id is string => Boolean(id)));
 }
 
 /** Domínio inativo → coluna Comercial exibe «Site Offline» (automático, sem filtro). */
@@ -76,7 +120,7 @@ export function buildComercialFiltroExtraOptions(
   ];
   for (const name of PIPELINE_COMERCIAL_NOMES) {
     const c = comerciais.find((x) => x.name === name);
-    opts.push({ value: c?.id ?? `__missing__:${name}`, label: name });
+    if (c?.id) opts.push({ value: c.id, label: name });
   }
   return opts;
 }
