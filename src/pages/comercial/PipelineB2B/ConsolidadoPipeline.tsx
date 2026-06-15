@@ -11,7 +11,7 @@ import {
   type StatusPipeline,
 } from "./constants";
 import type { PipelineMarcaRow } from "./types";
-import { countByFolha, countByPipeline } from "./helpers";
+import { countByConsolidadoFolha, countByPipeline } from "./helpers";
 
 const hierGrid: CSSProperties = {
   display: "grid",
@@ -87,7 +87,9 @@ export function ConsolidadoPipeline({
                   }}
                 >
                   <span>{line.label}</span>
-                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{countByFolha(rows, line.key)}</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {countByConsolidadoFolha(rows, line.key, "hierarchy")}
+                  </span>
                 </div>
               ))}
             </div>
@@ -136,7 +138,7 @@ export function ConsolidadoPipeline({
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {countByFolha(rows, line.key)}
+              {countByConsolidadoFolha(rows, line.key, "kpi")}
             </div>
           </button>
         );

@@ -38,10 +38,10 @@ import { ModalVerMarca } from "./ModalVerMarca";
 import { ModalContato } from "./ModalContato";
 import {
   COMERCIAL_FILTRO_ARIA,
-  COMERCIAL_FILTRO_NENHUM,
   COMERCIAL_FILTRO_TODOS,
   COMERCIAL_FILTRO_TODOS_LABEL,
   FOLHA_BY_PIPELINE,
+  PIPELINE_COMERCIAL_NOMES,
   PIPELINE_TABS,
   PIPELINE_TAB_LABEL,
   TAB_TABLE_CONFIG,
@@ -51,10 +51,13 @@ import {
 } from "./constants";
 import type { ComercialOpcao, ComercialContato, PipelineMarcaRow } from "./types";
 import {
+  buildComercialFiltroExtraOptions,
+  buildPipelineComerciais,
   defaultFolhaForPipeline,
   filterMarcas,
   mapContatoFromDb,
   normalizeRetificacoes,
+  pipelineComercialNomePorId,
   sortMarcas,
 } from "./helpers";
 
@@ -74,6 +77,12 @@ function mapRow(
   const contatosRaw = (raw.contatos as Record<string, unknown>[] | null) ?? [];
   const produtosRaw = (raw.produtos as Record<string, unknown>[] | null) ?? [];
   const comercialId = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
+  const rawComercialNome = comercialId ? comercialNames[comercialId] ?? null : null;
+  const comercialNomeCanonico =
+    rawComercialNome &&
+    (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(rawComercialNome)
+      ? rawComercialNome
+      : null;
 
   return {
     id: String(raw.id),
@@ -83,7 +92,7 @@ function mapRow(
     status_pipeline: raw.status_pipeline as StatusPipeline,
     status_folha: raw.status_folha as PipelineMarcaRow["status_folha"],
     comercial_user_id: comercialId,
-    comercial_nome: comercialId ? comercialNames[comercialId] ?? null : null,
+    comercial_nome: comercialNomeCanonico,
     ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
     empresa: {
       id: String(empresaRaw.id),
@@ -141,15 +150,17 @@ export default function PipelineB2B() {
         `,
         )
         .order("nome"),
-      supabase.from("profiles").select("id, name").eq("role", "gestor").eq("ativo", true).order("name"),
+      supabase
+        .from("profiles")
+        .select("id, name")
+        .eq("role", "gestor")
+        .eq("ativo", true)
+        .in("name", [...PIPELINE_COMERCIAL_NOMES]),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
 
-    const comercialList: ComercialOpcao[] = (gestoresRes.data ?? []).map((p) => ({
-      id: p.id,
-      name: p.name ?? p.id,
-    }));
+    const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
 
     const names = Object.fromEntries(comercialList.map((c) => [c.id, c.name]));
@@ -167,14 +178,14 @@ export default function PipelineB2B() {
   }, [tab]);
 
   const filteredBase = useMemo(
-    () => filterMarcas(rows, tab, busca, comercialFiltro, null),
-    [rows, tab, busca, comercialFiltro],
+    () => filterMarcas(rows, tab, busca, comercialFiltro, null, comerciais),
+    [rows, tab, busca, comercialFiltro, comerciais],
   );
 
   const tableRows = useMemo(() => {
-    const filtered = filterMarcas(rows, tab, busca, comercialFiltro, kpiFolha);
-    return sortMarcas(filtered, sort.col, sort.dir);
-  }, [rows, tab, busca, comercialFiltro, kpiFolha, sort]);
+    const filtered = filterMarcas(rows, tab, busca, comercialFiltro, kpiFolha, comerciais);
+    return sortMarcas(filtered, sort.col, sort.dir, comerciais);
+  }, [rows, tab, busca, comercialFiltro, kpiFolha, sort, comerciais]);
 
   async function insertHistorico(
     marcaId: string,
@@ -193,6 +204,7 @@ export default function PipelineB2B() {
 
   async function updateComercial(row: PipelineMarcaRow, userId: string | null) {
     if (!perm.canEditarOk) return;
+    if (row.status_dominio === "inativo") return;
     const anterior = row.comercial_user_id;
     const { error } = await supabase
       .from("comercial_marcas")
@@ -205,8 +217,8 @@ export default function PipelineB2B() {
     await insertHistorico(
       row.id,
       "comercial_user_id",
-      anterior,
-      userId,
+      pipelineComercialNomePorId(anterior, comerciais) ?? "—",
+      pipelineComercialNomePorId(userId, comerciais) ?? "—",
     );
     void loadData();
   }
@@ -302,8 +314,8 @@ export default function PipelineB2B() {
             ariaLabel={COMERCIAL_FILTRO_ARIA}
             todasValue={COMERCIAL_FILTRO_TODOS}
             todasLabel={COMERCIAL_FILTRO_TODOS_LABEL}
-            extraOptions={[{ value: COMERCIAL_FILTRO_NENHUM, label: "Nenhum" }]}
-            options={comerciais.map((c) => ({ value: c.id, label: c.name }))}
+            extraOptions={buildComercialFiltroExtraOptions(comerciais)}
+            options={[]}
             minWidth={200}
           />
         </div>
@@ -363,9 +375,7 @@ export default function PipelineB2B() {
             marginBottom: 16,
           }}
         >
-          <SectionTitle sub={`${tableRows.length} marca(s) no recorte atual`}>
-            {TAB_TABLE_CONFIG[tab].title}
-          </SectionTitle>
+          <SectionTitle>{TAB_TABLE_CONFIG[tab].title}</SectionTitle>
           <button
             type="button"
             disabled

@@ -37,20 +37,32 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 ### Filtros (bloco nível 2)
 
 - **Busca:** `BarraPesquisaPagina` — CNPJ, razão social ou marca (`...` ASCII no placeholder).
-- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais**, opção **Nenhum**, lista de gestores ativos (`profiles.role = gestor`).
+- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais** (default), opções **Nenhum**, **Marcus Morin** e **Fred Ring** (`PIPELINE_COMERCIAL_NOMES` em `constants.ts`; perfis `gestor` ativos resolvidos por nome). Coluna e popover inline: só esses nomes ou **—** (sem atribuição ou comercial legado).
 - **Abas:** `FiltroBarTabButton` + `useRouteTab` — `todos | disponiveis | conexao | negociacao | fechado` (URLs em `appRoutes.ts`).
 - **Alinhamento:** centralizado (`justifyContent: center`, `width: 100%`) — Global § Filtros.
 
 ### Consolidado (bloco nível 3)
 
-- **Aba Todos:** grelha hierárquica 4 colunas (Disponíveis, Conexão, Negociação, Fechado) com subtotais por `status_folha` — cores de pipeline em `constants.ts` (`PIPELINE_COLOR`), não semântica KPI.
-- **Demais abas:** KPIs clicáveis (`aria-pressed`) filtram a tabela por `status_folha`; segundo clique limpa o filtro.
+Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em `helpers.ts`) — **não** do campo `status_folha` no banco.
+
+- **Aba Todos:** total por **Status** (coluna pipeline); sublinhas:
+  - **Disponíveis:** Site Offline = `status_dominio` inativo; Site Ativo = domínio ativo.
+  - **Conexão:** Iniciada = Dedicada e Network vazias; Realizada = valor em ≥1 coluna.
+  - **Negociação:** Sem Interesse = `sem_interesse` em ≥1 produto; Interessado = valor em ≥1 (exceto sem interesse).
+  - **Fechado:** Ativo / Assinado por produto; demais só no total da coluna.
+- **Disponíveis:** Site Ativo / Site Offline = `status_dominio`; Sem contato = zero contatos.
+- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos.
+- **Negociação:** Sem interesse → `sem_interesse`; Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido.
+- **Fechado:** Contrato enviado / Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado > Enviado).
+- KPIs clicáveis (`aria-pressed`) filtram a tabela; segundo clique limpa.
 
 ### Tabela
 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
+- **Comercial — Site Offline:** quando `status_dominio = inativo`, coluna exibe badge **Site Offline** (automático); sem popover; **fora** do filtro Comercial.
+- **Comercial — gestores:** Marcus Morin, Fred Ring ou **—** quando domínio **Ativo** e sem atribuição.
 - **Ação:** só ícone — **Registro** (`ScrollText` → modal anotações/histórico) e **Ver** (`Eye` → modal dados/licença/contatos). Sem modal de edição de marca.
 - **Contatos:** nome clicável → modal editar; botão `+` → adicionar contato (`BtnExcluirComTexto` + `ModalConfirmExcluirPadrao` na exclusão).
 - Toolbar da tabela: **Comunicar** (fluxo futuro — modal e automações fora do MVP).
@@ -78,18 +90,25 @@ Edge Function **`sync-comercial-spa-lista`** — import diário do CSV oficial d
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |
 | Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
-| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao`, **`status_dominio`** |
+| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao` |
+| **Exceção domínio** | Se `dominio` mudar no CSV → atualiza domínio e **`status_dominio` → `inativo`** (revalidação HTTP) |
 | Marca nova | defaults `disponiveis` + `sem_contato`; domínio `inativo` até cron de validação HTTP |
 | Idempotência | Hash SHA-256 do CSV em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |
 | Logs | `sync_logs.integracao_slug = comercial_spa_lista` (Status Técnico) |
 
-**Validação de domínio (fase 2 — separado):** cron futuro tenta abrir o site (HTTP); presença na planilha **≠** site ativo.
+**Validação de domínio (cron separado):** Edge Function **`validate-comercial-dominios`** — verificação HTTP diária; atualiza `status_dominio` (`ok` = **Ativo**, `inativo` = **Inativo**). Coluna **Comercial** exibe **Site Offline** (automático, cinza) quando `inativo` — **não** entra no filtro Comercial e **não** permite atribuição manual.
 
-Teste manual: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para ignorar hash.
+| Regra | Valor |
+|-------|-------|
+| Agendamento | GitHub Actions `validate-comercial-dominios-daily.yml` — **8h BRT** (~11h UTC, após import SPA) |
+| Critério **Ativo** | HTTP 2xx ou 3xx (HEAD/GET, timeout 12s, redirects) |
+| Sem domínio / erro | `inativo` |
+| Ao mudar `dominio` no import SPA | `status_dominio` → `inativo` até próxima validação |
+| Logs | `sync_logs.integracao_slug = comercial_dominio_validacao` (Status Técnico — botão Sync manual) |
 
----
+Teste manual domínios: `POST` `{}` ou `{ "dry_run": true }` na Edge `validate-comercial-dominios`.
 
-## Estados de interface
+Teste manual SPA: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para ignorar hash.
 
 | Estado | Mensagem |
 |--------|----------|

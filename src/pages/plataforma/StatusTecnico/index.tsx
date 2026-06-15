@@ -34,6 +34,11 @@ import {
   ERRO_DIAGNOSTICO_PLATAFORMA,
   ERRO_REDE_EDGE,
   ERRO_SYNC_CDA,
+  ERRO_SYNC_COMERCIAL_SPA,
+  LABEL_UI_COMERCIAL_SPA_LISTA,
+  LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+  nomeIntegracaoStatusTecnicoUi,
+  ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
@@ -143,6 +148,10 @@ export default function StatusTecnico() {
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
   const [syncSpinRssMensagem, setSyncSpinRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncComercialSpaExecutando, setSyncComercialSpaExecutando] = useState(false);
+  const [syncComercialSpaMensagem, setSyncComercialSpaMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncComercialDominioExecutando, setSyncComercialDominioExecutando] = useState(false);
+  const [syncComercialDominioMensagem, setSyncComercialDominioMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncLobbyBlazeExecutando, setSyncLobbyBlazeExecutando] = useState(false);
   const [syncLobbyBlazeMensagem, setSyncLobbyBlazeMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
@@ -168,7 +177,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -577,6 +586,151 @@ export default function StatusTecnico() {
     }
   };
 
+  const executarSyncComercialSpa = async () => {
+    if (syncComercialSpaExecutando || !perm.canEditarOk) return;
+    setSyncComercialSpaExecutando(true);
+    setSyncComercialSpaMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncComercialSpaMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncComercialSpaExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-comercial-spa-lista", {
+        body: {},
+      });
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        skipped?: boolean;
+        motivo?: string;
+        erro?: string;
+        empresas_inseridas?: number;
+        empresas_atualizadas?: number;
+        marcas_inseridas?: number;
+        marcas_atualizadas?: number;
+        marcas_parseadas?: number;
+        blocos?: number;
+        erros?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_COMERCIAL_SPA;
+        if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Edge Function sync-comercial-spa-lista não encontrada. Execute: supabase functions deploy sync-comercial-spa-lista";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncComercialSpaMensagem({ tipo: "erro", texto });
+        setSyncComercialSpaExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        setSyncComercialSpaMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : "Sync da lista SPA/MF concluído com erros (ver resposta da função).",
+        });
+        setSyncComercialSpaExecutando(false);
+        return;
+      }
+
+      if (resData.skipped) {
+        setSyncComercialSpaMensagem({
+          tipo: "ok",
+          texto: resData.motivo ?? "Lista SPA/MF: CSV sem alteração desde o último import.",
+        });
+      } else {
+        const ins = (resData.empresas_inseridas ?? 0) + (resData.marcas_inseridas ?? 0);
+        const upd = (resData.empresas_atualizadas ?? 0) + (resData.marcas_atualizadas ?? 0);
+        const marcas = resData.marcas_parseadas ?? 0;
+        setSyncComercialSpaMensagem({
+          tipo: "ok",
+          texto: `Pipeline B2B — Lista SPA/MF: ${ins} inserido(s), ${upd} atualizado(s) (${marcas} marcas na planilha).`,
+        });
+      }
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncComercialSpaMensagem({ tipo: "erro", texto: ERRO_SYNC_COMERCIAL_SPA });
+    } finally {
+      setSyncComercialSpaExecutando(false);
+    }
+  };
+
+  const executarSyncComercialDominio = async () => {
+    if (syncComercialDominioExecutando || !perm.canEditarOk) return;
+    setSyncComercialDominioExecutando(true);
+    setSyncComercialDominioMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncComercialDominioMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncComercialDominioExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke(
+        "validate-comercial-dominios",
+        { body: {} },
+      );
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        verificadas?: number;
+        atualizadas?: number;
+        ativas?: number;
+        inativas?: number;
+        erros?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0
+            ? resData.erro
+            : ERRO_SYNC_COMERCIAL_DOMINIO;
+        if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Edge Function validate-comercial-dominios não encontrada. Execute: supabase functions deploy validate-comercial-dominios";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncComercialDominioMensagem({ tipo: "erro", texto });
+        setSyncComercialDominioExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        setSyncComercialDominioMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : "Validação de domínios concluída com erros (ver resposta da função).",
+        });
+        setSyncComercialDominioExecutando(false);
+        return;
+      }
+
+      setSyncComercialDominioMensagem({
+        tipo: "ok",
+        texto: `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}: ${resData.verificadas ?? 0} verificada(s), ${resData.atualizadas ?? 0} atualizada(s) (${resData.ativas ?? 0} ativa(s), ${resData.inativas ?? 0} inativa(s)).`,
+      });
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncComercialDominioMensagem({ tipo: "erro", texto: ERRO_SYNC_COMERCIAL_DOMINIO });
+    } finally {
+      setSyncComercialDominioExecutando(false);
+    }
+  };
+
   const executarSyncLobbyBlaze = async () => {
     if (syncLobbyBlazeExecutando || !perm.canEditarOk) return;
     setSyncLobbyBlazeExecutando(true);
@@ -900,6 +1054,8 @@ export default function StatusTecnico() {
 
   const passouHorarioCda = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.cda);
   const passouHorarioSocial = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.social);
+  const passouHorarioComercialSpa = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialSpa);
+  const passouHorarioComercialDominio = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialDominio);
 
   // Integrações Ativas: jobs diários — OK se executou com sucesso hoje (SP); antes do horário, aceita último OK
   const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
@@ -913,6 +1069,21 @@ export default function StatusTecnico() {
   const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
   const spinNaRedeRssStatusOk =
     spinRssOkHoje || (!passouHorarioSocial && ultimoSyncSpinRssLog?.status === "ok");
+
+  const syncLogsComercialSpaKpi = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista");
+  const ultimoSyncComercialSpaLog = syncLogsComercialSpaKpi[0];
+  const comercialSpaOkHoje = syncLogOkNoDia(syncLogsComercialSpaKpi, hojeIsoKpi);
+  const comercialSpaStatusOk =
+    comercialSpaOkHoje || (!passouHorarioComercialSpa && ultimoSyncComercialSpaLog?.status === "ok");
+
+  const syncLogsComercialDominioKpi = syncLogs.filter(
+    (l) => l.integracao_slug === "comercial_dominio_validacao",
+  );
+  const ultimoSyncComercialDominioLog = syncLogsComercialDominioKpi[0];
+  const comercialDominioOkHoje = syncLogOkNoDia(syncLogsComercialDominioKpi, hojeIsoKpi);
+  const comercialDominioStatusOk =
+    comercialDominioOkHoje ||
+    (!passouHorarioComercialDominio && ultimoSyncComercialDominioLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
   const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
@@ -959,18 +1130,29 @@ export default function StatusTecnico() {
     cdaStatusOk,
     socialStatusOk,
     spinNaRedeRssStatusOk,
+    comercialSpaStatusOk,
+    comercialDominioStatusOk,
     lobbyBlazeStatusOk,
     lobbyCdaStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 7;
+  const totalIntegracoes = 9;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (ultimoSyncSpinRssLog?.executado_em) timestamps.push({ ts: ultimoSyncSpinRssLog.executado_em, label: "Spin na Rede RSS" });
+  if (ultimoSyncComercialSpaLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncComercialSpaLog.executado_em, label: LABEL_UI_COMERCIAL_SPA_LISTA });
+  }
+  if (ultimoSyncComercialDominioLog?.executado_em) {
+    timestamps.push({
+      ts: ultimoSyncComercialDominioLog.executado_em,
+      label: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+    });
+  }
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
   if (ultimoSyncLobbyCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyCdaLog.executado_em, label: "Lobby CDA" });
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
@@ -986,6 +1168,12 @@ export default function StatusTecnico() {
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
   const spinRssTotal = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss").length;
   const spinRssFalhas = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss" && l.status === "falha").length;
+  const comercialSpaTotal = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista").length;
+  const comercialSpaFalhas = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista" && l.status === "falha").length;
+  const comercialDominioTotal = syncLogs.filter((l) => l.integracao_slug === "comercial_dominio_validacao").length;
+  const comercialDominioFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "comercial_dominio_validacao" && l.status === "falha",
+  ).length;
   const lobbyBlazeTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze").length;
   const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
   const lobbyCdaTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_cda").length;
@@ -999,8 +1187,24 @@ export default function StatusTecnico() {
     l.tipo === "recuperar_senha",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const totalTentativas = cdaTotal + spinRssTotal + lobbyBlazeTotal + lobbyCdaTotal + socialTotal + Math.max(emailTotal, 1);
-  const totalFalhas = cdaFalhas + spinRssFalhas + lobbyBlazeFalhas + lobbyCdaFalhas + socialFalhas + emailFalhas;
+  const totalTentativas =
+    cdaTotal +
+    spinRssTotal +
+    comercialSpaTotal +
+    comercialDominioTotal +
+    lobbyBlazeTotal +
+    lobbyCdaTotal +
+    socialTotal +
+    Math.max(emailTotal, 1);
+  const totalFalhas =
+    cdaFalhas +
+    spinRssFalhas +
+    comercialSpaFalhas +
+    comercialDominioFalhas +
+    lobbyBlazeFalhas +
+    lobbyCdaFalhas +
+    socialFalhas +
+    emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -1121,6 +1325,63 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta na ingestão Spin na Rede (RSS) (${taxaErroSpinRss}%)` });
   }
 
+  // ── Pipeline B2B — Lista SPA/MF — Actions 7h30 BRT ──
+  const syncLogsComercialSpa = syncLogsComercialSpaKpi;
+  const ultimoSyncComercialSpaOk = syncLogsComercialSpa.find((l) => l.status === "ok");
+  const ultimoSyncComercialSpaFalha = syncLogsComercialSpa.find((l) => l.status === "falha");
+  const comercialSpaTeveHistorico = syncLogsComercialSpa.some((l) => l.status === "ok");
+  const taxaErroComercialSpa =
+    syncLogsComercialSpa.length > 0
+      ? ((syncLogsComercialSpa.filter((l) => l.status === "falha").length / syncLogsComercialSpa.length) * 100).toFixed(1)
+      : "0";
+
+  if (syncLogsComercialSpa.length > 0 && !ultimoSyncComercialSpaOk && ultimoSyncComercialSpaFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhum sync Pipeline B2B — Lista SPA/MF com sucesso" });
+  }
+  if (passouHorarioComercialSpa && comercialSpaTeveHistorico && !comercialSpaOkHoje) {
+    alertas.push({ nivel: "erro", msg: "Importação Lista SPA/MF não executou hoje (agendado 7h30)" });
+  }
+  if (parseFloat(taxaErroComercialSpa) > 5 && syncLogsComercialSpa.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta na importação Lista SPA/MF (${taxaErroComercialSpa}%)`,
+    });
+  }
+
+  // ── Pipeline B2B — Validação de domínios — Actions 8h BRT ──
+  const syncLogsComercialDominio = syncLogsComercialDominioKpi;
+  const ultimoSyncComercialDominioOk = syncLogsComercialDominio.find((l) => l.status === "ok");
+  const ultimoSyncComercialDominioFalha = syncLogsComercialDominio.find((l) => l.status === "falha");
+  const comercialDominioTeveHistorico = syncLogsComercialDominio.some((l) => l.status === "ok");
+  const taxaErroComercialDominio =
+    syncLogsComercialDominio.length > 0
+      ? (
+          (syncLogsComercialDominio.filter((l) => l.status === "falha").length /
+            syncLogsComercialDominio.length) *
+          100
+        ).toFixed(1)
+      : "0";
+
+  if (
+    syncLogsComercialDominio.length > 0 &&
+    !ultimoSyncComercialDominioOk &&
+    ultimoSyncComercialDominioFalha
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} com sucesso` });
+  }
+  if (passouHorarioComercialDominio && comercialDominioTeveHistorico && !comercialDominioOkHoje) {
+    alertas.push({
+      nivel: "erro",
+      msg: `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} não executou hoje (agendado 8h)`,
+    });
+  }
+  if (parseFloat(taxaErroComercialDominio) > 5 && syncLogsComercialDominio.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} (${taxaErroComercialDominio}%)`,
+    });
+  }
+
   // ── Lobby Blaze ──
   const syncLogsLobbyBlaze = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze");
   const ultimoSyncLobbyOk = syncLogsLobbyBlaze.find((l) => l.status === "ok");
@@ -1182,7 +1443,11 @@ export default function StatusTecnico() {
             ? ("cda" as const)
             : int.slug === "spin_na_rede_rss"
               ? ("spin_rss" as const)
-              : int.slug === "lobby_blaze"
+              : int.slug === "comercial_spa_lista"
+                ? ("comercial_spa" as const)
+                : int.slug === "comercial_dominio_validacao"
+                  ? ("comercial_dominio" as const)
+                : int.slug === "lobby_blaze"
                 ? ("lobby_blaze" as const)
                 : int.slug === "lobby_cda"
                   ? ("lobby_cda" as const)
@@ -1278,7 +1543,7 @@ export default function StatusTecnico() {
       if (!r) return null;
       return {
         slug: r.slug,
-        nome: r.nome,
+        nome: nomeIntegracaoStatusTecnicoUi(r.slug, r.nome),
         ultimoSync: r.ultimoSync,
         registrosHoje: r.registrosHoje,
         erros: r.erros,
@@ -1305,6 +1570,8 @@ export default function StatusTecnico() {
       ordenarLinhasIntegracao(
         [
           pickIntegracaoRow("spin_na_rede_rss"),
+          pickIntegracaoRow("comercial_spa_lista"),
+          pickIntegracaoRow("comercial_dominio_validacao"),
           pickIntegracaoRow("painel_noticias_rss"),
           {
             slug: socialKpisRow.slug,
@@ -1347,7 +1614,7 @@ export default function StatusTecnico() {
   const labelIntegracaoLog = useCallback(
     (log: TechLog) => {
       if (log.integracao_slug) {
-        return (
+        const nomeDb =
           integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
           (log.integracao_slug === "spin_na_rede_rss"
             ? "Spin na Rede (RSS)"
@@ -1355,8 +1622,8 @@ export default function StatusTecnico() {
               ? "Lobby Blaze"
               : log.integracao_slug === "lobby_cda"
                 ? "Lobby Casa de Apostas"
-                : log.integracao_slug)
-        );
+                : log.integracao_slug);
+        return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
       return (
         {
@@ -1371,6 +1638,8 @@ export default function StatusTecnico() {
           recuperar_senha: "E-mail — Reset de senha",
           resend: "E-mail (Resend)",
           spin_na_rede_rss: "Spin na Rede (RSS)",
+          comercial_spa_lista: LABEL_UI_COMERCIAL_SPA_LISTA,
+          comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
           painel_noticias_rss: "Painel de Notícias (RSS)",
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
@@ -1476,10 +1745,13 @@ export default function StatusTecnico() {
     syncExecutando,
     syncSocialExecutando,
     syncSpinRssExecutando,
+    syncComercialSpaExecutando,
+    syncComercialDominioExecutando,
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss") => setConfirmarSync(tipo),
+    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio") =>
+      setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
 
@@ -1638,6 +1910,8 @@ export default function StatusTecnico() {
         syncMensagem ||
         syncSocialMensagem ||
         syncSpinRssMensagem ||
+        syncComercialSpaMensagem ||
+        syncComercialDominioMensagem ||
         syncLobbyBlazeMensagem ||
         emailMensagem ||
         emailAgendaMensagem) && (
@@ -1648,6 +1922,11 @@ export default function StatusTecnico() {
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
+              syncComercialSpaMensagem && { prefix: LABEL_UI_COMERCIAL_SPA_LISTA, msg: syncComercialSpaMensagem },
+              syncComercialDominioMensagem && {
+                prefix: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+                msg: syncComercialDominioMensagem,
+              },
               syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
               emailMensagem && { prefix: "E-mail de Relatório", msg: emailMensagem },
               emailAgendaMensagem && { prefix: "E-mail de Agenda", msg: emailAgendaMensagem },
@@ -1699,7 +1978,7 @@ export default function StatusTecnico() {
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="RSS e mídias sociais">Status das Integrações Externas</SectionTitle>
+        <SectionTitle sub="Automações com plataformas/sites de mercado">Status das Integrações Externas</SectionTitle>
         {loading ? (
           <StatusTecnicoLoadingBlock />
         ) : (
@@ -2185,6 +2464,21 @@ export default function StatusTecnico() {
                   ["Nenhuma ingestão Spin na Rede (RSS) com sucesso", "Último sync_logs com falha, nenhum OK (slug spin_na_rede_rss)"],
                   ["Ingestão Spin na Rede (RSS) não executou hoje (agendado 6h)", "Após 6h BRT, sem sync_logs OK na data civil de hoje (slug spin_na_rede_rss)"],
                   ["Taxa de erro alta na ingestão Spin na Rede (RSS)", "> 5% em sync_logs (slug spin_na_rede_rss)"],
+                  ["Nenhum sync Pipeline B2B — Lista SPA/MF com sucesso", "Último sync_logs com falha, nenhum OK (slug comercial_spa_lista)"],
+                  ["Importação Lista SPA/MF não executou hoje (agendado 7h30)", "Após 7h BRT, sem sync_logs OK na data civil de hoje (slug comercial_spa_lista)"],
+                  ["Taxa de erro alta na importação Lista SPA/MF", "> 5% em sync_logs (slug comercial_spa_lista)"],
+                  [
+                    `Nenhuma ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} com sucesso`,
+                    "Último sync_logs com falha, nenhum OK (slug comercial_dominio_validacao)",
+                  ],
+                  [
+                    `${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO} não executou hoje (agendado 8h)`,
+                    "Após 8h BRT, sem sync_logs OK na data civil de hoje (slug comercial_dominio_validacao)",
+                  ],
+                  [
+                    `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`,
+                    "> 5% em sync_logs (slug comercial_dominio_validacao)",
+                  ],
                   ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
                   ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
@@ -2247,6 +2541,9 @@ export default function StatusTecnico() {
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
+              {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
+              {confirmarSync === "comercial_dominio" &&
+                `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail de Relatório"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail de Agenda"}
@@ -2295,6 +2592,12 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "spin_rss") {
                     setConfirmarSync(null);
                     void executarSyncSpinRss();
+                  } else if (confirmarSync === "comercial_spa") {
+                    setConfirmarSync(null);
+                    void executarSyncComercialSpa();
+                  } else if (confirmarSync === "comercial_dominio") {
+                    setConfirmarSync(null);
+                    void executarSyncComercialDominio();
                   } else if (confirmarSync === "lobby_blaze") {
                     setConfirmarSync(null);
                     void executarSyncLobbyBlaze();

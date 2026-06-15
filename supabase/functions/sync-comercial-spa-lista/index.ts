@@ -230,6 +230,7 @@ interface MarcaExistente {
   id: string;
   nome: string;
   dominio: string | null;
+  status_dominio: string;
   status_pipeline: string;
   status_folha: string;
 }
@@ -459,7 +460,7 @@ async function upsertBlocos(
 
     const { data: marcasDb, error: marErr } = await supabase
       .from("comercial_marcas")
-      .select("id, nome, dominio, status_pipeline, status_folha")
+      .select("id, nome, dominio, status_dominio, status_pipeline, status_folha")
       .eq("empresa_id", empresaId);
 
     if (marErr) {
@@ -494,7 +495,10 @@ async function upsertBlocos(
 
       const patchMarca: Record<string, unknown> = {};
       if (prev.nome !== marca.nome) patchMarca.nome = marca.nome;
-      if ((prev.dominio ?? null) !== (marca.dominio ?? null)) patchMarca.dominio = marca.dominio;
+      if ((prev.dominio ?? null) !== (marca.dominio ?? null)) {
+        patchMarca.dominio = marca.dominio;
+        patchMarca.status_dominio = "inativo";
+      }
 
       if (Object.keys(patchMarca).length === 0) continue;
 
@@ -517,6 +521,15 @@ async function upsertBlocos(
           prev.dominio,
           marca.dominio,
         );
+        if (patchMarca.status_dominio === "inativo" && prev.status_dominio !== "inativo") {
+          await insertHistoricoSync(
+            supabase,
+            prev.id,
+            "status_dominio",
+            prev.status_dominio === "ok" ? "Ativo" : "Inativo",
+            "Inativo",
+          );
+        }
       }
       if (patchMarca.nome !== undefined) {
         await insertHistoricoSync(supabase, prev.id, "nome", prev.nome, marca.nome);

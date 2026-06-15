@@ -4,6 +4,11 @@ import {
   STATUS_FOLHA_LABEL,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
+  COMERCIAL_FILTRO_NENHUM,
+  COMERCIAL_FILTRO_NENHUM_LABEL,
+  COMERCIAL_FILTRO_TODOS,
+  PIPELINE_COMERCIAL_NOMES,
+  PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL,
   type PipelineTab,
   type StatusFolha,
   type StatusPipeline,
@@ -13,7 +18,68 @@ import {
   TAB_TABLE_CONFIG,
   FOLHA_BY_PIPELINE,
 } from "./constants";
-import type { ComercialContato, PipelineMarcaRow } from "./types";
+import type { ComercialContato, ComercialOpcao, PipelineMarcaRow } from "./types";
+
+export function buildPipelineComerciais(
+  profiles: { id: string; name: string }[],
+): ComercialOpcao[] {
+  const byName = new Map(profiles.map((p) => [p.name, p]));
+  return PIPELINE_COMERCIAL_NOMES.flatMap((name) => {
+    const p = byName.get(name);
+    return p ? [{ id: p.id, name }] : [];
+  });
+}
+
+export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<string> {
+  return new Set(comerciais.map((c) => c.id));
+}
+
+/** Domínio inativo → coluna Comercial exibe «Site Offline» (automático, sem filtro). */
+export function pipelineComercialIsSiteOffline(
+  row: Pick<PipelineMarcaRow, "status_dominio">,
+): boolean {
+  return row.status_dominio === "inativo";
+}
+
+/** Rótulo da coluna — Site Offline (automático), Marcus Morin, Fred Ring ou «—». */
+export function pipelineComercialDisplayNome(
+  row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome" | "status_dominio">,
+  comerciais: ComercialOpcao[],
+): string {
+  if (pipelineComercialIsSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
+  if (!row.comercial_user_id) return "—";
+  const nome =
+    row.comercial_nome ??
+    comerciais.find((c) => c.id === row.comercial_user_id)?.name ??
+    null;
+  if (nome && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nome)) return nome;
+  return "—";
+}
+
+export function pipelineComercialPodeEditar(row: Pick<PipelineMarcaRow, "status_dominio">): boolean {
+  return !pipelineComercialIsSiteOffline(row);
+}
+
+export function pipelineComercialNomePorId(
+  userId: string | null,
+  comerciais: ComercialOpcao[],
+): string | null {
+  if (!userId) return null;
+  return comerciais.find((c) => c.id === userId)?.name ?? null;
+}
+
+export function buildComercialFiltroExtraOptions(
+  comerciais: ComercialOpcao[],
+): { value: string; label: string }[] {
+  const opts: { value: string; label: string }[] = [
+    { value: COMERCIAL_FILTRO_NENHUM, label: COMERCIAL_FILTRO_NENHUM_LABEL },
+  ];
+  for (const name of PIPELINE_COMERCIAL_NOMES) {
+    const c = comerciais.find((x) => x.name === name);
+    opts.push({ value: c?.id ?? `__missing__:${name}`, label: name });
+  }
+  return opts;
+}
 
 export function fmtDataPipeline(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -54,6 +120,78 @@ export function produtoDisplay(row: PipelineMarcaRow, tipo: ProdutoTipo): string
   const st = produtoStatus(row, tipo);
   if (!st) return "—";
   return STATUS_PRODUTO_LABEL[st];
+}
+
+function algumProdutoStatus(row: PipelineMarcaRow, statuses: StatusProduto[]): boolean {
+  const d = produtoStatus(row, "mesa_dedicada");
+  const n = produtoStatus(row, "mesa_network");
+  return (d !== null && statuses.includes(d)) || (n !== null && statuses.includes(n));
+}
+
+function algumProdutoComValor(row: PipelineMarcaRow): boolean {
+  return produtoStatus(row, "mesa_dedicada") !== null || produtoStatus(row, "mesa_network") !== null;
+}
+
+function produtosAmbosVazios(row: PipelineMarcaRow): boolean {
+  return !algumProdutoComValor(row);
+}
+
+/** Classificação dos KPIs / linhas do consolidado — derivada da tabela, não de `status_folha` no banco. */
+export function rowMatchesConsolidadoFolha(
+  row: PipelineMarcaRow,
+  folha: StatusFolha,
+  context: "hierarchy" | "kpi" = "kpi",
+): boolean {
+  switch (folha) {
+    case "site_ativo":
+      return row.status_pipeline === "disponiveis" && row.status_dominio === "ok";
+    case "site_offline":
+      return row.status_pipeline === "disponiveis" && row.status_dominio === "inativo";
+    case "sem_contato":
+      return row.status_pipeline === "disponiveis" && row.contatos.length === 0;
+    case "conexao_iniciada":
+      return row.status_pipeline === "conexao" && produtosAmbosVazios(row);
+    case "conexao_realizada":
+      return row.status_pipeline === "conexao" && algumProdutoComValor(row);
+    case "neg_sem":
+      return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+    case "neg_enviar":
+      if (row.status_pipeline !== "negociacao") return false;
+      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      return algumProdutoStatus(row, ["sem_proposta"]) || produtosAmbosVazios(row);
+    case "neg_interessado":
+      if (row.status_pipeline !== "negociacao") return false;
+      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (context === "hierarchy") {
+        return algumProdutoComValor(row);
+      }
+      return algumProdutoComValor(row) && !algumProdutoStatus(row, ["sem_proposta"]);
+    case "fech_ativo":
+      return row.status_pipeline === "fechado" && algumProdutoStatus(row, ["ativo"]);
+    case "fech_assinado":
+      return (
+        row.status_pipeline === "fechado" &&
+        !algumProdutoStatus(row, ["ativo"]) &&
+        algumProdutoStatus(row, ["contrato_assinado"])
+      );
+    case "fech_enviado":
+      return (
+        row.status_pipeline === "fechado" &&
+        !algumProdutoStatus(row, ["ativo"]) &&
+        !algumProdutoStatus(row, ["contrato_assinado"]) &&
+        algumProdutoStatus(row, ["contrato_enviado"])
+      );
+    default:
+      return false;
+  }
+}
+
+export function countByConsolidadoFolha(
+  rows: PipelineMarcaRow[],
+  folha: StatusFolha,
+  context: "hierarchy" | "kpi" = "kpi",
+): number {
+  return rows.filter((r) => rowMatchesConsolidadoFolha(r, folha, context)).length;
 }
 
 export function normalizeTelefones(raw: unknown): import("./types").TelefoneContato[] {
@@ -99,22 +237,31 @@ export function filterMarcas(
   busca: string,
   comercialFiltro: string,
   kpiFolha: StatusFolha | null,
+  comerciais: ComercialOpcao[] = [],
 ): PipelineMarcaRow[] {
   const cfg = TAB_TABLE_CONFIG[tab];
   let list = rows;
+  const canonicalIds = pipelineComercialCanonicoIds(comerciais);
 
   if (cfg.pipelines) {
     list = list.filter((r) => cfg.pipelines!.includes(r.status_pipeline));
   }
 
   if (kpiFolha) {
-    list = list.filter((r) => r.status_folha === kpiFolha);
+    list = list.filter((r) => rowMatchesConsolidadoFolha(r, kpiFolha, "kpi"));
   }
 
-  if (comercialFiltro === "nenhum") {
-    list = list.filter((r) => !r.comercial_user_id);
-  } else if (comercialFiltro !== "todos") {
-    list = list.filter((r) => r.comercial_user_id === comercialFiltro);
+  if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
+    list = list.filter(
+      (r) =>
+        !pipelineComercialIsSiteOffline(r) &&
+        (!r.comercial_user_id || !canonicalIds.has(r.comercial_user_id)),
+    );
+  } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
+    list = list.filter(
+      (r) =>
+        !pipelineComercialIsSiteOffline(r) && r.comercial_user_id === comercialFiltro,
+    );
   }
 
   const q = busca.trim().toLowerCase();
@@ -133,10 +280,6 @@ export function filterMarcas(
   }
 
   return list;
-}
-
-export function countByFolha(rows: PipelineMarcaRow[], folha: StatusFolha): number {
-  return rows.filter((r) => r.status_folha === folha).length;
 }
 
 export function countByPipeline(rows: PipelineMarcaRow[], pipeline: StatusPipeline): number {
@@ -169,6 +312,7 @@ export function sortMarcas(
   rows: PipelineMarcaRow[],
   col: TableCol,
   dir: SortDir,
+  comerciais: ComercialOpcao[] = [],
 ): PipelineMarcaRow[] {
   const sorted = [...rows];
   sorted.sort((a, b) => {
@@ -179,8 +323,13 @@ export function sortMarcas(
         return compareLocaleTexto(a.nome, b.nome, dir);
       case "contato":
         return compareLocaleTexto(contatoPrincipalNome(a), contatoPrincipalNome(b), dir);
-      case "comercial":
-        return compareLocaleTexto(a.comercial_nome ?? "", b.comercial_nome ?? "", dir);
+      case "comercial": {
+        const sortKey = (r: PipelineMarcaRow) => {
+          const label = pipelineComercialDisplayNome(r, comerciais);
+          return label === "—" ? "" : label;
+        };
+        return compareLocaleTexto(sortKey(a), sortKey(b), dir);
+      }
       case "status":
         return compareLocaleTexto(
           STATUS_PIPELINE_LABEL[a.status_pipeline],

@@ -11,12 +11,15 @@ import type { ComercialOpcao, ComercialContato, PipelineMarcaRow } from "./types
 import {
   COL_LABEL,
   PIPELINE_COLOR,
+  PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR,
+  PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL,
   SORTABLE_COLS,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
+  COMERCIAL_FILTRO_NENHUM_LABEL,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
@@ -24,6 +27,9 @@ import {
 import {
   buildRazaoMerge,
   fmtDataPipeline,
+  pipelineComercialDisplayNome,
+  pipelineComercialIsSiteOffline,
+  pipelineComercialPodeEditar,
   produtoDisplay,
   produtoStatus,
 } from "./helpers";
@@ -121,7 +127,10 @@ export function PipelineTable({
     setPopover({ kind, row, rect, produto });
   }
 
-  const comercialOpts = useMemo(() => ["", ...comerciais.map((c) => c.id)] as const, [comerciais]);
+  const comercialOpts = useMemo(
+    () => ["", ...comerciais.map((c) => c.id)] as const,
+    [comerciais],
+  );
 
   if (rows.length === 0) {
     return (
@@ -280,21 +289,38 @@ export function PipelineTable({
 
                   {cfg.cols.includes("comercial") ? (
                     <td style={dataTable.tdCenter}>
-                      <div
-                        role={canEditar ? "button" : undefined}
-                        tabIndex={canEditar ? 0 : undefined}
-                        style={canEditar ? cellEditable : undefined}
-                        onClick={(e) => openPopover(e, "comercial", row)}
-                        onKeyDown={
-                          canEditar
-                            ? (e) => {
-                                if (e.key === "Enter" || e.key === " ") openPopover(e as unknown as MouseEvent<HTMLElement>, "comercial", row);
-                              }
-                            : undefined
+                      {(() => {
+                        const siteOffline = pipelineComercialIsSiteOffline(row);
+                        const comercialEditavel = canEditar && pipelineComercialPodeEditar(row);
+                        const conteudo = siteOffline ? (
+                          <span
+                            style={badgePipelineStyle(PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR)}
+                            title="Domínio inativo — atribuição automática"
+                          >
+                            {PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL}
+                          </span>
+                        ) : (
+                          pipelineComercialDisplayNome(row, comerciais)
+                        );
+                        if (!comercialEditavel) {
+                          return conteudo;
                         }
-                      >
-                        {row.comercial_nome ?? "—"}
-                      </div>
+                        return (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            style={cellEditable}
+                            onClick={(e) => openPopover(e, "comercial", row)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                openPopover(e as unknown as MouseEvent<HTMLElement>, "comercial", row);
+                              }
+                            }}
+                          >
+                            {conteudo}
+                          </div>
+                        );
+                      })()}
                     </td>
                   ) : null}
 
@@ -388,7 +414,7 @@ export function PipelineTable({
           onSelect={(v) => onUpdateComercial(popover.row, v || null)}
           onClose={() => setPopover(null)}
           labelOption={(v) => {
-            if (!v) return "—";
+            if (!v) return COMERCIAL_FILTRO_NENHUM_LABEL;
             return comerciais.find((c) => c.id === v)?.name ?? "—";
           }}
           t={t}

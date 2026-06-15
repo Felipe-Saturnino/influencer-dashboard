@@ -27,9 +27,12 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `sync-painel-noticias-rss` |
 | `sync-spin-na-rede-rss` |
 | `sync-comercial-spa-lista` |
+| `validate-comercial-dominios` |
 | `trigger-social-kpis` |
 
 **`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser inline). Testes locais do parser: `src/lib/comercialSpaCsvParser.ts`.
+
+**`validate-comercial-dominios`:** deploy com **apenas** `index.ts`. Lógica HTTP espelhada em `src/lib/comercialDominioValidation.ts`.
 
 ### `index.ts` + `platformHealthDiagnostics.ts`
 

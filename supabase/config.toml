@@ -78,3 +78,7 @@ verify_jwt = false
 [functions.sync-comercial-spa-lista]
 verify_jwt = false
 # Import CSV oficial SPA/MF → comercial_empresas / comercial_marcas (service role interno).
+
+[functions.validate-comercial-dominios]
+verify_jwt = false
+# Validação HTTP status_dominio das marcas Pipeline B2B (service role interno).

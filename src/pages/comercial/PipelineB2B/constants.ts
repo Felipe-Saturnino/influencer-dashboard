@@ -194,9 +194,17 @@ export const COMERCIAL_FILTRO_TODOS = "todos";
 export const COMERCIAL_FILTRO_NENHUM = "nenhum";
 export const COMERCIAL_FILTRO_ARIA = "Comercial";
 export const COMERCIAL_FILTRO_TODOS_LABEL = "Todos Comerciais";
+export const COMERCIAL_FILTRO_NENHUM_LABEL = "Nenhum";
+
+/** Comerciais atribuíveis no pipeline — ordem fixa (filtro e popover). */
+export const PIPELINE_COMERCIAL_NOMES = ["Marcus Morin", "Fred Ring"] as const;
+
+/** Coluna Comercial automática quando status_dominio = inativo — não entra no filtro. */
+export const PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL = "Site Offline";
+export const PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR = "#6b7280";
 
 export const STATUS_DOMINIO_LABEL: Record<"ok" | "inativo", string> = {
-  ok: "Ok",
+  ok: "Ativo",
   inativo: "Inativo",
 };
 
@@ -221,6 +229,7 @@ export function badgeProdutoStyle(): CSSProperties {
 export const HISTORICO_CAMPO_LABEL: Record<string, string> = {
   comercial_user_id: "Comercial",
   status_pipeline: "Status",
+  status_dominio: "Status do Domínio",
   mesa_dedicada: "Dedicada",
   mesa_network: "Network",
   status_folha: "Detalhe",
