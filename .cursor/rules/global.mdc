@@ -850,6 +850,47 @@ import {
 
 **Referência só ícone:** Gestão de Mesas. **Referência ícone + texto:** Vagas, Central de Denúncias, `ModalLive` (Agenda), `ModalEditar` (Scout, Network). **Exceção:** fluxos de domínio que **não** são exclusão (ex.: **Recusar** banca) mantêm `ModalConfirmDelete` com título e copy próprios.
 
+### Arquivamento — padrão canónico (só ícone)
+
+Informativos (Gerenciamento) e Portal RH (Gerenciamento) partilham **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto).
+
+| Peça | Implementação |
+|------|----------------|
+| Botão | **`BtnArquivarLinha`** — ícone **`Archive`** 13px, **30×30**, `borderRadius` **8**, estilo neutro de linha (`t.inputBg`, `t.cardBorder`, `t.textMuted`) |
+| Pop-up | **`ModalConfirmArquivarPadrao`** (`OperacoesModal.tsx`) |
+| Copy / helpers | **`src/lib/arquivarItemUi.ts`** |
+
+**Pop-up:**
+
+| Campo | Valor |
+|-------|--------|
+| Título | **`Arquivar`** |
+| Corpo | `Deseja arquivar {fragmento}?\n\nEsta ação não poderá ser desfeita.` (`textoModalArquivar`) |
+| Fragmento modal | **`descricaoModalArquivarItem(artigoTipo, nome)`** — ex.: `o informativo «Título»`, `a postagem «Assunto»` |
+| CTAs | **Cancelar** / **Arquivar** (gradiente marca, `destructive={false}`) |
+
+```tsx
+import { BtnArquivarLinha } from "../components/BtnArquivarLinha";
+import { ModalConfirmArquivarPadrao } from "../components/OperacoesModal";
+import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../lib/arquivarItemUi";
+
+<BtnArquivarLinha
+  descricaoItem={descricaoBotaoArquivar("informativo", row.assunto)}
+  onClick={() => setAlvoArquivar(row)}
+/>
+
+{alvoArquivar ? (
+  <ModalConfirmArquivarPadrao
+    descricaoItem={descricaoModalArquivarItem("o informativo", alvoArquivar.assunto)}
+    onCancel={() => setAlvoArquivar(null)}
+    onConfirm={() => void confirmarArquivar()}
+    loading={arquivando}
+  />
+) : null}
+```
+
+**Referência:** Informativos → Gerenciamento; Portal RH → Gerenciamento.
+
 ---
 
 ## Tabelas — interação e layout
@@ -1046,6 +1087,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
 - Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
+- Arquivamento (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.

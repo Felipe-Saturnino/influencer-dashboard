@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
+import { Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
+import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
+import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -180,7 +183,8 @@ export function GerenciamentoPostagens({
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
   const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
-  const [confirmandoArquivarId, setConfirmandoArquivarId] = useState<string | null>(null);
+  const [alvoArquivar, setAlvoArquivar] = useState<PostagemGerenciamentoRow | null>(null);
+  const [erroArquivar, setErroArquivar] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -473,9 +477,11 @@ export function GerenciamentoPostagens({
     setAcaoLoading(null);
   }
 
-  async function arquivarPostagem(row: PostagemGerenciamentoRow) {
-    if (!user?.id) return;
-    setAcaoLoading(row.id);
+  async function confirmarArquivar() {
+    if (!user?.id || !alvoArquivar) return;
+    setErroArquivar(null);
+    setAcaoLoading(alvoArquivar.id);
+    const row = alvoArquivar;
     const table =
       row.contentType === "comunicado"
         ? "rh_portal_comunicado"
@@ -485,11 +491,12 @@ export function GerenciamentoPostagens({
     const { error } = await supabase.from(table).update({ status: "arquivado" }).eq("id", row.id);
     if (!error) {
       await registrarHistoricoStatus(supabase, row.contentType, row.id, row.status, "arquivado", user.id);
+      setAlvoArquivar(null);
       await carregar();
       onDadosAlterados();
     } else {
       console.error("[GerenciamentoPostagens] arquivar:", error);
-      setErro(ERRO_ARQUIVAR);
+      setErroArquivar(ERRO_ARQUIVAR);
     }
     setAcaoLoading(null);
   }
@@ -657,35 +664,14 @@ export function GerenciamentoPostagens({
                           </button>
                         ) : null}
                         {acoes.includes("arquivar") ? (
-                          <button
-                            type="button"
-                            aria-label={`${confirmandoArquivarId === row.id ? "Confirmar arquivamento:" : "Arquivar:"} ${row.assunto}`}
+                          <BtnArquivarLinha
+                            descricaoItem={descricaoBotaoArquivar("postagem", row.assunto)}
                             disabled={busy}
                             onClick={() => {
-                              if (confirmandoArquivarId !== row.id) {
-                                setConfirmandoArquivarId(row.id);
-                                return;
-                              }
-                              void arquivarPostagem(row);
-                              setConfirmandoArquivarId(null);
+                              setErroArquivar(null);
+                              setAlvoArquivar(row);
                             }}
-                            onBlur={() => setConfirmandoArquivarId(null)}
-                            style={{
-                              ...btnAcao(t),
-                              ...(confirmandoArquivarId === row.id
-                                ? {
-                                    border: "1px solid rgba(232,64,37,0.6)",
-                                    background: "rgba(232,64,37,0.15)",
-                                    color: "#e84025",
-                                  }
-                                : {}),
-                            }}
-                          >
-                            <Archive size={13} aria-hidden />
-                            {confirmandoArquivarId === row.id ? (
-                              <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
-                            ) : null}
-                          </button>
+                          />
                         ) : null}
                         {acoes.includes("historico") ? (
                           <button
@@ -733,6 +719,21 @@ export function GerenciamentoPostagens({
         contentId={histRef?.id ?? null}
         onClose={() => setHistRef(null)}
       />
+
+      {alvoArquivar ? (
+        <ModalConfirmArquivarPadrao
+          descricaoItem={descricaoModalArquivarItem("a postagem", alvoArquivar.assunto)}
+          onCancel={() => {
+            if (acaoLoading !== alvoArquivar.id) {
+              setErroArquivar(null);
+              setAlvoArquivar(null);
+            }
+          }}
+          onConfirm={() => void confirmarArquivar()}
+          loading={acaoLoading === alvoArquivar.id}
+          error={erroArquivar}
+        />
+      ) : null}
     </div>
   );
 }

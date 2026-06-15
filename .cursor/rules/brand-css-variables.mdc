@@ -518,13 +518,13 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 | Ver / Visualizar | `Eye` | `Ver {identificador}` |
 | Histórico / thread | `Clock` ou `History` | `Histórico de {identificador}` |
 | Aprovar | `Check` | `Aprovar {identificador}` |
-| Arquivar | `Archive` | `Arquivar {identificador}` — 2º clique: incluir “Confirmar arquivamento” no label |
+| Arquivar | `Archive` via **`BtnArquivarLinha`** | `Arquivar {tipo} {nome}` — pop-up **`ModalConfirmArquivarPadrao`** (Global § Modais → Arquivamento) |
 | Excluir (lista/card/tabela) | `Trash2` via **`BtnExcluirLinha`** | `Excluir {tipo} {nome}` — Global § Exclusão |
 | Excluir (card rotulado / modal editar) | `Trash2` + texto via **`BtnExcluirComTexto`** | Idem + rótulo visível **Excluir**; pop-up **`ModalConfirmExcluirPadrao`** |
 | Link externo | `ExternalLink` | `Abrir {destino} em nova aba` |
 | Expandir linha | `ChevronRight` rotacionado | Nunca `▶` textual |
 
-**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques com microtexto (ex.: Portal RH **Arquivar**) — **não** aplicar a **Excluir** (usar `BtnExcluirLinha`, `BtnExcluirComTexto` + modal).
+**Exceções em linha (só com pedido explícito de produto):** confirmação em 2 cliques com microtexto — **não** aplicar a **Excluir** (`BtnExcluirLinha`, `BtnExcluirComTexto` + modal) nem a **Arquivar** em Informativos/Portal RH (`BtnArquivarLinha` + modal).
 
 **Legado a migrar (linha):** botões com texto “Ver”, “Editar”, “Aprovar” em células de tabela (ex. Afiliados) → ícone + `aria-label` + `title`. **Não** migrar toolbars de fluxo para ícone.
 
@@ -561,6 +561,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
 - Ação de **linha** só com texto, sem ícone (código novo).
 - **Excluir** sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** ou com confirmação em 2 cliques no botão.
+- **Arquivar** (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
 - Título diferente do menu ou página sem subtítulo.
 - `blockBg` na barra de filtros.

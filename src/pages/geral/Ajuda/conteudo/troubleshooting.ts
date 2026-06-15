@@ -156,7 +156,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma live?",
         texto:
-          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal segue o fluxo de duplo clique (Confirmar?) quando o seu perfil tem permissão de exclusão.",
+          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal abre o pop-up padrão de confirmação quando o seu perfil tem permissão de exclusão.",
       },
       {
         subtitulo: "Não consigo agendar para hoje?",
@@ -221,7 +221,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso excluir uma live da lista de validação?",
         texto:
-          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com confirmação em dois cliques. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
+          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com pop-up de confirmação antes de excluir. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
       },
     ],
   },
@@ -256,7 +256,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma live?",
         texto:
-          "O botão Excluir segue as mesmas regras de permissão que o Editar e usa o fluxo de duplo clique (Confirmar?). Lives fora do seu escopo não exibem ações.",
+          "O botão Excluir segue as mesmas regras de permissão que o Editar e abre o pop-up padrão de confirmação. Lives fora do seu escopo não exibem ações.",
       },
       {
         subtitulo: "A operadora não aparece nas opções ao editar?",
@@ -511,7 +511,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
-          "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+          "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os ícones de exclusão não aparecem. Ao clicar, o pop-up padrão pede confirmação. Confirme também que a operadora do item está dentro do escopo do usuário.",
       },
     ],
   },
@@ -666,7 +666,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo arquivar uma postagem publicada?",
         texto:
-          "O botão Arquivar exige dois cliques: o primeiro destaca o botão e exibe Confirmar?; o segundo executa a ação. Se você clicou fora do botão antes de confirmar, repita o processo.",
+          "O botão Arquivar (ícone de arquivo) abre um pop-up pedindo confirmação. Toque em Arquivar no pop-up para concluir ou Cancelar para voltar. A ação não pode ser desfeita pela plataforma.",
       },
       {
         subtitulo: "O anexo ou imagem não abre ao clicar?",
