@@ -7,6 +7,7 @@ export const HORARIO_AGENDADO_BR = {
   social: 6,
   spinRss: 6,
   comercialSpa: 7,
+  comercialDominio: 8,
   emailDiretoria: 6,
   emailAgenda: 6,
 } as const;
@@ -33,6 +34,14 @@ export function pipelineSucessoNoDia(
 
 export const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 
+/** Rótulo na UI de Status Técnico (slug `comercial_spa_lista`); automação/DB mantém nome legado. */
+export const LABEL_UI_COMERCIAL_SPA_LISTA = "Lista SPA";
+
+export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
+  if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
+  return nome;
+}
+
 export const ERRO_SYNC_CDA =
   "Não foi possível sincronizar os dados CDA. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SOCIAL =
@@ -41,6 +50,8 @@ export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_SPA =
   "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_COMERCIAL_DOMINIO =
+  "Não foi possível validar os domínios do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_LOBBY_BLAZE =
   "Não foi possível executar o monitor Lobby Blaze. Verifique a Edge Function e tente novamente.";
 export const ERRO_EMAIL_DIRETORIA =

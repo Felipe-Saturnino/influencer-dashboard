@@ -28,6 +28,7 @@ jobs:
               { id: "email-agenda-diaria.yml", label: "E-mail Agenda" },
               { id: "sync-spin-na-rede-rss-daily.yml", label: "Spin RSS" },
               { id: "sync-comercial-spa-lista-daily.yml", label: "Comercial SPA" },
+              { id: "validate-comercial-dominios-daily.yml", label: "Comercial Domínios" },
               { id: "sync-social-kpis-daily.yml", label: "Social KPIs" },
             ];
 

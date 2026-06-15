@@ -8,6 +8,7 @@ export type StatusIntegracaoSyncTipo =
   | "social"
   | "spin_rss"
   | "comercial_spa"
+  | "comercial_dominio"
   | "lobby_blaze"
   | "lobby_cda"
   | "email"

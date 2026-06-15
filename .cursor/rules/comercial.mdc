@@ -51,6 +51,8 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
+- **Comercial — Site Offline:** quando `status_dominio = inativo`, coluna exibe badge **Site Offline** (automático); sem popover; **fora** do filtro Comercial.
+- **Comercial — gestores:** Marcus Morin, Fred Ring ou **—** quando domínio **Ativo** e sem atribuição.
 - **Ação:** só ícone — **Registro** (`ScrollText` → modal anotações/histórico) e **Ver** (`Eye` → modal dados/licença/contatos). Sem modal de edição de marca.
 - **Contatos:** nome clicável → modal editar; botão `+` → adicionar contato (`BtnExcluirComTexto` + `ModalConfirmExcluirPadrao` na exclusão).
 - Toolbar da tabela: **Comunicar** (fluxo futuro — modal e automações fora do MVP).
@@ -78,18 +80,25 @@ Edge Function **`sync-comercial-spa-lista`** — import diário do CSV oficial d
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |
 | Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
-| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao`, **`status_dominio`** |
+| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao` |
+| **Exceção domínio** | Se `dominio` mudar no CSV → atualiza domínio e **`status_dominio` → `inativo`** (revalidação HTTP) |
 | Marca nova | defaults `disponiveis` + `sem_contato`; domínio `inativo` até cron de validação HTTP |
 | Idempotência | Hash SHA-256 do CSV em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |
 | Logs | `sync_logs.integracao_slug = comercial_spa_lista` (Status Técnico) |
 
-**Validação de domínio (fase 2 — separado):** cron futuro tenta abrir o site (HTTP); presença na planilha **≠** site ativo.
+**Validação de domínio (cron separado):** Edge Function **`validate-comercial-dominios`** — verificação HTTP diária; atualiza `status_dominio` (`ok` = **Ativo**, `inativo` = **Inativo**). Coluna **Comercial** exibe **Site Offline** (automático, cinza) quando `inativo` — **não** entra no filtro Comercial e **não** permite atribuição manual.
 
-Teste manual: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para ignorar hash.
+| Regra | Valor |
+|-------|-------|
+| Agendamento | GitHub Actions `validate-comercial-dominios-daily.yml` — **8h BRT** (~11h UTC, após import SPA) |
+| Critério **Ativo** | HTTP 2xx ou 3xx (HEAD/GET, timeout 12s, redirects) |
+| Sem domínio / erro | `inativo` |
+| Ao mudar `dominio` no import SPA | `status_dominio` → `inativo` até próxima validação |
+| Logs | `sync_logs.integracao_slug = comercial_dominio_validacao` (Status Técnico — botão Sync manual) |
 
----
+Teste manual domínios: `POST` `{}` ou `{ "dry_run": true }` na Edge `validate-comercial-dominios`.
 
-## Estados de interface
+Teste manual SPA: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para ignorar hash.
 
 | Estado | Mensagem |
 |--------|----------|

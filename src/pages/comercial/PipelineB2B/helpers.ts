@@ -8,6 +8,7 @@ import {
   COMERCIAL_FILTRO_NENHUM_LABEL,
   COMERCIAL_FILTRO_TODOS,
   PIPELINE_COMERCIAL_NOMES,
+  PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL,
   type PipelineTab,
   type StatusFolha,
   type StatusPipeline,
@@ -33,11 +34,19 @@ export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<
   return new Set(comerciais.map((c) => c.id));
 }
 
-/** Rótulo da coluna — apenas Marcus Morin, Fred Ring ou «—». */
+/** Domínio inativo → coluna Comercial exibe «Site Offline» (automático, sem filtro). */
+export function pipelineComercialIsSiteOffline(
+  row: Pick<PipelineMarcaRow, "status_dominio">,
+): boolean {
+  return row.status_dominio === "inativo";
+}
+
+/** Rótulo da coluna — Site Offline (automático), Marcus Morin, Fred Ring ou «—». */
 export function pipelineComercialDisplayNome(
-  row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome">,
+  row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome" | "status_dominio">,
   comerciais: ComercialOpcao[],
 ): string {
+  if (pipelineComercialIsSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
   if (!row.comercial_user_id) return "—";
   const nome =
     row.comercial_nome ??
@@ -45,6 +54,10 @@ export function pipelineComercialDisplayNome(
     null;
   if (nome && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nome)) return nome;
   return "—";
+}
+
+export function pipelineComercialPodeEditar(row: Pick<PipelineMarcaRow, "status_dominio">): boolean {
+  return !pipelineComercialIsSiteOffline(row);
 }
 
 export function pipelineComercialNomePorId(
@@ -168,10 +181,15 @@ export function filterMarcas(
 
   if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
     list = list.filter(
-      (r) => !r.comercial_user_id || !canonicalIds.has(r.comercial_user_id),
+      (r) =>
+        !pipelineComercialIsSiteOffline(r) &&
+        (!r.comercial_user_id || !canonicalIds.has(r.comercial_user_id)),
     );
   } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
-    list = list.filter((r) => r.comercial_user_id === comercialFiltro);
+    list = list.filter(
+      (r) =>
+        !pipelineComercialIsSiteOffline(r) && r.comercial_user_id === comercialFiltro,
+    );
   }
 
   const q = busca.trim().toLowerCase();

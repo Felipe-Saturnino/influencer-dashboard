@@ -29,6 +29,7 @@ export function StatusIntegracaoTable({
   syncSocialExecutando,
   syncSpinRssExecutando,
   syncComercialSpaExecutando,
+  syncComercialDominioExecutando,
   emailEnviando,
   emailAgendaEnviando,
   canEditarOk,
@@ -50,10 +51,11 @@ export function StatusIntegracaoTable({
   syncSocialExecutando: boolean;
   syncSpinRssExecutando: boolean;
   syncComercialSpaExecutando: boolean;
+  syncComercialDominioExecutando: boolean;
   emailEnviando: boolean;
   emailAgendaEnviando: boolean;
   canEditarOk: boolean;
-  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa") => void;
+  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio") => void;
   onConfirmarEmail: (tipo: "diretoria" | "agenda") => void;
 }) {
   const handleSort = (col: IntegracaoSortCol) => {
@@ -65,6 +67,7 @@ export function StatusIntegracaoTable({
     const isSocial = row.syncTipo === "social";
     const isSpinRss = row.syncTipo === "spin_rss";
     const isComercialSpa = row.syncTipo === "comercial_spa";
+    const isComercialDominio = row.syncTipo === "comercial_dominio";
     const isEmailDir = row.syncTipo === "email";
     const isEmailAgenda = row.syncTipo === "email_agenda";
     const syncExecutandoRow = isCda
@@ -75,15 +78,25 @@ export function StatusIntegracaoTable({
           ? syncSpinRssExecutando
           : isComercialSpa
             ? syncComercialSpaExecutando
+            : isComercialDominio
+              ? syncComercialDominioExecutando
             : false;
 
-    if (isCda || isSocial || isSpinRss || isComercialSpa) {
+    if (isCda || isSocial || isSpinRss || isComercialSpa || isComercialDominio) {
       return (
         <button
           type="button"
           onClick={() =>
             onConfirmarSync(
-              isCda ? "cda" : isSocial ? "social" : isComercialSpa ? "comercial_spa" : "spin_rss",
+              isCda
+                ? "cda"
+                : isSocial
+                  ? "social"
+                  : isComercialSpa
+                    ? "comercial_spa"
+                    : isComercialDominio
+                      ? "comercial_dominio"
+                      : "spin_rss",
             )
           }
           disabled={syncExecutandoRow || !canEditarOk}

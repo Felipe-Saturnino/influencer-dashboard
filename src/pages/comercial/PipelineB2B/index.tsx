@@ -204,6 +204,7 @@ export default function PipelineB2B() {
 
   async function updateComercial(row: PipelineMarcaRow, userId: string | null) {
     if (!perm.canEditarOk) return;
+    if (row.status_dominio === "inativo") return;
     const anterior = row.comercial_user_id;
     const { error } = await supabase
       .from("comercial_marcas")
