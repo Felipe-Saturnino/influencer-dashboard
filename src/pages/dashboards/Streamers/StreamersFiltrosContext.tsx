@@ -10,9 +10,16 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
+import { INFLUENCER_FILTRO_TODOS_VALUE } from "../../../components/FiltroInfluencerSelect";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { getMesesDisponiveis, getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
+import {
+  buildInfluencerFilterOptions,
+  fetchInfluencerIdsComDadosNoPeriodo,
+  periodoStreamersFiltro,
+  type PerfilInfluencerMin,
+} from "./streamersInfluencerFilterHelpers";
 
 export type MesRef = { ano: number; mes: number; label: string };
 
@@ -54,16 +61,17 @@ export function useStreamersFiltros(): StreamersFiltrosContextValue {
 }
 
 export function StreamersFiltrosProvider({ children }: { children: ReactNode }) {
-  const { podeVerInfluencer } = useDashboardFiltros();
+  const { podeVerInfluencer, operadoraSlugsForcado } = useDashboardFiltros();
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
   const [idxMes, setIdxMes] = useState(idxInicial);
   const [historico, setHistorico] = useState(false);
-  const [filtroInfluencer, setFiltroInfluencer] = useState("todos");
+  const [filtroInfluencer, setFiltroInfluencer] = useState(INFLUENCER_FILTRO_TODOS_VALUE);
   const [filtroOperadora, setFiltroOperadora] = useState("todas");
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+  const [perfis, setPerfis] = useState<PerfilInfluencerMin[]>([]);
   const [influencerOptions, setInfluencerOptions] = useState<{ id: string; nome: string }[]>([]);
   const [isLoading, setIsLoadingState] = useState(false);
   const setIsLoading = useCallback((v: boolean) => {
@@ -86,17 +94,55 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       });
       setOperadoraInfMap(map);
       setOperadorasList(opsData || []);
-      const opts = (perfisData || [])
-        .filter((p: { id: string }) => podeVerInfluencer(p.id))
-        .map((p: { id: string; nome_artistico: string }) => ({ id: p.id, nome: p.nome_artistico }));
-      setInfluencerOptions(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+      setPerfis((perfisData || []) as PerfilInfluencerMin[]);
     })();
     return () => {
       cancel = true;
     };
-  }, [podeVerInfluencer]);
+  }, []);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
+
+  useEffect(() => {
+    let cancel = false;
+    const periodo = periodoStreamersFiltro(historico, mesSelecionado);
+    if (!periodo || perfis.length === 0) {
+      setInfluencerOptions([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const idsComDados = await fetchInfluencerIdsComDadosNoPeriodo({
+          inicio: periodo.inicio,
+          fim: periodo.fim,
+          filtroOperadora,
+          operadoraSlugsForcado,
+          podeVerInfluencer,
+        });
+        if (cancel) return;
+        setInfluencerOptions(buildInfluencerFilterOptions(perfis, idsComDados, podeVerInfluencer));
+      } catch (err) {
+        console.error("[StreamersFiltros] influencer options", err);
+        if (!cancel) setInfluencerOptions([]);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, [perfis, historico, mesSelecionado, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer]);
+
+  useEffect(() => {
+    if (
+      filtroInfluencer !== INFLUENCER_FILTRO_TODOS_VALUE &&
+      influencerOptions.length > 0 &&
+      !influencerOptions.some((o) => o.id === filtroInfluencer)
+    ) {
+      setFiltroInfluencer(INFLUENCER_FILTRO_TODOS_VALUE);
+    }
+  }, [filtroInfluencer, influencerOptions]);
+
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
@@ -160,7 +206,7 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       toggleHistorico,
       isLoading,
       setIsLoading,
-    ]
+    ],
   );
 
   return <StreamersFiltrosCtx.Provider value={value}>{children}</StreamersFiltrosCtx.Provider>;

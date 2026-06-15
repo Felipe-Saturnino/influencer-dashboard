@@ -112,6 +112,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 
 - **Container:** `Streamers/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
   Toda lógica de filtros vive em `StreamersFiltrosProvider` (`StreamersFiltrosContext.tsx`).
+  **`FiltroInfluencerSelect` (`mode="single"`):** opções = influencers com dados no período (métricas, lives ou UTM mapeado), alinhado à **Overview Influencer** — ver `streamersInfluencerFilterHelpers.ts`; reset para **Todos Influencers** se a seleção sair do período/operadora.
 - **Sub-páginas:** `DashboardOverview`, `DashboardConversao`, `DashboardFinanceiro`.
   Cada uma recebe os filtros via `useStreamersFiltrosOptional()`.
   Quando `embed === true` (dentro do container), a FilterBar NÃO é renderizada pela sub-página.
