@@ -35,6 +35,7 @@ import { ConsolidadoPipeline } from "./ConsolidadoPipeline";
 import { PipelineTable } from "./PipelineTable";
 import { ModalRegistroMarca } from "./ModalRegistroMarca";
 import { ModalVerMarca } from "./ModalVerMarca";
+import { ModalEditarDominio } from "./ModalEditarDominio";
 import { ModalContato } from "./ModalContato";
 import {
   COMERCIAL_FILTRO_ARIA,
@@ -44,6 +45,7 @@ import {
   PIPELINE_COMERCIAL_NOMES,
   PIPELINE_TABS,
   PIPELINE_TAB_LABEL,
+  STATUS_DOMINIO_LABEL,
   TAB_TABLE_CONFIG,
   type StatusPipeline,
   type StatusProduto,
@@ -127,6 +129,7 @@ export default function PipelineB2B() {
 
   const [registroMarca, setRegistroMarca] = useState<PipelineMarcaRow | null>(null);
   const [verMarca, setVerMarca] = useState<PipelineMarcaRow | null>(null);
+  const [editDominioMarca, setEditDominioMarca] = useState<PipelineMarcaRow | null>(null);
   const [contatoModal, setContatoModal] = useState<
     | { mode: "edit"; marca: PipelineMarcaRow; contato: ComercialContato }
     | { mode: "add"; marca: PipelineMarcaRow }
@@ -206,7 +209,6 @@ export default function PipelineB2B() {
 
   async function updateComercial(row: PipelineMarcaRow, userId: string | null) {
     if (!perm.canEditarOk) return;
-    if (row.status_dominio === "inativo") return;
     const anterior = row.comercial_user_id;
     const { error } = await supabase
       .from("comercial_marcas")
@@ -223,6 +225,41 @@ export default function PipelineB2B() {
       pipelineComercialNomePorId(userId, comerciais) ?? "—",
     );
     void loadData();
+  }
+
+  async function updateDominio(marcaId: string, novoDominio: string | null): Promise<boolean> {
+    if (!perm.canEditarOk) return false;
+    const row = rows.find((r) => r.id === marcaId);
+    if (!row) return false;
+
+    const anterior = row.dominio;
+    if ((anterior ?? null) === (novoDominio ?? null)) return true;
+
+    const patch: { dominio: string | null; status_dominio?: "inativo" } = {
+      dominio: novoDominio,
+    };
+    if ((anterior ?? null) !== (novoDominio ?? null)) {
+      patch.status_dominio = "inativo";
+    }
+
+    const { error } = await supabase.from("comercial_marcas").update(patch).eq("id", marcaId);
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    await insertHistorico(marcaId, "dominio", anterior, novoDominio);
+    if (patch.status_dominio === "inativo" && row.status_dominio !== "inativo") {
+      await insertHistorico(
+        marcaId,
+        "status_dominio",
+        STATUS_DOMINIO_LABEL[row.status_dominio],
+        STATUS_DOMINIO_LABEL.inativo,
+      );
+    }
+
+    void loadData();
+    return true;
   }
 
   async function updateStatus(row: PipelineMarcaRow, status: StatusPipeline) {
@@ -413,6 +450,7 @@ export default function PipelineB2B() {
             canEditar={perm.canEditarOk}
             onRegistro={setRegistroMarca}
             onVer={setVerMarca}
+            onEditDominio={setEditDominioMarca}
             onContato={(marca, contato) => setContatoModal({ mode: "edit", marca, contato })}
             onAddContato={(marca) => setContatoModal({ mode: "add", marca })}
             onUpdateComercial={updateComercial}
@@ -439,6 +477,14 @@ export default function PipelineB2B() {
           allMarcas={rows}
           onClose={() => setVerMarca(null)}
           onOpenMarca={(m) => setVerMarca(m)}
+        />
+      ) : null}
+
+      {editDominioMarca ? (
+        <ModalEditarDominio
+          marca={editDominioMarca}
+          onClose={() => setEditDominioMarca(null)}
+          onSaved={updateDominio}
         />
       ) : null}
 

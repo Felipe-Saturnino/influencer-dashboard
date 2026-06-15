@@ -228,6 +228,7 @@ export function badgeProdutoStyle(): CSSProperties {
 
 export const HISTORICO_CAMPO_LABEL: Record<string, string> = {
   comercial_user_id: "Comercial",
+  dominio: "Domínio",
   status_pipeline: "Status",
   status_dominio: "Status do Domínio",
   mesa_dedicada: "Dedicada",

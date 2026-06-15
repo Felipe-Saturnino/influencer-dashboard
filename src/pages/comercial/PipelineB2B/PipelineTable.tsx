@@ -28,11 +28,10 @@ import {
   buildPipelineComercialPopoverOptions,
   fmtDataPipeline,
   pipelineComercialDisplayNome,
+  pipelineComercialExibeSiteOffline,
   pipelineComercialIsMissingOptionValue,
-  pipelineComercialIsSiteOffline,
   pipelineComercialPopoverLabel,
   pipelineComercialPopoverUserId,
-  pipelineComercialPodeEditar,
   produtoDisplay,
   produtoStatus,
 } from "./helpers";
@@ -85,6 +84,7 @@ export function PipelineTable({
   canEditar,
   onRegistro,
   onVer,
+  onEditDominio,
   onContato,
   onAddContato,
   onUpdateComercial,
@@ -100,6 +100,7 @@ export function PipelineTable({
   canEditar: boolean;
   onRegistro: (row: PipelineMarcaRow) => void;
   onVer: (row: PipelineMarcaRow) => void;
+  onEditDominio: (row: PipelineMarcaRow) => void;
   onContato: (row: PipelineMarcaRow, contato: ComercialContato) => void;
   onAddContato: (row: PipelineMarcaRow) => void;
   onUpdateComercial: (row: PipelineMarcaRow, userId: string | null) => void;
@@ -219,7 +220,9 @@ export function PipelineTable({
                     <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
                       <button
                         type="button"
-                        onClick={() => onVer(row)}
+                        onClick={() => (canEditar ? onEditDominio(row) : onVer(row))}
+                        title={canEditar ? `Editar domínio de ${row.nome}` : `Ver ${row.nome}`}
+                        aria-label={canEditar ? `Editar domínio de ${row.nome}` : `Ver ${row.nome}`}
                         style={{
                           background: "none",
                           border: "none",
@@ -293,19 +296,18 @@ export function PipelineTable({
                   {cfg.cols.includes("comercial") ? (
                     <td style={dataTable.tdCenter}>
                       {(() => {
-                        const siteOffline = pipelineComercialIsSiteOffline(row);
-                        const comercialEditavel = canEditar && pipelineComercialPodeEditar(row);
+                        const siteOffline = pipelineComercialExibeSiteOffline(row);
                         const conteudo = siteOffline ? (
                           <span
                             style={badgePipelineStyle(PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR)}
-                            title="Domínio inativo — atribuição automática"
+                            title="Domínio inativo — clique para atribuir comercial"
                           >
                             {PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL}
                           </span>
                         ) : (
                           pipelineComercialDisplayNome(row, comerciais)
                         );
-                        if (!comercialEditavel) {
+                        if (!canEditar) {
                           return conteudo;
                         }
                         return (

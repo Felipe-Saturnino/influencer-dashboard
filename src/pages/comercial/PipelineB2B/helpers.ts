@@ -1,5 +1,6 @@
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { SortDir } from "../../../components/dashboard";
+import { normalizeDominioForCheck } from "../../../lib/comercialDominioValidation";
 import {
   STATUS_FOLHA_LABEL,
   STATUS_PIPELINE_LABEL,
@@ -78,11 +79,18 @@ export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<
   return new Set(comerciais.map((c) => c.id).filter((id): id is string => Boolean(id)));
 }
 
-/** Domínio inativo → coluna Comercial exibe «Site Offline» (automático, sem filtro). */
+/** Domínio inativo no banco (KPI Site Offline, consolidado). */
 export function pipelineComercialIsSiteOffline(
   row: Pick<PipelineMarcaRow, "status_dominio">,
 ): boolean {
   return row.status_dominio === "inativo";
+}
+
+/** Badge «Site Offline» na coluna Comercial — domínio inativo sem comercial atribuído. */
+export function pipelineComercialExibeSiteOffline(
+  row: Pick<PipelineMarcaRow, "status_dominio" | "comercial_user_id">,
+): boolean {
+  return row.status_dominio === "inativo" && !row.comercial_user_id;
 }
 
 /** Rótulo da coluna — Site Offline (automático), Marcus Morin, Fred Ring ou «—». */
@@ -90,7 +98,7 @@ export function pipelineComercialDisplayNome(
   row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome" | "status_dominio">,
   comerciais: ComercialOpcao[],
 ): string {
-  if (pipelineComercialIsSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
+  if (pipelineComercialExibeSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
   if (!row.comercial_user_id) return "—";
   const nome =
     row.comercial_nome ??
@@ -100,16 +108,23 @@ export function pipelineComercialDisplayNome(
   return "—";
 }
 
-export function pipelineComercialPodeEditar(row: Pick<PipelineMarcaRow, "status_dominio">): boolean {
-  return !pipelineComercialIsSiteOffline(row);
-}
-
 export function pipelineComercialNomePorId(
   userId: string | null,
   comerciais: ComercialOpcao[],
 ): string | null {
   if (!userId) return null;
   return comerciais.find((c) => c.id === userId)?.name ?? null;
+}
+
+/** Normaliza input de domínio no modal de edição (vazio → null). */
+export function parseDominioMarcaInput(raw: string): { value: string | null; error?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { value: null };
+  const normalized = normalizeDominioForCheck(trimmed);
+  if (!normalized) {
+    return { value: null, error: "Informe um domínio válido (ex.: apostou.bet.br)." };
+  }
+  return { value: normalized };
 }
 
 export function buildComercialFiltroExtraOptions(
@@ -297,15 +312,10 @@ export function filterMarcas(
 
   if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
     list = list.filter(
-      (r) =>
-        !pipelineComercialIsSiteOffline(r) &&
-        (!r.comercial_user_id || !canonicalIds.has(r.comercial_user_id)),
+      (r) => !r.comercial_user_id || !canonicalIds.has(r.comercial_user_id),
     );
   } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
-    list = list.filter(
-      (r) =>
-        !pipelineComercialIsSiteOffline(r) && r.comercial_user_id === comercialFiltro,
-    );
+    list = list.filter((r) => r.comercial_user_id === comercialFiltro);
   }
 
   const q = busca.trim().toLowerCase();
