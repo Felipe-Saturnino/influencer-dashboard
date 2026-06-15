@@ -51,7 +51,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe dados do dia atual. Se o monitoramento automático ainda não executou hoje (acontece em horários específicos ao longo do dia), os dados podem não estar disponíveis. Verifique o horário exibido em 'Última atualização' — se indicar um horário de ontem, aguarde a próxima execução. Se o campo não aparecer, selecione uma operadora específica no filtro: **Todas Operadoras** na aba Posicionamento exibe ambas simultaneamente (Blaze e Casa de Apostas).",
+          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA) ainda não executou hoje, aguarde a próxima coleta — confira **Status Técnico** (integração `lobby_blaze` ou `lobby_cda` com status OK). Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze e Casa de Apostas aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso de permissão (`mesas_spin`) ou dados só na tabela sem posições vinculadas à execução.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",

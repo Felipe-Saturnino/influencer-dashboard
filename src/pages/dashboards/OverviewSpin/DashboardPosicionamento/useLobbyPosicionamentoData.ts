@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
-import { fetchAllPages } from "../../../../lib/supabasePaginate";
+import {
+  fetchAllPages,
+  fetchInBatched,
+  LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
+} from "../../../../lib/supabasePaginate";
+import {
+  inicioDiaBrasilUtcIso,
+  periodoDiaBrasil,
+  subDiasIso,
+} from "../../../../lib/dateBrasil";
 import {
   type LobbyExecucaoRow,
   type LobbyPosicaoRow,
-  periodoRange,
   execucoesNoPeriodo,
   mapPosicoesPorExecucao,
   mesasNoTop10Snapshot,
@@ -17,7 +25,6 @@ import {
   visibilidadePorCategoriaDia,
   gerarAlertas,
   toDateKey,
-  addDays,
   POS_MONITOR_DIA_MIN,
 } from "../../../../lib/lobbyMonitorHelpers";
 
@@ -30,7 +37,12 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
   const [execucoesAll, setExecucoesAll] = useState<LobbyExecucaoRow[]>([]);
   const [posicoesAll, setPosicoesAll] = useState<LobbyPosicaoRow[]>([]);
 
-  const dayKey = useMemo(() => toDateKey(refDate), [refDate]);
+  const dayKey = useMemo(() => {
+    const y = refDate.getFullYear();
+    const m = String(refDate.getMonth() + 1).padStart(2, "0");
+    const d = String(refDate.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [refDate]);
   const skip = !operadoraSlug || operadoraSlug === "todas";
 
   const carregar = useCallback(async () => {
@@ -42,12 +54,11 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
     }
     setLoading(true);
     try {
-      const rangeDia = periodoRange("dia", refDate);
-      const fetchStart = addDays(refDate, -35);
+      const rangeDia = periodoDiaBrasil(dayKey);
+      const fetchStartKey = subDiasIso(dayKey, 35);
       const minKey = toDateKey(POS_MONITOR_DIA_MIN);
-      const fetchInicioKey =
-        toDateKey(fetchStart) < minKey ? minKey : toDateKey(fetchStart);
-      const fetchFrom = `${fetchInicioKey}T00:00:00.000Z`;
+      const fetchInicioKey = fetchStartKey < minKey ? minKey : fetchStartKey;
+      const fetchFrom = inicioDiaBrasilUtcIso(fetchInicioKey);
 
       const execRows = await fetchAllPages(async (from, to) =>
         supabase
@@ -70,14 +81,16 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
       }
 
       const ids = execucoes.map((e) => e.id);
-      const posRows = await fetchAllPages(async (from, to) =>
-        supabase
-          .from("lobby_monitor_posicao")
-          .select(
-            "execucao_id, mesa_identificacao, nome_mesa, tipo_jogo, posicao, qtd_concorrentes_a_frente, concorrentes_a_frente",
-          )
-          .in("execucao_id", ids)
-          .range(from, to),
+      const posRows = await fetchInBatched(ids, LOBBY_MONITOR_EXECUCAO_IN_CHUNK, async (slice) =>
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("lobby_monitor_posicao")
+            .select(
+              "execucao_id, mesa_identificacao, nome_mesa, tipo_jogo, posicao, qtd_concorrentes_a_frente, concorrentes_a_frente",
+            )
+            .in("execucao_id", slice)
+            .range(from, to),
+        ),
       );
 
       setExecucoesAll(
@@ -96,17 +109,21 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
             : [],
         })),
       );
+    } catch (err) {
+      console.error("[useLobbyPosicionamentoData]", operadoraSlug, err);
+      setExecucoesAll([]);
+      setPosicoesAll([]);
     } finally {
       setLoading(false);
     }
-  }, [operadoraSlug, refDate, skip]);
+  }, [operadoraSlug, dayKey, skip]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
 
   const posByExec = useMemo(() => mapPosicoesPorExecucao(posicoesAll), [posicoesAll]);
-  const rangeDia = useMemo(() => periodoRange("dia", refDate), [refDate]);
+  const rangeDia = useMemo(() => periodoDiaBrasil(dayKey), [dayKey]);
   const execDia = useMemo(
     () => execucoesNoPeriodo(execucoesAll, rangeDia.inicio, rangeDia.fim),
     [execucoesAll, rangeDia],
@@ -176,7 +193,8 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
     [snapshotAtual, snapshotOntem, execDia, posByExec],
   );
 
-  const semDados = skip || (!loading && execDia.length === 0);
+  const semDados =
+    skip || (!loading && (!ultimaNoDia || snapshotAtual.length === 0));
 
   return {
     loading: skip ? false : loading,

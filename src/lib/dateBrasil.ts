@@ -28,6 +28,38 @@ export function inicioDiaBrasilUtcIso(isoDate: string): string {
   return new Date(Date.UTC(y, m - 1, d, 3, 0, 0)).toISOString();
 }
 
+/** Fim do dia civil em SP (23:59:59.999) como ISO UTC. */
+export function fimDiaBrasilUtcIso(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1, 2, 59, 59, 999)).toISOString();
+}
+
+/** Intervalo do dia civil BR para filtros em `executado_em` (ISO UTC). */
+export function periodoDiaBrasil(isoDate: string): {
+  inicio: string;
+  fim: string;
+  fimExclusive: string;
+} {
+  return {
+    inicio: inicioDiaBrasilUtcIso(isoDate),
+    fim: fimDiaBrasilUtcIso(isoDate),
+    fimExclusive: subDiasIso(isoDate, -1),
+  };
+}
+
+/** Hora (0–23) em America/Sao_Paulo a partir de instante ISO. */
+export function horaBrasilFromInstant(iso: string | null | undefined): number | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const h = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE_BRASIL,
+    hour: "numeric",
+    hour12: false,
+  }).format(d);
+  return parseInt(h, 10);
+}
+
 /** Hora atual (0–23) em America/Sao_Paulo. */
 export function horaAtualBrasil(): number {
   const h = new Intl.DateTimeFormat("en-US", {

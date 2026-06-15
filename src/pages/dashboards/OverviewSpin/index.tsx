@@ -17,7 +17,8 @@ import { OverviewSpinDetalhamentoInterativo } from "./OverviewSpinDetalhamentoIn
 import { OverviewSpinComparativoJogoInterativo } from "./OverviewSpinComparativoJogoInterativo";
 
 import type { OverviewSpinTab } from "./overviewSpinTabs";
-import { labelCarrosselPos } from "../../../lib/lobbyMonitorHelpers";
+import { labelCarrosselPos, parseDateKey } from "../../../lib/lobbyMonitorHelpers";
+import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import {
   GAME_IDENTITY_HEX,
@@ -229,10 +230,7 @@ export default function OverviewSpin() {
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
-  const refDatePosicionamento = useMemo(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  }, []);
+  const refDatePosicionamento = useMemo(() => parseDateKey(hojeIsoBrasil()), []);
 
   const carrosselAnteriorDisabled = useMemo(() => {
     if (aba === "posicionamento") return true;

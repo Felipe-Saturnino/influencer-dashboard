@@ -90,7 +90,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 
 - **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
-- **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia atual em vez de mês, não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData`, nunca do mesmo fetch do Overview.
+- **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário.
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
