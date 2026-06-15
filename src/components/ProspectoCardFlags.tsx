@@ -1,32 +1,12 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Building2, Coins, Dices, Signpost } from "lucide-react";
 import OperadoraTag from "./OperadoraTag";
-import { FONT } from "../constants/theme";
-
-/** Roxo de produto/formato ao vivo — distinto de operadora e de semântica KPI. */
-export const PROSPECTO_FLAG_LIVE_CASSINO_COLOR = "#a855f7";
-
-/** Metadado de prospecção (tipo de contato → Origem). */
-export const PROSPECTO_FLAG_ORIGEM_COLOR = "#6b7280";
-
-/** Cachê negociado — tom ouro/âmbar de domínio financeiro (não semântica de alerta). */
-export const PROSPECTO_FLAG_CACHE_COLOR = "#b45309";
-
-export function prospectoCardFlagPillFromHex(hex: string): CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    padding: "3px 10px",
-    borderRadius: 20,
-    background: `color-mix(in srgb, ${hex} 12%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${hex} 28%, transparent)`,
-    fontSize: 11,
-    fontWeight: 600,
-    color: hex,
-    fontFamily: FONT.body,
-  };
-}
+import {
+  PROSPECTO_FLAG_CACHE_COLOR,
+  PROSPECTO_FLAG_LIVE_CASSINO_COLOR,
+  PROSPECTO_FLAG_ORIGEM_COLOR,
+  prospectoCardFlagPillFromHex,
+} from "../lib/prospectoCardFlagsStyles";
 
 export type ProspectoCardFlagsProps = {
   liveCassino?: string | null;
@@ -96,14 +76,4 @@ export function ProspectoCacheFlag({
       </span>
     </div>
   );
-}
-
-/** Resolve rótulo de origem (tipo de contato) a partir do valor persistido. */
-export function resolveProspectoOrigemLabel(
-  tipoContato: string | null | undefined,
-  options: readonly { value: string; label: string }[],
-): string | null {
-  const v = (tipoContato ?? "").trim();
-  if (!v) return null;
-  return options.find((o) => o.value === v)?.label ?? v;
 }

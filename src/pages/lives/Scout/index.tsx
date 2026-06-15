@@ -30,7 +30,8 @@ import {
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { X, Eye, Pencil, ChevronDown, Loader2, Coins, Contact, Share2, StickyNote } from "lucide-react";
 import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
-import { ProspectoCacheFlag, ProspectoCardFlags, resolveProspectoOrigemLabel } from "../../../components/ProspectoCardFlags";
+import { ProspectoCacheFlag, ProspectoCardFlags } from "../../../components/ProspectoCardFlags";
+import { resolveProspectoOrigemLabel } from "../../../lib/prospectoCardFlagsStyles";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
