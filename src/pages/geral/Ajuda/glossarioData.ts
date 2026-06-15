@@ -847,6 +847,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {
+        termo: "Origem (contratação)",
+        definicao:
+          "Canal pelo qual o prestador chegou à Spin — LinkedIn, Indicação, Site de Vagas, Instagram ou Site Spin. Preenchido na aba Dados de contratação.",
+        nota: "Quando a origem é Indicação, o campo Quem indicou? é obrigatório.",
+        referencia: "Gestão de Prestadores",
+      },
+      {
         termo: "Dados de Cadastro",
         definicao:
           "Autoatendimento e consulta cadastral do prestador: dados pessoais, documentos, formação, experiência profissional anterior e histórico de movimentações.",

@@ -80,6 +80,7 @@ import {
   ESCALAS_PERMITIDAS,
   FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS,
   NIVEIS,
+  ORIGENS_CONTRATACAO,
   TIPOS_CONTRATO,
   UFS_BR,
   abaDoCampoRhModal,
@@ -649,6 +650,9 @@ export default function RhPrestadoresPage() {
       }
       if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
         e.data_nascimento = "Data de nascimento inválida.";
+      }
+      if (form.origem_contratacao === "indicacao" && !form.quem_indicou.trim()) {
+        e.quem_indicou = "Quem indicou? é obrigatório.";
       }
 
       const telD = somenteDigitos(form.telefone);
@@ -2136,6 +2140,48 @@ export default function RhPrestadoresPage() {
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                     <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>Data da Função</div>
                     <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body }}>{fmtDataIsoPtBr(form.data_funcao)}</div>
+                  </div>
+                ) : null}
+                <div style={{ marginBottom: 10, gridColumn: leitura ? "1 / -1" : undefined }}>
+                  {lbl("f-origem-contratacao", "Origem")}
+                  <select
+                    id="f-origem-contratacao"
+                    disabled={desabilitarCampos}
+                    value={form.origem_contratacao}
+                    onChange={(e) => {
+                      const v = e.target.value as FormState["origem_contratacao"];
+                      setForm((s) => ({
+                        ...s,
+                        origem_contratacao: v,
+                        quem_indicou: v === "indicacao" ? s.quem_indicou : "",
+                      }));
+                    }}
+                    style={inputStyle}
+                    aria-label="Origem da contratação"
+                  >
+                    <option value="">— Selecione —</option>
+                    {ORIGENS_CONTRATACAO.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {form.origem_contratacao === "indicacao" ? (
+                  <div style={{ marginBottom: 10, gridColumn: leitura ? "1 / -1" : undefined }}>
+                    {lblReqCad("f-quem-indicou", "Quem indicou?")}
+                    <input
+                      id="f-quem-indicou"
+                      disabled={desabilitarCampos}
+                      value={form.quem_indicou}
+                      onChange={(e) => setForm((s) => ({ ...s, quem_indicou: e.target.value }))}
+                      style={inputStyle}
+                      aria-label="Quem indicou"
+                      aria-required={!leitura}
+                    />
+                    {fieldErr.quem_indicou ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.quem_indicou}</div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
