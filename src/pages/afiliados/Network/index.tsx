@@ -7,7 +7,9 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { DashboardPageHeader, FiltroBarTabButton, FiltroStatusSemanticoPill, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { DashboardPageHeader, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
+import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
+import { ProspectoCardFlags, resolveProspectoOrigemLabel } from "../../../components/ProspectoCardFlags";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -76,7 +78,7 @@ function NetworkModalTabs({
   );
 }
 
-export type OperadoraOpt = { slug: string; nome: string };
+export type OperadoraOpt = { slug: string; nome: string; brand_action?: string | null };
 
 export type StatusAfiliado = "visualizado" | "contato" | "negociacao" | "fechado";
 const STATUS_OPTS: StatusAfiliado[] = ["visualizado", "contato", "negociacao", "fechado"];
@@ -178,7 +180,6 @@ function StatusAfiliadoBadge({ value }: { value: StatusAfiliado }) {
 export default function AfiliadosNetwork() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const funnelCardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const perm = usePermission("afiliados_network");
   const [list, setList] = useState<AfiliadoNetworkRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +191,7 @@ export default function AfiliadosNetwork() {
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraOpt[]>([]);
 
   useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+    supabase.from("operadoras").select("slug, nome, brand_action").order("nome").then(({ data }) => {
       setOperadorasOpt((data ?? []) as OperadoraOpt[]);
     });
   }, []);
@@ -254,56 +255,26 @@ export default function AfiliadosNetwork() {
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
             Funil de Prospecção
           </div>
-          <div className="app-grid-kpi-4" style={{ width: "100%" }}>
-            {STATUS_OPTS.map((s) => {
-              const cor = STATUS_COLOR[s];
-              return (
-                <div
-                  key={s}
-                  style={{
-                    background: brand.blockBg,
-                    border: `1px solid ${t.cardBorder}`,
-                    borderLeft: `3px solid ${cor}`,
-                    borderRadius: 18,
-                    padding: "16px 20px",
-                    boxShadow: funnelCardShadow,
-                    minWidth: 0,
-                  }}
-                >
-                  <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: brand.secondary, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_LABEL[s]}</div>
-                </div>
-              );
-            })}
-          </div>
+          <FunilProspeccaoKpiGrid
+            options={STATUS_OPTS}
+            labels={STATUS_LABEL}
+            colors={STATUS_COLOR}
+            counts={porStatus}
+            filterStatus={filterStatus}
+            onFilterStatusChange={setFilterStatus}
+          />
         </div>
       )}
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-          {/* Linha 1: Status */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-            {STATUS_OPTS.map((s) => (
-              <FiltroStatusSemanticoPill
-                key={s}
-                label={STATUS_LABEL[s]}
-                semanticColor={STATUS_COLOR[s]}
-                active={filterStatus === s}
-                onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
-              />
-            ))}
-          </div>
-
-          {/* Linha 2: Busca + Adicionar */}
           <div
             style={{
-              paddingTop: 12,
-              marginTop: 12,
-              borderTop: `1px solid ${t.cardBorder}`,
               display: "flex",
               alignItems: "center",
               gap: 10,
               flexWrap: "wrap",
+              justifyContent: "center",
+              width: "100%",
             }}
           >
             <BarraPesquisaPagina
@@ -432,6 +403,20 @@ export default function AfiliadosNetwork() {
                 >
                   {(r.operacao ?? "").trim() ? r.operacao : "—"}
                 </div>
+                <ProspectoCardFlags
+                  liveCassino={r.live_cassino}
+                  operadoraNome={
+                    r.operadora_slug
+                      ? operadorasOpt.find((o) => o.slug === r.operadora_slug)?.nome ?? r.operadora_slug
+                      : null
+                  }
+                  operadoraCorPrimaria={
+                    r.operadora_slug
+                      ? operadorasOpt.find((o) => o.slug === r.operadora_slug)?.brand_action
+                      : null
+                  }
+                  origemLabel={resolveProspectoOrigemLabel(r.tipo_contato, TIPO_CONTATO_OPTS)}
+                />
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

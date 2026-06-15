@@ -26,7 +26,10 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `sync-metricas-cda` |
 | `sync-painel-noticias-rss` |
 | `sync-spin-na-rede-rss` |
+| `sync-comercial-spa-lista` |
 | `trigger-social-kpis` |
+
+**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser inline). Testes locais do parser: `src/lib/comercialSpaCsvParser.ts`.
 
 ### `index.ts` + `platformHealthDiagnostics.ts`
 

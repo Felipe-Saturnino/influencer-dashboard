@@ -311,7 +311,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nenhum prospecto aparece na lista?",
         texto:
-          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status. Verifique também se o chip de plataforma na grade de Cobertura está ativo — ele também filtra a lista quando selecionado. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
+          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, clique no card **Fechado** do Funil de Prospecção. Verifique também se algum chip de plataforma está ativo na barra de filtros. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
       },
       {
         subtitulo: "Não consigo fechar a parceria — aparece uma mensagem de erro?",

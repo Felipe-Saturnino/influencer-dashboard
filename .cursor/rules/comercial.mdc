@@ -67,6 +67,26 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 
 Tabelas: `comercial_empresas`, `comercial_marcas`, `comercial_marca_contatos`, `comercial_marca_produtos`, `comercial_marca_anotacoes`, `comercial_marca_historico`. RLS: `_comercial_pipeline_b2b_perm`.
 
+### Sync automático — Lista SPA/MF (cron)
+
+Edge Function **`sync-comercial-spa-lista`** — import diário do CSV oficial do Ministério da Fazenda (empresas autorizadas).
+
+| Regra | Valor |
+|-------|-------|
+| Agendamento | GitHub Actions `sync-comercial-spa-lista-daily.yml` — **7h30 BRT** (~10h30 UTC) |
+| Fonte | Página gov.br (descobre URL do CSV) ou secret **`COMERCIAL_SPA_CSV_URL`** |
+| Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
+| Chave marca | **`empresa_id` + nome** (normalizado) |
+| Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
+| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao`, **`status_dominio`** |
+| Marca nova | defaults `disponiveis` + `sem_contato`; domínio `inativo` até cron de validação HTTP |
+| Idempotência | Hash SHA-256 do CSV em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |
+| Logs | `sync_logs.integracao_slug = comercial_spa_lista` (Status Técnico) |
+
+**Validação de domínio (fase 2 — separado):** cron futuro tenta abrir o site (HTTP); presença na planilha **≠** site ativo.
+
+Teste manual: `POST` com `{ "dry_run": true }` ou `{ "force": true }` para ignorar hash.
+
 ---
 
 ## Estados de interface

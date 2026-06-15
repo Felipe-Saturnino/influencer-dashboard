@@ -54,15 +54,10 @@ Usar `DashboardPageHeader` (`src/components/dashboard`) — spec **real** do com
 - Na barra de chips de status: **`FiltroOperadoraSelect`** após divisor — **sem** label lateral “Operadora”.
 - Opção agregadora: **Todas Operadoras** (`pill`, `minWidth={200}`).
 
-## Filtro de status (Afiliados e Network)
+## Filtro de status
 
-- Chips de status na barra: **`FiltroStatusSemanticoPill`** — Global § Filtros semânticos (visual abas Overview Spin + bolinha `STATUS_COLOR`).
-- Toggle: valor ativo ↔ agregador (`todos` em Afiliados/Network; Agenda usa `null` — regra da página).
-- **Não** usar pill 999 inline nem cor de marca no chip ativo.
-
-```tsx
-import { FiltroStatusSemanticoPill } from "../../../components/dashboard";
-```
+- **Afiliados:** chips **`FiltroStatusSemanticoPill`** na barra — toggle valor ativo ↔ agregador `todos`.
+- **Network:** filtro por status nos **cards clicáveis do Funil de Prospecção** (`FunilProspeccaoKpiGrid`) — **sem** chips de Status na barra. Estado inicial `todos`: lista todos os prospectos **exceto Fechados**; clique no card **Fechado** para incluí-los.
 
 ## Estados ativos — tabs e filtros
 
