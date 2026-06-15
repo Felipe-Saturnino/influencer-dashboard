@@ -10,9 +10,9 @@ export type GameIdentityKey = "blackjack" | "roleta" | "baccarat" | "futebol_bra
  */
 export const GAME_IDENTITY_HEX: Record<GameIdentityKey, string> = {
   blackjack: "#22c55e",
-  roleta: BRAND.vermelho,
+  roleta: "#eab308",
   baccarat: BRAND.azul,
-  futebol_brasileiro: BRAND.amarelo,
+  futebol_brasileiro: "#ea580c",
 };
 
 export const GAME_IDENTITY_LABEL: Record<GameIdentityKey, string> = {
@@ -24,9 +24,9 @@ export const GAME_IDENTITY_LABEL: Record<GameIdentityKey, string> = {
 
 const GAME_IDENTITY_TEXT: Record<GameIdentityKey, { light: string; dark: string }> = {
   blackjack: { light: "#15803d", dark: "#86efac" },
-  roleta: { light: "#b02a14", dark: "#ff8570" },
+  roleta: { light: "#a16207", dark: "#fde047" },
   baccarat: { light: "#1631c4", dark: "#7b95ff" },
-  futebol_brasileiro: { light: "#b45309", dark: "#fcd34d" },
+  futebol_brasileiro: { light: "#c2410c", dark: "#fdba74" },
 };
 
 /** Cor de texto em chips/tags (Roteiro de Mesa, filtros semânticos). */

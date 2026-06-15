@@ -97,13 +97,15 @@ function StreamersFiltrosEUAbas({
             <FiltroInfluencerSelect
               mode="single"
               value={sf.filtroInfluencer}
-              onChange={sf.setFiltroInfluencer}
+              onChange={(id) => sf.setFiltroInfluencer(id)}
               influencers={sf.influencerOptions.map((r) => ({ id: r.id, name: r.nome }))}
             />
           )}
 
           {showFiltroOperadora && (
             <FiltroOperadoraSelect
+              pill
+              minWidth={200}
               value={sf.filtroOperadora}
               onChange={sf.setFiltroOperadora}
               operadoras={sf.operadorasList}

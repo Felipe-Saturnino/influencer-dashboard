@@ -61,6 +61,13 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Financeiro", "financeiro", "Financeiro"),
   page("Banca de Jogo", "banca_jogo", "BancaDeJogo"),
   page("Campanhas", "campanhas", "Campanhas"),
+  page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
+    { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
+    { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
+    { tabId: "conexao", slug: "Conexao", label: "Conexão", access: "always" },
+    { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
+    { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
+  ]),
   page("Gestão de Dealers", "gestao_dealers", "GestaoDeDealers"),
   page("Roteiro de Mesa", "roteiro_mesa", "RoteiroDeMesa"),
   page("Gestão de Escala", "rh_gestao_escala", "GestaoDeEscala"),

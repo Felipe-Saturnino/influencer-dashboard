@@ -738,6 +738,37 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "comercial",
+    label: "Comercial",
+    accentColor: "#4a2082",
+    termos: [
+      {
+        termo: "Pipeline B2B",
+        definicao:
+          "Funil comercial de prospecção de operadoras e marcas de Live Cassino no mercado B2B brasileiro — da disponibilidade inicial até contrato fechado, com mesas Dedicada e Network.",
+        referencia: "Pipeline B2B",
+      },
+      {
+        termo: "Mesa Dedicada",
+        definicao:
+          "Produto de Live Cassino exclusivo para a marca/operadora, negociado no Pipeline B2B. Status de proposta aparece na coluna Dedicada.",
+        referencia: "Pipeline B2B",
+      },
+      {
+        termo: "Mesa Network",
+        definicao:
+          "Produto de Live Cassino em rede compartilhada entre operadoras, negociado no Pipeline B2B. Status de proposta aparece na coluna Network.",
+        referencia: "Pipeline B2B",
+      },
+      {
+        termo: "Licença compartilhada",
+        definicao:
+          "Situação em que mais de uma marca opera sob o mesmo CNPJ e portaria SPA/MF. No modal Ver, a aba Licença Compartilhada lista as demais marcas da mesma empresa.",
+        referencia: "Pipeline B2B",
+      },
+    ],
+  },
+  {
     key: "rh_portal",
     label: "Portal de RH",
     accentColor: "#a78bfa",

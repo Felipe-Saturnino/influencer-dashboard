@@ -1,0 +1,50 @@
+# Pipeline B2B — importação diária lista SPA/MF via Edge Function `sync-comercial-spa-lista`
+# ~7h30 BRT → 10h30 UTC (escalonado após sync CDA 4h e RSS 6h20)
+# Secrets GitHub: SUPABASE_URL, SUPABASE_ANON_KEY
+name: Sync Comercial SPA Lista (7h30 BRT)
+
+on:
+  schedule:
+    - cron: "30 10 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar sync-comercial-spa-lista
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Defina os secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/sync-comercial-spa-lista"
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | sed '$d')
+          echo "HTTP ${HTTP}"
+          echo "$BODY_RES" | head -c 4000
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "Falha HTTP"
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
+          if [ "$OK" != "true" ]; then
+            echo "Resposta com ok != true (ver erros no JSON acima)."
+            exit 1
+          fi
+          SKIPPED=$(echo "$BODY_RES" | grep -oE '"skipped"\s*:\s*true' || true)
+          if [ -n "$SKIPPED" ]; then
+            echo "Sync concluído — CSV sem alteração desde o último import."
+          else
+            echo "Sync Comercial SPA Lista concluído com sucesso."
+          fi

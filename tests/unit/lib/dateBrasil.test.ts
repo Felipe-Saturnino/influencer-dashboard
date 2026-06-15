@@ -1,11 +1,14 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   fmtDataBrasilCurta,
+  fimDiaBrasilUtcIso,
   hojeIsoBrasil,
   horaAtualBrasil,
+  horaBrasilFromInstant,
   inicioDiaBrasilUtcIso,
   isoDateBrasilFromInstant,
   passouHorarioAgendadoBr,
+  periodoDiaBrasil,
   subDiasIso,
 } from "@/lib/dateBrasil";
 
@@ -18,6 +21,26 @@ describe("subDiasIso", () => {
 describe("inicioDiaBrasilUtcIso", () => {
   it("usa 03:00 UTC para meia-noite em SP", () => {
     expect(inicioDiaBrasilUtcIso("2026-06-02")).toBe("2026-06-02T03:00:00.000Z");
+  });
+});
+
+describe("fimDiaBrasilUtcIso / periodoDiaBrasil", () => {
+  it("fecha o dia civil SP em 02:59:59 UTC do dia seguinte", () => {
+    expect(fimDiaBrasilUtcIso("2026-06-02")).toBe("2026-06-03T02:59:59.999Z");
+  });
+
+  it("monta intervalo completo do dia civil BR", () => {
+    expect(periodoDiaBrasil("2026-06-02")).toEqual({
+      inicio: "2026-06-02T03:00:00.000Z",
+      fim: "2026-06-03T02:59:59.999Z",
+      fimExclusive: "2026-06-03",
+    });
+  });
+});
+
+describe("horaBrasilFromInstant", () => {
+  it("retorna hora civil SP", () => {
+    expect(horaBrasilFromInstant("2026-06-02T14:00:00.000Z")).toBe(11);
   });
 });
 

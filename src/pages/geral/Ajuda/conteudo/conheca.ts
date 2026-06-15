@@ -53,7 +53,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Comparativo de Jogo",
         texto:
-          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (vermelho), Baccarat (azul) e Futebol Brasileiro (amarelo). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
+          "Tabela com os resultados separados por tipo de jogo — Blackjack (verde), Roleta (ouro), Baccarat (azul) e Futebol Brasileiro (laranja). Selecione quais KPIs exibir pelos botões 'KPIs visíveis'. O percentual abaixo de cada valor indica a participação daquele jogo no total do período (coluna Total alinhada ao resumo diário oficial).\n\nNo mês corrente, a evolução é dia a dia; no Histórico, o subtítulo da seção é \"mês a mês\" e cada linha representa um mês. Alterne para o modo Gráfico para visualizar a evolução temporal de um único KPI por jogo.",
       },
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
@@ -311,17 +311,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Funil de Prospecção e Cobertura de Plataformas",
         texto:
-          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma\n\nA grade Cobertura de Plataformas (logo abaixo) lista cada canal com a contagem de prospectos. Cada célula é um botão de filtro: clique para restringir a lista àquela plataforma; clique de novo para limpar. Esse filtro é independente dos chips de Status do bloco de filtros inferior.\n\nAtenção: na vista padrão, prospectos com status Fechado não aparecem na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status.",
+          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma\n\nClique em um card para filtrar a lista por aquele status; clique de novo no card ativo para voltar à vista padrão. Por padrão, nenhum card está selecionado e prospectos **Fechados** não aparecem na lista — clique no card Fechado para visualizá-los.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "No bloco inferior, combine:\n\n— Status: chips Visualizado, Contato, Negociação, Fechado\n— Cachê por Hora — até: slider até o maior cachê cadastrado\n— Views — até: slider até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo (inclui filtro de plataforma da Cobertura).",
+          "No bloco inferior, combine:\n\n— Plataforma: chips com contagem por canal\n— Cachê por Hora — até: slider até o maior cachê cadastrado\n— Views — até: slider até o maior volume de views cadastrado\n— Busca: por nome artístico ou e-mail\n\nO botão Limpar filtros aparece automaticamente quando há qualquer filtro ativo (inclui card do funil e plataforma). O filtro por status é feito diretamente nos cards do funil.",
       },
       {
         subtitulo: "Card de Prospecto",
         texto:
-          "Cada card exibe nome artístico, StatusBadge com dropdown para alterar a etapa do funil, plataformas com métricas inline e badges de informações adicionais.\n\nAs métricas variam por plataforma: YouTube, Twitch, Kick e TikTok mostram Média de Views; Instagram, Discord, WhatsApp e Telegram mostram Seguidores.\n\nBadges adicionais aparecem quando informados: tag da operadora vinculada, valor do cachê negociado e 'Live Cassino' quando o prospecto já realiza ou tem histórico de lives de cassino.",
+          "Cada card exibe nome artístico, StatusBadge com dropdown para alterar a etapa do funil, plataformas com métricas inline e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide da parceira — igual Gestão de Dealers), **Origem** (cinza — tipo de contato) e, quando informado, **cachê negociado** (ouro/âmbar).\n\nAs métricas variam por plataforma: YouTube, Twitch, Kick e TikTok mostram Média de Views; Instagram, Discord, WhatsApp e Telegram mostram Seguidores.",
       },
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
@@ -753,7 +753,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista de Prospectos",
         texto:
-          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil e uma prévia do campo Operação (truncado em 2 linhas). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
+          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil, uma prévia do campo Operação (truncado em 2 linhas) e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide), **Origem** (cinza). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
       },
       {
         subtitulo: "Cadastro e Edição",
@@ -827,6 +827,30 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Criando uma Campanha",
         texto:
           "No bloco **Campanhas cadastradas**, use **Nova Campanha** na mesma linha do título (ícone + no padrão de criação) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+      },
+    ],
+  },
+  comercial_pipeline_b2b: {
+    titulo: "Pipeline B2B",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline B2B** substitui a planilha comercial da Spin Gaming: concentra empresas licenciadas, marcas (sites), contatos, status do funil e propostas de mesa **Dedicada** e **Network** de Live Cassino. O acesso depende da permissão de Ver em Gestão de Usuários; edição inline, contatos e anotações exigem permissão de Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+      },
+      {
+        subtitulo: "Tabela e edição",
+        texto:
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.",
+      },
+      {
+        subtitulo: "Comunicar",
+        texto:
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Última Comunicação** — fluxo em implementação posterior.",
       },
     ],
   },

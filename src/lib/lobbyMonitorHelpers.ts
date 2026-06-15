@@ -1,5 +1,11 @@
 /** Helpers para dashboard de posicionamento (lobby_monitor_*). */
 
+import {
+  horaBrasilFromInstant,
+  isoDateBrasilFromInstant,
+  subDiasIso,
+} from "./dateBrasil";
+
 export const POS_TOP3_MAX = 3;
 export const POS_TOP10_MAX = 10;
 export const POS_MID_MAX = 20;
@@ -406,11 +412,11 @@ export function assignExecucoesToBuckets(
     const dt = new Date(ex.executado_em);
     let key: string;
     if (visao === "dia") {
-      key = String(dt.getHours());
+      key = String(horaBrasilFromInstant(ex.executado_em) ?? dt.getHours());
     } else if (visao === "semana") {
-      key = toDateKey(dt);
+      key = isoDateBrasilFromInstant(ex.executado_em) ?? toDateKey(dt);
     } else {
-      key = toDateKey(dt);
+      key = isoDateBrasilFromInstant(ex.executado_em) ?? toDateKey(dt);
     }
     const b = copy.find((x) => x.key === key);
     if (b) b.execucaoIds.push(ex.id);
@@ -568,7 +574,7 @@ export function ultimaExecucaoNoDia(
   const ok = execucoes.filter(
     (e) =>
       (e.status === "ok" || e.status === "parcial") &&
-      toDateKey(new Date(e.executado_em)) === dayKey,
+      isoDateBrasilFromInstant(e.executado_em) === dayKey,
   );
   if (ok.length === 0) return null;
   return [...ok].sort(
@@ -581,18 +587,22 @@ export function execucaoMesmoHorarioDiaAnterior(
   ref: LobbyExecucaoRow,
   execucoes: LobbyExecucaoRow[],
 ): LobbyExecucaoRow | null {
-  const dt = new Date(ref.executado_em);
-  const prevKey = toDateKey(addDays(dt, -1));
-  const hour = dt.getHours();
+  const refDay = isoDateBrasilFromInstant(ref.executado_em);
+  if (!refDay) return null;
+  const prevKey = subDiasIso(refDay, 1);
+  const hour = horaBrasilFromInstant(ref.executado_em);
+  if (hour == null) return null;
   const candidates = execucoes.filter((e) => {
     if (e.status !== "ok" && e.status !== "parcial") return false;
-    return toDateKey(new Date(e.executado_em)) === prevKey;
+    return isoDateBrasilFromInstant(e.executado_em) === prevKey;
   });
   if (candidates.length === 0) return null;
   let best: LobbyExecucaoRow | null = null;
   let bestDiff = 999;
   for (const e of candidates) {
-    const diff = Math.abs(new Date(e.executado_em).getHours() - hour);
+    const eh = horaBrasilFromInstant(e.executado_em);
+    if (eh == null) continue;
+    const diff = Math.abs(eh - hour);
     if (diff < bestDiff) {
       bestDiff = diff;
       best = e;
@@ -675,15 +685,18 @@ export function execIdsColunaHistorico(
 ): string[] {
   if (modo === "dia") {
     const h = Number(colKey);
-    const dayKey = toDateKey(refDate);
+    const dayKey = isoDateBrasilFromInstant(refDate.toISOString()) ?? toDateKey(refDate);
     return execucoes
       .filter((e) => {
-        const d = new Date(e.executado_em);
-        return toDateKey(d) === dayKey && d.getHours() === h;
+        const dia = isoDateBrasilFromInstant(e.executado_em);
+        const hora = horaBrasilFromInstant(e.executado_em);
+        return dia === dayKey && hora === h;
       })
       .map((e) => e.id);
   }
-  return execucoes.filter((e) => toDateKey(new Date(e.executado_em)) === colKey).map((e) => e.id);
+  return execucoes
+    .filter((e) => isoDateBrasilFromInstant(e.executado_em) === colKey)
+    .map((e) => e.id);
 }
 
 export function visibilidadePorCategoriaDia(

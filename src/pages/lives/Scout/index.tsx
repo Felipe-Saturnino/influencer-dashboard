@@ -13,7 +13,6 @@ import {
   DashboardPageHeader,
   FiltroBarTabButton,
   FiltroPlataformaSemanticoPill,
-  FiltroStatusSemanticoPill,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
@@ -29,7 +28,10 @@ import {
   getPageKpiSectionGapStyle,
 } from "../../../lib/pageContentBoxStyles";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { X, Eye, Pencil, ChevronDown, Loader2, Coins, Building2, Contact, Share2, StickyNote } from "lucide-react";
+import { X, Eye, Pencil, ChevronDown, Loader2, Coins, Contact, Share2, StickyNote } from "lucide-react";
+import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
+import { ProspectoCacheFlag, ProspectoCardFlags } from "../../../components/ProspectoCardFlags";
+import { resolveProspectoOrigemLabel } from "../../../lib/prospectoCardFlagsStyles";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
@@ -84,7 +86,7 @@ function ScoutModalTabs({
   );
 }
 
-export type OperadoraScoutOpt = { slug: string; nome: string };
+export type OperadoraScoutOpt = { slug: string; nome: string; brand_action?: string | null };
 
 /** Chama a Edge Function (service role): influencer_operadoras + user_scopes — alinha Gestão de Usuários e quadro Influencers. */
 async function vincularOperadoraInfluencerViaApi(userId: string, operadoraSlug: string, scoutId?: string): Promise<void> {
@@ -300,7 +302,7 @@ export default function Scout() {
   const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+    supabase.from("operadoras").select("slug, nome, brand_action").order("nome").then(({ data }) => {
       setOperadorasOpt((data ?? []) as OperadoraScoutOpt[]);
     });
   }, []);
@@ -438,36 +440,21 @@ export default function Scout() {
         <div style={{ ...getPageKpiSectionGapStyle(), display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Funil de Prospecção</div>
-            <div className="app-grid-kpi-4" style={{ width: "100%" }}>
-              {STATUS_SCOUT_OPTS.map((s) => (
-                <div key={s} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${STATUS_SCOUT_COLOR[s]}`, borderRadius: 18, padding: "16px 20px", boxShadow: cardShadow, minWidth: 0 }}>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: brand.secondary, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_SCOUT_LABEL[s]}</div>
-                </div>
-              ))}
-            </div>
+            <FunilProspeccaoKpiGrid
+              options={STATUS_SCOUT_OPTS}
+              labels={STATUS_SCOUT_LABEL}
+              colors={STATUS_SCOUT_COLOR}
+              counts={porStatus}
+              filterStatus={filterStatus}
+              onFilterStatusChange={setFilterStatus}
+            />
           </div>
         </div>
       )}
 
       {/* Bloco 2: Filtros (estilo Agenda / Influencers) */}
       <div style={getPageFilterBoxStyle(brand, t)}>
-          {/* Linha 1: Status */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
-            {STATUS_SCOUT_OPTS.map((s) => (
-              <FiltroStatusSemanticoPill
-                key={s}
-                label={STATUS_SCOUT_LABEL[s]}
-                semanticColor={STATUS_SCOUT_COLOR[s]}
-                active={filterStatus === s}
-                onClick={() => setFilterStatus(filterStatus === s ? "todos" : s)}
-              />
-            ))}
-          </div>
-
-          {/* Linha 2: Plataforma (cobertura — filtro na lista) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
             {PLATS_ORDEM.map((plat) => (
               <FiltroPlataformaSemanticoPill
@@ -482,7 +469,7 @@ export default function Scout() {
             ))}
           </div>
 
-          {/* Linha 3: Cachê / Views */}
+          {/* Cachê / Views */}
           <div className="app-grid-2" style={{
             paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
             gap: 18,
@@ -687,23 +674,24 @@ export default function Scout() {
                       })}
                     </div>
                   )}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {s.operadora_slug && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-secondary, #1e36f8) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-secondary, #1e36f8) 30%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-secondary, #1e36f8)", fontFamily: FONT.body }}>
-                        <Building2 size={11} aria-hidden="true" /> {operadorasOpt.find((o) => o.slug === s.operadora_slug)?.nome ?? s.operadora_slug}
-                      </span>
-                    )}
-                    {toCacheNumber(s.cache_negociado) > 0 && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-accent, #7c3aed) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-accent, #7c3aed) 30%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-accent, #7c3aed)", fontFamily: FONT.body }}>
-                        {fmtBRL(toCacheNumber(s.cache_negociado))}
-                      </span>
-                    )}
-                    {s.live_cassino === "sim" && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-secondary, #1e36f8) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-secondary, #1e36f8) 30%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-secondary, #1e36f8)", fontFamily: FONT.body }}>
-                        Live Cassino
-                      </span>
-                    )}
-                  </div>
+                  <ProspectoCardFlags
+                    liveCassino={s.live_cassino}
+                    operadoraNome={
+                      s.operadora_slug
+                        ? operadorasOpt.find((o) => o.slug === s.operadora_slug)?.nome ?? s.operadora_slug
+                        : null
+                    }
+                    operadoraCorPrimaria={
+                      s.operadora_slug
+                        ? operadorasOpt.find((o) => o.slug === s.operadora_slug)?.brand_action
+                        : null
+                    }
+                    origemLabel={resolveProspectoOrigemLabel(s.tipo_contato, TIPO_CONTATO_OPTS)}
+                    marginTop={plats.length > 0 ? 6 : 8}
+                  />
+                  {toCacheNumber(s.cache_negociado) > 0 && (
+                    <ProspectoCacheFlag label={fmtBRL(toCacheNumber(s.cache_negociado))} />
+                  )}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

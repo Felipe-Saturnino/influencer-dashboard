@@ -11,9 +11,9 @@ import {
 describe("GAME_IDENTITY_HEX", () => {
   it("mantém paleta canónica por jogo", () => {
     expect(GAME_IDENTITY_HEX.blackjack).toBe("#22c55e");
-    expect(GAME_IDENTITY_HEX.roleta).toBe("#e84025");
+    expect(GAME_IDENTITY_HEX.roleta).toBe("#eab308");
     expect(GAME_IDENTITY_HEX.baccarat).toBe("#1e36f8");
-    expect(GAME_IDENTITY_HEX.futebol_brasileiro).toBe("#f59e0b");
+    expect(GAME_IDENTITY_HEX.futebol_brasileiro).toBe("#ea580c");
   });
 });
 

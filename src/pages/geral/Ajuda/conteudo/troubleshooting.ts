@@ -51,7 +51,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe dados do dia atual. Se o monitoramento automático ainda não executou hoje (acontece em horários específicos ao longo do dia), os dados podem não estar disponíveis. Verifique o horário exibido em 'Última atualização' — se indicar um horário de ontem, aguarde a próxima execução. Se o campo não aparecer, selecione uma operadora específica no filtro: **Todas Operadoras** na aba Posicionamento exibe ambas simultaneamente (Blaze e Casa de Apostas).",
+          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA) ainda não executou hoje, aguarde a próxima coleta — confira **Status Técnico** (integração `lobby_blaze` ou `lobby_cda` com status OK). Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze e Casa de Apostas aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso de permissão (`mesas_spin`) ou dados só na tabela sem posições vinculadas à execução.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -311,7 +311,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nenhum prospecto aparece na lista?",
         texto:
-          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, selecione explicitamente o filtro 'Fechado' nos chips de Status. Verifique também se o chip de plataforma na grade de Cobertura está ativo — ele também filtra a lista quando selecionado. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
+          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, clique no card **Fechado** do Funil de Prospecção. Verifique também se algum chip de plataforma está ativo na barra de filtros. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
       },
       {
         subtitulo: "Não consigo fechar a parceria — aparece uma mensagem de erro?",
@@ -842,6 +842,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
           "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  comercial_pipeline_b2b: {
+    titulo: "Pipeline B2B",
+    blocos: [
+      {
+        subtitulo: "Não vejo a página Pipeline B2B no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e se a página está liberada na aba Gestores (tipo de gestor) ou Operadora, conforme seu perfil. Administradores têm acesso total.",
+      },
+      {
+        subtitulo: "Não consigo editar Comercial, Status ou produtos na tabela?",
+        texto:
+          "A edição inline exige permissão de Editar na página Pipeline B2B. Sem essa permissão, os modais de contato e Ver funcionam em modo consulta.",
+      },
+      {
+        subtitulo: "A tabela está vazia após aplicar filtros?",
+        texto:
+          "Revise a busca, o filtro Comercial e os KPIs clicáveis na aba atual — eles restringem o detalhe por substatus. Limpe a busca, selecione **Todos Comerciais** e clique novamente no KPI ativo para remover o filtro.",
+      },
+      {
+        subtitulo: "Erro ao salvar contato ou anotação?",
+        texto:
+          "Verifique conexão e permissão de Editar. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.",
       },
     ],
   },
