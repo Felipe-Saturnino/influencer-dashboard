@@ -6,6 +6,7 @@ import type {
   RhFuncionario,
   RhFuncionarioTipoContrato,
   RhHistoricoAcaoTipo,
+  RhOrigemContratacao,
 } from "../../../types/rhFuncionario";
 import type { RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
@@ -35,6 +36,24 @@ export const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }
   { value: "Estagio", label: "Estágio" },
   { value: "Temporario", label: "Temporário" },
 ];
+
+export const ORIGENS_CONTRATACAO: { value: RhOrigemContratacao; label: string }[] = [
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "indicacao", label: "Indicação" },
+  { value: "site_vagas", label: "Site de Vagas" },
+  { value: "instagram", label: "Instagram" },
+  { value: "site_spin", label: "Site Spin" },
+];
+
+export function labelOrigemContratacao(v: RhOrigemContratacao | "" | null | undefined): string {
+  if (!v) return "—";
+  return ORIGENS_CONTRATACAO.find((o) => o.value === v)?.label ?? "—";
+}
+
+export function origemContratacaoDeRow(r: RhFuncionario): RhOrigemContratacao | "" {
+  const v = r.origem_contratacao;
+  return ORIGENS_CONTRATACAO.some((o) => o.value === v) ? (v as RhOrigemContratacao) : "";
+}
 
 export const PRESTADOR_STATUS_FILTRO_EXTRA = [
   { value: "ativo", label: "Ativos" },
@@ -158,6 +177,8 @@ export type SliceContratacao = {
   escala: string;
   data_funcao: string;
   email_spin: string;
+  origem_contratacao: RhOrigemContratacao | "";
+  quem_indicou: string;
 };
 
 export function sliceContratacaoDeForm(f: FormState): SliceContratacao {
@@ -176,6 +197,8 @@ export function sliceContratacaoDeForm(f: FormState): SliceContratacao {
     escala: f.escala.trim(),
     data_funcao: (f.data_funcao ?? "").trim().slice(0, 10),
     email_spin: (f.email_spin ?? "").trim(),
+    origem_contratacao: f.origem_contratacao,
+    quem_indicou: (f.quem_indicou ?? "").trim(),
   };
 }
 
@@ -199,6 +222,8 @@ export function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
     escala: r.escala.trim(),
     data_funcao: df,
     email_spin: (r.email_spin ?? "").trim(),
+    origem_contratacao: origemContratacaoDeRow(r),
+    quem_indicou: (r.quem_indicou ?? "").trim(),
   };
 }
 
@@ -281,6 +306,20 @@ export function diffContratacaoSlices(
       campo: "E-mail Spin",
       antes: antes.email_spin.trim() ? antes.email_spin : "—",
       depois: depois.email_spin.trim() ? depois.email_spin : "—",
+    });
+  }
+  if (antes.origem_contratacao !== depois.origem_contratacao) {
+    out.push({
+      campo: "Origem",
+      antes: labelOrigemContratacao(antes.origem_contratacao),
+      depois: labelOrigemContratacao(depois.origem_contratacao),
+    });
+  }
+  if (antes.quem_indicou !== depois.quem_indicou) {
+    out.push({
+      campo: "Quem indicou?",
+      antes: antes.quem_indicou.trim() || "—",
+      depois: depois.quem_indicou.trim() || "—",
     });
   }
   return out;
@@ -383,6 +422,8 @@ export type FormState = {
   salarioCentavos: string;
   data_inicio: string;
   data_funcao: string;
+  origem_contratacao: RhOrigemContratacao | "";
+  quem_indicou: string;
   escala: string;
   tipo_contrato: RhFuncionarioTipoContrato;
   nome_empresa: string;
@@ -499,6 +540,8 @@ export function estadoVazioForm(): FormState {
     salarioCentavos: "",
     data_inicio: "",
     data_funcao: "",
+    origem_contratacao: "",
+    quem_indicou: "",
     escala: "",
     tipo_contrato: "PJ",
     nome_empresa: "",
@@ -552,6 +595,8 @@ export function formDeFuncionario(f: RhFuncionario): FormState {
     salarioCentavos: cents,
     data_inicio: f.data_inicio,
     data_funcao: f.data_funcao ? String(f.data_funcao).slice(0, 10) : "",
+    origem_contratacao: origemContratacaoDeRow(f),
+    quem_indicou: (f.quem_indicou ?? "").trim(),
     escala: f.escala,
     tipo_contrato: f.tipo_contrato,
     nome_empresa: f.nome_empresa,
@@ -699,6 +744,9 @@ export function buildRhFuncionarioPayloadFromState(
     salario: sal,
     data_inicio: form.data_inicio,
     data_funcao: form.data_funcao.trim() ? form.data_funcao.trim().slice(0, 10) : null,
+    origem_contratacao: form.origem_contratacao || null,
+    quem_indicou:
+      form.origem_contratacao === "indicacao" && form.quem_indicou.trim() ? form.quem_indicou.trim() : null,
     escala: form.escala.trim(),
     tipo_contrato: form.tipo_contrato,
     nome_empresa: nomeEmpresa,

@@ -34,6 +34,9 @@ export interface RhFuncionarioHistorico {
 
 export type RhFuncionarioTipoContrato = "CLT" | "PJ" | "Estagio" | "Temporario";
 
+/** Canal de origem da contratação (Gestão de Prestadores — Dados de contratação). */
+export type RhOrigemContratacao = "linkedin" | "indicacao" | "site_vagas" | "instagram" | "site_spin";
+
 /** Contratação: Estúdio (hora + escala + turno) vs Escritório (mensal + escala). */
 export type RhAreaAtuacao = "estudio" | "escritorio";
 
@@ -77,6 +80,10 @@ export interface RhFuncionario {
   data_inicio: string;
   /** Data da função/cargo (YYYY-MM-DD). */
   data_funcao?: string | null;
+  /** Canal de origem da contratação (opcional). */
+  origem_contratacao?: RhOrigemContratacao | null;
+  /** Nome de quem indicou; só quando `origem_contratacao` = indicacao. */
+  quem_indicou?: string | null;
   data_desligamento: string | null;
   /** Nota interna de RH (texto livre). Opcional até migração aplicada no banco. */
   observacao_rh?: string | null;
