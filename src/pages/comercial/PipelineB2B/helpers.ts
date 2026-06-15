@@ -9,10 +9,11 @@ import {
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
+  type ProdutoTipo,
   TAB_TABLE_CONFIG,
   FOLHA_BY_PIPELINE,
 } from "./constants";
-import type { ComercialContato, PipelineMarcaRow, ProdutoTipo } from "./types";
+import type { ComercialContato, PipelineMarcaRow } from "./types";
 
 export function fmtDataPipeline(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -169,37 +170,34 @@ export function sortMarcas(
   col: TableCol,
   dir: SortDir,
 ): PipelineMarcaRow[] {
-  const mul = dir === "asc" ? 1 : -1;
   const sorted = [...rows];
   sorted.sort((a, b) => {
     switch (col) {
       case "razao":
-        return mul * compareLocaleTexto(a.empresa.razao_social, b.empresa.razao_social);
+        return compareLocaleTexto(a.empresa.razao_social, b.empresa.razao_social, dir);
       case "marca":
-        return mul * compareLocaleTexto(a.nome, b.nome);
+        return compareLocaleTexto(a.nome, b.nome, dir);
       case "contato":
-        return mul * compareLocaleTexto(contatoPrincipalNome(a), contatoPrincipalNome(b));
+        return compareLocaleTexto(contatoPrincipalNome(a), contatoPrincipalNome(b), dir);
       case "comercial":
-        return mul * compareLocaleTexto(a.comercial_nome ?? "", b.comercial_nome ?? "");
+        return compareLocaleTexto(a.comercial_nome ?? "", b.comercial_nome ?? "", dir);
       case "status":
-        return (
-          mul *
-          compareLocaleTexto(
-            STATUS_PIPELINE_LABEL[a.status_pipeline],
-            STATUS_PIPELINE_LABEL[b.status_pipeline],
-          )
+        return compareLocaleTexto(
+          STATUS_PIPELINE_LABEL[a.status_pipeline],
+          STATUS_PIPELINE_LABEL[b.status_pipeline],
+          dir,
         );
       case "dedicada":
-        return mul * compareLocaleTexto(produtoDisplay(a, "mesa_dedicada"), produtoDisplay(b, "mesa_dedicada"));
+        return compareLocaleTexto(produtoDisplay(a, "mesa_dedicada"), produtoDisplay(b, "mesa_dedicada"), dir);
       case "network":
-        return mul * compareLocaleTexto(produtoDisplay(a, "mesa_network"), produtoDisplay(b, "mesa_network"));
+        return compareLocaleTexto(produtoDisplay(a, "mesa_network"), produtoDisplay(b, "mesa_network"), dir);
       case "ultima": {
         const da = a.ultima_comunicacao ?? "";
         const db = b.ultima_comunicacao ?? "";
         if (da === db) return 0;
         if (!da) return 1;
         if (!db) return -1;
-        return mul * da.localeCompare(db);
+        return dir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
       }
       default:
         return 0;

@@ -145,9 +145,19 @@ export function ModalContato({
       <ModalBase onClose={onClose} maxWidth={560} zIndex={1000}>
         <ModalHeader
           title={mode === "add" ? "Adicionar Contato" : contato?.nome ?? "Contato"}
-          subtitle={`${marca.nome} · ${marca.empresa.razao_social}`}
           onClose={onClose}
         />
+        <p
+          style={{
+            margin: "0 0 16px",
+            fontSize: 13,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            lineHeight: 1.45,
+          }}
+        >
+          {marca.nome} · {marca.empresa.razao_social}
+        </p>
         {readonly && mode === "edit" ? (
           <p style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
             Campos bloqueados — perfil sem permissão de Editar.

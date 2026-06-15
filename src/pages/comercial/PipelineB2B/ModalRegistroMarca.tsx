@@ -113,11 +113,18 @@ export function ModalRegistroMarca({
 
   return (
     <ModalBase onClose={onClose} maxWidth={640} zIndex={1000}>
-      <ModalHeader
-        title={`Registro — ${marca.nome}`}
-        subtitle={`${marca.empresa.razao_social} · CNPJ ${marca.empresa.cnpj}`}
-        onClose={onClose}
-      />
+      <ModalHeader title={`Registro — ${marca.nome}`} onClose={onClose} />
+      <p
+        style={{
+          margin: "0 0 20px",
+          fontSize: 13,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          lineHeight: 1.45,
+        }}
+      >
+        {marca.empresa.razao_social} · CNPJ {marca.empresa.cnpj}
+      </p>
       <div
         role="tablist"
         aria-label="Abas do registro da marca"

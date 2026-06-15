@@ -24,9 +24,9 @@ import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
+  SectionTitle,
   type SortDir,
 } from "../../../components/dashboard";
-import { SectionTitle } from "../../../components/dashboard/SectionTitle";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -180,7 +180,7 @@ export default function PipelineB2B() {
     marcaId: string,
     campo: string,
     valorAnterior: string | null,
-    valorNovo: string,
+    valorNovo: string | null,
   ) {
     await supabase.from("comercial_marca_historico").insert({
       marca_id: marcaId,

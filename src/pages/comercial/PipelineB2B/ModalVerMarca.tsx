@@ -65,11 +65,18 @@ export function ModalVerMarca({
 
   return (
     <ModalBase onClose={onClose} maxWidth={720} zIndex={1000}>
-      <ModalHeader
-        title={marca.nome}
-        subtitle={`${marca.empresa.razao_social} · CNPJ ${marca.empresa.cnpj}`}
-        onClose={onClose}
-      />
+      <ModalHeader title={marca.nome} onClose={onClose} />
+      <p
+        style={{
+          margin: "0 0 20px",
+          fontSize: 13,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          lineHeight: 1.45,
+        }}
+      >
+        {marca.empresa.razao_social} · CNPJ {marca.empresa.cnpj}
+      </p>
       <div
         role="tablist"
         aria-label="Abas de visualização da marca"
