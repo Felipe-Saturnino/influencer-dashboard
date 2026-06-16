@@ -55,13 +55,46 @@ export const PIPELINE_COLOR: Record<StatusPipeline, string> = {
   fechado: "#22c55e",
 };
 
-export const PRODUTO_COLOR = "#a78bfa";
+/** Progressão visual Dedicada / Network — pior → melhor (funil comercial, não semântica KPI). */
+export const STATUS_PRODUTO_COLOR: Record<StatusProduto, string> = {
+  sem_interesse: "#e84025",
+  sem_proposta: "#6b7280",
+  em_negociacao: "#f59e0b",
+  contrato_enviado: "#1e36f8",
+  contrato_assinado: "#a78bfa",
+  ativo: "#22c55e",
+};
+
+export const STATUS_PRODUTO_ORDEM: StatusProduto[] = [
+  "sem_interesse",
+  "sem_proposta",
+  "em_negociacao",
+  "contrato_enviado",
+  "contrato_assinado",
+  "ativo",
+];
+
+export const STATUS_PRODUTO_LABEL: Record<StatusProduto, string> = {
+  sem_proposta: "Sem proposta",
+  em_negociacao: "Em negociação",
+  sem_interesse: "Sem interesse",
+  contrato_enviado: "Contrato enviado",
+  contrato_assinado: "Contrato Assinado",
+  ativo: "Ativo",
+};
 
 export const STATUS_PIPELINE_LABEL: Record<StatusPipeline, string> = {
   disponiveis: "Disponíveis",
   conexao: "Conexão",
   negociacao: "Negociação",
   fechado: "Fechado",
+};
+
+export const FOLHA_BY_PIPELINE: Record<StatusPipeline, StatusFolha[]> = {
+  disponiveis: ["sem_contato", "site_ativo", "site_offline"],
+  conexao: ["conexao_iniciada", "conexao_realizada"],
+  negociacao: ["neg_enviar", "neg_interessado", "neg_sem"],
+  fechado: ["fech_enviado", "fech_assinado", "fech_ativo"],
 };
 
 export const STATUS_FOLHA_LABEL: Record<StatusFolha, string> = {
@@ -76,22 +109,6 @@ export const STATUS_FOLHA_LABEL: Record<StatusFolha, string> = {
   fech_enviado: "Contrato enviado",
   fech_assinado: "Assinado",
   fech_ativo: "Ativo",
-};
-
-export const STATUS_PRODUTO_LABEL: Record<StatusProduto, string> = {
-  sem_proposta: "Sem proposta",
-  em_negociacao: "Em negociação",
-  sem_interesse: "Sem interesse",
-  contrato_enviado: "Contrato enviado",
-  contrato_assinado: "Contrato Assinado",
-  ativo: "Ativo",
-};
-
-export const FOLHA_BY_PIPELINE: Record<StatusPipeline, StatusFolha[]> = {
-  disponiveis: ["sem_contato", "site_ativo", "site_offline"],
-  conexao: ["conexao_iniciada", "conexao_realizada"],
-  negociacao: ["neg_enviar", "neg_interessado", "neg_sem"],
-  fechado: ["fech_enviado", "fech_assinado", "fech_ativo"],
 };
 
 /** Linhas do consolidado hierárquico (aba Todos). */
@@ -123,14 +140,14 @@ export const KPI_LINES: Record<Exclude<PipelineTab, "todos">, { key: StatusFolha
   conexao: [
     { key: "conexao_iniciada", label: "Iniciada" },
     { key: "conexao_realizada", label: "Realizada" },
+    { key: "neg_sem", label: "Sem interesse" },
   ],
   negociacao: [
     { key: "neg_enviar", label: "Enviar contrato" },
     { key: "neg_interessado", label: "Interessado" },
-    { key: "neg_sem", label: "Sem interesse" },
+    { key: "fech_enviado", label: "Contrato enviado" },
   ],
   fechado: [
-    { key: "fech_enviado", label: "Contrato enviado" },
     { key: "fech_assinado", label: "Assinado" },
     { key: "fech_ativo", label: "Ativo" },
   ],
@@ -218,8 +235,20 @@ export function badgePipelineStyle(cor: string): CSSProperties {
   };
 }
 
-export function badgeProdutoStyle(): CSSProperties {
-  return badgePipelineStyle(PRODUTO_COLOR);
+/** Badge Dedicada/Network — tinta suave (fundo, borda e texto em color-mix, não cor sólida). */
+export function badgeProdutoStyle(status: StatusProduto): CSSProperties {
+  const cor = STATUS_PRODUTO_COLOR[status];
+  return {
+    display: "inline-flex",
+    padding: "3px 9px",
+    borderRadius: 20,
+    fontSize: 10,
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    background: `color-mix(in srgb, ${cor} 10%, transparent)`,
+    color: `color-mix(in srgb, ${cor} 72%, #6b7280)`,
+    border: `1px solid color-mix(in srgb, ${cor} 18%, transparent)`,
+  };
 }
 
 export const HISTORICO_CAMPO_LABEL: Record<string, string> = {

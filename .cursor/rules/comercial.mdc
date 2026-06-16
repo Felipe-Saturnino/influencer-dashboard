@@ -51,16 +51,16 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
   - **Negociação:** Sem Interesse = `sem_interesse` em ≥1 produto; Interessado = valor em ≥1 (exceto sem interesse).
   - **Fechado:** Ativo / Assinado por produto; demais só no total da coluna.
 - **Disponíveis:** Site Ativo / Site Offline = `status_dominio`; Sem contato = zero contatos.
-- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos.
-- **Negociação:** Sem interesse → `sem_interesse`; Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido.
-- **Fechado:** Contrato enviado / Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado > Enviado).
+- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos; **Sem interesse** = `sem_interesse` em ≥1 produto (status Conexão).
+- **Negociação:** Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido (exceto sem interesse); **Contrato enviado** = `contrato_enviado` em ≥1 produto (status Negociação).
+- **Fechado:** Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado).
 - KPIs clicáveis (`aria-pressed`) filtram a tabela; segundo clique limpa.
 
 ### Tabela
 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, Última Comunicação — **sem** sort em Marca, Contato, Comercial, Status.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
-- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
+- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → … → Ativo (hex em `constants.ts`).
 - **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
 - **Comercial — gestores:** nomes em `PIPELINE_COMERCIAL_NOMES` ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.

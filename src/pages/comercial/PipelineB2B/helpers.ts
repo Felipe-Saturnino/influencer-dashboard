@@ -211,16 +211,23 @@ export function rowMatchesConsolidadoFolha(
     case "conexao_iniciada":
       return row.status_pipeline === "conexao" && produtosAmbosVazios(row);
     case "conexao_realizada":
-      return row.status_pipeline === "conexao" && algumProdutoComValor(row);
+      if (row.status_pipeline !== "conexao") return false;
+      if (context === "kpi" && algumProdutoStatus(row, ["sem_interesse"])) return false;
+      return algumProdutoComValor(row);
     case "neg_sem":
-      return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+      if (context === "hierarchy") {
+        return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+      }
+      return row.status_pipeline === "conexao" && algumProdutoStatus(row, ["sem_interesse"]);
     case "neg_enviar":
       if (row.status_pipeline !== "negociacao") return false;
       if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       return algumProdutoStatus(row, ["sem_proposta"]) || produtosAmbosVazios(row);
     case "neg_interessado":
       if (row.status_pipeline !== "negociacao") return false;
       if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       if (context === "hierarchy") {
         return algumProdutoComValor(row);
       }
@@ -235,7 +242,7 @@ export function rowMatchesConsolidadoFolha(
       );
     case "fech_enviado":
       return (
-        row.status_pipeline === "fechado" &&
+        row.status_pipeline === "negociacao" &&
         !algumProdutoStatus(row, ["ativo"]) &&
         !algumProdutoStatus(row, ["contrato_assinado"]) &&
         algumProdutoStatus(row, ["contrato_enviado"])

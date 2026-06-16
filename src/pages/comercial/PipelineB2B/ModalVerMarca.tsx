@@ -440,14 +440,14 @@ export function ModalVerMarca({
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
                         {ded ? (
-                          <span style={badgeProdutoStyle()}>{STATUS_PRODUTO_LABEL[ded]}</span>
+                          <span style={badgeProdutoStyle(ded)}>{STATUS_PRODUTO_LABEL[ded]}</span>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
                         {net ? (
-                          <span style={badgeProdutoStyle()}>{STATUS_PRODUTO_LABEL[net]}</span>
+                          <span style={badgeProdutoStyle(net)}>{STATUS_PRODUTO_LABEL[net]}</span>
                         ) : (
                           "—"
                         )}

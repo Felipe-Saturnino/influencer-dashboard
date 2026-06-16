@@ -16,6 +16,7 @@ import {
   SORTABLE_COLS,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
+  STATUS_PRODUTO_ORDEM,
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
@@ -32,7 +33,6 @@ import {
   pipelineComercialIsMissingOptionValue,
   pipelineComercialPopoverLabel,
   pipelineComercialPopoverUserId,
-  produtoDisplay,
   produtoStatus,
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
@@ -64,14 +64,7 @@ const cellEditable: CSSProperties = {
   width: "100%",
 };
 
-const PRODUTO_OPTS: StatusProduto[] = [
-  "sem_proposta",
-  "em_negociacao",
-  "sem_interesse",
-  "contrato_enviado",
-  "contrato_assinado",
-  "ativo",
-];
+const PRODUTO_OPTS = STATUS_PRODUTO_ORDEM;
 
 const STATUS_OPTS: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
 
@@ -347,13 +340,14 @@ export function PipelineTable({
                         style={canEditar ? cellEditable : undefined}
                         onClick={(e) => openPopover(e, "dedicada", row, "mesa_dedicada")}
                       >
-                        {produtoStatus(row, "mesa_dedicada") ? (
-                          <span style={badgeProdutoStyle()}>
-                            {produtoDisplay(row, "mesa_dedicada")}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                        {(() => {
+                          const dedSt = produtoStatus(row, "mesa_dedicada");
+                          return dedSt ? (
+                            <span style={badgeProdutoStyle(dedSt)}>{STATUS_PRODUTO_LABEL[dedSt]}</span>
+                          ) : (
+                            "—"
+                          );
+                        })()}
                       </div>
                     </td>
                   ) : null}
@@ -365,11 +359,14 @@ export function PipelineTable({
                         style={canEditar ? cellEditable : undefined}
                         onClick={(e) => openPopover(e, "network", row, "mesa_network")}
                       >
-                        {produtoStatus(row, "mesa_network") ? (
-                          <span style={badgeProdutoStyle()}>{produtoDisplay(row, "mesa_network")}</span>
-                        ) : (
-                          "—"
-                        )}
+                        {(() => {
+                          const netSt = produtoStatus(row, "mesa_network");
+                          return netSt ? (
+                            <span style={badgeProdutoStyle(netSt)}>{STATUS_PRODUTO_LABEL[netSt]}</span>
+                          ) : (
+                            "—"
+                          );
+                        })()}
                       </div>
                     </td>
                   ) : null}

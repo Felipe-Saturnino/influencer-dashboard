@@ -850,7 +850,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo).",
       },
       {
         subtitulo: "Comunicar",
