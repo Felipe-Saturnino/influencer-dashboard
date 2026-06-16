@@ -344,9 +344,30 @@ export function defaultFolhaForPipeline(pipeline: StatusPipeline): StatusFolha {
   return FOLHA_BY_PIPELINE[pipeline][0];
 }
 
-export type RazaoMerge = { row: PipelineMarcaRow; rowSpan: number; showRazao: boolean };
+export type RazaoMerge = {
+  row: PipelineMarcaRow;
+  rowSpan: number;
+  showRazao: boolean;
+  /** Índice de zebra por CNPJ (todas as marcas da mesma razão compartilham). */
+  razaoStripeIndex: number;
+};
+
+/** Ordem de primeira aparição na lista exibida — define intercalação por razão social. */
+export function buildCnpjStripeIndex(rows: PipelineMarcaRow[]): Map<string, number> {
+  const map = new Map<string, number>();
+  let idx = 0;
+  for (const r of rows) {
+    const cnpj = r.empresa.cnpj;
+    if (!map.has(cnpj)) {
+      map.set(cnpj, idx);
+      idx += 1;
+    }
+  }
+  return map;
+}
 
 export function buildRazaoMerge(rows: PipelineMarcaRow[]): RazaoMerge[] {
+  const stripeByCnpj = buildCnpjStripeIndex(rows);
   const out: RazaoMerge[] = [];
   let i = 0;
   while (i < rows.length) {
@@ -354,8 +375,9 @@ export function buildRazaoMerge(rows: PipelineMarcaRow[]): RazaoMerge[] {
     let j = i;
     while (j < rows.length && rows[j].empresa.cnpj === cnpj) j += 1;
     const span = j - i;
+    const stripe = stripeByCnpj.get(cnpj) ?? 0;
     for (let k = i; k < j; k += 1) {
-      out.push({ row: rows[k], rowSpan: span, showRazao: k === i });
+      out.push({ row: rows[k], rowSpan: span, showRazao: k === i, razaoStripeIndex: stripe });
     }
     i = j;
   }

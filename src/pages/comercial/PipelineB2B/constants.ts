@@ -179,16 +179,7 @@ export const COL_LABEL: Record<TableCol, string> = {
   acao: "Ação",
 };
 
-export const SORTABLE_COLS: TableCol[] = [
-  "razao",
-  "marca",
-  "contato",
-  "comercial",
-  "status",
-  "dedicada",
-  "network",
-  "ultima",
-];
+export const SORTABLE_COLS: TableCol[] = ["razao", "dedicada", "network", "ultima"];
 
 export const COMERCIAL_FILTRO_TODOS = "todos";
 export const COMERCIAL_FILTRO_NENHUM = "nenhum";

@@ -174,8 +174,8 @@ export function PipelineTable({
             </tr>
           </thead>
           <tbody>
-            {merged.map(({ row, rowSpan, showRazao }, i) => {
-              const hoverBg = dataTable.zebraRow(i);
+            {merged.map(({ row, rowSpan, showRazao, razaoStripeIndex }) => {
+              const hoverBg = dataTable.zebraRow(razaoStripeIndex);
               return (
                 <tr
                   key={row.id}
@@ -198,6 +198,7 @@ export function PipelineTable({
                         maxWidth: 150,
                         verticalAlign: "middle",
                         borderRight: `1px solid color-mix(in srgb, ${t.cardBorder} 80%, transparent)`,
+                        background: hoverBg,
                       }}
                       title={`${row.empresa.razao_social} — CNPJ ${row.empresa.cnpj}`}
                     >
