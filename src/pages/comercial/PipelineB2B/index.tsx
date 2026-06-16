@@ -35,7 +35,6 @@ import { ConsolidadoPipeline } from "./ConsolidadoPipeline";
 import { PipelineTable } from "./PipelineTable";
 import { ModalRegistroMarca } from "./ModalRegistroMarca";
 import { ModalVerMarca } from "./ModalVerMarca";
-import { ModalEditarDominio } from "./ModalEditarDominio";
 import { ModalContato } from "./ModalContato";
 import {
   COMERCIAL_FILTRO_ARIA,
@@ -129,7 +128,6 @@ export default function PipelineB2B() {
 
   const [registroMarca, setRegistroMarca] = useState<PipelineMarcaRow | null>(null);
   const [verMarca, setVerMarca] = useState<PipelineMarcaRow | null>(null);
-  const [editDominioMarca, setEditDominioMarca] = useState<PipelineMarcaRow | null>(null);
   const [contatoModal, setContatoModal] = useState<
     | { mode: "edit"; marca: PipelineMarcaRow; contato: ComercialContato }
     | { mode: "add"; marca: PipelineMarcaRow }
@@ -259,6 +257,15 @@ export default function PipelineB2B() {
     }
 
     void loadData();
+    setVerMarca((prev) =>
+      prev?.id === marcaId
+        ? {
+            ...prev,
+            dominio: novoDominio,
+            status_dominio: patch.status_dominio ?? prev.status_dominio,
+          }
+        : prev,
+    );
     return true;
   }
 
@@ -450,7 +457,6 @@ export default function PipelineB2B() {
             canEditar={perm.canEditarOk}
             onRegistro={setRegistroMarca}
             onVer={setVerMarca}
-            onEditDominio={setEditDominioMarca}
             onContato={(marca, contato) => setContatoModal({ mode: "edit", marca, contato })}
             onAddContato={(marca) => setContatoModal({ mode: "add", marca })}
             onUpdateComercial={updateComercial}
@@ -477,14 +483,8 @@ export default function PipelineB2B() {
           allMarcas={rows}
           onClose={() => setVerMarca(null)}
           onOpenMarca={(m) => setVerMarca(m)}
-        />
-      ) : null}
-
-      {editDominioMarca ? (
-        <ModalEditarDominio
-          marca={editDominioMarca}
-          onClose={() => setEditDominioMarca(null)}
-          onSaved={updateDominio}
+          canEditar={perm.canEditarOk}
+          onSavedDominio={updateDominio}
         />
       ) : null}
 

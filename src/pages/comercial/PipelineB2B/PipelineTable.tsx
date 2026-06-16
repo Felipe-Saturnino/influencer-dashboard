@@ -84,7 +84,6 @@ export function PipelineTable({
   canEditar,
   onRegistro,
   onVer,
-  onEditDominio,
   onContato,
   onAddContato,
   onUpdateComercial,
@@ -100,7 +99,6 @@ export function PipelineTable({
   canEditar: boolean;
   onRegistro: (row: PipelineMarcaRow) => void;
   onVer: (row: PipelineMarcaRow) => void;
-  onEditDominio: (row: PipelineMarcaRow) => void;
   onContato: (row: PipelineMarcaRow, contato: ComercialContato) => void;
   onAddContato: (row: PipelineMarcaRow) => void;
   onUpdateComercial: (row: PipelineMarcaRow, userId: string | null) => void;
@@ -220,9 +218,7 @@ export function PipelineTable({
                     <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
                       <button
                         type="button"
-                        onClick={() => (canEditar ? onEditDominio(row) : onVer(row))}
-                        title={canEditar ? `Editar domínio de ${row.nome}` : `Ver ${row.nome}`}
-                        aria-label={canEditar ? `Editar domínio de ${row.nome}` : `Ver ${row.nome}`}
+                        onClick={() => onVer(row)}
                         style={{
                           background: "none",
                           border: "none",

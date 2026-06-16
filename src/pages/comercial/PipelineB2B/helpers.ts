@@ -93,7 +93,7 @@ export function pipelineComercialExibeSiteOffline(
   return row.status_dominio === "inativo" && !row.comercial_user_id;
 }
 
-/** Rótulo da coluna — Site Offline (automático), Marcus Morin, Fred Ring ou «—». */
+/** Rótulo da coluna — Site Offline (automático), comerciais canónicos ou «—». */
 export function pipelineComercialDisplayNome(
   row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome" | "status_dominio">,
   comerciais: ComercialOpcao[],

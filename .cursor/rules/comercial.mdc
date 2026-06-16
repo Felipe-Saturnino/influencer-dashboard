@@ -37,7 +37,7 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 ### Filtros (bloco nível 2)
 
 - **Busca:** `BarraPesquisaPagina` — CNPJ, razão social ou marca (`...` ASCII no placeholder).
-- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais** (default), opções **Nenhum**, **Marcus Morin** e **Fred Ring** (`PIPELINE_COMERCIAL_NOMES` em `constants.ts`; perfis resolvidos por nome). Coluna e popover inline: só esses nomes, **—** ou **Site Offline** (domínio inativo sem comercial). Override manual de comercial em Site Offline permitido com **Editar**.
+- **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais** (default), opções **Nenhum** + nomes em `PIPELINE_COMERCIAL_NOMES` (`constants.ts`: Marcus Morin, Fred Ring, Nathan Yoles, Simcha Neumark; perfis resolvidos por nome). Coluna e popover inline: só esses nomes, **—** ou **Site Offline** (domínio inativo sem comercial). Override manual de comercial em Site Offline permitido com **Editar**.
 - **Abas:** `FiltroBarTabButton` + `useRouteTab` — `todos | disponiveis | conexao | negociacao | fechado` (URLs em `appRoutes.ts`).
 - **Alinhamento:** centralizado (`justifyContent: center`, `width: 100%`) — Global § Filtros.
 
@@ -61,9 +61,9 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
-- **Domínio:** clique no nome da **Marca** (com permissão **Editar**) abre modal para corrigir URL; ao salvar, `status_dominio` → `inativo` até a próxima validação HTTP.
-- **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir Marcus Morin, Fred Ring ou Nenhum (override manual).
-- **Comercial — gestores:** Marcus Morin, Fred Ring ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.
+- **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; com permissão **Editar**, o campo **Domínio** na aba Dados da Marca é editável (Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
+- **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
+- **Comercial — gestores:** nomes em `PIPELINE_COMERCIAL_NOMES` ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.
 - **Ação:** só ícone — **Registro** (`ScrollText` → modal anotações/histórico) e **Ver** (`Eye` → modal dados/licença/contatos). Sem modal de edição de marca.
 - **Contatos:** nome clicável → modal editar; botão `+` → adicionar contato (`BtnExcluirComTexto` + `ModalConfirmExcluirPadrao` na exclusão).
 - Toolbar da tabela: **Comunicar** (fluxo futuro — modal e automações fora do MVP).
@@ -73,7 +73,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 | Modal | Abas | Edição |
 |-------|------|--------|
 | Registro | Anotações, Histórico | Anotações exige Editar |
-| Ver | Dados da Marca; Licença Compartilhada (se >1 marca/CNPJ); Dados dos Contatos (se houver) | Somente leitura |
+| Ver | Dados da Marca; Licença Compartilhada (se >1 marca/CNPJ); Dados dos Contatos (se houver) | Domínio editável na aba Dados da Marca com **Editar**; demais campos somente leitura |
 | Contato / Adicionar Contato | — | Editar; X no editar salva ao fechar via Salvar |
 
 ### Dados (Supabase)

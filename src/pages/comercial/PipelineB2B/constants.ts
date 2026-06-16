@@ -197,7 +197,12 @@ export const COMERCIAL_FILTRO_TODOS_LABEL = "Todos Comerciais";
 export const COMERCIAL_FILTRO_NENHUM_LABEL = "Nenhum";
 
 /** Comerciais atribuíveis no pipeline — ordem fixa (filtro e popover). */
-export const PIPELINE_COMERCIAL_NOMES = ["Marcus Morin", "Fred Ring"] as const;
+export const PIPELINE_COMERCIAL_NOMES = [
+  "Marcus Morin",
+  "Fred Ring",
+  "Nathan Yoles",
+  "Simcha Neumark",
+] as const;
 
 /** Coluna Comercial automática quando status_dominio = inativo — não entra no filtro. */
 export const PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL = "Site Offline";
