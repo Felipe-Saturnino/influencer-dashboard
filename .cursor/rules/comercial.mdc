@@ -61,7 +61,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`.
-- **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; com permissão **Editar**, o campo **Domínio** na aba Dados da Marca é editável (Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
+- **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
 - **Comercial — gestores:** nomes em `PIPELINE_COMERCIAL_NOMES` ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.
 - **Ação:** só ícone — **Registro** (`ScrollText` → modal anotações/histórico) e **Ver** (`Eye` → modal dados/licença/contatos). Sem modal de edição de marca.
@@ -73,7 +73,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 | Modal | Abas | Edição |
 |-------|------|--------|
 | Registro | Anotações, Histórico | Anotações exige Editar |
-| Ver | Dados da Marca; Licença Compartilhada (se >1 marca/CNPJ); Dados dos Contatos (se houver) | Domínio editável na aba Dados da Marca com **Editar**; demais campos somente leitura |
+| Ver | Dados da Marca; Licença Compartilhada (se >1 marca/CNPJ); Dados dos Contatos (se houver) | Domínio = link + **Pencil** (modo edição) com **Editar**; demais campos somente leitura |
 | Contato / Adicionar Contato | — | Editar; X no editar salva ao fechar via Salvar |
 
 ### Dados (Supabase)

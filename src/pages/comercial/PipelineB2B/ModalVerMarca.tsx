@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Globe, Loader2, Shield, Users } from "lucide-react";
+import { Globe, Loader2, Pencil, Shield, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -48,11 +48,13 @@ export function ModalVerMarca({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [dominio, setDominio] = useState(marca.dominio ?? "");
+  const [editandoDominio, setEditandoDominio] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     setDominio(marca.dominio ?? "");
+    setEditandoDominio(false);
     setErr(null);
   }, [marca.id, marca.dominio]);
   const licencaRows = useMemo(
@@ -109,8 +111,22 @@ export function ModalVerMarca({
     setSalvando(false);
     if (!ok) {
       setErr("Não foi possível salvar o domínio. Se o problema persistir, entre em contato com o suporte.");
+      return;
     }
+    setEditandoDominio(false);
   }
+
+  function cancelarEdicaoDominio() {
+    setDominio(marca.dominio ?? "");
+    setEditandoDominio(false);
+    setErr(null);
+  }
+
+  const dominioHref = marca.dominio
+    ? marca.dominio.startsWith("http")
+      ? marca.dominio
+      : `https://${marca.dominio}`
+    : null;
 
   const dominioParsed = parseDominioMarcaInput(dominio);
   const dominioAtualNormalizado = marca.dominio
@@ -188,7 +204,7 @@ export function ModalVerMarca({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 16 }}>
             <div>
               <div style={fieldLabel}>Domínio</div>
-              {canEditar ? (
+              {editandoDominio && canEditar ? (
                 <input
                   type="url"
                   inputMode="url"
@@ -197,18 +213,63 @@ export function ModalVerMarca({
                   placeholder="https://marca.bet.br"
                   aria-label="Domínio da marca"
                   style={inputStyle}
+                  autoFocus
                 />
-              ) : marca.dominio ? (
-                <a
-                  href={marca.dominio.startsWith("http") ? marca.dominio : `https://${marca.dominio}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...fieldValue, color: "var(--brand-accent, #1e36f8)", fontWeight: 700 }}
-                >
-                  {marca.dominio}
-                </a>
               ) : (
-                <div style={fieldValue}>—</div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {marca.dominio && dominioHref ? (
+                    <a
+                      href={dominioHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        ...fieldValue,
+                        color: "var(--brand-accent, #1e36f8)",
+                        fontWeight: 700,
+                        wordBreak: "break-all",
+                      }}
+                      aria-label={`Abrir ${marca.dominio} em nova aba`}
+                    >
+                      {marca.dominio}
+                    </a>
+                  ) : (
+                    <div style={fieldValue}>—</div>
+                  )}
+                  {canEditar ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDominio(marca.dominio ?? "");
+                        setEditandoDominio(true);
+                        setErr(null);
+                      }}
+                      aria-label="Editar domínio"
+                      title="Editar domínio"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 32,
+                        height: 32,
+                        flexShrink: 0,
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Pencil size={14} aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
               )}
             </div>
             <div>
@@ -245,7 +306,7 @@ export function ModalVerMarca({
               <div style={fieldValue}>{marca.empresa.requerimento_ano ?? "—"}</div>
             </div>
           </div>
-          {canEditar ? (
+          {editandoDominio && canEditar ? (
             <>
               <p
                 style={{
@@ -258,7 +319,33 @@ export function ModalVerMarca({
               >
                 Ao alterar o domínio, o status volta para Inativo até a próxima validação automática.
               </p>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  marginTop: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={cancelarEdicaoDominio}
+                  disabled={salvando}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: t.text,
+                    cursor: salvando ? "not-allowed" : "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  Cancelar
+                </button>
                 <button
                   type="button"
                   onClick={() => void salvarDominio()}
