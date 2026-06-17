@@ -20,6 +20,9 @@ export type EstudioSpinRow = {
   nome: string;
   tipo: string;
   ativo: boolean;
+  turno_manha_inicio: string | null;
+  turno_tarde_inicio: string | null;
+  turno_noite_inicio: string | null;
   created_at: string;
   updated_at: string;
   estudios_spin_operadoras: { operadora_slug: string; operadoras: { nome: string } | { nome: string }[] | null }[];
@@ -44,11 +47,17 @@ export function nomeOperadoraJoin(row: MesaSpinCadastroRow): string | undefined 
   return o.nome;
 }
 
-export function nomeEstudioJoin(row: MesaSpinCadastroRow): string | undefined {
+export function nomeEstudioJoin(row: MesaSpinCadastroRow, estudios?: EstudioSpinRow[]): string | undefined {
   const e = row.estudios_spin;
-  if (e == null) return undefined;
-  if (Array.isArray(e)) return e[0]?.nome;
-  return e.nome;
+  if (e != null) {
+    if (Array.isArray(e)) return e[0]?.nome;
+    return e.nome;
+  }
+  const slug = row.estudio_slug?.trim();
+  if (slug && estudios?.length) {
+    return estudios.find((x) => x.slug === slug)?.nome;
+  }
+  return undefined;
 }
 
 export function nomesOperadorasEstudio(row: EstudioSpinRow): string[] {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Building2, LayoutGrid, Shield } from "lucide-react";
-import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -25,6 +24,11 @@ import {
 import { nomeOperadoraJoin, type EstudioSpinRow, type MesaSpinCadastroRow } from "./gestaoMesasUi";
 import { AbaEstudios } from "./AbaEstudios";
 import { AbaMesas } from "./AbaMesas";
+import {
+  fetchEstudiosSpinJunctionRows,
+  fetchEstudiosSpinRows,
+  fetchMesasSpinCadastroRows,
+} from "./gestaoMesasFetch";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
 
@@ -39,41 +43,20 @@ export default function GestaoMesas() {
   const [aba, setAba] = useState<AbaGestaoEstudios>("estudios");
   const [rows, setRows] = useState<MesaSpinCadastroRow[]>([]);
   const [estudios, setEstudios] = useState<EstudioSpinRow[]>([]);
+  const [estudiosJunction, setEstudiosJunction] = useState<EstudioSpinRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [mesasRes, estudiosRes] = await Promise.all([
-      supabase
-        .from("mesas_spin_cadastro")
-        .select(
-          "id, operadora_slug, estudio_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome), estudios_spin(nome)",
-        )
-        .order("nome_mesa", { ascending: true }),
-      supabase
-        .from("estudios_spin")
-        .select(
-          "id, slug, nome, tipo, ativo, created_at, updated_at, estudios_spin_operadoras(operadora_slug, operadoras(nome))",
-        )
-        .eq("ativo", true)
-        .order("nome", { ascending: true }),
+    const [mesas, estudiosAtivos, estudiosTodos] = await Promise.all([
+      fetchMesasSpinCadastroRows(),
+      fetchEstudiosSpinRows(),
+      fetchEstudiosSpinJunctionRows(),
     ]);
-
-    if (mesasRes.error) {
-      console.error(mesasRes.error);
-      setRows([]);
-    } else {
-      setRows((mesasRes.data ?? []) as unknown as MesaSpinCadastroRow[]);
-    }
-
-    if (estudiosRes.error) {
-      console.error(estudiosRes.error);
-      setEstudios([]);
-    } else {
-      setEstudios((estudiosRes.data ?? []) as unknown as EstudioSpinRow[]);
-    }
-
+    setRows(mesas);
+    setEstudios(estudiosAtivos);
+    setEstudiosJunction(estudiosTodos.length > 0 ? estudiosTodos : estudiosAtivos);
     setLoading(false);
   }, []);
 
@@ -247,7 +230,7 @@ export default function GestaoMesas() {
           <AbaMesas
             filtroOperadora={filtroOperadora}
             rows={rows}
-            estudios={estudios}
+            estudios={estudiosJunction}
             loading={loading}
             perm={perm}
             onRecarregar={() => void carregar()}

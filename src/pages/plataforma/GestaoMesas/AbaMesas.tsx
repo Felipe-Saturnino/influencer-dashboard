@@ -87,10 +87,10 @@ export function AbaMesas({
       const nome = (r.nome_mesa ?? "").toLowerCase();
       const idSpin = (r.mesa_identificacao ?? "").toLowerCase();
       const numero = (r.numero_mesa ?? "").toLowerCase();
-      const estudio = (nomeEstudioJoin(r) ?? "").toLowerCase();
+      const estudio = (nomeEstudioJoin(r, estudios) ?? "").toLowerCase();
       return nome.includes(q) || idSpin.includes(q) || numero.includes(q) || estudio.includes(q);
     });
-  }, [rowsPorOperadora, buscaMesa]);
+  }, [rowsPorOperadora, buscaMesa, estudios]);
 
   const contagemPorJogo = useMemo(() => {
     const map = new Map<string, number>(KPI_TIPOS_JOGO_MESAS.map((k) => [k.label, 0]));
@@ -104,7 +104,7 @@ export function AbaMesas({
   const rowsOrdenadas = useMemo(() => {
     const arr = [...rowsFiltradas];
     const { col, dir } = sortMesa;
-    const nomeEst = (r: MesaSpinCadastroRow) => (nomeEstudioJoin(r) ?? "").toLowerCase();
+    const nomeEst = (r: MesaSpinCadastroRow) => (nomeEstudioJoin(r, estudios) ?? "").toLowerCase();
     arr.sort((a, b) => {
       let c = 0;
       switch (col) {
@@ -130,7 +130,7 @@ export function AbaMesas({
       return compareLocaleTexto((a.nome_mesa ?? "").trim(), (b.nome_mesa ?? "").trim(), "asc");
     });
     return arr;
-  }, [rowsFiltradas, sortMesa]);
+  }, [rowsFiltradas, sortMesa, estudios]);
 
   const dataTable = useDataTableBlock();
   const contentBox = getPageContentBoxStyle(dashBrand, t);
@@ -323,7 +323,7 @@ export function AbaMesas({
               <tbody>
                 {rowsOrdenadas.map((r, i) => {
                   const zebra = dataTable.zebraRow(i);
-                  const estudioNome = nomeEstudioJoin(r);
+                  const estudioNome = nomeEstudioJoin(r, estudios);
                   return (
                     <tr
                       key={r.id}

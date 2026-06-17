@@ -864,7 +864,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide), status de operação e horários de turno.",
+          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide) e status de operação.",
       },
       {
         subtitulo: "Lista de operadoras",
@@ -874,7 +874,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar ou editar operadora",
         texto:
-          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Estúdios. Novas operadoras são criadas como inativas.",
+          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): template de Home do operador e lista de mesas cadastradas.\n\nNovas operadoras são criadas como inativas e podem ser ativadas a qualquer momento.",
       },
       {
         subtitulo: "Excluir operadora",
@@ -898,7 +898,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar ou editar estúdio",
         texto:
-          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
+          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Na edição, a aba Operações concentra os horários de início dos turnos da manhã, tarde e noite dos dealers — usados no Calendário e na Gestão de Staff. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",

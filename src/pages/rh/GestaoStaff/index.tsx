@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchTurnosPorOperadoraSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -32,7 +33,6 @@ import {
   opcoesHorarioTurnoStaff,
   textoHorarioTurnoSomenteOperadora,
 } from "../../../lib/rhStaffHorarioTurno";
-import type { Operadora } from "../../../types";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -97,7 +97,7 @@ function dataIsoParaInputDate(iso: string | null | undefined): string {
   return String(iso).trim().slice(0, 10);
 }
 
-type OpTurnosStaffPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+type OpTurnosStaffPick = TurnosDealersPick;
 
 /** Texto da coluna «Horário do Turno» na tabela (com dados de operadora quando necessário). */
 function textoHorarioTurnoStaffEmTabela(row: RhFuncionario, opBySlug: Record<string, OpTurnosStaffPick | null>): string {
@@ -640,22 +640,14 @@ export default function RhGestaoStaffPage() {
       return;
     }
     let cancel = false;
-    void supabase
-      .from("operadoras")
-      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .in("slug", slugsParaFetchHorarioTabela)
-      .then(({ data, error }) => {
-        if (cancel) return;
-        if (error) {
-          setOpTurnosPorSlug({});
-          return;
-        }
-        const m: Record<string, OpTurnosStaffPick | null> = {};
-        (data ?? []).forEach((r: OpTurnosStaffPick & { slug: string }) => {
-          m[r.slug] = r;
-        });
-        setOpTurnosPorSlug(m);
-      });
+    void fetchTurnosPorOperadoraSlugs(slugsParaFetchHorarioTabela).then((turnosMap) => {
+      if (cancel) return;
+      const m: Record<string, OpTurnosStaffPick | null> = {};
+      for (const slug of slugsParaFetchHorarioTabela) {
+        m[slug] = turnosMap.get(slug) ?? null;
+      }
+      setOpTurnosPorSlug(m);
+    });
     return () => {
       cancel = true;
     };
@@ -1225,10 +1217,7 @@ function ModalStaffVer({
   const opSlug = row.staff_operadora_slug?.trim();
   const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
   const turnoEfVer = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
-  const [opTurnosVer, setOpTurnosVer] = useState<Pick<
-    Operadora,
-    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
-  > | null>(null);
+  const [opTurnosVer, setOpTurnosVer] = useState<OpTurnosStaffPick | null>(null);
 
   useEffect(() => {
     if (!opSlug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
@@ -1236,14 +1225,9 @@ function ModalStaffVer({
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .eq("slug", opSlug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setOpTurnosVer((data as Operadora) ?? null);
-      });
+    void fetchTurnosPorOperadoraSlugs([opSlug]).then((map) => {
+      if (!cancelled) setOpTurnosVer(map.get(opSlug) ?? null);
+    });
     return () => {
       cancelled = true;
     };
@@ -1489,10 +1473,7 @@ function ModalStaffEditar({
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
   const [horarioTurno, setHorarioTurno] = useState("");
-  const [opTurnosEdit, setOpTurnosEdit] = useState<Pick<
-    Operadora,
-    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
-  > | null>(null);
+  const [opTurnosEdit, setOpTurnosEdit] = useState<OpTurnosStaffPick | null>(null);
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [liveNoEstudio, setLiveNoEstudio] = useState(() => dataIsoParaInputDate(row.staff_live_no_estudio));
   const [err, setErr] = useState("");
@@ -1555,14 +1536,9 @@ function ModalStaffEditar({
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .eq("slug", slug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setOpTurnosEdit((data as Operadora) ?? null);
-      });
+    void fetchTurnosPorOperadoraSlugs([slug]).then((map) => {
+      if (!cancelled) setOpTurnosEdit(map.get(slug) ?? null);
+    });
     return () => {
       cancelled = true;
     };

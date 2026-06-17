@@ -20,13 +20,13 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchTurnosPorOperadoraSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import {
   MSG_PRESTADOR_PONTO_REDE,
   obterPrestadorPontoEstado,
   registrarPrestadorPonto,
   type PrestadorPontoEstado,
 } from "../../../lib/prestadorPontoApi";
-import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   normalizarEscalaCadastro,
@@ -304,8 +304,8 @@ function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   return nome || null;
 }
 
-type OpTurnosCalPick = Pick<Operadora, "slug" | "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
-type OpTurnosHorarioPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+type OpTurnosCalPick = { slug: string } & TurnosDealersPick;
+type OpTurnosHorarioPick = TurnosDealersPick;
 
 function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
@@ -1026,22 +1026,15 @@ export default function RhCalendarioPage() {
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .in("slug", slugs)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          setMapOpTurnos(new Map());
-          return;
-        }
-        const m = new Map<string, OpTurnosCalPick>();
-        (data ?? []).forEach((row: OpTurnosCalPick) => {
-          if (row.slug) m.set(row.slug, row);
-        });
-        setMapOpTurnos(m);
-      });
+    void fetchTurnosPorOperadoraSlugs(slugs).then((turnosMap) => {
+      if (cancelled) return;
+      const m = new Map<string, OpTurnosCalPick>();
+      for (const slug of slugs) {
+        const turnos = turnosMap.get(slug);
+        if (turnos) m.set(slug, { slug, ...turnos });
+      }
+      setMapOpTurnos(m);
+    });
     return () => {
       cancelled = true;
     };
