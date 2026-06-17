@@ -18,9 +18,10 @@ A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, n
 
 Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
-1. **Este MDC (Global)** — tema, semântica, **linguagem PT-BR**, tabelas, filtros, permissões, estados, formatos.
-2. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
-3. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
+1. **`business.mdc` (Negócio)** — estúdio vs operadora, dedicada vs network, atores, dados Mesas Spin (quando o trabalho envolver domínio ou modelo de dados).
+2. **Este MDC (Global)** — tema, semântica, **linguagem PT-BR**, tabelas, filtros, permissões, estados, formatos.
+3. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
+4. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
 
 Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cron, transacional, disparo manual na plataforma — ex.: Status Técnico, criar usuário, recuperar senha):
 
@@ -32,6 +33,7 @@ Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cr
 
 | MDC | Conteúdo |
 |-----|----------|
+| **Business** | Estúdio vs operadora, dedicada vs network, atores, PLS/relatório, glossário, roadmap Gestão de Estúdios |
 | **Global** | Semântica de dados, **identidade visual por jogo**, **linguagem e copy (PT-BR)**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |

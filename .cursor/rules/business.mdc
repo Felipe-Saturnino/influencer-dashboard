@@ -1,0 +1,200 @@
+---
+description: Conceitos de negócio Spin Gaming — estúdios, operadoras, produtos Live, atores, dados financeiros e glossário. Consultar em dúvidas de domínio antes de modelar schema ou UX.
+alwaysApply: true
+---
+
+# Spin Gaming — Negócio e domínio
+
+**Escopo:** o que a empresa faz, quem são os atores, como se relacionam **Estúdio**, **Operadora** e **Mesa**, tipos de produto (Dedicada / Network), origem dos dados analíticos e princípios de permissão. **Não** cobre UI (Global / Brand) nem fluxos técnicos de uma página (MDCs de secção).
+
+**Relação com outros MDCs**
+
+| Quem lê | Ordem sugerida |
+|---------|----------------|
+| Implementação em `src/**` | **Business (este)** → Global → Brand → MDC da secção |
+| Carga manual Mesas Spin (SQL) | **Business** § Dados financeiros → handoff / scripts |
+| Novo modelo Estúdio / migração | **Business** § Roadmap estrutural → `plataforma.mdc` / `estudio.mdc` quando existir spec |
+
+**Manutenção:** quando produto alterar conceito (novo tipo de estúdio, regra de relatório, ator novo), atualizar **este ficheiro primeiro**; depois MDCs de secção e Ajuda.
+
+---
+
+## 1. O que é a Spin Gaming
+
+A Spin Gaming opera **estúdios de live casino** e fornece **sinal de mesas ao vivo** para **operadoras parceiras** (casas de apostas / iGaming). A plataforma **Data Intelligence** centraliza:
+
+- Operação de estúdio (dealers, figurino, escala, roteiro, solicitações).
+- Performance comercial das mesas (dashboards Mesas Spin / Overview Spin).
+- Canais de aquisição (influencers, afiliados, campanhas, UTM).
+- RH, comercial B2B e gestão de parceiros.
+
+A plataforma **não substitui** o PLS/fornecedor de relatórios: hoje a carga financeira das mesas é **manual** (SQL no Supabase), com reconciliação diária entre blocos Per table, Daily, UAP por jogo e Monthly.
+
+---
+
+## 2. Atores principais
+
+| Ator | Papel | Na plataforma (hoje / alvo) |
+|------|--------|------------------------------|
+| **Spin (interno)** | Dono dos estúdios, operação, dados, comercial | Perfis admin, gestor, executivo, prestador (estúdio), staff |
+| **Operadora parceira** | Casa que exibe as mesas ao jogador e reporta GGR/UAP dos **seus** jogadores | `operadoras.slug` — Blaze, Casa de Apostas, …; whitelabel; `user_scopes` por operadora |
+| **Estúdio** | Unidade física/lógica onde mesas rodam e equipe atua | **Alvo:** entidade `estudios` (ex. estúdio dedicado Blaze, **Sports Club** network); hoje implicitamente único estúdio Spin |
+| **Jogador** | Utilizador final na operadora | Não é utilizador da plataforma; aparece só em métricas agregadas |
+| **Influencer / Afiliado** | Aquisição e divulgação | Secções Lives, Marketing, Afiliados |
+| **Dealer / Staff** | Apresenta jogos no estúdio | Gestão de Dealers, Gestão de Staff, escala |
+
+**Regra:** **Operadora ≠ Estúdio.** Operadora é parceiro comercial; estúdio é origem operacional do sinal. Confundir os dois (ex. cadastrar Sports Club como operadora) quebra relatórios, filtros e permissões.
+
+---
+
+## 3. Estúdio vs Operadora vs Mesa
+
+### Estúdio
+
+- Local / marca operacional onde dealers trabalham e mesas são produzidas.
+- Pode ser **dedicado** a uma operadora (modelo histórico Blaze/CDA) ou **network** (ex. **Sports Club**), com sinal replicado para várias operadoras.
+- Configura: mesas físicas, escala, figurino, roteiro, campanhas de notificação, skills de staff.
+
+### Operadora parceira
+
+- Recebe o sinal no lobby do jogador.
+- Relatórios PLS são **por operadora** (GGR, turnover, apostas, UAP dos jogadores **daquela** casa).
+- Permissões de parceiro e dashboards comerciais filtram por `operadora_slug`.
+
+### Mesa
+
+- Unidade de jogo (Blackjack 1, Roleta, Speed Baccarat, Futebol Brasileiro, …).
+- Tem identificadores distintos:
+  - **ID interno Spin / estúdio** (`mesa_identificacao`) — único no catálogo do estúdio.
+  - **ID no catálogo da operadora** (`mesa_identificacao_operadora`) — pode diferir por parceiro; essencial em mesas **Network**.
+- Nome canónico em relatório: `relatorio_por_tabela.mesa` (ex. `Blackjack 1`, `VIP Blackjack 1` na Casa, `Blackjack VIP` na Blaze).
+
+---
+
+## 4. Tipos de produto — Dedicada e Network
+
+| Tipo | Descrição | Relatório | Exemplo |
+|------|-----------|-----------|---------|
+| **Mesa dedicada** | Sinal exclusivo para **uma** operadora; estúdio costuma ser dedicado ao parceiro | Linhas no daily da **mesma** operadora | Mesas Blaze só no relatório Blaze; mesas CDA só no relatório CDA |
+| **Mesa network** | Mesmo estúdio/sinal disponível em **várias** operadoras | Cada operadora reporta **a sua fatia** (jogadores dela na mesa); **não** existe daily consolidado “do estúdio” como se fosse operadora | Mesas do estúdio **Sports Club** aparecem no print Blaze e no print CDA com IDs de lobby diferentes |
+
+**Comercial:** o pipeline B2B já distingue `mesa_dedicada` e `mesa_network` em oportunidades — alinhar linguagem com o catálogo de estúdios/mesas.
+
+**Anti-pattern:** tratar estúdio network (Sports Club) como `operadoras.slug` e carregar `relatorio_daily_summary` com esse slug — duplica ou distorce agregados “Todas Operadoras”.
+
+---
+
+## 5. Dados financeiros das mesas (Overview Spin)
+
+### Fonte
+
+Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / paste; carga via SQL (`relatorio_*`).
+
+### Tabelas (chaves)
+
+| Tabela | Chave | Conteúdo |
+|--------|-------|----------|
+| `relatorio_daily_summary` | `(data, operadora_slug)` | Turnover, GGR, apostas, UAP **da operadora no dia** |
+| `relatorio_por_tabela` | `(dia, operadora_slug, mesa)` | Métricas por mesa; `operadora` = texto de exibição do print |
+| `relatorio_uap_por_jogo` | `(data, jogo, operadora_slug)` | UAP por vertical de jogo |
+| `relatorio_monthly_summary` | `(mes, operadora_slug)` | UAP mensal (`mes` = `YYYY-MM-01`) |
+
+### Regras de reconciliação (carga)
+
+1. Soma das mesas ≈ daily (GGR, turnover, apostas), tolerância ±1/±2.
+2. Em discrepância: **não** gerar SQL nem assumir correção — sinalizar e aguardar confirmação humana.
+3. Soma UAP por jogo **pode** exceder UAP daily (overlap entre verticais) — **não** é discrepância.
+4. Monthly só atualiza quando o print Monthly mudar; evitar sobrescrever `arpu` sem valor explícito.
+
+### Visão analítica alvo (pós-migração estúdios)
+
+- Filtro principal do parceiro: **operadora** (mantém).
+- Drilldown nos dashboards: **Dedicada** vs **Network** (e opcionalmente por **estúdio** para perfis Spin).
+- Agregar “Todas Operadoras” soma parceiros — correto se cada linha é volume dos jogadores **daquele** parceiro.
+
+---
+
+## 6. Mapa da plataforma (secções e eixo de negócio)
+
+| Secção | Eixo de negócio principal | Notas |
+|--------|---------------------------|--------|
+| **Dashboards** (Overview Spin, Streamers, …) | Operadora + período; Spin vê tudo | Overview Spin: resultado das **mesas** por parceiro |
+| **Estúdio** (Dealers, Figurinos, Roteiro, Notificações) | **Estúdio** (alvo); hoje mistura com operadora em alguns campos | Sports Club exige escopo por estúdio |
+| **RH / Escala** | Staff por estúdio + turno; prestadores | `area_atuacao` estúdio vs escritório |
+| **Lives / Marketing** | Influencer, campanha, operadora | |
+| **Plataforma** | Operadoras (parceiros), usuários, **Gestão de Estúdios** (alvo) | Operadora = parceiro comercial, não estúdio network |
+| **Comercial** | Marca B2B, produto dedicada/network | |
+
+---
+
+## 7. Permissões — princípio
+
+| Perfil | Escopo típico |
+|--------|----------------|
+| **Admin** | Irrestrito |
+| **Operador** (parceiro) | `user_scopes` → **operadora(s)**; vê dedicadas + network **distribuídas** a essa operadora |
+| **Gestor / Executivo Spin** | Visão global ou multi-operadora conforme matriz |
+| **Prestador / Staff** | Operação no **estúdio** onde atua (alvo); não confundir com slug de parceiro |
+
+**Manter:** acessos e filtros comerciais por **operadora**.  
+**Adicionar:** configuração operacional por **estúdio** (cadastro mestre na futura Gestão de Estúdios).
+
+---
+
+## 8. Roadmap estrutural acordado (produto)
+
+### Gestão de Mesas → **Gestão de Estúdios** (hub de configuração)
+
+| Aba | Função |
+|-----|--------|
+| **Estúdio** | Cadastro de estúdios; tipo (dedicado / network); quais **operadoras** usam o estúdio; metadados que alimentam Dealers, Notificações, Staff, Calendário, Marketplace, Solicitações |
+| **Mesas** | Cadastro por **estúdio** (não por operadora); IDs Spin + IDs por operadora (network); tipo dedicada/network por mesa |
+
+### Ordem de entrega sugerida
+
+1. Modelo de dados + Gestão de Estúdios (abas Estúdio + Mesas).
+2. UX das páginas da secção Estúdio e RH (estúdio em vez de operadora onde for operação física).
+3. Dashboards: drilldown Dedicada / Network mantendo filtro por operadora.
+4. **Migração legado** (Blaze, CDA, Sports Club) — por último, com scripts e validação.
+
+### Situação Sports Club (transitória)
+
+- Cadastro inicial como `operadoras` foi **provisório** — conceito correto é **estúdio network**.
+- Não carregar relatório financeiro com slug Sports Club até o modelo e a distribuição por parceiros estarem definidos.
+
+---
+
+## 9. Glossário canónico
+
+| Termo | Definição |
+|-------|-----------|
+| **GGR** | Gross Gaming Revenue — receita bruta do jogo no período |
+| **Turnover** | Volume apostado |
+| **UAP** | Unique Active Players — jogadores únicos ativos |
+| **ARPU** | Receita média por jogador (monthly quando aplicável) |
+| **PLS** | Origem dos relatórios de mesa (prints / exports diários) |
+| **Dedicada** | Mesa/sinal exclusivo de uma operadora |
+| **Network** | Mesa de estúdio compartilhada entre operadoras |
+| **Sports Club** | Estúdio network Spin (não operadora parceira) |
+| **Overview Spin** | Dashboard de resultados das mesas ao vivo (`mesas_spin`) |
+| **Whitelabel** | Identidade visual da operadora na plataforma (`operadoraBrand`) |
+
+---
+
+## 10. Perguntas em aberto (preencher com produto)
+
+- [ ] Lista inicial de estúdios (Sports Club + dedicados por parceiro — nomes e slugs).
+- [ ] Para cada mesa network: lista de operadoras com sinal ativo e regra de nome no PLS.
+- [ ] Operador parceiro deve ver badge “Network” / “Dedicada” na UI ou só Spin interno?
+- [ ] Relatório interno consolidado por estúdio (sem dupla contagem) — necessário na v1?
+- [ ] Destino do registo provisório `sports_club` em `operadoras` (desativar / migrar / flag).
+
+---
+
+## 11. Anti-patterns de domínio
+
+- Cadastrar **estúdio network** como **operadora** em `operadoras`.
+- Carga SQL com `operadora_slug` que não é parceiro comercial real.
+- Somar UAP por jogo e exigir igualdade ao UAP daily.
+- Assumir correção numérica em reconciliação sem confirmação humana.
+- Usar `operadora_slug` em Staff/Figurino quando o significado é **estúdio físico** (migrar para `estudio_slug`).
