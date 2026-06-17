@@ -187,8 +187,10 @@ type RpcPrestadorEscala = {
   org_time_id: string | null;
   nome_time: string;
   staff_nickname: string | null;
-  /** Slug do estúdio na Staff; vazio = sem estúdio. */
+  /** Slug do estúdio primário (legado). */
   staff_estudio_slug?: string | null;
+  /** Slugs específicos ou {todos} — filtro multi-estúdio na UI. */
+  staff_estudio_slugs?: string[] | null;
   /** Legado — fallback de estúdio quando staff_estudio_slug ausente. */
   staff_operadora_slug?: string | null;
 };

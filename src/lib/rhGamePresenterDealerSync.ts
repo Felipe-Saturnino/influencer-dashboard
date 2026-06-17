@@ -1,6 +1,10 @@
 import { supabase } from "./supabase";
 import type { DealerGenero, DealerJogo, DealerTurno } from "../types";
 import type { RhFuncionario } from "../types/rhFuncionario";
+import {
+  staffEstudioSlugPrimarioParaSync,
+  staffEstudioSlugsFromRow,
+} from "../pages/rh/GestaoStaff/gestaoStaffEstudioHelpers";
 
 export function isGamePresenterTimeNome(nome: string | null | undefined): boolean {
   const n = (nome ?? "")
@@ -116,6 +120,9 @@ export async function syncGamePresenterDealerFromRhFuncionario(
   const turno = staffTurnoTextoParaDealerTurno(row.staff_turno);
   const { jogos, vip } = staffSkillsParaJogosEVip(row.staff_skills as Record<string, unknown> | null);
   const slug = (row.staff_operadora_slug ?? "").trim() || null;
+  const estudioSlugs = staffEstudioSlugsFromRow(row, {});
+  const estudioSlug =
+    staffEstudioSlugPrimarioParaSync(estudioSlugs) ?? ((row.staff_estudio_slug ?? "").trim() || null);
   const bio = bioDeRow(row);
 
   const payload = {
@@ -125,6 +132,7 @@ export async function syncGamePresenterDealerFromRhFuncionario(
     genero,
     turno,
     jogos,
+    estudio_slug: estudioSlug,
     operadora_slug: slug,
     perfil_influencer: bio,
     status: "aprovado" as const,

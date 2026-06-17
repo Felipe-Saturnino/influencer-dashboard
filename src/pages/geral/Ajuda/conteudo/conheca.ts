@@ -491,12 +491,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Repositório de materiais ao vivo por operadora: campanhas com vigência e blocos de roteiro (Abertura, Durante o jogo e Fechamento) com scripts, orientações e alertas. O conteúdo alimenta a Central de Notificações — operadores veem campanhas vigentes e podem abrir conversas com o estúdio quando há solicitação vinculada.",
+          "Repositório de materiais ao vivo por estúdio: campanhas com vigência e blocos de roteiro (Abertura, Durante o jogo e Fechamento) com scripts, orientações e alertas. O conteúdo alimenta a Central de Notificações — operadores veem campanhas vigentes e podem abrir conversas com o estúdio quando há solicitação vinculada.",
       },
       {
-        subtitulo: "Filtros e operadora",
+        subtitulo: "Filtros e estúdio",
         texto:
-          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+          "Selecione o estúdio na barra superior (quando o perfil tem acesso a mais de um). Com **Todos Estúdios**, gestores veem o inventário completo no escopo; cada item exibe a tag do estúdio.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
       },
       {
         subtitulo: "Campanhas",
@@ -511,7 +511,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
       },
     ],
   },

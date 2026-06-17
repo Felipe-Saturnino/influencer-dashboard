@@ -55,8 +55,14 @@ import {
   FILTRO_STAFF_ESTUDIO_TODOS,
   primeiraOperadoraDoEstudio,
   staffEstudioSlugEfetivo,
+  staffEstudioSlugsFromRow,
+  staffEstudioLabel,
+  staffEstudioLabelFromRow,
+  normalizeStaffEstudioSlugsForSave,
+  staffEstudioSlugPrimarioParaSync,
   staffRowPassaFiltroEstudio,
 } from "./gestaoStaffEstudioHelpers";
+import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
@@ -707,7 +713,8 @@ export default function RhGestaoStaffPage() {
       (r.org_time_id ? nomePorTimeId.get(r.org_time_id) ?? "" : "").trim().toLowerCase();
     const turnoStr = (r: RhFuncionario) =>
       (turnoRhCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
-    const estudioSlugSort = (r: RhFuncionario) => staffEstudioSlugEfetivo(r, opParaEstudio).toLowerCase();
+    const estudioSlugSort = (r: RhFuncionario) =>
+      staffEstudioLabelFromRow(r, estudiosNome, opParaEstudio).toLowerCase();
     return [...linhasTabela].sort((a, b) => {
       let cmp = 0;
       switch (sortCol) {
@@ -749,7 +756,7 @@ export default function RhGestaoStaffPage() {
       }
       return cmp * dir;
     });
-  }, [linhasTabela, sortCol, sortDir, nomePorTimeId, estudioTurnosPorSlug, opParaEstudio]);
+  }, [linhasTabela, sortCol, sortDir, nomePorTimeId, estudioTurnosPorSlug, opParaEstudio, estudiosNome]);
 
   const resumoStaffCards = useMemo(
     () => calcularResumoStaffCards(linhasTabela, nomePorTimeId),
@@ -1064,8 +1071,7 @@ export default function RhGestaoStaffPage() {
                 </tr>
               ) : (
                 linhasTabelaOrdenadas.map((row, i) => {
-                  const estudioSlug = staffEstudioSlugEfetivo(row, opParaEstudio);
-                  const estudioNome = estudioSlug ? estudiosNome[estudioSlug] ?? estudioSlug : "—";
+                  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   const nomeTime =
                     row.org_time_id && nomePorTimeId.has(row.org_time_id)
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
@@ -1250,7 +1256,7 @@ function ModalStaffVer({
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const estudioSlug = staffEstudioSlugEfetivo(row, opParaEstudio);
-  const estudioNome = estudioSlug ? estudiosNome[estudioSlug] ?? estudioSlug : "—";
+  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
   const turnoEfVer = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
   const [estudioTurnosVer, setEstudioTurnosVer] = useState<OpTurnosStaffPick | null>(null);
 
@@ -1508,7 +1514,9 @@ function ModalStaffEditar({
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
-  const [estudioSlug, setEstudioSlug] = useState(() => staffEstudioSlugEfetivo(row, opParaEstudio));
+  const [estudiosSelecionados, setEstudiosSelecionados] = useState<string[]>(() =>
+    staffEstudioSlugsFromRow(row, opParaEstudio),
+  );
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
   const [horarioTurno, setHorarioTurno] = useState("");
@@ -1525,7 +1533,7 @@ function ModalStaffEditar({
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
     setTurno(turnoRhCoerenteComEscala(row.escala, row.staff_turno));
-    setEstudioSlug(staffEstudioSlugEfetivo(row, opParaEstudio));
+    setEstudiosSelecionados(staffEstudioSlugsFromRow(row, opParaEstudio));
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
     {
@@ -1546,6 +1554,7 @@ function ModalStaffEditar({
     row.staff_nickname,
     row.staff_turno,
     row.staff_estudio_slug,
+    row.staff_estudio_slugs,
     opParaEstudio,
     row.staff_barcode,
     row.staff_id_operacional,
@@ -1570,7 +1579,7 @@ function ModalStaffEditar({
   }, [staffEhGamePresenter, aba]);
 
   useEffect(() => {
-    const slug = estudioSlug.trim();
+    const slug = staffEstudioSlugPrimarioParaSync(estudiosSelecionados) ?? "";
     if (!slug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
       setEstudioTurnosEdit(null);
       return;
@@ -1582,7 +1591,7 @@ function ModalStaffEditar({
     return () => {
       cancelled = true;
     };
-  }, [estudioSlug, row.escala]);
+  }, [estudiosSelecionados, row.escala]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -1688,10 +1697,14 @@ function ModalStaffEditar({
       return;
     }
 
+    const estudioAntes = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
+    const estudioDepoisSlugs = normalizeStaffEstudioSlugsForSave(estudiosSelecionados);
+    const estudioDepois = staffEstudioLabel(estudioDepoisSlugs, estudiosNome);
+
     const antes = {
       nick: (row.staff_nickname ?? "").trim(),
       turno: (row.staff_turno ?? "").trim(),
-      estudio: staffEstudioSlugEfetivo(row, opParaEstudio),
+      estudio: estudioAntes,
       barcode: (row.staff_barcode ?? "").trim(),
       idOp: (row.staff_id_operacional ?? "").trim(),
       horario: (row.staff_horario_turno ?? "").trim(),
@@ -1701,7 +1714,7 @@ function ModalStaffEditar({
     const depois = {
       nick: nick.trim(),
       turno: (turnoFinal ?? "").trim(),
-      estudio: estudioSlug.trim(),
+      estudio: estudioDepois,
       barcode: barcode.trim(),
       idOp: idOperacional.trim(),
       horario: (horarioFinal ?? "").trim(),
@@ -1721,8 +1734,8 @@ function ModalStaffEditar({
     if (antes.estudio !== depois.estudio) {
       alteracoes.push({
         campo: "Estúdio",
-        antes: antes.estudio ? estudiosNome[antes.estudio] ?? antes.estudio : "—",
-        depois: depois.estudio ? estudiosNome[depois.estudio] ?? depois.estudio : "—",
+        antes: antes.estudio,
+        depois: depois.estudio,
       });
     }
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
@@ -1736,15 +1749,17 @@ function ModalStaffEditar({
       });
     }
 
-    const operadoraSync = depois.estudio
-      ? primeiraOperadoraDoEstudio(depois.estudio, operadorasPorEstudio)
+    const estudioPrimario = staffEstudioSlugPrimarioParaSync(estudioDepoisSlugs);
+    const operadoraSync = estudioPrimario
+      ? primeiraOperadoraDoEstudio(estudioPrimario, operadorasPorEstudio)
       : null;
 
     const patch = {
       staff_nickname: depois.nick || null,
       staff_turno: turnoFinal,
       staff_horario_turno: precisaHorario ? horarioFinal : null,
-      staff_estudio_slug: depois.estudio || null,
+      staff_estudio_slugs: estudioDepoisSlugs.length > 0 ? estudioDepoisSlugs : null,
+      staff_estudio_slug: estudioPrimario,
       staff_operadora_slug: operadoraSync,
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
@@ -1820,23 +1835,13 @@ function ModalStaffEditar({
           </div>
           {!ocultarCampoEstudio ? (
             <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle} htmlFor="staff-estudio">
-                Estúdio
-              </label>
-              <select
-                id="staff-estudio"
-                value={estudioSlug}
-                onChange={(e) => setEstudioSlug(e.target.value)}
-                style={inputStyle}
-                aria-label="Estúdio"
-              >
-                <option value="">—</option>
-                {estudioSlugs.map((slug) => (
-                  <option key={slug} value={slug}>
-                    {estudiosNome[slug] ?? slug}
-                  </option>
-                ))}
-              </select>
+              <span style={labelStyle}>Estúdio</span>
+              <StaffEstudioCampoSelect
+                value={estudiosSelecionados}
+                onChange={setEstudiosSelecionados}
+                estudioSlugs={estudioSlugs}
+                estudiosNome={estudiosNome}
+              />
             </div>
           ) : null}
           <div style={{ marginBottom: 14 }}>

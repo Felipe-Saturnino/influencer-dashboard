@@ -104,8 +104,10 @@ export interface RhFuncionario {
   pix: string | null;
   /** Gestão de Staff — opcional até migration aplicada. */
   staff_nickname?: string | null;
-  /** Estúdio Spin (Gestão de Staff); preferir sobre staff_operadora_slug na UI. */
+  /** Estúdio Spin (Gestão de Staff); primário para legado — ver staff_estudio_slugs. */
   staff_estudio_slug?: string | null;
+  /** Slugs específicos ou {todos} para todos os estúdios (exclusivo). */
+  staff_estudio_slugs?: string[] | null;
   /** Legado / sync dealer e calendário — derivado do estúdio quando possível. */
   staff_operadora_slug?: string | null;
   staff_barcode?: string | null;

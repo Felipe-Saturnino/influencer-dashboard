@@ -23,7 +23,7 @@ alwaysApply: false
 | `gestao_dealers` | Gestão de Dealers | Catálogo do elenco com especialidades, turnos e solicitações das operadoras. |
 | `central_notificacoes` | Central de Notificações | **Fixo:** Gerencie solicitações entre operadoras e estúdio com histórico de conversas. |
 | `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
-| `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por operadora para o dealer usar em mesa. |
+| `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por estúdio para o dealer usar em mesa. |
 
 **Central de Notificações:** após o `PageHeader`, manter `<p>` separado para texto dinâmico (ex.: contador de pendentes ou “Campanhas de roteiro…”) — não substituir o `subtitle` fixo do header.
 
@@ -55,7 +55,8 @@ alwaysApply: false
 - `DealerCard`: `<article aria-label={...}>`, badge **PENDENTE** quando `status === "pendente"`.
 - Label **“Bio do Dealer”** — nunca “Perfil do Influencer”.
 - Query `dealer_observacoes`: sempre `.limit(20)`.
-- Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); gênero/jogo com `aria-pressed`.
+- Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); **`FiltroEstudioSelect`** (**Todos Estúdios**, opção **Nenhum estúdio**); gênero/jogo com `aria-pressed`.
+- Coluna/badge de vínculo: **Estúdio** (`dealerEstudioLabelFromRow` com fallback operadora→estúdio). `operadora_slug` mantido para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
 
@@ -89,15 +90,17 @@ alwaysApply: false
 
 ## Roteiro de Mesa (`roteiro_mesa`)
 
-- Filtros na barra: **Jogos** e **Tipo** com **`FiltroSemanticoTabPill`** (visual abas Overview Spin — `borderRadius` 10, `10px 18px`, `minHeight` 44; ícones por jogo via **`GAME_IDENTITY_ICONS`** / `lib/gameIdentityIcons.tsx`, alinhado a Gestão de Dealers; ativo na cor de **`getGameTagChipStyle` / `gameIdentityTextColor`** de `lib/gameIdentityColors.ts` — Global § Identidade por jogo — ou `TIPO_CONFIG`, não marca); **operadora** via `FiltroOperadoraSelect` à direita. **Não** usar `FilterChip` local nem pill 999/uppercase legado na barra.
+- Filtros na barra: **Jogos** e **Tipo** com **`FiltroSemanticoTabPill`** (visual abas Overview Spin — `borderRadius` 10, `10px 18px`, `minHeight` 44; ícones por jogo via **`GAME_IDENTITY_ICONS`** / `lib/gameIdentityIcons.tsx`, alinhado a Gestão de Dealers; ativo na cor de **`getGameTagChipStyle` / `gameIdentityTextColor`** de `lib/gameIdentityColors.ts` — Global § Identidade por jogo — ou `TIPO_CONFIG`, não marca); **estúdio** via **`FiltroEstudioSelect`** (**Todos Estúdios**) à direita. **Não** usar `FilterChip` local nem pill 999/uppercase legado na barra.
 - Tags de jogo em cards/modais: **`getGameTagChipStyle(key, isDark)`** — **proibido** `JOGO_TAG_CONFIG` local ou hex solto por jogo.
 
 ### Exceções — identidade de jogo
 
 Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § Identidade visual por jogo). Nova exceção **somente** com pedido explícito de produto — registrar aqui antes de implementar.
-- Conteúdo após operadora selecionada.
+- Conteúdo após estúdio selecionado (ou **Todos Estúdios** para gestores com escopo amplo).
 - Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"`.
-- `BannerPendencias` + `ModalThreadSolicitacao`.
+- Cadastro grava **`estudio_slug`** em `roteiro_mesa_sugestoes` / `roteiro_mesa_campanhas`; **`operadora_slug`** mantido para solicitações (`roteiro_mesa_solicitacoes`, `roteiro_campanha_solicitacoes`) e RLS legado — resolvido via `operadoraSlugParaRoteiroInsert` em `roteiroMesaEstudioHelpers.ts`.
+- Tag de estúdio nos itens quando filtro = **Todos Estúdios** (`roteiroEstudioLabelFromRow` com fallback operadora→estúdio).
+- `BannerPendencias` + `ModalThreadSolicitacao` continuam por **operadora** (escopo do operador).
 - **Handoff:** CRUD campanhas de mesa, exclusão 2 cliques.
 
 ---
