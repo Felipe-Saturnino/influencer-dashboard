@@ -73,7 +73,7 @@ export function AbaMesas({
   const [deleteTarget, setDeleteTarget] = useState<MesaSpinCadastroRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
+  const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "estudio", dir: "asc" });
 
   const rowsPorOperadora = useMemo(
     () => rows.filter((r) => mesaNoFiltroOperadora(r, filtroOperadora, estudios)),

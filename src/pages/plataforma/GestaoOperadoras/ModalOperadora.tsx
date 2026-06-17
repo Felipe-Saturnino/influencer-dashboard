@@ -24,6 +24,7 @@ import {
   type MesaCadastroResumo,
   type ModalTabId,
 } from "./gestaoOperadorasUi";
+import { fetchMesasOperadoraResumo } from "./gestaoOperadorasFetch";
 
 const ERRO_SALVAR_OPERADORA = "Não foi possível salvar. Verifique os dados e tente novamente.";
 const ERRO_UPLOAD_LOGO = "Não foi possível enviar o logo.";
@@ -98,17 +99,11 @@ export function ModalOperadora({
     }
     let cancelled = false;
     setMesasLoading(true);
-    void supabase
-      .from("mesas_spin_cadastro")
-      .select("tipo_jogo, nome_mesa, numero_mesa, mesa_identificacao, mesa_identificacao_operadora")
-      .eq("operadora_slug", editando.slug)
-      .order("nome_mesa")
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setMesasLoading(false);
-        if (error || !data) setMesas([]);
-        else setMesas(data as MesaCadastroResumo[]);
-      });
+    void fetchMesasOperadoraResumo(editando.slug).then((data) => {
+      if (cancelled) return;
+      setMesasLoading(false);
+      setMesas(data);
+    });
     return () => {
       cancelled = true;
     };
