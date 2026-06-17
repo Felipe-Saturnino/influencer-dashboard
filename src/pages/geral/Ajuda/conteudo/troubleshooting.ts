@@ -364,7 +364,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um dealer não aparece na listagem?",
         texto:
-          "A página lista apenas dealers já vinculados a um prestador ativo em **Gestão de Prestadores**. Se o colaborador existe em RH mas não aparece aqui, o vínculo Game Presenter / registro na tabela de dealers pode estar pendente — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, operadora ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers daquela parceira.",
+          "A página lista apenas Game Presenters (dealers) com prestador **ativo** ou **indisponível** no time Game Presenter. Se o colaborador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o perfil em **Gestão de Staff** — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers do estúdio vinculado à parceira.",
       },
       {
         subtitulo: "O botão Solicitar não aparece no card?",
@@ -379,7 +379,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro botão para criar ou editar dealer?",
         texto:
-          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Crie ou atualize o prestador em **Gestão de Prestadores**; quando o vínculo de Game Presenter estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura). Fotos e dados de perfil são mantidos no fluxo de RH, não nesta tela.",
+          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Cadastre o prestador e defina o time **Game Presenter** em **Gestão de Prestadores**; complete perfil, estúdio e skills em **Gestão de Staff**. Quando o sync estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura).",
       },
       {
         subtitulo: "O histórico de solicitações do dealer está vazio?",

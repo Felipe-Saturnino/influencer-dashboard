@@ -350,7 +350,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo do elenco de dealers de cassino ao vivo da Spin Gaming vinculados a prestadores ativos em Gestão de Prestadores. Exibe fotos, especialidades por jogo, turno, gênero e operadora — em modo consulta (Ver) e, para operadoras, solicitações de troca ou feedback ao estúdio. O cadastro e a manutenção do perfil de dealer não são feitos nesta página.",
+          "Catálogo de **Game Presenters** (dealers) em operação no estúdio, sincronizado com RH. A operadora consulta especialidades, turno e estúdio e envia solicitações ao estúdio — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor de estúdio configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui para a operadora vinculada ao estúdio.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -370,7 +370,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Origem do cadastro no elenco",
         texto:
-          "Um dealer só aparece nesta listagem quando existe vínculo com um prestador ativo em **Gestão de Prestadores** (perfil Game Presenter / sincronização com a tabela de dealers). Se o colaborador está cadastrado em RH mas não aparece aqui, confira o vínculo e o status do prestador — não há botão de criar ou editar dealer nesta página.",
+          "Um dealer só aparece quando o prestador está no time **Game Presenter** com status **Ativo** ou **Indisponível** em **Gestão de Prestadores** e o perfil operacional foi sincronizado a partir de **Gestão de Staff**. Se o colaborador existe em RH mas não aparece aqui, confira o time no organograma, o status e os dados em Staff — não há botão de criar ou editar dealer nesta página.",
       },
       {
         subtitulo: "Visibilidade por Perfil",

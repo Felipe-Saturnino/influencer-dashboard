@@ -39,6 +39,10 @@ import {
   dealerEstudioLabelFromRow,
   dealerRowPassaFiltroEstudio,
 } from "./gestaoDealersEstudioHelpers";
+import {
+  prestadorEmbedQualificaElencoDealer,
+  type RhFuncionarioElencoEmbed,
+} from "../../../lib/rhGamePresenterDealerSync";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
@@ -202,7 +206,19 @@ export default function GestaoDealers() {
       }
       slugsForcado = set.size > 0 ? [...set] : null;
     }
-    let qDealers = supabase.from("dealers").select("*").not("rh_funcionario_id", "is", null).order("nickname");
+    let qDealers = supabase
+      .from("dealers")
+      .select(
+        `*,
+        rh_funcionarios (
+          id,
+          status,
+          org_time_id,
+          rh_org_times ( nome, status )
+        )`,
+      )
+      .not("rh_funcionario_id", "is", null)
+      .order("nickname");
     if (user?.role === "operador" && operadoraSlugsForcado?.length) {
       const parts: string[] = [];
       if (slugsForcado?.length) {
@@ -215,7 +231,19 @@ export default function GestaoDealers() {
       qDealers,
       supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
-    setDealers((dealersRes.data ?? []) as Dealer[]);
+    const dealersElenco = (dealersRes.data ?? [])
+      .filter((raw) => {
+        const row = raw as Dealer & { rh_funcionarios?: RhFuncionarioElencoEmbed | null };
+        return prestadorEmbedQualificaElencoDealer(row.rh_funcionarios);
+      })
+      .map((raw) => {
+        const { rh_funcionarios: _embed, ...dealer } = raw as Dealer & {
+          rh_funcionarios?: RhFuncionarioElencoEmbed | null;
+        };
+        void _embed;
+        return dealer as Dealer;
+      });
+    setDealers(dealersElenco);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
     setLoading(false);
   }, [user?.role, operadoraSlugsForcado, carregarEstudios]);
@@ -354,7 +382,7 @@ export default function GestaoDealers() {
       <PageHeader
         icon={<PageMenuIcon pageKey="gestao_dealers" />}
         title={getPageMenuLabel("gestao_dealers")}
-        subtitle="Catálogo do elenco com especialidades, turnos e solicitações do estúdio."
+        subtitle="Catálogo de Game Presenters em operação — especialidades, turnos e solicitações das operadoras."
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (

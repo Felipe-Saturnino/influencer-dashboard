@@ -1159,6 +1159,14 @@ export default function RhPrestadoresPage() {
           return;
         }
       }
+      try {
+        const { data: rowRhPosAcao } = await supabase.from("rh_funcionarios").select("*").eq("id", fid).maybeSingle();
+        if (rowRhPosAcao) {
+          await syncGamePresenterDealerFromRhFuncionario(rowRhPosAcao as RhFuncionario);
+        }
+      } catch (e) {
+        console.error("Falha ao sincronizar elenco de dealers após ação RH", e);
+      }
       let resSync: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null = null;
       try {
         const spinAcao = acaoForm.email_spin.trim().toLowerCase();

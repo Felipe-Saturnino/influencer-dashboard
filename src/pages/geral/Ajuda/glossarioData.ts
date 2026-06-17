@@ -645,8 +645,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Profissional de casino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
         nota:
-          "O perfil é mantido via prestador em Gestão de Prestadores (Game Presenter). Gestão de Dealers exibe o catálogo e solicitações — não cadastra dealer na página.",
-        referencia: "Gestão de Dealers · Gestão de Prestadores",
+          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página.",
+        referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
         termo: "Bloco de Roteiro",
@@ -810,7 +810,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. No topo, cards consolidados (somente time Game Presenter) indicam perfis com lacunas operacionais (Nickname, Turno ou ID Operacional), cadastrais (Gênero, Bio ou Fotos) ou de jogo (Live no Estúdio ou skills inativas).",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo.",
         referencia: "Gestão de Staff",
       },
       {
@@ -843,7 +843,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
         nota:
-          "É a origem do vínculo para dealers (Game Presenter) exibidos em Gestão de Dealers e para listas de retirada em Figurinos. Ao registrar Término da prestação (status Encerrado), o login na plataforma vinculado ao E-mail Spin ou e-mail pessoal é desativado automaticamente. RH Talks: cadastre e publique no Portal de RH; em Gestão de Prestadores (aba Anotações RH) registre participantes e data.",
+          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o dealer do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data.",
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {

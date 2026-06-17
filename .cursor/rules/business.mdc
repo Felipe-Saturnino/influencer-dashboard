@@ -41,7 +41,7 @@ A plataforma **não substitui** o PLS/fornecedor de relatórios: hoje a carga fi
 | **Estúdio** | Unidade física/lógica onde mesas rodam e equipe atua | **Alvo:** entidade `estudios` (ex. estúdio dedicado Blaze, **Sports Club** network); hoje implicitamente único estúdio Spin |
 | **Jogador** | Utilizador final na operadora | Não é utilizador da plataforma; aparece só em métricas agregadas |
 | **Influencer / Afiliado** | Aquisição e divulgação | Secções Lives, Marketing, Afiliados |
-| **Dealer / Staff** | Apresenta jogos no estúdio | Gestão de Dealers, Gestão de Staff, escala |
+| **Dealer / Game Presenter** | Apresenta jogos no estúdio — **mesma função**; RH cadastra em Prestadores, gestor configura em Staff, operadora vê catálogo em Dealers | Gestão de Dealers, Gestão de Staff, Gestão de Prestadores, escala |
 
 **Regra:** **Operadora ≠ Estúdio.** Operadora é parceiro comercial; estúdio é origem operacional do sinal. Confundir os dois (ex. cadastrar Sports Club como operadora) quebra relatórios, filtros e permissões.
 

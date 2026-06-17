@@ -20,7 +20,7 @@ alwaysApply: false
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
-| `gestao_dealers` | Gestão de Dealers | Catálogo do elenco com especialidades, turnos e solicitações das operadoras. |
+| `gestao_dealers` | Gestão de Dealers | Catálogo de Game Presenters em operação — especialidades, turnos e solicitações das operadoras. |
 | `central_notificacoes` | Central de Notificações | **Fixo:** Gerencie solicitações entre operadoras e estúdio com histórico de conversas. |
 | `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
 | `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por estúdio para o dealer usar em mesa. |
@@ -49,6 +49,19 @@ alwaysApply: false
 ---
 
 ## Gestão de Dealers (`gestao_dealers`)
+
+### Dealer = Game Presenter (fluxo entre páginas)
+
+| Etapa | Página | Quem | O quê |
+|-------|--------|------|-------|
+| 1 | **Gestão de Prestadores** | RH | Cadastra o colaborador, define organograma e **promove/altera a função** (time no organograma). |
+| 2 | **Gestão de Staff** | Gestor de estúdio | Configura perfil operacional do **Game Presenter**: nickname, turno, estúdio(s), skills, fotos, bio. |
+| 3 | **Gestão de Dealers** | Operadora / Spin | **Catálogo somente leitura** do elenco em operação — dealers = prestadores GP ativos/indisponíveis sincronizados de Staff. Operadora vê quem trabalha no **estúdio** vinculado à parceira. |
+
+- **Dealer** e **Game Presenter** são a **mesma função** — nomes distintos por contexto (catálogo para operadora vs. organograma/escala).
+- Registro em `dealers` é **automático** via `syncGamePresenterDealerFromRhFuncionario` ao salvar Staff ou alterar vínculo em Prestadores; **não** há CTA de cadastro nesta página.
+- **Elenco visível:** prestador com `status` `ativo` ou `indisponivel`, time **Game Presenter** ativo no organograma e `rh_funcionario_id` vinculado. Sai do catálogo ao mudar de time, encerrar prestação ou time inativo (sync remove o dealer).
+- Query com join em `rh_funcionarios` + filtro `prestadorEmbedQualificaElencoDealer` (`lib/rhGamePresenterDealerSync.ts`) — defesa em UI além do sync.
 
 - Grid de cards: `repeat(auto-fill, minmax(min(100%, 300px), 1fr))`.
 - **Skeleton** obrigatório no loading (6 placeholders) — nunca só texto “Carregando…”.
