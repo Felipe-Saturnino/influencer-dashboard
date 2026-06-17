@@ -10,6 +10,7 @@ import {
   getFiltroBarPillStateStyle,
 } from "../lib/filterBarStyles";
 import { FILTER_SEARCH_INFLUENCER } from "../lib/searchBarConstants";
+import { textoContemBusca } from "../lib/searchText";
 import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 /** Valor canónico da opção agregadora (todos no escopo). */
@@ -127,9 +128,9 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
   }, [open]);
 
   const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (!q) return [...influencers];
-    return influencers.filter((inf) => inf.name.toLowerCase().includes(q));
+    return influencers.filter((inf) => textoContemBusca(inf.name, searchQuery));
   }, [influencers, searchQuery]);
 
   const isSingle = props.mode === "single";

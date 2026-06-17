@@ -66,6 +66,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
@@ -351,12 +352,12 @@ export default function RhPrestadoresPage() {
   }, [fieldErr, ehPJ]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
-    const q = rtBusca.trim().toLowerCase();
+    const q = rtBusca.trim();
     if (!q) return [];
     const ids = new Set(rtParticipantes.map((p) => p.id));
     return lista
       .filter((f) => !ids.has(f.id))
-      .filter((f) => f.nome.toLowerCase().includes(q))
+      .filter((f) => textoContemBusca(f.nome, rtBusca))
       .slice(0, 12);
   }, [lista, rtBusca, rtParticipantes]);
 

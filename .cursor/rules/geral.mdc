@@ -44,6 +44,7 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 | Onde | Regra |
 |------|--------|
 | `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` | Campo **`titulo`** = mesmo texto que `label` no menu (ex.: `Resultados`, `Feedback`, `Agenda`) |
+| Troubleshooting transversal | `TROUBLESHOOTING_TRANSVERSAL` em `conteudo/troubleshooting.ts` — blocos de plataforma (ex.: busca sem acentos) no topo da aba Troubleshooting, antes do conteúdo da página selecionada |
 | Navegação interna (Conheça / Troubleshooting) | Derivada de `MENU` em `menu.ts` — mesma ordem de secções e páginas; filtro `can_view` igual à Sidebar; glossário sem filtro por página |
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |

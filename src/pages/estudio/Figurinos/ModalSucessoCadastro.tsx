@@ -12,11 +12,11 @@ import { BarcodeBlock } from "./BarcodeBlock"
 
 export function ModalSucessoCadastro({
   peca,
-  operadorasTexto,
+  estudiosTexto,
   onClose,
 }: {
   peca: RhFigurinoPeca;
-  operadorasTexto: string;
+  estudiosTexto: string;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
@@ -41,7 +41,7 @@ export function ModalSucessoCadastro({
         </div>
         <p style={{ fontFamily: FONT_TITLE, fontSize: 20, fontWeight: 800, color: brand.primary, margin: "8px 0" }}>{peca.code}</p>
         <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.text, margin: "4px 0 16px" }}>
-          {peca.category} · {peca.size} · {operadorasTexto}
+          {peca.category} · {peca.size} · {estudiosTexto}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
@@ -50,7 +50,7 @@ export function ModalSucessoCadastro({
             onClick={async () => {
               setPdfLoading(true);
               try {
-                await baixarEtiquetaFigurinoPdf(peca, operadorasTexto);
+                await baixarEtiquetaFigurinoPdf(peca, estudiosTexto);
               } finally {
                 setPdfLoading(false);
               }

@@ -15,6 +15,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import {
@@ -839,9 +840,9 @@ export default function RhGestaoEscalaPage() {
   }, [prestadoresFiltradosEstudio, filtroArea]);
 
   const linhasAposNickname = useMemo(() => {
-    const q = filtroNicknameEscala.trim().toLowerCase();
+    const q = filtroNicknameEscala.trim();
     if (!q) return linhas;
-    return linhas.filter((row) => row.nickname.toLowerCase().includes(q));
+    return linhas.filter((row) => textoContemBusca(row.nickname, filtroNicknameEscala));
   }, [linhas, filtroNicknameEscala]);
 
   const linhasFiltradasEscalaDiaria = useMemo(() => {
@@ -1490,7 +1491,7 @@ export default function RhGestaoEscalaPage() {
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
                 style={contentBox}
               >
-                <SectionTitle sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária">
+                <SectionTitle sub="clique num turno para filtrar a Escala Diária">
                   Consolidado
                 </SectionTitle>
                 {mostrarFiltroArea ? (

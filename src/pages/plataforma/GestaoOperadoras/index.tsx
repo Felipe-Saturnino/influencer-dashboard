@@ -12,6 +12,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
@@ -56,9 +57,9 @@ export default function GestaoOperadoras() {
   useEffect(() => { carregar(); }, [carregar]);
 
   const operadorasFiltradas = useMemo(() => {
-    const q = buscaOperadora.trim().toLowerCase();
+    const q = buscaOperadora.trim();
     if (!q) return operadoras;
-    return operadoras.filter((o) => (o.nome ?? "").toLowerCase().includes(q));
+    return operadoras.filter((o) => textoContemBusca(o.nome, q));
   }, [operadoras, buscaOperadora]);
 
   const operadorasOrdenadas = useMemo(() => {

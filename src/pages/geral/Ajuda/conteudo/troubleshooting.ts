@@ -1,4 +1,17 @@
 // ─── Conteúdo: Troubleshooting ────────────────────────────────────────────────
+
+/** Blocos transversais — exibidos no topo da aba Troubleshooting (todas as páginas do menu). */
+export const TROUBLESHOOTING_TRANSVERSAL = {
+  titulo: "Plataforma",
+  blocos: [
+    {
+      subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
+      texto:
+        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
+    },
+  ],
+} as const;
+
 export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: string; texto: string }[] }> = {
   streamers: {
     titulo: "Streamers",

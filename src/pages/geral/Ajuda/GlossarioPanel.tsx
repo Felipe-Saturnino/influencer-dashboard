@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
 import { GLOSSARIO_CATEGORIAS, type GlossarioCategoria } from "./glossarioData";
 
@@ -195,17 +196,17 @@ export function AbaGlossario({
   t: Theme;
 }) {
   const [busca, setBusca] = useState("");
-  const q = busca.trim().toLowerCase();
+  const q = busca.trim();
 
   const categoriasFiltradas = q
     ? GLOSSARIO_CATEGORIAS.map((cat) => ({
         ...cat,
         termos: cat.termos.filter(
           (termo) =>
-            termo.termo.toLowerCase().includes(q) ||
-            termo.definicao.toLowerCase().includes(q) ||
-            (termo.nota ?? "").toLowerCase().includes(q) ||
-            (termo.formula ?? "").toLowerCase().includes(q),
+            textoContemBusca(termo.termo, q) ||
+            textoContemBusca(termo.definicao, q) ||
+            textoContemBusca(termo.nota, q) ||
+            textoContemBusca(termo.formula, q),
         ),
       })).filter((cat) => cat.termos.length > 0)
     : GLOSSARIO_CATEGORIAS;

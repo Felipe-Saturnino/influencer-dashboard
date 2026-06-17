@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -294,7 +295,7 @@ export default function PortalRhPage() {
   const cardShadow = getPageContentBoxShadow(t.isDark);
 
   useEffect(() => {
-    const id = window.setTimeout(() => setBuscaDeb(busca.trim().toLowerCase()), 300);
+    const id = window.setTimeout(() => setBuscaDeb(normalizarTextoBusca(busca)), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
 
@@ -408,12 +409,13 @@ export default function PortalRhPage() {
   }, [aba]);
 
   const hitBuscaTexto = useCallback(
-    (s: string | null | undefined) => !buscaDeb || (s ?? "").toLowerCase().includes(buscaDeb),
+    (s: string | null | undefined) => !buscaDeb || normalizarTextoBusca(s).includes(buscaDeb),
     [buscaDeb],
   );
 
   const hitBuscaCorpo = useCallback(
-    (html: string | null | undefined) => !buscaDeb || stripHtmlText(html ?? "").toLowerCase().includes(buscaDeb),
+    (html: string | null | undefined) =>
+      !buscaDeb || normalizarTextoBusca(stripHtmlText(html ?? "")).includes(buscaDeb),
     [buscaDeb],
   );
 

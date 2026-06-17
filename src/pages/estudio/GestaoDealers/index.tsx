@@ -28,6 +28,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
@@ -61,10 +62,6 @@ function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
   if (filtroOperadora === "nenhuma") return !d.operadora_slug;
   if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
   return true;
-}
-
-function normalizarBuscaTexto(s: string): string {
-  return s.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
@@ -183,14 +180,14 @@ export default function GestaoDealers() {
   );
 
   const filtered = useMemo(() => {
-    const q = normalizarBuscaTexto(buscaDealer);
+    const q = normalizarTextoBusca(buscaDealer);
     return dealersPorOperadora.filter((d) => {
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
       if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return false;
       if (q) {
-        const nick = normalizarBuscaTexto(d.nickname ?? "");
-        const nome = normalizarBuscaTexto(d.nome_real ?? "");
+        const nick = normalizarTextoBusca(d.nickname ?? "");
+        const nome = normalizarTextoBusca(d.nome_real ?? "");
         if (!nick.includes(q) && !nome.includes(q)) return false;
       }
       return true;

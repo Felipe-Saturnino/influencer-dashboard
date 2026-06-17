@@ -6,23 +6,20 @@ import { supabase } from "../../../lib/supabase"
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
-import type { Operadora } from "../../../types"
 import { type RhFigurinoPeca } from "./types"
 import { CATEGORIAS, TAMANHOS } from "./figurinosConstants"
 import { ctaButtonContent } from "./figurinosPageHelpers"
 
 export function ModalCadastroPeca({
   onClose,
-  operadoras,
-  podeVerOperadora,
-  operadoraSlugsForcado,
+  estudios,
+  estudioSlugsForcado,
   actor,
   onCreated,
 }: {
   onClose: () => void;
-  operadoras: Operadora[];
-  podeVerOperadora: (s: string) => boolean;
-  operadoraSlugsForcado: string[] | null;
+  estudios: readonly { slug: string; nome: string }[];
+  estudioSlugsForcado: string[] | null;
   actor: string;
   onCreated: (row: RhFigurinoPeca) => void | Promise<void>;
 }) {
@@ -30,7 +27,7 @@ export function ModalCadastroPeca({
   const brand = useDashboardBrand();
   const [previewCode, setPreviewCode] = useState<string>("…");
   const [slugsSel, setSlugsSel] = useState<Set<string>>(() => {
-    if (operadoraSlugsForcado?.length) return new Set(operadoraSlugsForcado);
+    if (estudioSlugsForcado?.length) return new Set(estudioSlugsForcado);
     return new Set();
   });
   const [cat, setCat] = useState<string>(CATEGORIAS[0]);
@@ -63,7 +60,7 @@ export function ModalCadastroPeca({
   const salvar = async () => {
     setErr(null);
     if (slugsSel.size === 0) {
-      setErr("Selecione ao menos uma operadora.");
+      setErr("Selecione ao menos um estúdio.");
       return;
     }
     if (!dataEntrada.trim()) {
@@ -72,7 +69,7 @@ export function ModalCadastroPeca({
     }
     setLoading(true);
     const { data, error } = await supabase.rpc("rh_figurino_criar_peca", {
-      p_operadora_slugs: [...slugsSel],
+      p_estudio_slugs: [...slugsSel],
       p_category: cat,
       p_size: tam,
       p_purchase_date: dataEntrada,
@@ -88,7 +85,7 @@ export function ModalCadastroPeca({
     await onCreated(data as RhFigurinoPeca);
   };
 
-  const opsVis = operadoras.filter((o) => podeVerOperadora(o.slug));
+  const estVis = [...estudios].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
@@ -116,9 +113,9 @@ export function ModalCadastroPeca({
         </label>
         <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
           <legend style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
-            Operadoras
+            Estúdios
             <CampoObrigatorioMark />
-            <span style={{ fontWeight: 400 }}> (pode marcar várias)</span>
+            <span style={{ fontWeight: 400 }}> (pode marcar vários)</span>
           </legend>
           <div
             style={{
@@ -130,16 +127,16 @@ export function ModalCadastroPeca({
               padding: "4px 0",
             }}
           >
-            {opsVis.map((o) => {
-              const ativo = slugsSel.has(o.slug);
+            {estVis.map((e) => {
+              const ativo = slugsSel.has(e.slug);
               return (
                 <button
-                  key={o.slug}
+                  key={e.slug}
                   type="button"
                   role="checkbox"
                   aria-checked={ativo}
-                  aria-label={`Operadora ${o.nome}`}
-                  onClick={() => toggleSlug(o.slug)}
+                  aria-label={`Estúdio ${e.nome}`}
+                  onClick={() => toggleSlug(e.slug)}
                   style={{
                     textAlign: "left",
                     padding: "8px 12px",
@@ -157,7 +154,7 @@ export function ModalCadastroPeca({
                     cursor: "pointer",
                   }}
                 >
-                  {o.nome}
+                  {e.nome}
                 </button>
               );
             })}
@@ -169,7 +166,7 @@ export function ModalCadastroPeca({
             <CampoObrigatorioMark />
             <select
               value={cat}
-              onChange={(e) => setCat(e.target.value)}
+              onChange={(ev) => setCat(ev.target.value)}
               style={{
                 display: "block",
                 width: "100%",
@@ -194,7 +191,7 @@ export function ModalCadastroPeca({
             <CampoObrigatorioMark />
             <select
               value={tam}
-              onChange={(e) => setTam(e.target.value)}
+              onChange={(ev) => setTam(ev.target.value)}
               style={{
                 display: "block",
                 width: "100%",
@@ -223,7 +220,7 @@ export function ModalCadastroPeca({
             type="date"
             required
             value={dataEntrada}
-            onChange={(e) => setDataEntrada(e.target.value)}
+            onChange={(ev) => setDataEntrada(ev.target.value)}
             style={{
               display: "block",
               width: "100%",
@@ -241,7 +238,7 @@ export function ModalCadastroPeca({
           Observações
           <textarea
             value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            onChange={(ev) => setDesc(ev.target.value)}
             rows={3}
             style={{
               display: "block",

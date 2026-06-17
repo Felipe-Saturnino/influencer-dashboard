@@ -14,14 +14,14 @@ import type { FluxoDevolucaoUi } from "./figurinosModalShared"
 
 export function ModalDevolucao({
   peca,
-  resumoOperadoras,
+  resumoEstudios,
   emprestimo,
   actor,
   onClose,
   onOk,
 }: {
   peca: RhFigurinoPeca;
-  resumoOperadoras: string;
+  resumoEstudios: string;
   emprestimo: RhFigurinoEmprestimo | undefined;
   actor: string;
   onClose: () => void;
@@ -81,7 +81,7 @@ export function ModalDevolucao({
   return (
     <ModalBase onClose={onClose} maxWidth={500}>
       <ModalHeader title="Devolução" onClose={onClose} />
-      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      <BlocoResumoPecaBasico peca={peca} estudiosTexto={resumoEstudios} t={t} />
       {emprestimo ? (
         <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px" }}>
           Retirada ativa ({labelTipoRetirada(emprestimo.withdrawal_type)}):{" "}

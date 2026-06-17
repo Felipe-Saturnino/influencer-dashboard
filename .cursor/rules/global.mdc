@@ -539,6 +539,32 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 **Modais / seletor com lista:** mesma barra (`BarraPesquisaPagina`) + listbox abaixo (ex.: Figurinos prestador, RH Talks participantes, concluir vaga HC). Placeholder de staff: `FILTER_SEARCH_STAFF` → `Pesquisar Staff...`.
 
+### Comportamento da busca — insensível a acentos (obrigatório)
+
+Toda filtragem **client-side** acionada por barra de pesquisa ou busca no painel do filtro deve ignorar acentos e diferença de maiúsculas/minúsculas. Ex.: «Flavia» encontra «Flávia»; «jose» encontra «José».
+
+**Helper canónico:** `src/lib/searchText.ts` — não duplicar `normalize("NFD")` nem `toLowerCase().includes` localmente.
+
+| Função | Uso |
+|--------|-----|
+| `normalizarTextoBusca(s)` | Pré-processar termo ou haystack (trim, lower, remove marcas Unicode) |
+| `textoContemBusca(haystack, buscaRaw)` | Um campo — `true` se `buscaRaw` vazia ou coincidir |
+| `textoContemBuscaEmAlgum(buscaRaw, ...partes)` | Vários campos (nome, e-mail, nickname, …) |
+
+```tsx
+import { textoContemBusca, textoContemBuscaEmAlgum } from "../lib/searchText";
+
+rows.filter((r) => textoContemBuscaEmAlgum(busca, r.nome, r.email));
+
+// Debounce com texto pré-normalizado (Portal RH, Informativos):
+setBuscaDeb(normalizarTextoBusca(busca));
+// textoBusca indexado na linha também com normalizarTextoBusca(...)
+```
+
+- **Vagas:** `normalizarBuscaVaga` em `rhVagasFormat.ts` delega a `normalizarTextoBusca` — manter assim.
+- **Componentes de filtro** (`FiltroInfluencerSelect`, `FiltroEntidadeBarSelect`, …): já usam `textoContemBusca` no painel — não reimplementar.
+- **Exceção documentada:** **Central de Denúncias** — parte da busca via `ilike` no Postgres (sem `unaccent`); comportamento pode exigir acento até migração. Ajuda → Troubleshooting → bloco transversal **Plataforma**.
+
 ### Pesquisa dentro do filtro (> 5 valores)
 
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
@@ -546,7 +572,7 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 - **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — busca no painel via **`BarraPesquisaFiltroPainel`** quando `> 5` opções; placeholder Staff: **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
 - **Outros domínios:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
 - Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
-- Filtrar por correspondência parcial no nome.
+- Filtrar por correspondência parcial no nome — **com** `textoContemBusca` / `textoContemBuscaEmAlgum` (§ Comportamento da busca — insensível a acentos).
 
 ---
 
@@ -1074,6 +1100,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
+- Busca textual client-side com `toLowerCase().includes` ou `normalize("NFD")` duplicado em vez de `lib/searchText.ts` (`textoContemBusca`, `textoContemBuscaEmAlgum`, `normalizarTextoBusca`).
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Tabela nova em bloco nível 3 sem `createDataTableBlockStyles` / `getDataTableWrapStyle` (usar padrão Detalhamento Diário — § Tabelas padrão canónico).

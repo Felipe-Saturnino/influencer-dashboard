@@ -19,6 +19,7 @@ import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill }
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageFilterBoxStyle,
@@ -251,9 +252,8 @@ export default function Afiliados() {
   const filtered = list.filter((inf) => {
     if (!podeVerInfluencer(inf.id)) return false;
     const p = inf.perfil;
-    const q = search.toLowerCase();
     const nomeEx = p?.nome_artistico?.trim() || inf.name || "";
-    if (q && !nomeEx.toLowerCase().includes(q) && !inf.name?.toLowerCase().includes(q) && !inf.email?.toLowerCase().includes(q)) return false;
+    if (search.trim() && !textoContemBuscaEmAlgum(search, nomeEx, inf.name, inf.email)) return false;
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (operadoraSlugsForcado?.length) {
       if (!inf.operadoras?.some((o) => operadoraSlugsForcado.includes(o.operadora_slug))) return false;

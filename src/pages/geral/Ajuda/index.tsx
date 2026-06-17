@@ -18,7 +18,7 @@ import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
 type Aba = "conheca" | "troubleshooting" | "glossario";
 
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
-import { CONTEUDO_TROUBLE } from "./conteudo/troubleshooting";
+import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
 
 function podeVerPaginaNoMenu(cv: string | null | undefined): boolean {
   return cv === "sim" || cv === "proprios";
@@ -102,6 +102,54 @@ export default function Ajuda() {
       : aba === "troubleshooting"
         ? CONTEUDO_TROUBLE[paginaSelecionada]
         : undefined;
+
+  const renderAjudaBlocos = (
+    blocos: { subtitulo: string; texto: string }[],
+    opts?: { pageKeyLink?: PageKey; skipLink?: boolean },
+  ) =>
+    blocos.map((bloco, i) => (
+      <div key={`${bloco.subtitulo}-${i}`}>
+        {bloco.subtitulo ? (
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              color: brand.accent,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              margin: "0 0 6px",
+            }}
+          >
+            {bloco.subtitulo}
+          </p>
+        ) : null}
+        <p
+          style={{
+            fontSize: 14,
+            lineHeight: 1.75,
+            color: t.text,
+            fontFamily: FONT.body,
+            margin: 0,
+            whiteSpace: "pre-line",
+          }}
+        >
+          {renderAjudaTexto(bloco.texto)}
+        </p>
+        {!opts?.skipLink && i === 0 && opts?.pageKeyLink ? (
+          <AjudaPaginaAcessoLink pageKey={opts.pageKeyLink} />
+        ) : null}
+        {i < blocos.length - 1 ? (
+          <div
+            style={{
+              height: 1,
+              background: t.cardBorder,
+              marginTop: 20,
+            }}
+          />
+        ) : null}
+      </div>
+    ));
 
   return (
     <div className="app-page-shell" style={{ maxWidth: "1100px", margin: "0 auto" }}>
@@ -294,65 +342,117 @@ export default function Ajuda() {
             padding: "28px 32px",
             boxShadow: cardShadow,
           }}>
-            {dadosConteudo ? (
+            {aba === "troubleshooting" || dadosConteudo ? (
               <>
-                <div style={{ marginBottom: 20 }}>
-                  <h2 style={{
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: t.text,
-                    fontFamily: FONT_TITLE,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    margin: "0 0 8px",
-                  }}>
-                    {dadosConteudo.titulo}
-                  </h2>
-                  <div style={{
-                    height: 2,
-                    width: 40,
-                    background: tituloGradient,
-                    borderRadius: 2,
-                  }} />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  {dadosConteudo.blocos.map((bloco, i) => (
-                    <div key={i}>
-                      {"subtitulo" in bloco && bloco.subtitulo && (
-                        <p style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          fontFamily: FONT.body,
-                          color: brand.accent,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.08em",
-                          margin: "0 0 6px",
-                        }}>
-                          {bloco.subtitulo}
-                        </p>
-                      )}
-                      <p style={{
-                        fontSize: 14,
-                        lineHeight: 1.75,
-                        color: t.text,
-                        fontFamily: FONT.body,
-                        margin: 0,
-                        whiteSpace: "pre-line",
-                      }}>
-                        {renderAjudaTexto(bloco.texto)}
-                      </p>
-                      {i === 0 ? <AjudaPaginaAcessoLink pageKey={paginaSelecionada} /> : null}
-                      {i < dadosConteudo.blocos.length - 1 && (
-                        <div style={{
+                {aba === "troubleshooting" ? (
+                  <>
+                    <div style={{ marginBottom: dadosConteudo ? 28 : 0 }}>
+                      <div style={{ marginBottom: 20 }}>
+                        <h2
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 800,
+                            color: t.text,
+                            fontFamily: FONT_TITLE,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                            margin: "0 0 8px",
+                          }}
+                        >
+                          {TROUBLESHOOTING_TRANSVERSAL.titulo}
+                        </h2>
+                        <div
+                          style={{
+                            height: 2,
+                            width: 40,
+                            background: tituloGradient,
+                            borderRadius: 2,
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        {renderAjudaBlocos([...TROUBLESHOOTING_TRANSVERSAL.blocos], { skipLink: true })}
+                      </div>
+                    </div>
+                    {dadosConteudo ? (
+                      <div
+                        style={{
                           height: 1,
                           background: t.cardBorder,
-                          marginTop: 20,
-                        }} />
-                      )}
+                          margin: "0 0 28px",
+                        }}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+
+                {dadosConteudo ? (
+                  <>
+                    <div style={{ marginBottom: 20 }}>
+                      <h2
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: t.text,
+                          fontFamily: FONT_TITLE,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          margin: "0 0 8px",
+                        }}
+                      >
+                        {dadosConteudo.titulo}
+                      </h2>
+                      <div
+                        style={{
+                          height: 2,
+                          width: 40,
+                          background: tituloGradient,
+                          borderRadius: 2,
+                        }}
+                      />
                     </div>
-                  ))}
-                </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      {renderAjudaBlocos(dadosConteudo.blocos, { pageKeyLink: paginaSelecionada })}
+                    </div>
+                  </>
+                ) : aba === "troubleshooting" ? null : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "60px 20px",
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 14,
+                        background: navActiveBg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <HelpCircle size={22} color={brand.primary} aria-hidden="true" />
+                    </div>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        margin: 0,
+                        textAlign: "center",
+                      }}
+                    >
+                      Conteúdo em construção para esta página.
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <div style={{

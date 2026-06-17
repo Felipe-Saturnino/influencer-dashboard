@@ -23,7 +23,7 @@ import { BarcodeBlock } from "./BarcodeBlock"
 
 export function ModalDetalhe({
   peca,
-  operadorasTexto,
+  estudiosTexto,
   histStatus,
   histErro,
   loadingHist,
@@ -37,7 +37,7 @@ export function ModalDetalhe({
   onDescartar,
 }: {
   peca: RhFigurinoPeca;
-  operadorasTexto: string;
+  estudiosTexto: string;
   histStatus: RhFigurinoStatusHist[];
   histErro: string | null;
   loadingHist: boolean;
@@ -95,7 +95,7 @@ export function ModalDetalhe({
       {abaDet === "detalhes" ? (
         <div role="tabpanel" id="panel-fig-detalhe-detalhes" aria-labelledby="tab-fig-detalhe-detalhes" tabIndex={0}>
           <div style={{ marginBottom: 16 }}>
-            {linhaLeitura("Operadora", operadorasTexto)}
+            {linhaLeitura("Estúdio", estudiosTexto)}
             {linhaLeitura("Categoria", peca.category)}
             {linhaLeitura("Tamanho", peca.size)}
             {linhaLeitura("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
@@ -116,7 +116,7 @@ export function ModalDetalhe({
               onClick={async () => {
                 setPdfLoading(true);
                 try {
-                  await baixarEtiquetaFigurinoPdf(peca, operadorasTexto);
+                  await baixarEtiquetaFigurinoPdf(peca, estudiosTexto);
                 } finally {
                   setPdfLoading(false);
                 }

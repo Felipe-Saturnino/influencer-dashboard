@@ -8,6 +8,7 @@ import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch"
 import { revisaoCadastralPendenteParaFuncionario } from "../../../lib/rhCadastroRevisao";
 import { prestadorCadastroIncompleto } from "./gestaoPrestadorHelpers";
 import { somenteDigitos } from "../../../lib/rhFuncionarioValidators";
+import { textoContemBusca } from "../../../lib/searchText";
 import type { SortDir } from "../../../components/dashboard";
 import {
   dataFuncaoOuInicioIso,
@@ -132,8 +133,8 @@ export function usePrestadorLista({
   );
 
   const filtrada = useMemo(() => {
-    const b = busca.trim().toLowerCase();
     const digits = somenteDigitos(busca);
+    const q = busca.trim();
     return lista.filter((r) => {
       if (filtroStatus === "disponiveis") {
         if (r.status === "encerrado") return false;
@@ -148,10 +149,10 @@ export function usePrestadorLista({
         const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
         if (!o || o.gerenciaNome !== filtroGerencia) return false;
       }
-      if (!b) return true;
+      if (!q && digits.length === 0) return true;
       if (digits.length === 11 && r.cpf === digits) return true;
-      if (r.nome.toLowerCase().includes(b)) return true;
-      if (r.email.toLowerCase().includes(b)) return true;
+      if (textoContemBusca(r.nome, busca)) return true;
+      if (textoContemBusca(r.email, busca)) return true;
       if (r.cpf && r.cpf.includes(digits) && digits.length >= 3) return true;
       return false;
     });

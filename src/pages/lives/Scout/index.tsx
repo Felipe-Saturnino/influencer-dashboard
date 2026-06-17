@@ -21,6 +21,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   getPageContentBoxStyle,
@@ -324,8 +325,7 @@ export default function Scout() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = list.filter((s) => {
-    const q = search.toLowerCase();
-    if (search && !(s.nome_artistico ?? "").toLowerCase().includes(q) && !(s.email ?? "").toLowerCase().includes(q)) return false;
+    if (search.trim() && !textoContemBuscaEmAlgum(search, s.nome_artistico, s.email)) return false;
     // Vista padrão ("todos"): não listar fechados — só aparecem ao filtrar explicitamente por Fechado.
     if (filterStatus === "todos") {
       if (s.status === "fechado") return false;

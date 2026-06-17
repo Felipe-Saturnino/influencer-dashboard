@@ -21,6 +21,7 @@ import {
   stripHtmlText,
   type InformativoStatus,
 } from "../../../lib/informativosWorkflow";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { labelPerfisInformativo } from "../../../lib/informativosRoles";
 import {
   labelOperadorEscopoInformativo,
@@ -236,7 +237,7 @@ export function GerenciamentoInformativos({
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: `${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`,
+        textoBusca: normalizarTextoBusca(`${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`),
       });
     }
 
@@ -274,7 +275,7 @@ export function GerenciamentoInformativos({
 
   const rowsFiltradas = useMemo(() => {
     const mes = mesesDisponiveis[idxMes];
-    const q = buscaDeb.trim().toLowerCase();
+    const q = buscaDeb;
     return rows.filter((row) => {
       if (filtroStatus !== "todos" && row.status !== filtroStatus) return false;
       if (!modoHistorico && row.publishedAt && mes && !itemNoMesCarrossel(row.publishedAt, mes)) {
@@ -283,7 +284,7 @@ export function GerenciamentoInformativos({
       if (!modoHistorico && !row.publishedAt && mes && !itemNoMesCarrossel(row.createdAt, mes)) {
         if (row.status === "rascunho" || row.status === "aprovacao") return false;
       }
-      if (q && !row.textoBusca.toLowerCase().includes(q)) return false;
+      if (q && !row.textoBusca.includes(q)) return false;
       return true;
     });
   }, [rows, filtroStatus, buscaDeb, modoHistorico, idxMes, mesesDisponiveis]);

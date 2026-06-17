@@ -1,4 +1,5 @@
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { textoContemBusca } from "../../../lib/searchText";
 import type { SortDir } from "../../../components/dashboard";
 import { normalizeDominioForCheck } from "../../../lib/comercialDominioValidation";
 import {
@@ -325,7 +326,7 @@ export function filterMarcas(
     list = list.filter((r) => r.comercial_user_id === comercialFiltro);
   }
 
-  const q = busca.trim().toLowerCase();
+  const q = busca.trim();
   if (q) {
     list = list.filter((r) => {
       const hay = [
@@ -333,10 +334,8 @@ export function filterMarcas(
         r.empresa.razao_social,
         r.empresa.cnpj,
         ...r.contatos.map((c) => c.nome),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
+      ].join(" ");
+      return textoContemBusca(hay, q);
     });
   }
 

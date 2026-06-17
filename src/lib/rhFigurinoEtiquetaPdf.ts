@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import type { RhFigurinoPeca } from "../pages/estudio/Figurinos/types";
 
 /** Etiqueta ~10×5 cm (mm), geração 100% no cliente. */
-export async function baixarEtiquetaFigurinoPdf(peca: RhFigurinoPeca, operadorasTexto: string): Promise<void> {
+export async function baixarEtiquetaFigurinoPdf(peca: RhFigurinoPeca, estudiosTexto: string): Promise<void> {
   const JsBarcode = (await import("jsbarcode")).default;
   const canvas = document.createElement("canvas");
   JsBarcode(canvas, peca.barcode, {
@@ -20,7 +20,7 @@ export async function baixarEtiquetaFigurinoPdf(peca: RhFigurinoPeca, operadoras
   pdf.setFont("helvetica", "normal");
   pdf.text(`${peca.category} · ${peca.size}`.slice(0, 48), 4, 8);
   pdf.setFontSize(9);
-  pdf.text(operadorasTexto.slice(0, 56), 4, 14);
+  pdf.text(estudiosTexto.slice(0, 56), 4, 14);
   pdf.setFontSize(10);
   pdf.setFont("helvetica", "bold");
   pdf.text(peca.code, 4, 21);

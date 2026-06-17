@@ -2,25 +2,12 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { Users } from "lucide-react";
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import SectionTitle from "../../dashboard/SectionTitle";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { ORG_MSG_BUSCA_SEM_RESULTADO, ORG_MSG_SEM_DIRETORIAS } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
-
-function normalizarBusca(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function textoContemBusca(haystack: string, needleRaw: string): boolean {
-  const needle = normalizarBusca(needleRaw);
-  if (!needle) return true;
-  return normalizarBusca(haystack).includes(needle);
-}
 
 type NomeResp = (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
 

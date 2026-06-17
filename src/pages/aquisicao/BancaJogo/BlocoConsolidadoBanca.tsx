@@ -8,6 +8,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
 import { compareAtivoBoolean, compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText"
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { ChevronRight } from "lucide-react"
 import { type BancaPerfilMapRow, type BancaRowDb, type BancaStatusConta } from "./bancaJogoTypes"
@@ -112,7 +113,7 @@ export function BlocoConsolidadoBanca({
   const filtradaBusca = useMemo(() => {
     return agregados.filter((r) => {
       if (!busca) return true;
-      return r.nome.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
+      return textoContemBuscaEmAlgum(busca, r.nome, r.email);
     });
   }, [agregados, busca]);
 

@@ -11,6 +11,7 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
@@ -71,12 +72,11 @@ export function AbaEstudios({
 
   const estudiosFiltrados = useMemo(() => {
     const base = estudios.filter(estudioVisivelNoFiltro);
-    const q = busca.trim().toLowerCase();
+    const q = busca.trim();
     if (!q) return base;
-    return base.filter((e) => {
-      const nomesOp = nomesOperadorasEstudio(e).join(" ").toLowerCase();
-      return (e.nome ?? "").toLowerCase().includes(q) || nomesOp.includes(q);
-    });
+    return base.filter((e) =>
+      textoContemBusca(e.nome, q) || textoContemBusca(nomesOperadorasEstudio(e).join(" "), q),
+    );
   }, [estudios, busca, estudioVisivelNoFiltro]);
 
   const contagemMesasPorTipo = useMemo(() => {

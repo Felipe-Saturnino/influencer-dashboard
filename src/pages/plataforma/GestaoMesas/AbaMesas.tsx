@@ -11,6 +11,7 @@ import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
@@ -81,15 +82,17 @@ export function AbaMesas({
   );
 
   const rowsFiltradas = useMemo(() => {
-    const q = buscaMesa.trim().toLowerCase();
+    const q = buscaMesa.trim();
     if (!q) return rowsPorOperadora;
-    return rowsPorOperadora.filter((r) => {
-      const nome = (r.nome_mesa ?? "").toLowerCase();
-      const idSpin = (r.mesa_identificacao ?? "").toLowerCase();
-      const numero = (r.numero_mesa ?? "").toLowerCase();
-      const estudio = (nomeEstudioJoin(r, estudios) ?? "").toLowerCase();
-      return nome.includes(q) || idSpin.includes(q) || numero.includes(q) || estudio.includes(q);
-    });
+    return rowsPorOperadora.filter((r) =>
+      textoContemBuscaEmAlgum(
+        q,
+        r.nome_mesa,
+        r.mesa_identificacao,
+        r.numero_mesa,
+        nomeEstudioJoin(r, estudios),
+      ),
+    );
   }, [rowsPorOperadora, buscaMesa, estudios]);
 
   const contagemPorJogo = useMemo(() => {

@@ -38,6 +38,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import {
   FiltroTodosTimesButton,
   FiltroTurnoSelect,
@@ -622,13 +623,9 @@ export default function RhGestaoStaffPage() {
       const tid = times[idxTime]!.id;
       rows = rows.filter((p) => p.org_time_id === tid);
     }
-    const q = buscaNomeNickname.trim().toLowerCase();
+    const q = buscaNomeNickname.trim();
     if (q) {
-      rows = rows.filter((p) => {
-        const nome = (p.nome ?? "").toLowerCase();
-        const nick = (p.staff_nickname ?? "").trim().toLowerCase();
-        return nome.includes(q) || nick.includes(q);
-      });
+      rows = rows.filter((p) => textoContemBuscaEmAlgum(buscaNomeNickname, p.nome, p.staff_nickname));
     }
     rows = rows.filter((p) => staffRowPassaFiltroEstudio(p, filtroEstudioStaff, opParaEstudio));
     rows = rows.filter((p) => staffRowPassaFiltroTurno(p, filtroTurnoStaff));

@@ -40,8 +40,10 @@ export function buildOperadorasPorEstudioMap(junction: readonly { operadora_slug
   return m;
 }
 
+export type StaffEstudioVinculo = Pick<RhFuncionario, "staff_estudio_slug" | "staff_operadora_slug">;
+
 export function staffEstudioSlugEfetivo(
-  row: Pick<RhFuncionario, "staff_estudio_slug" | "staff_operadora_slug">,
+  row: StaffEstudioVinculo,
   opParaEstudio: Record<string, string>,
 ): string {
   const direct = (row.staff_estudio_slug ?? "").trim();
@@ -51,7 +53,7 @@ export function staffEstudioSlugEfetivo(
 }
 
 export function staffRowPassaFiltroEstudio(
-  row: RhFuncionario,
+  row: StaffEstudioVinculo,
   filtro: string,
   opParaEstudio: Record<string, string>,
 ): boolean {

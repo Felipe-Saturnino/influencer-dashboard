@@ -8,6 +8,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { supabase } from "../../../lib/supabase"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
 import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText"
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { ChevronRight, Loader2 } from "lucide-react"
 import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
@@ -57,7 +58,7 @@ export function BlocoConsolidado({
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (!busca) return true;
-      return r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
+      return textoContemBuscaEmAlgum(busca, r.nome_artistico, r.email);
     });
   }, [rows, busca]);
 

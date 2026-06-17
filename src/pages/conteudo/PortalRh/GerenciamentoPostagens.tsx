@@ -21,6 +21,7 @@ import {
   type RhPostagemStatus,
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
@@ -260,7 +261,7 @@ export function GerenciamentoPostagens({
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: `${row.titulo} ${stripHtmlText(row.corpo)}`.toLowerCase(),
+        textoBusca: normalizarTextoBusca(`${row.titulo} ${stripHtmlText(row.corpo)}`),
         _autorId: autorId,
         _aprovadorId: row.approved_by,
       } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });
@@ -295,7 +296,7 @@ export function GerenciamentoPostagens({
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: `${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? "")}`.toLowerCase(),
+        textoBusca: normalizarTextoBusca(`${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? "")}`),
         _autorId: row.created_by,
         _aprovadorId: row.approved_by,
       } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });
@@ -329,7 +330,7 @@ export function GerenciamentoPostagens({
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: `${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? row.resumo ?? "")}`.toLowerCase(),
+        textoBusca: normalizarTextoBusca(`${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? row.resumo ?? "")}`),
         _autorId: row.created_by,
         _aprovadorId: row.approved_by,
       } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });

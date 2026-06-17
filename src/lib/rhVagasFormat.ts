@@ -1,5 +1,6 @@
 import type { RhVagaCandidaturaEtapa, RhVagasCandidaturasFiltroTipo } from "../types/rhVagaCandidatura";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../types/rhVaga";
+import { normalizarTextoBusca } from "./searchText";
 
 export function hojeIsoDate(): string {
   const d = new Date();
@@ -56,11 +57,7 @@ export function tipoVagaParaEdicao(tipo: RhVagaTipo): RhVagaTipoSelecionavel {
 }
 
 export function normalizarBuscaVaga(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return normalizarTextoBusca(s);
 }
 
 export function organogramaLabelDeVaga(v: RhVagaRow): string {
