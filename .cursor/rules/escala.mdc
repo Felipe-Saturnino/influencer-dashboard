@@ -47,13 +47,13 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Gestão de Escala (`rh_gestao_escala`)
 
-- **Barra de filtros — linha 1:** carrossel de mês + **`FiltroOperadoraSelect`** (Todas Operadoras + extra «Nenhuma»). **Linha 2:** tablist **`FiltroBarTabButton`** — «Geração de Escala» / «Alteração de Escala» (`borderTop` como Marketplace/Solicitações); carrossel e operadora valem para ambos os modos.
+- **Barra de filtros — linha 1:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum»). **Linha 2:** tablist **`FiltroBarTabButton`** — «Geração de Escala» / «Alteração de Escala» (`borderTop` como Marketplace/Solicitações); carrossel e estúdio valem para ambos os modos.
 - **Geração de Escala:** blocos **Consolidado** e **Escala Diária** (conteúdo atual da grade mensal).
 - **Alteração de Escala:** painel reservado (em branco até implementação).
 - Blocos **Consolidado** e **Escala Diária:** **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
 - **Consolidado:** abaixo do título do bloco, chips de **área (time)** — Customer Service, Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária.
 - Tabela **Consolidado:** coluna **Turno** com `position: sticky; left: 0` e sombra lateral ao rolar horizontalmente (dias do mês).
-- Grade mensal por área (time): chips de área **dentro do bloco Consolidado** (abaixo do `SectionTitle`), **`FiltroOperadoraSelect`** na barra (opção **Todas Operadoras** + `extraOptions` “Nenhuma” se aplicável), carrossel de mês.
+- Grade mensal por área (time): chips de área **dentro do bloco Consolidado** (abaixo do `SectionTitle`), **`FiltroEstudioSelect`** na barra (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.
 - Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
 - Vínculo com Calendário: escala aprovada alimenta presença/agenda.
 - RPCs: `rh_gestao_escala_grade_*`.
@@ -66,7 +66,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - `PageHeader`; **ordem do topo:** alertas → **cards consolidado** (`app-grid-3`: sem dados operacionais, cadastrais e de jogo — `StaffKpiResumo.tsx`, regras em `gestaoStaffHelpers.ts`; **somente time Game Presenter** — ocultos na vista time a time de outros times; em «Todos os Times», contagem só de GP no recorte filtrado) → barra de filtros → tabela.
 - **Tabela principal:** padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); ações em ícone centralizadas (Global + Brand).
 - **Linha superior de filtros:** carrossel de time (`carouselNavStyles` — setas 32×32, rótulo `getCarouselPeriodLabelStyle`) + **`FiltroTodosTimesButton`** (pill igual **Histórico** via `FiltroBarPillButton`; rótulo **Todos os Times**; ícone **`UsersRound`** 15px; `aria-label` alternado conforme estado). Textos e toggle `todosTimes` / `idxTime` **inalterados**.
-- Segunda linha: turno, operadora, pesquisa — **`FiltroOperadoraSelect`** (Todas Operadoras / Nenhuma), **`FiltroTurnoSelect`**.
+- Segunda linha: turno, estúdio, pesquisa — **`FiltroEstudioSelect`** (Todos Estúdios / Nenhum), **`FiltroTurnoSelect`**.
 - **Handoff:** CRUD staff, organograma operacional.
 
 ---
@@ -105,5 +105,5 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 - Converter toolbar de escala para só ícone.
 - Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
-- Filtro de operadora sem `FiltroOperadoraSelect`, sem ícone Shield no campo, label lateral “Operadora” ou agregadora diferente de **Todas Operadoras**.
+- Filtro de estúdio sem `FiltroEstudioSelect`, sem ícone Building2 no campo, label lateral “Estúdio” ou agregadora diferente de **Todos Estúdios**.
 - Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.

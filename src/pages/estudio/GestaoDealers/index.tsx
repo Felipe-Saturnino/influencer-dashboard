@@ -115,6 +115,17 @@ function estiloFiltroJogoDealer(
 const CARD_SHADOW = (isDark: boolean) =>
   isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
+/** Retratos de dealer: âncora no topo para não cortar rosto em `object-fit: cover`. */
+const DEALER_FOTO_ASPECT_RATIO = "4/5";
+
+const DEALER_FOTO_IMG_STYLE: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  objectPosition: "top center",
+  display: "block",
+};
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GestaoDealers() {
@@ -447,7 +458,7 @@ export default function GestaoDealers() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
-              <div style={{ aspectRatio: "16/10", background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+              <div style={{ aspectRatio: DEALER_FOTO_ASPECT_RATIO, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
               <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ height: 18, width: "60%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
                 <div style={{ height: 12, width: "40%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
@@ -571,7 +582,7 @@ function DealerFotoCarrossel({
       <img
         src={urls[cur]}
         alt={n > 1 ? `${alt} — foto ${cur + 1} de ${n}` : alt}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        style={DEALER_FOTO_IMG_STYLE}
       />
       {n > 1 ? (
         <>
@@ -661,7 +672,7 @@ function DealerCard({
     >
       {/* Área da foto */}
       <div style={{
-        aspectRatio: "16/10",
+        aspectRatio: DEALER_FOTO_ASPECT_RATIO,
         background: "linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%)",
         position: "relative",
         display: "flex",
@@ -953,7 +964,7 @@ function ModalVer({
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title={dealer.nickname} onClose={onClose} />
       {fotosUrls.length > 0 ? (
-        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
+        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: DEALER_FOTO_ASPECT_RATIO }}>
           <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         </div>
       ) : null}

@@ -1347,7 +1347,7 @@ function ModalStaffVer({
                             flexShrink: 0,
                           }}
                         >
-                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
                         </div>
                       ))}
                     </div>
@@ -2022,7 +2022,7 @@ function ModalStaffEditar({
                     border: `1px solid ${t.cardBorder}`,
                   }}
                 >
-                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
                   <button
                     type="button"
                     aria-label="Remover foto"

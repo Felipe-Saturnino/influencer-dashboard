@@ -16,7 +16,13 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { FiltroOperadoraSelect } from "../../../components/dashboard";
+import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
+import {
+  buildOperadoraParaEstudioMap,
+  FILTRO_STAFF_ESTUDIO_NENHUM,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+  staffRowPassaFiltroEstudio,
+} from "../GestaoStaff/gestaoStaffEstudioHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   FILTRO_BAR_TAB_ICON_SIZE,
@@ -180,7 +186,9 @@ type RpcPrestadorEscala = {
   org_time_id: string | null;
   nome_time: string;
   staff_nickname: string | null;
-  /** Slug da operadora na Staff (Gestão de Prestadores); vazio = sem operadora. */
+  /** Slug do estúdio na Staff; vazio = sem estúdio. */
+  staff_estudio_slug?: string | null;
+  /** Legado — fallback de estúdio quando staff_estudio_slug ausente. */
   staff_operadora_slug?: string | null;
 };
 
@@ -273,13 +281,13 @@ function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPre
   return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
 }
 
-/** Filtro global por operadora da Staff (`todas` | `nenhuma` | slug ativo). */
-function filtrarPrestadoresPorOperadora(rows: RpcPrestadorEscala[], filtroOperadora: string): RpcPrestadorEscala[] {
-  if (filtroOperadora === "todas") return rows;
-  if (filtroOperadora === "nenhuma") {
-    return rows.filter((p) => !(p.staff_operadora_slug ?? "").trim());
-  }
-  return rows.filter((p) => (p.staff_operadora_slug ?? "").trim() === filtroOperadora);
+/** Filtro global por estúdio da Staff (`todos` | `nenhum` | slug ativo). */
+function filtrarPrestadoresPorEstudio(
+  rows: RpcPrestadorEscala[],
+  filtroEstudio: string,
+  opParaEstudio: Record<string, string>,
+): RpcPrestadorEscala[] {
+  return rows.filter((p) => staffRowPassaFiltroEstudio(p, filtroEstudio, opParaEstudio));
 }
 
 function contarCelulasComSigla(
@@ -515,10 +523,11 @@ export default function RhGestaoEscalaPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
-  /** Operadoras ativas (Gestão de Operadoras) para o select ao lado do período. */
-  const [operadorasAtivasEscala, setOperadorasAtivasEscala] = useState<{ slug: string; nome: string }[]>([]);
-  /** `todas` | `nenhuma` | slug da operadora. */
-  const [filtroOperadoraEscala, setFiltroOperadoraEscala] = useState<string>("todas");
+  /** Estúdios ativos para o select ao lado do período. */
+  const [estudiosAtivosEscala, setEstudiosAtivosEscala] = useState<{ slug: string; nome: string }[]>([]);
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
+  /** `todos` | `nenhum` | slug do estúdio. */
+  const [filtroEstudioEscala, setFiltroEstudioEscala] = useState<string>(FILTRO_STAFF_ESTUDIO_TODOS);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
@@ -571,25 +580,56 @@ export default function RhGestaoEscalaPage() {
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     void supabase
-      .from("operadoras")
-      .select("slug, nome, ativo")
+      .from("estudios_spin")
+      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
       .eq("ativo", true)
       .order("nome", { ascending: true })
       .then(({ data, error }) => {
         if (error) {
-          setOperadorasAtivasEscala([]);
+          setEstudiosAtivosEscala([]);
+          setOpParaEstudio({});
           return;
         }
-        const rows = (data ?? []) as { slug: string; nome: string; ativo?: boolean }[];
-        setOperadorasAtivasEscala(
-          rows.filter((o) => o.ativo).map((o) => ({ slug: o.slug, nome: (o.nome ?? "").trim() || o.slug })),
-        );
+        const opts: { slug: string; nome: string }[] = [];
+        const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+        for (const raw of data ?? []) {
+          const e = raw as {
+            slug: string;
+            nome: string;
+            tipo: string;
+            estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+          };
+          opts.push({ slug: e.slug, nome: (e.nome ?? "").trim() || e.slug });
+          const joins = e.estudios_spin_operadoras;
+          const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+          for (const j of list) {
+            junctionFlat.push({
+              operadora_slug: j.operadora_slug,
+              estudio_slug: e.slug,
+              tipo: e.tipo,
+            });
+          }
+        }
+        setEstudiosAtivosEscala(opts);
+        setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
       });
   }, [perm.loading, perm.canView]);
 
-  const prestadoresFiltradosOperadora = useMemo(
-    () => filtrarPrestadoresPorOperadora(prestadoresRaw, filtroOperadoraEscala),
-    [prestadoresRaw, filtroOperadoraEscala],
+  useEffect(() => {
+    if (
+      filtroEstudioEscala === FILTRO_STAFF_ESTUDIO_TODOS ||
+      filtroEstudioEscala === FILTRO_STAFF_ESTUDIO_NENHUM
+    ) {
+      return;
+    }
+    if (!estudiosAtivosEscala.some((e) => e.slug === filtroEstudioEscala)) {
+      setFiltroEstudioEscala(FILTRO_STAFF_ESTUDIO_TODOS);
+    }
+  }, [filtroEstudioEscala, estudiosAtivosEscala]);
+
+  const prestadoresFiltradosEstudio = useMemo(
+    () => filtrarPrestadoresPorEstudio(prestadoresRaw, filtroEstudioEscala, opParaEstudio),
+    [prestadoresRaw, filtroEstudioEscala, opParaEstudio],
   );
 
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
@@ -795,8 +835,8 @@ export default function RhGestaoEscalaPage() {
   );
 
   const linhas = useMemo(() => {
-    return filtrarPorArea(prestadoresFiltradosOperadora, filtroArea).map(mapLinhaPrestador);
-  }, [prestadoresFiltradosOperadora, filtroArea]);
+    return filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map(mapLinhaPrestador);
+  }, [prestadoresFiltradosEstudio, filtroArea]);
 
   const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim().toLowerCase();
@@ -835,8 +875,8 @@ export default function RhGestaoEscalaPage() {
   }, [linhasFiltradasEscalaDiaria, sortEscalaDiaria]);
 
   const linhasPorFiltroGerar = useCallback(
-    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosOperadora, areaKey).map(mapLinhaPrestador),
-    [prestadoresFiltradosOperadora],
+    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosEstudio, areaKey).map(mapLinhaPrestador),
+    [prestadoresFiltradosEstudio],
   );
 
   /**
@@ -1187,7 +1227,7 @@ export default function RhGestaoEscalaPage() {
 
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
-    const linhasF = filtrarPorArea(prestadoresFiltradosOperadora, filtroArea).map(mapLinhaPrestador);
+    const linhasF = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map(mapLinhaPrestador);
     const celulas = gerarPorFiltro[filtroArea]?.celulas;
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
@@ -1221,7 +1261,7 @@ export default function RhGestaoEscalaPage() {
       temLinhaComercialConsolidado,
       temLinhaTardeConsolidado,
     };
-  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosOperadora, dias, gerarPorFiltro]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     const est = gerarPorFiltro[filtroArea];
@@ -1347,12 +1387,13 @@ export default function RhGestaoEscalaPage() {
                 <ChevronRight size={14} aria-hidden="true" />
               </button>
             </div>
-            <FiltroOperadoraSelect
-              id="rh-gestao-escala-filtro-operadora"
-              value={filtroOperadoraEscala}
-              onChange={setFiltroOperadoraEscala}
-              operadoras={operadorasAtivasEscala}
-              extraOptions={[{ value: "nenhuma", label: "Nenhuma" }]}
+            <FiltroEstudioSelect
+              id="rh-gestao-escala-filtro-estudio"
+              value={filtroEstudioEscala}
+              onChange={setFiltroEstudioEscala}
+              estudios={estudiosAtivosEscala}
+              todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
+              extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
               minWidth={200}
             />
           </div>
