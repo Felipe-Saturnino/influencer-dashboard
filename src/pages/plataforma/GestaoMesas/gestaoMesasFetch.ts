@@ -1,11 +1,20 @@
 import { supabase } from "../../../lib/supabase";
 import type { EstudioSpinRow, MesaSpinCadastroRow } from "./gestaoMesasUi";
 
+/** FK direta operadora_slug — obrigatório após mesas_spin_operadora_identificacao (PGRST201 / HTTP 300). */
+const MESAS_OPERADORA_EMBED = "operadoras!mesas_spin_cadastro_operadora_slug_fkey(nome)";
+
 const MESAS_SELECT_COM_ESTUDIO =
-  "id, operadora_slug, estudio_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome)";
+  `id, operadora_slug, estudio_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, ${MESAS_OPERADORA_EMBED}`;
+
+const MESAS_SELECT_SEM_EMBED =
+  "id, operadora_slug, estudio_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at";
 
 const MESAS_SELECT_LEGADO =
-  "id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome)";
+  `id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, ${MESAS_OPERADORA_EMBED}`;
+
+const MESAS_SELECT_LEGADO_SEM_EMBED =
+  "id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at";
 
 const ESTUDIOS_SELECT_COM_TURNOS =
   "id, slug, nome, tipo, ativo, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio, created_at, updated_at, estudios_spin_operadoras(operadora_slug, operadoras(nome))";
@@ -32,27 +41,18 @@ function normalizarEstudioRow(row: Record<string, unknown>): EstudioSpinRow {
 
 /** Evita falha total quando colunas novas ainda não existem no PostgREST. */
 export async function fetchMesasSpinCadastroRows(): Promise<MesaSpinCadastroRow[]> {
-  const full = await supabase
-    .from("mesas_spin_cadastro")
-    .select(MESAS_SELECT_COM_ESTUDIO)
-    .order("nome_mesa", { ascending: true });
+  const attempts = [MESAS_SELECT_COM_ESTUDIO, MESAS_SELECT_LEGADO, MESAS_SELECT_SEM_EMBED, MESAS_SELECT_LEGADO_SEM_EMBED];
 
-  const res = full.error
-    ? await supabase
-        .from("mesas_spin_cadastro")
-        .select(MESAS_SELECT_LEGADO)
-        .order("nome_mesa", { ascending: true })
-    : full;
-
-  if (full.error) {
-    console.error("mesas_spin_cadastro (com estúdio):", full.error);
-  }
-  if (res.error) {
-    console.error("mesas_spin_cadastro (legado):", res.error);
-    return [];
+  for (let i = 0; i < attempts.length; i++) {
+    const select = attempts[i]!;
+    const res = await supabase.from("mesas_spin_cadastro").select(select).order("nome_mesa", { ascending: true });
+    if (!res.error) {
+      return (res.data ?? []).map((row) => normalizarMesaRow(row as unknown as Record<string, unknown>));
+    }
+    console.error(`mesas_spin_cadastro (tentativa ${i + 1}):`, res.error);
   }
 
-  return (res.data ?? []).map((row) => normalizarMesaRow(row as Record<string, unknown>));
+  return [];
 }
 
 export async function fetchEstudiosSpinRows(): Promise<EstudioSpinRow[]> {
