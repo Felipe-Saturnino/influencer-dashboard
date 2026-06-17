@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -10,18 +10,35 @@ import { SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { ctaGradientSalvar } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
-import { TIPOS_JOGO, tipoJogoInitial, type MesaSpinCadastroRow } from "./gestaoMesasUi";
+import {
+  TIPOS_JOGO,
+  tipoJogoInitial,
+  nomesOperadorasEstudio,
+  type EstudioSpinRow,
+  type MesaSpinCadastroRow,
+} from "./gestaoMesasUi";
 
 const ERRO_SALVAR_MESA = "Não foi possível salvar a mesa. Verifique os dados e tente novamente.";
 const ERRO_MESA_DUPLICADA =
   "Já existe uma mesa com este ID Spin ou ID da operadora para esta operadora.";
 
+function operadorasDoEstudio(estudio: EstudioSpinRow | undefined) {
+  if (!estudio) return [];
+  return (estudio.estudios_spin_operadoras ?? []).map((j) => {
+    const o = j.operadoras;
+    const nome = o == null ? j.operadora_slug : Array.isArray(o) ? (o[0]?.nome ?? j.operadora_slug) : o.nome;
+    return { slug: j.operadora_slug, nome };
+  });
+}
+
 export function ModalMesa({
   editando,
+  estudios,
   onClose,
   onSalvo,
 }: {
   editando: MesaSpinCadastroRow | null;
+  estudios: EstudioSpinRow[];
   onClose: () => void;
   onSalvo: () => void;
 }) {
@@ -30,39 +47,59 @@ export function ModalMesa({
   const userRole = user?.role ?? null;
   const baseId = useId();
   const ini = tipoJogoInitial(editando);
-  const [operadoras, setOperadoras] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraSlug, setOperadoraSlug] = useState(editando?.operadora_slug ?? "");
+  const [estudioSlug, setEstudioSlug] = useState(editando?.estudio_slug ?? "");
   const [nomeMesa, setNomeMesa] = useState(editando?.nome_mesa ?? "");
   const [tipoJogo, setTipoJogo] = useState(ini.preset);
   const [tipoJogoOutro, setTipoJogoOutro] = useState(ini.outro);
   const [numeroMesa, setNumeroMesa] = useState(editando?.numero_mesa ?? "");
   const [mesaIdentificacao, setMesaIdentificacao] = useState(editando?.mesa_identificacao ?? "");
-  const [mesaIdentificacaoOperadora, setMesaIdentificacaoOperadora] = useState(
-    editando?.mesa_identificacao_operadora ?? "",
-  );
+  const [idsPorOperadora, setIdsPorOperadora] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const estudioSelecionado = useMemo(
+    () => estudios.find((e) => e.slug === estudioSlug),
+    [estudios, estudioSlug],
+  );
+
+  const operadorasEstudio = useMemo(() => operadorasDoEstudio(estudioSelecionado), [estudioSelecionado]);
+
   useEffect(() => {
+    if (!editando?.id) return;
     let cancelled = false;
     void supabase
-      .from("operadoras")
-      .select("slug, nome")
-      .order("nome")
+      .from("mesas_spin_operadora_identificacao")
+      .select("operadora_slug, mesa_identificacao_operadora")
+      .eq("mesa_id", editando.id)
       .then(({ data }) => {
-        if (!cancelled) setOperadoras(data ?? []);
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        for (const row of data ?? []) {
+          if (row.mesa_identificacao_operadora?.trim()) {
+            map[row.operadora_slug] = row.mesa_identificacao_operadora.trim();
+          }
+        }
+        if (Object.keys(map).length === 0 && editando.mesa_identificacao_operadora?.trim()) {
+          map[editando.operadora_slug] = editando.mesa_identificacao_operadora.trim();
+        }
+        setIdsPorOperadora(map);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [editando]);
+
+  useEffect(() => {
+    if (!estudioSlug || editando) return;
+    setIdsPorOperadora({});
+  }, [estudioSlug, editando]);
 
   const tipoJogoEfetivo = tipoJogo === "Outro" ? tipoJogoOutro.trim() : tipoJogo;
 
   const salvar = async () => {
     setErro(null);
-    if (!operadoraSlug.trim()) {
-      setErro("Selecione a operadora.");
+    if (!estudioSlug.trim()) {
+      setErro("Selecione o estúdio.");
       return;
     }
     if (!nomeMesa.trim()) {
@@ -81,28 +118,54 @@ export function ModalMesa({
       setErro("Informe o ID interno Spin da mesa.");
       return;
     }
-    if (!mesaIdentificacaoOperadora.trim()) {
-      setErro("Informe o ID da mesa no catálogo da operadora.");
+    const primeiraOperadora = operadorasEstudio[0]?.slug ?? editando?.operadora_slug;
+    if (!primeiraOperadora) {
+      setErro("O estúdio selecionado não possui operadoras vinculadas.");
       return;
     }
+
+    const legacyIdOp =
+      Object.values(idsPorOperadora).find((v) => v.trim())?.trim() ??
+      editando?.mesa_identificacao_operadora?.trim() ??
+      null;
 
     setSalvando(true);
     try {
       const payload = {
-        operadora_slug: operadoraSlug.trim(),
+        estudio_slug: estudioSlug.trim(),
+        operadora_slug: primeiraOperadora,
         nome_mesa: nomeMesa.trim(),
         tipo_jogo: tipoJogoEfetivo,
         numero_mesa: numeroMesa.trim(),
         mesa_identificacao: mesaIdentificacao.trim(),
-        mesa_identificacao_operadora: mesaIdentificacaoOperadora.trim(),
+        mesa_identificacao_operadora: legacyIdOp,
       };
+
+      let mesaId = editando?.id;
       if (editando) {
         const { error } = await supabase.from("mesas_spin_cadastro").update(payload).eq("id", editando.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("mesas_spin_cadastro").insert(payload);
+        const { data, error } = await supabase.from("mesas_spin_cadastro").insert(payload).select("id").single();
         if (error) throw error;
+        mesaId = data?.id;
       }
+
+      if (mesaId) {
+        await supabase.from("mesas_spin_operadora_identificacao").delete().eq("mesa_id", mesaId);
+        const idRows = operadorasEstudio
+          .map((op) => ({
+            mesa_id: mesaId!,
+            operadora_slug: op.slug,
+            mesa_identificacao_operadora: idsPorOperadora[op.slug]?.trim() || null,
+          }))
+          .filter((r) => r.mesa_identificacao_operadora);
+        if (idRows.length > 0) {
+          const { error: idErr } = await supabase.from("mesas_spin_operadora_identificacao").insert(idRows);
+          if (idErr) throw idErr;
+        }
+      }
+
       onSalvo();
       onClose();
     } catch (e: unknown) {
@@ -122,8 +185,28 @@ export function ModalMesa({
     if (!salvando) onClose();
   };
 
-  const desabilitaOperadora =
+  const desabilitaEstudio =
     Boolean(editando) && (!userRole || !ROLES_STAFF_OPERACOES_LIVES.includes(userRole as Role));
+
+  const fieldLabel = {
+    display: "block" as const,
+    fontSize: 12,
+    fontWeight: 600,
+    color: t.textMuted,
+    marginBottom: 6,
+  };
+
+  const inputStyle = (disabled?: boolean) => ({
+    width: "100%",
+    boxSizing: "border-box" as const,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: disabled ? t.cardBg : t.inputBg,
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 13,
+  });
 
   return (
     <ModalBase maxWidth={480} onClose={tryClose}>
@@ -151,37 +234,34 @@ export function ModalMesa({
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <label htmlFor={`${baseId}-op`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
-            Operadora
+          <label htmlFor={`${baseId}-estudio`} style={fieldLabel}>
+            Nome do Estúdio
             <CampoObrigatorioMark />
           </label>
           <select
-            id={`${baseId}-op`}
-            aria-label="Operadora (obrigatório)"
-            value={operadoraSlug}
-            disabled={desabilitaOperadora}
-            onChange={(e) => setOperadoraSlug(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: desabilitaOperadora ? t.cardBg : t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
+            id={`${baseId}-estudio`}
+            aria-label="Estúdio (obrigatório)"
+            value={estudioSlug}
+            disabled={desabilitaEstudio}
+            onChange={(e) => setEstudioSlug(e.target.value)}
+            style={inputStyle(desabilitaEstudio)}
           >
             <option value="">Selecione…</option>
-            {operadoras.map((o) => (
-              <option key={o.slug} value={o.slug}>
-                {o.nome}
+            {estudios.map((e) => (
+              <option key={e.slug} value={e.slug}>
+                {e.nome}
+                {e.tipo ? ` (${e.tipo === "network" ? "Network" : "Dedicado"})` : ""}
               </option>
             ))}
           </select>
+          {estudioSelecionado && operadorasEstudio.length > 0 && (
+            <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4 }}>
+              Operadoras: {nomesOperadorasEstudio(estudioSelecionado).join(", ")}
+            </p>
+          )}
         </div>
         <div>
-          <label htmlFor={`${baseId}-nome`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
+          <label htmlFor={`${baseId}-nome`} style={fieldLabel}>
             Nome da mesa
             <CampoObrigatorioMark />
           </label>
@@ -193,21 +273,11 @@ export function ModalMesa({
             placeholder="Ex.: Blackjack VIP"
             aria-label="Nome da mesa (obrigatório)"
             autoComplete="off"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
+            style={inputStyle()}
           />
         </div>
         <div>
-          <label htmlFor={`${baseId}-tipo`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
+          <label htmlFor={`${baseId}-tipo`} style={fieldLabel}>
             Tipo de jogo
             <CampoObrigatorioMark />
           </label>
@@ -216,16 +286,7 @@ export function ModalMesa({
             aria-label="Tipo de jogo (obrigatório)"
             value={(TIPOS_JOGO as readonly string[]).includes(tipoJogo) ? tipoJogo : "Outro"}
             onChange={(e) => setTipoJogo(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
+            style={inputStyle()}
           >
             {TIPOS_JOGO.map((tj) => (
               <option key={tj} value={tj}>
@@ -235,7 +296,7 @@ export function ModalMesa({
           </select>
           {tipoJogo === "Outro" && (
             <>
-              <label htmlFor={`${baseId}-tipo-outro`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginTop: 10, marginBottom: 6 }}>
+              <label htmlFor={`${baseId}-tipo-outro`} style={{ ...fieldLabel, marginTop: 10 }}>
                 Especificar tipo
                 <CampoObrigatorioMark />
               </label>
@@ -243,28 +304,16 @@ export function ModalMesa({
                 id={`${baseId}-tipo-outro`}
                 type="text"
                 value={tipoJogoOutro}
-                onChange={(e) => {
-                  setTipoJogoOutro(e.target.value);
-                }}
+                onChange={(e) => setTipoJogoOutro(e.target.value)}
                 placeholder="Descreva o tipo de jogo"
                 aria-label="Especificar tipo de jogo (obrigatório)"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                }}
+                style={inputStyle()}
               />
             </>
           )}
         </div>
         <div>
-          <label htmlFor={`${baseId}-num`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
+          <label htmlFor={`${baseId}-num`} style={fieldLabel}>
             Número da mesa
             <CampoObrigatorioMark />
           </label>
@@ -276,21 +325,11 @@ export function ModalMesa({
             placeholder="Ex.: 01"
             aria-label="Número da mesa (obrigatório)"
             autoComplete="off"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
+            style={inputStyle()}
           />
         </div>
         <div>
-          <label htmlFor={`${baseId}-id`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
+          <label htmlFor={`${baseId}-id`} style={fieldLabel}>
             ID interno Spin
             <CampoObrigatorioMark />
           </label>
@@ -303,17 +342,7 @@ export function ModalMesa({
             placeholder="Identificador Spin (estúdio)"
             aria-label="ID interno Spin (obrigatório)"
             autoComplete="off"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: editando ? t.cardBg : t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
+            style={inputStyle(Boolean(editando))}
           />
           {editando && (
             <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4 }}>
@@ -321,32 +350,29 @@ export function ModalMesa({
             </p>
           )}
         </div>
-        <div>
-          <label htmlFor={`${baseId}-id-op`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
-            ID na operadora
-            <CampoObrigatorioMark />
-          </label>
-          <input
-            id={`${baseId}-id-op`}
-            type="text"
-            value={mesaIdentificacaoOperadora}
-            onChange={(e) => setMesaIdentificacaoOperadora(e.target.value)}
-            placeholder="Ex.: 500617 (game id na Blaze)"
-            aria-label="ID da mesa no catálogo da operadora (obrigatório)"
-            autoComplete="off"
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
-          />
-        </div>
+        {operadorasEstudio.length > 0 &&
+          operadorasEstudio.map((op) => (
+            <div key={op.slug}>
+              <label htmlFor={`${baseId}-id-op-${op.slug}`} style={fieldLabel}>
+                ID na {op.nome}
+              </label>
+              <input
+                id={`${baseId}-id-op-${op.slug}`}
+                type="text"
+                value={idsPorOperadora[op.slug] ?? ""}
+                onChange={(e) =>
+                  setIdsPorOperadora((prev) => ({
+                    ...prev,
+                    [op.slug]: e.target.value,
+                  }))
+                }
+                placeholder={`Ex.: game id na ${op.nome}`}
+                aria-label={`ID da mesa no catálogo da operadora ${op.nome} (opcional)`}
+                autoComplete="off"
+                style={inputStyle()}
+              />
+            </div>
+          ))}
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
         <button

@@ -49,6 +49,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - **Modal — aba Dados de contratação:** **Origem** (`linkedin` | `indicacao` | `site_vagas` | `instagram` | `site_spin`, opcional) e **Quem indicou?** (texto livre; visível e **obrigatório** só quando Origem = Indicação). Colunas `origem_contratacao` e `quem_indicou` em `rh_funcionarios`; alterações entram no diff de Revisão de Contrato.
 - **Status encerrado:** ao registrar **Término da prestação** (ação RH), `rh_funcionarios.status` passa a `encerrado` e o usuário vinculado (`profiles` com mesmo e-mail Spin ou e-mail pessoal do cadastro) é **desativado** automaticamente (`profiles.ativo = false`) — trigger `trg_rh_funcionario_encerrado_desativa_usuario` + confirmação na Edge `sync-rh-prestador-auth-user`. Não cria login novo para prestador encerrado.
 - CTA gradiente em ações primárias de linha quando aplicável.
+- **Modal cadastro (Novo / Editar / Ver):** `tablist` com `FiltroBarTabButton` — `flexWrap: wrap`, centralizado, **sem** rolagem horizontal; abas quebram linha quando não couberem na largura do modal.
 - **Handoff:** abas, headcount, fluxos de aprovação RH.
 
 ---

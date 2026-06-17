@@ -74,6 +74,7 @@ import {
   SkeletonTableRow,
 } from "../../../components/dashboard";
 import {
+  FILTRO_BAR_ROW_GAP,
   FILTRO_BAR_TAB_ICON_SIZE,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
@@ -1452,12 +1453,12 @@ export default function RhPrestadoresPage() {
             aria-label="Seções do cadastro"
             style={{
               display: "flex",
-              gap: 6,
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: FILTER_BAR_ROW_GAP,
               marginBottom: 16,
-              flexWrap: "nowrap",
-              overflowX: "auto",
-              WebkitOverflowScrolling: "touch",
-              paddingBottom: 2,
+              width: "100%",
             }}
           >
             {abasModalDef.map((tb) => (

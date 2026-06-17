@@ -12,7 +12,7 @@ alwaysApply: false
 
 **Escopo:** `src/pages/plataforma/` — GestaoOperadoras, StatusTecnico, GestaoUsuarios, GestaoMesas (+ abas e modais).
 
-**Filtro de operadora (lista):** em **Gestão de Mesas**, usar `FiltroOperadoraSelect` — **sem** `<label>Filtrar por operadora</label>` lateral; agregadora **Todas Operadoras**.
+**Filtro de operadora (lista):** em **Gestão de Estúdios**, usar carrossel de operadoras — **sem** `FiltroOperadoraSelect` na barra; agregadora **Todas Operadoras**.
 
 **Marca:** Brand MDC. **GestaoUsuarios:** admin-centric; hook no header por consistência, não preview whitelabel completo.
 
@@ -28,7 +28,7 @@ Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `Pag
 |---|---|---|
 | `gestao_usuarios` | Gestão de Usuários | Configure e acompanhe os usuários, permissões por perfil e menus de acesso à plataforma. |
 | `gestao_operadoras` | Gestão de Operadoras | Gerencie operadoras parceiras, identidade visual e configurações de integração. |
-| `gestao_mesas` | Gestão de Mesas | Cadastre e gerencie as mesas disponíveis por operadora. |
+| `gestao_mesas` | Gestão de Estúdios | Cadastre estúdios e mesas, vincule operadoras e gerencie identificadores por parceiro. |
 | `status_tecnico` | Status Técnico | Monitore integrações, alertas automáticos e sincronizações da plataforma. |
 
 **Gestão de Usuários:** um único subtítulo para todos os perfis (não variantes admin vs somente leitura no header).
@@ -243,15 +243,12 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - Ações de linha: ícone + `aria-label` + `title` — sem texto visível; hover neutro nas `<tr>`.
 - `perm.loading` com `GestaoUsuariosLoading` antes do gate `canView`.
 
-### GestaoMesas
+### GestaoMesas (Gestão de Estúdios)
 
-- Bloco de filtros: `getPageFilterBoxStyle` + carrossel de operadoras (`getCarouselBtnNavStyle` / `getCarouselPeriodLabelStyle`) + pill **Todas Operadoras** (`getFiltroBarTabButtonStyle` + ícone `Shield`) — referência Gestão de Usuários (status); **sem** `FiltroOperadoraSelect` na barra.
-- **KPIs por jogo** (abaixo do filtro, acima da tabela): `app-grid-kpi-4` + `getPageKpiSectionGapStyle` — Baccarat, Blackjack, Roleta, Futebol Brasileiro; **`borderLeft` e valor** com `GAME_IDENTITY_HEX` / `JOGOS_IDENTIDADE_LISTA` (`lib/gameIdentityColors.ts` — Global § Identidade por jogo); mesmo visual dos cards de Gestão de Operadoras; contagens respeitam o filtro do carrossel.
-
-**Exceções — identidade de jogo (Gestão de Mesas):** nenhuma. Paleta canónica obrigatória; nova exceção **somente** com pedido explícito de produto — registrar neste MDC antes de codar.
-
-- Bloco **Mesas:** `getPageContentBoxStyle` + `SectionTitle` (`compact`) na linha 1; linha 2 — `BarraPesquisaPagina` (`PAGE_SEARCH.mesaNomeOuId`, filtra nome / ID Spin / nº mesa) + `CtaCriarButton` **Nova Mesa** (`perm.canCriarOk`).
-- `FiltroOperadoraSelect` com `highlightWhenFiltered` default (`true`) — nunca `false`.
+- Bloco de filtros: `getPageFilterBoxStyle` + carrossel de operadoras (`getCarouselBtnNavStyle` / `getCarouselPeriodLabelStyle`) + pill **Todas Operadoras** (`getFiltroBarTabButtonStyle` + ícone `Shield`) — **linha 2:** tablist `FiltroBarTabButton` **Estúdios** (`Building2`) | **Mesas** (`LayoutGrid`).
+- **Aba Estúdios:** KPIs `app-grid-2` — **Mesas Dedicadas** e **Mesas Network** (contagem de mesas por tipo de estúdio, respeitando filtro de operadora); bloco **Estúdios** com `SectionTitle`, `BarraPesquisaPagina`, `CtaCriarButton` **Novo Estúdio**, tabela (Nome, Tipo, Qtd Mesas, Operadoras, Ações); `ModalEstudio` (nome, tipo Network/Dedicado, operadoras ativas multi-seleção).
+- **Aba Mesas:** KPIs por jogo `app-grid-kpi-4` + `getPageKpiSectionGapStyle` — Baccarat, Blackjack, Roleta, Futebol Brasileiro; `GAME_IDENTITY_HEX`; bloco **Mesas** com coluna **Nome do Estúdio** (não Operadora); `ModalMesa` com select de estúdio e campos opcionais de ID por operadora do estúdio (`mesas_spin_operadora_identificacao`).
+- Schema: `estudios_spin`, `estudios_spin_operadoras`, `mesas_spin_cadastro.estudio_slug` (legado `operadora_slug` mantido); migração futura remove colunas legadas.
 - Ícone do header: Lucide (`LayoutGrid` ou `Table2`) — `GiRoundTable` e qualquer GameIcon proibidos no header.
 - Ações de linha: ícone + `aria-label={\`Editar mesa ${nome}\`}` + `title` — sem texto visível; hover neutro nas `<tr>`.
 - Loading de tabela: `Loader2` + `app-lucide-spin` + `color: var(--brand-primary, #7c3aed)`.

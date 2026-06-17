@@ -971,7 +971,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Operadora ativa",
         definicao:
           "Parceira com status ativo e ao menos uma mesa cadastrada. Só operadoras ativas aparecem no filtro **Todas Operadoras** das listagens.",
-        referencia: "Gestão de Operadoras · Gestão de Mesas",
+        referencia: "Gestão de Operadoras · Gestão de Estúdios",
       },
     ],
   },

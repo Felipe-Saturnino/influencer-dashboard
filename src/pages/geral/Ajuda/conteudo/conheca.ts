@@ -874,7 +874,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar ou editar operadora",
         texto:
-          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Mesas. Novas operadoras são criadas como inativas.",
+          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Estúdios. Novas operadoras são criadas como inativas.",
       },
       {
         subtitulo: "Excluir operadora",
@@ -884,21 +884,26 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   gestao_mesas: {
-    titulo: "Gestão de Mesas",
+    titulo: "Gestão de Estúdios",
     blocos: [
       {
         texto:
-          "Cadastro e manutenção das mesas físicas de cada operadora. As mesas cadastradas aqui são referência para a programação de lives, escalas de dealers e relatórios de performance.",
+          "Hub de cadastro de estúdios físicos Spin e das mesas vinculadas. Estúdios podem ser do tipo Dedicado ou Network e associam-se a uma ou mais operadoras parceiras.",
       },
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro de operadora. No bloco Mesas, use a busca abaixo do título para filtrar por nome da mesa, ID Spin ou número da mesa. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas.\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar estúdio",
+        texto:
+          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
         texto:
-          "Cada mesa exige: operadora, nome, tipo de jogo, número da mesa, ID interno Spin e ID da mesa no catálogo da operadora. O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto. Para tipos de jogo não listados, selecione 'Outro' e especifique.",
+          "Selecione o estúdio, informe nome, tipo de jogo, número da mesa e ID interno Spin. Para cada operadora vinculada ao estúdio, pode preencher o ID no catálogo da parceira (opcional). O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto.",
       },
     ],
   },

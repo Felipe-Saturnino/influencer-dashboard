@@ -876,7 +876,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo ativar uma operadora?",
         texto:
-          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Mesas. Cadastre as mesas primeiro e tente novamente.",
+          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Estúdios. Cadastre as mesas primeiro e tente novamente.",
       },
       {
         subtitulo: "Erro ao excluir uma operadora?",
@@ -891,17 +891,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   gestao_mesas: {
-    titulo: "Gestão de Mesas",
+    titulo: "Gestão de Estúdios",
     blocos: [
       {
         subtitulo: "Erro ao cadastrar uma mesa — 'já existe uma mesa com este ID'?",
         texto:
-          "O ID Spin e o ID da operadora são únicos por operadora. Verifique se já existe uma mesa com os mesmos identificadores na lista. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
+          "O ID Spin é único por operadora (legado). Verifique se já existe uma mesa com o mesmo identificador. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
       },
       {
         subtitulo: "A lista aparece vazia mesmo havendo mesas cadastradas?",
         texto:
-          "Verifique se o filtro de operadora está selecionado em **Todas Operadoras**. Se um filtro específico estiver ativo, apenas as mesas daquela operadora serão exibidas.",
+          "Verifique se o filtro de operadora está em **Todas Operadoras** e se está na aba correta (**Estúdios** ou **Mesas**). Com filtro de operadora ativo, só entram estúdios e mesas vinculados àquela parceira.",
       },
     ],
   },

@@ -1,79 +1,79 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Building2, LayoutGrid, Shield } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT, FONT_TITLE } from "../../../constants/theme";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
-import { Pencil, Loader2, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { FONT } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import SectionTitle from "../../../components/dashboard/SectionTitle";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
-import { CtaCriarButton } from "../../../components/CtaCriarButton";
-import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
-import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
-import {
-  getPageContentBoxStyle,
-  getPageFilterBoxStyle,
-  getPageKpiSectionGapStyle,
-} from "../../../lib/pageContentBoxStyles";
+import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { getFilterBarRowStyle, getFiltroBarTabButtonStyle } from "../../../lib/filterBarStyles";
+import {
+  FILTRO_BAR_TAB_ICON_SIZE,
+  getFilterBarRowStyle,
+  getFiltroBarTabButtonStyle,
+} from "../../../lib/filterBarStyles";
+import { FiltroBarTabButton } from "../../../components/dashboard/FiltroBarTabButton";
+import { handleGestaoTabsArrowKeyDown } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import {
   OPERADORA_FILTRO_TODAS_LABEL,
   OPERADORA_FILTRO_TODAS_VALUE,
 } from "../../../components/FiltroOperadoraSelect";
+import { nomeOperadoraJoin, type EstudioSpinRow, type MesaSpinCadastroRow } from "./gestaoMesasUi";
+import { AbaEstudios } from "./AbaEstudios";
+import { AbaMesas } from "./AbaMesas";
 
 const MSG_SEM_PERMISSAO = "Você não tem permissão para visualizar esta página.";
-const ERRO_EXCLUIR_MESA = "Não foi possível excluir a mesa. Verifique se não há registros vinculados.";
 
-const KPI_TIPOS_JOGO_MESAS = (
-  ["baccarat", "blackjack", "roleta", "futebol_brasileiro"] as const
-).map((key) => ({
-  label: GAME_IDENTITY_LABEL[key],
-  cor: GAME_IDENTITY_HEX[key],
-}));
+type AbaGestaoEstudios = "estudios" | "mesas";
 
-import { nomeOperadoraJoin, tableRowHoverBg, type MesaSpinCadastroRow } from "./gestaoMesasUi";
-import { ModalMesa } from "./ModalMesa";
+const TAB_IDS: AbaGestaoEstudios[] = ["estudios", "mesas"];
 
 export default function GestaoMesas() {
   const { theme: t } = useApp();
   const dashBrand = useDashboardBrand();
   const perm = usePermission("gestao_mesas");
+  const [aba, setAba] = useState<AbaGestaoEstudios>("estudios");
   const [rows, setRows] = useState<MesaSpinCadastroRow[]>([]);
+  const [estudios, setEstudios] = useState<EstudioSpinRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<MesaSpinCadastroRow | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<MesaSpinCadastroRow | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
-  const [buscaMesa, setBuscaMesa] = useState("");
-  type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident" | "identOp";
-  const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("mesas_spin_cadastro")
-      .select("id, operadora_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome)")
-      .order("operadora_slug", { ascending: true })
-      .order("nome_mesa", { ascending: true });
-    if (error) {
+    const [mesasRes, estudiosRes] = await Promise.all([
+      supabase
+        .from("mesas_spin_cadastro")
+        .select(
+          "id, operadora_slug, estudio_slug, nome_mesa, tipo_jogo, numero_mesa, mesa_identificacao, mesa_identificacao_operadora, created_at, updated_at, operadoras(nome), estudios_spin(nome)",
+        )
+        .order("nome_mesa", { ascending: true }),
+      supabase
+        .from("estudios_spin")
+        .select(
+          "id, slug, nome, tipo, ativo, created_at, updated_at, estudios_spin_operadoras(operadora_slug, operadoras(nome))",
+        )
+        .eq("ativo", true)
+        .order("nome", { ascending: true }),
+    ]);
+
+    if (mesasRes.error) {
+      console.error(mesasRes.error);
       setRows([]);
     } else {
-      setRows((data ?? []) as unknown as MesaSpinCadastroRow[]);
+      setRows((mesasRes.data ?? []) as unknown as MesaSpinCadastroRow[]);
     }
+
+    if (estudiosRes.error) {
+      console.error(estudiosRes.error);
+      setEstudios([]);
+    } else {
+      setEstudios((estudiosRes.data ?? []) as unknown as EstudioSpinRow[]);
+    }
+
     setLoading(false);
   }, []);
 
@@ -87,10 +87,16 @@ export default function GestaoMesas() {
       const nome = nomeOperadoraJoin(r) ?? r.operadora_slug;
       m.set(r.operadora_slug, nome);
     }
+    for (const e of estudios) {
+      for (const j of e.estudios_spin_operadoras ?? []) {
+        const o = j.operadoras;
+        const nome = o == null ? j.operadora_slug : Array.isArray(o) ? (o[0]?.nome ?? j.operadora_slug) : o.nome;
+        m.set(j.operadora_slug, nome);
+      }
+    }
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
-  }, [rows]);
+  }, [rows, estudios]);
 
-  /** Carrossel: «Todas Operadoras» sempre na primeira posição (default). */
   const operadorasCarrossel = useMemo(
     () => [
       { slug: OPERADORA_FILTRO_TODAS_VALUE, nome: OPERADORA_FILTRO_TODAS_LABEL },
@@ -98,39 +104,6 @@ export default function GestaoMesas() {
     ],
     [operadorasOpcoes],
   );
-
-  const rowsPorOperadora = useMemo(() => {
-    if (filtroOperadora === OPERADORA_FILTRO_TODAS_VALUE) return rows;
-    return rows.filter((r) => r.operadora_slug === filtroOperadora);
-  }, [rows, filtroOperadora]);
-
-  const rowsFiltradas = useMemo(() => {
-    const q = buscaMesa.trim().toLowerCase();
-    if (!q) return rowsPorOperadora;
-    return rowsPorOperadora.filter((r) => {
-      const nome = (r.nome_mesa ?? "").toLowerCase();
-      const idSpin = (r.mesa_identificacao ?? "").toLowerCase();
-      const numero = (r.numero_mesa ?? "").toLowerCase();
-      return nome.includes(q) || idSpin.includes(q) || numero.includes(q);
-    });
-  }, [rowsPorOperadora, buscaMesa]);
-
-  const contagemPorJogo = useMemo(() => {
-    const map = new Map<string, number>(
-      KPI_TIPOS_JOGO_MESAS.map((k) => [k.label, 0]),
-    );
-    for (const r of rowsPorOperadora) {
-      const tipo = (r.tipo_jogo ?? "").trim();
-      if (map.has(tipo)) map.set(tipo, (map.get(tipo) ?? 0) + 1);
-    }
-    return map;
-  }, [rowsPorOperadora]);
-
-  const labelCarrosselOperadora = useMemo(() => {
-    return (
-      operadorasCarrossel.find((o) => o.slug === filtroOperadora)?.nome ?? OPERADORA_FILTRO_TODAS_LABEL
-    );
-  }, [filtroOperadora, operadorasCarrossel]);
 
   const indiceCarrosselOperadora = useMemo(() => {
     const idx = operadorasCarrossel.findIndex((o) => o.slug === filtroOperadora);
@@ -158,46 +131,6 @@ export default function GestaoMesas() {
     setFiltroOperadora(prev.slug);
   }, [indiceCarrosselOperadora, operadorasCarrossel]);
 
-  const rowsOrdenadas = useMemo(() => {
-    const arr = [...rowsFiltradas];
-    const { col, dir } = sortMesa;
-    const nomeOp = (r: MesaSpinCadastroRow) => (nomeOperadoraJoin(r) ?? r.operadora_slug ?? "").toLowerCase();
-    arr.sort((a, b) => {
-      let c = 0;
-      switch (col) {
-        case "operadora":
-          c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
-          break;
-        case "nome":
-          c = compareLocaleTexto((a.nome_mesa ?? "").trim(), (b.nome_mesa ?? "").trim(), dir);
-          break;
-        case "tipo":
-          c = compareLocaleTexto((a.tipo_jogo ?? "").trim(), (b.tipo_jogo ?? "").trim(), dir);
-          break;
-        case "numero":
-          c = compareLocaleTexto((a.numero_mesa ?? "").trim(), (b.numero_mesa ?? "").trim(), dir);
-          break;
-        case "ident":
-          c = compareLocaleTexto((a.mesa_identificacao ?? "").trim(), (b.mesa_identificacao ?? "").trim(), dir);
-          break;
-        case "identOp":
-          c = compareLocaleTexto(
-            (a.mesa_identificacao_operadora ?? "").trim(),
-            (b.mesa_identificacao_operadora ?? "").trim(),
-            dir,
-          );
-          break;
-        default:
-          c = 0;
-      }
-      if (c !== 0) return c;
-      return compareLocaleTexto((a.nome_mesa ?? "").trim(), (b.nome_mesa ?? "").trim(), "asc");
-    });
-    return arr;
-  }, [rowsFiltradas, sortMesa]);
-
-  const dataTable = useDataTableBlock();
-
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -214,16 +147,17 @@ export default function GestaoMesas() {
     );
   }
 
-  const contentBox = getPageContentBoxStyle(dashBrand, t);
   const todasOperadorasAtivo = filtroOperadora === OPERADORA_FILTRO_TODAS_VALUE;
   const carrosselOperadoraDesabilitado = operadorasCarrossel.length <= 1;
+  const labelCarrosselOperadora =
+    operadorasCarrossel.find((o) => o.slug === filtroOperadora)?.nome ?? OPERADORA_FILTRO_TODAS_LABEL;
 
   return (
     <div className="app-page-shell">
       <PageHeader
         icon={<PageMenuIcon pageKey="gestao_mesas" />}
         title={getPageMenuLabel("gestao_mesas")}
-        subtitle="Cadastre e gerencie as mesas disponíveis por operadora."
+        subtitle="Cadastre estúdios e mesas, vincule operadoras e gerencie identificadores por parceiro."
       />
 
       <div style={getPageFilterBoxStyle(dashBrand, t)}>
@@ -237,9 +171,7 @@ export default function GestaoMesas() {
           >
             <ChevronLeft size={14} aria-hidden="true" />
           </button>
-          <span style={getCarouselPeriodLabelStyle(t, { minWidth: 160 })}>
-            {labelCarrosselOperadora}
-          </span>
+          <span style={getCarouselPeriodLabelStyle(t, { minWidth: 160 })}>{labelCarrosselOperadora}</span>
           <button
             type="button"
             aria-label="Próxima operadora"
@@ -266,310 +198,61 @@ export default function GestaoMesas() {
             {OPERADORA_FILTRO_TODAS_LABEL}
           </button>
         </div>
-      </div>
 
-      <div className="app-grid-kpi-4" style={getPageKpiSectionGapStyle()}>
-        {KPI_TIPOS_JOGO_MESAS.map((k) => (
-          <div
-            key={k.label}
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderLeft: `3px solid ${k.cor}`,
-              borderRadius: 18,
-              padding: "16px 20px",
-              boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-            }}
+        <div
+          role="tablist"
+          aria-label="Estúdios ou Mesas"
+          onKeyDown={(e) => handleGestaoTabsArrowKeyDown(e, TAB_IDS, aba, setAba, "tab-gestao-estudios-")}
+          style={{
+            ...getFilterBarRowStyle({ width: "100%" }),
+            paddingTop: 12,
+            marginTop: 12,
+            borderTop: `1px solid ${t.cardBorder}`,
+          }}
+        >
+          <FiltroBarTabButton
+            id="tab-gestao-estudios-estudios"
+            active={aba === "estudios"}
+            aria-controls="panel-gestao-estudios-estudios"
+            onClick={() => setAba("estudios")}
+            icon={<Building2 size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
           >
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "1.4px",
-                textTransform: "uppercase",
-                color: t.textMuted,
-                fontFamily: FONT.body,
-                marginBottom: 6,
-              }}
-            >
-              {k.label}
-            </div>
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 900,
-                color: k.cor,
-                fontFamily: FONT_TITLE,
-                lineHeight: 1,
-              }}
-            >
-              {loading ? "—" : (contagemPorJogo.get(k.label) ?? 0)}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={contentBox}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
-          <SectionTitle compact>Mesas</SectionTitle>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 10,
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            Estúdios
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-gestao-estudios-mesas"
+            active={aba === "mesas"}
+            aria-controls="panel-gestao-estudios-mesas"
+            onClick={() => setAba("mesas")}
+            icon={<LayoutGrid size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
           >
-            <BarraPesquisaPagina
-              value={buscaMesa}
-              onChange={setBuscaMesa}
-              placeholder={PAGE_SEARCH.mesaNomeOuId}
-              aria-label="Buscar por nome da mesa, ID Spin ou número da mesa"
-              wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
-            />
-            {perm.canCriarOk ? (
-              <CtaCriarButton
-                type="button"
-                onClick={() => {
-                  setEditando(null);
-                  setModalOpen(true);
-                }}
-                style={{ flexShrink: 0 }}
-              >
-                Nova Mesa
-              </CtaCriarButton>
-            ) : null}
-          </div>
+            Mesas
+          </FiltroBarTabButton>
         </div>
-
-        {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <Loader2 size={20} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-            <span>Carregando…</span>
-          </div>
-        ) : rowsFiltradas.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            {rows.length === 0
-              ? "Nenhuma mesa cadastrada."
-              : buscaMesa.trim()
-                ? "Nenhuma mesa encontrada."
-                : filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE
-                  ? "Nenhuma mesa para o filtro selecionado."
-                  : "Nenhuma mesa cadastrada."}
-          </div>
-        ) : (
-          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle()}>
-              <caption style={{ display: "none" }}>Cadastro de mesas por operadora</caption>
-              <thead>
-                <tr>
-                  <SortTableTh<MesaSortCol>
-                    label="Operadora"
-                    col="operadora"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortMesa((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<MesaSortCol>
-                    label="Nome da mesa"
-                    col="nome"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortMesa((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<MesaSortCol>
-                    label="Jogo"
-                    col="tipo"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(col) =>
-                      setSortMesa((s) => ({
-                        col,
-                        dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<MesaSortCol>
-                    label="Nº mesa"
-                    col="numero"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortMesa((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<MesaSortCol>
-                    label="ID Spin"
-                    col="ident"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortMesa((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  <SortTableTh<MesaSortCol>
-                    label="ID operadora"
-                    col="identOp"
-                    sortCol={sortMesa.col}
-                    sortDir={sortMesa.dir}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                    onSort={(c) =>
-                      setSortMesa((s) => ({
-                        col: c,
-                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                      }))
-                    }
-                  />
-                  {(perm.canEditarOk || perm.canExcluirOk) && (
-                    <th scope="col" style={dataTable.thHeader}>
-                      Ações
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rowsOrdenadas.map((r, i) => {
-                  const zebra = dataTable.zebraRow(i);
-                  return (
-                  <tr
-                    key={r.id}
-                    style={{ background: zebra }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = zebra;
-                    }}
-                  >
-                    <td style={dataTable.tdCenter} title={r.operadora_slug}>
-                      {nomeOperadoraJoin(r) ?? r.operadora_slug}
-                    </td>
-                    <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome_mesa}</td>
-                    <td style={dataTable.tdCenter}>{r.tipo_jogo}</td>
-                    <td style={dataTable.tdCenter}>
-                      {r.numero_mesa?.trim() ? r.numero_mesa : "—"}
-                    </td>
-                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao}>
-                      {r.mesa_identificacao}
-                    </td>
-                    <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: 12 }} title={r.mesa_identificacao_operadora ?? undefined}>
-                      {r.mesa_identificacao_operadora?.trim() ? r.mesa_identificacao_operadora : "—"}
-                    </td>
-                    {(perm.canEditarOk || perm.canExcluirOk) && (
-                      <td style={dataTable.tdCenter}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                          {perm.canEditarOk && (
-                            <button
-                              type="button"
-                              aria-label={`Editar mesa ${r.nome_mesa}`}
-                              title={`Editar mesa ${r.nome_mesa}`}
-                              onClick={() => {
-                                setEditando(r);
-                                setModalOpen(true);
-                              }}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 32,
-                                height: 32,
-                                background: "transparent",
-                                border: `1px solid ${t.cardBorder}`,
-                                borderRadius: 10,
-                                cursor: "pointer",
-                                color: t.text,
-                              }}
-                            >
-                              <Pencil size={14} aria-hidden="true" />
-                            </button>
-                          )}
-                          {perm.canExcluirOk && (
-                            <BtnExcluirLinha
-                              descricaoItem={descricaoBotaoExcluir("mesa", r.nome_mesa)}
-                              onClick={() => {
-                                setDeleteError(null);
-                                setDeleteTarget(r);
-                              }}
-                            />
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
-      {modalOpen && (
-        <ModalMesa
-          key={editando?.id ?? "nova"}
-          editando={editando}
-          onClose={() => setModalOpen(false)}
-          onSalvo={() => {
-            void carregar();
-          }}
-        />
-      )}
-
-      {deleteTarget && (
-        <ModalConfirmExcluirPadrao
-          zIndex={1100}
-          descricaoItem={descricaoModalExcluirItem(
-            "a mesa",
-            deleteTarget.nome_mesa,
-            `(ID Spin: ${deleteTarget.mesa_identificacao})`,
-          )}
-          onCancel={() => {
-            if (!deleteLoading) setDeleteTarget(null);
-          }}
-          onConfirm={async () => {
-            setDeleteError(null);
-            setDeleteLoading(true);
-            const { error } = await supabase.from("mesas_spin_cadastro").delete().eq("id", deleteTarget.id);
-            setDeleteLoading(false);
-            if (error) {
-              console.error(error);
-              setDeleteError(ERRO_EXCLUIR_MESA);
-              return;
-            }
-            setDeleteTarget(null);
-            void carregar();
-          }}
-          loading={deleteLoading}
-          error={deleteError}
-        />
+      {aba === "estudios" ? (
+        <div id="panel-gestao-estudios-estudios" role="tabpanel" aria-labelledby="tab-gestao-estudios-estudios">
+          <AbaEstudios
+            filtroOperadora={filtroOperadora}
+            estudios={estudios}
+            mesas={rows}
+            loading={loading}
+            perm={perm}
+            onRecarregar={() => void carregar()}
+          />
+        </div>
+      ) : (
+        <div id="panel-gestao-estudios-mesas" role="tabpanel" aria-labelledby="tab-gestao-estudios-mesas">
+          <AbaMesas
+            filtroOperadora={filtroOperadora}
+            rows={rows}
+            estudios={estudios}
+            loading={loading}
+            perm={perm}
+            onRecarregar={() => void carregar()}
+          />
+        </div>
       )}
     </div>
   );

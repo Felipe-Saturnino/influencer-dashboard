@@ -591,7 +591,7 @@ export function ModalOperadora({
                 aria-pressed={ativo}
                 title={
                   !ativo && (mesasLoading || mesas.length === 0)
-                    ? "Cadastre pelo menos uma mesa para esta operadora (Gestão de Mesas) antes de ativar."
+                    ? "Cadastre pelo menos uma mesa para esta operadora (Gestão de Estúdios) antes de ativar."
                     : undefined
                 }
                 onClick={() => {
@@ -625,7 +625,7 @@ export function ModalOperadora({
               </button>
               {!ativo && mesas.length === 0 && !mesasLoading && (
                 <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 420, lineHeight: 1.45 }}>
-                  Cadastre pelo menos uma mesa em Gestão de Mesas para poder marcar como Ativa.
+                  Cadastre pelo menos uma mesa em Gestão de Estúdios para poder marcar como Ativa.
                 </span>
               )}
               {!ativo && (

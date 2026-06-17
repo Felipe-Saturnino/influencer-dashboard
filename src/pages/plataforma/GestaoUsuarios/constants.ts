@@ -133,7 +133,7 @@ export const PAGES: {
   // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "gestao_mesas", label: "Gestão de Mesas", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "gestao_mesas", label: "Gestão de Estúdios", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Geral (sempre por último)
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
