@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, Loader2, Replace } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -18,7 +18,14 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroOperadoraSelect } from "../../../components/dashboard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FILTRO_BAR_TAB_ICON_SIZE,
+  FiltroBarTabButton,
+  SortTableTh,
+  onFiltroBarTabsKeyDown,
+  type SortDir,
+} from "../../../components/dashboard";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   escalaPrestadorTemTurnosOperacionais,
@@ -188,6 +195,14 @@ type AreaEscalaKey =
 type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
 
 type EscalaDiariaSortCol = "nome" | "nickname" | "escala" | "turno";
+
+type ModoPaginaGestaoEscala = "geracao" | "alteracao";
+
+const MODOS_PAGINA_GESTAO_ESCALA: readonly ModoPaginaGestaoEscala[] = ["geracao", "alteracao"];
+
+function tabIdModoPaginaGestaoEscala(modo: ModoPaginaGestaoEscala): string {
+  return modo === "geracao" ? "tab-gestao-escala-geracao" : "tab-gestao-escala-alteracao";
+}
 
 function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
@@ -508,6 +523,8 @@ export default function RhGestaoEscalaPage() {
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
   const [resetandoGrade, setResetandoGrade] = useState(false);
+  /** Módulo da página: geração mensal (grade atual) ou alteração (em desenvolvimento). */
+  const [modoPagina, setModoPagina] = useState<ModoPaginaGestaoEscala>("geracao");
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Filtro local da tabela Escala Diária (nickname). */
@@ -1340,53 +1357,39 @@ export default function RhGestaoEscalaPage() {
             />
           </div>
 
-          {mostrarFiltroArea ? (
-            <>
-              <div
-                role="group"
-                aria-label="Área (time)"
-                style={{
-                  marginTop: 14,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}
-              >
-                {AREA_ESCALA_ORDEM_BOTOES.map((key) => {
-                  const ativo = filtroArea === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-pressed={ativo}
-                      onClick={() => setFiltroArea(key)}
-                      style={{
-                        padding: "10px 14px",
-                        minHeight: 44,
-                        borderRadius: 10,
-                        fontWeight: 700,
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        cursor: "pointer",
-                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                        background: ativo
-                          ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                            : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg ?? "transparent"),
-                        color: ativo ? brand.accent : t.textMuted,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {labelAreaEscala(key)}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
+          <div
+            role="tablist"
+            aria-label="Modo da gestão de escala"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(e, MODOS_PAGINA_GESTAO_ESCALA, setModoPagina, tabIdModoPaginaGestaoEscala)
+            }
+            style={{
+              ...getFilterBarRowStyle(),
+              width: "100%",
+              paddingTop: 12,
+              marginTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <FiltroBarTabButton
+              id="tab-gestao-escala-geracao"
+              active={modoPagina === "geracao"}
+              aria-controls="panel-gestao-escala-geracao"
+              onClick={() => setModoPagina("geracao")}
+              icon={<CalendarRange size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Geração de Escala
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-gestao-escala-alteracao"
+              active={modoPagina === "alteracao"}
+              aria-controls="panel-gestao-escala-alteracao"
+              onClick={() => setModoPagina("alteracao")}
+              icon={<Replace size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Alteração de Escala
+            </FiltroBarTabButton>
+          </div>
       </div>
 
       {erroPrestadores && (
@@ -1426,6 +1429,14 @@ export default function RhGestaoEscalaPage() {
       )}
 
       <div role="region" aria-label="Gestão de escala por colaborador e dia">
+        {modoPagina === "alteracao" ? (
+          <div role="tabpanel" id="panel-gestao-escala-alteracao" aria-labelledby="tab-gestao-escala-alteracao">
+            <div style={contentBox}>
+              <SectionTitle>Alteração de Escala</SectionTitle>
+            </div>
+          </div>
+        ) : (
+          <div role="tabpanel" id="panel-gestao-escala-geracao" aria-labelledby="tab-gestao-escala-geracao">
         {loadingPrestadores ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -1441,6 +1452,52 @@ export default function RhGestaoEscalaPage() {
                 <SectionTitle sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária">
                   Consolidado
                 </SectionTitle>
+                {mostrarFiltroArea ? (
+                  <div
+                    role="group"
+                    aria-label="Área (time)"
+                    style={{
+                      marginBottom: 14,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      width: "100%",
+                    }}
+                  >
+                    {AREA_ESCALA_ORDEM_BOTOES.map((key) => {
+                      const ativo = filtroArea === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={ativo}
+                          onClick={() => setFiltroArea(key)}
+                          style={{
+                            padding: "10px 14px",
+                            minHeight: 44,
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            fontFamily: FONT.body,
+                            fontSize: 12,
+                            cursor: "pointer",
+                            border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                            background: ativo
+                              ? brand.useBrand
+                                ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                                : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                              : (t.inputBg ?? t.cardBg ?? "transparent"),
+                            color: ativo ? brand.accent : t.textMuted,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {labelAreaEscala(key)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
                 <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                 <table
                   style={{
@@ -2179,6 +2236,8 @@ export default function RhGestaoEscalaPage() {
               </div>
             </section>
           </>
+        )}
+          </div>
         )}
       </div>
 
