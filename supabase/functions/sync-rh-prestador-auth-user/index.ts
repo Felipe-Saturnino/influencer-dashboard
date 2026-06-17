@@ -373,7 +373,7 @@ serve(async (req) => {
 
   const { data: row, error: rowErr } = await supabase
     .from('rh_funcionarios')
-    .select('id, nome, email, email_spin, area_atuacao, org_time_id, org_gerencia_id')
+    .select('id, nome, email, email_spin, area_atuacao, org_time_id, org_gerencia_id, status')
     .eq('id', rhId)
     .maybeSingle()
 
@@ -382,6 +382,49 @@ serve(async (req) => {
       status: 404,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
+  }
+
+  const statusPrestador = String((row as { status?: string }).status ?? '').trim()
+
+  if (statusPrestador === 'encerrado') {
+    const spinEnc = String(row.email_spin ?? '').trim().toLowerCase()
+    const personalEnc = String(row.email ?? '').trim().toLowerCase()
+    const emailsMatch = [...new Set([spinEnc, personalEnc].filter((e) => e.includes('@')))]
+    let deactivatedUserId: string | null = null
+    let jaInativo = false
+    for (const em of emailsMatch) {
+      const { data: perfil } = await supabase
+        .from('profiles')
+        .select('id, email, ativo')
+        .ilike('email', em)
+        .limit(1)
+        .maybeSingle()
+      if (!perfil?.id) continue
+      const pe = String((perfil as { email?: string }).email ?? '').trim().toLowerCase()
+      if (pe !== em) continue
+      deactivatedUserId = perfil.id as string
+      jaInativo = (perfil as { ativo?: boolean | null }).ativo === false
+      if (!jaInativo) {
+        const { error: deactErr } = await supabase.from('profiles').update({ ativo: false }).eq('id', perfil.id)
+        if (deactErr) {
+          return new Response(JSON.stringify({ error: deactErr.message }), {
+            status: 500,
+            headers: { ...cors, 'Content-Type': 'application/json' },
+          })
+        }
+      }
+      break
+    }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: deactivatedUserId ? 'prestador_encerrado' : 'prestador_encerrado_sem_usuario',
+        deactivated: Boolean(deactivatedUserId),
+        userId: deactivatedUserId ?? undefined,
+      }),
+      { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+    )
   }
 
   const spinFromRow = String(row.email_spin ?? '').trim().toLowerCase()

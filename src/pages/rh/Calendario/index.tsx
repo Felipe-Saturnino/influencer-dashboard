@@ -1259,6 +1259,13 @@ export default function RhCalendarioPage() {
     return isDark ? "rgba(34,197,94,0.75)" : "rgba(34,197,94,0.85)";
   }
 
+  /** Fundo opaco da linha «hoje» na tabela Controle de Presença (mesma família visual que `dayStyle`). */
+  function fundoLinhaPresencaDiaHoje(colBg: string): string {
+    return isDark
+      ? `color-mix(in srgb, ${colBg} 78%, var(--brand-accent, #1e36f8) 22%)`
+      : `color-mix(in srgb, ${colBg} 88%, var(--brand-accent, #1e36f8) 12%)`;
+  }
+
   const contentBox = getPageContentBoxStyle(brand, t);
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -1636,6 +1643,8 @@ export default function RhCalendarioPage() {
     for (let d = 1; d <= last; d++) out.push(new Date(y, m, d));
     return out;
   }, [current]);
+
+  const hojeIsoCalendario = toISO(new Date());
 
   if (perm.canView === "nao") {
     return (
@@ -2110,9 +2119,22 @@ export default function RhCalendarioPage() {
                         month: "long",
                         year: "numeric",
                       });
+                      const isHojePresenca = iso === hojeIsoCalendario;
                       return (
-                        <tr key={iso} style={{ background: dataTable.zebraRow(i) }}>
-                          <td style={dataTable.tdCenter}>
+                        <tr
+                          key={iso}
+                          style={{
+                            background: isHojePresenca
+                              ? fundoLinhaPresencaDiaHoje(dataTable.colBg)
+                              : dataTable.zebraRow(i),
+                          }}
+                        >
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              ...(isHojePresenca ? { fontWeight: 700, color: BRAND.azul } : {}),
+                            }}
+                          >
                             {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
                           </td>
                           <td style={dataTable.tdCenter}>{situacao}</td>

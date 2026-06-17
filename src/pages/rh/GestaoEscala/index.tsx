@@ -187,7 +187,7 @@ type AreaEscalaKey =
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
 type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
 
-type EscalaDiariaSortCol = "nickname" | "escala" | "turno";
+type EscalaDiariaSortCol = "nome" | "nickname" | "escala" | "turno";
 
 function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
@@ -379,7 +379,8 @@ const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 /** Larguras fixas das 4 colunas fixas (sticky) — soma usada em `left`. */
 const STICKY_W_NOME = 180;
 const STICKY_W_NICK = 130;
-const STICKY_W_ESCALA = 72;
+/** Largura mínima para caber rótulo «Escala» + ícone de ordenação sem sobrepor a coluna Turno. */
+const STICKY_W_ESCALA = 92;
 const STICKY_W_TURNO_STAFF = 112;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
@@ -802,6 +803,9 @@ export default function RhGestaoEscalaPage() {
     const rows = [...linhasFiltradasEscalaDiaria];
     const { col, dir } = sortEscalaDiaria;
     rows.sort((a, b) => {
+      if (col === "nome") {
+        return compareLocaleTexto(a.nome, b.nome, dir);
+      }
       if (col === "nickname") {
         return compareLocaleTexto(a.nickname, b.nickname, dir);
       }
@@ -1042,6 +1046,11 @@ export default function RhGestaoEscalaPage() {
 
   /** Cabeçalhos fixos à esquerda ficam acima das colunas de dia ao rolar horizontalmente. */
   const Z_STICKY_HEAD = 30;
+  /** Colunas sticky à esquerda: z decrescente à direita para o ícone de ordenação não ficar sob a coluna seguinte. */
+  const Z_STICKY_HEAD_NOME = 34;
+  const Z_STICKY_HEAD_NICK = 33;
+  const Z_STICKY_HEAD_ESCALA = 32;
+  const Z_STICKY_HEAD_TURNO = 31;
   /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Escala > Turno (staff). */
   const Z_BODY_NOME = 31;
   const Z_BODY_NICK = 30;
@@ -1924,17 +1933,20 @@ export default function RhGestaoEscalaPage() {
               <thead>
                 <tr>
                   {!semColunaNome ? (
-                    <th
-                      scope="col"
-                      style={thSticky(0, {
+                    <SortTableTh<EscalaDiariaSortCol>
+                      label="Nome"
+                      col="nome"
+                      sortCol={sortEscalaDiaria.col}
+                      sortDir={sortEscalaDiaria.dir}
+                      onSort={onSortEscalaDiaria}
+                      thStyle={thSticky(0, {
                         minWidth: STICKY_W_NOME,
                         maxWidth: STICKY_W_NOME,
                         width: STICKY_W_NOME,
                         verticalAlign: "middle",
+                        zIndex: Z_STICKY_HEAD_NOME,
                       })}
-                    >
-                      Nome
-                    </th>
+                    />
                   ) : null}
                   <SortTableTh<EscalaDiariaSortCol>
                     label="Nickname"
@@ -1947,6 +1959,7 @@ export default function RhGestaoEscalaPage() {
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
                       verticalAlign: "middle",
+                      zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
                     })}
                     align="center"
                   />
@@ -1961,6 +1974,7 @@ export default function RhGestaoEscalaPage() {
                       maxWidth: STICKY_W_ESCALA,
                       width: STICKY_W_ESCALA,
                       verticalAlign: "middle",
+                      zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_ESCALA,
                     })}
                     align="center"
                   />
@@ -1978,6 +1992,7 @@ export default function RhGestaoEscalaPage() {
                       verticalAlign: "middle",
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
+                      zIndex: semColunaNome ? Z_STICKY_HEAD_ESCALA : Z_STICKY_HEAD_TURNO,
                     })}
                     align="center"
                   />

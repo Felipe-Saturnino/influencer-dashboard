@@ -51,6 +51,7 @@ import { encontrarVinculoParaFuncionarioRow } from "../../../lib/rhOrganogramaTr
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import {
   mensagemFeedbackSyncPrestador,
+  mensagemSucessoDesativacaoPrestadorEncerrado,
   syncUsuarioPrestadorAposSalvarRh,
 } from "../../../lib/rhPrestadorUsuarioSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
@@ -1133,10 +1134,11 @@ export default function RhPrestadoresPage() {
           return;
         }
       }
+      let resSync: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null = null;
       try {
         const spinAcao = acaoForm.email_spin.trim().toLowerCase();
         const emailAcao = acaoForm.email.trim().toLowerCase();
-        const resSync = await syncUsuarioPrestadorAposSalvarRh(fid, {
+        resSync = await syncUsuarioPrestadorAposSalvarRh(fid, {
           emailSpin: spinAcao && validarEmail(spinAcao) ? spinAcao : undefined,
           emailPessoal: emailAcao && validarEmail(emailAcao) ? emailAcao : undefined,
         });
@@ -1147,7 +1149,8 @@ export default function RhPrestadoresPage() {
           `Ação registrada, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
-      setSucessoMsg("Ação registrada.");
+      const extraDesativacao = mensagemSucessoDesativacaoPrestadorEncerrado(resSync);
+      setSucessoMsg(extraDesativacao ? `Ação registrada. ${extraDesativacao}` : "Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
