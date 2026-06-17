@@ -15,9 +15,9 @@ import {
   FILTRO_BAR_TAB_ICON_SIZE,
   getFilterBarRowStyle,
   getFiltroBarTabButtonStyle,
+  handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
 import { FiltroBarTabButton } from "../../../components/dashboard/FiltroBarTabButton";
-import { handleGestaoTabsArrowKeyDown } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import {
   OPERADORA_FILTRO_TODAS_LABEL,
   OPERADORA_FILTRO_TODAS_VALUE,
@@ -202,7 +202,7 @@ export default function GestaoMesas() {
         <div
           role="tablist"
           aria-label="Estúdios ou Mesas"
-          onKeyDown={(e) => handleGestaoTabsArrowKeyDown(e, TAB_IDS, aba, setAba, "tab-gestao-estudios-")}
+          onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, TAB_IDS, aba, setAba, "tab-gestao-estudios-")}
           style={{
             ...getFilterBarRowStyle({ width: "100%" }),
             paddingTop: 12,

@@ -74,7 +74,7 @@ import {
   SkeletonTableRow,
 } from "../../../components/dashboard";
 import {
-  FILTRO_BAR_ROW_GAP,
+  FILTER_BAR_ROW_GAP,
   FILTRO_BAR_TAB_ICON_SIZE,
   handleFiltroBarTabsArrowKeyDown,
 } from "../../../lib/filterBarStyles";
@@ -94,8 +94,10 @@ import {
   estadoVazioForm,
   formDeFuncionario,
   historicoPrestadorPassaFiltroTipo,
+  labelOpcaoRhTalkPortal,
   labelStatusPrestador,
   mensagemErroSupabaseRhFuncionarioSalvar,
+  type RhPortalRhTalkOpcao,
   sliceContratacaoDeForm,
   sliceContratacaoDeRow,
   tiposAcaoDisponiveis,
@@ -195,12 +197,12 @@ export default function RhPrestadoresPage() {
   const [histModalFiltroTipo, setHistModalFiltroTipo] = useState<FiltroTipoAcaoHistoricoPrestador>("todos");
 
   const [rhTalksOpen, setRhTalksOpen] = useState(false);
-  const [rtAssunto, setRtAssunto] = useState("");
+  const [rtTalkId, setRtTalkId] = useState("");
+  const [rtTalksOpcoes, setRtTalksOpcoes] = useState<RhPortalRhTalkOpcao[]>([]);
+  const [rtTalksCarregando, setRtTalksCarregando] = useState(false);
   const [rtData, setRtData] = useState("");
-  const [rtAta, setRtAta] = useState("");
   const [rtBusca, setRtBusca] = useState("");
   const [rtParticipantes, setRtParticipantes] = useState<RhFuncionario[]>([]);
-  const [rtFiles, setRtFiles] = useState<File[]>([]);
   const [rtSalvando, setRtSalvando] = useState(false);
 
   const [anotacaoModalRow, setAnotacaoModalRow] = useState<RhFuncionario | null>(null);
@@ -223,6 +225,33 @@ export default function RhPrestadoresPage() {
     const id = window.setTimeout(() => setSucessoMsg(null), 4000);
     return () => window.clearTimeout(id);
   }, [sucessoMsg]);
+
+  useEffect(() => {
+    if (!rhTalksOpen) return;
+    let cancel = false;
+    setRtTalksCarregando(true);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_portal_rh_talk")
+        .select("id, numero, titulo, data_reuniao, status")
+        .eq("status", "publicado")
+        .order("data_reuniao", { ascending: false });
+      if (cancel) return;
+      if (error) {
+        console.error("[GestaoPrestador] carregar RH Talks portal:", error);
+        setRtTalksOpcoes([]);
+        setErroGlobal("Não foi possível carregar os RH Talks do Portal de RH. Se o problema persistir, entre em contato com o suporte.");
+      } else {
+        setRtTalksOpcoes(
+          ((data ?? []) as RhPortalRhTalkOpcao[]).filter((t) => String(t.titulo ?? "").trim().length > 0),
+        );
+      }
+      setRtTalksCarregando(false);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [rhTalksOpen]);
 
   useEffect(() => {
     if (!histModalRow) {
@@ -425,24 +454,29 @@ export default function RhPrestadoresPage() {
   const fecharModalRhTalks = () => {
     if (rtSalvando) return;
     setRhTalksOpen(false);
-    setRtAssunto("");
+    setRtTalkId("");
+    setRtTalksOpcoes([]);
     setRtData("");
-    setRtAta("");
     setRtBusca("");
     setRtParticipantes([]);
-    setRtFiles([]);
   };
 
   const abrirModalRhTalks = () => {
     setErroGlobal(null);
     setSucessoMsg(null);
     setRhTalksOpen(true);
-    setRtAssunto("");
+    setRtTalkId("");
     setRtData("");
-    setRtAta("");
     setRtBusca("");
     setRtParticipantes([]);
-    setRtFiles([]);
+  };
+
+  const selecionarRhTalkPortal = (talkId: string) => {
+    setRtTalkId(talkId);
+    const talk = rtTalksOpcoes.find((t) => t.id === talkId);
+    if (talk?.data_reuniao) {
+      setRtData(talk.data_reuniao.slice(0, 10));
+    }
   };
 
   const fecharModalRegistrarAnotacao = () => {
@@ -471,50 +505,39 @@ export default function RhPrestadoresPage() {
       setErroGlobal("Sem permissão para registrar.");
       return;
     }
-    const assunto = rtAssunto.trim();
-    const ata = rtAta.trim();
-    if (!assunto) {
-      setErroGlobal("Informe o assunto do RH Talks.");
+    if (!rtTalkId) {
+      setErroGlobal("Selecione o RH Talks.");
       return;
     }
     if (!rtData.trim()) {
-      setErroGlobal("Informe a data do RH Talks.");
+      setErroGlobal("Informe a data da participação.");
       return;
     }
     if (rtParticipantes.length === 0) {
       setErroGlobal("Adicione pelo menos um participante.");
       return;
     }
-    if (!ata) {
-      setErroGlobal("Informe a ata da reunião.");
+    const talk = rtTalksOpcoes.find((t) => t.id === rtTalkId);
+    if (!talk) {
+      setErroGlobal("RH Talks selecionado não está mais disponível. Feche o modal e tente novamente.");
       return;
     }
     setRtSalvando(true);
     setErroGlobal(null);
     try {
-      let anexosDb: { name: string; path: string; publicUrl: string }[] = [];
-      if (rtFiles.length > 0) {
-        const firstId = rtParticipantes[0]!.id;
-        const up = await uploadAnexosAcaoRh(firstId, rtFiles);
-        if (!up.ok) {
-          setErroGlobal(up.message);
-          setRtSalvando(false);
-          return;
-        }
-        anexosDb = up.anexos;
-      }
       const participantesPayload = rtParticipantes.map((p) => ({ id: p.id, nome: p.nome.trim() || p.nome }));
       const detalhes: Record<string, unknown> = {
-        assunto,
+        rh_talk_id: talk.id,
+        rh_talk_titulo: talk.titulo.trim(),
+        rh_talk_numero: talk.numero,
         data_rh_talks: rtData.trim().slice(0, 10),
-        ata,
         participantes: participantesPayload,
       };
       for (const p of rtParticipantes) {
-        const err = await inserirHistorico(p.id, "rh_talks", detalhes, anexosDb);
+        const err = await inserirHistorico(p.id, "rh_talks", detalhes, []);
         if (err) throw err;
       }
-      setSucessoMsg("RH Talks registrado para os participantes.");
+      setSucessoMsg("Participação registrada para os prestadores selecionados.");
       fecharModalRhTalks();
       await carregar();
     } catch (e: unknown) {
@@ -3006,18 +3029,43 @@ export default function RhPrestadoresPage() {
               </div>
             ) : null}
             <div style={{ marginBottom: 12 }}>
-              {lblReq("rt-assunto", "Assunto do RH Talks")}
-              <input
-                id="rt-assunto"
-                value={rtAssunto}
-                onChange={(e) => setRtAssunto(e.target.value)}
-                style={inputStyle}
-                aria-label="Assunto do RH Talks"
-              />
+              {lblReq("rt-talk", "RH Talks")}
+              {rtTalksCarregando ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0", color: t.textMuted, fontSize: 13 }}>
+                  <Loader2 size={14} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                  Carregando…
+                </div>
+              ) : rtTalksOpcoes.length === 0 ? (
+                <div style={{ fontSize: 13, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>
+                  Nenhum RH Talks publicado no Portal de RH. Cadastre e publique em Portal de RH antes de registrar participantes.
+                </div>
+              ) : (
+                <select
+                  id="rt-talk"
+                  value={rtTalkId}
+                  onChange={(e) => selecionarRhTalkPortal(e.target.value)}
+                  style={inputStyle}
+                  aria-label="RH Talks"
+                >
+                  <option value="">Selecione o RH Talks…</option>
+                  {rtTalksOpcoes.map((talk) => (
+                    <option key={talk.id} value={talk.id}>
+                      {labelOpcaoRhTalkPortal(talk)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lblReq("rt-data", "Data do RH Talks")}
-              <input id="rt-data" type="date" value={rtData} onChange={(e) => setRtData(e.target.value)} style={inputStyle} aria-label="Data do RH Talks" />
+              {lblReq("rt-data", "Data da participação")}
+              <input
+                id="rt-data"
+                type="date"
+                value={rtData}
+                onChange={(e) => setRtData(e.target.value)}
+                style={inputStyle}
+                aria-label="Data da participação"
+              />
             </div>
             <div style={{ marginBottom: 10 }}>
               {lblReq("rt-busca", "Participantes")}
@@ -3111,32 +3159,6 @@ export default function RhPrestadoresPage() {
                 </div>
               ) : null}
             </div>
-            <div style={{ marginBottom: 12 }}>
-              {lblReq("rt-ata", "Ata da reunião")}
-              <textarea
-                id="rt-ata"
-                value={rtAta}
-                onChange={(e) => setRtAta(e.target.value)}
-                rows={6}
-                style={{ ...inputStyle, resize: "vertical", minHeight: 120 }}
-                aria-label="Ata da reunião"
-              />
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <label htmlFor="rt-anexo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
-                Anexo (opcional)
-              </label>
-              <input
-                id="rt-anexo"
-                type="file"
-                onChange={(e) => setRtFiles(Array.from(e.target.files ?? []))}
-                style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                aria-label="Anexo opcional"
-              />
-              {rtFiles.length > 0 ? (
-                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{rtFiles.map((f) => f.name).join(", ")}</div>
-              ) : null}
-            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
               <button
                 type="button"
@@ -3157,7 +3179,7 @@ export default function RhPrestadoresPage() {
               </button>
               <button
                 type="button"
-                disabled={rtSalvando}
+                disabled={rtSalvando || rtTalksCarregando || rtTalksOpcoes.length === 0}
                 onClick={() => void salvarRhTalks()}
                 style={{
                   padding: "10px 18px",

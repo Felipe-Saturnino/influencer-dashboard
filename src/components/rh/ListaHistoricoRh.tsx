@@ -172,14 +172,14 @@ export function ListaHistoricoRh({
             ) : null}
             {h.tipo === "rh_talks" ? (
               <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
-                {det.assunto ? (
+                {det.rh_talk_titulo || det.assunto ? (
                   <div>
-                    <strong>Assunto:</strong> {String(det.assunto)}
+                    <strong>RH Talks:</strong> {String(det.rh_talk_titulo ?? det.assunto)}
                   </div>
                 ) : null}
                 {det.data_rh_talks ? (
                   <div style={{ marginTop: 4 }}>
-                    <strong>Data do RH Talks:</strong> {fmtDataIsoPtBr(String(det.data_rh_talks))}
+                    <strong>Data da participação:</strong> {fmtDataIsoPtBr(String(det.data_rh_talks))}
                   </div>
                 ) : null}
               </div>

@@ -843,7 +843,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
         nota:
-          "É a origem do vínculo para dealers (Game Presenter) exibidos em Gestão de Dealers e para listas de retirada em Figurinos. Ao registrar Término da prestação (status Encerrado), o login na plataforma vinculado ao E-mail Spin ou e-mail pessoal é desativado automaticamente.",
+          "É a origem do vínculo para dealers (Game Presenter) exibidos em Gestão de Dealers e para listas de retirada em Figurinos. Ao registrar Término da prestação (status Encerrado), o login na plataforma vinculado ao E-mail Spin ou e-mail pessoal é desativado automaticamente. RH Talks: cadastre e publique no Portal de RH; em Gestão de Prestadores (aba Anotações RH) registre participantes e data.",
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {
