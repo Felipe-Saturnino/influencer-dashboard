@@ -104,11 +104,11 @@ export default function Ajuda() {
         : undefined;
 
   const renderAjudaBlocos = (
-    blocos: { subtitulo: string; texto: string }[],
+    blocos: { subtitulo?: string; texto: string }[],
     opts?: { pageKeyLink?: PageKey; skipLink?: boolean },
   ) =>
     blocos.map((bloco, i) => (
-      <div key={`${bloco.subtitulo}-${i}`}>
+      <div key={`${bloco.subtitulo ?? "bloco"}-${i}`}>
         {bloco.subtitulo ? (
           <p
             style={{
