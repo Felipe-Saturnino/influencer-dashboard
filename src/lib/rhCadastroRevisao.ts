@@ -19,43 +19,36 @@ export function prestadorExigeRevisaoCadastral(status: RhFuncionarioStatus): boo
 }
 
 /**
- * Data-base do ciclo de 6 meses: `cadastro_revisado_em` após a primeira revisão do prestador;
- * enquanto vazio, usa `created_at` do cadastro em Gestão de Prestadores (única criação).
+ * Data-base do ciclo de 6 meses — somente após a primeira revisão concluída pelo prestador em Dados de Cadastro.
+ * O cadastro em Gestão de Prestadores (`created_at`) não substitui a primeira revisão.
  */
-export function dataReferenciaRevisaoCadastral(
-  revisadoEm: string | null | undefined,
-  criadoEm: string | null | undefined,
-): string | null {
+export function dataReferenciaRevisaoCadastral(revisadoEm: string | null | undefined): string | null {
   const rev = revisadoEm?.trim();
-  if (rev) return rev;
-  const criado = criadoEm?.trim();
-  return criado || null;
+  return rev || null;
 }
 
 export function cadastroRevisaoJaRegistradaPeloPrestador(revisadoEm: string | null | undefined): boolean {
   return Boolean(revisadoEm?.trim());
 }
 
-/** `true` quando já passaram 6 meses desde a data de referência (revisão ou criação do cadastro). */
+/**
+ * `true` quando a revisão está pendente: sem revisão prévia (primeiro acesso) ou ciclo de 6 meses vencido.
+ */
 export function precisaRevisaoCadastral(
   revisadoEm: string | null | undefined,
   refDate = new Date(),
-  criadoEm?: string | null | undefined,
 ): boolean {
-  const baseStr = dataReferenciaRevisaoCadastral(revisadoEm, criadoEm);
-  if (!baseStr) return true;
-  const base = new Date(baseStr);
+  const rev = revisadoEm?.trim();
+  if (!rev) return true;
+  const base = new Date(rev);
   if (Number.isNaN(base.getTime())) return true;
   const limite = new Date(base);
   limite.setMonth(limite.getMonth() + MESES_CICLO_REVISAO_CADASTRO);
   return refDate.getTime() >= limite.getTime();
 }
 
-export function proximaRevisaoCadastralEm(
-  revisadoEm: string | null | undefined,
-  criadoEm?: string | null | undefined,
-): Date | null {
-  const baseStr = dataReferenciaRevisaoCadastral(revisadoEm, criadoEm);
+export function proximaRevisaoCadastralEm(revisadoEm: string | null | undefined): Date | null {
+  const baseStr = dataReferenciaRevisaoCadastral(revisadoEm);
   if (!baseStr) return null;
   const base = new Date(baseStr);
   if (Number.isNaN(base.getTime())) return null;
@@ -66,7 +59,7 @@ export function proximaRevisaoCadastralEm(
 
 export function revisaoCadastralPendenteParaFuncionario(f: RhFuncionario | null | undefined): boolean {
   if (!f || !prestadorExigeRevisaoCadastral(f.status)) return false;
-  return precisaRevisaoCadastral(f.cadastro_revisado_em, new Date(), f.created_at);
+  return precisaRevisaoCadastral(f.cadastro_revisado_em, new Date());
 }
 
 export function payloadMarcarRevisaoCadastral(tipo: RhCadastroRevisaoTipo): {

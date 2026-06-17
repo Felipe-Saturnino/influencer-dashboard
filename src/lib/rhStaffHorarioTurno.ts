@@ -115,7 +115,7 @@ export function textoHorarioTurnoSomenteOperadora(
   if (!escalaComHorarioTurnoSomenteOperadora(escalaRaw)) return "";
   const t = (turnoStaffNome ?? "").trim();
   if (!t) return "Selecione o turno para ver o horário.";
-  if (!op) return "Associe uma operadora para ver o horário.";
+  if (!op) return "Associe um estúdio para ver o horário.";
 
   const duracaoMin = normalizarEscalaCadastro(escalaRaw ?? "") === "4x2" ? 8 * 60 : 6 * 60 + 30;
 

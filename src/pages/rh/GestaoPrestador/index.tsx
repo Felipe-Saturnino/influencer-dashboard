@@ -1590,14 +1590,20 @@ export default function RhPrestadoresPage() {
                     <strong>Revisão cadastral (prestador):</strong>{" "}
                     {cadastroRevisaoJaRegistradaPeloPrestador(snapshotEdicao.cadastro_revisado_em)
                       ? `última em ${fmtDataIsoPtBr(String(snapshotEdicao.cadastro_revisado_em).slice(0, 10))}`
-                      : `primeira revisão pendente — prazo desde cadastro em ${fmtDataIsoPtBr(String(snapshotEdicao.created_at).slice(0, 10))}`}
+                      : "primeira revisão pendente — aguardando confirmação em Dados de Cadastro"}
                     {snapshotEdicao.cadastro_revisao_tipo === "sem_alteracao"
                       ? " — declarada sem alterações"
                       : snapshotEdicao.cadastro_revisao_tipo === "alteracao"
                         ? " — com atualização de dados/documentos"
                         : ""}
                     {revisaoCadastralPendenteParaFuncionario(snapshotEdicao) ? (
-                      <span style={{ color: "#f59e0b", fontWeight: 700 }}> · Pendente (ciclo 6 meses)</span>
+                      <span style={{ color: "#f59e0b", fontWeight: 700 }}>
+                        {" "}
+                        · Pendente
+                        {cadastroRevisaoJaRegistradaPeloPrestador(snapshotEdicao.cadastro_revisado_em)
+                          ? " (ciclo 6 meses)"
+                          : " (primeira revisão)"}
+                      </span>
                     ) : (
                       <span style={{ color: "#22c55e", fontWeight: 600 }}> · Em dia</span>
                     )}

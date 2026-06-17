@@ -431,7 +431,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O banner de revisão cadastral não aparece ou não some?",
         texto:
-          "A revisão obrigatória (ciclo de 6 meses) vale apenas quando você visualiza o **seu** cadastro — não aparece ao consultar terceiros. Para concluir: atualize dados ou documentos na aba correspondente, ou use **Confirmar sem alterações** na aba Documentos quando nada mudou. Formação e Experiência profissional anterior não entram nesse ciclo.",
+          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. Formação e Experiência profissional anterior não entram nesse ciclo.",
       },
       {
         subtitulo: "Falha ao enviar documento ou arquivo?",

@@ -101,3 +101,28 @@ export async function fetchTurnosPorOperadoraSlugs(
 
   return map;
 }
+
+/** Turnos por estúdio (colunas em estudios_spin). */
+export async function fetchTurnosPorEstudioSlugs(
+  slugs: string[],
+): Promise<Map<string, TurnosDealersPick>> {
+  const uniq = [...new Set(slugs.map((s) => s.trim()).filter(Boolean))];
+  const map = new Map<string, TurnosDealersPick>();
+  if (uniq.length === 0) return map;
+
+  const { data } = await supabase
+    .from("estudios_spin")
+    .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+    .in("slug", uniq)
+    .eq("ativo", true);
+
+  for (const row of (data ?? []) as (TurnosDealersPick & { slug: string })[]) {
+    map.set(row.slug, {
+      turno_manha_inicio: row.turno_manha_inicio,
+      turno_tarde_inicio: row.turno_tarde_inicio,
+      turno_noite_inicio: row.turno_noite_inicio,
+    });
+  }
+
+  return map;
+}

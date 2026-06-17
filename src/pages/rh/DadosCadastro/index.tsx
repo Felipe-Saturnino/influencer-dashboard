@@ -289,7 +289,7 @@ export default function RhDadosCadastroPage() {
 
   const proximaRevisaoLabel = useMemo(() => {
     if (!row) return null;
-    const d = proximaRevisaoCadastralEm(row.cadastro_revisado_em, row.created_at);
+    const d = proximaRevisaoCadastralEm(row.cadastro_revisado_em);
     return d ? d.toLocaleDateString("pt-BR") : null;
   }, [row]);
 
@@ -839,13 +839,7 @@ export default function RhDadosCadastroPage() {
             <strong>{fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}</strong>
             {row.cadastro_revisao_tipo === "sem_alteracao" ? " (sem alterações declaradas)" : null}.
           </>
-        ) : (
-          <>
-            {" "}
-            Referência atual: cadastro em Gestão de Prestadores (
-            <strong>{fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}</strong>).
-          </>
-        )}
+        ) : null}
       </p>
     ) : null;
 
@@ -955,13 +949,12 @@ export default function RhDadosCadastroPage() {
               {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                   Última revisão: {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
-                  {precisaRevisaoCadastral(row.cadastro_revisado_em, new Date(), row.created_at) ? " (vencida)" : null}
+                  {precisaRevisaoCadastral(row.cadastro_revisado_em) ? " (vencida)" : null}
                 </p>
               ) : (
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Primeira revisão cadastral: o prazo de {MESES_CICLO_REVISAO_CADASTRO} meses conta desde o cadastro em
-                  Gestão de Prestadores ({fmtDataIsoPtBr(String(row.created_at).slice(0, 10))}
-                  {proximaRevisaoLabel ? ` — prevista para ${proximaRevisaoLabel}` : ""}).
+                  Primeira revisão cadastral pendente: conclua a atualização ou confirme que seus dados estão corretos
+                  antes de usar as demais áreas da plataforma.
                 </p>
               )}
               <label
@@ -985,8 +978,10 @@ export default function RhDadosCadastroPage() {
                   style={{ marginTop: 3, flexShrink: 0 }}
                 />
                 <span>
-                  Confirmo que meus dados cadastrais e documentos permanecem corretos e que não houve alteração no
-                  período desde a última revisão.
+                  Confirmo que meus dados cadastrais e documentos estão corretos
+                  {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em)
+                    ? " e que não houve alteração no período desde a última revisão."
+                    : "."}
                 </span>
               </label>
               <button

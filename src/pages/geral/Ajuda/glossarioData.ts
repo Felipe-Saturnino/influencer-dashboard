@@ -858,7 +858,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Autoatendimento e consulta cadastral do prestador: dados pessoais, documentos, formação, experiência profissional anterior e histórico de movimentações.",
         nota:
-          "Revisão cadastral de 6 meses aplica-se ao próprio cadastro. Histórico de trabalho (vínculo Spin) é somente leitura nesta página.",
+          "Primeira revisão obrigatória no primeiro acesso (cadastro em Gestão de Prestadores não conta). Depois, ciclo de 6 meses no próprio cadastro. Histórico de trabalho (vínculo Spin) é somente leitura nesta página.",
         referencia: "Dados de Cadastro",
       },
       {
@@ -876,7 +876,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Revisão cadastral",
         definicao:
-          "Ciclo obrigatório de atualização ou confirmação dos dados do prestador a cada seis meses, exibido em Dados de Cadastro no próprio cadastro.",
+          "Atualização ou confirmação obrigatória dos dados do prestador em Dados de Cadastro: a primeira no primeiro login (após cadastro em Gestão de Prestadores); depois, a cada seis meses.",
         referencia: "Dados de Cadastro",
       },
     ],
