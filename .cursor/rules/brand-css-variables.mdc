@@ -23,6 +23,7 @@ alwaysApply: true
 
 - `AppContext` chama `aplicarBrandguide()` / reset e injeta variáveis em `document.documentElement`.
 - **Ativo:** perfil **operador** + `operadoraBrand` → `brand.useBrand === true` em `useDashboardBrand()`.
+- **Cache local:** após fetch bem-sucedido, snapshot em `localStorage` (`lib/operadoraBrandCache.ts`) — reaplicado **antes** do primeiro paint do layout (login e restauração de sessão) para evitar flash Spin → operadora. Refresh em background ao focar a aba (`brandRefreshKey`).
 - **Inativo:** defaults Spin em `src/styles/global.css` (`:root`); fallbacks nos `var(--brand-*, #…)` garantem identidade sem `if` por página.
 - **Fonte:** `--brand-fontFamily` + `@font-face` quando houver `font_url` da operadora.
 - **Logo:** `operadoraBrand` na Sidebar — não reimplementar fetch aqui.

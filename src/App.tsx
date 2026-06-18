@@ -261,7 +261,17 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
-  const { user, setUser, checking, routeReady, layoutView, applyPathFromLocation, theme: t } = useApp();
+  const {
+    user,
+    setUser,
+    checking,
+    routeReady,
+    layoutView,
+    operadoraHomeReady,
+    operadoraBrand,
+    applyPathFromLocation,
+    theme: t,
+  } = useApp();
   const [, setNavEpoch] = useState(0);
   const publicRoute = detectPublicUnauthenticatedRoute();
 
@@ -295,12 +305,18 @@ function Root() {
 
   useIdleSessionTimeout(!!user && routeReady && !checking, handleLogout);
 
-  if (checking || !routeReady) {
+  const aguardandoBrandOperador = user?.role === "operador" && !operadoraHomeReady;
+  const bootBackground =
+    user?.role === "operador"
+      ? operadoraBrand?.brand_bg ?? "#0f0f1a"
+      : "#0a0a0f";
+
+  if (checking || !routeReady || aguardandoBrandOperador) {
     return (
       <div
         className="app-full-viewport-zoomed"
         style={{
-          background: "#0a0a0f",
+          background: bootBackground,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -315,7 +331,9 @@ function Root() {
             aria-hidden
             style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
           />
-          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando…</span>
+          <span style={{ fontSize: 14, color: user?.role === "operador" ? "var(--brand-text, #e5dce1)" : "#e5dce1" }}>
+            Carregando…
+          </span>
         </div>
       </div>
     );
