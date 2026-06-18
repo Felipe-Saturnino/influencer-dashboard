@@ -47,13 +47,10 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Gestão de Escala (`rh_gestao_escala`)
 
-- **Barra de filtros — linha 1:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum»). **Linha 2:** tablist **`FiltroBarTabButton`** — «Geração de Escala» / «Alteração de Escala» (`borderTop` como Marketplace/Solicitações); carrossel e estúdio valem para ambos os modos.
-- **Geração de Escala:** blocos **Consolidado** e **Escala Diária** (conteúdo atual da grade mensal).
-- **Alteração de Escala:** painel reservado (em branco até implementação).
-- Blocos **Consolidado** e **Escala Diária:** **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
-- **Consolidado:** abaixo do título do bloco, chips de **área (time)** — Customer Service, Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária.
+- Blocos **Consolidado** e **Escala Diária** (todas as áreas): **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
+- **Barra de filtros:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum») + chips de **área (time)** — Customer Service, Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária.
 - Tabela **Consolidado:** coluna **Turno** com `position: sticky; left: 0` e sombra lateral ao rolar horizontalmente (dias do mês).
-- Grade mensal por área (time): chips de área **dentro do bloco Consolidado** (abaixo do `SectionTitle`), **`FiltroEstudioSelect`** na barra (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.
+- Grade mensal por área (time): chips de área na barra de filtros, **`FiltroEstudioSelect`** (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.
 - Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
 - Vínculo com Calendário: escala aprovada alimenta presença/agenda.
 - RPCs: `rh_gestao_escala_grade_*`.
