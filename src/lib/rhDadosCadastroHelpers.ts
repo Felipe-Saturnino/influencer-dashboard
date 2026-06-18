@@ -45,14 +45,26 @@ export function ehProprioCadastroDados(meuPrestadorId: string | null, funcionari
   return Boolean(meuPrestadorId && funcionarioId && meuPrestadorId === funcionarioId);
 }
 
+/** Vista «apenas próprio» (Ver ≠ Sim): o registro carregado é sempre o do login. */
+export function dadosCadastroVisualizaProprioCadastro(
+  vistaCompleta: boolean,
+  meuPrestadorId: string | null,
+  funcionarioId: string | null,
+): boolean {
+  if (!vistaCompleta) return Boolean(funcionarioId);
+  return ehProprioCadastroDados(meuPrestadorId, funcionarioId);
+}
+
 export function podeEditarFuncionarioDadosCadastro(
   perm: Pick<Permissoes, "canEditar" | "canEditarOk">,
   meuPrestadorId: string | null,
   funcionarioId: string | null,
+  opts?: { vistaApenasProprio?: boolean },
 ): boolean {
   if (!perm.canEditarOk || !funcionarioId) return false;
   if (perm.canEditar === "sim") return true;
   if (perm.canEditar === "proprios") {
+    if (opts?.vistaApenasProprio) return true;
     return ehProprioCadastroDados(meuPrestadorId, funcionarioId);
   }
   return false;

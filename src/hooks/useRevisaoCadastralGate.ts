@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useApp } from "../context/AppContext";
+import { registerRevisaoNavGate, useApp } from "../context/AppContext";
 import type { PageKey } from "../types";
 import { REVISAO_GATE_BANNER_KEY } from "../lib/appRoutes";
 import {
-  PAGES_ISENTAS_GATE_REVISAO_CADASTRO,
   buscarFuncionarioRevisaoCadastralPorEmail,
+  destinoBloqueadoPorGateRevisaoCadastral,
   revisaoCadastralPendenteParaFuncionario,
   usuarioSujeitoGateRevisaoCadastral,
 } from "../lib/rhCadastroRevisao";
 
 export function useRevisaoCadastralGate() {
-  const { user, permissions, navigateTo, activePage } = useApp();
+  const { user, permissionsAcoes, navigateTo } = useApp();
   const [gateLoading, setGateLoading] = useState(true);
   const [gateAtivo, setGateAtivo] = useState(false);
+  const [modalAberto, setModalAberto] = useState(false);
   const bootDoneRef = useRef(false);
+  const gateAtivoRef = useRef(gateAtivo);
+  gateAtivoRef.current = gateAtivo;
 
   const recarregar = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -23,9 +26,10 @@ export function useRevisaoCadastralGate() {
         bootDoneRef.current = true;
         return;
       }
-      const permEdit = permissions.rh_dados_cadastro ?? null;
-      if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEdit)) {
+      const permEditar = permissionsAcoes.rh_dados_cadastro?.editar ?? null;
+      if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
         setGateAtivo(false);
+        setModalAberto(false);
         setGateLoading(false);
         bootDoneRef.current = true;
         return;
@@ -33,11 +37,13 @@ export function useRevisaoCadastralGate() {
       const showBlockingLoader = !opts?.silent && !bootDoneRef.current;
       if (showBlockingLoader) setGateLoading(true);
       const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
-      setGateAtivo(revisaoCadastralPendenteParaFuncionario(row));
+      const ativo = revisaoCadastralPendenteParaFuncionario(row);
+      setGateAtivo(ativo);
+      if (!ativo) setModalAberto(false);
       setGateLoading(false);
       bootDoneRef.current = true;
     },
-    [user?.email, user?.role, permissions.rh_dados_cadastro],
+    [user?.email, user?.role, permissionsAcoes.rh_dados_cadastro?.editar],
   );
 
   useEffect(() => {
@@ -51,24 +57,29 @@ export function useRevisaoCadastralGate() {
   }, [recarregar]);
 
   useEffect(() => {
-    if (gateLoading || !gateAtivo) return;
-    const page = activePage as PageKey;
-    if (PAGES_ISENTAS_GATE_REVISAO_CADASTRO.includes(page)) return;
+    registerRevisaoNavGate({
+      shouldBlock: (pageKey: PageKey) => destinoBloqueadoPorGateRevisaoCadastral(gateAtivoRef.current, pageKey),
+      onBlocked: () => setModalAberto(true),
+    });
+    return () => registerRevisaoNavGate(null);
+  }, []);
+
+  const fecharModalRevisao = useCallback(() => {
+    setModalAberto(false);
+  }, []);
+
+  const irParaAtualizacaoCadastral = useCallback(() => {
+    setModalAberto(false);
     sessionStorage.setItem(REVISAO_GATE_BANNER_KEY, "1");
     navigateTo("rh_dados_cadastro");
-  }, [gateLoading, gateAtivo, activePage, navigateTo]);
+  }, [navigateTo]);
 
-  const navegarComGate = useCallback(
-    (page: string) => {
-      if (gateAtivo && !PAGES_ISENTAS_GATE_REVISAO_CADASTRO.includes(page as PageKey)) {
-        sessionStorage.setItem(REVISAO_GATE_BANNER_KEY, "1");
-        navigateTo("rh_dados_cadastro");
-        return;
-      }
-      navigateTo(page as PageKey);
-    },
-    [gateAtivo, navigateTo],
-  );
-
-  return { gateLoading, gateAtivo, recarregarGate: recarregar, navegarComGate };
+  return {
+    gateLoading,
+    gateAtivo,
+    modalRevisaoAberto: modalAberto,
+    fecharModalRevisao,
+    irParaAtualizacaoCadastral,
+    recarregarGate: recarregar,
+  };
 }

@@ -12,6 +12,20 @@ export const PAGES_ISENTAS_GATE_REVISAO_CADASTRO: readonly PageKey[] = [
   "rh_central_denuncias",
 ];
 
+export const REVISAO_CADASTRO_GATE_MODAL_TITULO = "Atualização Cadastral pendente";
+
+export const REVISAO_CADASTRO_GATE_MODAL_MENSAGEM =
+  "Você tem Atualização Cadastral pendente. Acesse a página de Dados de Cadastro e faça a verificação para retornar à navegação.";
+
+export const REVISAO_CADASTRO_GATE_MODAL_CTA = "Ir para Dados de Cadastro";
+
+export function destinoBloqueadoPorGateRevisaoCadastral(
+  gateAtivo: boolean,
+  pageKey: PageKey,
+): boolean {
+  return gateAtivo && !PAGES_ISENTAS_GATE_REVISAO_CADASTRO.includes(pageKey);
+}
+
 export type RhCadastroRevisaoTipo = "alteracao" | "sem_alteracao";
 
 export function prestadorExigeRevisaoCadastral(status: RhFuncionarioStatus): boolean {
@@ -86,10 +100,11 @@ export async function buscarFuncionarioRevisaoCadastralPorEmail(
   return buscarRhFuncionarioAtivoPorEmailLogin(em);
 }
 
+/** Usar `can_editar` de Dados de Cadastro — não confundir com `can_view` (Ver Próprios ≠ gate). */
 export function usuarioSujeitoGateRevisaoCadastral(
   role: string | undefined,
-  permDadosCadastroEdit: string | null | undefined,
+  permDadosCadastroEditar: string | null | undefined,
 ): boolean {
   if (role === "prestador") return true;
-  return permDadosCadastroEdit === "proprios";
+  return permDadosCadastroEditar === "proprios";
 }

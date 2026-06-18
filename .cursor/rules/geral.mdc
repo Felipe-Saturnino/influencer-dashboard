@@ -119,7 +119,7 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 - Rota **`/painel-noticias`** — `isPainelNoticiasPublicPath()` / `detectPublicUnauthenticatedRoute()`.
 - **Sem** login, menu, `PageHeader`, `usePermission`.
 - Dados: `painel_noticia` via anon (RLS); ingestão RSS horária (`sync-painel-noticias-rss`).
-- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical ~30 s (sobe), polling 60 s.
+- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical **20 s** por slide (sobe), polling 60 s.
 - Purge físico na base após janela de 4 h quando fora do conjunto mínimo de 5 exibíveis.
 
 ---

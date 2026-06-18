@@ -3,12 +3,14 @@ import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
+import type { PageKey } from "./types";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
 import { useRevisaoCadastralGate } from "./hooks/useRevisaoCadastralGate";
 import { useIdleSessionTimeout } from "./hooks/useIdleSessionTimeout";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
+import { RevisaoCadastralGateModal } from "./components/RevisaoCadastralGateModal";
 // Páginas de fluxo inicial (eager — Login e TrocarSenha bloqueiam antes do layout)
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
@@ -159,12 +161,16 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
-  const { user, theme: t, activePage, layoutView } = useApp();
+  const { user, theme: t, activePage, layoutView, navigateTo } = useApp();
   const [retryKey, setRetryKey] = useState(0);
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { gateLoading: revisaoGateLoading, gateAtivo: revisaoGateAtivo, navegarComGate } =
-    useRevisaoCadastralGate();
+  const {
+    gateAtivo: revisaoGateAtivo,
+    modalRevisaoAberto,
+    fecharModalRevisao,
+    irParaAtualizacaoCadastral,
+  } = useRevisaoCadastralGate();
 
   useEffect(() => {
     if (!navDrawer) setMenuOpen(false);
@@ -192,12 +198,18 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const PageComponent = PAGE_MAP[activePage] ?? Home;
 
   const go = (page: string) => {
-    navegarComGate(page);
+    navigateTo(page as PageKey);
     setMenuOpen(false);
   };
 
   return (
     <div className="app-layout-shell" style={{ display: "flex", background: t.bg }}>
+      {modalRevisaoAberto ? (
+        <RevisaoCadastralGateModal
+          onClose={fecharModalRevisao}
+          onIrParaDadosCadastro={irParaAtualizacaoCadastral}
+        />
+      ) : null}
       {navDrawer && menuOpen && (
         <button
           type="button"
@@ -246,11 +258,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
           ) : null}
           <ErrorBoundary background={t.bg} onReset={() => setRetryKey((k) => k + 1)}>
             <Suspense fallback={<PageLoadingFallback background={t.bg} />}>
-              {revisaoGateLoading && activePage !== "rh_dados_cadastro" ? (
-                <PageLoadingFallback background={t.bg} />
-              ) : (
-                <PageComponent key={`${activePage}-${retryKey}`} />
-              )}
+              <PageComponent key={`${activePage}-${retryKey}`} />
             </Suspense>
           </ErrorBoundary>
         </div>

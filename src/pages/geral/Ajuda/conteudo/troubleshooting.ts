@@ -447,6 +447,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. Formação e Experiência profissional anterior não entram nesse ciclo.",
       },
       {
+        subtitulo: "Aparece um aviso ao tentar acessar outras páginas?",
+        texto:
+          "Com revisão cadastral pendente, a plataforma exibe um aviso ao tentar ir para outra área pelo menu ou atalhos. Você permanece na página atual até concluir a verificação em **Dados de Cadastro** (atualizar dados/documentos ou **Confirmar sem alterações**). Enquanto isso, **Configurações**, **Ajuda** e **Central de Denúncias** continuam acessíveis.",
+      },
+      {
         subtitulo: "Falha ao enviar documento ou arquivo?",
         texto:
           "Limite de **15 MB** por arquivo na aba Documentos e nos anexos de formação/portfólio (exceto vídeo/áudio, que usam apenas link externo). Formatos aceitos conforme o tipo de item. Se o envio falhar, tente arquivo menor ou outro formato; mensagens ao usuário são genéricas — detalhes técnicos ficam no console para suporte.",
