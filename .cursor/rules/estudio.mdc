@@ -61,7 +61,7 @@ alwaysApply: false
 - **Dealer** e **Game Presenter** são a **mesma função** — nomes distintos por contexto (catálogo para operadora vs. organograma/escala).
 - Registro em `dealers` é **automático** via `syncGamePresenterDealerFromRhFuncionario` ao salvar Staff ou alterar vínculo em Prestadores; **não** há CTA de cadastro nesta página.
 - **Elenco visível:** prestador com `status` `ativo` ou `indisponivel`, time **Game Presenter** ativo no organograma e `rh_funcionario_id` vinculado. Sai do catálogo ao mudar de time, encerrar prestação ou time inativo (sync remove o dealer).
-- Query com join em `rh_funcionarios` + filtro `prestadorEmbedQualificaElencoDealer` (`lib/rhGamePresenterDealerSync.ts`) — defesa em UI além do sync.
+- Query via RPC **`dealers_lista_elenco`** (`SECURITY DEFINER`) — filtra GP ativo/indisponível no servidor sem exigir leitura de `rh_funcionarios` no cliente (RLS bloqueava o join aninhado para operadora). Fallback: `dealers` com `rh_funcionario_id` se a RPC ainda não existir.
 
 - Grid de cards: `repeat(auto-fill, minmax(min(100%, 300px), 1fr))`.
 - **Skeleton** obrigatório no loading (6 placeholders) — nunca só texto “Carregando…”.

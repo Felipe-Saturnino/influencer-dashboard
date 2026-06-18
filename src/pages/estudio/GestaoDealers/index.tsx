@@ -39,10 +39,6 @@ import {
   dealerEstudioLabelFromRow,
   dealerRowPassaFiltroEstudio,
 } from "./gestaoDealersEstudioHelpers";
-import {
-  prestadorEmbedQualificaElencoDealer,
-  type RhFuncionarioElencoEmbed,
-} from "../../../lib/rhGamePresenterDealerSync";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
@@ -206,44 +202,31 @@ export default function GestaoDealers() {
       }
       slugsForcado = set.size > 0 ? [...set] : null;
     }
-    let qDealers = supabase
-      .from("dealers")
-      .select(
-        `*,
-        rh_funcionarios (
-          id,
-          status,
-          org_time_id,
-          rh_org_times ( nome, status )
-        )`,
-      )
-      .not("rh_funcionario_id", "is", null)
-      .order("nickname");
-    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      const parts: string[] = [];
-      if (slugsForcado?.length) {
-        for (const s of slugsForcado) parts.push(`estudio_slug.eq.${s}`);
-      }
-      for (const s of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${s}`);
-      if (parts.length > 0) qDealers = qDealers.or(parts.join(","));
+    const { data: dealersRpc, error: dealersErr } = await supabase.rpc("dealers_lista_elenco");
+    let dealersLista: Dealer[];
+    if (dealersErr) {
+      console.error("Gestão de Dealers: RPC dealers_lista_elenco indisponível — fallback em dealers", dealersErr);
+      const { data: legacy, error: legacyErr } = await supabase
+        .from("dealers")
+        .select("*")
+        .not("rh_funcionario_id", "is", null)
+        .order("nickname");
+      if (legacyErr) console.error("Gestão de Dealers: falha ao carregar dealers", legacyErr);
+      dealersLista = (legacy ?? []) as Dealer[];
+    } else {
+      dealersLista = (dealersRpc ?? []) as Dealer[];
     }
-    const [dealersRes, operadorasRes] = await Promise.all([
-      qDealers,
+    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+      dealersLista = dealersLista.filter((d) => {
+        if (slugsForcado?.some((s) => d.estudio_slug === s)) return true;
+        return operadoraSlugsForcado.some((s) => d.operadora_slug === s);
+      });
+    }
+    dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
+    const [operadorasRes] = await Promise.all([
       supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
-    const dealersElenco = (dealersRes.data ?? [])
-      .filter((raw) => {
-        const row = raw as Dealer & { rh_funcionarios?: RhFuncionarioElencoEmbed | null };
-        return prestadorEmbedQualificaElencoDealer(row.rh_funcionarios);
-      })
-      .map((raw) => {
-        const { rh_funcionarios: _embed, ...dealer } = raw as Dealer & {
-          rh_funcionarios?: RhFuncionarioElencoEmbed | null;
-        };
-        void _embed;
-        return dealer as Dealer;
-      });
-    setDealers(dealersElenco);
+    setDealers(dealersLista);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
     setLoading(false);
   }, [user?.role, operadoraSlugsForcado, carregarEstudios]);

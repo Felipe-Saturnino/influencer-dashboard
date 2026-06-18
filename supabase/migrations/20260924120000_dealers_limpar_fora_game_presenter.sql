@@ -3,6 +3,28 @@
 
 BEGIN;
 
+CREATE OR REPLACE FUNCTION public._rh_org_time_nome_eh_game_presenter(p_nome text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT lower(
+    regexp_replace(
+      trim(
+        translate(
+          coalesce(p_nome, ''),
+          'ÁÀÂÃÄáàâãäÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÕÖóòôõöÚÙÛÜúùûüÇçÑñ',
+          'AAAAAaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNn'
+        )
+      ),
+      '\s+',
+      ' ',
+      'g'
+    )
+  ) = 'game presenter';
+$$;
+
 DELETE FROM public.dealers d
 WHERE d.rh_funcionario_id IS NOT NULL
   AND NOT EXISTS (
@@ -12,7 +34,7 @@ WHERE d.rh_funcionario_id IS NOT NULL
     WHERE f.id = d.rh_funcionario_id
       AND f.status IN ('ativo', 'indisponivel')
       AND lower(coalesce(t.status, '')) = 'ativo'
-      AND lower(trim(regexp_replace(t.nome, '\s+', ' ', 'g'))) = 'game presenter'
+      AND public._rh_org_time_nome_eh_game_presenter(t.nome)
   );
 
 COMMENT ON COLUMN public.dealers.rh_funcionario_id IS
