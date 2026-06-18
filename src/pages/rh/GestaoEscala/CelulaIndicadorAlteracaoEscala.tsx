@@ -30,15 +30,18 @@ export function CelulaIndicadorAlteracaoEscala({
   const [hover, setHover] = useState(false);
   const tooltipId = useId();
   const obs = (meta.observacao ?? "").trim();
+  const tooltipBg = t.isDark ? "#1a1625" : "#ffffff";
+  const tooltipText = t.isDark ? "#f3f4f6" : "#111827";
+  const tooltipMuted = t.isDark ? "#9ca3af" : "#6b7280";
 
   return (
     <span
       style={{
         position: "absolute",
-        top: 2,
-        right: 2,
+        top: 3,
+        right: 3,
         lineHeight: 0,
-        zIndex: 2,
+        zIndex: 3,
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -51,17 +54,17 @@ export function CelulaIndicadorAlteracaoEscala({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 16,
-          height: 16,
+          width: 14,
+          height: 14,
           padding: 0,
           border: "none",
-          borderRadius: 4,
+          borderRadius: 3,
           background: "transparent",
-          color: "#f59e0b",
+          color: "#22c55e",
           cursor: "help",
         }}
       >
-        <MessageSquare size={11} strokeWidth={2.25} aria-hidden="true" />
+        <MessageSquare size={11} strokeWidth={2.5} aria-hidden="true" fill="color-mix(in srgb, #22c55e 18%, transparent)" />
       </button>
       {hover ? (
         <div
@@ -71,42 +74,43 @@ export function CelulaIndicadorAlteracaoEscala({
             position: "absolute",
             top: "100%",
             right: 0,
-            marginTop: 4,
-            minWidth: 200,
+            marginTop: 6,
+            minWidth: 210,
             maxWidth: 280,
             padding: "10px 12px",
             borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.isDark ? "#1a1625" : "#fffef8",
+            border: `1px solid ${t.isDark ? "rgba(255,255,255,0.14)" : "rgba(17,24,39,0.12)"}`,
+            background: tooltipBg,
+            opacity: 1,
             boxShadow: t.isDark
-              ? "0 8px 24px rgba(0,0,0,0.45)"
-              : "0 8px 20px rgba(0,0,0,0.12)",
+              ? "0 10px 28px rgba(0,0,0,0.55)"
+              : "0 10px 24px rgba(17,24,39,0.18), 0 2px 6px rgba(17,24,39,0.08)",
             fontFamily: FONT.body,
             fontSize: 11,
-            lineHeight: 1.45,
-            color: t.text,
+            lineHeight: 1.5,
+            color: tooltipText,
             textAlign: "left",
             whiteSpace: "normal",
-            zIndex: 40,
-            pointerEvents: "none",
+            zIndex: 9999,
+            isolation: "isolate",
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 6, color: t.text }}>Alteração de escala</div>
+          <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>Alteração de escala</div>
           <div>
-            <span style={{ color: t.textMuted }}>Alterado por: </span>
+            <span style={{ color: tooltipMuted }}>Alterado por: </span>
             {meta.alteradoPorNome}
           </div>
           <div>
-            <span style={{ color: t.textMuted }}>Data/hora: </span>
+            <span style={{ color: tooltipMuted }}>Data/hora: </span>
             {fmtAlteracaoDataHora(meta.alteradoEm)}
           </div>
           <div>
-            <span style={{ color: t.textMuted }}>Valor anterior: </span>
+            <span style={{ color: tooltipMuted }}>Valor anterior: </span>
             {valorAnteriorLabel}
           </div>
           {obs ? (
             <div style={{ marginTop: 6 }}>
-              <span style={{ color: t.textMuted }}>Observação: </span>
+              <span style={{ color: tooltipMuted }}>Observação: </span>
               {obs}
             </div>
           ) : null}

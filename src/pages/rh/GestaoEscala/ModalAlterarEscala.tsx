@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -98,6 +99,8 @@ function mensagemErroAlterarCelula(code: string): string {
       return "O prestador não pertence a esta área.";
     case "observacao_too_long":
       return `A observação deve ter no máximo ${OBSERVACAO_MAX} caracteres.`;
+    case "observacao_obrigatoria":
+      return "Informe a observação sobre a alteração.";
     default:
       return code
         ? `Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.`
@@ -183,8 +186,15 @@ export function ModalAlterarEscala({
     ? labelExibicaoCelula(prestador.siglaTurnoStaff, valorOriginal, prestador.turnoStaffNome)
     : "—";
 
+  const obsTrim = observacao.trim();
+
   const podeSalvar =
-    canEditar && prestador != null && diaIso !== "" && valorEdit !== valorOriginal && !salvando;
+    canEditar &&
+    prestador != null &&
+    diaIso !== "" &&
+    valorEdit !== valorOriginal &&
+    obsTrim.length > 0 &&
+    !salvando;
 
   const inputSomenteLeitura = (id: string, label: string, value: string) => (
     <div>
@@ -215,18 +225,21 @@ export function ModalAlterarEscala({
 
   const salvar = async () => {
     if (!prestador || !diaIso || !podeSalvar) return;
+    if (!obsTrim) {
+      setErr("Informe a observação sobre a alteração.");
+      return;
+    }
     setErr(null);
     setSalvando(true);
     try {
       const valorSan = sanitizarValor(prestador.siglaTurnoStaff, valorEdit, prestador.turnoStaffNome);
-      const obsTrim = observacao.trim();
       const { data, error } = await supabase.rpc("rh_gestao_escala_grade_alterar_celula", {
         p_ref_mes: refMesIso,
         p_area_key: areaKey,
         p_funcionario_id: prestador.id,
         p_dia_iso: diaIso,
         p_valor: valorSan,
-        p_observacao: obsTrim || null,
+        p_observacao: obsTrim,
       });
       if (error) throw error;
       const payload = data as RpcAlterarCelulaResult | null;
@@ -238,7 +251,7 @@ export function ModalAlterarEscala({
         valorAnterior: (payload.valor_anterior ?? valorOriginal).trim(),
         alteradoPorNome: (payload.alterado_por_nome ?? "").trim() || "Usuário",
         alteradoEm: payload.alterado_em ?? new Date().toISOString(),
-        observacao: payload.observacao ?? (obsTrim || null),
+        observacao: payload.observacao ?? obsTrim,
       });
       onClose();
     } catch {
@@ -462,14 +475,17 @@ export function ModalAlterarEscala({
               <div style={{ marginBottom: 14 }}>
                 <label htmlFor="alterar-escala-observacao" style={{ ...labelCampoStyle, color: t.textMuted }}>
                   Observação
+                  <CampoObrigatorioMark />
                 </label>
                 <textarea
                   id="alterar-escala-observacao"
                   value={observacao}
                   onChange={(e) => setObservacao(e.target.value.slice(0, OBSERVACAO_MAX))}
                   rows={3}
+                  required
                   placeholder="Motivo ou contexto da alteração..."
                   aria-label="Observação sobre a alteração de escala"
+                  aria-required="true"
                   style={{
                     width: "100%",
                     boxSizing: "border-box",

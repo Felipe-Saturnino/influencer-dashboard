@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { supabase } from "../../../lib/supabase";
@@ -34,6 +35,15 @@ const ACAO_LABEL: Record<EscalaHistoricoAcao, string> = {
   alterar_escala: "Alterar Escala",
 };
 
+/** Cores dos botões da toolbar Escala Diária (Global § paleta semântica + marca na sugestão). */
+const HISTORICO_ACAO_COR: Record<EscalaHistoricoAcao, string> = {
+  sugestao: "#7c3aed",
+  salvar: "#1e36f8",
+  aprovar: "#22c55e",
+  nova_escala: "#e84025",
+  alterar_escala: "#1e36f8",
+};
+
 function fmtDataHora(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -59,6 +69,49 @@ function parseDetalhes(raw: unknown): EscalaHistoricoDetalhes {
   };
 }
 
+function historicoCardStyle(acao: EscalaHistoricoAcao, brandAccent: string, useBrand: boolean): CSSProperties {
+  const corBase =
+    acao === "sugestao" && useBrand ? brandAccent : HISTORICO_ACAO_COR[acao];
+  const corMix =
+    acao === "sugestao" && useBrand
+      ? "var(--brand-action, #7c3aed)"
+      : HISTORICO_ACAO_COR[acao];
+  return {
+    padding: "12px 14px",
+    borderRadius: 10,
+    border: `1px solid ${corBase}`,
+    background: `color-mix(in srgb, ${corMix} 22%, transparent)`,
+  };
+}
+
+function CampoHistorico({
+  label,
+  valor,
+  t,
+  accent,
+  first,
+}: {
+  label: string;
+  valor: ReactNode;
+  t: { text: string; textMuted: string };
+  accent: string;
+  first?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        fontSize: 12,
+        lineHeight: 1.45,
+        color: t.text,
+        marginTop: first ? 0 : 4,
+      }}
+    >
+      <span style={{ color: t.textMuted, fontSize: 11 }}>{label}: </span>
+      <span style={{ fontWeight: 600, color: accent }}>{valor}</span>
+    </div>
+  );
+}
+
 type ModalHistoricoEscalaProps = {
   refMesIso: string;
   areaKey: string;
@@ -75,6 +128,7 @@ export function ModalHistoricoEscala({
   onClose,
 }: ModalHistoricoEscalaProps) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [itens, setItens] = useState<EscalaHistoricoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -120,9 +174,6 @@ export function ModalHistoricoEscala({
       cancelled = true;
     };
   }, [refMesIso, areaKey]);
-
-  const linhaMuted = { color: t.textMuted, fontSize: 11, lineHeight: 1.45 };
-  const linhaTexto = { color: t.text, fontSize: 12, lineHeight: 1.45 };
 
   return (
     <ModalBase maxWidth={560} onClose={onClose}>
@@ -174,49 +225,44 @@ export function ModalHistoricoEscala({
               const det = item.detalhes;
               const obs = (det.observacao ?? "").trim();
               const isAlterar = item.acao === "alterar_escala";
+              const accent =
+                item.acao === "sugestao" && brand.useBrand
+                  ? brand.accent
+                  : HISTORICO_ACAO_COR[item.acao];
 
               return (
-                <li
-                  key={item.id}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg ?? t.cardBg,
-                  }}
-                >
-                  <div style={linhaTexto}>
-                    <span style={linhaMuted}>Data/hora: </span>
-                    {fmtDataHora(item.realizada_em)}
-                  </div>
-                  <div style={{ ...linhaTexto, marginTop: 4 }}>
-                    <span style={linhaMuted}>Usuário: </span>
-                    {item.realizada_por_nome}
-                  </div>
-
+                <li key={item.id} style={historicoCardStyle(item.acao, brand.accent, brand.useBrand)}>
+                  <CampoHistorico
+                    label="Ação"
+                    valor={ACAO_LABEL[item.acao] ?? item.acao}
+                    t={t}
+                    accent={accent}
+                    first
+                  />
+                  <CampoHistorico
+                    label="Data/hora"
+                    valor={fmtDataHora(item.realizada_em)}
+                    t={t}
+                    accent={t.text}
+                  />
+                  <CampoHistorico label="Usuário" valor={item.realizada_por_nome} t={t} accent={t.text} />
                   {isAlterar ? (
                     <>
-                      <div style={{ ...linhaTexto, marginTop: 4 }}>
-                        <span style={linhaMuted}>Prestador: </span>
-                        {det.prestador_nome ?? "—"}
-                      </div>
-                      <div style={{ ...linhaTexto, marginTop: 4 }}>
-                        <span style={linhaMuted}>Dia: </span>
-                        {fmtDiaIso(det.dia_iso)}
-                      </div>
-                      {obs ? (
-                        <div style={{ ...linhaTexto, marginTop: 4 }}>
-                          <span style={linhaMuted}>Observação: </span>
-                          {obs}
-                        </div>
-                      ) : null}
+                      <CampoHistorico
+                        label="Prestador Alterado"
+                        valor={det.prestador_nome ?? "—"}
+                        t={t}
+                        accent={t.text}
+                      />
+                      <CampoHistorico
+                        label="Dia Alterado"
+                        valor={fmtDiaIso(det.dia_iso)}
+                        t={t}
+                        accent={t.text}
+                      />
+                      <CampoHistorico label="Observação" valor={obs || "—"} t={t} accent={t.text} />
                     </>
-                  ) : (
-                    <div style={{ ...linhaTexto, marginTop: 4 }}>
-                      <span style={linhaMuted}>Ação: </span>
-                      {ACAO_LABEL[item.acao] ?? item.acao}
-                    </div>
-                  )}
+                  ) : null}
                 </li>
               );
             })}

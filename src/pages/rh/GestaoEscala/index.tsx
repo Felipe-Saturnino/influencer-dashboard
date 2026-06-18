@@ -2362,6 +2362,9 @@ export default function RhGestaoEscalaPage() {
                                 ...tdDia,
                                 background: fundoColunaDia(dia, bg),
                                 ...(podeEditarCelulasDia ? { minWidth: 76, maxWidth: 86 } : {}),
+                                ...(alteracaoMeta
+                                  ? { position: "relative" as const, overflow: "visible" as const }
+                                  : {}),
                               }}
                             >
                               {podeEditarCelulasDia ? (
@@ -2387,20 +2390,20 @@ export default function RhGestaoEscalaPage() {
                                   ))}
                                 </select>
                               ) : (
-                                <span
-                                  style={{
-                                    position: "relative",
-                                    display: "block",
-                                    minHeight: 16,
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: t.text,
-                                    lineHeight: 1.2,
-                                    padding: "2px 0",
-                                    paddingRight: alteracaoMeta ? 14 : 0,
-                                  }}
-                                >
-                                  {textoCelula}
+                                <>
+                                  <span
+                                    style={{
+                                      display: "block",
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: t.text,
+                                      lineHeight: 1.2,
+                                      padding: "2px 0",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    {textoCelula}
+                                  </span>
                                   {alteracaoMeta ? (
                                     <CelulaIndicadorAlteracaoEscala
                                       meta={alteracaoMeta}
@@ -2408,7 +2411,7 @@ export default function RhGestaoEscalaPage() {
                                       t={t}
                                     />
                                   ) : null}
-                                </span>
+                                </>
                               )}
                             </td>
                           );
