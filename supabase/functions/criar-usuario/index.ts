@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
-import { accessGrantedByPayload } from './accessGrantedByFelipe.ts'
+import { accessGrantedByPayload } from './common.ts'
 
 // Edge Function: criar-usuario — senha padrão + e-mail de boas-vindas + troca obrigatória no primeiro login
 

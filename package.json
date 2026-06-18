@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "analyze": "tsc && vite build --mode analyze",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc --noEmit",
+    "analyze": "npm run typecheck && vite build --mode analyze",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

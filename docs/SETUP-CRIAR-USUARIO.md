@@ -39,12 +39,47 @@ Detalhes do Resend: `docs/SETUP-RESEND.md`.
 
 ## Passo 3: Deploy das Edge Functions
 
+### Opção A — CLI (recomendado)
+
+Na raiz do repositório, com Supabase CLI ligado ao projeto:
+
 ```bash
 supabase functions deploy criar-usuario
 supabase functions deploy criar-usuario-scout
 supabase functions deploy sync-rh-prestador-auth-user
 supabase functions deploy criar-afiliado-network
 ```
+
+A CLI envia **todos** os `.ts` da pasta local (`supabase/functions/criar-usuario/`).
+
+### Opção B — Painel Supabase (manual)
+
+O painel **não lê o GitHub** nem cria ficheiros sozinho. Cada function é uma **lista plana** de ficheiros (sem subpastas, sem `_shared`).
+
+Para **`criar-usuario`**, a lista no Dashboard deve incluir **8 ficheiros** (sem ficheiro auxiliar separado — auditoria `access_granted_by` fica em **`common.ts`**):
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `enviarBoasVindas.ts` |
+| `resendMail.ts` |
+| `boasVindasUsuario.ts` |
+| `common.ts` |
+| `emailBrand.ts` |
+| `transacionalShell.ts` |
+| `registrarEmailTransacional.ts` |
+
+**Atualizar auditoria de acesso (`access_granted_by`):**
+
+1. Colar/actualizar o bloco `accessGrantedByPayload` no **`common.ts`** do painel (copiar de `supabase/functions/criar-usuario/common.ts` no Git).
+2. Confirmar em **`index.ts`**: `import { accessGrantedByPayload } from './common.ts'`
+3. **Deploy updates**
+
+**Por que um ficheiro novo “some” após deploy?** O painel Supabase **bundla** a function (Deno): só mantém ficheiros **alcançáveis por imports a partir de `index.ts`**. Se criar `accessGrantedByFelipe.ts` com **+ Add File** mas o `index.ts` no painel ainda não tiver o `import` (ou não foi gravado), o deploy conclui mas o ficheiro **não persiste** — comportamento documentado pelo Supabase, não bug do projeto.
+
+**Ordem correcta se precisar mesmo de ficheiro novo:** (1) gravar `index.ts` com `import './novo.ts'` → (2) criar `novo.ts` → (3) Deploy updates. Preferir **`common.ts`** para evitar + Add File.
+
+Inventário completo: `supabase/functions/README.md`.
 
 ---
 

@@ -13,7 +13,7 @@ const preCommitPath = path.join(gitHooksDir, "pre-commit");
 
 const HOOK = `#!/usr/bin/env node
 /**
- * Pre-commit — lint-staged + testes (espelha parte do CI).
+ * Pre-commit — typecheck + lint-staged + testes (espelha parte do CI).
  * Ignorar uma vez: SKIP_SIMPLE_GIT_HOOKS=1 git commit ...
  */
 import { execSync } from "node:child_process";
@@ -26,6 +26,7 @@ if (process.env.SKIP_SIMPLE_GIT_HOOKS === "1") {
 }
 
 try {
+  execSync("npm run typecheck", opts);
   execSync("npm run precommit", opts);
   execSync("npm run test", opts);
 } catch {

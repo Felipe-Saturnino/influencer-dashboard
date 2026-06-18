@@ -12,7 +12,7 @@
 | **Bundle / Code splitting** | ✅ OK | Chunks por vendor e por página |
 | **Mobile readiness** | ⚠️ Parcial | Layout fixo; 1 breakpoint em CSS |
 | **Otimizações de rede** | ✅ OK | Preconnect para fonts |
-| **Estrutura de código** | ✅ Melhorado | Componentes compartilhados extraídos |
+| **Build TypeScript** | ✅ OK | `npm run typecheck` no pre-commit; ver Global § TypeScript pré-deploy |
 
 ---
 
