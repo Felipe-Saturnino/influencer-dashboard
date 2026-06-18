@@ -8,6 +8,7 @@ import { Operadora } from "../../../types";
 import { AlertCircle, Upload, Check, Palette, Layers, Building2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -496,8 +497,7 @@ export function ModalOperadora({
         ))}
       </div>
 
-      {aba === "dados" && (
-        <div role="tabpanel" id="panel-op-dados" aria-labelledby="tab-op-dados" tabIndex={0}>
+      <ModalTabPanel active={aba === "dados"} id="panel-op-dados" labelledBy="tab-op-dados">
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Nome
@@ -574,17 +574,14 @@ export function ModalOperadora({
               )}
             </div>
           )}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "brand" && (
-        <div role="tabpanel" id="panel-op-brand" aria-labelledby="tab-op-brand" tabIndex={0}>
+      <ModalTabPanel active={aba === "brand"} id="panel-op-brand" labelledBy="tab-op-brand">
           {brandGrid}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {!isNova && aba === "operacoes" && (
-        <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes" tabIndex={0}>
+      {!isNova ? (
+        <ModalTabPanel active={aba === "operacoes"} id="panel-op-operacoes" labelledBy="tab-op-operacoes">
           <div style={fieldStyle}>
             <label style={labelStyle} htmlFor="op-home-template">
               Home do operador
@@ -670,8 +667,8 @@ export function ModalOperadora({
               </table>
             </div>
           )}
-        </div>
-      )}
+        </ModalTabPanel>
+      ) : null}
 
       {erro && (
         <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginTop: 16, marginBottom: 8, fontFamily: FONT.body }}>

@@ -6,6 +6,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -1568,13 +1569,6 @@ function ModalStaffEditar({
   ]);
 
   useEffect(() => {
-    if (aba !== "dealer") return;
-    setDealerGenero(readStaffDealerGeneroForUi(row));
-    setDealerBio(readStaffDealerBioForUi(row));
-    setDealerFotos(readStaffDealerFotosForUi(row));
-  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos, row]);
-
-  useEffect(() => {
     if (!staffEhGamePresenter && aba === "dealer") setAba("funcao");
   }, [staffEhGamePresenter, aba]);
 
@@ -1643,31 +1637,6 @@ function ModalStaffEditar({
 
   const salvar = async () => {
     setErr("");
-    if (aba === "dealer") {
-      setSaving(true);
-      try {
-        const { data: updatedRh, error } = await supabase
-          .from("rh_funcionarios")
-          .update({
-            staff_dealer_genero: dealerGenero,
-            staff_dealer_bio: dealerBio.trim() || null,
-            staff_dealer_fotos: dealerFotos,
-          })
-          .eq("id", row.id)
-          .select("*")
-          .single();
-        if (error) throw error;
-        const merged = (updatedRh ?? row) as RhFuncionario;
-        await syncGamePresenterDealerFromRhFuncionario(merged);
-        onSalvo(merged);
-      } catch (upErr) {
-        setErr(upErr instanceof Error ? upErr.message : "Não foi possível salvar os dados do dealer.");
-      } finally {
-        setSaving(false);
-      }
-      return;
-    }
-
     setSaving(true);
     const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
     const turnoStr = turno.trim();
@@ -1748,6 +1717,30 @@ function ModalStaffEditar({
         depois: fmtDataIsoPtBr(depois.live || null),
       });
     }
+    if (staffEhGamePresenter) {
+      const generoAntes = readStaffDealerGeneroForUi(row);
+      const bioAntes = readStaffDealerBioForUi(row).trim();
+      const fotosAntes = readStaffDealerFotosForUi(row).length;
+      const bioDepois = dealerBio.trim();
+      const fotosDepois = dealerFotos.length;
+      if (generoAntes !== dealerGenero) {
+        alteracoes.push({
+          campo: "Gênero (Dealer)",
+          antes: DEALER_GENERO_LABEL[generoAntes] ?? generoAntes,
+          depois: DEALER_GENERO_LABEL[dealerGenero] ?? dealerGenero,
+        });
+      }
+      if (bioAntes !== bioDepois) {
+        alteracoes.push({ campo: "Bio do Dealer", antes: bioAntes || "—", depois: bioDepois || "—" });
+      }
+      if (fotosAntes !== fotosDepois) {
+        alteracoes.push({
+          campo: "Fotos do Dealer",
+          antes: fotosAntes ? `${fotosAntes} foto(s)` : "—",
+          depois: fotosDepois ? `${fotosDepois} foto(s)` : "—",
+        });
+      }
+    }
 
     const estudioPrimario = staffEstudioSlugPrimarioParaSync(estudioDepoisSlugs);
     const operadoraSync = estudioPrimario
@@ -1765,6 +1758,13 @@ function ModalStaffEditar({
       staff_id_operacional: depois.idOp || null,
       staff_skills: skillsParaJson(skills),
       staff_live_no_estudio: depois.live ? depois.live : null,
+      ...(staffEhGamePresenter
+        ? {
+            staff_dealer_genero: dealerGenero,
+            staff_dealer_bio: dealerBio.trim() || null,
+            staff_dealer_fotos: dealerFotos,
+          }
+        : {}),
     };
 
     const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
@@ -1809,6 +1809,7 @@ function ModalStaffEditar({
             key={key}
             id={`staff-edit-tab-${key}`}
             active={aba === key}
+            aria-controls={`staff-edit-panel-${key}`}
             onClick={() => setAba(key)}
             icon={STAFF_EDITAR_TAB_ICONS[key]}
           >
@@ -1817,8 +1818,7 @@ function ModalStaffEditar({
         ))}
       </div>
 
-      {aba === "funcao" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "funcao"} id="staff-edit-panel-funcao" labelledBy="staff-edit-tab-funcao">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-nick">
               Nickname
@@ -1924,11 +1924,9 @@ function ModalStaffEditar({
             </label>
             <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
           </div>
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "skills" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "skills"} id="staff-edit-panel-skills" labelledBy="staff-edit-tab-skills">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-live-estudio">
               Live no Estúdio
@@ -1973,11 +1971,10 @@ function ModalStaffEditar({
               </select>
             </div>
           ))}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "dealer" && (
-        <div role="tabpanel">
+      {staffEhGamePresenter ? (
+        <ModalTabPanel active={aba === "dealer"} id="staff-edit-panel-dealer" labelledBy="staff-edit-tab-dealer">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-dealer-genero">
               Gênero
@@ -2069,8 +2066,8 @@ function ModalStaffEditar({
               <input type="file" accept="image/*" multiple hidden onChange={(ev) => void handleDealerFotosUpload(ev)} disabled={dealerUploading} />
             </label>
           </div>
-        </div>
-      )}
+        </ModalTabPanel>
+      ) : null}
 
       {err ? (
         <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>

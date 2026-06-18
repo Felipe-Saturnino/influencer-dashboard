@@ -7,6 +7,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, BRAND_SEMANTIC as BRAND } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { SalvarCtaContent } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { ctaGradientSalvar, handleGestaoTabsArrowKeyDown } from "../GestaoUsuarios/gestaoUsuariosHelpers";
@@ -323,32 +324,29 @@ export function ModalEstudio({
           {erro}
         </div>
       )}
-      {!isEdicao || aba === "dados" ? (
-        <div
-          role={isEdicao ? "tabpanel" : undefined}
-          id={isEdicao ? "panel-est-dados" : undefined}
-          aria-labelledby={isEdicao ? "tab-est-dados" : undefined}
-          tabIndex={isEdicao ? 0 : undefined}
-        >
-          {dadosCadastrais}
-        </div>
-      ) : null}
-      {isEdicao && aba === "operacoes" ? (
-        <div role="tabpanel" id="panel-est-operacoes" aria-labelledby="tab-est-operacoes" tabIndex={0}>
-          <TurnosDealersFields
-            baseId={baseId}
-            turnoManha={turnoManha}
-            turnoTarde={turnoTarde}
-            turnoNoite={turnoNoite}
-            onTurnoManha={setTurnoManha}
-            onTurnoTarde={setTurnoTarde}
-            onTurnoNoite={setTurnoNoite}
-          />
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
-            Horários usados no RH (Calendário e Gestão de Staff) para dealers vinculados às operadoras deste estúdio.
-          </p>
-        </div>
-      ) : null}
+      {!isEdicao ? (
+        <div>{dadosCadastrais}</div>
+      ) : (
+        <>
+          <ModalTabPanel active={aba === "dados"} id="panel-est-dados" labelledBy="tab-est-dados">
+            {dadosCadastrais}
+          </ModalTabPanel>
+          <ModalTabPanel active={aba === "operacoes"} id="panel-est-operacoes" labelledBy="tab-est-operacoes">
+            <TurnosDealersFields
+              baseId={baseId}
+              turnoManha={turnoManha}
+              turnoTarde={turnoTarde}
+              turnoNoite={turnoNoite}
+              onTurnoManha={setTurnoManha}
+              onTurnoTarde={setTurnoTarde}
+              onTurnoNoite={setTurnoNoite}
+            />
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
+              Horários usados no RH (Calendário e Gestão de Staff) para dealers vinculados às operadoras deste estúdio.
+            </p>
+          </ModalTabPanel>
+        </>
+      )}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
         <button
           type="button"

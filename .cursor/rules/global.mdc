@@ -812,6 +812,30 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - `autoFocus` em input de modal: `ref` + `setTimeout(..., 100)` — evitar `autoFocus` direto (iOS).
 - Modais com `useApp()` + `useDashboardBrand()` **internamente** — não passar props `t` / `brand` salvo exceção documentada na secção.
 
+### Modal de edição com abas — pré-save entre abas
+
+Modais de **criar/editar** com `role="tablist"` + `FiltroBarTabButton` (Global + Brand §6 abas):
+
+| Regra | Valor |
+|-------|--------|
+| Estado do formulário | **Um único estado no nível do modal** (objeto `form` ou vários `useState` irmãos) — **não** por painel filho isolado |
+| Troca de aba | **Não** resetar campos ao mudar aba; **proibido** `useEffect` que repõe valores de `row`/`props` quando `aba` / `tab` muda |
+| Painéis | **`ModalTabPanel`** (`src/components/ModalTabPanel.tsx`) — todos montados; inativo com `hidden` — **não** `{aba === "x" && …}` que desmonta o painel |
+| Salvar | **Um** handler persiste **todas** as abas editáveis de uma vez — **proibido** gravar só a aba ativa |
+| Inicialização | `useEffect` de sync com `row` / entidade só quando **abre** o modal ou muda o **id** do registro — dependências: `row.id`, não `aba` |
+
+```tsx
+import { ModalTabPanel } from "../components/ModalTabPanel";
+
+<ModalTabPanel active={aba === "funcao"} id="panel-edit-funcao" labelledBy="tab-edit-funcao">
+  {/* campos controlados pelo estado do modal */}
+</ModalTabPanel>
+```
+
+**Referências:** Gestão de Staff (`ModalStaffEditar`), Gestão de Operadoras (`ModalOperadora`), Gestão de Mesas (`ModalEstudio`), Scout (`ModalEditar`), Influencers (`ModalPerfil`).
+
+**Exceção:** abas só leitura (visualização / histórico) podem desmontar conteúdo pesado se documentado na secção — edição mista segue o padrão acima.
+
 ### Exclusão — padrão canónico (ícone ou ícone + texto)
 
 Dois variantes partilham **mesma cor**, **ícone `Trash2`**, **helpers** (`excluirItemUi.ts`) e **pop-up** **`ModalConfirmExcluirPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto) ou `window.confirm()`.
@@ -1115,6 +1139,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Ajuda/glossário com nome de página divergente do menu (ex.: “Resultado de Lives” em vez de “Resultados”).
 - CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
+- Modal de edição com abas: desmontar painel com `{aba === … &&}`; `useEffect` que reseta campos ao trocar aba; **Salvar** só da aba ativa — ver § Modais pré-save.
 - Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
 - Arquivamento (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - `90vh` em modais — usar `90dvh`.
