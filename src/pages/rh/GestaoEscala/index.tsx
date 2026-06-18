@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { getFiltroBarPillStateStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -38,6 +39,11 @@ import {
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
 import { ModalAlterarEscala } from "./ModalAlterarEscala";
+import { ModalHistoricoEscala } from "./ModalHistoricoEscala";
+import {
+  CelulaIndicadorAlteracaoEscala,
+  type EscalaAlteracaoCelulaMeta,
+} from "./CelulaIndicadorAlteracaoEscala";
 
 type DiaMes = {
   dia: number;
@@ -84,6 +90,8 @@ type EscalaGerarEstadoFiltro = {
   posSugestao?: boolean;
   /** Legado (localStorage): tratar como `posSugestao`. */
   posSugestaoCs?: boolean;
+  /** Última alteração pontual por célula (`prestadorId|YYYY-MM-DD`) — modal Alterar Escala. */
+  alteracoesPorCelula?: Record<string, EscalaAlteracaoCelulaMeta>;
 };
 
 function escalaGradeAprovadaNaBase(est: EscalaGerarEstadoFiltro | undefined): boolean {
@@ -118,9 +126,32 @@ function carregarEscalaMesGravada(ano: number, mes0: number): Record<string, Esc
 
 function gravarEscalaMes(ano: number, mes0: number, est: Record<string, EscalaGerarEstadoFiltro>): void {
   try {
-    localStorage.setItem(chaveStorageEscalaMes(ano, mes0), JSON.stringify(est));
+    const stripped: Record<string, EscalaGerarEstadoFiltro> = {};
+    for (const [k, v] of Object.entries(est)) {
+      const { alteracoesPorCelula: _omit, ...rest } = v;
+      stripped[k] = rest;
+    }
+    localStorage.setItem(chaveStorageEscalaMes(ano, mes0), JSON.stringify(stripped));
   } catch {
     /* quota / privado */
+  }
+}
+
+/** Registra ações apenas no cliente (sugestão / nova escala em rascunho). */
+async function registrarHistoricoEscalaAcao(
+  refMesIso: string,
+  areaKey: string,
+  acao: "sugestao" | "nova_escala",
+): Promise<void> {
+  try {
+    await supabase.rpc("rh_gestao_escala_historico_registrar", {
+      p_ref_mes: refMesIso,
+      p_area_key: areaKey,
+      p_acao: acao,
+      p_detalhes: {},
+    });
+  } catch {
+    /* histórico não bloqueia o fluxo principal */
   }
 }
 
@@ -158,6 +189,32 @@ type RpcGradeResetarResult = {
   ok?: boolean;
   error?: string;
 };
+
+type RpcAlteracaoUltimaRow = {
+  funcionario_id: string;
+  dia_iso: string;
+  valor_anterior: string | null;
+  valor_novo: string | null;
+  observacao: string | null;
+  alterado_em: string;
+  alterado_por_nome: string | null;
+};
+
+function mapAlteracoesUltimasPorCelula(rows: RpcAlteracaoUltimaRow[]): Record<string, EscalaAlteracaoCelulaMeta> {
+  const out: Record<string, EscalaAlteracaoCelulaMeta> = {};
+  for (const row of rows) {
+    const isoRaw = row.dia_iso;
+    const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+    const k = chaveCelulaGerar(row.funcionario_id, iso);
+    out[k] = {
+      valorAnterior: (row.valor_anterior ?? "").trim(),
+      alteradoPorNome: (row.alterado_por_nome ?? "").trim() || "Usuário",
+      alteradoEm: row.alterado_em,
+      observacao: row.observacao,
+    };
+  }
+  return out;
+}
 
 function chaveCelulaGerar(rowId: string, iso: string): string {
   return `${rowId}|${iso}`;
@@ -577,6 +634,7 @@ export default function RhGestaoEscalaPage() {
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
   const [alterarEscalaModalAberto, setAlterarEscalaModalAberto] = useState(false);
+  const [historicoModalAberto, setHistoricoModalAberto] = useState(false);
   const [resetandoGrade, setResetandoGrade] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
@@ -755,11 +813,17 @@ export default function RhGestaoEscalaPage() {
       const [{ data: metaData, error: metaError }, ...results] = await Promise.all([
         supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
         ...areas.map(async (areaKey) => {
-          const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
-            p_ref_mes: ref,
-            p_area_key: areaKey,
-          });
-          return { areaKey, data, error };
+          const [gradeRes, alterRes] = await Promise.all([
+            supabase.rpc("rh_gestao_escala_grade_carregar", {
+              p_ref_mes: ref,
+              p_area_key: areaKey,
+            }),
+            supabase.rpc("rh_gestao_escala_grade_alteracoes_ultimas", {
+              p_ref_mes: ref,
+              p_area_key: areaKey,
+            }),
+          ]);
+          return { areaKey, gradeRes, alterRes };
         }),
       ]);
       if (cancelled) return;
@@ -771,16 +835,21 @@ export default function RhGestaoEscalaPage() {
         }
       }
       const fromDbPorArea: Partial<Record<AreaEscalaKey, Record<string, string>>> = {};
-      for (const { areaKey, data, error } of results) {
-        if (error) continue;
-        const rows = (data ?? []) as RpcGradeCarregarRow[];
-        const fromDb: Record<string, string> = {};
-        for (const row of rows) {
-          const isoRaw = row.dia_iso;
-          const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-          fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+      const alteracoesPorArea: Partial<Record<AreaEscalaKey, Record<string, EscalaAlteracaoCelulaMeta>>> = {};
+      for (const { areaKey, gradeRes, alterRes } of results) {
+        if (!gradeRes.error) {
+          const rows = (gradeRes.data ?? []) as RpcGradeCarregarRow[];
+          const fromDb: Record<string, string> = {};
+          for (const row of rows) {
+            const isoRaw = row.dia_iso;
+            const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+            fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+          }
+          fromDbPorArea[areaKey] = fromDb;
         }
-        fromDbPorArea[areaKey] = fromDb;
+        if (!alterRes.error && alterRes.data) {
+          alteracoesPorArea[areaKey] = mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[]);
+        }
       }
       if (Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) return;
       setGerarPorFiltro((prev) => {
@@ -811,6 +880,9 @@ export default function RhGestaoEscalaPage() {
             baseline: aprovadaNaBase ? { ...merged } : cur?.baseline ?? null,
             posSugestao: aprovadaNaBase ? true : cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
             celulasSincronizadasComDb: snap,
+            alteracoesPorCelula: aprovadaNaBase
+              ? (alteracoesPorArea[ak] ?? cur?.alteracoesPorCelula ?? {})
+              : undefined,
           };
         }
         return next;
@@ -979,6 +1051,7 @@ export default function RhGestaoEscalaPage() {
           },
         };
       });
+      void registrarHistoricoEscalaAcao(refMesISO(ano, mes), areaKey, "sugestao");
     },
     [ano, mes, dias, linhasPorFiltroGerar],
   );
@@ -1083,6 +1156,7 @@ export default function RhGestaoEscalaPage() {
               statusGradeDb: null,
               aprovadoEmDb: null,
               aprovadoPorDb: null,
+              alteracoesPorCelula: undefined,
             },
           };
           gravarEscalaMes(ano, mes, next);
@@ -1275,6 +1349,7 @@ export default function RhGestaoEscalaPage() {
 
   const estGradeFiltro = gerarPorFiltro[filtroArea];
   const celulasGerarAtivas = estGradeFiltro?.celulas;
+  const alteracoesPorCelulaAtivas = estGradeFiltro?.alteracoesPorCelula;
   const podeEditarCelulasDia = Boolean(podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro));
 
   const resumoTurnoDias = useMemo(() => {
@@ -1378,13 +1453,19 @@ export default function RhGestaoEscalaPage() {
   const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
 
   const confirmarAlteracaoCelulaAprovada = useCallback(
-    (funcionarioId: string, diaIso: string, valor: string) => {
+    (
+      funcionarioId: string,
+      diaIso: string,
+      valor: string,
+      metaAlteracao: EscalaAlteracaoCelulaMeta,
+    ) => {
       setGerarPorFiltro((prev) => {
         const areaKey = filtroArea;
         const cur = prev[areaKey];
         if (!cur) return prev;
         const k = chaveCelulaGerar(funcionarioId, diaIso);
         const merged = { ...cur.celulas, [k]: valor };
+        const alteracoes = { ...(cur.alteracoesPorCelula ?? {}), [k]: metaAlteracao };
         const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
         const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
         const next = {
@@ -1394,6 +1475,7 @@ export default function RhGestaoEscalaPage() {
             celulas: merged,
             baseline: cur.baseline ? { ...cur.baseline, [k]: valor } : cur.baseline,
             celulasSincronizadasComDb: snap,
+            alteracoesPorCelula: alteracoes,
           },
         };
         gravarEscalaMes(ano, mes, next);
@@ -1437,43 +1519,73 @@ export default function RhGestaoEscalaPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent: "space-between",
               gap: 10,
               flexWrap: "wrap",
               marginBottom: 0,
               width: "100%",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              <button
-                type="button"
-                onClick={mesAnterior}
-                disabled={!podeMesAnterior}
-                aria-label="Mês anterior"
-                style={getCarouselBtnNavStyle(t, !podeMesAnterior)}
-              >
-                <ChevronLeft size={14} aria-hidden="true" />
-              </button>
-              <span style={getCarouselPeriodLabelStyle(t, { minWidth: 200 })}>{tituloMes}</span>
-              <button
-                type="button"
-                onClick={mesSeguinte}
-                disabled={!podeMesSeguinte}
-                aria-label="Próximo mês"
-                style={getCarouselBtnNavStyle(t, !podeMesSeguinte)}
-              >
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                flex: "1 1 auto",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  onClick={mesAnterior}
+                  disabled={!podeMesAnterior}
+                  aria-label="Mês anterior"
+                  style={getCarouselBtnNavStyle(t, !podeMesAnterior)}
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                <span style={getCarouselPeriodLabelStyle(t, { minWidth: 200 })}>{tituloMes}</span>
+                <button
+                  type="button"
+                  onClick={mesSeguinte}
+                  disabled={!podeMesSeguinte}
+                  aria-label="Próximo mês"
+                  style={getCarouselBtnNavStyle(t, !podeMesSeguinte)}
+                >
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              </div>
+              <FiltroEstudioSelect
+                id="rh-gestao-escala-filtro-estudio"
+                value={filtroEstudioEscala}
+                onChange={setFiltroEstudioEscala}
+                estudios={estudiosAtivosEscala}
+                todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
+                extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
+                minWidth={200}
+              />
             </div>
-            <FiltroEstudioSelect
-              id="rh-gestao-escala-filtro-estudio"
-              value={filtroEstudioEscala}
-              onChange={setFiltroEstudioEscala}
-              estudios={estudiosAtivosEscala}
-              todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
-              extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
-              minWidth={200}
-            />
+            <button
+              type="button"
+              onClick={() => setHistoricoModalAberto(true)}
+              aria-label="Abrir histórico de ações da escala neste mês"
+              title="Histórico"
+              style={{
+                ...getFiltroBarPillStateStyle(t, brand, false),
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                padding: 0,
+                flexShrink: 0,
+                cursor: "pointer",
+              }}
+            >
+              <History size={15} aria-hidden="true" />
+            </button>
           </div>
 
           {mostrarFiltroArea ? (
@@ -1893,8 +2005,10 @@ export default function RhGestaoEscalaPage() {
                                   statusGradeDb: null,
                                   aprovadoEmDb: null,
                                   aprovadoPorDb: null,
+                                  alteracoesPorCelula: undefined,
                                 },
                               }));
+                              void registrarHistoricoEscalaAcao(refMesISO(ano, mes), filtroArea, "nova_escala");
                             }}
                             aria-label="Iniciar nova escala em rascunho"
                             style={
@@ -2233,6 +2347,14 @@ export default function RhGestaoEscalaPage() {
                             celulasGerarAtivas?.[ck],
                             row.turnoStaffNome,
                           );
+                          const alteracaoMeta = alteracoesPorCelulaAtivas?.[ck];
+                          const valorAnteriorLabel = alteracaoMeta
+                            ? labelExibicaoCelulaEscala(
+                                row.siglaTurnoStaff,
+                                alteracaoMeta.valorAnterior,
+                                row.turnoStaffNome,
+                              )
+                            : "";
                           return (
                             <td
                               key={`${row.id}-${dia.iso}`}
@@ -2267,15 +2389,25 @@ export default function RhGestaoEscalaPage() {
                               ) : (
                                 <span
                                   style={{
+                                    position: "relative",
                                     display: "block",
+                                    minHeight: 16,
                                     fontSize: 11,
                                     fontWeight: 600,
                                     color: t.text,
                                     lineHeight: 1.2,
                                     padding: "2px 0",
+                                    paddingRight: alteracaoMeta ? 14 : 0,
                                   }}
                                 >
                                   {textoCelula}
+                                  {alteracaoMeta ? (
+                                    <CelulaIndicadorAlteracaoEscala
+                                      meta={alteracaoMeta}
+                                      valorAnteriorLabel={valorAnteriorLabel}
+                                      t={t}
+                                    />
+                                  ) : null}
                                 </span>
                               )}
                             </td>
@@ -2293,10 +2425,19 @@ export default function RhGestaoEscalaPage() {
         )}
       </div>
 
+      {historicoModalAberto ? (
+        <ModalHistoricoEscala
+          refMesIso={refMesISO(ano, mes)}
+          areaKey={filtroArea}
+          areaLabel={labelAreaEscala(filtroArea)}
+          tituloMes={tituloMes}
+          onClose={() => setHistoricoModalAberto(false)}
+        />
+      ) : null}
+
       {alterarEscalaModalAberto ? (
         <ModalAlterarEscala
           areaKey={filtroArea}
-          areaLabel={labelAreaEscala(filtroArea)}
           refMesIso={refMesISO(ano, mes)}
           hojeIso={hojeIso}
           dias={dias}

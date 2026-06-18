@@ -9,6 +9,9 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { supabase } from "../../../lib/supabase";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import type { EscalaAlteracaoCelulaMeta } from "./CelulaIndicadorAlteracaoEscala";
+
+const OBSERVACAO_MAX = 500;
 
 export type LinhaColaboradorAlterarEscala = {
   id: string;
@@ -31,11 +34,14 @@ type OpcaoCelula = { value: string; label: string };
 type RpcAlterarCelulaResult = {
   ok?: boolean;
   error?: string;
+  valor_anterior?: string;
+  observacao?: string | null;
+  alterado_em?: string;
+  alterado_por_nome?: string;
 };
 
 type ModalAlterarEscalaProps = {
   areaKey: string;
-  areaLabel: string;
   refMesIso: string;
   hojeIso: string;
   dias: DiaMesAlterarEscala[];
@@ -51,7 +57,12 @@ type ModalAlterarEscalaProps = {
   ) => string;
   chaveCelula: (rowId: string, iso: string) => string;
   onClose: () => void;
-  onCelulaAlterada: (funcionarioId: string, diaIso: string, valor: string) => void;
+  onCelulaAlterada: (
+    funcionarioId: string,
+    diaIso: string,
+    valor: string,
+    meta: EscalaAlteracaoCelulaMeta,
+  ) => void;
 };
 
 function diasEditaveisAlterarEscala(dias: DiaMesAlterarEscala[], hojeIso: string): DiaMesAlterarEscala[] {
@@ -85,6 +96,8 @@ function mensagemErroAlterarCelula(code: string): string {
       return "O dia selecionado não pertence ao mês exibido no carrossel.";
     case "prestador_fora_area":
       return "O prestador não pertence a esta área.";
+    case "observacao_too_long":
+      return `A observação deve ter no máximo ${OBSERVACAO_MAX} caracteres.`;
     default:
       return code
         ? `Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.`
@@ -94,7 +107,6 @@ function mensagemErroAlterarCelula(code: string): string {
 
 export function ModalAlterarEscala({
   areaKey,
-  areaLabel,
   refMesIso,
   hojeIso,
   dias,
@@ -115,6 +127,7 @@ export function ModalAlterarEscala({
   const [prestadorId, setPrestadorId] = useState<string | null>(null);
   const [diaIso, setDiaIso] = useState("");
   const [valorEdit, setValorEdit] = useState("");
+  const [observacao, setObservacao] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -141,8 +154,13 @@ export function ModalAlterarEscala({
   useEffect(() => {
     setDiaIso("");
     setValorEdit("");
+    setObservacao("");
     setErr(null);
   }, [prestadorId]);
+
+  useEffect(() => {
+    setObservacao("");
+  }, [diaIso]);
 
   useEffect(() => {
     if (!prestador || !diaIso) {
@@ -201,12 +219,14 @@ export function ModalAlterarEscala({
     setSalvando(true);
     try {
       const valorSan = sanitizarValor(prestador.siglaTurnoStaff, valorEdit, prestador.turnoStaffNome);
+      const obsTrim = observacao.trim();
       const { data, error } = await supabase.rpc("rh_gestao_escala_grade_alterar_celula", {
         p_ref_mes: refMesIso,
         p_area_key: areaKey,
         p_funcionario_id: prestador.id,
         p_dia_iso: diaIso,
         p_valor: valorSan,
+        p_observacao: obsTrim || null,
       });
       if (error) throw error;
       const payload = data as RpcAlterarCelulaResult | null;
@@ -214,7 +234,12 @@ export function ModalAlterarEscala({
         setErr(mensagemErroAlterarCelula(payload?.error ?? ""));
         return;
       }
-      onCelulaAlterada(prestador.id, diaIso, valorSan);
+      onCelulaAlterada(prestador.id, diaIso, valorSan, {
+        valorAnterior: (payload.valor_anterior ?? valorOriginal).trim(),
+        alteradoPorNome: (payload.alterado_por_nome ?? "").trim() || "Usuário",
+        alteradoEm: payload.alterado_em ?? new Date().toISOString(),
+        observacao: payload.observacao ?? (obsTrim || null),
+      });
       onClose();
     } catch {
       setErr("Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.");
@@ -227,11 +252,6 @@ export function ModalAlterarEscala({
     <ModalBase maxWidth={520} onClose={() => !salvando && onClose()}>
       <ModalHeader title="Alterar Escala" onClose={() => !salvando && onClose()} />
       <div style={{ fontFamily: FONT.body }}>
-        <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
-          Área: <strong style={{ color: t.text }}>{areaLabel}</strong>. Pesquise por nome ou nickname e selecione um
-          prestador para alterar o status de um dia (a partir de hoje).
-        </p>
-
         {!prestador ? (
           <>
             <BarraPesquisaPagina
@@ -435,6 +455,35 @@ export function ModalAlterarEscala({
                     Você não tem permissão de Editar para alterar o status.
                   </div>
                 )}
+              </div>
+            ) : null}
+
+            {diaIso && canEditar ? (
+              <div style={{ marginBottom: 14 }}>
+                <label htmlFor="alterar-escala-observacao" style={{ ...labelCampoStyle, color: t.textMuted }}>
+                  Observação
+                </label>
+                <textarea
+                  id="alterar-escala-observacao"
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value.slice(0, OBSERVACAO_MAX))}
+                  rows={3}
+                  placeholder="Motivo ou contexto da alteração..."
+                  aria-label="Observação sobre a alteração de escala"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg ?? t.cardBg ?? "transparent",
+                    color: t.text,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    resize: "vertical",
+                    minHeight: 72,
+                  }}
+                />
               </div>
             ) : null}
           </>
