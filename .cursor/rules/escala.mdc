@@ -51,9 +51,9 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Barra de filtros:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum») + chips de **área (time)** — Customer Service, Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária.
 - Tabela **Consolidado:** coluna **Turno** com `position: sticky; left: 0` e sombra lateral ao rolar horizontalmente (dias do mês).
 - Grade mensal por área (time): chips de área na barra de filtros, **`FiltroEstudioSelect`** (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.
-- Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
+- Toolbar: Nova Escala (neutro em rascunho; **vermelho** `#e84025` transparente após aprovação), **Alterar Escala** (azul `#1e36f8` transparente — escala aprovada), Sugestão de Escala, **Salvar Alterações** (azul transparente), **Aprovar Escala** (verde `#22c55e` transparente) — **texto visível**; cores semânticas Global, fundo `color-mix` 22%.
 - Vínculo com Calendário: escala aprovada alimenta presença/agenda.
-- RPCs: `rh_gestao_escala_grade_*`.
+- RPCs: `rh_gestao_escala_grade_*` (incl. `rh_gestao_escala_grade_alterar_celula` para ajuste pontual com escala aprovada).
 - **Handoff:** regras de sugestão CS, aprovação, áreas (customer_service, shift_leader, etc.).
 
 ---

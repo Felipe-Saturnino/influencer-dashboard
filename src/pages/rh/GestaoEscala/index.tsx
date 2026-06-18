@@ -37,6 +37,7 @@ import {
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
+import { ModalAlterarEscala } from "./ModalAlterarEscala";
 
 type DiaMes = {
   dia: number;
@@ -410,6 +411,62 @@ const CONSOLIDADO_FONT_DIA_HEADER = 11;
 const Z_CONSOLIDADO_STICKY_HEAD = 25;
 const Z_CONSOLIDADO_STICKY_ROW = 24;
 
+/** Toolbar Escala Diária — fundos transparentes com tint semântico (Global § paleta de dados). */
+const ESCALA_TOOLBAR_AZUL = "#1e36f8";
+const ESCALA_TOOLBAR_VERDE = "#22c55e";
+const ESCALA_TOOLBAR_VERMELHO = "#e84025";
+
+function escalaToolbarBtnBase(extra?: CSSProperties): CSSProperties {
+  return {
+    padding: "10px 16px",
+    borderRadius: 10,
+    fontFamily: FONT.body,
+    fontSize: 13,
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    ...extra,
+  };
+}
+
+function escalaToolbarBtnAzul(extra?: CSSProperties): CSSProperties {
+  return escalaToolbarBtnBase({
+    border: `1px solid ${ESCALA_TOOLBAR_AZUL}`,
+    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_AZUL} 22%, transparent)`,
+    color: ESCALA_TOOLBAR_AZUL,
+    ...extra,
+  });
+}
+
+function escalaToolbarBtnVerde(extra?: CSSProperties): CSSProperties {
+  return escalaToolbarBtnBase({
+    border: `1px solid ${ESCALA_TOOLBAR_VERDE}`,
+    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_VERDE} 22%, transparent)`,
+    color: ESCALA_TOOLBAR_VERDE,
+    ...extra,
+  });
+}
+
+function escalaToolbarBtnVermelho(extra?: CSSProperties): CSSProperties {
+  return escalaToolbarBtnBase({
+    border: `1px solid ${ESCALA_TOOLBAR_VERMELHO}`,
+    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_VERMELHO} 22%, transparent)`,
+    color: ESCALA_TOOLBAR_VERMELHO,
+    ...extra,
+  });
+}
+
+function escalaToolbarBtnNeutro(
+  t: { cardBorder: string; inputBg?: string; cardBg?: string; text: string },
+  extra?: CSSProperties,
+): CSSProperties {
+  return escalaToolbarBtnBase({
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg ?? "transparent",
+    color: t.text,
+    ...extra,
+  });
+}
+
 /** Navegação e escala consideram a partir de abril de 2026 (sem escala antes). */
 const ESCALA_ANO_MIN = 2026;
 /** Abril (0-indexado). */
@@ -519,6 +576,7 @@ export default function RhGestaoEscalaPage() {
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
+  const [alterarEscalaModalAberto, setAlterarEscalaModalAberto] = useState(false);
   const [resetandoGrade, setResetandoGrade] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
@@ -660,7 +718,15 @@ export default function RhGestaoEscalaPage() {
   }, [mes, podeMesSeguinte]);
 
   const podeEditarGrade = perm.canCriarOk;
+  const podeAlterarEscalaAprovada = perm.canEditarOk;
   const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
+
+  const hojeIso = useMemo(() => {
+    const y = hoje.getFullYear();
+    const m = String(hoje.getMonth() + 1).padStart(2, "0");
+    const d = String(hoje.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [hoje]);
 
   const mesHydratingRef = useRef(false);
 
@@ -1310,6 +1376,32 @@ export default function RhGestaoEscalaPage() {
   };
 
   const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
+
+  const confirmarAlteracaoCelulaAprovada = useCallback(
+    (funcionarioId: string, diaIso: string, valor: string) => {
+      setGerarPorFiltro((prev) => {
+        const areaKey = filtroArea;
+        const cur = prev[areaKey];
+        if (!cur) return prev;
+        const k = chaveCelulaGerar(funcionarioId, diaIso);
+        const merged = { ...cur.celulas, [k]: valor };
+        const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
+        const next = {
+          ...prev,
+          [areaKey]: {
+            ...cur,
+            celulas: merged,
+            baseline: cur.baseline ? { ...cur.baseline, [k]: valor } : cur.baseline,
+            celulasSincronizadasComDb: snap,
+          },
+        };
+        gravarEscalaMes(ano, mes, next);
+        return next;
+      });
+    },
+    [filtroArea, prestadoresRaw, dias, ano, mes],
+  );
   /** Oculta coluna Nome na Escala Diária (layout tipo Customer Service). */
   const semColunaNome =
     filtroArea === "customer_service" ||
@@ -1805,47 +1897,41 @@ export default function RhGestaoEscalaPage() {
                               }));
                             }}
                             aria-label="Iniciar nova escala em rascunho"
-                            style={{
-                              padding: "10px 16px",
-                              borderRadius: 10,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg ?? t.cardBg ?? "transparent",
-                              color: t.text,
-                              fontFamily: FONT.body,
-                              fontSize: 13,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                            }}
+                            style={
+                              escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea])
+                                ? escalaToolbarBtnVermelho({ cursor: "pointer" })
+                                : escalaToolbarBtnNeutro(t, { cursor: "pointer" })
+                            }
                           >
                             Nova Escala
                           </button>
+                          {escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea]) && podeAlterarEscalaAprovada ? (
+                            <button
+                              type="button"
+                              onClick={() => setAlterarEscalaModalAberto(true)}
+                              aria-label="Alterar status de um prestador em um dia da escala aprovada"
+                              style={escalaToolbarBtnAzul({ cursor: "pointer" })}
+                            >
+                              Alterar Escala
+                            </button>
+                          ) : null}
                           {mostrarSalvarAlteracoes ? (
                             <button
                               type="button"
                               disabled={salvandoGrade}
                               onClick={() => void salvarGradeEscalaDb(filtroArea)}
                               aria-label="Salvar alterações da escala na base de dados"
-                              style={{
-                                padding: "10px 16px",
-                                borderRadius: 10,
-                                border: `1px solid ${brand.accent}`,
-                                background: brand.useBrand
-                                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                                  : "rgba(124,58,237,0.12)",
-                                color: brand.accent,
-                                fontFamily: FONT.body,
-                                fontSize: 13,
-                                fontWeight: 700,
+                              style={escalaToolbarBtnAzul({
                                 cursor: salvandoGrade ? "wait" : "pointer",
-                                whiteSpace: "nowrap",
                                 opacity: salvandoGrade ? 0.65 : 1,
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 8,
-                              }}
+                              })}
                             >
-                              {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                              {salvandoGrade ? (
+                                <Loader2 size={16} className="app-lucide-spin" color={ESCALA_TOOLBAR_AZUL} aria-hidden />
+                              ) : null}
                               Salvar Alterações
                             </button>
                           ) : null}
@@ -1855,26 +1941,17 @@ export default function RhGestaoEscalaPage() {
                               disabled={salvandoGrade}
                               onClick={() => void aprovarEscalaGerar(filtroArea)}
                               aria-label="Aprovar escala e bloquear edição manual da grade"
-                              style={{
-                                padding: "10px 16px",
-                                borderRadius: 10,
-                                border: `1px solid ${brand.accent}`,
-                                background: brand.useBrand
-                                  ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                                  : "rgba(30,54,248,0.12)",
-                                color: brand.accent,
-                                fontFamily: FONT.body,
-                                fontSize: 13,
-                                fontWeight: 700,
+                              style={escalaToolbarBtnVerde({
                                 cursor: salvandoGrade ? "wait" : "pointer",
-                                whiteSpace: "nowrap",
                                 opacity: salvandoGrade ? 0.65 : 1,
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 8,
-                              }}
+                              })}
                             >
-                              {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                              {salvandoGrade ? (
+                                <Loader2 size={16} className="app-lucide-spin" color={ESCALA_TOOLBAR_VERDE} aria-hidden />
+                              ) : null}
                               Aprovar Escala
                             </button>
                           ) : null}
@@ -1907,26 +1984,17 @@ export default function RhGestaoEscalaPage() {
                           disabled={salvandoGrade}
                           onClick={() => void aprovarEscalaGerar(filtroArea)}
                           aria-label="Aprovar escala da área selecionada"
-                          style={{
-                            padding: "10px 16px",
-                            borderRadius: 10,
-                            border: `1px solid ${brand.accent}`,
-                            background: brand.useBrand
-                              ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                              : "rgba(30,54,248,0.12)",
-                            color: brand.accent,
-                            fontFamily: FONT.body,
-                            fontSize: 13,
-                            fontWeight: 700,
+                          style={escalaToolbarBtnVerde({
                             cursor: salvandoGrade ? "wait" : "pointer",
-                            whiteSpace: "nowrap",
                             opacity: salvandoGrade ? 0.65 : 1,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 8,
-                          }}
+                          })}
                         >
-                          {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                          {salvandoGrade ? (
+                            <Loader2 size={16} className="app-lucide-spin" color={ESCALA_TOOLBAR_VERDE} aria-hidden />
+                          ) : null}
                           Aprovar Escala
                         </button>
                       ) : null}
@@ -2224,6 +2292,25 @@ export default function RhGestaoEscalaPage() {
           </>
         )}
       </div>
+
+      {alterarEscalaModalAberto ? (
+        <ModalAlterarEscala
+          areaKey={filtroArea}
+          areaLabel={labelAreaEscala(filtroArea)}
+          refMesIso={refMesISO(ano, mes)}
+          hojeIso={hojeIso}
+          dias={dias}
+          prestadores={linhas}
+          celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
+          canEditar={podeAlterarEscalaAprovada}
+          sanitizarValor={sanitizarValorCelulaGerar}
+          opcoesSelectCelula={opcoesSelectCelulaGerar}
+          labelExibicaoCelula={labelExibicaoCelulaEscala}
+          chaveCelula={chaveCelulaGerar}
+          onClose={() => setAlterarEscalaModalAberto(false)}
+          onCelulaAlterada={confirmarAlteracaoCelulaAprovada}
+        />
+      ) : null}
 
       {novaEscalaModalArea ? (
         <ModalBase
