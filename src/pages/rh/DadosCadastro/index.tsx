@@ -54,7 +54,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import {
   buildPayloadCadastralDadosCadastro,
   dadosCadastroVistaCompleta,
-  ehProprioCadastroDados,
+  dadosCadastroVisualizaProprioCadastro,
   historicoVisivelAbaDadosCadastro,
   podeEditarFuncionarioDadosCadastro,
 } from "../../../lib/rhDadosCadastroHelpers";
@@ -275,6 +275,7 @@ export default function RhDadosCadastroPage() {
   const [confirmandoSemAlteracao, setConfirmandoSemAlteracao] = useState(false);
 
   const vistaCompleta = !perm.loading && dadosCadastroVistaCompleta(perm.canView);
+  const vistaApenasProprio = !perm.loading && !vistaCompleta;
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [filterStaffId, setFilterStaffId] = useState<string | null>(null);
@@ -302,8 +303,14 @@ export default function RhDadosCadastroPage() {
     return row.setor?.trim() || "—";
   }, [row, opcoesVinculoFlat, opcoesTimes]);
 
-  const visualizandoProprioCadastro = ehProprioCadastroDados(meuPrestadorId, row?.id ?? null);
-  const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null);
+  const visualizandoProprioCadastro = dadosCadastroVisualizaProprioCadastro(
+    vistaCompleta,
+    meuPrestadorId,
+    row?.id ?? null,
+  );
+  const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null, {
+    vistaApenasProprio,
+  });
   const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
   const podeEditarExperiencia = podeEditarSelecionado && row?.status !== "encerrado";
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
@@ -421,10 +428,7 @@ export default function RhDadosCadastroPage() {
   }, [perm.loading, vistaCompleta]);
 
   useEffect(() => {
-    if (perm.loading || !vistaCompleta || !user?.email?.trim()) {
-      if (!vistaCompleta) setMeuPrestadorId(null);
-      return;
-    }
+    if (perm.loading || !user?.email?.trim()) return;
     let cancelled = false;
     void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((r) => {
       if (!cancelled) setMeuPrestadorId(r?.id ?? null);
@@ -432,7 +436,7 @@ export default function RhDadosCadastroPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, vistaCompleta, user?.email]);
+  }, [perm.loading, user?.email]);
 
   useEffect(() => {
     if (!vistaCompleta || !meuPrestadorId || filterStaffId) return;
@@ -943,8 +947,10 @@ export default function RhDadosCadastroPage() {
               </h2>
               <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT.body }}>
                 A cada {MESES_CICLO_REVISAO_CADASTRO} meses você deve revisar seu cadastro nesta página. Se algo mudou,
-                atualize os dados na aba <strong>Dados cadastrais</strong> e/ou envie novos documentos; em seguida salve ou
-                envie os arquivos. Se nada mudou, marque a declaração abaixo e confirme.
+                atualize os dados nas abas <strong>Dados cadastrais</strong>, <strong>Formação e Competências</strong> ou{" "}
+                <strong>Experiência Profissional</strong> e/ou envie novos documentos; em seguida salve ou envie os
+                arquivos. Se nada mudou, marque a declaração abaixo e use{" "}
+                <strong>Confirmar sem alterações</strong>.
               </p>
               {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>

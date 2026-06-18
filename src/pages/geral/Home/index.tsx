@@ -230,7 +230,7 @@ type PerfilRow = {
 };
 
 export default function Home() {
-  const { theme: t, user, permissions, operadoraBrand, isDark } = useApp();
+  const { theme: t, user, permissions, permissionsAcoes, operadoraBrand, isDark } = useApp();
   const { propsFor } = useAppPageNav();
 
   const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
@@ -248,8 +248,8 @@ export default function Home() {
       setRevisaoCadastralHomeReady(true);
       return;
     }
-    const permEdit = permissions.rh_dados_cadastro ?? null;
-    if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEdit)) {
+    const permEditar = permissionsAcoes.rh_dados_cadastro?.editar ?? null;
+    if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
       setRevisaoCadastralPendenteHome(false);
       setRevisaoCadastralHomeReady(true);
       return;
@@ -274,7 +274,7 @@ export default function Home() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user, permissions.rh_dados_cadastro]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar]);
 
   useEffect(() => {
     if (!user || !roleParidadeInfluencer(user.role)) {

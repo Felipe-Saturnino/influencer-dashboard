@@ -129,6 +129,18 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+type RevisaoNavGateHandler = {
+  shouldBlock: (pageKey: PageKey) => boolean;
+  onBlocked: () => void;
+};
+
+let revisaoNavGateHandler: RevisaoNavGateHandler | null = null;
+
+/** Registro do gate de revisão cadastral — intercepta `navigateTo` (menu, Home, abas). */
+export function registerRevisaoNavGate(handler: RevisaoNavGateHandler | null) {
+  revisaoNavGateHandler = handler;
+}
+
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
 const DEFAULT_FONT_FAMILY = "'Inter', 'Helvetica Neue', Arial, sans-serif";
@@ -573,6 +585,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
       if (!access.ok) {
         goToSemAcesso(access.reason, options);
+        return;
+      }
+      if (revisaoNavGateHandler?.shouldBlock(access.pageKey)) {
+        revisaoNavGateHandler.onBlocked();
         return;
       }
       const nextPath = buildAppPath(access.pageKey, access.tabSlug);
