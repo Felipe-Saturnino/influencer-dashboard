@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { SectionTitle } from "../../../components/dashboard/SectionTitle";
+import { SectionTitle } from "../../../components/dashboard";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";

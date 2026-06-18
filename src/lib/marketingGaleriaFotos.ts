@@ -32,9 +32,26 @@ export interface MarketingFoto {
   created_at: string;
 }
 
+export type MarketingEventoEmbed = Pick<MarketingEvento, "id" | "nome" | "data_evento" | "ativo">;
+export type MarketingPrestadorEmbed = { id: string; nome: string };
+
 export interface MarketingFotoComEvento extends MarketingFoto {
-  marketing_eventos?: Pick<MarketingEvento, "id" | "nome" | "data_evento"> | null;
-  rh_funcionario?: { id: string; nome_completo: string | null } | null;
+  /** Join Supabase — objeto ou array conforme a relação embutida. */
+  marketing_eventos?: MarketingEventoEmbed | MarketingEventoEmbed[] | null;
+  rh_funcionarios?: MarketingPrestadorEmbed | MarketingPrestadorEmbed[] | null;
+}
+
+function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+export function fotoEventoEmbed(f: MarketingFotoComEvento): MarketingEventoEmbed | null {
+  return unwrapEmbed(f.marketing_eventos);
+}
+
+export function fotoPrestadorEmbed(f: MarketingFotoComEvento): MarketingPrestadorEmbed | null {
+  return unwrapEmbed(f.rh_funcionarios);
 }
 
 function sanitizeStorageFileName(name: string): string {

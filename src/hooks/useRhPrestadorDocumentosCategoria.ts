@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import type { RhFuncionarioSelfMedia } from "../types/rhFuncionario";
-import type { RhPrestadorDocumentoCategoria } from "./rhPrestadorDocumentosCadastro";
+import type { RhPrestadorDocumentoCategoria } from "../lib/rhPrestadorDocumentosCadastro";
 import {
   excluirDocumentoPrestador,
   listarDocumentosPrestador,
   uploadDocumentoPrestador,
   urlsAssinadasDocumentosPrestador,
-} from "./rhPrestadorSelfMediaDocs";
+} from "../lib/rhPrestadorSelfMediaDocs";
 
 export function useRhPrestadorDocumentosCategoria(
   funcionarioId: string | null,
@@ -48,7 +48,7 @@ export function useRhPrestadorDocumentosCategoria(
       return;
     }
     let cancelled = false;
-    void urlsAssinadasDocumentosPrestador(rows).then((next) => {
+    void urlsAssinadasDocumentosPrestador(rows).then((next: Record<string, string>) => {
       if (!cancelled) setSignedById(next);
     });
     return () => {

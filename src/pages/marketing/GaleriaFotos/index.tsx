@@ -51,6 +51,8 @@ import {
   type MarketingFotoComEvento,
   type MarketingFotoTipo,
   fmtDataEvento,
+  fotoEventoEmbed,
+  fotoPrestadorEmbed,
   removerMarketingFotoStorage,
   uploadMarketingFotoArquivo,
   urlAssinadaFotoPrestador,
@@ -232,8 +234,8 @@ export default function GaleriaFotos() {
     if (filtroEvento !== "todos") list = list.filter((f) => f.evento_id === filtroEvento);
     if (buscaGaleria.trim()) {
       list = list.filter((f) => {
-        const ev = f.marketing_eventos;
-        const prest = f.rh_funcionarios;
+        const ev = fotoEventoEmbed(f);
+        const prest = fotoPrestadorEmbed(f);
         return textoContemBuscaEmAlgum(
           buscaGaleria,
           ev?.nome,
@@ -249,7 +251,7 @@ export default function GaleriaFotos() {
   const blocosPorEvento = useMemo(() => {
     const map = new Map<string, { evento: MarketingEvento; fotos: MarketingFotoComEvento[] }>();
     for (const f of fotosFiltradas) {
-      const ev = f.marketing_eventos;
+      const ev = fotoEventoEmbed(f);
       if (!ev) continue;
       const key = ev.id;
       if (!map.has(key)) {
@@ -637,8 +639,8 @@ export default function GaleriaFotos() {
                           }}
                         >
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {f.tipo === "prestador" && f.rh_funcionarios?.nome
-                              ? f.rh_funcionarios.nome
+                            {f.tipo === "prestador" && fotoPrestadorEmbed(f)?.nome
+                              ? fotoPrestadorEmbed(f)!.nome
                               : f.legenda || "Foto geral"}
                           </span>
                           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -742,14 +744,12 @@ export default function GaleriaFotos() {
                     setUploadTipo("geral");
                     setUploadPrestadorId("");
                   }}
-                  showClearIcon={false}
                 />
                 <FiltroSemanticoTabPill
                   label="Fotos de colaborador"
                   semanticColor="#1e36f8"
                   active={uploadTipo === "prestador"}
                   onClick={() => setUploadTipo("prestador")}
-                  showClearIcon={false}
                 />
               </div>
             </div>
