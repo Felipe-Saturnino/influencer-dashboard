@@ -54,6 +54,10 @@ import {
   mensagemSucessoDesativacaoPrestadorEncerrado,
   syncUsuarioPrestadorAposSalvarRh,
 } from "../../../lib/rhPrestadorUsuarioSync";
+import {
+  defaultsNovoPrestadorDeVinculoOrganograma,
+  defaultsNovoPrestadorSemVinculoOrganograma,
+} from "../../../lib/rhPrestadorNovoDefaults";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import {
@@ -1838,9 +1842,18 @@ export default function RhPrestadoresPage() {
                             grupos={organogramaGrupos}
                             onPick={(id, op) => {
                               if (!id || !op) {
-                                setForm((s) => ({ ...s, org_diretoria_id: null, org_gerencia_id: null, org_time_id: null, setor: "" }));
+                                setForm((s) => ({
+                                  ...s,
+                                  org_diretoria_id: null,
+                                  org_gerencia_id: null,
+                                  org_time_id: null,
+                                  setor: "",
+                                  ...(modalForm === "novo" ? defaultsNovoPrestadorSemVinculoOrganograma() : {}),
+                                }));
                                 return;
                               }
+                              const defaultsNovo =
+                                modalForm === "novo" ? defaultsNovoPrestadorDeVinculoOrganograma(op) : null;
                               if (op.nivel === "time") {
                                 setForm((s) => ({
                                   ...s,
@@ -1848,6 +1861,7 @@ export default function RhPrestadoresPage() {
                                   org_gerencia_id: null,
                                   org_time_id: op.timeId,
                                   setor: op.setorNome,
+                                  ...(defaultsNovo ?? {}),
                                 }));
                               } else if (op.nivel === "gerencia") {
                                 setForm((s) => ({
@@ -1856,6 +1870,7 @@ export default function RhPrestadoresPage() {
                                   org_gerencia_id: op.gerenciaId,
                                   org_time_id: null,
                                   setor: op.setorNome,
+                                  ...(defaultsNovo ?? {}),
                                 }));
                               } else {
                                 setForm((s) => ({
@@ -1864,6 +1879,7 @@ export default function RhPrestadoresPage() {
                                   org_gerencia_id: null,
                                   org_time_id: null,
                                   setor: op.setorNome,
+                                  ...(defaultsNovo ?? {}),
                                 }));
                               }
                             }}
