@@ -538,10 +538,14 @@ export default function RhGestaoStaffPage() {
   }, []);
 
   const carregarEstudios = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("estudios_spin")
       .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
       .eq("ativo", true);
+    if (error) {
+      console.error("Gestão de Staff: falha ao carregar estúdios", error);
+      return;
+    }
     const nomeMap: Record<string, string> = {};
     const opts: { slug: string; nome: string }[] = [];
     const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
