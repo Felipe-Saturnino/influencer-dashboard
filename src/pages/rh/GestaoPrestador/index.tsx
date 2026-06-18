@@ -37,7 +37,7 @@ import {
   validarDataNascimentoOpcional,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
-import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
+import { buscarEnderecoPorCep, mesclarCamposEnderecoViaCep } from "../../../lib/rhViaCep";
 import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import type {
   RhAreaAtuacao,
@@ -652,19 +652,43 @@ export default function RhPrestadoresPage() {
       }
       setErroGlobal(null);
       if (qual === "res") {
-        setForm((s) => ({
-          ...s,
-          res_logradouro: s.res_logradouro.trim() || r.logradouro,
-          res_cidade: s.res_cidade.trim() || r.cidade,
-          res_estado: (s.res_estado.trim() || r.uf).toUpperCase().slice(0, 2),
-        }));
+        setForm((s) => {
+          const m = mesclarCamposEnderecoViaCep(
+            {
+              logradouro: s.res_logradouro,
+              complemento: s.res_complemento,
+              cidade: s.res_cidade,
+              estado: s.res_estado,
+            },
+            r,
+          );
+          return {
+            ...s,
+            res_logradouro: m.logradouro,
+            res_complemento: m.complemento,
+            res_cidade: m.cidade,
+            res_estado: m.estado,
+          };
+        });
       } else {
-        setForm((s) => ({
-          ...s,
-          emp_logradouro: s.emp_logradouro.trim() || r.logradouro,
-          emp_cidade: s.emp_cidade.trim() || r.cidade,
-          emp_estado: (s.emp_estado.trim() || r.uf).toUpperCase().slice(0, 2),
-        }));
+        setForm((s) => {
+          const m = mesclarCamposEnderecoViaCep(
+            {
+              logradouro: s.emp_logradouro,
+              complemento: s.emp_complemento,
+              cidade: s.emp_cidade,
+              estado: s.emp_estado,
+            },
+            r,
+          );
+          return {
+            ...s,
+            emp_logradouro: m.logradouro,
+            emp_complemento: m.complemento,
+            emp_cidade: m.cidade,
+            emp_estado: m.estado,
+          };
+        });
       }
     })();
   };

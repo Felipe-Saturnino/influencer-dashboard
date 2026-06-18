@@ -10,7 +10,7 @@ import { FONT } from "../../../constants/theme";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
-import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
+import { buscarEnderecoPorCep, mesclarCamposEnderecoViaCep } from "../../../lib/rhViaCep";
 import {
   formatarAgencia,
   formatarCepDigitos,
@@ -339,6 +339,8 @@ export default function RhDadosCadastroPage() {
   }, [completudeRevisao.ok]);
   const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
   const podeEditarExperiencia = podeEditarSelecionado && row?.status !== "encerrado";
+  /** E-mail pessoal: somente leitura quando já preenchido; vazio permite inclusão na aba Dados cadastrais. */
+  const emailPessoalEditavel = Boolean(podeEditarSelecionado && form && !form.email.trim());
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
   const staffSelectItems = useMemo(
     () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
@@ -519,29 +521,46 @@ export default function RhDadosCadastroPage() {
         return;
       }
       setErroGlobal(null);
-      if (!form) return;
       if (qual === "res") {
-        setForm((s) =>
-          s
-            ? {
-                ...s,
-                res_logradouro: s.res_logradouro.trim() || r.logradouro,
-                res_cidade: s.res_cidade.trim() || r.cidade,
-                res_estado: (s.res_estado.trim() || r.uf).toUpperCase().slice(0, 2),
-              }
-            : s,
-        );
+        setForm((s) => {
+          if (!s) return s;
+          const m = mesclarCamposEnderecoViaCep(
+            {
+              logradouro: s.res_logradouro,
+              complemento: s.res_complemento,
+              cidade: s.res_cidade,
+              estado: s.res_estado,
+            },
+            r,
+          );
+          return {
+            ...s,
+            res_logradouro: m.logradouro,
+            res_complemento: m.complemento,
+            res_cidade: m.cidade,
+            res_estado: m.estado,
+          };
+        });
       } else {
-        setForm((s) =>
-          s
-            ? {
-                ...s,
-                emp_logradouro: s.emp_logradouro.trim() || r.logradouro,
-                emp_cidade: s.emp_cidade.trim() || r.cidade,
-                emp_estado: (s.emp_estado.trim() || r.uf).toUpperCase().slice(0, 2),
-              }
-            : s,
-        );
+        setForm((s) => {
+          if (!s) return s;
+          const m = mesclarCamposEnderecoViaCep(
+            {
+              logradouro: s.emp_logradouro,
+              complemento: s.emp_complemento,
+              cidade: s.emp_cidade,
+              estado: s.emp_estado,
+            },
+            r,
+          );
+          return {
+            ...s,
+            emp_logradouro: m.logradouro,
+            emp_complemento: m.complemento,
+            emp_cidade: m.cidade,
+            emp_estado: m.estado,
+          };
+        });
       }
     })();
   };
@@ -1212,12 +1231,31 @@ export default function RhDadosCadastroPage() {
               {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
             </div>
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
-              <span id="dc-email-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
-                E-mail
-              </span>
-              <div id="dc-email" style={{ ...readOnlyBox, wordBreak: "break-word" }} aria-labelledby="dc-email-lbl">
-                {form.email.trim() || "—"}
-              </div>
+              {emailPessoalEditavel ? (
+                <>
+                  <label htmlFor="dc-email" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+                    E-mail
+                  </label>
+                  <input
+                    id="dc-email"
+                    type="email"
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={(e) => setForm((s) => (s ? { ...s, email: e.target.value } : s))}
+                    style={inputStyle}
+                    aria-label="E-mail pessoal"
+                  />
+                </>
+              ) : (
+                <>
+                  <span id="dc-email-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+                    E-mail
+                  </span>
+                  <div id="dc-email" style={{ ...readOnlyBox, wordBreak: "break-word" }} aria-labelledby="dc-email-lbl">
+                    {form.email.trim() || "—"}
+                  </div>
+                </>
+              )}
               {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
             </div>
           </div>

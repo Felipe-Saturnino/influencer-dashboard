@@ -37,3 +37,16 @@ export async function buscarEnderecoPorCep(cepRaw: string): Promise<
     return { ok: false, message: "Falha de rede ao consultar o CEP." };
   }
 }
+
+/** Mescla resposta ViaCEP — logradouro/cidade/UF sempre da consulta; complemento só se vazio (preserva apto/sala). */
+export function mesclarCamposEnderecoViaCep(
+  atual: { logradouro: string; complemento: string; cidade: string; estado: string },
+  via: { logradouro: string; complemento: string; cidade: string; uf: string },
+): { logradouro: string; complemento: string; cidade: string; estado: string } {
+  return {
+    logradouro: via.logradouro || atual.logradouro,
+    complemento: atual.complemento.trim() || via.complemento,
+    cidade: via.cidade || atual.cidade,
+    estado: (via.uf || atual.estado).toUpperCase().slice(0, 2),
+  };
+}
