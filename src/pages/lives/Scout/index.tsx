@@ -21,6 +21,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   getPageContentBoxStyle,
@@ -34,6 +35,7 @@ import { ProspectoCacheFlag, ProspectoCardFlags } from "../../../components/Pros
 import { resolveProspectoOrigemLabel } from "../../../lib/prospectoCardFlagsStyles";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 
 type ScoutModalTab = "contato" | "canais" | "anotacoes";
@@ -324,8 +326,7 @@ export default function Scout() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = list.filter((s) => {
-    const q = search.toLowerCase();
-    if (search && !(s.nome_artistico ?? "").toLowerCase().includes(q) && !(s.email ?? "").toLowerCase().includes(q)) return false;
+    if (search.trim() && !textoContemBuscaEmAlgum(search, s.nome_artistico, s.email)) return false;
     // Vista padrão ("todos"): não listar fechados — só aparecem ao filtrar explicitamente por Fechado.
     if (filterStatus === "todos") {
       if (s.status === "fechado") return false;
@@ -1259,8 +1260,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           </div>
         )}
 
-        {tab === "contato" && (
-          <>
+        <ModalTabPanel active={tab === "contato"} id="scout-edit-panel-contato" labelledBy="scout-edit-tab-contato">
             <div style={row}>
               <label style={labelStyle}>Tipo de Contato</label>
               <select value={tipoContato} onChange={(e) => setTipoContato(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
@@ -1317,11 +1317,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 </select>
               )}
             </div>
-          </>
-        )}
+        </ModalTabPanel>
 
-        {tab === "canais" && (
-          <>
+        <ModalTabPanel active={tab === "canais"} id="scout-edit-panel-canais" labelledBy="scout-edit-tab-canais">
             <div style={row}>
               <label style={labelStyle}>Plataformas</label>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -1370,11 +1368,10 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 })}
               </div>
             </div>
-          </>
-        )}
+        </ModalTabPanel>
 
-        {tab === "anotacoes" && scout && (
-          <>
+        {scout ? (
+          <ModalTabPanel active={tab === "anotacoes"} id="scout-edit-panel-anotacoes" labelledBy="scout-edit-tab-anotacoes">
             <div style={row}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />
@@ -1397,8 +1394,8 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 )}
               </div>
             </div>
-          </>
-        )}
+          </ModalTabPanel>
+        ) : null}
 
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Check, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
+import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
+import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -18,6 +21,7 @@ import {
   stripHtmlText,
   type InformativoStatus,
 } from "../../../lib/informativosWorkflow";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { labelPerfisInformativo } from "../../../lib/informativosRoles";
 import {
   labelOperadorEscopoInformativo,
@@ -145,7 +149,8 @@ export function GerenciamentoInformativos({
   const [editId, setEditId] = useState<string | null>(null);
   const [histRef, setHistRef] = useState<{ id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
-  const [confirmandoArquivarId, setConfirmandoArquivarId] = useState<string | null>(null);
+  const [alvoArquivar, setAlvoArquivar] = useState<InformativoGerenciamentoRow | null>(null);
+  const [erroArquivar, setErroArquivar] = useState<string | null>(null);
   const [confirmandoExcluirId, setConfirmandoExcluirId] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -232,7 +237,7 @@ export function GerenciamentoInformativos({
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: `${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`,
+        textoBusca: normalizarTextoBusca(`${row.assunto} ${stripHtmlText(row.descricao)} ${(row.perfis ?? []).join(" ")}`),
       });
     }
 
@@ -270,7 +275,7 @@ export function GerenciamentoInformativos({
 
   const rowsFiltradas = useMemo(() => {
     const mes = mesesDisponiveis[idxMes];
-    const q = buscaDeb.trim().toLowerCase();
+    const q = buscaDeb;
     return rows.filter((row) => {
       if (filtroStatus !== "todos" && row.status !== filtroStatus) return false;
       if (!modoHistorico && row.publishedAt && mes && !itemNoMesCarrossel(row.publishedAt, mes)) {
@@ -279,7 +284,7 @@ export function GerenciamentoInformativos({
       if (!modoHistorico && !row.publishedAt && mes && !itemNoMesCarrossel(row.createdAt, mes)) {
         if (row.status === "rascunho" || row.status === "aprovacao") return false;
       }
-      if (q && !row.textoBusca.toLowerCase().includes(q)) return false;
+      if (q && !row.textoBusca.includes(q)) return false;
       return true;
     });
   }, [rows, filtroStatus, buscaDeb, modoHistorico, idxMes, mesesDisponiveis]);
@@ -352,17 +357,20 @@ export function GerenciamentoInformativos({
     setAcaoLoading(null);
   }
 
-  async function arquivar(row: InformativoGerenciamentoRow) {
-    if (!user?.id) return;
-    setAcaoLoading(row.id);
+  async function confirmarArquivar() {
+    if (!user?.id || !alvoArquivar) return;
+    setErroArquivar(null);
+    setAcaoLoading(alvoArquivar.id);
+    const row = alvoArquivar;
     const { error } = await supabase.from("conteudo_informativo").update({ status: "arquivado" }).eq("id", row.id);
     if (!error) {
       await registrarHistoricoStatus(supabase, row.id, row.status, "arquivado", user.id);
+      setAlvoArquivar(null);
       await carregar();
       onDadosAlterados();
     } else {
       console.error("[GerenciamentoInformativos] arquivar:", error);
-      setErro(ERRO_ARQUIVAR);
+      setErroArquivar(ERRO_ARQUIVAR);
     }
     setAcaoLoading(null);
   }
@@ -505,32 +513,14 @@ export function GerenciamentoInformativos({
                           </button>
                         ) : null}
                         {acoes.includes("arquivar") ? (
-                          <button
-                            type="button"
-                            aria-label={`${confirmandoArquivarId === row.id ? "Confirmar arquivamento:" : "Arquivar:"} ${row.assunto}`}
-                            title={`${confirmandoArquivarId === row.id ? "Confirmar arquivamento" : "Arquivar"} ${row.assunto}`}
+                          <BtnArquivarLinha
+                            descricaoItem={descricaoBotaoArquivar("informativo", row.assunto)}
                             disabled={busy}
                             onClick={() => {
-                              if (confirmandoArquivarId !== row.id) {
-                                setConfirmandoArquivarId(row.id);
-                                return;
-                              }
-                              void arquivar(row);
-                              setConfirmandoArquivarId(null);
+                              setErroArquivar(null);
+                              setAlvoArquivar(row);
                             }}
-                            onBlur={() => setConfirmandoArquivarId(null)}
-                            style={{
-                              ...btnAcao(t),
-                              ...(confirmandoArquivarId === row.id
-                                ? { border: "1px solid rgba(232,64,37,0.6)", background: "rgba(232,64,37,0.15)", color: "#e84025" }
-                                : {}),
-                            }}
-                          >
-                            <Archive size={13} aria-hidden />
-                            {confirmandoArquivarId === row.id ? (
-                              <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
-                            ) : null}
-                          </button>
+                          />
                         ) : null}
                         {acoes.includes("historico") ? (
                           <button
@@ -602,6 +592,21 @@ export function GerenciamentoInformativos({
         informativoId={histRef?.id ?? null}
         onClose={() => setHistRef(null)}
       />
+
+      {alvoArquivar ? (
+        <ModalConfirmArquivarPadrao
+          descricaoItem={descricaoModalArquivarItem("o informativo", alvoArquivar.assunto)}
+          onCancel={() => {
+            if (acaoLoading !== alvoArquivar.id) {
+              setErroArquivar(null);
+              setAlvoArquivar(null);
+            }
+          }}
+          onConfirm={() => void confirmarArquivar()}
+          loading={acaoLoading === alvoArquivar.id}
+          error={erroArquivar}
+        />
+      ) : null}
     </div>
   );
 }

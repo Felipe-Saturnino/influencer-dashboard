@@ -39,6 +39,8 @@ export const FilterBarIcons = {
   hoje: <History {...FILTRO_BAR_ICON_PROPS} />,
   modoVisualizacao: <CalendarRange {...FILTRO_BAR_ICON_PROPS} />,
   diretoria: <Building2 {...FILTRO_BAR_ICON_PROPS} />,
+  /** Estúdio Spin — Gestão de Staff e filtros de estúdio na barra. */
+  estudio: <Building2 {...FILTRO_BAR_ICON_PROPS} />,
   acaoSolicitacao: <ListChecks {...FILTRO_BAR_ICON_PROPS} />,
   figurinoCategoria: <Tags {...FILTRO_BAR_ICON_PROPS} />,
   figurinoTamanho: <Ruler {...FILTRO_BAR_ICON_PROPS} />,

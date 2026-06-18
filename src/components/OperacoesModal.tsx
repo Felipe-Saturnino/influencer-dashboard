@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
+import { MODAL_ARQUIVAR_TITULO, textoModalArquivar } from "../lib/arquivarItemUi";
 import { MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../lib/excluirItemUi";
 
 const DialogTitleIdContext = createContext<string>("");
@@ -281,6 +282,38 @@ export function ModalConfirmExcluirPadrao({
       title={MODAL_EXCLUIR_TITULO}
       texto={textoModalExcluir(descricaoItem)}
       confirmLabel="Excluir"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      loading={loading}
+      zIndex={zIndex}
+      error={error}
+    />
+  );
+}
+
+/** Pop-up canónico: título «Arquivar», corpo padronizado, Cancelar / Arquivar. */
+export function ModalConfirmArquivarPadrao({
+  descricaoItem,
+  onCancel,
+  onConfirm,
+  loading,
+  zIndex = 1000,
+  error,
+}: {
+  descricaoItem: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  loading?: boolean;
+  zIndex?: number;
+  error?: string | null;
+}) {
+  return (
+    <ModalConfirmDelete
+      title={MODAL_ARQUIVAR_TITULO}
+      texto={textoModalArquivar(descricaoItem)}
+      confirmLabel="Arquivar"
+      destructive={false}
+      loadingLabel="Arquivando..."
       onCancel={onCancel}
       onConfirm={onConfirm}
       loading={loading}

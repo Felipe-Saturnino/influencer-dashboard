@@ -20,13 +20,13 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchTurnosPorOperadoraSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import {
   MSG_PRESTADOR_PONTO_REDE,
   obterPrestadorPontoEstado,
   registrarPrestadorPonto,
   type PrestadorPontoEstado,
 } from "../../../lib/prestadorPontoApi";
-import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   normalizarEscalaCadastro,
@@ -304,8 +304,8 @@ function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   return nome || null;
 }
 
-type OpTurnosCalPick = Pick<Operadora, "slug" | "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
-type OpTurnosHorarioPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+type OpTurnosCalPick = { slug: string } & TurnosDealersPick;
+type OpTurnosHorarioPick = TurnosDealersPick;
 
 function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
@@ -1026,22 +1026,15 @@ export default function RhCalendarioPage() {
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .in("slug", slugs)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          setMapOpTurnos(new Map());
-          return;
-        }
-        const m = new Map<string, OpTurnosCalPick>();
-        (data ?? []).forEach((row: OpTurnosCalPick) => {
-          if (row.slug) m.set(row.slug, row);
-        });
-        setMapOpTurnos(m);
-      });
+    void fetchTurnosPorOperadoraSlugs(slugs).then((turnosMap) => {
+      if (cancelled) return;
+      const m = new Map<string, OpTurnosCalPick>();
+      for (const slug of slugs) {
+        const turnos = turnosMap.get(slug);
+        if (turnos) m.set(slug, { slug, ...turnos });
+      }
+      setMapOpTurnos(m);
+    });
     return () => {
       cancelled = true;
     };
@@ -1257,6 +1250,13 @@ export default function RhCalendarioPage() {
     if (iso === todayISO) return BRAND.azul;
     if (iso < todayISO) return isDark ? "rgba(232,64,37,0.65)" : "rgba(232,64,37,0.75)";
     return isDark ? "rgba(34,197,94,0.75)" : "rgba(34,197,94,0.85)";
+  }
+
+  /** Fundo opaco da linha «hoje» na tabela Controle de Presença (mesma família visual que `dayStyle`). */
+  function fundoLinhaPresencaDiaHoje(colBg: string): string {
+    return isDark
+      ? `color-mix(in srgb, ${colBg} 78%, var(--brand-accent, #1e36f8) 22%)`
+      : `color-mix(in srgb, ${colBg} 88%, var(--brand-accent, #1e36f8) 12%)`;
   }
 
   const contentBox = getPageContentBoxStyle(brand, t);
@@ -1636,6 +1636,8 @@ export default function RhCalendarioPage() {
     for (let d = 1; d <= last; d++) out.push(new Date(y, m, d));
     return out;
   }, [current]);
+
+  const hojeIsoCalendario = toISO(new Date());
 
   if (perm.canView === "nao") {
     return (
@@ -2110,9 +2112,22 @@ export default function RhCalendarioPage() {
                         month: "long",
                         year: "numeric",
                       });
+                      const isHojePresenca = iso === hojeIsoCalendario;
                       return (
-                        <tr key={iso} style={{ background: dataTable.zebraRow(i) }}>
-                          <td style={dataTable.tdCenter}>
+                        <tr
+                          key={iso}
+                          style={{
+                            background: isHojePresenca
+                              ? fundoLinhaPresencaDiaHoje(dataTable.colBg)
+                              : dataTable.zebraRow(i),
+                          }}
+                        >
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              ...(isHojePresenca ? { fontWeight: 700, color: BRAND.azul } : {}),
+                            }}
+                          >
                             {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
                           </td>
                           <td style={dataTable.tdCenter}>{situacao}</td>

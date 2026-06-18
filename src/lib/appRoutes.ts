@@ -76,7 +76,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Links e Materiais", "links_materiais", "LinksEMateriais"),
   page("Spin na Rede", "spin_na_rede", "SpinNaRede"),
   page("Gestão de Operadoras", "gestao_operadoras", "GestaoDeOperadoras"),
-  page("Gestão de Mesas", "gestao_mesas", "GestaoDeMesas"),
+  page("Gestão de Estúdios", "gestao_mesas", "GestaoDeMesas"),
   page("Status Técnico", "status_tecnico", "StatusTecnico"),
   page("Configurações", "configuracoes", "Configuracoes"),
   page("Overview Spin", "mesas_spin", "OverviewSpin", [

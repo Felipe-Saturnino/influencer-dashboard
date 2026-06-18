@@ -28,6 +28,7 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageContentBoxStyle,
@@ -195,13 +196,9 @@ export default function Influencers() {
   const filtered = list.filter((inf) => {
     if (!podeVerInfluencer(inf.id)) return false;
     const p = inf.perfil;
-    const searchLower = search.toLowerCase();
     const nomeExibicao = p?.nome_artistico?.trim() || inf.name || "";
-    if (search && !(
-      nomeExibicao.toLowerCase().includes(searchLower) ||
-      inf.name?.toLowerCase().includes(searchLower) ||
-      inf.email?.toLowerCase().includes(searchLower)
-    )) return false;
+    const searchTrim = search.trim();
+    if (searchTrim && !textoContemBuscaEmAlgum(search, nomeExibicao, inf.name, inf.email)) return false;
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
     if (operadoraSlugsForcado?.length) {

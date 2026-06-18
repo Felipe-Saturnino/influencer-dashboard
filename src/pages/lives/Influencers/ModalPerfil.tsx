@@ -12,6 +12,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { InfluencerModalTabs, StatusBadge } from "./influencerUiComponents";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { emptyPerfil, type Influencer, type Perfil } from "./influencerTypes";
 
 type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
@@ -201,8 +202,7 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
           </div>
         )}
 
-        {tab === "cadastral" && (
-          <>
+        <ModalTabPanel active={tab === "cadastral"} id="inf-edit-panel-cadastral" labelledBy="inf-edit-tab-cadastral">
             <div style={row}>
               <label style={labelStyle}>Nome Artístico</label>
               <input value={form.nome_artistico ?? ""} onChange={(e) => set("nome_artistico", e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
@@ -223,11 +223,9 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
               <label style={labelStyle}>CPF <span style={{ fontSize: 9, color: BRAND.vermelho, fontWeight: 400 }}>(dado sensível)</span></label>
               <input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={{ ...inputStyle, fontFamily: "monospace", letterSpacing: "0.1em" }} placeholder="000.000.000-00" />
             </div>
-          </>
-        )}
+        </ModalTabPanel>
 
-        {tab === "canais" && (
-          <>
+        <ModalTabPanel active={tab === "canais"} id="inf-edit-panel-canais" labelledBy="inf-edit-tab-canais">
             <div style={row}>
               <label style={labelStyle}>Plataformas Ativas</label>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -258,11 +256,9 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
             {(form.canais ?? []).length === 0 && (
               <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Selecione ao menos uma plataforma acima.</p>
             )}
-          </>
-        )}
+        </ModalTabPanel>
 
-        {tab === "financeiro" && (
-          <>
+        <ModalTabPanel active={tab === "financeiro"} id="inf-edit-panel-financeiro" labelledBy="inf-edit-tab-financeiro">
             <div style={row}>
               <label style={labelStyle}>Cachê por Hora (R$) {!podeAlterarStatusCache && <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 400 }}>(somente Gestor/Admin)</span>}</label>
               <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", Math.max(0, v))} style={inputStyle} disabled={!podeAlterarStatusCache} />
@@ -287,11 +283,9 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
                 </div>
               ))}
             </div>
-          </>
-        )}
+        </ModalTabPanel>
 
-        {tab === "operadoras" && (
-          <>
+        <ModalTabPanel active={tab === "operadoras"} id="inf-edit-panel-operadoras" labelledBy="inf-edit-tab-operadoras">
             {operadorasList.length === 0 ? (
               <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada. Acesse Gestão de Operadoras primeiro.</p>
             ) : (
@@ -328,8 +322,7 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
                 );
               })
             )}
-          </>
-        )}
+        </ModalTabPanel>
 
         <button
           type="button"

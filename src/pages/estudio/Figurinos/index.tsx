@@ -16,21 +16,25 @@ import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants"
+import { textoContemBusca } from "../../../lib/searchText"
 import { CtaCriarButton } from "../../../components/CtaCriarButton"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import {
   FiltroFigurinosCategoriaSelect,
   FiltroFigurinosTamanhoSelect,
   FiltroBarTabButton,
-  FiltroOperadoraSelect,
   SortTableTh,
   type SortDir,
 } from "../../../components/dashboard"
+import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect"
+import {
+  buildOperadoraParaEstudioMap,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+} from "../../rh/GestaoStaff/gestaoStaffEstudioHelpers"
 import { onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles"
 import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort"
-import type { Operadora } from "../../../types"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types"
 import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada } from "./figurinosConstants";
 import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
@@ -42,9 +46,9 @@ import {
   fmtDataSóDia,
   labelCondicaoPeca,
   labelEmprestadoParaTabela,
-  labelOperadorasPeca,
+  labelEstudiosPeca,
   normNomeParaFiltroPrestadorFig,
-  pecaSlugsOperadoras,
+  pecaSlugsEstudiosEfetivos,
   tableRowHoverBg,
 } from "./figurinosPageHelpers"
 import { ModalCadastroPeca } from "./ModalCadastroPeca"
@@ -57,7 +61,7 @@ import { ModalScanner } from "./ModalScanner"
 import { ModalSucessoCadastro } from "./ModalSucessoCadastro"
 
 export default function FigurinosPage() {
-  const { theme: t, user, podeVerOperadora } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const { operadoraSlugsForcado } = useDashboardFiltros();
@@ -68,20 +72,22 @@ export default function FigurinosPage() {
 
   const [pecas, setPecas] = useState<RhFigurinoPeca[]>([]);
   const [empPorItem, setEmpPorItem] = useState<Record<string, RhFigurinoEmprestimo>>({});
-  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const [estudios, setEstudios] = useState<{ slug: string; nome: string }[]>([]);
+  const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [aba, setAba] = useRouteTab(
     "rh_figurinos",
     "available",
     ["available", "borrowed", "maintenance", "discarded"] as const,
   );
-  const [filtroOp, setFiltroOp] = useState<string>("todas");
+  const [filtroEstudio, setFiltroEstudio] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");
   const [filtroTam, setFiltroTam] = useState<string>("todas");
   type FigSortCol =
     | "codigo"
-    | "operadora"
+    | "estudio"
     | "categoria"
     | "tamanho"
     | "data_aqui"
@@ -121,24 +127,77 @@ export default function FigurinosPage() {
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [histErro, setHistErro] = useState<string | null>(null);
 
+  const estudioSlugsForcado = useMemo(() => {
+    if (!operadoraSlugsForcado?.length) return null;
+    const set = new Set<string>();
+    for (const op of operadoraSlugsForcado) {
+      const e = opParaEstudio[op];
+      if (e) set.add(e);
+    }
+    return set.size > 0 ? [...set] : null;
+  }, [operadoraSlugsForcado, opParaEstudio]);
+
+  const carregarEstudios = useCallback(async () => {
+    const { data } = await supabase
+      .from("estudios_spin")
+      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+      .eq("ativo", true);
+    const nomeMap: Record<string, string> = {};
+    const opts: { slug: string; nome: string }[] = [];
+    const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+    for (const raw of data ?? []) {
+      const e = raw as {
+        slug: string;
+        nome: string;
+        tipo: string;
+        estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+      };
+      nomeMap[e.slug] = e.nome;
+      opts.push({ slug: e.slug, nome: e.nome });
+      const joins = e.estudios_spin_operadoras;
+      const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+      for (const j of list) {
+        junctionFlat.push({
+          operadora_slug: j.operadora_slug,
+          estudio_slug: e.slug,
+          tipo: e.tipo,
+        });
+      }
+    }
+    const opMap = buildOperadoraParaEstudioMap(junctionFlat);
+    setEstudiosNome(nomeMap);
+    setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+    setOpParaEstudio(opMap);
+    return opMap;
+  }, []);
+
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroGlobal(null);
-    const selEmbed =
-      user?.role === "operador" && operadoraSlugsForcado?.length
-        ? "*, rh_figurino_peca_operadoras!inner(operadora_slug)"
-        : "*, rh_figurino_peca_operadoras(operadora_slug)";
-    let q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
+    const opMap = await carregarEstudios();
+    let slugsForcado: string[] | null = null;
     if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+      const set = new Set<string>();
+      for (const op of operadoraSlugsForcado) {
+        const e = opMap[op];
+        if (e) set.add(e);
+      }
+      slugsForcado = set.size > 0 ? [...set] : null;
+    }
+    const selEmbed =
+      user?.role === "operador" && slugsForcado?.length
+        ? "*, rh_figurino_peca_estudios!inner(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)"
+        : "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
+    let q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
+    if (user?.role === "operador" && slugsForcado?.length) {
       q = q.or(
-        operadoraSlugsForcado.map((s) => `operadora_slug.eq.${s}`).join(","),
-        { foreignTable: "rh_figurino_peca_operadoras" },
+        slugsForcado.map((s) => `estudio_slug.eq.${s}`).join(","),
+        { foreignTable: "rh_figurino_peca_estudios" },
       );
     }
-    const [pr, er, or] = await Promise.all([
+    const [pr, er] = await Promise.all([
       q,
       supabase.from("rh_figurino_emprestimos").select("*").eq("status", "active").limit(500),
-      supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
     if (pr.error) {
       console.error("[Figurinos] Erro ao carregar inventário:", pr.error);
@@ -151,9 +210,8 @@ export default function FigurinosPage() {
       map[e.item_id] = e;
     });
     setEmpPorItem(map);
-    setOperadoras((or.data ?? []) as Operadora[]);
     setLoading(false);
-  }, [user?.role, operadoraSlugsForcado]);
+  }, [user?.role, operadoraSlugsForcado, carregarEstudios]);
 
   useEffect(() => {
     void carregar();
@@ -179,26 +237,36 @@ export default function FigurinosPage() {
   }, [perm.canView, user?.email]);
 
   useEffect(() => {
-    if (user?.role === "operador" && operadoraSlugsForcado?.length === 1) {
-      setFiltroOp(operadoraSlugsForcado[0]);
+    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+      setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, operadoraSlugsForcado]);
+  }, [user?.role, estudioSlugsForcado]);
 
-  const operadoraNome = useCallback(
-    (slug: string) => operadoras.find((o) => o.slug === slug)?.nome ?? slug,
-    [operadoras],
+  const estudioNome = useCallback(
+    (slug: string) => estudiosNome[slug] ?? slug,
+    [estudiosNome],
   );
 
-  const operadorasVisiveis = useMemo(() => operadoras.filter((o) => podeVerOperadora(o.slug)), [operadoras, podeVerOperadora]);
+  const estudiosVisiveis = useMemo(() => {
+    if (estudioSlugsForcado?.length) {
+      return estudios.filter((e) => estudioSlugsForcado.includes(e.slug));
+    }
+    return estudios;
+  }, [estudios, estudioSlugsForcado]);
 
   const passaFiltroBloco = useCallback(
     (p: RhFigurinoPeca) => {
-      if (filtroOp !== "todas" && !pecaSlugsOperadoras(p).includes(filtroOp)) return false;
+      if (
+        filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS &&
+        !pecaSlugsEstudiosEfetivos(p, opParaEstudio).includes(filtroEstudio)
+      ) {
+        return false;
+      }
       if (filtroCat !== "todas" && p.category !== filtroCat) return false;
       if (filtroTam !== "todas" && p.size !== filtroTam) return false;
       return true;
     },
-    [filtroOp, filtroCat, filtroTam],
+    [filtroEstudio, filtroCat, filtroTam, opParaEstudio],
   );
 
   const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
@@ -230,24 +298,16 @@ export default function FigurinosPage() {
     return { tot, av, bo: emprestadas, fx: fixos, ma };
   }, [pecasVisiveisPermissao, empPorItem]);
 
-  const buscaNorm = useMemo(
-    () => busca.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""),
-    [busca],
-  );
-
   const pecasFiltradas = useMemo(() => {
     return pecasVisiveisPermissao.filter((p) => {
       if (p.status !== aba) return false;
-      if (!buscaNorm) return true;
+      if (!busca.trim()) return true;
       const emp = empPorItem[p.id];
-      const opNames = labelOperadorasPeca(p, operadoraNome);
-      const hay = `${p.code} ${p.category} ${opNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "");
-      return hay.includes(buscaNorm);
+      const estNames = labelEstudiosPeca(p, estudioNome, opParaEstudio);
+      const hay = `${p.code} ${p.category} ${estNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`;
+      return textoContemBusca(hay, busca);
     });
-  }, [pecasVisiveisPermissao, aba, buscaNorm, empPorItem, operadoraNome]);
+  }, [pecasVisiveisPermissao, aba, busca, empPorItem, estudioNome, opParaEstudio]);
 
   const pecasOrdenadas = useMemo(() => {
     const arr = [...pecasFiltradas];
@@ -259,10 +319,10 @@ export default function FigurinosPage() {
         case "codigo":
           c = compareLocaleTexto(a.code, b.code, dir);
           break;
-        case "operadora":
+        case "estudio":
           c = compareLocaleTexto(
-            labelOperadorasPeca(a, operadoraNome).toLowerCase(),
-            labelOperadorasPeca(b, operadoraNome).toLowerCase(),
+            labelEstudiosPeca(a, estudioNome, opParaEstudio).toLowerCase(),
+            labelEstudiosPeca(b, estudioNome, opParaEstudio).toLowerCase(),
             dir,
           );
           break;
@@ -319,7 +379,7 @@ export default function FigurinosPage() {
       return compareLocaleTexto(a.code, b.code, "asc");
     });
     return arr;
-  }, [pecasFiltradas, sortFig, empPorItem, operadoraNome]);
+  }, [pecasFiltradas, sortFig, empPorItem, estudioNome, opParaEstudio]);
 
   const pecasNaAbaComFiltroTopo = useMemo(
     () => pecasVisiveisPermissao.filter((p) => p.status === aba),
@@ -369,7 +429,7 @@ export default function FigurinosPage() {
   const resolverCodigo = async (texto: string): Promise<RhFigurinoPeca | null> => {
     const raw = texto.trim();
     if (!raw) return null;
-    const emb = "*, rh_figurino_peca_operadoras(operadora_slug)";
+    const emb = "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
     const byBar = await supabase.from("rh_figurino_pecas").select(emb).eq("barcode", raw).maybeSingle();
     if (byBar.data) return byBar.data as RhFigurinoPeca;
     const upper = raw.toUpperCase();
@@ -529,13 +589,13 @@ export default function FigurinosPage() {
               width: "100%",
             }}
           >
-            {operadorasVisiveis.length > 0 ? (
-              <FiltroOperadoraSelect
+            {estudiosVisiveis.length > 0 ? (
+              <FiltroEstudioSelect
                 pill
                 minWidth={200}
-                value={filtroOp}
-                onChange={setFiltroOp}
-                operadoras={operadorasVisiveis}
+                value={filtroEstudio}
+                onChange={setFiltroEstudio}
+                estudios={estudiosVisiveis}
               />
             ) : null}
             <FiltroFigurinosCategoriaSelect
@@ -660,7 +720,7 @@ export default function FigurinosPage() {
                   {aba === "available" ? (
                     <>
                       {sortHeader("Código", "codigo")}
-                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Data de aquisição", "data_aqui")}
@@ -673,7 +733,7 @@ export default function FigurinosPage() {
                   {aba === "borrowed" ? (
                     <>
                       {sortHeader("Código", "codigo")}
-                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Tipo de retirada", "tipo_ret")}
@@ -688,7 +748,7 @@ export default function FigurinosPage() {
                   {aba === "maintenance" ? (
                     <>
                       {sortHeader("Código", "codigo")}
-                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Motivo", "motivo")}
@@ -702,7 +762,7 @@ export default function FigurinosPage() {
                   {aba === "discarded" ? (
                     <>
                       {sortHeader("Código", "codigo")}
-                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
                       {sortHeader("Motivo", "disc_motivo")}
@@ -732,8 +792,8 @@ export default function FigurinosPage() {
                       {aba === "available" ? (
                         <>
                           <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
-                            {labelOperadorasPeca(p, operadoraNome)}
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelEstudiosPeca(p, estudioNome, opParaEstudio)}>
+                            {labelEstudiosPeca(p, estudioNome, opParaEstudio)}
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
@@ -788,8 +848,8 @@ export default function FigurinosPage() {
                       {aba === "borrowed" ? (
                         <>
                           <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
-                            {labelOperadorasPeca(p, operadoraNome)}
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelEstudiosPeca(p, estudioNome, opParaEstudio)}>
+                            {labelEstudiosPeca(p, estudioNome, opParaEstudio)}
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
@@ -832,8 +892,8 @@ export default function FigurinosPage() {
                       {aba === "maintenance" ? (
                         <>
                           <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
-                            {labelOperadorasPeca(p, operadoraNome)}
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelEstudiosPeca(p, estudioNome, opParaEstudio)}>
+                            {labelEstudiosPeca(p, estudioNome, opParaEstudio)}
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
@@ -891,8 +951,8 @@ export default function FigurinosPage() {
                       {aba === "discarded" ? (
                         <>
                           <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
-                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
-                            {labelOperadorasPeca(p, operadoraNome)}
+                          <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelEstudiosPeca(p, estudioNome, opParaEstudio)}>
+                            {labelEstudiosPeca(p, estudioNome, opParaEstudio)}
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
@@ -915,14 +975,13 @@ export default function FigurinosPage() {
       {modalCadastro ? (
         <ModalCadastroPeca
           onClose={() => setModalCadastro(false)}
-          operadoras={operadoras}
-          podeVerOperadora={podeVerOperadora}
-          operadoraSlugsForcado={operadoraSlugsForcado}
+          estudios={estudiosVisiveis}
+          estudioSlugsForcado={estudioSlugsForcado}
           actor={actorLabel(user)}
           onCreated={async (row) => {
             const { data } = await supabase
               .from("rh_figurino_pecas")
-              .select("*, rh_figurino_peca_operadoras(operadora_slug)")
+              .select("*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)")
               .eq("id", row.id)
               .maybeSingle();
             setPecaNova((data ?? row) as RhFigurinoPeca);
@@ -935,7 +994,7 @@ export default function FigurinosPage() {
       {pecaNova ? (
         <ModalSucessoCadastro
           peca={pecaNova}
-          operadorasTexto={labelOperadorasPeca(pecaNova, operadoraNome)}
+          estudiosTexto={labelEstudiosPeca(pecaNova, estudioNome, opParaEstudio)}
           onClose={() => setPecaNova(null)}
         />
       ) : null}
@@ -951,7 +1010,7 @@ export default function FigurinosPage() {
       {empPeca ? (
         <ModalRetirada
           peca={empPeca}
-          resumoOperadoras={labelOperadorasPeca(empPeca, operadoraNome)}
+          resumoEstudios={labelEstudiosPeca(empPeca, estudioNome, opParaEstudio)}
           actor={actorLabel(user)}
           onClose={() => setEmpPeca(null)}
           onOk={async () => {
@@ -964,7 +1023,7 @@ export default function FigurinosPage() {
       {devPeca ? (
         <ModalDevolucao
           peca={devPeca}
-          resumoOperadoras={labelOperadorasPeca(devPeca, operadoraNome)}
+          resumoEstudios={labelEstudiosPeca(devPeca, estudioNome, opParaEstudio)}
           emprestimo={empPorItem[devPeca.id]}
           actor={actorLabel(user)}
           onClose={() => setDevPeca(null)}
@@ -1006,7 +1065,7 @@ export default function FigurinosPage() {
       {manutPeca ? (
         <ModalManutencaoPeca
           peca={manutPeca}
-          resumoOperadoras={labelOperadorasPeca(manutPeca, operadoraNome)}
+          resumoEstudios={labelEstudiosPeca(manutPeca, estudioNome, opParaEstudio)}
           actor={actorLabel(user)}
           onClose={() => setManutPeca(null)}
           onOk={async () => {
@@ -1019,7 +1078,7 @@ export default function FigurinosPage() {
       {descPeca ? (
         <ModalDescartarPeca
           peca={descPeca}
-          resumoOperadoras={labelOperadorasPeca(descPeca, operadoraNome)}
+          resumoEstudios={labelEstudiosPeca(descPeca, estudioNome, opParaEstudio)}
           actor={actorLabel(user)}
           onClose={() => setDescPeca(null)}
           onOk={async () => {
@@ -1094,7 +1153,7 @@ export default function FigurinosPage() {
       {detalhe ? (
         <ModalDetalhe
           peca={detalhe}
-          operadorasTexto={labelOperadorasPeca(detalhe, operadoraNome)}
+          estudiosTexto={labelEstudiosPeca(detalhe, estudioNome, opParaEstudio)}
           histStatus={histStatus}
           histErro={histErro}
           loadingHist={loadingHist}

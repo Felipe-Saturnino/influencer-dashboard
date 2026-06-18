@@ -8,6 +8,7 @@ import { Operadora } from "../../../types";
 import { AlertCircle, Upload, Check, Palette, Layers, Building2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -21,10 +22,10 @@ import {
   isHomeOperadorTemplatePadrao,
 } from "../../../lib/homeOperadoraTemplate";
 import {
-  timeDbToInput,
   type MesaCadastroResumo,
   type ModalTabId,
 } from "./gestaoOperadorasUi";
+import { fetchMesasOperadoraResumo } from "./gestaoOperadorasFetch";
 
 const ERRO_SALVAR_OPERADORA = "Não foi possível salvar. Verifique os dados e tente novamente.";
 const ERRO_UPLOAD_LOGO = "Não foi possível enviar o logo.";
@@ -61,9 +62,6 @@ export function ModalOperadora({
   const [brandAvisos, setBrandAvisos] = useState<string[]>([]);
   const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
   const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
-  const [turnoManha, setTurnoManha] = useState(() => timeDbToInput(editando?.turno_manha_inicio));
-  const [turnoTarde, setTurnoTarde] = useState(() => timeDbToInput(editando?.turno_tarde_inicio));
-  const [turnoNoite, setTurnoNoite] = useState(() => timeDbToInput(editando?.turno_noite_inicio));
   const [homeTemplate, setHomeTemplate] = useState(() =>
     isHomeOperadorTemplatePadrao(editando?.home_template) ? HOME_OPERADOR_TEMPLATE_PADRAO : (editando?.home_template?.trim() ?? HOME_OPERADOR_TEMPLATE_PADRAO),
   );
@@ -102,17 +100,11 @@ export function ModalOperadora({
     }
     let cancelled = false;
     setMesasLoading(true);
-    void supabase
-      .from("mesas_spin_cadastro")
-      .select("tipo_jogo, nome_mesa, numero_mesa, mesa_identificacao, mesa_identificacao_operadora")
-      .eq("operadora_slug", editando.slug)
-      .order("nome_mesa")
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setMesasLoading(false);
-        if (error || !data) setMesas([]);
-        else setMesas(data as MesaCadastroResumo[]);
-      });
+    void fetchMesasOperadoraResumo(editando.slug).then((data) => {
+      if (cancelled) return;
+      setMesasLoading(false);
+      setMesas(data);
+    });
     return () => {
       cancelled = true;
     };
@@ -195,9 +187,6 @@ export function ModalOperadora({
 
     const logoTrim = logoUrl.trim();
     const fontTrim = fontUrl.trim();
-    const tm = turnoManha.trim();
-    const tt = turnoTarde.trim();
-    const tn = turnoNoite.trim();
 
     setSalvando(true);
     try {
@@ -242,18 +231,6 @@ export function ModalOperadora({
         });
         if (error) throw error;
       } else {
-        if (ativo) {
-          if (mesasLoading) {
-            setErro("Aguarde a verificação das mesas cadastradas antes de salvar.");
-            setSalvando(false);
-            return;
-          }
-          if (mesas.length === 0) {
-            setErro("Só é possível definir o status como Ativa quando existir pelo menos uma mesa registrada para esta operadora.");
-            setSalvando(false);
-            return;
-          }
-        }
         let brandPayload: Record<string, string | null>;
         if (ativo) {
           const ha = normHex6(brandAction);
@@ -267,11 +244,6 @@ export function ModalOperadora({
           }
           if (!logoTrim) {
             setErro("Com status Ativa, o logo é obrigatório.");
-            setSalvando(false);
-            return;
-          }
-          if (!tm || !tt || !tn) {
-            setErro("Com status Ativa, informe o horário de início dos três turnos.");
             setSalvando(false);
             return;
           }
@@ -317,15 +289,6 @@ export function ModalOperadora({
           };
         }
 
-        const turnoPayload =
-          ativo
-            ? { turno_manha_inicio: tm, turno_tarde_inicio: tt, turno_noite_inicio: tn }
-            : {
-                turno_manha_inicio: tm || null,
-                turno_tarde_inicio: tt || null,
-                turno_noite_inicio: tn || null,
-              };
-
         const dedicatedKeys = new Set([
           ...HOME_OPERADOR_TEMPLATES_DEDICADOS.map((x) => x.key),
           ...getRegisteredHomeOperadorTemplateKeys(),
@@ -341,7 +304,7 @@ export function ModalOperadora({
 
         const { error } = await supabase
           .from("operadoras")
-          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload, ...homeTemplatePayload })
+          .update({ nome: nome.trim(), ativo, ...brandPayload, ...homeTemplatePayload })
           .eq("slug", editando.slug);
         if (error) throw error;
       }
@@ -534,8 +497,7 @@ export function ModalOperadora({
         ))}
       </div>
 
-      {aba === "dados" && (
-        <div role="tabpanel" id="panel-op-dados" aria-labelledby="tab-op-dados" tabIndex={0}>
+      <ModalTabPanel active={aba === "dados"} id="panel-op-dados" labelledBy="tab-op-dados">
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Nome
@@ -580,7 +542,7 @@ export function ModalOperadora({
                 Inativa
               </span>
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                Novas operadoras são criadas como inativas até as mesas desta operadora serem cadastradas.
+                Novas operadoras são criadas como inativas. Ative quando estiver pronta para operação.
               </span>
             </div>
           ) : (
@@ -589,26 +551,9 @@ export function ModalOperadora({
               <button
                 type="button"
                 aria-pressed={ativo}
-                title={
-                  !ativo && (mesasLoading || mesas.length === 0)
-                    ? "Cadastre pelo menos uma mesa para esta operadora (Gestão de Mesas) antes de ativar."
-                    : undefined
-                }
                 onClick={() => {
                   setErro("");
-                  if (ativo) {
-                    setAtivo(false);
-                    return;
-                  }
-                  if (mesasLoading) {
-                    setErro("Aguarde a verificação das mesas cadastradas.");
-                    return;
-                  }
-                  if (mesas.length === 0) {
-                    setErro("Só é possível ativar quando existir pelo menos uma mesa registrada para esta operadora.");
-                    return;
-                  }
-                  setAtivo(true);
+                  setAtivo(!ativo);
                 }}
                 style={{
                   border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
@@ -617,17 +562,11 @@ export function ModalOperadora({
                   borderRadius: 10, padding: "6px 16px", cursor: "pointer",
                   fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
                   display: "inline-flex", alignItems: "center", gap: 6,
-                  opacity: !ativo && (mesasLoading || mesas.length === 0) ? 0.65 : 1,
                 }}
               >
                 {ativo && <Check size={13} aria-hidden="true" />}
                 {ativo ? "Ativa" : "Inativa"}
               </button>
-              {!ativo && mesas.length === 0 && !mesasLoading && (
-                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 420, lineHeight: 1.45 }}>
-                  Cadastre pelo menos uma mesa em Gestão de Mesas para poder marcar como Ativa.
-                </span>
-              )}
               {!ativo && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
                   <AlertCircle size={13} aria-hidden="true" /> Vínculos existentes não são removidos
@@ -635,17 +574,14 @@ export function ModalOperadora({
               )}
             </div>
           )}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "brand" && (
-        <div role="tabpanel" id="panel-op-brand" aria-labelledby="tab-op-brand" tabIndex={0}>
+      <ModalTabPanel active={aba === "brand"} id="panel-op-brand" labelledBy="tab-op-brand">
           {brandGrid}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {!isNova && aba === "operacoes" && (
-        <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes" tabIndex={0}>
+      {!isNova ? (
+        <ModalTabPanel active={aba === "operacoes"} id="panel-op-operacoes" labelledBy="tab-op-operacoes">
           <div style={fieldStyle}>
             <label style={labelStyle} htmlFor="op-home-template">
               Home do operador
@@ -667,51 +603,6 @@ export function ModalOperadora({
               Operadores com escopo nesta operadora veem o template selecionado ao entrar na Home. Sem template dedicado,
               usa-se a Home Operador Padrão.
             </p>
-          </div>
-
-          <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
-            Horário de turno dos dealers
-          </div>
-          <div className="app-grid-2-tight" style={{ marginBottom: 24 }}>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>
-                Turno da manhã — horário de início
-                {ativo ? <CampoObrigatorioMark /> : null}
-              </label>
-              <input
-                type="time"
-                value={turnoManha}
-                onChange={(e) => setTurnoManha(e.target.value)}
-                style={inputStyle}
-                aria-label="Horário de início do turno da manhã"
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>
-                Turno da tarde — horário de início
-                {ativo ? <CampoObrigatorioMark /> : null}
-              </label>
-              <input
-                type="time"
-                value={turnoTarde}
-                onChange={(e) => setTurnoTarde(e.target.value)}
-                style={inputStyle}
-                aria-label="Horário de início do turno da tarde"
-              />
-            </div>
-            <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>
-                Turno da noite — horário de início
-                {ativo ? <CampoObrigatorioMark /> : null}
-              </label>
-              <input
-                type="time"
-                value={turnoNoite}
-                onChange={(e) => setTurnoNoite(e.target.value)}
-                style={inputStyle}
-                aria-label="Horário de início do turno da noite"
-              />
-            </div>
           </div>
 
           <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
@@ -776,8 +667,8 @@ export function ModalOperadora({
               </table>
             </div>
           )}
-        </div>
-      )}
+        </ModalTabPanel>
+      ) : null}
 
       {erro && (
         <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginTop: 16, marginBottom: 8, fontFamily: FONT.body }}>

@@ -12,16 +12,17 @@ import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico"
 import type { PrestadorRetiradaRow } from "./figurinosModalShared"
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
 import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants"
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText"
 
 export function ModalRetirada({
   peca,
-  resumoOperadoras,
+  resumoEstudios,
   actor,
   onClose,
   onOk,
 }: {
   peca: RhFigurinoPeca;
-  resumoOperadoras: string;
+  resumoEstudios: string;
   actor: string;
   onClose: () => void;
   onOk: () => void | Promise<void>;
@@ -76,13 +77,9 @@ export function ModalRetirada({
   );
 
   const prestadoresFiltrados = useMemo(() => {
-    const q = buscaPrestador.trim().toLowerCase();
+    const q = buscaPrestador.trim();
     if (!q) return prestadores;
-    return prestadores.filter((p) => {
-      const nome = (p.nome ?? "").toLowerCase();
-      const setor = (p.setor ?? "").toLowerCase();
-      return nome.includes(q) || setor.includes(q);
-    });
+    return prestadores.filter((p) => textoContemBuscaEmAlgum(q, p.nome, p.setor));
   }, [prestadores, buscaPrestador]);
 
   const confirmar = async () => {
@@ -119,7 +116,7 @@ export function ModalRetirada({
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title="Retirada" onClose={onClose} />
-      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      <BlocoResumoPecaBasico peca={peca} estudiosTexto={resumoEstudios} t={t} />
       <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span>

@@ -18,9 +18,10 @@ A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, n
 
 Antes de desenvolver uma feature ou alterar uma página em `src/pages/**`:
 
-1. **Este MDC (Global)** — tema, semântica, **linguagem PT-BR**, tabelas, filtros, permissões, estados, formatos.
-2. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
-3. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
+1. **`business.mdc` (Negócio)** — estúdio vs operadora, dedicada vs network, atores, dados Mesas Spin (quando o trabalho envolver domínio ou modelo de dados).
+2. **Este MDC (Global)** — tema, semântica, **linguagem PT-BR**, tabelas, filtros, permissões, estados, formatos.
+3. **`brand-css-variables.mdc` (Brand)** — whitelabel, header, barra de filtros, carrossel, toolbars vs ações em linha.
+4. **MDC da secção** da pasta da página (ex.: `lives.mdc`, `estudio.mdc`, `dashboards.mdc`) — fluxos e regras de negócio da área.
 
 Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cron, transacional, disparo manual na plataforma — ex.: Status Técnico, criar usuário, recuperar senha):
 
@@ -32,6 +33,7 @@ Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cr
 
 | MDC | Conteúdo |
 |-----|----------|
+| **Business** | Estúdio vs operadora, dedicada vs network, atores, PLS/relatório, glossário, roadmap Gestão de Estúdios |
 | **Global** | Semântica de dados, **identidade visual por jogo**, **linguagem e copy (PT-BR)**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
@@ -537,6 +539,32 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 **Modais / seletor com lista:** mesma barra (`BarraPesquisaPagina`) + listbox abaixo (ex.: Figurinos prestador, RH Talks participantes, concluir vaga HC). Placeholder de staff: `FILTER_SEARCH_STAFF` → `Pesquisar Staff...`.
 
+### Comportamento da busca — insensível a acentos (obrigatório)
+
+Toda filtragem **client-side** acionada por barra de pesquisa ou busca no painel do filtro deve ignorar acentos e diferença de maiúsculas/minúsculas. Ex.: «Flavia» encontra «Flávia»; «jose» encontra «José».
+
+**Helper canónico:** `src/lib/searchText.ts` — não duplicar `normalize("NFD")` nem `toLowerCase().includes` localmente.
+
+| Função | Uso |
+|--------|-----|
+| `normalizarTextoBusca(s)` | Pré-processar termo ou haystack (trim, lower, remove marcas Unicode) |
+| `textoContemBusca(haystack, buscaRaw)` | Um campo — `true` se `buscaRaw` vazia ou coincidir |
+| `textoContemBuscaEmAlgum(buscaRaw, ...partes)` | Vários campos (nome, e-mail, nickname, …) |
+
+```tsx
+import { textoContemBusca, textoContemBuscaEmAlgum } from "../lib/searchText";
+
+rows.filter((r) => textoContemBuscaEmAlgum(busca, r.nome, r.email));
+
+// Debounce com texto pré-normalizado (Portal RH, Informativos):
+setBuscaDeb(normalizarTextoBusca(busca));
+// textoBusca indexado na linha também com normalizarTextoBusca(...)
+```
+
+- **Vagas:** `normalizarBuscaVaga` em `rhVagasFormat.ts` delega a `normalizarTextoBusca` — manter assim.
+- **Componentes de filtro** (`FiltroInfluencerSelect`, `FiltroEntidadeBarSelect`, …): já usam `textoContemBusca` no painel — não reimplementar.
+- **Exceção documentada:** **Central de Denúncias** — parte da busca via `ilike` no Postgres (sem `unaccent`); comportamento pode exigir acento até migração. Ajuda → Troubleshooting → bloco transversal **Plataforma**.
+
 ### Pesquisa dentro do filtro (> 5 valores)
 
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
@@ -544,7 +572,7 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 - **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — busca no painel via **`BarraPesquisaFiltroPainel`** quando `> 5` opções; placeholder Staff: **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
 - **Outros domínios:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
 - Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
-- Filtrar por correspondência parcial no nome.
+- Filtrar por correspondência parcial no nome — **com** `textoContemBusca` / `textoContemBuscaEmAlgum` (§ Comportamento da busca — insensível a acentos).
 
 ---
 
@@ -784,6 +812,30 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 - `autoFocus` em input de modal: `ref` + `setTimeout(..., 100)` — evitar `autoFocus` direto (iOS).
 - Modais com `useApp()` + `useDashboardBrand()` **internamente** — não passar props `t` / `brand` salvo exceção documentada na secção.
 
+### Modal de edição com abas — pré-save entre abas
+
+Modais de **criar/editar** com `role="tablist"` + `FiltroBarTabButton` (Global + Brand §6 abas):
+
+| Regra | Valor |
+|-------|--------|
+| Estado do formulário | **Um único estado no nível do modal** (objeto `form` ou vários `useState` irmãos) — **não** por painel filho isolado |
+| Troca de aba | **Não** resetar campos ao mudar aba; **proibido** `useEffect` que repõe valores de `row`/`props` quando `aba` / `tab` muda |
+| Painéis | **`ModalTabPanel`** (`src/components/ModalTabPanel.tsx`) — todos montados; inativo com `hidden` — **não** `{aba === "x" && …}` que desmonta o painel |
+| Salvar | **Um** handler persiste **todas** as abas editáveis de uma vez — **proibido** gravar só a aba ativa |
+| Inicialização | `useEffect` de sync com `row` / entidade só quando **abre** o modal ou muda o **id** do registro — dependências: `row.id`, não `aba` |
+
+```tsx
+import { ModalTabPanel } from "../components/ModalTabPanel";
+
+<ModalTabPanel active={aba === "funcao"} id="panel-edit-funcao" labelledBy="tab-edit-funcao">
+  {/* campos controlados pelo estado do modal */}
+</ModalTabPanel>
+```
+
+**Referências:** Gestão de Staff (`ModalStaffEditar`), Gestão de Operadoras (`ModalOperadora`), Gestão de Mesas (`ModalEstudio`), Scout (`ModalEditar`), Influencers (`ModalPerfil`).
+
+**Exceção:** abas só leitura (visualização / histórico) podem desmontar conteúdo pesado se documentado na secção — edição mista segue o padrão acima.
+
 ### Exclusão — padrão canónico (ícone ou ícone + texto)
 
 Dois variantes partilham **mesma cor**, **ícone `Trash2`**, **helpers** (`excluirItemUi.ts`) e **pop-up** **`ModalConfirmExcluirPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto) ou `window.confirm()`.
@@ -849,6 +901,47 @@ import {
 ```
 
 **Referência só ícone:** Gestão de Mesas. **Referência ícone + texto:** Vagas, Central de Denúncias, `ModalLive` (Agenda), `ModalEditar` (Scout, Network). **Exceção:** fluxos de domínio que **não** são exclusão (ex.: **Recusar** banca) mantêm `ModalConfirmDelete` com título e copy próprios.
+
+### Arquivamento — padrão canónico (só ícone)
+
+Informativos (Gerenciamento) e Portal RH (Gerenciamento) partilham **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto).
+
+| Peça | Implementação |
+|------|----------------|
+| Botão | **`BtnArquivarLinha`** — ícone **`Archive`** 13px, **30×30**, `borderRadius` **8**, estilo neutro de linha (`t.inputBg`, `t.cardBorder`, `t.textMuted`) |
+| Pop-up | **`ModalConfirmArquivarPadrao`** (`OperacoesModal.tsx`) |
+| Copy / helpers | **`src/lib/arquivarItemUi.ts`** |
+
+**Pop-up:**
+
+| Campo | Valor |
+|-------|--------|
+| Título | **`Arquivar`** |
+| Corpo | `Deseja arquivar {fragmento}?\n\nEsta ação não poderá ser desfeita.` (`textoModalArquivar`) |
+| Fragmento modal | **`descricaoModalArquivarItem(artigoTipo, nome)`** — ex.: `o informativo «Título»`, `a postagem «Assunto»` |
+| CTAs | **Cancelar** / **Arquivar** (gradiente marca, `destructive={false}`) |
+
+```tsx
+import { BtnArquivarLinha } from "../components/BtnArquivarLinha";
+import { ModalConfirmArquivarPadrao } from "../components/OperacoesModal";
+import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../lib/arquivarItemUi";
+
+<BtnArquivarLinha
+  descricaoItem={descricaoBotaoArquivar("informativo", row.assunto)}
+  onClick={() => setAlvoArquivar(row)}
+/>
+
+{alvoArquivar ? (
+  <ModalConfirmArquivarPadrao
+    descricaoItem={descricaoModalArquivarItem("o informativo", alvoArquivar.assunto)}
+    onCancel={() => setAlvoArquivar(null)}
+    onConfirm={() => void confirmarArquivar()}
+    loading={arquivando}
+  />
+) : null}
+```
+
+**Referência:** Informativos → Gerenciamento; Portal RH → Gerenciamento.
 
 ---
 
@@ -1031,6 +1124,7 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Lista >5 opções sem busca no painel do filtro.
+- Busca textual client-side com `toLowerCase().includes` ou `normalize("NFD")` duplicado em vez de `lib/searchText.ts` (`textoContemBusca`, `textoContemBuscaEmAlgum`, `normalizarTextoBusca`).
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.
 - Tabela nova em bloco nível 3 sem `createDataTableBlockStyles` / `getDataTableWrapStyle` (usar padrão Detalhamento Diário — § Tabelas padrão canónico).
@@ -1045,7 +1139,9 @@ Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e v
 - Ajuda/glossário com nome de página divergente do menu (ex.: “Resultado de Lives” em vez de “Resultados”).
 - CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
+- Modal de edição com abas: desmontar painel com `{aba === … &&}`; `useEffect` que reseta campos ao trocar aba; **Salvar** só da aba ativa — ver § Modais pré-save.
 - Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
+- Arquivamento (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.

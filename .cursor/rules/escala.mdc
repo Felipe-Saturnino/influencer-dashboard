@@ -38,7 +38,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Exceções globais nesta secção
 
-- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha Consolidado; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`. **Escala Diária:** `SortTableTh` em **Nickname**, **Escala** e **Turno** (colunas de dia fixas); ordenação inicial **`turno` asc**; coluna **Nome** fixa quando visível.
+- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha Consolidado; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`. **Escala Diária:** `SortTableTh` em **Nome** (Game Presenter e Shuffler), **Nickname**, **Escala** e **Turno**; coluna **Escala** com largura mínima para rótulo + ícone (`STICKY_W_ESCALA`); z-index decrescente nas colunas sticky do cabeçalho para o ícone não ficar sob a coluna seguinte; ordenação inicial **`turno` asc**; coluna **Nome** fixa quando visível.
 - **Marketplace** e **Solicitações:** listas em tabela usam padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
 - Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
@@ -48,28 +48,34 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Gestão de Escala (`rh_gestao_escala`)
 
 - Blocos **Consolidado** e **Escala Diária** (todas as áreas): **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
+- **Barra de filtros:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum») + chips de **área (time)** — Customer Service, Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária.
 - Tabela **Consolidado:** coluna **Turno** com `position: sticky; left: 0` e sombra lateral ao rolar horizontalmente (dias do mês).
-- Grade mensal por área (time): chips de área, **`FiltroOperadoraSelect`** (opção **Todas Operadoras** + `extraOptions` “Nenhuma” se aplicável), carrossel de mês.
-- Toolbar: Nova Escala, Sugestão de Escala, Salvar Alterações, Aprovar Escala — **texto visível**.
+- Grade mensal por área (time): chips de área na barra de filtros, **`FiltroEstudioSelect`** (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.
+- Toolbar: Nova Escala (neutro em rascunho; **vermelho** `#e84025` transparente após aprovação), **Alterar Escala** (azul `#1e36f8` transparente — escala aprovada), Sugestão de Escala, **Salvar Alterações** (azul transparente), **Aprovar Escala** (verde `#22c55e` transparente) — **texto visível**; cores semânticas Global, fundo `color-mix` 22%.
 - Vínculo com Calendário: escala aprovada alimenta presença/agenda.
-- RPCs: `rh_gestao_escala_grade_*`.
+- RPCs: `rh_gestao_escala_grade_*` (incl. `rh_gestao_escala_grade_alterar_celula` com `p_observacao` opcional; `rh_gestao_escala_grade_alteracoes_ultimas` para ícone de comentário na Escala Diária).
+- **Modal Alterar Escala** (escala aprovada, `canEditarOk`): busca prestador → dia (≥ hoje) → status → **Observação** (**obrigatória**, máx. 500, `CampoObrigatorioMark`). Ao salvar, célula na **Escala Diária** exibe ícone `MessageSquare` (canto superior direito, estilo comentário Excel); hover mostra autor, data/hora, valor anterior e observação (se houver). Componente `CelulaIndicadorAlteracaoEscala`; log em `rh_gestao_escala_grade_alteracao` (apagado em **Nova Escala** / `rh_gestao_escala_grade_resetar`).
+- **Histórico de ações:** ícone `History` na barra de filtros (direita, mesma linha do carrossel e Estúdio) abre `ModalHistoricoEscala` — registros do **mês do carrossel** e **área ativa**, ordem **mais novo → mais antigo**. Ações: Sugestão de Escala, Salvar Alterações, Aprovar Escala, Nova Escala (data/hora, usuário, ação); **Alterar Escala** (data/hora, usuário, prestador, dia, observação). Tabela `rh_gestao_escala_historico`; RPCs `rh_gestao_escala_historico_listar` e `rh_gestao_escala_historico_registrar` (sugestão e nova escala em rascunho no cliente); demais ações gravadas nas RPCs de grade.
 - **Handoff:** regras de sugestão CS, aprovação, áreas (customer_service, shift_leader, etc.).
 
 ---
 
 ## Gestão de Staff (`rh_staff`)
 
+- **Dealer = Game Presenter:** mesma função — RH define o time em **Gestão de Prestadores**; o gestor de estúdio completa perfil, estúdio(s), turno e skills aqui; o catálogo para operadora fica em **Gestão de Dealers** (sync automático).
 - `PageHeader`; **ordem do topo:** alertas → **cards consolidado** (`app-grid-3`: sem dados operacionais, cadastrais e de jogo — `StaffKpiResumo.tsx`, regras em `gestaoStaffHelpers.ts`; **somente time Game Presenter** — ocultos na vista time a time de outros times; em «Todos os Times», contagem só de GP no recorte filtrado) → barra de filtros → tabela.
 - **Tabela principal:** padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); ações em ícone centralizadas (Global + Brand).
 - **Linha superior de filtros:** carrossel de time (`carouselNavStyles` — setas 32×32, rótulo `getCarouselPeriodLabelStyle`) + **`FiltroTodosTimesButton`** (pill igual **Histórico** via `FiltroBarPillButton`; rótulo **Todos os Times**; ícone **`UsersRound`** 15px; `aria-label` alternado conforme estado). Textos e toggle `todosTimes` / `idxTime` **inalterados**.
-- Segunda linha: turno, operadora, pesquisa — **`FiltroOperadoraSelect`** (Todas Operadoras / Nenhuma), **`FiltroTurnoSelect`**.
+- Segunda linha: turno, estúdio, pesquisa — **`FiltroEstudioSelect`** (Todos Estúdios / Nenhum), **`FiltroTurnoSelect`**.
+- **Cadastro Staff (modal):** estúdio multi-seleção — **Todos Estúdios** (exclusivo) ou **N** slugs específicos (`staff_estudio_slugs`); filtro Escala e Staff consideram todos os vínculos.
+- **Modal Editar (`ModalStaffEditar`):** abas Função / Skills / Dealer (Dealer só Game Presenter). Pré-save entre abas (Global § Modais — pré-save); **Salvar** grava função, skills e dealer num único patch; histórico inclui alterações de todas as abas.
 - **Handoff:** CRUD staff, organograma operacional.
 
 ---
 
 ## Calendário (`rh_calendario`)
 
-- Aba **Controle de Presença:** KPIs **TRABALHADOS**, **PENDENTES**, **APROVADOS** em grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — formato Financeiro (rótulo em caixa alta acima do valor; sem caixa pai). Bloco da tabela: **`SectionTitle`** **Controle de Presença** (sem ícone). Tabela de presença: padrão canónico (`useDataTableBlock`).
+- Aba **Controle de Presença:** KPIs **TRABALHADOS**, **PENDENTES**, **APROVADOS** em grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — formato Financeiro (rótulo em caixa alta acima do valor; sem caixa pai). Bloco da tabela: **`SectionTitle`** **Controle de Presença** (sem ícone). Tabela de presença: padrão canónico (`useDataTableBlock`); **linha do dia civil de hoje** com fundo em tint `brand-accent` (mesma família visual da célula «hoje» na aba Compromissos).
 - Compromissos, presença, reuniões; modais dedicados.
 - Depende de escala aprovada para mensagens de “sem escala hoje”.
 - **Barra de filtros (única, ambas as secções):** **linha 1** — carrossel de mês (`carouselNavStyles`) + filtros da aba ativa + CTA; **linha 2** — tablist **`FiltroBarTabButton`** («Compromissos» / «Controle de Presença»), com `borderTop` como Marketplace/Solicitações. Compromissos: **`FiltroMeuCalendarioButton`** + **`FiltroCalendarioTimeSelect`** + **`FiltroCalendarioStaffSelect`**; Presença: «Meu Controle» + Time/Staff (seleção única). **Não** multi-select genérico na barra — usar os filtros canónicos de Calendário/Entidade (Brand §6).
@@ -101,5 +107,5 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 - Converter toolbar de escala para só ícone.
 - Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
-- Filtro de operadora sem `FiltroOperadoraSelect`, sem ícone Shield no campo, label lateral “Operadora” ou agregadora diferente de **Todas Operadoras**.
+- Filtro de estúdio sem `FiltroEstudioSelect`, sem ícone Building2 no campo, label lateral “Estúdio” ou agregadora diferente de **Todos Estúdios**.
 - Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.

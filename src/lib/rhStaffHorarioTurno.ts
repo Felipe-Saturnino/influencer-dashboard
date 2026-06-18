@@ -1,7 +1,7 @@
 /**
- * Regras de «Horário do Turno» na Gestão de Staff (3x3 / 5x2 editável; 4x2 / 5x1 só leitura via operadora).
+ * Regras de «Horário do Turno» na Gestão de Staff (3x3 / 5x2 editável; 4x2 / 5x1 só leitura via estúdio/operadora).
  */
-import type { Operadora } from "../types";
+import type { TurnosDealersPick } from "./turnosDealers";
 import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTurnos";
 
 export type OpcaoHorarioTurnoStaff = { value: string; label: string };
@@ -105,17 +105,17 @@ function formatarHoraCurtaParaIntervalo(hhmm: string): string {
 }
 
 /**
- * Texto de leitura para 4x2 / 5x1: intervalo «XXh às XXh» (início na operadora + jornada 8h ou 6h30).
+ * Texto de leitura para 4x2 / 5x1: intervalo «XXh às XXh» (início no estúdio vinculado + jornada 8h ou 6h30).
  */
 export function textoHorarioTurnoSomenteOperadora(
   escalaRaw: string | null | undefined,
   turnoStaffNome: string | null | undefined,
-  op: Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"> | null,
+  op: TurnosDealersPick | null,
 ): string {
   if (!escalaComHorarioTurnoSomenteOperadora(escalaRaw)) return "";
   const t = (turnoStaffNome ?? "").trim();
   if (!t) return "Selecione o turno para ver o horário.";
-  if (!op) return "Associe uma operadora para ver o horário.";
+  if (!op) return "Associe um estúdio para ver o horário.";
 
   const duracaoMin = normalizarEscalaCadastro(escalaRaw ?? "") === "4x2" ? 8 * 60 : 6 * 60 + 30;
 

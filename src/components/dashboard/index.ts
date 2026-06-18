@@ -12,6 +12,15 @@ export {
   type FiltroOperadoraSelectProps,
   type OperadoraFiltroOption,
 } from "../FiltroOperadoraSelect";
+export {
+  FiltroEstudioSelect,
+  ESTUDIO_FILTRO_ARIA_LABEL,
+  ESTUDIO_FILTRO_TODOS_LABEL,
+  ESTUDIO_FILTRO_TODOS_VALUE,
+  type EstudioFiltroOption,
+  type FiltroEstudioExtraOption,
+  type FiltroEstudioSelectProps,
+} from "../FiltroEstudioSelect";
 export { SkeletonKpiCard, SkeletonTableRow } from "./SkeletonCard";
 export { MarginBadge } from "./MarginBadge";
 export { RateCard } from "./RateCard";

@@ -141,7 +141,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "gestao_usuarios", label: "Gestão de Usuários", icon: Shield },
       { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: Factory },
-      { key: "gestao_mesas", label: "Gestão de Mesas", icon: LayoutGrid },
+      { key: "gestao_mesas", label: "Gestão de Estúdios", icon: LayoutGrid },
       { key: "status_tecnico", label: "Status Técnico", icon: Radar },
     ],
   },

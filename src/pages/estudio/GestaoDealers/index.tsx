@@ -28,7 +28,17 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { FiltroOperadoraSelect } from "../../../components/dashboard";
+import { normalizarTextoBusca } from "../../../lib/searchText";
+import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
+import {
+  buildOperadoraParaEstudioMap,
+  FILTRO_STAFF_ESTUDIO_NENHUM,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+} from "../../rh/GestaoStaff/gestaoStaffEstudioHelpers";
+import {
+  dealerEstudioLabelFromRow,
+  dealerRowPassaFiltroEstudio,
+} from "./gestaoDealersEstudioHelpers";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
@@ -57,14 +67,8 @@ const JOGOS_OPTS: { value: DealerJogoCadastro; label: string }[] = [
   { value: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
-function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
-  if (filtroOperadora === "nenhuma") return !d.operadora_slug;
-  if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
-  return true;
-}
-
-function normalizarBuscaTexto(s: string): string {
-  return s.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+function passaFiltroEstudio(d: Dealer, filtroEstudio: string, opParaEstudio: Record<string, string>): boolean {
+  return dealerRowPassaFiltroEstudio(d, filtroEstudio, opParaEstudio);
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
@@ -115,17 +119,31 @@ function estiloFiltroJogoDealer(
 const CARD_SHADOW = (isDark: boolean) =>
   isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
+/** Retratos de dealer: âncora no topo para não cortar rosto em `object-fit: cover`. */
+const DEALER_FOTO_ASPECT_RATIO = "4/5";
+
+const DEALER_FOTO_IMG_STYLE: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  objectPosition: "top center",
+  display: "block",
+};
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GestaoDealers() {
-  const { theme: t, user, podeVerOperadora } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const consolidadoBox = getPageContentBoxStyle(brand, t, { padding: "14px 18px" });
-  const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
+  const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
   const permCentral = usePermission("central_notificacoes");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const [estudios, setEstudios] = useState<{ slug: string; nome: string }[]>([]);
+  const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
   const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
@@ -134,85 +152,157 @@ export default function GestaoDealers() {
 
   const [filtroGenero, setFiltroGenero] = useState<string>("todos");
   const [filtroTurno, setFiltroTurno] = useState<string>("todos");
-  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+  const [filtroEstudio, setFiltroEstudio] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
   const [filtroJogos, setFiltroJogos] = useState<string>("todos");
   const [buscaDealer, setBuscaDealer] = useState("");
 
+  const carregarEstudios = useCallback(async () => {
+    const { data } = await supabase
+      .from("estudios_spin")
+      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+      .eq("ativo", true);
+    const nomeMap: Record<string, string> = {};
+    const opts: { slug: string; nome: string }[] = [];
+    const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+    for (const raw of data ?? []) {
+      const e = raw as {
+        slug: string;
+        nome: string;
+        tipo: string;
+        estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+      };
+      nomeMap[e.slug] = e.nome;
+      opts.push({ slug: e.slug, nome: e.nome });
+      const joins = e.estudios_spin_operadoras;
+      const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+      for (const j of list) {
+        junctionFlat.push({
+          operadora_slug: j.operadora_slug,
+          estudio_slug: e.slug,
+          tipo: e.tipo,
+        });
+      }
+    }
+    const opMap = buildOperadoraParaEstudioMap(junctionFlat);
+    setEstudiosNome(nomeMap);
+    setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+    setOpParaEstudio(opMap);
+    return opMap;
+  }, []);
+
   const carregar = useCallback(async () => {
     setLoading(true);
-    let qDealers = supabase.from("dealers").select("*").not("rh_funcionario_id", "is", null).order("nickname");
-    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      qDealers = qDealers.in("operadora_slug", operadoraSlugsForcado);
+    const opMap = await carregarEstudios();
+    let slugsForcado: string[] | null = null;
+    if (operadoraSlugsForcado?.length) {
+      const set = new Set<string>();
+      for (const op of operadoraSlugsForcado) {
+        const e = opMap[op];
+        if (e) set.add(e);
+      }
+      slugsForcado = set.size > 0 ? [...set] : null;
     }
-    const [dealersRes, operadorasRes] = await Promise.all([
-      qDealers,
+    const { data: dealersRpc, error: dealersErr } = await supabase.rpc("dealers_lista_elenco");
+    let dealersLista: Dealer[];
+    if (dealersErr) {
+      console.error("Gestão de Dealers: RPC dealers_lista_elenco indisponível — fallback em dealers", dealersErr);
+      const { data: legacy, error: legacyErr } = await supabase
+        .from("dealers")
+        .select("*")
+        .not("rh_funcionario_id", "is", null)
+        .order("nickname");
+      if (legacyErr) console.error("Gestão de Dealers: falha ao carregar dealers", legacyErr);
+      dealersLista = (legacy ?? []) as Dealer[];
+    } else {
+      dealersLista = (dealersRpc ?? []) as Dealer[];
+    }
+    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+      dealersLista = dealersLista.filter((d) => {
+        if (slugsForcado?.some((s) => d.estudio_slug === s)) return true;
+        return operadoraSlugsForcado.some((s) => d.operadora_slug === s);
+      });
+    }
+    dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
+    const [operadorasRes] = await Promise.all([
       supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
-    setDealers((dealersRes.data ?? []) as Dealer[]);
+    setDealers(dealersLista);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
     setLoading(false);
-  }, [user?.role, operadoraSlugsForcado]);
+  }, [user?.role, operadoraSlugsForcado, carregarEstudios]);
+
+  const estudioSlugsForcado = useMemo(() => {
+    if (!operadoraSlugsForcado?.length) return null;
+    const set = new Set<string>();
+    for (const op of operadoraSlugsForcado) {
+      const e = opParaEstudio[op];
+      if (e) set.add(e);
+    }
+    return set.size > 0 ? [...set] : null;
+  }, [operadoraSlugsForcado, opParaEstudio]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
   useEffect(() => {
-    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      setFiltroOperadora(operadoraSlugsForcado[0]);
+    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+      setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, operadoraSlugsForcado]);
+  }, [user?.role, estudioSlugsForcado]);
 
-  const opcoesFiltroOperadora = useMemo(
-    () => operadoras.filter((o) => podeVerOperadora(o.slug)),
-    [operadoras, podeVerOperadora]
-  );
+  const estudiosVisiveis = useMemo(() => {
+    if (estudioSlugsForcado?.length) {
+      return estudios.filter((e) => estudioSlugsForcado.includes(e.slug));
+    }
+    return estudios;
+  }, [estudios, estudioSlugsForcado]);
 
-  const dealersPorOperadora = useMemo(
-    () => dealers.filter((d) => passaFiltroOperadora(d, filtroOperadora)),
-    [dealers, filtroOperadora]
+  const dealersPorEstudio = useMemo(
+    () => dealers.filter((d) => passaFiltroEstudio(d, filtroEstudio, opParaEstudio)),
+    [dealers, filtroEstudio, opParaEstudio],
   );
 
   const filtered = useMemo(() => {
-    const q = normalizarBuscaTexto(buscaDealer);
-    return dealersPorOperadora.filter((d) => {
+    const q = normalizarTextoBusca(buscaDealer);
+    return dealersPorEstudio.filter((d) => {
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
       if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return false;
       if (q) {
-        const nick = normalizarBuscaTexto(d.nickname ?? "");
-        const nome = normalizarBuscaTexto(d.nome_real ?? "");
+        const nick = normalizarTextoBusca(d.nickname ?? "");
+        const nome = normalizarTextoBusca(d.nome_real ?? "");
         if (!nick.includes(q) && !nome.includes(q)) return false;
       }
       return true;
     });
-  }, [dealersPorOperadora, filtroGenero, filtroTurno, filtroJogos, buscaDealer]);
+  }, [dealersPorEstudio, filtroGenero, filtroTurno, filtroJogos, buscaDealer]);
 
-  /** Total do consolidado: operadora + turno + gênero + jogo (sem busca por texto). */
+  /** Total do consolidado: estúdio + turno + gênero + jogo (sem busca por texto). */
   const totalDealersDestaque = useMemo(
     () =>
-      dealersPorOperadora.filter((d) => {
+      dealersPorEstudio.filter((d) => {
         if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
         if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
         if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return false;
         return true;
       }).length,
-    [dealersPorOperadora, filtroTurno, filtroGenero, filtroJogos]
+    [dealersPorEstudio, filtroTurno, filtroGenero, filtroJogos]
   );
 
-  /** Contagens por gênero com turno + jogo + operadora aplicados (sem o filtro de gênero). */
+  /** Contagens por gênero com turno + jogo + estúdio aplicados (sem o filtro de gênero). */
   const porGenero = useMemo(() => {
     const acc: Record<string, number> = { feminino: 0, masculino: 0 };
-    dealersPorOperadora.forEach((d) => {
+    dealersPorEstudio.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
       if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return;
       acc[d.genero] = (acc[d.genero] ?? 0) + 1;
     });
     return acc;
-  }, [dealersPorOperadora, filtroTurno, filtroJogos]);
+  }, [dealersPorEstudio, filtroTurno, filtroJogos]);
 
-  /** Contagens por jogo com turno + gênero + operadora (sem o filtro de jogo). */
+  /** Contagens por jogo com turno + gênero + estúdio (sem o filtro de jogo). */
   const porJogo = useMemo(() => {
     const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, futebol_brasileiro: 0 };
-    dealersPorOperadora.forEach((d) => {
+    dealersPorEstudio.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return;
       (d.jogos ?? []).forEach((j) => {
@@ -220,7 +310,7 @@ export default function GestaoDealers() {
       });
     });
     return acc;
-  }, [dealersPorOperadora, filtroTurno, filtroGenero]);
+  }, [dealersPorEstudio, filtroTurno, filtroGenero]);
 
   const irTurnoAnterior = () => {
     if (filtroTurno === "todos") {
@@ -247,13 +337,19 @@ export default function GestaoDealers() {
       ? "Todos os turnos"
       : (TURNO_OPTS.find((o) => o.value === filtroTurno)?.label ?? filtroTurno);
 
-  /** Slug da operadora para solicitações (operador com escopo). */
+  /** Slug da operadora para solicitações (operador com escopo — fluxo Central permanece por operadora). */
   const operadoraSlugAtiva = useMemo(() => {
     if (user?.role !== "operador" || !operadoraSlugsForcado?.length) return null;
     if (operadoraSlugsForcado.length === 1) return operadoraSlugsForcado[0];
-    if (filtroOperadora !== "todas" && filtroOperadora !== "nenhuma") return filtroOperadora;
+    if (
+      filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS &&
+      filtroEstudio !== FILTRO_STAFF_ESTUDIO_NENHUM
+    ) {
+      const op = operadoraSlugsForcado.find((o) => opParaEstudio[o] === filtroEstudio);
+      if (op) return op;
+    }
     return operadoraSlugsForcado[0] ?? null;
-  }, [user?.role, operadoraSlugsForcado, filtroOperadora]);
+  }, [user?.role, operadoraSlugsForcado, filtroEstudio, opParaEstudio]);
 
   if (perm.canView === "nao") {
     return (
@@ -269,14 +365,14 @@ export default function GestaoDealers() {
       <PageHeader
         icon={<PageMenuIcon pageKey="gestao_dealers" />}
         title={getPageMenuLabel("gestao_dealers")}
-        subtitle="Catálogo do elenco com especialidades, turnos e solicitações das operadoras."
+        subtitle="Catálogo de Game Presenters em operação — especialidades, turnos e solicitações das operadoras."
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
         <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} podeInteragir={permCentral.canEditarOk} />
       ) : null}
 
-      {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
+      {/* ─── Bloco filtros: carrossel turnos (Overview) + estúdio ───────────── */}
       <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
@@ -296,16 +392,16 @@ export default function GestaoDealers() {
             >
               <ChevronRight size={14} aria-hidden="true" />
             </button>
-            {showFiltroOperadora && (
-              <FiltroOperadoraSelect
+            {estudiosVisiveis.length > 0 ? (
+              <FiltroEstudioSelect
                 pill
                 minWidth={200}
-                value={filtroOperadora}
-                onChange={setFiltroOperadora}
-                operadoras={opcoesFiltroOperadora}
-                extraOptions={[{ value: "nenhuma", label: "Nenhuma operadora" }]}
+                value={filtroEstudio}
+                onChange={setFiltroEstudio}
+                estudios={estudiosVisiveis}
+                extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum estúdio" }]}
               />
-            )}
+            ) : null}
           </div>
       </div>
 
@@ -447,7 +543,7 @@ export default function GestaoDealers() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
-              <div style={{ aspectRatio: "16/10", background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+              <div style={{ aspectRatio: DEALER_FOTO_ASPECT_RATIO, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
               <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ height: 18, width: "60%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
                 <div style={{ height: 12, width: "40%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
@@ -470,7 +566,7 @@ export default function GestaoDealers() {
             <DealerCard
               key={d.id}
               dealer={d}
-              operadoras={operadoras}
+              estudioLabel={dealerEstudioLabelFromRow(d, estudiosNome, opParaEstudio)}
               onVer={() => setModalVer(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               onHistoricoSolicitacoes={
@@ -487,7 +583,11 @@ export default function GestaoDealers() {
 
       {/* Modais */}
       {modalVer && (
-        <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />
+        <ModalVer
+          dealer={modalVer}
+          estudioLabel={dealerEstudioLabelFromRow(modalVer, estudiosNome, opParaEstudio)}
+          onClose={() => setModalVer(null)}
+        />
       )}
       {modalHistoricoDealer && (
         <ModalHistoricoSolicitacoesDealer
@@ -571,7 +671,7 @@ function DealerFotoCarrossel({
       <img
         src={urls[cur]}
         alt={n > 1 ? `${alt} — foto ${cur + 1} de ${n}` : alt}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        style={DEALER_FOTO_IMG_STYLE}
       />
       {n > 1 ? (
         <>
@@ -626,13 +726,13 @@ function DealerFotoCarrossel({
 // ─── DealerCard ────────────────────────────────────────────────────────────────
 function DealerCard({
   dealer,
-  operadoras,
+  estudioLabel,
   onVer,
   onSolicitar,
   onHistoricoSolicitacoes,
 }: {
   dealer: Dealer;
-  operadoras: Operadora[];
+  estudioLabel: string;
   onVer: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
@@ -642,7 +742,6 @@ function DealerCard({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
-  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
   return (
     <article
@@ -661,7 +760,7 @@ function DealerCard({
     >
       {/* Área da foto */}
       <div style={{
-        aspectRatio: "16/10",
+        aspectRatio: DEALER_FOTO_ASPECT_RATIO,
         background: "linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 100%)",
         position: "relative",
         display: "flex",
@@ -753,9 +852,22 @@ function DealerCard({
           >
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
-          {op && (
-            <OperadoraTag label={op.nome} corPrimaria={op.brand_action} />
-          )}
+          {estudioLabel !== "—" ? (
+            <span
+              style={{
+                background: "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)",
+                color: "var(--brand-accent, #1e36f8)",
+                border: "1px solid color-mix(in srgb, var(--brand-accent, #1e36f8) 28%, transparent)",
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 600,
+                fontFamily: FONT.body,
+              }}
+            >
+              {estudioLabel}
+            </span>
+          ) : null}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
@@ -938,22 +1050,21 @@ function ModalHistoricoSolicitacoesDealer({
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
 function ModalVer({
   dealer,
-  operadoras,
+  estudioLabel,
   onClose,
 }: {
   dealer: Dealer;
-  operadoras: Operadora[];
+  estudioLabel: string;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
-  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title={dealer.nickname} onClose={onClose} />
       {fotosUrls.length > 0 ? (
-        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
+        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: DEALER_FOTO_ASPECT_RATIO }}>
           <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         </div>
       ) : null}
@@ -985,9 +1096,9 @@ function ModalVer({
           </span>
         </div>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Estúdio</span>
           <br />
-          {op ? <OperadoraTag label={op.nome} corPrimaria={op.brand_action} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}
+          <span style={{ fontSize: 14, color: t.text }}>{estudioLabel}</span>
         </div>
         {dealer.perfil_influencer && (
           <div>

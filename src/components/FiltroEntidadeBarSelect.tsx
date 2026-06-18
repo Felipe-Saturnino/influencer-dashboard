@@ -19,6 +19,7 @@ import {
   getFiltroBarPillStateStyle,
 } from "../lib/filterBarStyles";
 import { FILTER_SEARCH_STAFF } from "../lib/searchBarConstants";
+import { textoContemBusca } from "../lib/searchText";
 import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 const SEMANTIC_RED = "#e84025";
@@ -105,9 +106,9 @@ export function FiltroEntidadeBarSelect({
   }, [open, enableSearch]);
 
   const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (!q) return [...items];
-    return items.filter((item) => item.name.toLowerCase().includes(q));
+    return items.filter((item) => textoContemBusca(item.name, searchQuery));
   }, [items, searchQuery]);
 
   const triggerLabel =

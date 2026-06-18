@@ -36,6 +36,8 @@ export type SyncRhPrestadorAuthUserResponse = {
   skipped?: boolean;
   reason?: string;
   created?: boolean;
+  /** Usuário da plataforma desativado após encerramento do vínculo. */
+  deactivated?: boolean;
   userId?: string;
   /** Presente em algumas respostas de erro (corpo JSON). */
   error?: string;
@@ -57,7 +59,18 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
   if (res.reason === "sem_email" || res.reason === "sem_email_spin") {
     return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal no cadastro e salve de novo).";
   }
+  if (res.reason === "prestador_encerrado" || res.reason === "prestador_encerrado_sem_usuario") {
+    return null;
+  }
   return `Prestador salvo, mas o usuário não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
+}
+
+/** Mensagem de sucesso quando o encerramento desativou o login na plataforma. */
+export function mensagemSucessoDesativacaoPrestadorEncerrado(
+  res: SyncRhPrestadorAuthUserResponse | null | undefined,
+): string | null {
+  if (!res?.deactivated) return null;
+  return "O acesso à plataforma do prestador foi desativado.";
 }
 
 /**

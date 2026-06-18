@@ -16,6 +16,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   getPageContentBoxStyle,
@@ -214,8 +215,7 @@ export default function AfiliadosNetwork() {
   }, [loadData]);
 
   const filtered = list.filter((row) => {
-    const q = search.trim().toLowerCase();
-    if (q && !row.nome.toLowerCase().includes(q) && !(row.email ?? "").toLowerCase().includes(q)) return false;
+    if (search.trim() && !textoContemBuscaEmAlgum(search, row.nome, row.email)) return false;
     if (filterStatus === "todos") {
       if (row.status === "fechado") return false;
     } else if (row.status !== filterStatus) {

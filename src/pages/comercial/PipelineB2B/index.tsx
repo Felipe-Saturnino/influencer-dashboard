@@ -44,6 +44,7 @@ import {
   PIPELINE_COMERCIAL_NOMES,
   PIPELINE_TABS,
   PIPELINE_TAB_LABEL,
+  STATUS_DOMINIO_LABEL,
   TAB_TABLE_CONFIG,
   type StatusPipeline,
   type StatusProduto,
@@ -123,7 +124,7 @@ export default function PipelineB2B() {
   const [rows, setRows] = useState<PipelineMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "marca", dir: "asc" });
+  const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "razao", dir: "asc" });
 
   const [registroMarca, setRegistroMarca] = useState<PipelineMarcaRow | null>(null);
   const [verMarca, setVerMarca] = useState<PipelineMarcaRow | null>(null);
@@ -136,8 +137,30 @@ export default function PipelineB2B() {
   const pageBox = getPageContentBoxStyle(brand, t);
   const filterBox = getPageFilterBoxStyle(brand, t);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const patchMarcaRow = useCallback(
+    (marcaId: string, patch: (row: PipelineMarcaRow) => PipelineMarcaRow) => {
+      let updated: PipelineMarcaRow | undefined;
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.id !== marcaId) return r;
+          updated = patch(r);
+          return updated;
+        }),
+      );
+      if (updated) {
+        setVerMarca((v) => (v?.id === marcaId ? updated! : v));
+        setRegistroMarca((v) => (v?.id === marcaId ? updated! : v));
+        setContatoModal((m) =>
+          m && m.marca.id === marcaId ? { ...m, marca: updated! } : m,
+        );
+      }
+    },
+    [],
+  );
+
+  const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
+    const showLoading = opts?.showLoading !== false;
+    if (showLoading) setLoading(true);
     const [marcasRes, gestoresRes] = await Promise.all([
       supabase
         .from("comercial_marcas")
@@ -153,20 +176,22 @@ export default function PipelineB2B() {
       supabase
         .from("profiles")
         .select("id, name")
-        .eq("role", "gestor")
-        .eq("ativo", true)
-        .in("name", [...PIPELINE_COMERCIAL_NOMES]),
+        .in("name", [...PIPELINE_COMERCIAL_NOMES])
+        .or("ativo.is.null,ativo.eq.true"),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
+    if (gestoresRes.error) console.error(gestoresRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
 
-    const names = Object.fromEntries(comercialList.map((c) => [c.id, c.name]));
+    const names = Object.fromEntries(
+      comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
+    );
     const mapped = (marcasRes.data ?? []).map((r) => mapRow(r as Record<string, unknown>, names));
     setRows(mapped);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -204,7 +229,6 @@ export default function PipelineB2B() {
 
   async function updateComercial(row: PipelineMarcaRow, userId: string | null) {
     if (!perm.canEditarOk) return;
-    if (row.status_dominio === "inativo") return;
     const anterior = row.comercial_user_id;
     const { error } = await supabase
       .from("comercial_marcas")
@@ -220,7 +244,50 @@ export default function PipelineB2B() {
       pipelineComercialNomePorId(anterior, comerciais) ?? "—",
       pipelineComercialNomePorId(userId, comerciais) ?? "—",
     );
-    void loadData();
+    patchMarcaRow(row.id, (r) => ({
+      ...r,
+      comercial_user_id: userId,
+      comercial_nome: userId ? pipelineComercialNomePorId(userId, comerciais) : null,
+    }));
+  }
+
+  async function updateDominio(marcaId: string, novoDominio: string | null): Promise<boolean> {
+    if (!perm.canEditarOk) return false;
+    const row = rows.find((r) => r.id === marcaId);
+    if (!row) return false;
+
+    const anterior = row.dominio;
+    if ((anterior ?? null) === (novoDominio ?? null)) return true;
+
+    const patch: { dominio: string | null; status_dominio?: "inativo" } = {
+      dominio: novoDominio,
+    };
+    if ((anterior ?? null) !== (novoDominio ?? null)) {
+      patch.status_dominio = "inativo";
+    }
+
+    const { error } = await supabase.from("comercial_marcas").update(patch).eq("id", marcaId);
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    await insertHistorico(marcaId, "dominio", anterior, novoDominio);
+    if (patch.status_dominio === "inativo" && row.status_dominio !== "inativo") {
+      await insertHistorico(
+        marcaId,
+        "status_dominio",
+        STATUS_DOMINIO_LABEL[row.status_dominio],
+        STATUS_DOMINIO_LABEL.inativo,
+      );
+    }
+
+    patchMarcaRow(marcaId, (r) => ({
+      ...r,
+      dominio: novoDominio,
+      status_dominio: patch.status_dominio ?? r.status_dominio,
+    }));
+    return true;
   }
 
   async function updateStatus(row: PipelineMarcaRow, status: StatusPipeline) {
@@ -239,7 +306,11 @@ export default function PipelineB2B() {
       return;
     }
     await insertHistorico(row.id, "status_pipeline", anterior, status);
-    void loadData();
+    patchMarcaRow(row.id, (r) => ({
+      ...r,
+      status_pipeline: status,
+      status_folha: folha,
+    }));
   }
 
   async function updateProduto(
@@ -263,7 +334,16 @@ export default function PipelineB2B() {
       return;
     }
     await insertHistorico(row.id, tipo, anterior, status);
-    void loadData();
+    patchMarcaRow(row.id, (r) => {
+      const produtos = [...r.produtos];
+      const idx = produtos.findIndex((p) => p.produto === tipo);
+      if (idx >= 0) {
+        produtos[idx] = { ...produtos[idx], status_produto: status };
+      } else {
+        produtos.push({ produto: tipo, status_produto: status });
+      }
+      return { ...r, produtos };
+    });
   }
 
   function toggleSort(col: TableCol) {
@@ -437,6 +517,8 @@ export default function PipelineB2B() {
           allMarcas={rows}
           onClose={() => setVerMarca(null)}
           onOpenMarca={(m) => setVerMarca(m)}
+          canEditar={perm.canEditarOk}
+          onSavedDominio={updateDominio}
         />
       ) : null}
 
@@ -446,7 +528,7 @@ export default function PipelineB2B() {
           marca={contatoModal.marca}
           contato={contatoModal.mode === "edit" ? contatoModal.contato : undefined}
           onClose={() => setContatoModal(null)}
-          onSaved={() => void loadData()}
+          onSaved={() => void loadData({ showLoading: false })}
           canEditar={perm.canEditarOk}
         />
       ) : null}

@@ -9,13 +9,19 @@ export type RhWithdrawalType = "emprestar" | "fixo";
 
 export type RhReturnCondition = "good" | "needs_cleaning" | "damaged";
 
-/** Linha da relação N:N com operadoras (embed Supabase). */
+/** Linha da relação N:N com estúdios (embed Supabase). */
+export interface RhFigurinoPecaEstudio {
+  estudio_slug: string;
+}
+
+/** Legado — mantido para peças antigas / sync operadora. */
 export interface RhFigurinoPecaOperadora {
   operadora_slug: string;
 }
 
 export interface RhFigurinoPeca {
   id: string;
+  rh_figurino_peca_estudios?: RhFigurinoPecaEstudio[];
   rh_figurino_peca_operadoras?: RhFigurinoPecaOperadora[];
   code: string;
   barcode: string;

@@ -12,13 +12,13 @@ import { BlocoResumoPecaBasico } from "./BlocoResumoPecaBasico"
 
 export function ModalManutencaoPeca({
   peca,
-  resumoOperadoras,
+  resumoEstudios,
   actor,
   onClose,
   onOk,
 }: {
   peca: RhFigurinoPeca;
-  resumoOperadoras: string;
+  resumoEstudios: string;
   actor: string;
   onClose: () => void;
   onOk: () => void | Promise<void>;
@@ -60,7 +60,7 @@ export function ModalManutencaoPeca({
   return (
     <ModalBase onClose={onClose} maxWidth={500}>
       <ModalHeader title="Manutenção" onClose={onClose} />
-      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      <BlocoResumoPecaBasico peca={peca} estudiosTexto={resumoEstudios} t={t} />
       <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
         Tipo *
         <select

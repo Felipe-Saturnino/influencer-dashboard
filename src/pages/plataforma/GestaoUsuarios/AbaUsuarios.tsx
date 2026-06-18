@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { KeyRound } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useApp } from "../../../context/AppContext";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
@@ -197,11 +198,7 @@ export function AbaUsuarios({
   };
 
   const porBusca = busca.trim()
-    ? usuarios.filter(
-        (u) =>
-          (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
-          (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
-      )
+    ? usuarios.filter((u) => textoContemBuscaEmAlgum(busca, u.name, u.email))
     : usuarios;
 
   const baseContagemStatus = porBusca.filter((u) => passaFiltroPerfil(u, filtroPerfilSet));

@@ -1,5 +1,7 @@
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { textoContemBusca } from "../../../lib/searchText";
 import type { SortDir } from "../../../components/dashboard";
+import { normalizeDominioForCheck } from "../../../lib/comercialDominioValidation";
 import {
   STATUS_FOLHA_LABEL,
   STATUS_PIPELINE_LABEL,
@@ -20,33 +22,84 @@ import {
 } from "./constants";
 import type { ComercialContato, ComercialOpcao, PipelineMarcaRow } from "./types";
 
+function normalizePipelineComercialNome(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export function buildPipelineComerciais(
   profiles: { id: string; name: string }[],
 ): ComercialOpcao[] {
-  const byName = new Map(profiles.map((p) => [p.name, p]));
-  return PIPELINE_COMERCIAL_NOMES.flatMap((name) => {
-    const p = byName.get(name);
-    return p ? [{ id: p.id, name }] : [];
+  const byName = new Map(
+    profiles.map((p) => [normalizePipelineComercialNome(p.name), p]),
+  );
+  return PIPELINE_COMERCIAL_NOMES.map((name) => {
+    const p = byName.get(normalizePipelineComercialNome(name));
+    return { id: p?.id ?? null, name };
   });
 }
 
-export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<string> {
-  return new Set(comerciais.map((c) => c.id));
+/** Valor sintético no popover quando o perfil canónico ainda não foi resolvido. */
+export function pipelineComercialMissingOptionValue(name: string): string {
+  return `__missing__:${name}`;
 }
 
-/** Domínio inativo → coluna Comercial exibe «Site Offline» (automático, sem filtro). */
+export function pipelineComercialIsMissingOptionValue(value: string): boolean {
+  return value.startsWith("__missing__:");
+}
+
+/** Opções fixas do popover inline — Nenhum + PIPELINE_COMERCIAL_NOMES (sempre visíveis). */
+export function buildPipelineComercialPopoverOptions(
+  comerciais: ComercialOpcao[],
+): string[] {
+  return [
+    "",
+    ...PIPELINE_COMERCIAL_NOMES.map((name) => {
+      const c = comerciais.find((x) => x.name === name);
+      return c?.id ?? pipelineComercialMissingOptionValue(name);
+    }),
+  ];
+}
+
+export function pipelineComercialPopoverLabel(
+  value: string,
+  comerciais: ComercialOpcao[],
+): string {
+  if (!value) return COMERCIAL_FILTRO_NENHUM_LABEL;
+  if (pipelineComercialIsMissingOptionValue(value)) {
+    return value.slice("__missing__:".length);
+  }
+  return comerciais.find((c) => c.id === value)?.name ?? "—";
+}
+
+export function pipelineComercialPopoverUserId(value: string): string | null {
+  if (!value || pipelineComercialIsMissingOptionValue(value)) return null;
+  return value;
+}
+
+export function pipelineComercialCanonicoIds(comerciais: ComercialOpcao[]): Set<string> {
+  return new Set(comerciais.map((c) => c.id).filter((id): id is string => Boolean(id)));
+}
+
+/** Domínio inativo no banco (KPI Site Offline, consolidado). */
 export function pipelineComercialIsSiteOffline(
   row: Pick<PipelineMarcaRow, "status_dominio">,
 ): boolean {
   return row.status_dominio === "inativo";
 }
 
-/** Rótulo da coluna — Site Offline (automático), Marcus Morin, Fred Ring ou «—». */
+/** Badge «Site Offline» na coluna Comercial — domínio inativo sem comercial atribuído. */
+export function pipelineComercialExibeSiteOffline(
+  row: Pick<PipelineMarcaRow, "status_dominio" | "comercial_user_id">,
+): boolean {
+  return row.status_dominio === "inativo" && !row.comercial_user_id;
+}
+
+/** Rótulo da coluna — Site Offline (automático), comerciais canónicos ou «—». */
 export function pipelineComercialDisplayNome(
   row: Pick<PipelineMarcaRow, "comercial_user_id" | "comercial_nome" | "status_dominio">,
   comerciais: ComercialOpcao[],
 ): string {
-  if (pipelineComercialIsSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
+  if (pipelineComercialExibeSiteOffline(row)) return PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL;
   if (!row.comercial_user_id) return "—";
   const nome =
     row.comercial_nome ??
@@ -54,10 +107,6 @@ export function pipelineComercialDisplayNome(
     null;
   if (nome && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nome)) return nome;
   return "—";
-}
-
-export function pipelineComercialPodeEditar(row: Pick<PipelineMarcaRow, "status_dominio">): boolean {
-  return !pipelineComercialIsSiteOffline(row);
 }
 
 export function pipelineComercialNomePorId(
@@ -68,6 +117,17 @@ export function pipelineComercialNomePorId(
   return comerciais.find((c) => c.id === userId)?.name ?? null;
 }
 
+/** Normaliza input de domínio no modal de edição (vazio → null). */
+export function parseDominioMarcaInput(raw: string): { value: string | null; error?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { value: null };
+  const normalized = normalizeDominioForCheck(trimmed);
+  if (!normalized) {
+    return { value: null, error: "Informe um domínio válido (ex.: apostou.bet.br)." };
+  }
+  return { value: normalized };
+}
+
 export function buildComercialFiltroExtraOptions(
   comerciais: ComercialOpcao[],
 ): { value: string; label: string }[] {
@@ -76,7 +136,7 @@ export function buildComercialFiltroExtraOptions(
   ];
   for (const name of PIPELINE_COMERCIAL_NOMES) {
     const c = comerciais.find((x) => x.name === name);
-    opts.push({ value: c?.id ?? `__missing__:${name}`, label: name });
+    if (c?.id) opts.push({ value: c.id, label: name });
   }
   return opts;
 }
@@ -152,16 +212,23 @@ export function rowMatchesConsolidadoFolha(
     case "conexao_iniciada":
       return row.status_pipeline === "conexao" && produtosAmbosVazios(row);
     case "conexao_realizada":
-      return row.status_pipeline === "conexao" && algumProdutoComValor(row);
+      if (row.status_pipeline !== "conexao") return false;
+      if (context === "kpi" && algumProdutoStatus(row, ["sem_interesse"])) return false;
+      return algumProdutoComValor(row);
     case "neg_sem":
-      return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+      if (context === "hierarchy") {
+        return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+      }
+      return row.status_pipeline === "conexao" && algumProdutoStatus(row, ["sem_interesse"]);
     case "neg_enviar":
       if (row.status_pipeline !== "negociacao") return false;
       if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       return algumProdutoStatus(row, ["sem_proposta"]) || produtosAmbosVazios(row);
     case "neg_interessado":
       if (row.status_pipeline !== "negociacao") return false;
       if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       if (context === "hierarchy") {
         return algumProdutoComValor(row);
       }
@@ -176,7 +243,7 @@ export function rowMatchesConsolidadoFolha(
       );
     case "fech_enviado":
       return (
-        row.status_pipeline === "fechado" &&
+        row.status_pipeline === "negociacao" &&
         !algumProdutoStatus(row, ["ativo"]) &&
         !algumProdutoStatus(row, ["contrato_assinado"]) &&
         algumProdutoStatus(row, ["contrato_enviado"])
@@ -253,18 +320,13 @@ export function filterMarcas(
 
   if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
     list = list.filter(
-      (r) =>
-        !pipelineComercialIsSiteOffline(r) &&
-        (!r.comercial_user_id || !canonicalIds.has(r.comercial_user_id)),
+      (r) => !r.comercial_user_id || !canonicalIds.has(r.comercial_user_id),
     );
   } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
-    list = list.filter(
-      (r) =>
-        !pipelineComercialIsSiteOffline(r) && r.comercial_user_id === comercialFiltro,
-    );
+    list = list.filter((r) => r.comercial_user_id === comercialFiltro);
   }
 
-  const q = busca.trim().toLowerCase();
+  const q = busca.trim();
   if (q) {
     list = list.filter((r) => {
       const hay = [
@@ -272,10 +334,8 @@ export function filterMarcas(
         r.empresa.razao_social,
         r.empresa.cnpj,
         ...r.contatos.map((c) => c.nome),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
+      ].join(" ");
+      return textoContemBusca(hay, q);
     });
   }
 
@@ -290,9 +350,30 @@ export function defaultFolhaForPipeline(pipeline: StatusPipeline): StatusFolha {
   return FOLHA_BY_PIPELINE[pipeline][0];
 }
 
-export type RazaoMerge = { row: PipelineMarcaRow; rowSpan: number; showRazao: boolean };
+export type RazaoMerge = {
+  row: PipelineMarcaRow;
+  rowSpan: number;
+  showRazao: boolean;
+  /** Índice de zebra por CNPJ (todas as marcas da mesma razão compartilham). */
+  razaoStripeIndex: number;
+};
+
+/** Ordem de primeira aparição na lista exibida — define intercalação por razão social. */
+export function buildCnpjStripeIndex(rows: PipelineMarcaRow[]): Map<string, number> {
+  const map = new Map<string, number>();
+  let idx = 0;
+  for (const r of rows) {
+    const cnpj = r.empresa.cnpj;
+    if (!map.has(cnpj)) {
+      map.set(cnpj, idx);
+      idx += 1;
+    }
+  }
+  return map;
+}
 
 export function buildRazaoMerge(rows: PipelineMarcaRow[]): RazaoMerge[] {
+  const stripeByCnpj = buildCnpjStripeIndex(rows);
   const out: RazaoMerge[] = [];
   let i = 0;
   while (i < rows.length) {
@@ -300,8 +381,9 @@ export function buildRazaoMerge(rows: PipelineMarcaRow[]): RazaoMerge[] {
     let j = i;
     while (j < rows.length && rows[j].empresa.cnpj === cnpj) j += 1;
     const span = j - i;
+    const stripe = stripeByCnpj.get(cnpj) ?? 0;
     for (let k = i; k < j; k += 1) {
-      out.push({ row: rows[k], rowSpan: span, showRazao: k === i });
+      out.push({ row: rows[k], rowSpan: span, showRazao: k === i, razaoStripeIndex: stripe });
     }
     i = j;
   }

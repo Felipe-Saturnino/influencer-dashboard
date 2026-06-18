@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Loader2 } from "lucide-react"
 import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync"
+import { normalizarTextoBusca } from "../../../lib/searchText"
 import type { RhFigurinoCondition, RhFigurinoEmprestimo, RhFigurinoPeca } from "./types"
 
 export function tableRowHoverBg(isDark: boolean): string {
@@ -19,11 +20,7 @@ export function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string
 
 /** Alinha nome do perfil com o texto gravado em «Emprestado para» / retirada (borrower_name). */
 export function normNomeParaFiltroPrestadorFig(s: string | null | undefined): string {
-  return (s ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "");
+  return normalizarTextoBusca(s);
 }
 
 /** Nome exibido na coluna «Emprestado para» — primeiro e último token. */
@@ -75,14 +72,53 @@ export function actorLabel(user: { name: string; email: string } | null): string
   return (user.name || "").trim() || user.email;
 }
 
-export function pecaSlugsOperadoras(p: RhFigurinoPeca): string[] {
+export function pecaSlugsEstudiosDiretos(p: RhFigurinoPeca): string[] {
+  const r = p.rh_figurino_peca_estudios;
+  if (!r || !Array.isArray(r)) return [];
+  return [...new Set(r.map((x) => x.estudio_slug.trim()).filter(Boolean))];
+}
+
+export function pecaSlugsOperadorasLegado(p: RhFigurinoPeca): string[] {
   const r = p.rh_figurino_peca_operadoras;
   if (!r || !Array.isArray(r)) return [];
   return [...new Set(r.map((x) => x.operadora_slug))];
 }
 
-export function labelOperadorasPeca(p: RhFigurinoPeca, slugParaNome: (slug: string) => string): string {
-  const slugs = pecaSlugsOperadoras(p);
+/** Estúdios da peça (coluna embed ou fallback operadora → estúdio). */
+export function pecaSlugsEstudiosEfetivos(
+  p: RhFigurinoPeca,
+  opParaEstudio: Record<string, string> = {},
+): string[] {
+  const direct = pecaSlugsEstudiosDiretos(p);
+  if (direct.length > 0) return direct;
+  const est = new Set<string>();
+  for (const op of pecaSlugsOperadorasLegado(p)) {
+    const e = opParaEstudio[op.trim()];
+    if (e) est.add(e);
+  }
+  return [...est];
+}
+
+/** @deprecated Use pecaSlugsOperadorasLegado */
+export function pecaSlugsOperadoras(p: RhFigurinoPeca): string[] {
+  return pecaSlugsOperadorasLegado(p);
+}
+
+export function labelEstudiosPeca(
+  p: RhFigurinoPeca,
+  slugParaNome: (slug: string) => string,
+  opParaEstudio: Record<string, string> = {},
+): string {
+  const slugs = pecaSlugsEstudiosEfetivos(p, opParaEstudio);
   if (slugs.length === 0) return "—";
   return slugs.map(slugParaNome).join(" · ");
+}
+
+/** @deprecated Use labelEstudiosPeca */
+export function labelOperadorasPeca(
+  p: RhFigurinoPeca,
+  slugParaNome: (slug: string) => string,
+  opParaEstudio: Record<string, string> = {},
+): string {
+  return labelEstudiosPeca(p, slugParaNome, opParaEstudio);
 }

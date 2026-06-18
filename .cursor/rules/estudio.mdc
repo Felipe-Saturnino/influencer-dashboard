@@ -20,10 +20,10 @@ alwaysApply: false
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
-| `gestao_dealers` | Gestão de Dealers | Catálogo do elenco com especialidades, turnos e solicitações das operadoras. |
+| `gestao_dealers` | Gestão de Dealers | Catálogo de Game Presenters em operação — especialidades, turnos e solicitações das operadoras. |
 | `central_notificacoes` | Central de Notificações | **Fixo:** Gerencie solicitações entre operadoras e estúdio com histórico de conversas. |
 | `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
-| `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por operadora para o dealer usar em mesa. |
+| `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por estúdio para o dealer usar em mesa. |
 
 **Central de Notificações:** após o `PageHeader`, manter `<p>` separado para texto dinâmico (ex.: contador de pendentes ou “Campanhas de roteiro…”) — não substituir o `subtitle` fixo do header.
 
@@ -50,12 +50,26 @@ alwaysApply: false
 
 ## Gestão de Dealers (`gestao_dealers`)
 
+### Dealer = Game Presenter (fluxo entre páginas)
+
+| Etapa | Página | Quem | O quê |
+|-------|--------|------|-------|
+| 1 | **Gestão de Prestadores** | RH | Cadastra o colaborador, define organograma e **promove/altera a função** (time no organograma). |
+| 2 | **Gestão de Staff** | Gestor de estúdio | Configura perfil operacional do **Game Presenter**: nickname, turno, estúdio(s), skills, fotos, bio. |
+| 3 | **Gestão de Dealers** | Operadora / Spin | **Catálogo somente leitura** do elenco em operação — dealers = prestadores GP ativos/indisponíveis sincronizados de Staff. Operadora vê quem trabalha no **estúdio** vinculado à parceira. |
+
+- **Dealer** e **Game Presenter** são a **mesma função** — nomes distintos por contexto (catálogo para operadora vs. organograma/escala).
+- Registro em `dealers` é **automático** via `syncGamePresenterDealerFromRhFuncionario` ao salvar Staff ou alterar vínculo em Prestadores; **não** há CTA de cadastro nesta página.
+- **Elenco visível:** prestador com `status` `ativo` ou `indisponivel`, time **Game Presenter** ativo no organograma e `rh_funcionario_id` vinculado. Sai do catálogo ao mudar de time, encerrar prestação ou time inativo (sync remove o dealer).
+- Query via RPC **`dealers_lista_elenco`** (`SECURITY DEFINER`) — filtra GP ativo/indisponível no servidor sem exigir leitura de `rh_funcionarios` no cliente (RLS bloqueava o join aninhado para operadora). Fallback: `dealers` com `rh_funcionario_id` se a RPC ainda não existir.
+
 - Grid de cards: `repeat(auto-fill, minmax(min(100%, 300px), 1fr))`.
 - **Skeleton** obrigatório no loading (6 placeholders) — nunca só texto “Carregando…”.
 - `DealerCard`: `<article aria-label={...}>`, badge **PENDENTE** quando `status === "pendente"`.
 - Label **“Bio do Dealer”** — nunca “Perfil do Influencer”.
 - Query `dealer_observacoes`: sempre `.limit(20)`.
-- Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); gênero/jogo com `aria-pressed`.
+- Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); **`FiltroEstudioSelect`** (**Todos Estúdios**, opção **Nenhum estúdio**); gênero/jogo com `aria-pressed`.
+- Coluna/badge de vínculo: **Estúdio** (`dealerEstudioLabelFromRow` com fallback operadora→estúdio). `operadora_slug` mantido para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
 
@@ -77,26 +91,29 @@ alwaysApply: false
 ## Figurinos (`rh_figurinos`)
 
 - **Consolidado (topo):** grelha `app-grid-kpi-5` + `getPageKpiSectionGapStyle()` — cards no formato Financeiro (`borderLeft` 3px, rótulo em caixa alta acima do valor: **TOTAL DE PEÇAS**, **DISPONÍVEIS**, etc.); **sem** título de secção nem caixa pai.
-- **Filtros:** só `getPageFilterBoxStyle` (operadora, categoria, tamanho, busca, abas) — **sem** título **FILTROS**.
+- **Filtros:** só `getPageFilterBoxStyle` (estúdio, categoria, tamanho, busca, abas) — **sem** título **FILTROS**.
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
 - Tabelas 4 abas: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); hover nas linhas; tablist ARIA completo.
-- Filtros na barra (strip `primaryTransparent*`): **`FiltroOperadoraSelect`** (**Todas Operadoras**), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
+- Filtros na barra (strip `primaryTransparent*`): **`FiltroEstudioSelect`** (**Todos Estúdios**), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
+- Peças vinculadas por **`rh_figurino_peca_estudios`** (N:N); cadastro via RPC `rh_figurino_criar_peca` com **`p_estudio_slugs`**. Junction **`rh_figurino_peca_operadoras`** mantida só para legado/sync. Coluna e modais exibem **Estúdio** (`labelEstudiosPeca` com fallback operadora→estúdio).
 - **Handoff:** barcode, condição da peça, abas.
 
 ---
 
 ## Roteiro de Mesa (`roteiro_mesa`)
 
-- Filtros na barra: **Jogos** e **Tipo** com **`FiltroSemanticoTabPill`** (visual abas Overview Spin — `borderRadius` 10, `10px 18px`, `minHeight` 44; ícones por jogo via **`GAME_IDENTITY_ICONS`** / `lib/gameIdentityIcons.tsx`, alinhado a Gestão de Dealers; ativo na cor de **`getGameTagChipStyle` / `gameIdentityTextColor`** de `lib/gameIdentityColors.ts` — Global § Identidade por jogo — ou `TIPO_CONFIG`, não marca); **operadora** via `FiltroOperadoraSelect` à direita. **Não** usar `FilterChip` local nem pill 999/uppercase legado na barra.
+- Filtros na barra: **Jogos** e **Tipo** com **`FiltroSemanticoTabPill`** (visual abas Overview Spin — `borderRadius` 10, `10px 18px`, `minHeight` 44; ícones por jogo via **`GAME_IDENTITY_ICONS`** / `lib/gameIdentityIcons.tsx`, alinhado a Gestão de Dealers; ativo na cor de **`getGameTagChipStyle` / `gameIdentityTextColor`** de `lib/gameIdentityColors.ts` — Global § Identidade por jogo — ou `TIPO_CONFIG`, não marca); **estúdio** via **`FiltroEstudioSelect`** (**Todos Estúdios**) à direita. **Não** usar `FilterChip` local nem pill 999/uppercase legado na barra.
 - Tags de jogo em cards/modais: **`getGameTagChipStyle(key, isDark)`** — **proibido** `JOGO_TAG_CONFIG` local ou hex solto por jogo.
 
 ### Exceções — identidade de jogo
 
 Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § Identidade visual por jogo). Nova exceção **somente** com pedido explícito de produto — registrar aqui antes de implementar.
-- Conteúdo após operadora selecionada.
+- Conteúdo após estúdio selecionado (ou **Todos Estúdios** para gestores com escopo amplo).
 - Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"`.
-- `BannerPendencias` + `ModalThreadSolicitacao`.
+- Cadastro grava **`estudio_slug`** em `roteiro_mesa_sugestoes` / `roteiro_mesa_campanhas`; **`operadora_slug`** mantido para solicitações (`roteiro_mesa_solicitacoes`, `roteiro_campanha_solicitacoes`) e RLS legado — resolvido via `operadoraSlugParaRoteiroInsert` em `roteiroMesaEstudioHelpers.ts`.
+- Tag de estúdio nos itens quando filtro = **Todos Estúdios** (`roteiroEstudioLabelFromRow` com fallback operadora→estúdio).
+- `BannerPendencias` + `ModalThreadSolicitacao` continuam por **operadora** (escopo do operador).
 - **Handoff:** CRUD campanhas de mesa, exclusão 2 cliques.
 
 ---
@@ -126,5 +143,4 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - Tabelas de inventário (Figurinos): padrão canónico + hover nas linhas — ver Global § Tabelas.
 - GameIcons no header (`PageHeader` + Lucide).
 - Query de observações sem `.limit()`.
-- Filtro de operadora com `GiShield`, markup manual ou agregadora “Todas as operadoras” / “Operadoras” só — usar `FiltroOperadoraSelect` (**Todas Operadoras**).
-- Figurinos: `<select>` nativo para categoria/tamanho — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` (**Todas Categorias** / **Todos Tamanhos**).
+- Figurinos: `<select>` nativo para categoria/tamanho — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` (**Todas Categorias** / **Todos Tamanhos**). Filtro de estúdio: **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`.

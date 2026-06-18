@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId } from "react";
+import { useState, useEffect, useCallback, useId, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -9,11 +9,20 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { BookOpen, Megaphone, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { FiltroOperadoraSelect, FiltroSemanticoTabPill } from "../../../components/dashboard";
+import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
+import { FiltroSemanticoTabPill } from "../../../components/dashboard";
+import {
+  buildOperadoraParaEstudioMap,
+  buildOperadorasPorEstudioMap,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+} from "../../rh/GestaoStaff/gestaoStaffEstudioHelpers";
+import {
+  operadoraSlugParaRoteiroInsert,
+  roteiroEstudioLabelFromRow,
+} from "./roteiroMesaEstudioHelpers";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
@@ -25,7 +34,7 @@ import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
-function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
+function podeEscolherEstudioNoRoteiro(role: string | undefined): boolean {
   return !!role && ROLES_STAFF_OPERACOES_LIVES.includes(role as Role);
 }
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
@@ -34,6 +43,7 @@ export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat" | "fute
 
 export interface RoteiroSugestao {
   id: string;
+  estudio_slug?: string | null;
   operadora_slug: string;
   bloco: BlocoRoteiro;
   texto: string;
@@ -46,6 +56,7 @@ export interface RoteiroSugestao {
 
 export interface RoteiroCampanha {
   id: string;
+  estudio_slug?: string | null;
   operadora_slug: string;
   titulo: string;
   texto: string;
@@ -207,29 +218,39 @@ function TagChip({ label, bg, color, border }: { label: string; bg: string; colo
 }
 
 // ─── MODAL ROTEIRO (+ Roteiro) ───────────────────────────────────────────────
-function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, podeVerOperadora }: {
-  operadoraSlug: string;
-  operadorasList: { slug: string; nome: string }[];
+function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opParaEstudio, operadorasPorEstudio, operadoraSlugsForcado }: {
+  estudioSlug: string;
+  estudiosList: { slug: string; nome: string }[];
   bloco: BlocoRoteiro;
   onClose: () => void;
   onSalvo: () => void;
-  podeVerOperadora: (slug: string) => boolean;
+  opParaEstudio: Record<string, string>;
+  operadorasPorEstudio: Record<string, readonly string[]>;
+  operadoraSlugsForcado: string[] | null;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dark = t.isDark;
   const labelTipoId = useId();
   const labelJogosId = useId();
-  const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
+  const mostraCampoEstudio = podeEscolherEstudioNoRoteiro(user?.role);
   const [tipo, setTipo] = useState<TipoSugestao>("script");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
   const [texto, setTexto] = useState("");
-  const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
+  const [estudioSlugModal, setEstudioSlugModal] = useState(
+    estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS ? "" : estudioSlug,
+  );
   const [saving, setSaving] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
-  const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
-  const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
+  const estudioFinal = mostraCampoEstudio
+    ? estudioSlugModal
+    : estudioSlug !== FILTRO_STAFF_ESTUDIO_TODOS
+      ? estudioSlug
+      : "";
+  const operadoraFinal = estudioFinal
+    ? operadoraSlugParaRoteiroInsert(estudioFinal, operadoraSlugsForcado, opParaEstudio, operadorasPorEstudio)
+    : null;
 
   const toggleJogo = (jogo: JogoTag) => {
     if (jogo === "todos") { setJogos(["todos"]); return; }
@@ -241,13 +262,13 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   };
 
   const handleSalvar = async () => {
-    if (!texto.trim() || !operadoraFinal || operadoraFinal === "todas") return;
+    if (!texto.trim() || !estudioFinal || !operadoraFinal) return;
     setSaving(true);
     setErroSalvar(null);
     const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
     const { data: sugRow, error } = await supabase
       .from("roteiro_mesa_sugestoes")
-      .insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload })
+      .insert({ estudio_slug: estudioFinal, operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload })
       .select("id")
       .single();
     if (error || !sugRow?.id) {
@@ -318,7 +339,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
     onClose();
   };
 
-  const podeSalvar = texto.trim().length > 0 && operadoraFinal && operadoraFinal !== "todas";
+  const podeSalvar = texto.trim().length > 0 && !!estudioFinal && !!operadoraFinal;
   const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
 
   const salvarBg = brand.useBrand
@@ -329,16 +350,16 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
     <ModalBase onClose={onClose} maxWidth={500}>
       <ModalHeader title={`Novo Roteiro — ${blocoLabel}`} onClose={onClose} />
 
-        {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
+        {mostraCampoEstudio && estudiosList.length > 0 && (
           <>
             <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
-              Operadora
+              Estúdio
               <CampoObrigatorioMark />
             </p>
-            <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontFamily: FONT.body, fontSize: 13, marginBottom: 18, outline: "none" }}>
-              <option value="">Selecione a operadora</option>
-              {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
+            <select value={estudioSlugModal} onChange={(e) => setEstudioSlugModal(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontFamily: FONT.body, fontSize: 13, marginBottom: 18, outline: "none" }}>
+              <option value="">Selecione o estúdio</option>
+              {[...estudiosList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((e) => (
+                <option key={e.slug} value={e.slug}>{e.nome}</option>
               ))}
             </select>
           </>
@@ -421,30 +442,40 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
 }
 
 // ─── MODAL CAMPANHA (Nova Campanha) ───────────────────────────────────────────
-function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVerOperadora }: {
-  operadoraSlug: string;
-  operadorasList: { slug: string; nome: string }[];
+function ModalCampanha({ estudioSlug, estudiosList, onClose, onSalvo, opParaEstudio, operadorasPorEstudio, operadoraSlugsForcado }: {
+  estudioSlug: string;
+  estudiosList: { slug: string; nome: string }[];
   onClose: () => void;
   /** Inclui `solicitacaoId` quando a thread da campanha é criada com sucesso. */
   onSalvo: (opts?: { solicitacaoId: string }) => void;
-  podeVerOperadora: (slug: string) => boolean;
+  opParaEstudio: Record<string, string>;
+  operadorasPorEstudio: Record<string, readonly string[]>;
+  operadoraSlugsForcado: string[] | null;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dark = t.isDark;
   const labelJogosId = useId();
-  const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
+  const mostraCampoEstudio = podeEscolherEstudioNoRoteiro(user?.role);
   const [titulo, setTitulo] = useState("");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [texto, setTexto] = useState("");
-  const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
+  const [estudioSlugModal, setEstudioSlugModal] = useState(
+    estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS ? "" : estudioSlug,
+  );
   const [saving, setSaving] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
-  const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
-  const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
+  const estudioFinal = mostraCampoEstudio
+    ? estudioSlugModal
+    : estudioSlug !== FILTRO_STAFF_ESTUDIO_TODOS
+      ? estudioSlug
+      : "";
+  const operadoraFinal = estudioFinal
+    ? operadoraSlugParaRoteiroInsert(estudioFinal, operadoraSlugsForcado, opParaEstudio, operadorasPorEstudio)
+    : null;
 
   const toggleJogo = (jogo: JogoTag) => {
     if (jogo === "todos") { setJogos(["todos"]); return; }
@@ -456,13 +487,14 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   };
 
   const handleSalvar = async () => {
-    if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !operadoraFinal || operadoraFinal === "todas") return;
+    if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !estudioFinal || !operadoraFinal) return;
     setSaving(true);
     setErroSalvar(null);
     const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio, data_fim: dataFim, ativo: true, updated_at: new Date().toISOString() };
     const { data: campRow, error } = await supabase
       .from("roteiro_mesa_campanhas")
       .insert({
+        estudio_slug: estudioFinal,
         operadora_slug: operadoraFinal,
         ordem: 0,
         created_by: user?.id ?? null,
@@ -535,7 +567,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
     onClose();
   };
 
-  const podeSalvar = titulo.trim().length > 0 && texto.trim().length > 0 && dataInicio && dataFim && operadoraFinal && operadoraFinal !== "todas";
+  const podeSalvar = titulo.trim().length > 0 && texto.trim().length > 0 && dataInicio && dataFim && !!estudioFinal && !!operadoraFinal;
   const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, boxSizing: "border-box" as const, outline: "none" };
   const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
 
@@ -547,16 +579,16 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
     <ModalBase onClose={onClose} maxWidth={520}>
       <ModalHeader title="Nova Campanha" onClose={onClose} />
 
-        {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
+        {mostraCampoEstudio && estudiosList.length > 0 && (
           <>
             <label style={lbl}>
-              Operadora
+              Estúdio
               <CampoObrigatorioMark />
             </label>
-            <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ ...inp, marginBottom: 18 }}>
-              <option value="">Selecione a operadora</option>
-              {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
+            <select value={estudioSlugModal} onChange={(e) => setEstudioSlugModal(e.target.value)} style={{ ...inp, marginBottom: 18 }}>
+              <option value="">Selecione o estúdio</option>
+              {[...estudiosList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((e) => (
+                <option key={e.slug} value={e.slug}>{e.nome}</option>
               ))}
             </select>
           </>
@@ -647,11 +679,19 @@ function truncarTextoRoteiro(texto: string, max: number): string {
   return `${texto.slice(0, max)}…`;
 }
 
+function estudioTagChipStyle(isDark: boolean): { bg: string; color: string; border: string } {
+  return {
+    bg: "rgba(74,32,130,0.12)",
+    color: isDark ? "#b08aee" : "#3a1868",
+    border: "rgba(74,32,130,0.28)",
+  };
+}
+
 // ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
-function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, operadoraNome, operadoraCor }: {
+function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, estudioNome }: {
   sugestao: RoteiroSugestao; podeExcluir: boolean;
   onPedirExcluir: (s: RoteiroSugestao) => void;
-  dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
+  dark: boolean; estudioNome?: string;
 }) {
   const tipo      = sugestao.tipo ?? "script";
   const jogosList = sugestao.jogos ?? ["todos"];
@@ -699,7 +739,10 @@ function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, operadoraNo
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ fontFamily: FONT.body, fontSize: 13, color: cfg.textColor(dark), lineHeight: 1.55 }}>{sugestao.texto}</span>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
+          {estudioNome ? (() => {
+            const ecfg = estudioTagChipStyle(dark);
+            return <TagChip label={estudioNome} bg={ecfg.bg} color={ecfg.color} border={ecfg.border} />;
+          })() : null}
           {jogosList.map((jogo) => {
             const jcfg = jogoTagChipStyle(jogo as JogoTag, dark);
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
@@ -718,10 +761,10 @@ function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, operadoraNo
 }
 
 // ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
-function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, operadoraNome, operadoraCor }: {
+function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, estudioNome }: {
   campanha: RoteiroCampanha; podeExcluir: boolean;
   onPedirExcluir: (c: RoteiroCampanha) => void;
-  dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
+  dark: boolean; estudioNome?: string;
 }) {
   const cianoText = dark ? "#70cae4" : "#0f6a8a";
   const formatDate = (d?: string) => {
@@ -757,7 +800,10 @@ function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, operadoraNo
         </div>
         <span style={{ fontFamily: FONT.body, fontSize: 13, color: dark ? "#9898be" : "#4a4a6a", lineHeight: 1.55, fontStyle: "italic" }}>"{campanha.texto}"</span>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
+          {estudioNome ? (() => {
+            const ecfg = estudioTagChipStyle(dark);
+            return <TagChip label={estudioNome} bg={ecfg.bg} color={ecfg.color} border={ecfg.border} />;
+          })() : null}
           {(campanha.jogos ?? ["todos"]).map((jogo) => {
             const jcfg = jogoTagChipStyle(jogo as JogoTag, dark);
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
@@ -781,11 +827,15 @@ function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, operadoraNo
 }
 
 // ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
-function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
-  bloco: BlocoRoteiro; operadoraSlug: string | null;
+function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar, onCarregar, dark, estudiosNome, opParaEstudio, estudiosList, operadorasPorEstudio, operadoraSlugsForcado }: {
+  bloco: BlocoRoteiro; estudioSlug: string | null;
   sugestoes: RoteiroSugestao[]; podeExcluir: boolean; podeCriar: boolean;
-  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; brand_action?: string | null }[];
-  podeVerOperadora: (slug: string) => boolean;
+  onCarregar: () => void; dark: boolean;
+  estudiosNome: Record<string, string>;
+  opParaEstudio: Record<string, string>;
+  estudiosList: { slug: string; nome: string }[];
+  operadorasPorEstudio: Record<string, readonly string[]>;
+  operadoraSlugsForcado: string[] | null;
 }) {
   const { theme: t } = useApp();
   const [modalAberto, setModalAberto] = useState(false);
@@ -805,7 +855,7 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 
   const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
   const cfg   = BLOCO_CONFIG[bloco];
-  if (!operadoraSlug) return null;
+  if (!estudioSlug) return null;
 
   return (
     <>
@@ -834,15 +884,28 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
           </div>
         ) : (
           sugestoes.map((s) => {
-            const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug) : undefined;
+            const estLabel = estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS
+              ? roteiroEstudioLabelFromRow(s, estudiosNome, opParaEstudio)
+              : undefined;
             return (
-              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onPedirExcluir={setExcluirTarget} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.brand_action} />
+              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onPedirExcluir={setExcluirTarget} dark={dark} estudioNome={estLabel !== "—" ? estLabel : undefined} />
             );
           })
         )}
       </div>
     </div>
-    {modalAberto && <ModalRoteiro operadoraSlug={operadoraSlug} operadorasList={operadorasList} bloco={bloco} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    {modalAberto && (
+      <ModalRoteiro
+        estudioSlug={estudioSlug}
+        estudiosList={estudiosList}
+        bloco={bloco}
+        onClose={() => setModalAberto(false)}
+        onSalvo={() => { setModalAberto(false); onCarregar(); }}
+        opParaEstudio={opParaEstudio}
+        operadorasPorEstudio={operadorasPorEstudio}
+        operadoraSlugsForcado={operadoraSlugsForcado}
+      />
+    )}
     {excluirTarget ? (
       <ModalConfirmExcluirPadrao
         descricaoItem={descricaoModalExcluirItem("a sugestão de roteiro", truncarTextoRoteiro(excluirTarget.texto, 80))}
@@ -858,11 +921,15 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, onThreadCampanhaCriada }: {
-  operadoraSlug: string | null; campanhas: RoteiroCampanha[];
+function BlocoCampanhas({ estudioSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, estudiosNome, opParaEstudio, estudiosList, operadorasPorEstudio, operadoraSlugsForcado, onThreadCampanhaCriada }: {
+  estudioSlug: string | null; campanhas: RoteiroCampanha[];
   podeExcluir: boolean; podeCriar: boolean;
-  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; brand_action?: string | null }[];
-  podeVerOperadora: (slug: string) => boolean;
+  onCarregar: () => void; dark: boolean;
+  estudiosNome: Record<string, string>;
+  opParaEstudio: Record<string, string>;
+  estudiosList: { slug: string; nome: string }[];
+  operadorasPorEstudio: Record<string, readonly string[]>;
+  operadoraSlugsForcado: string[] | null;
   onThreadCampanhaCriada?: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
@@ -886,7 +953,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
     }
   };
 
-  if (!operadoraSlug) return null;
+  if (!estudioSlug) return null;
 
   return (
     <>
@@ -916,7 +983,9 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
           </div>
         ) : (
           campanhas.map((c) => {
-            const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug) : undefined;
+            const estLabel = estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS
+              ? roteiroEstudioLabelFromRow(c, estudiosNome, opParaEstudio)
+              : undefined;
             return (
               <CampanhaItem
                 key={c.id}
@@ -924,8 +993,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
                 podeExcluir={podeExcluir}
                 onPedirExcluir={setExcluirTarget}
                 dark={dark}
-                operadoraNome={op?.nome}
-                operadoraCor={op?.brand_action}
+                estudioNome={estLabel !== "—" ? estLabel : undefined}
               />
             );
           })
@@ -934,14 +1002,16 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
     </div>
     {modalAberto && (
       <ModalCampanha
-        operadoraSlug={operadoraSlug}
-        operadorasList={operadorasList}
+        estudioSlug={estudioSlug}
+        estudiosList={estudiosList}
         onClose={() => setModalAberto(false)}
         onSalvo={(opts) => {
           void onCarregar();
           if (opts?.solicitacaoId) onThreadCampanhaCriada?.(opts.solicitacaoId);
         }}
-        podeVerOperadora={podeVerOperadora}
+        opParaEstudio={opParaEstudio}
+        operadorasPorEstudio={operadorasPorEstudio}
+        operadoraSlugsForcado={operadoraSlugsForcado}
       />
     )}
     {excluirTarget ? (
@@ -960,7 +1030,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
-  const { theme: t, podeVerOperadora, user } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
@@ -969,56 +1039,132 @@ export default function RoteiroMesa() {
   const permCentral = usePermission("central_notificacoes");
   const dark = t.isDark;
 
-  const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; brand_action?: string | null }[]>([]);
-  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  const [filtroJogo,      setFiltroJogo]      = useState<JogoTag | "todos">("todos");
-  const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
-  const [sugestoes,       setSugestoes]       = useState<RoteiroSugestao[]>([]);
-  const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string; brand_action?: string | null }[]>([]);
+  const [estudios, setEstudios] = useState<{ slug: string; nome: string }[]>([]);
+  const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
+  const [operadorasPorEstudio, setOperadorasPorEstudio] = useState<Record<string, readonly string[]>>({});
+  const [filtroEstudio, setFiltroEstudio] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
+  const [filtroJogo, setFiltroJogo] = useState<JogoTag | "todos">("todos");
+  const [filtroTipo, setFiltroTipo] = useState<TipoSugestao | "todos">("todos");
+  const [sugestoes, setSugestoes] = useState<RoteiroSugestao[]>([]);
+  const [campanhas, setCampanhas] = useState<RoteiroCampanha[]>([]);
   const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
-  const [loading,         setLoading]         = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const mostrarFiltroOp = showFiltroOperadora;
+  const mostrarFiltroEstudio = showFiltroOperadora;
 
-  const operadoraSlugSelecionada: string | null =
-    operadoraSlugsForcado?.length === 1
-      ? operadoraSlugsForcado[0]
-      : operadoraSlugsForcado?.length
-        ? filtroOperadora !== "todas" && operadoraSlugsForcado.includes(filtroOperadora)
-          ? filtroOperadora
-          : operadoraSlugsForcado[0]
-        : filtroOperadora;
+  const estudioSlugsForcado = useMemo(() => {
+    if (!operadoraSlugsForcado?.length) return null;
+    const set = new Set<string>();
+    for (const op of operadoraSlugsForcado) {
+      const e = opParaEstudio[op];
+      if (e) set.add(e);
+    }
+    return set.size > 0 ? [...set] : null;
+  }, [operadoraSlugsForcado, opParaEstudio]);
+
+  const estudioSlugSelecionada: string | null =
+    estudioSlugsForcado?.length === 1
+      ? estudioSlugsForcado[0]!
+      : estudioSlugsForcado?.length
+        ? filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS && estudioSlugsForcado.includes(filtroEstudio)
+          ? filtroEstudio
+          : estudioSlugsForcado[0]!
+        : filtroEstudio;
+
+  const estudiosVisiveis = useMemo(() => {
+    if (estudioSlugsForcado?.length) {
+      return estudios.filter((e) => estudioSlugsForcado.includes(e.slug));
+    }
+    return estudios;
+  }, [estudios, estudioSlugsForcado]);
+
+  const carregarEstudios = useCallback(async () => {
+    const { data } = await supabase
+      .from("estudios_spin")
+      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+      .eq("ativo", true);
+    const nomeMap: Record<string, string> = {};
+    const opts: { slug: string; nome: string }[] = [];
+    const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+    for (const raw of data ?? []) {
+      const e = raw as {
+        slug: string;
+        nome: string;
+        tipo: string;
+        estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+      };
+      nomeMap[e.slug] = e.nome;
+      opts.push({ slug: e.slug, nome: e.nome });
+      const joins = e.estudios_spin_operadoras;
+      const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+      for (const j of list) {
+        junctionFlat.push({
+          operadora_slug: j.operadora_slug,
+          estudio_slug: e.slug,
+          tipo: e.tipo,
+        });
+      }
+    }
+    const opMap = buildOperadoraParaEstudioMap(junctionFlat);
+    const opPorEst = buildOperadorasPorEstudioMap(junctionFlat);
+    setEstudiosNome(nomeMap);
+    setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+    setOpParaEstudio(opMap);
+    setOperadorasPorEstudio(opPorEst);
+    return opMap;
+  }, []);
 
   const carregarDados = useCallback(async () => {
-    if (!operadoraSlugSelecionada) { setSugestoes([]); setCampanhas([]); setLoading(false); return; }
+    if (!estudioSlugSelecionada) { setSugestoes([]); setCampanhas([]); setLoading(false); return; }
     setLoading(true);
+    await carregarEstudios();
 
     let qSug = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
-    if (operadoraSlugSelecionada !== "todas") qSug = qSug.eq("operadora_slug", operadoraSlugSelecionada);
+    if (user?.role === "operador" && estudioSlugsForcado?.length && estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS) {
+      const parts: string[] = [];
+      for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
+      if (operadoraSlugsForcado?.length) {
+        for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
+      }
+      qSug = qSug.or(parts.join(","));
+    } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
+      qSug = qSug.eq("estudio_slug", estudioSlugSelecionada);
+    }
     const { data: dataSug } = await qSug;
     setSugestoes((dataSug ?? []) as RoteiroSugestao[]);
 
     let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
-    if (operadoraSlugSelecionada !== "todas") qCamp = qCamp.eq("operadora_slug", operadoraSlugSelecionada);
+    if (user?.role === "operador" && estudioSlugsForcado?.length && estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS) {
+      const parts: string[] = [];
+      for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
+      if (operadoraSlugsForcado?.length) {
+        for (const op of operadoraSlugsForcado) parts.push(`operadora_slug.eq.${op}`);
+      }
+      qCamp = qCamp.or(parts.join(","));
+    } else if (estudioSlugSelecionada !== FILTRO_STAFF_ESTUDIO_TODOS) {
+      qCamp = qCamp.eq("estudio_slug", estudioSlugSelecionada);
+    }
     const { data: dataCamp } = await qCamp;
-    const listaCamp = (dataCamp ?? []) as RoteiroCampanha[];
-    setCampanhas(listaCamp);
+    setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
 
     setLoading(false);
-  }, [operadoraSlugSelecionada]);
+  }, [estudioSlugSelecionada, user?.role, estudioSlugsForcado, operadoraSlugsForcado, carregarEstudios]);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
+  useEffect(() => { void carregarDados(); }, [carregarDados]);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome, brand_action").eq("ativo", true).order("nome")
       .then(({ data }) => setOperadorasList(data ?? []));
-  }, []);
+    void carregarEstudios();
+  }, [carregarEstudios]);
 
   useEffect(() => {
-    if (operadoraSlugsForcado?.length && filtroOperadora === "todas") {
-      setFiltroOperadora(operadoraSlugsForcado[0]);
+    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+      setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [operadoraSlugsForcado, filtroOperadora]);
+  }, [user?.role, estudioSlugsForcado]);
 
   if (perm.canView === "nao") {
     return (
@@ -1028,7 +1174,7 @@ export default function RoteiroMesa() {
     );
   }
 
-  const opcoesFiltro = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const opcoesFiltroEstudio = estudiosVisiveis;
 
   const filtrarSugestoes = (lista: RoteiroSugestao[]) =>
     lista.filter((s) => {
@@ -1061,10 +1207,10 @@ export default function RoteiroMesa() {
       <PageHeader
         icon={<PageMenuIcon pageKey="roteiro_mesa" />}
         title={getPageMenuLabel("roteiro_mesa")}
-        subtitle="Scripts e orientações de live por operadora para o dealer usar em mesa."
+        subtitle="Scripts e orientações de live por estúdio para o dealer usar em mesa."
       />
 
-      {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
+      {/* ── BLOCO DE FILTROS — tudo em uma linha, estúdio à direita com ícone ── */}
       <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={{ position: "relative", ...(narrowMobile ? { overflow: "hidden" } : {}) }}>
           <div
@@ -1119,15 +1265,15 @@ export default function RoteiroMesa() {
                 })}
               </div>
             </div>
-            {/* Direita: Operadora (só quando showFiltroOperadora; não aparece para perfil Operador) */}
-            {mostrarFiltroOp && opcoesFiltro.length > 0 && (
-              <FiltroOperadoraSelect
+            {/* Direita: Estúdio (só quando showFiltroOperadora; não aparece para perfil Operador) */}
+            {mostrarFiltroEstudio && opcoesFiltroEstudio.length > 0 && (
+              <FiltroEstudioSelect
                 pill
                 minWidth={200}
-                value={filtroOperadora}
-                onChange={setFiltroOperadora}
-                operadoras={opcoesFiltro}
-                showTodasOption={!operadoraSlugsForcado?.length}
+                value={filtroEstudio}
+                onChange={setFiltroEstudio}
+                estudios={opcoesFiltroEstudio}
+                showTodosOption={!estudioSlugsForcado?.length}
               />
             )}
           </div>
@@ -1148,20 +1294,20 @@ export default function RoteiroMesa() {
           </div>
       </div>
 
-      {/* ── ESTADO: SEM OPERADORA ── */}
-      {!operadoraSlugSelecionada && opcoesFiltro.length > 0 && (
+      {/* ── ESTADO: SEM ESTÚDIO ── */}
+      {!estudioSlugSelecionada && opcoesFiltroEstudio.length > 0 && (
         <div style={{ padding: "48px 24px", textAlign: "center", background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <div style={{ width: 52, height: 52, borderRadius: 14, background: dark ? "linear-gradient(135deg,rgba(30,54,248,0.15) 0%,rgba(74,32,130,0.15) 100%)" : "linear-gradient(135deg,rgba(30,54,248,0.07) 0%,rgba(74,32,130,0.07) 100%)", border: `1px solid ${BRAND.azulBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <BookOpen size={22} color={dark ? "#7b95ff" : BRAND.azul} strokeWidth={1.5} />
           </div>
           <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>
-            Selecione uma operadora para ver e gerenciar os roteiros.
+            Selecione um estúdio para ver e gerenciar os roteiros.
           </p>
         </div>
       )}
 
       {/* ── BLOCOS DE CONTEÚDO ── */}
-      {operadoraSlugSelecionada && (
+      {estudioSlugSelecionada && (
         loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -1170,27 +1316,33 @@ export default function RoteiroMesa() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <BlocoCampanhas
-              operadoraSlug={operadoraSlugSelecionada}
+              estudioSlug={estudioSlugSelecionada}
               campanhas={filtrarCampanhas(campanhas)}
               podeExcluir={perm.canExcluirOk}
               podeCriar={perm.canCriarOk}
               onCarregar={carregarDados}
               dark={dark}
-              operadorasList={operadorasList}
-              podeVerOperadora={podeVerOperadora}
+              estudiosNome={estudiosNome}
+              opParaEstudio={opParaEstudio}
+              estudiosList={estudiosVisiveis}
+              operadorasPorEstudio={operadorasPorEstudio}
+              operadoraSlugsForcado={operadoraSlugsForcado}
               onThreadCampanhaCriada={(id) => setThreadCampSolId(id)}
             />
             {BLOCOS.map(({ key }) => (
               <BlocoSugestoes
                 key={key} bloco={key}
-                operadoraSlug={operadoraSlugSelecionada}
+                estudioSlug={estudioSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
                 podeExcluir={perm.canExcluirOk}
                 podeCriar={perm.canCriarOk}
                 onCarregar={carregarDados}
                 dark={dark}
-                operadorasList={operadorasList}
-                podeVerOperadora={podeVerOperadora}
+                estudiosNome={estudiosNome}
+                opParaEstudio={opParaEstudio}
+                estudiosList={estudiosVisiveis}
+                operadorasPorEstudio={operadorasPorEstudio}
+                operadoraSlugsForcado={operadoraSlugsForcado}
               />
             ))}
           </div>

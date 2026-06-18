@@ -55,6 +55,20 @@ export function origemContratacaoDeRow(r: RhFuncionario): RhOrigemContratacao | 
   return ORIGENS_CONTRATACAO.some((o) => o.value === v) ? (v as RhOrigemContratacao) : "";
 }
 
+/** Opção mínima de RH Talk publicado no Portal de RH (seleção na Gestão de Prestadores). */
+export type RhPortalRhTalkOpcao = {
+  id: string;
+  numero: number | null;
+  titulo: string;
+  data_reuniao: string | null;
+};
+
+export function labelOpcaoRhTalkPortal(talk: RhPortalRhTalkOpcao): string {
+  const num = talk.numero != null ? `#${talk.numero} — ` : "";
+  const data = talk.data_reuniao ? fmtDataIsoPtBr(talk.data_reuniao.slice(0, 10)) : "—";
+  return `${num}${talk.titulo.trim()} (${data})`;
+}
+
 export const PRESTADOR_STATUS_FILTRO_EXTRA = [
   { value: "ativo", label: "Ativos" },
   { value: "indisponivel", label: "Indisponíveis" },

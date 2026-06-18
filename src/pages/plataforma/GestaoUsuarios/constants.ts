@@ -85,7 +85,7 @@ export const PAGES: {
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Comercial
-  { key: "comercial_pipeline_b2b", label: "Pipeline B2B", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "comercial_pipeline_b2b", label: "Pipeline B2B", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
   // Estúdio (menu)
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
@@ -94,9 +94,9 @@ export const PAGES: {
     secao: "Estúdio",
     hasCriar: false,
     hasEditar: true,
-    hasExcluir: true,
+    hasExcluir: false,
   },
-  { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Escala
   { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
@@ -133,7 +133,7 @@ export const PAGES: {
   // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "gestao_mesas", label: "Gestão de Mesas", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "gestao_mesas", label: "Gestão de Estúdios", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Geral (sempre por último)
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },

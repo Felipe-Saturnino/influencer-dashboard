@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -32,14 +34,13 @@ import {
   opcoesHorarioTurnoStaff,
   textoHorarioTurnoSomenteOperadora,
 } from "../../../lib/rhStaffHorarioTurno";
-import type { Operadora } from "../../../types";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import {
-  FiltroOperadoraSelect,
   FiltroTodosTimesButton,
   FiltroTurnoSelect,
   FiltroBarTabButton,
@@ -47,6 +48,22 @@ import {
   onFiltroBarTabsKeyDown,
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,
 } from "../../../components/dashboard";
+import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
+import {
+  buildOperadoraParaEstudioMap,
+  buildOperadorasPorEstudioMap,
+  FILTRO_STAFF_ESTUDIO_NENHUM,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+  primeiraOperadoraDoEstudio,
+  staffEstudioSlugEfetivo,
+  staffEstudioSlugsFromRow,
+  staffEstudioLabel,
+  staffEstudioLabelFromRow,
+  normalizeStaffEstudioSlugsForSave,
+  staffEstudioSlugPrimarioParaSync,
+  staffRowPassaFiltroEstudio,
+} from "./gestaoStaffEstudioHelpers";
+import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
@@ -97,18 +114,22 @@ function dataIsoParaInputDate(iso: string | null | undefined): string {
   return String(iso).trim().slice(0, 10);
 }
 
-type OpTurnosStaffPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+type OpTurnosStaffPick = TurnosDealersPick;
 
-/** Texto da coluna «Horário do Turno» na tabela (com dados de operadora quando necessário). */
-function textoHorarioTurnoStaffEmTabela(row: RhFuncionario, opBySlug: Record<string, OpTurnosStaffPick | null>): string {
+/** Texto da coluna «Horário do Turno» na tabela (turnos do estúdio quando necessário). */
+function textoHorarioTurnoStaffEmTabela(
+  row: RhFuncionario,
+  turnosPorEstudio: Record<string, OpTurnosStaffPick | null>,
+  opParaEstudio: Record<string, string>,
+): string {
   const te = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
   if (escalaUsaHorarioTurnoEditavel(row.escala, te)) {
     return labelHorarioTurnoStaffPorValor(row.staff_horario_turno);
   }
   if (escalaComHorarioTurnoSomenteOperadora(row.escala)) {
-    const slug = row.staff_operadora_slug?.trim();
-    const op = slug ? opBySlug[slug] ?? null : null;
-    const txt = textoHorarioTurnoSomenteOperadora(row.escala, te, op).trim();
+    const estudioSlug = staffEstudioSlugEfetivo(row, opParaEstudio);
+    const turnos = estudioSlug ? turnosPorEstudio[estudioSlug] ?? null : null;
+    const txt = textoHorarioTurnoSomenteOperadora(row.escala, te, turnos).trim();
     return txt || "—";
   }
   return "—";
@@ -141,17 +162,9 @@ function stringifySkills(s: Record<StaffSkillKey, StaffSkillStatus>): string {
   return JSON.stringify(skillsParaJson(s));
 }
 
-const FILTRO_STAFF_OPERADORA_TODAS = "todas";
-const FILTRO_STAFF_OPERADORA_NENHUMA = "nenhuma";
+const FILTRO_STAFF_ESTUDIO_NENHUM_LOCAL = FILTRO_STAFF_ESTUDIO_NENHUM;
 
 type FiltroTurnoStaffTabela = "todos" | "nenhum" | "manha" | "tarde" | "noite" | "comercial";
-
-function staffRowPassaFiltroOperadora(row: RhFuncionario, filtro: string): boolean {
-  if (filtro === FILTRO_STAFF_OPERADORA_TODAS) return true;
-  const slug = (row.staff_operadora_slug ?? "").trim();
-  if (filtro === FILTRO_STAFF_OPERADORA_NENHUMA) return !slug;
-  return slug === filtro;
-}
 
 function staffRowPassaFiltroTurno(row: RhFuncionario, filtro: FiltroTurnoStaffTabela): boolean {
   if (filtro === "todos") return true;
@@ -171,6 +184,9 @@ function staffRowPassaFiltroTurno(row: RhFuncionario, filtro: FiltroTurnoStaffTa
 function labelCampoHistorico(campo: string): string {
   const c = campo.trim();
   if (c === "Operadora (slug)") return "Operadora";
+  if (c === "Operadora") return "Operadora";
+  if (c === "Staff — estúdio") return "Estúdio";
+  if (c === "Estúdio") return "Estúdio";
   if (c === "Skills (JSON)") return "Skills";
   if (c === "Horário do Turno") return "Horário do Turno";
   return c;
@@ -219,7 +235,7 @@ type StaffTabelaSortCol =
   | "escala"
   | "turno"
   | "horario_turno"
-  | "operadora"
+  | "estudio"
   | "status"
   | "id_op";
 
@@ -487,20 +503,23 @@ export default function RhGestaoStaffPage() {
   const [loadingTimes, setLoadingTimes] = useState(true);
   const [erroTimes, setErroTimes] = useState<string | null>(null);
 
-  const [operadorasNome, setOperadorasNome] = useState<Record<string, string>>({});
+  const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [estudiosFiltroOpts, setEstudiosFiltroOpts] = useState<{ slug: string; nome: string }[]>([]);
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
+  const [operadorasPorEstudio, setOperadorasPorEstudio] = useState<Record<string, string[]>>({});
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
 
   const [todosTimes, setTodosTimes] = useState(true);
   const [idxTime, setIdxTime] = useState(0);
   const [buscaNomeNickname, setBuscaNomeNickname] = useState("");
-  const [filtroOperadoraStaff, setFiltroOperadoraStaff] = useState(FILTRO_STAFF_OPERADORA_TODAS);
+  const [filtroEstudioStaff, setFiltroEstudioStaff] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
   const [filtroTurnoStaff, setFiltroTurnoStaff] = useState<FiltroTurnoStaffTabela>("todos");
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
   const [modalAnotacoes, setModalAnotacoes] = useState<RhFuncionario | null>(null);
-  const [opTurnosPorSlug, setOpTurnosPorSlug] = useState<Record<string, OpTurnosStaffPick | null>>({});
+  const [estudioTurnosPorSlug, setEstudioTurnosPorSlug] = useState<Record<string, OpTurnosStaffPick | null>>({});
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -518,13 +537,37 @@ export default function RhGestaoStaffPage() {
     setLoadingTimes(false);
   }, []);
 
-  const carregarOperadoras = useCallback(async () => {
-    const { data } = await supabase.from("operadoras").select("slug, nome").eq("ativo", true);
-    const m: Record<string, string> = {};
-    (data ?? []).forEach((r: { slug: string; nome: string }) => {
-      m[r.slug] = r.nome;
-    });
-    setOperadorasNome(m);
+  const carregarEstudios = useCallback(async () => {
+    const { data } = await supabase
+      .from("estudios_spin")
+      .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
+      .eq("ativo", true);
+    const nomeMap: Record<string, string> = {};
+    const opts: { slug: string; nome: string }[] = [];
+    const junctionFlat: { operadora_slug: string; estudio_slug: string; tipo: string }[] = [];
+    for (const raw of data ?? []) {
+      const e = raw as {
+        slug: string;
+        nome: string;
+        tipo: string;
+        estudios_spin_operadoras: { operadora_slug: string } | { operadora_slug: string }[] | null;
+      };
+      nomeMap[e.slug] = e.nome;
+      opts.push({ slug: e.slug, nome: e.nome });
+      const joins = e.estudios_spin_operadoras;
+      const list = joins == null ? [] : Array.isArray(joins) ? joins : [joins];
+      for (const j of list) {
+        junctionFlat.push({
+          operadora_slug: j.operadora_slug,
+          estudio_slug: e.slug,
+          tipo: e.tipo,
+        });
+      }
+    }
+    setEstudiosNome(nomeMap);
+    setEstudiosFiltroOpts(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+    setOpParaEstudio(buildOperadoraParaEstudioMap(junctionFlat));
+    setOperadorasPorEstudio(buildOperadorasPorEstudioMap(junctionFlat));
   }, []);
 
   const carregarPrestadores = useCallback(async (timeIds: string[]) => {
@@ -548,19 +591,21 @@ export default function RhGestaoStaffPage() {
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
     void carregarTimes();
-    void carregarOperadoras();
-  }, [perm.loading, perm.canView, carregarTimes, carregarOperadoras]);
+    void carregarEstudios();
+  }, [perm.loading, perm.canView, carregarTimes, carregarEstudios]);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
   const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
 
-  const operadorasFiltroOpts = useMemo(
-    () =>
-      Object.entries(operadorasNome)
-        .map(([slug, nome]) => ({ slug, nome }))
-        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [operadorasNome],
-  );
+  useEffect(() => {
+    if (
+      filtroEstudioStaff === FILTRO_STAFF_ESTUDIO_TODOS ||
+      filtroEstudioStaff === FILTRO_STAFF_ESTUDIO_NENHUM_LOCAL
+    ) {
+      return;
+    }
+    if (!estudiosNome[filtroEstudioStaff]) setFiltroEstudioStaff(FILTRO_STAFF_ESTUDIO_TODOS);
+  }, [filtroEstudioStaff, estudiosNome]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -577,11 +622,6 @@ export default function RhGestaoStaffPage() {
     if (idxTime >= times.length) setIdxTime(0);
   }, [times.length, idxTime]);
 
-  useEffect(() => {
-    if (filtroOperadoraStaff === FILTRO_STAFF_OPERADORA_TODAS || filtroOperadoraStaff === FILTRO_STAFF_OPERADORA_NENHUMA) return;
-    if (!operadorasNome[filtroOperadoraStaff]) setFiltroOperadoraStaff(FILTRO_STAFF_OPERADORA_TODAS);
-  }, [filtroOperadoraStaff, operadorasNome]);
-
   const linhasTabela = useMemo(() => {
     if (times.length === 0) return [];
     const permitidos = new Set(timeIds);
@@ -590,15 +630,11 @@ export default function RhGestaoStaffPage() {
       const tid = times[idxTime]!.id;
       rows = rows.filter((p) => p.org_time_id === tid);
     }
-    const q = buscaNomeNickname.trim().toLowerCase();
+    const q = buscaNomeNickname.trim();
     if (q) {
-      rows = rows.filter((p) => {
-        const nome = (p.nome ?? "").toLowerCase();
-        const nick = (p.staff_nickname ?? "").trim().toLowerCase();
-        return nome.includes(q) || nick.includes(q);
-      });
+      rows = rows.filter((p) => textoContemBuscaEmAlgum(buscaNomeNickname, p.nome, p.staff_nickname));
     }
-    rows = rows.filter((p) => staffRowPassaFiltroOperadora(p, filtroOperadoraStaff));
+    rows = rows.filter((p) => staffRowPassaFiltroEstudio(p, filtroEstudioStaff, opParaEstudio));
     rows = rows.filter((p) => staffRowPassaFiltroTurno(p, filtroTurnoStaff));
     return rows;
   }, [
@@ -608,8 +644,9 @@ export default function RhGestaoStaffPage() {
     idxTime,
     timeIds,
     buscaNomeNickname,
-    filtroOperadoraStaff,
+    filtroEstudioStaff,
     filtroTurnoStaff,
+    opParaEstudio,
   ]);
 
   const nomePorTimeId = useMemo(() => {
@@ -618,55 +655,47 @@ export default function RhGestaoStaffPage() {
     return m;
   }, [times]);
 
-  /** Vista time a time: tabela sem coluna Operadora e com Horário do Turno (times de serviço). */
-  const layoutTabelaSemOperadoraComHorario = useMemo(() => {
+  /** Vista time a time: tabela sem coluna Estúdio e com Horário do Turno (times de serviço). */
+  const layoutTabelaSemEstudioComHorario = useMemo(() => {
     if (todosTimes || !times[idxTime]) return false;
     return staffUiTimeSemOperadoraHorarioModaisRestritos(times[idxTime]!.nome);
   }, [todosTimes, times, idxTime]);
 
-  const slugsParaFetchHorarioTabela = useMemo(() => {
-    if (!layoutTabelaSemOperadoraComHorario) return [] as string[];
+  const slugsEstudioParaFetchHorarioTabela = useMemo(() => {
+    if (!layoutTabelaSemEstudioComHorario) return [] as string[];
     const set = new Set<string>();
     for (const r of linhasTabela) {
-      const slug = r.staff_operadora_slug?.trim();
+      const slug = staffEstudioSlugEfetivo(r, opParaEstudio);
       if (slug) set.add(slug);
     }
     return [...set].sort();
-  }, [layoutTabelaSemOperadoraComHorario, linhasTabela]);
+  }, [layoutTabelaSemEstudioComHorario, linhasTabela, opParaEstudio]);
 
   useEffect(() => {
-    if (!layoutTabelaSemOperadoraComHorario || slugsParaFetchHorarioTabela.length === 0) {
-      setOpTurnosPorSlug({});
+    if (!layoutTabelaSemEstudioComHorario || slugsEstudioParaFetchHorarioTabela.length === 0) {
+      setEstudioTurnosPorSlug({});
       return;
     }
     let cancel = false;
-    void supabase
-      .from("operadoras")
-      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .in("slug", slugsParaFetchHorarioTabela)
-      .then(({ data, error }) => {
-        if (cancel) return;
-        if (error) {
-          setOpTurnosPorSlug({});
-          return;
-        }
-        const m: Record<string, OpTurnosStaffPick | null> = {};
-        (data ?? []).forEach((r: OpTurnosStaffPick & { slug: string }) => {
-          m[r.slug] = r;
-        });
-        setOpTurnosPorSlug(m);
-      });
+    void fetchTurnosPorEstudioSlugs(slugsEstudioParaFetchHorarioTabela).then((turnosMap) => {
+      if (cancel) return;
+      const m: Record<string, OpTurnosStaffPick | null> = {};
+      for (const slug of slugsEstudioParaFetchHorarioTabela) {
+        m[slug] = turnosMap.get(slug) ?? null;
+      }
+      setEstudioTurnosPorSlug(m);
+    });
     return () => {
       cancel = true;
     };
-  }, [layoutTabelaSemOperadoraComHorario, slugsParaFetchHorarioTabela]);
+  }, [layoutTabelaSemEstudioComHorario, slugsEstudioParaFetchHorarioTabela]);
 
   useEffect(() => {
     setSortCol((c) => {
-      if (layoutTabelaSemOperadoraComHorario) return c === "operadora" ? "nome" : c;
+      if (layoutTabelaSemEstudioComHorario) return c === "estudio" ? "nome" : c;
       return c === "horario_turno" ? "nome" : c;
     });
-  }, [layoutTabelaSemOperadoraComHorario]);
+  }, [layoutTabelaSemEstudioComHorario]);
 
   const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
     setSortCol((prev) => {
@@ -685,7 +714,8 @@ export default function RhGestaoStaffPage() {
       (r.org_time_id ? nomePorTimeId.get(r.org_time_id) ?? "" : "").trim().toLowerCase();
     const turnoStr = (r: RhFuncionario) =>
       (turnoRhCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
-    const opSlug = (r: RhFuncionario) => (r.staff_operadora_slug ?? "").trim().toLowerCase();
+    const estudioSlugSort = (r: RhFuncionario) =>
+      staffEstudioLabelFromRow(r, estudiosNome, opParaEstudio).toLowerCase();
     return [...linhasTabela].sort((a, b) => {
       let cmp = 0;
       switch (sortCol) {
@@ -708,13 +738,13 @@ export default function RhGestaoStaffPage() {
           cmp = turnoStr(a).localeCompare(turnoStr(b), "pt-BR");
           break;
         case "horario_turno":
-          cmp = textoHorarioTurnoStaffEmTabela(a, opTurnosPorSlug).localeCompare(
-            textoHorarioTurnoStaffEmTabela(b, opTurnosPorSlug),
+          cmp = textoHorarioTurnoStaffEmTabela(a, estudioTurnosPorSlug, opParaEstudio).localeCompare(
+            textoHorarioTurnoStaffEmTabela(b, estudioTurnosPorSlug, opParaEstudio),
             "pt-BR",
           );
           break;
-        case "operadora":
-          cmp = opSlug(a).localeCompare(opSlug(b), "pt-BR");
+        case "estudio":
+          cmp = estudioSlugSort(a).localeCompare(estudioSlugSort(b), "pt-BR");
           break;
         case "status":
           cmp = a.status.localeCompare(b.status, "pt-BR");
@@ -727,7 +757,7 @@ export default function RhGestaoStaffPage() {
       }
       return cmp * dir;
     });
-  }, [linhasTabela, sortCol, sortDir, nomePorTimeId, opTurnosPorSlug]);
+  }, [linhasTabela, sortCol, sortDir, nomePorTimeId, estudioTurnosPorSlug, opParaEstudio, estudiosNome]);
 
   const resumoStaffCards = useMemo(
     () => calcularResumoStaffCards(linhasTabela, nomePorTimeId),
@@ -871,7 +901,7 @@ export default function RhGestaoStaffPage() {
             <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
               <div
                 role="group"
-                aria-label="Filtros de pesquisa, operadora e turno"
+                aria-label="Filtros de pesquisa, estúdio e turno"
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
@@ -895,13 +925,13 @@ export default function RhGestaoStaffPage() {
                   }}
                 />
                 <div style={{ flex: "0 0 auto", width: 200, minWidth: 160, maxWidth: "100%" }}>
-                  <FiltroOperadoraSelect
-                    id="staff-filtro-operadora"
-                    value={filtroOperadoraStaff}
-                    onChange={setFiltroOperadoraStaff}
-                    operadoras={operadorasFiltroOpts}
-                    todasValue={FILTRO_STAFF_OPERADORA_TODAS}
-                    extraOptions={[{ value: FILTRO_STAFF_OPERADORA_NENHUMA, label: "Nenhuma" }]}
+                  <FiltroEstudioSelect
+                    id="staff-filtro-estudio"
+                    value={filtroEstudioStaff}
+                    onChange={setFiltroEstudioStaff}
+                    estudios={estudiosFiltroOpts}
+                    todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
+                    extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
                     minWidth={200}
                   />
                 </div>
@@ -989,7 +1019,7 @@ export default function RhGestaoStaffPage() {
                   thStyle={dataTable.thHeader}
                   align="center"
                 />
-                {layoutTabelaSemOperadoraComHorario ? (
+                {layoutTabelaSemEstudioComHorario ? (
                   <SortTableTh
                     label="Horário do Turno"
                     col="horario_turno"
@@ -1001,8 +1031,8 @@ export default function RhGestaoStaffPage() {
                   />
                 ) : (
                   <SortTableTh
-                    label="Operadora"
-                    col="operadora"
+                    label="Estúdio"
+                    col="estudio"
                     sortCol={sortCol}
                     sortDir={sortDir}
                     onSort={handleSortStaff}
@@ -1042,8 +1072,7 @@ export default function RhGestaoStaffPage() {
                 </tr>
               ) : (
                 linhasTabelaOrdenadas.map((row, i) => {
-                  const opSlug = row.staff_operadora_slug?.trim();
-                  const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
+                  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   const nomeTime =
                     row.org_time_id && nomePorTimeId.has(row.org_time_id)
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
@@ -1067,12 +1096,12 @@ export default function RhGestaoStaffPage() {
                       >
                         {turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
-                      {layoutTabelaSemOperadoraComHorario ? (
+                      {layoutTabelaSemEstudioComHorario ? (
                         <td style={dataTable.tdCenter} title="Horário do turno (Gestão de Staff)">
-                          {textoHorarioTurnoStaffEmTabela(row, opTurnosPorSlug)}
+                          {textoHorarioTurnoStaffEmTabela(row, estudioTurnosPorSlug, opParaEstudio)}
                         </td>
                       ) : (
-                        <td style={dataTable.tdCenter}>{opNome}</td>
+                        <td style={dataTable.tdCenter}>{estudioNome}</td>
                       )}
                       <td style={dataTable.tdCenter}>{labelStatusPrestador(row.status)}</td>
                       <td style={dataTable.tdCenter} title={row.staff_id_operacional?.trim() || undefined}>
@@ -1115,8 +1144,9 @@ export default function RhGestaoStaffPage() {
       {modalVer ? (
         <ModalStaffVer
           row={modalVer}
-          operadorasNome={operadorasNome}
-          dadosFuncaoOcultarOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
+          estudiosNome={estudiosNome}
+          opParaEstudio={opParaEstudio}
+          dadosFuncaoOcultarEstudio={staffUiTimeSemOperadoraHorarioModaisRestritos(
             modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
           )}
           dadosFuncaoOcultarBioFotos={
@@ -1134,12 +1164,14 @@ export default function RhGestaoStaffPage() {
         <ModalStaffEditar
           row={modalEditar}
           nomeTimeOrganograma={modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : ""}
-          operadorasNome={operadorasNome}
-          operadoraSlugs={Object.keys(operadorasNome).sort((a, b) =>
-            (operadorasNome[a] ?? a).localeCompare(operadorasNome[b] ?? b, "pt-BR"),
+          estudiosNome={estudiosNome}
+          estudioSlugs={Object.keys(estudiosNome).sort((a, b) =>
+            (estudiosNome[a] ?? a).localeCompare(estudiosNome[b] ?? b, "pt-BR"),
           )}
+          operadorasPorEstudio={operadorasPorEstudio}
+          opParaEstudio={opParaEstudio}
           userEmail={user?.email ?? null}
-          ocultarCampoOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
+          ocultarCampoEstudio={staffUiTimeSemOperadoraHorarioModaisRestritos(
             modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : "",
           )}
           onClose={() => setModalEditar(null)}
@@ -1168,17 +1200,19 @@ export default function RhGestaoStaffPage() {
 
 function ModalStaffVer({
   row,
-  operadorasNome,
-  dadosFuncaoOcultarOperadora = false,
+  estudiosNome,
+  opParaEstudio,
+  dadosFuncaoOcultarEstudio = false,
   dadosFuncaoOcultarBioFotos = false,
   onClose,
   t,
 }: {
   row: RhFuncionario;
-  operadorasNome: Record<string, string>;
+  estudiosNome: Record<string, string>;
+  opParaEstudio: Record<string, string>;
   /** Times Service Manager, Customer Service, Shift Leader, Performance Coach. */
-  dadosFuncaoOcultarOperadora?: boolean;
-  /** Inclui Shuffler (só bio/fotos) ou o grupo acima (operadora + bio + fotos). */
+  dadosFuncaoOcultarEstudio?: boolean;
+  /** Inclui Shuffler (só bio/fotos) ou o grupo acima (estúdio + bio + fotos). */
   dadosFuncaoOcultarBioFotos?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
@@ -1222,32 +1256,24 @@ function ModalStaffVer({
   }, [aba, row.id]);
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
-  const opSlug = row.staff_operadora_slug?.trim();
-  const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
+  const estudioSlug = staffEstudioSlugEfetivo(row, opParaEstudio);
+  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
   const turnoEfVer = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
-  const [opTurnosVer, setOpTurnosVer] = useState<Pick<
-    Operadora,
-    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
-  > | null>(null);
+  const [estudioTurnosVer, setEstudioTurnosVer] = useState<OpTurnosStaffPick | null>(null);
 
   useEffect(() => {
-    if (!opSlug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
-      setOpTurnosVer(null);
+    if (!estudioSlug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
+      setEstudioTurnosVer(null);
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .eq("slug", opSlug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setOpTurnosVer((data as Operadora) ?? null);
-      });
+    void fetchTurnosPorEstudioSlugs([estudioSlug]).then((map) => {
+      if (!cancelled) setEstudioTurnosVer(map.get(estudioSlug) ?? null);
+    });
     return () => {
       cancelled = true;
     };
-  }, [opSlug, row.escala]);
+  }, [estudioSlug, row.escala]);
 
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
@@ -1294,11 +1320,11 @@ function ModalStaffVer({
           {escalaUsaHorarioTurnoEditavel(row.escala, turnoEfVer) ? (
             <CampoLeitura k="Horário do Turno" v={labelHorarioTurnoStaffPorValor(row.staff_horario_turno)} t={t} />
           ) : escalaComHorarioTurnoSomenteOperadora(row.escala) ? (
-            <CampoLeitura k="Horário do Turno" v={textoHorarioTurnoSomenteOperadora(row.escala, turnoEfVer, opTurnosVer)} t={t} />
+            <CampoLeitura k="Horário do Turno" v={textoHorarioTurnoSomenteOperadora(row.escala, turnoEfVer, estudioTurnosVer)} t={t} />
           ) : (
             <CampoLeitura k="Horário do Turno" v="—" t={t} />
           )}
-          {!dadosFuncaoOcultarOperadora ? <CampoLeitura k="Operadora" v={opNome} t={t} /> : null}
+          {!dadosFuncaoOcultarEstudio ? <CampoLeitura k="Estúdio" v={estudioNome} t={t} /> : null}
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
           {!dadosFuncaoOcultarBioFotos ? (
@@ -1325,7 +1351,7 @@ function ModalStaffVer({
                             flexShrink: 0,
                           }}
                         >
-                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
                         </div>
                       ))}
                     </div>
@@ -1461,10 +1487,12 @@ function ModalStaffVer({
 function ModalStaffEditar({
   row,
   nomeTimeOrganograma,
-  operadorasNome,
-  operadoraSlugs,
+  estudiosNome,
+  estudioSlugs,
+  operadorasPorEstudio,
+  opParaEstudio,
   userEmail,
-  ocultarCampoOperadora = false,
+  ocultarCampoEstudio = false,
   onClose,
   onSalvo,
   t,
@@ -1472,10 +1500,12 @@ function ModalStaffEditar({
 }: {
   row: RhFuncionario;
   nomeTimeOrganograma: string;
-  operadorasNome: Record<string, string>;
-  operadoraSlugs: string[];
+  estudiosNome: Record<string, string>;
+  estudioSlugs: string[];
+  operadorasPorEstudio: Record<string, string[]>;
+  opParaEstudio: Record<string, string>;
   userEmail: string | null;
-  ocultarCampoOperadora?: boolean;
+  ocultarCampoEstudio?: boolean;
   onClose: () => void;
   onSalvo: (r: RhFuncionario) => void;
   t: ReturnType<typeof useApp>["theme"];
@@ -1485,14 +1515,13 @@ function ModalStaffEditar({
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
-  const [opSlug, setOpSlug] = useState(row.staff_operadora_slug ?? "");
+  const [estudiosSelecionados, setEstudiosSelecionados] = useState<string[]>(() =>
+    staffEstudioSlugsFromRow(row, opParaEstudio),
+  );
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
   const [horarioTurno, setHorarioTurno] = useState("");
-  const [opTurnosEdit, setOpTurnosEdit] = useState<Pick<
-    Operadora,
-    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
-  > | null>(null);
+  const [estudioTurnosEdit, setEstudioTurnosEdit] = useState<OpTurnosStaffPick | null>(null);
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [liveNoEstudio, setLiveNoEstudio] = useState(() => dataIsoParaInputDate(row.staff_live_no_estudio));
   const [err, setErr] = useState("");
@@ -1505,7 +1534,7 @@ function ModalStaffEditar({
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
     setTurno(turnoRhCoerenteComEscala(row.escala, row.staff_turno));
-    setOpSlug(row.staff_operadora_slug ?? "");
+    setEstudiosSelecionados(staffEstudioSlugsFromRow(row, opParaEstudio));
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
     {
@@ -1525,7 +1554,9 @@ function ModalStaffEditar({
     row.escala,
     row.staff_nickname,
     row.staff_turno,
-    row.staff_operadora_slug,
+    row.staff_estudio_slug,
+    row.staff_estudio_slugs,
+    opParaEstudio,
     row.staff_barcode,
     row.staff_id_operacional,
     row.staff_horario_turno,
@@ -1538,35 +1569,23 @@ function ModalStaffEditar({
   ]);
 
   useEffect(() => {
-    if (aba !== "dealer") return;
-    setDealerGenero(readStaffDealerGeneroForUi(row));
-    setDealerBio(readStaffDealerBioForUi(row));
-    setDealerFotos(readStaffDealerFotosForUi(row));
-  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos, row]);
-
-  useEffect(() => {
     if (!staffEhGamePresenter && aba === "dealer") setAba("funcao");
   }, [staffEhGamePresenter, aba]);
 
   useEffect(() => {
-    const slug = opSlug.trim();
+    const slug = staffEstudioSlugPrimarioParaSync(estudiosSelecionados) ?? "";
     if (!slug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
-      setOpTurnosEdit(null);
+      setEstudioTurnosEdit(null);
       return;
     }
     let cancelled = false;
-    void supabase
-      .from("operadoras")
-      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
-      .eq("slug", slug)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setOpTurnosEdit((data as Operadora) ?? null);
-      });
+    void fetchTurnosPorEstudioSlugs([slug]).then((map) => {
+      if (!cancelled) setEstudioTurnosEdit(map.get(slug) ?? null);
+    });
     return () => {
       cancelled = true;
     };
-  }, [opSlug, row.escala]);
+  }, [estudiosSelecionados, row.escala]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -1618,31 +1637,6 @@ function ModalStaffEditar({
 
   const salvar = async () => {
     setErr("");
-    if (aba === "dealer") {
-      setSaving(true);
-      try {
-        const { data: updatedRh, error } = await supabase
-          .from("rh_funcionarios")
-          .update({
-            staff_dealer_genero: dealerGenero,
-            staff_dealer_bio: dealerBio.trim() || null,
-            staff_dealer_fotos: dealerFotos,
-          })
-          .eq("id", row.id)
-          .select("*")
-          .single();
-        if (error) throw error;
-        const merged = (updatedRh ?? row) as RhFuncionario;
-        await syncGamePresenterDealerFromRhFuncionario(merged);
-        onSalvo(merged);
-      } catch (upErr) {
-        setErr(upErr instanceof Error ? upErr.message : "Não foi possível salvar os dados do dealer.");
-      } finally {
-        setSaving(false);
-      }
-      return;
-    }
-
     setSaving(true);
     const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
     const turnoStr = turno.trim();
@@ -1672,10 +1666,14 @@ function ModalStaffEditar({
       return;
     }
 
+    const estudioAntes = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
+    const estudioDepoisSlugs = normalizeStaffEstudioSlugsForSave(estudiosSelecionados);
+    const estudioDepois = staffEstudioLabel(estudioDepoisSlugs, estudiosNome);
+
     const antes = {
       nick: (row.staff_nickname ?? "").trim(),
       turno: (row.staff_turno ?? "").trim(),
-      op: (row.staff_operadora_slug ?? "").trim(),
+      estudio: estudioAntes,
       barcode: (row.staff_barcode ?? "").trim(),
       idOp: (row.staff_id_operacional ?? "").trim(),
       horario: (row.staff_horario_turno ?? "").trim(),
@@ -1685,7 +1683,7 @@ function ModalStaffEditar({
     const depois = {
       nick: nick.trim(),
       turno: (turnoFinal ?? "").trim(),
-      op: opSlug.trim(),
+      estudio: estudioDepois,
       barcode: barcode.trim(),
       idOp: idOperacional.trim(),
       horario: (horarioFinal ?? "").trim(),
@@ -1702,7 +1700,13 @@ function ModalStaffEditar({
         depois: labelHorarioTurnoStaffPorValor(depois.horario || undefined),
       });
     }
-    if (antes.op !== depois.op) alteracoes.push({ campo: "Operadora", antes: antes.op || "—", depois: depois.op || "—" });
+    if (antes.estudio !== depois.estudio) {
+      alteracoes.push({
+        campo: "Estúdio",
+        antes: antes.estudio,
+        depois: depois.estudio,
+      });
+    }
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
     if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
     if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills", antes: antes.skills, depois: depois.skills });
@@ -1713,16 +1717,54 @@ function ModalStaffEditar({
         depois: fmtDataIsoPtBr(depois.live || null),
       });
     }
+    if (staffEhGamePresenter) {
+      const generoAntes = readStaffDealerGeneroForUi(row);
+      const bioAntes = readStaffDealerBioForUi(row).trim();
+      const fotosAntes = readStaffDealerFotosForUi(row).length;
+      const bioDepois = dealerBio.trim();
+      const fotosDepois = dealerFotos.length;
+      if (generoAntes !== dealerGenero) {
+        alteracoes.push({
+          campo: "Gênero (Dealer)",
+          antes: DEALER_GENERO_LABEL[generoAntes] ?? generoAntes,
+          depois: DEALER_GENERO_LABEL[dealerGenero] ?? dealerGenero,
+        });
+      }
+      if (bioAntes !== bioDepois) {
+        alteracoes.push({ campo: "Bio do Dealer", antes: bioAntes || "—", depois: bioDepois || "—" });
+      }
+      if (fotosAntes !== fotosDepois) {
+        alteracoes.push({
+          campo: "Fotos do Dealer",
+          antes: fotosAntes ? `${fotosAntes} foto(s)` : "—",
+          depois: fotosDepois ? `${fotosDepois} foto(s)` : "—",
+        });
+      }
+    }
+
+    const estudioPrimario = staffEstudioSlugPrimarioParaSync(estudioDepoisSlugs);
+    const operadoraSync = estudioPrimario
+      ? primeiraOperadoraDoEstudio(estudioPrimario, operadorasPorEstudio)
+      : null;
 
     const patch = {
       staff_nickname: depois.nick || null,
       staff_turno: turnoFinal,
       staff_horario_turno: precisaHorario ? horarioFinal : null,
-      staff_operadora_slug: depois.op || null,
+      staff_estudio_slugs: estudioDepoisSlugs.length > 0 ? estudioDepoisSlugs : null,
+      staff_estudio_slug: estudioPrimario,
+      staff_operadora_slug: operadoraSync,
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
       staff_skills: skillsParaJson(skills),
       staff_live_no_estudio: depois.live ? depois.live : null,
+      ...(staffEhGamePresenter
+        ? {
+            staff_dealer_genero: dealerGenero,
+            staff_dealer_bio: dealerBio.trim() || null,
+            staff_dealer_fotos: dealerFotos,
+          }
+        : {}),
     };
 
     const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
@@ -1767,6 +1809,7 @@ function ModalStaffEditar({
             key={key}
             id={`staff-edit-tab-${key}`}
             active={aba === key}
+            aria-controls={`staff-edit-panel-${key}`}
             onClick={() => setAba(key)}
             icon={STAFF_EDITAR_TAB_ICONS[key]}
           >
@@ -1775,8 +1818,7 @@ function ModalStaffEditar({
         ))}
       </div>
 
-      {aba === "funcao" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "funcao"} id="staff-edit-panel-funcao" labelledBy="staff-edit-tab-funcao">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-nick">
               Nickname
@@ -1791,19 +1833,15 @@ function ModalStaffEditar({
             <span style={labelStyle}>Escala (somente leitura)</span>
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
-          {!ocultarCampoOperadora ? (
+          {!ocultarCampoEstudio ? (
             <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle} htmlFor="staff-op">
-                Operadora
-              </label>
-              <select id="staff-op" value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={inputStyle} aria-label="Operadora">
-                <option value="">—</option>
-                {operadoraSlugs.map((slug) => (
-                  <option key={slug} value={slug}>
-                    {operadorasNome[slug] ?? slug}
-                  </option>
-                ))}
-              </select>
+              <span style={labelStyle}>Estúdio</span>
+              <StaffEstudioCampoSelect
+                value={estudiosSelecionados}
+                onChange={setEstudiosSelecionados}
+                estudioSlugs={estudioSlugs}
+                estudiosNome={estudiosNome}
+              />
             </div>
           ) : null}
           <div style={{ marginBottom: 14 }}>
@@ -1860,7 +1898,7 @@ function ModalStaffEditar({
                 }}
                 aria-readonly
               >
-                {textoHorarioTurnoSomenteOperadora(row.escala, turno, opTurnosEdit)}
+                {textoHorarioTurnoSomenteOperadora(row.escala, turno, estudioTurnosEdit)}
               </div>
             </div>
           ) : null}
@@ -1886,11 +1924,9 @@ function ModalStaffEditar({
             </label>
             <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
           </div>
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "skills" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "skills"} id="staff-edit-panel-skills" labelledBy="staff-edit-tab-skills">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-live-estudio">
               Live no Estúdio
@@ -1935,11 +1971,10 @@ function ModalStaffEditar({
               </select>
             </div>
           ))}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "dealer" && (
-        <div role="tabpanel">
+      {staffEhGamePresenter ? (
+        <ModalTabPanel active={aba === "dealer"} id="staff-edit-panel-dealer" labelledBy="staff-edit-tab-dealer">
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-dealer-genero">
               Gênero
@@ -1986,7 +2021,7 @@ function ModalStaffEditar({
                     border: `1px solid ${t.cardBorder}`,
                   }}
                 >
-                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
                   <button
                     type="button"
                     aria-label="Remover foto"
@@ -2031,8 +2066,8 @@ function ModalStaffEditar({
               <input type="file" accept="image/*" multiple hidden onChange={(ev) => void handleDealerFotosUpload(ev)} disabled={dealerUploading} />
             </label>
           </div>
-        </div>
-      )}
+        </ModalTabPanel>
+      ) : null}
 
       {err ? (
         <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>

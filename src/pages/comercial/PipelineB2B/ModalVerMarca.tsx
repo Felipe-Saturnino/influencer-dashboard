@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { Globe, Shield, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Globe, Loader2, Pencil, Shield, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -18,7 +20,13 @@ import {
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
 } from "./constants";
-import { fmtDataNascimento, marcasMesmoCnpj, produtoStatus, telefonesDisplay } from "./helpers";
+import {
+  fmtDataNascimento,
+  marcasMesmoCnpj,
+  parseDominioMarcaInput,
+  produtoStatus,
+  telefonesDisplay,
+} from "./helpers";
 
 type VerTab = "dados" | "licenca" | "contatos";
 
@@ -27,13 +35,28 @@ export function ModalVerMarca({
   allMarcas,
   onClose,
   onOpenMarca,
+  canEditar,
+  onSavedDominio,
 }: {
   marca: PipelineMarcaRow;
   allMarcas: PipelineMarcaRow[];
   onClose: () => void;
   onOpenMarca: (m: PipelineMarcaRow) => void;
+  canEditar: boolean;
+  onSavedDominio: (marcaId: string, dominio: string | null) => Promise<boolean>;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [dominio, setDominio] = useState(marca.dominio ?? "");
+  const [editandoDominio, setEditandoDominio] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    setDominio(marca.dominio ?? "");
+    setEditandoDominio(false);
+    setErr(null);
+  }, [marca.id, marca.dominio]);
   const licencaRows = useMemo(
     () => marcasMesmoCnpj(allMarcas, marca.empresa.cnpj, marca.id),
     [allMarcas, marca],
@@ -62,6 +85,57 @@ export function ModalVerMarca({
     color: t.text,
     fontFamily: FONT.body,
   };
+
+  const inputStyle = {
+    width: "100%",
+    boxSizing: "border-box" as const,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontSize: 13,
+    fontFamily: FONT.body,
+  };
+
+  async function salvarDominio() {
+    if (!canEditar) return;
+    setErr(null);
+    const parsed = parseDominioMarcaInput(dominio);
+    if (parsed.error) {
+      setErr(parsed.error);
+      return;
+    }
+    setSalvando(true);
+    const ok = await onSavedDominio(marca.id, parsed.value);
+    setSalvando(false);
+    if (!ok) {
+      setErr("Não foi possível salvar o domínio. Se o problema persistir, entre em contato com o suporte.");
+      return;
+    }
+    setEditandoDominio(false);
+  }
+
+  function cancelarEdicaoDominio() {
+    setDominio(marca.dominio ?? "");
+    setEditandoDominio(false);
+    setErr(null);
+  }
+
+  const dominioHref = marca.dominio
+    ? marca.dominio.startsWith("http")
+      ? marca.dominio
+      : `https://${marca.dominio}`
+    : null;
+
+  const dominioParsed = parseDominioMarcaInput(dominio);
+  const dominioAtualNormalizado = marca.dominio
+    ? parseDominioMarcaInput(marca.dominio).value
+    : null;
+  const dominioAlterado =
+    canEditar &&
+    !dominioParsed.error &&
+    (dominioParsed.value ?? null) !== (dominioAtualNormalizado ?? null);
 
   return (
     <ModalBase onClose={onClose} maxWidth={720} zIndex={1000}>
@@ -118,20 +192,84 @@ export function ModalVerMarca({
 
       {activeTab === "dados" ? (
         <div id="panel-ver-dados" role="tabpanel" aria-labelledby="tab-ver-dados">
+          {err ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+            >
+              {err}
+            </div>
+          ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 16 }}>
             <div>
               <div style={fieldLabel}>Domínio</div>
-              {marca.dominio ? (
-                <a
-                  href={marca.dominio.startsWith("http") ? marca.dominio : `https://${marca.dominio}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...fieldValue, color: "var(--brand-accent, #1e36f8)", fontWeight: 700 }}
-                >
-                  {marca.dominio}
-                </a>
+              {editandoDominio && canEditar ? (
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={dominio}
+                  onChange={(e) => setDominio(e.target.value)}
+                  placeholder="https://marca.bet.br"
+                  aria-label="Domínio da marca"
+                  style={inputStyle}
+                  autoFocus
+                />
               ) : (
-                <div style={fieldValue}>—</div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {marca.dominio && dominioHref ? (
+                    <a
+                      href={dominioHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        ...fieldValue,
+                        color: "var(--brand-accent, #1e36f8)",
+                        fontWeight: 700,
+                        wordBreak: "break-all",
+                      }}
+                      aria-label={`Abrir ${marca.dominio} em nova aba`}
+                    >
+                      {marca.dominio}
+                    </a>
+                  ) : (
+                    <div style={fieldValue}>—</div>
+                  )}
+                  {canEditar ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDominio(marca.dominio ?? "");
+                        setEditandoDominio(true);
+                        setErr(null);
+                      }}
+                      aria-label="Editar domínio"
+                      title="Editar domínio"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 32,
+                        height: 32,
+                        flexShrink: 0,
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Pencil size={14} aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
               )}
             </div>
             <div>
@@ -168,6 +306,78 @@ export function ModalVerMarca({
               <div style={fieldValue}>{marca.empresa.requerimento_ano ?? "—"}</div>
             </div>
           </div>
+          {editandoDominio && canEditar ? (
+            <>
+              <p
+                style={{
+                  margin: "16px 0 0",
+                  fontSize: 11,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  lineHeight: 1.45,
+                }}
+              >
+                Ao alterar o domínio, o status volta para Inativo até a próxima validação automática.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  marginTop: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={cancelarEdicaoDominio}
+                  disabled={salvando}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: t.text,
+                    cursor: salvando ? "not-allowed" : "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void salvarDominio()}
+                  disabled={salvando || !dominioAlterado}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: getCtaCriarGradient(brand),
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#fff",
+                    cursor: salvando || !dominioAlterado ? "not-allowed" : "pointer",
+                    opacity: salvando || !dominioAlterado ? 0.55 : 1,
+                    fontFamily: FONT.body,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {salvando ? (
+                    <>
+                      <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                      Salvando…
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
 
@@ -230,14 +440,14 @@ export function ModalVerMarca({
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
                         {ded ? (
-                          <span style={badgeProdutoStyle()}>{STATUS_PRODUTO_LABEL[ded]}</span>
+                          <span style={badgeProdutoStyle(ded)}>{STATUS_PRODUTO_LABEL[ded]}</span>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td style={{ padding: "9px 12px", textAlign: "center", borderBottom: `1px solid ${t.cardBorder}` }}>
                         {net ? (
-                          <span style={badgeProdutoStyle()}>{STATUS_PRODUTO_LABEL[net]}</span>
+                          <span style={badgeProdutoStyle(net)}>{STATUS_PRODUTO_LABEL[net]}</span>
                         ) : (
                           "—"
                         )}

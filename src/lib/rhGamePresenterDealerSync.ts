@@ -1,6 +1,10 @@
 import { supabase } from "./supabase";
 import type { DealerGenero, DealerJogo, DealerTurno } from "../types";
 import type { RhFuncionario } from "../types/rhFuncionario";
+import {
+  staffEstudioSlugPrimarioParaSync,
+  staffEstudioSlugsFromRow,
+} from "../pages/rh/GestaoStaff/gestaoStaffEstudioHelpers";
 
 export function isGamePresenterTimeNome(nome: string | null | undefined): boolean {
   const n = (nome ?? "")
@@ -9,6 +13,42 @@ export function isGamePresenterTimeNome(nome: string | null | undefined): boolea
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
   return n.replace(/\s+/g, " ") === "game presenter";
+}
+
+/** Prestador ativo/indisponível no time Game Presenter (mesma função que «dealer» no catálogo). */
+export function prestadorQualificaParaElencoDealer(
+  prestadorStatus: string | null | undefined,
+  timeNome: string | null | undefined,
+  timeStatus: string | null | undefined,
+): boolean {
+  const st = String(prestadorStatus ?? "").toLowerCase();
+  if (st !== "ativo" && st !== "indisponivel") return false;
+  if (String(timeStatus ?? "").toLowerCase() !== "ativo") return false;
+  return isGamePresenterTimeNome(timeNome);
+}
+
+export type RhFuncionarioElencoEmbed = {
+  id: string;
+  status: string;
+  org_time_id: string | null;
+  rh_org_times: { nome: string; status?: string | null } | { nome: string; status?: string | null }[] | null;
+};
+
+export function prestadorEmbedQualificaElencoDealer(
+  embed: RhFuncionarioElencoEmbed | null | undefined,
+): boolean {
+  if (!embed) return false;
+  const timeRaw = embed.rh_org_times;
+  const time = timeRaw == null ? null : Array.isArray(timeRaw) ? timeRaw[0] ?? null : timeRaw;
+  return prestadorQualificaParaElencoDealer(embed.status, time?.nome, time?.status);
+}
+
+export async function removeDealerForRhFuncionarioId(
+  rhFuncionarioId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const { error } = await supabase.from("dealers").delete().eq("rh_funcionario_id", rhFuncionarioId);
+  if (error) return { ok: false, reason: error.message };
+  return { ok: true, reason: "removed_from_elenco" };
 }
 
 /** Primeiro e último token do nome (regra dealer). */
@@ -90,24 +130,28 @@ export function readStaffDealerFotosForUi(row: RhFuncionario): string[] {
 }
 
 /**
- * Cria ou atualiza `dealers` quando o prestador está no time **Game Presenter** (nome do time, case-insensitive).
- * Não altera dealers se o time não for GP ou se o prestador estiver encerrado.
+ * Mantém `dealers` alinhado ao elenco de **Game Presenter** (dealer = mesma função).
+ * Cria/atualiza quando o prestador qualifica; remove o registro quando sai do time, é encerrado ou o time fica inativo.
  */
 export async function syncGamePresenterDealerFromRhFuncionario(
   row: RhFuncionario,
 ): Promise<{ ok: boolean; reason?: string; dealerId?: string }> {
-  if (!row.org_time_id) return { ok: true, reason: "no_org_time" };
-  if (row.status === "encerrado") return { ok: true, reason: "prestador_encerrado" };
+  if (!row.org_time_id || row.status === "encerrado") {
+    return removeDealerForRhFuncionarioId(row.id);
+  }
 
   const { data: timeRow, error: eT } = await supabase
     .from("rh_org_times")
     .select("nome,status")
     .eq("id", row.org_time_id)
     .maybeSingle();
-  if (eT || !timeRow) return { ok: true, reason: "time_not_found" };
+  if (eT || !timeRow) {
+    return removeDealerForRhFuncionarioId(row.id);
+  }
   const tr = timeRow as { nome: string; status?: string | null };
-  if (String(tr.status ?? "").toLowerCase() !== "ativo") return { ok: true, reason: "time_inativo" };
-  if (!isGamePresenterTimeNome(tr.nome)) return { ok: true, reason: "not_game_presenter" };
+  if (!prestadorQualificaParaElencoDealer(row.status, tr.nome, tr.status)) {
+    return removeDealerForRhFuncionarioId(row.id);
+  }
 
   const nick = (row.staff_nickname ?? "").trim() || primeiroUltimoNome(row.nome) || "Dealer";
   const nomeReal = primeiroUltimoNome(row.nome) || nick;
@@ -116,6 +160,9 @@ export async function syncGamePresenterDealerFromRhFuncionario(
   const turno = staffTurnoTextoParaDealerTurno(row.staff_turno);
   const { jogos, vip } = staffSkillsParaJogosEVip(row.staff_skills as Record<string, unknown> | null);
   const slug = (row.staff_operadora_slug ?? "").trim() || null;
+  const estudioSlugs = staffEstudioSlugsFromRow(row, {});
+  const estudioSlug =
+    staffEstudioSlugPrimarioParaSync(estudioSlugs) ?? ((row.staff_estudio_slug ?? "").trim() || null);
   const bio = bioDeRow(row);
 
   const payload = {
@@ -125,6 +172,7 @@ export async function syncGamePresenterDealerFromRhFuncionario(
     genero,
     turno,
     jogos,
+    estudio_slug: estudioSlug,
     operadora_slug: slug,
     perfil_influencer: bio,
     status: "aprovado" as const,

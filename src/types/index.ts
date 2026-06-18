@@ -233,6 +233,9 @@ export interface Dealer {
   genero:           DealerGenero;
   turno:            DealerTurno;
   jogos:            DealerJogo[];
+  /** Estúdio Spin (Gestão de Dealers); primário. */
+  estudio_slug?:    string | null;
+  /** Legado — solicitações (`dealer_solicitacoes`) e sync operadora. */
   operadora_slug:   string | null;
   perfil_influencer: string | null;
   /** Prestador RH (time Game Presenter) quando o cadastro é gerido pela Gestão de Staff. */

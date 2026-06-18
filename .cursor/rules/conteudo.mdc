@@ -387,7 +387,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **`useDashboardBrand()`** + `ctaGradientInformativos` em `src/lib/informativosUi.ts`.
 - **Abas:** `FiltroBarTabButton` — Informativos | Gerenciamento de Informativos (gerenciamento só com `canEditarOk`).
 - **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do usuário; perfil **Operador** também por `operador_escopo` (`todos` ou slug de operadora **ativa** em Gestão de Operadoras × `user_scopes`).
-- **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; **Editar** (ícone `Pencil` na coluna Ações) em rascunho, aprovação e publicado — `podeEditarInformativoGerenciamento` (`canEditar` sim ou próprios × `created_by`); excluir com `podeExcluirInformativoGerenciamento` (dois cliques). Linha de busca: filtro status + **`CtaCriarButton` Novo Informativo** à direita (`marginLeft: auto`), mesma fileira.
+- **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; **Editar** (ícone `Pencil` na coluna Ações) em rascunho, aprovação e publicado — `podeEditarInformativoGerenciamento` (`canEditar` sim ou próprios × `created_by`); **Arquivar** = **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**; excluir com `podeExcluirInformativoGerenciamento`. Linha de busca: filtro status + **`CtaCriarButton` Novo Informativo** à direita (`marginLeft: auto`), mesma fileira.
 - **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); com **Operador** selecionado, campo obrigatório **Operadora** (`InformativoOperadorEscopoSelect` — opção **Todos** ou slug ativa); coluna `operador_escopo` em `conteudo_informativo`; Publicar grava `published_at` / `published_by`.
 - **Aprovação (`lib/informativosWorkflow.ts`):** perfis Admin/Executivo/Operador/Agência/Influencer/Afiliado/Investidor → só «Enviar para aprovação»; demais perfis → «Publicar» direto. Aprovar: alvo com Admin/Executivo/Operador → só perfil Administrador; alvo com Agência/Influencer/Afiliado → Admin, Executivo ou Gestor; autoaprovação só Admin.
 - **Sem** categorias, fixado nem marcar como lido.
@@ -399,7 +399,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **CTA gradiente:** importar `ctaGradientPortalRh` de `src/lib/portalRhUi.ts` — nunca local; fallback Spin `#4a2082` → `#1e36f8` (nunca `--brand-action` / `--brand-contrast` fora de dashboards).
 - **Modais** (`ModalCriarPostagem`, `ModalHistoricoPostagem`, leitura): `useApp()` + `useDashboardBrand()` internos — **nunca** props `t` ou `brand`.
 - **Tabs principais + Gerenciamento:** `onKeyDown` ArrowLeft/Right, `tabIndex` roving, `tabpanel` com `tabIndex={0}`.
-- **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = dois cliques + `onBlur`; `aria-label` contextual em ações.
+- **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**; `aria-label` contextual em ações.
 - **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** (sem filtro de mês).
 - **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
 - **Gerenciamento:** todas as postagens (incl. arquivadas); carrossel e Histórico também em `published_at`; linha 3 — busca + tipo + status + **`CtaCriarButton` Nova Postagem** na mesma fileira (sem barra `borderTop` entre abas e busca; sem linha extra só para o CTA).
@@ -426,7 +426,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ## O Que Nunca Fazer Nesta Seção
 
 - Nunca declarar objeto de paleta semântica **local** — usar `BRAND_SEMANTIC` / `theme` ou `BRAND` de `dashboardConstants` conforme o ficheiro.
-- Nunca `window.confirm()` para exclusão — dois cliques + `onBlur`.
+- Nunca `window.confirm()` para exclusão ou arquivamento — usar modais canónicos (`ModalConfirmExcluirPadrao`, `ModalConfirmArquivarPadrao`).
 - Nunca `backdropFilter: blur()` em overlays de modal.
 - Nunca hardcodar cor no **botão primário** do modal sem ramo `brand.useBrand` / vars CSS.
 - Nunca `<input type="checkbox">` sem padrão acessível completo — botão com `role="checkbox"`.
@@ -448,4 +448,4 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Nunca `"A carregar"` — usar `"Carregando…"`.
 - Nunca `ctaGradient` local no Portal RH — usar `ctaGradientPortalRh` em `portalRhUi.ts`.
 - Nunca modal do Portal RH recebendo `t` ou `brand` por prop.
-- Nunca Arquivar com um único clique na tabela de gerenciamento.
+- Nunca Arquivar com confirmação em 2 cliques na tabela de gerenciamento — usar **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**.

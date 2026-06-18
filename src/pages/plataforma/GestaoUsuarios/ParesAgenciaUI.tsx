@@ -91,27 +91,22 @@ export function ParesAgenciaUI({
               type="button"
               onClick={() => onRemove(idx)}
               aria-label={`Remover par ${idx + 1}`}
+              title={`Remover par ${idx + 1}`}
               style={{
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                background: BRAND.vermelho,
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                padding: 8,
-                border: "none",
-                background: "none",
-                color: t.textMuted,
-                cursor: "pointer",
-                borderRadius: 6,
-              }}
-              title="Remover par"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = BRAND.vermelho;
-                e.currentTarget.style.background = `${BRAND.vermelho}18`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = t.textMuted;
-                e.currentTarget.style.background = "none";
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Trash2 size={16} />
+              <Trash2 size={12} aria-hidden="true" />
             </button>
           </div>
         ))}

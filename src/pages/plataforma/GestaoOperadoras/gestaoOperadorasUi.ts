@@ -12,8 +12,4 @@ export type MesaCadastroResumo = {
   mesa_identificacao_operadora: string | null;
 };
 
-export function timeDbToInput(v: string | null | undefined): string {
-  if (!v || typeof v !== "string") return "";
-  const m = v.match(/^(\d{1,2}):(\d{2})/);
-  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : v.slice(0, 5);
-}
+export { timeDbToInput } from "../../../lib/turnosDealers";

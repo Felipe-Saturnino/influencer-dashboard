@@ -1,4 +1,17 @@
 // ─── Conteúdo: Troubleshooting ────────────────────────────────────────────────
+
+/** Blocos transversais — exibidos no topo da aba Troubleshooting (todas as páginas do menu). */
+export const TROUBLESHOOTING_TRANSVERSAL = {
+  titulo: "Plataforma",
+  blocos: [
+    {
+      subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
+      texto:
+        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
+    },
+  ],
+} as const;
+
 export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: string; texto: string }[] }> = {
   streamers: {
     titulo: "Streamers",
@@ -156,7 +169,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma live?",
         texto:
-          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal segue o fluxo de duplo clique (Confirmar?) quando o seu perfil tem permissão de exclusão.",
+          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal abre o pop-up padrão de confirmação quando o seu perfil tem permissão de exclusão.",
       },
       {
         subtitulo: "Não consigo agendar para hoje?",
@@ -221,7 +234,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso excluir uma live da lista de validação?",
         texto:
-          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com confirmação em dois cliques. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
+          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com pop-up de confirmação antes de excluir. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
       },
     ],
   },
@@ -256,7 +269,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo excluir uma live?",
         texto:
-          "O botão Excluir segue as mesmas regras de permissão que o Editar e usa o fluxo de duplo clique (Confirmar?). Lives fora do seu escopo não exibem ações.",
+          "O botão Excluir segue as mesmas regras de permissão que o Editar e abre o pop-up padrão de confirmação. Lives fora do seu escopo não exibem ações.",
       },
       {
         subtitulo: "A operadora não aparece nas opções ao editar?",
@@ -351,7 +364,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um dealer não aparece na listagem?",
         texto:
-          "A página lista apenas dealers já vinculados a um prestador ativo em **Gestão de Prestadores**. Se o colaborador existe em RH mas não aparece aqui, o vínculo Game Presenter / registro na tabela de dealers pode estar pendente — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, operadora ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers daquela parceira.",
+          "A página lista apenas Game Presenters (dealers) com prestador **ativo** ou **indisponível** no time Game Presenter. Se o colaborador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o perfil em **Gestão de Staff** — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers do estúdio vinculado à parceira.",
       },
       {
         subtitulo: "O botão Solicitar não aparece no card?",
@@ -366,7 +379,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro botão para criar ou editar dealer?",
         texto:
-          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Crie ou atualize o prestador em **Gestão de Prestadores**; quando o vínculo de Game Presenter estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura). Fotos e dados de perfil são mantidos no fluxo de RH, não nesta tela.",
+          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Cadastre o prestador e defina o time **Game Presenter** em **Gestão de Prestadores**; complete perfil, estúdio e skills em **Gestão de Staff**. Quando o sync estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura).",
       },
       {
         subtitulo: "O histórico de solicitações do dealer está vazio?",
@@ -396,7 +409,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A campanha não aparece para o Operador?",
         texto:
-          "As campanhas exibidas para operadores vêm da tabela 'roteiro_mesa_campanhas' filtradas pela operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada com a operadora correta no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha.",
+          "As campanhas exibidas para operadores vêm da tabela 'roteiro_mesa_campanhas' filtradas pelo estúdio/operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada para o estúdio correto no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha (solicitações continuam por operadora).",
       },
       {
         subtitulo: "O botão 'Marcar como resolvido' não aparece na thread?",
@@ -431,7 +444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O banner de revisão cadastral não aparece ou não some?",
         texto:
-          "A revisão obrigatória (ciclo de 6 meses) vale apenas quando você visualiza o **seu** cadastro — não aparece ao consultar terceiros. Para concluir: atualize dados ou documentos na aba correspondente, ou use **Confirmar sem alterações** na aba Documentos quando nada mudou. Formação e Experiência profissional anterior não entram nesse ciclo.",
+          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. Formação e Experiência profissional anterior não entram nesse ciclo.",
       },
       {
         subtitulo: "Falha ao enviar documento ou arquivo?",
@@ -491,12 +504,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo nenhum bloco de conteúdo?",
         texto:
-          "É necessário selecionar uma operadora na barra de filtros (perfis com múltiplas operadoras). Sem seleção, a página exibe apenas a orientação para escolher a operadora.\n\nSe a operadora já está selecionada e os blocos continuam vazios, confirme permissão de visualização e se há campanhas ou sugestões cadastradas para aquela operadora.",
+          "Perfis com múltiplos estúdios devem selecionar um estúdio na barra de filtros (ou **Todos Estúdios** para ver tudo no escopo). Operadores com escopo fixo já entram com o estúdio da operadora.\n\nSe o estúdio já está selecionado e os blocos continuam vazios, confirme permissão de visualização e se há campanhas ou sugestões cadastradas para aquele estúdio.",
       },
       {
         subtitulo: "A campanha não aparece na Central de Notificações?",
         texto:
-          "Confirme operadora, datas de início/fim e permissões. A Central filtra por escopo; campanhas fora do período podem exigir modo Histórico na Central.\n\nA campanha precisa estar ativa no intervalo selecionado na Central e vinculada à operadora do escopo do operador.",
+          "Confirme estúdio/operadora do escopo, datas de início/fim e permissões. A Central filtra por operadora; campanhas fora do período podem exigir modo Histórico na Central.\n\nA campanha precisa estar ativa no intervalo selecionado na Central e vinculada ao estúdio/operadora do escopo do operador.",
       },
       {
         subtitulo: "Filtros de jogo ou tipo escondem itens?",
@@ -506,12 +519,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao salvar bloco ou campanha?",
         texto:
-          "Verifique campos obrigatórios (título, texto, operadora, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
+          "Verifique campos obrigatórios (título, texto, estúdio, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
       },
       {
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
-          "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os botões de lixeira não aparecem. Confirme também que a operadora do item está dentro do escopo do usuário.",
+          "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os ícones de exclusão não aparecem. Ao clicar, o pop-up padrão pede confirmação. Confirme também que o estúdio do item está dentro do escopo do usuário.",
       },
     ],
   },
@@ -666,7 +679,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo arquivar uma postagem publicada?",
         texto:
-          "O botão Arquivar exige dois cliques: o primeiro destaca o botão e exibe Confirmar?; o segundo executa a ação. Se você clicou fora do botão antes de confirmar, repita o processo.",
+          "O botão Arquivar (ícone de arquivo) abre um pop-up pedindo confirmação. Toque em Arquivar no pop-up para concluir ou Cancelar para voltar. A ação não pode ser desfeita pela plataforma.",
       },
       {
         subtitulo: "O anexo ou imagem não abre ao clicar?",
@@ -876,7 +889,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo ativar uma operadora?",
         texto:
-          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Mesas. Cadastre as mesas primeiro e tente novamente.",
+          "O status Ativa só pode ser definido quando a operadora tiver pelo menos uma mesa cadastrada em Gestão de Estúdios. Cadastre as mesas primeiro e tente novamente.",
       },
       {
         subtitulo: "Erro ao excluir uma operadora?",
@@ -891,17 +904,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   gestao_mesas: {
-    titulo: "Gestão de Mesas",
+    titulo: "Gestão de Estúdios",
     blocos: [
       {
         subtitulo: "Erro ao cadastrar uma mesa — 'já existe uma mesa com este ID'?",
         texto:
-          "O ID Spin e o ID da operadora são únicos por operadora. Verifique se já existe uma mesa com os mesmos identificadores na lista. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
+          "O ID Spin é único por operadora (legado). Verifique se já existe uma mesa com o mesmo identificador. Se precisar corrigir o ID Spin de uma mesa existente, exclua e recadastre.",
       },
       {
         subtitulo: "A lista aparece vazia mesmo havendo mesas cadastradas?",
         texto:
-          "Verifique se o filtro de operadora está selecionado em **Todas Operadoras**. Se um filtro específico estiver ativo, apenas as mesas daquela operadora serão exibidas.",
+          "Verifique se o filtro de operadora está em **Todas Operadoras** e se está na aba correta (**Estúdios** ou **Mesas**). Com filtro de operadora ativo, só entram estúdios e mesas vinculados àquela parceira.",
       },
     ],
   },

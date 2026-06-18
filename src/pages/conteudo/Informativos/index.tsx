@@ -13,6 +13,7 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
 import { InformativoCard } from "./InformativoCard";
@@ -121,7 +122,7 @@ export default function InformativosPage() {
   }, []);
 
   useEffect(() => {
-    const id = window.setTimeout(() => setBuscaDeb(busca), 300);
+    const id = window.setTimeout(() => setBuscaDeb(normalizarTextoBusca(busca)), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
 
@@ -136,11 +137,11 @@ export default function InformativosPage() {
 
   const listaFiltrada = useMemo(() => {
     const mes = mesesCarrossel[idxMes];
-    const q = buscaDeb.trim().toLowerCase();
+    const q = buscaDeb;
     return lista.filter((item) => {
       if (!modoHistorico && mes && !itemNoMesCarrossel(item.published_at, mes)) return false;
       if (q) {
-        const texto = `${item.assunto} ${stripHtmlText(item.descricao)}`.toLowerCase();
+        const texto = normalizarTextoBusca(`${item.assunto} ${stripHtmlText(item.descricao)}`);
         if (!texto.includes(q)) return false;
       }
       return true;

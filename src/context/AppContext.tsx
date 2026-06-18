@@ -5,6 +5,15 @@ import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
 import {
+  readOperadoraBrandCache,
+  writeOperadoraBrandCache,
+  type OperadoraBrandSnapshot,
+} from "../lib/operadoraBrandCache";
+import {
+  fetchOperadoraBrandSnapshot,
+  operadoraBrandSnapshotHasVisual,
+} from "../lib/operadoraBrandLoad";
+import {
   areAppPathsEqual,
   buildAppPath,
   buildLoginPath,
@@ -177,6 +186,75 @@ function aplicarBrandguideOperadora(data: OperadoraBrandRow | null | undefined) 
   });
   if (validated.warnings.length) console.warn("[brandguide]", validated.warnings);
   injectBrandCss(validated);
+}
+
+function operadoraBrandFromSnapshot(snapshot: OperadoraBrandSnapshot): OperadoraBrand {
+  return {
+    nome: snapshot.nome,
+    logo_url: snapshot.logo_url,
+    font_url: snapshot.font_url,
+    brand_bg: snapshot.brand_bg,
+    home_template: snapshot.home_template,
+  };
+}
+
+function applyOperadoraBrandSnapshot(snapshot: OperadoraBrandSnapshot): void {
+  if (operadoraBrandSnapshotHasVisual(snapshot)) {
+    aplicarBrandguideOperadora(snapshot);
+  } else {
+    aplicarBrandguideReset();
+  }
+}
+
+/** Cache síncrono + fetch (opcional em background) para evitar flash Spin → operadora. */
+async function syncOperadoraBrandState(
+  slug: string,
+  setBrand: (b: OperadoraBrand | null) => void,
+  setReady: (v: boolean) => void,
+  opts?: { awaitNetwork?: boolean },
+): Promise<void> {
+  const cached = readOperadoraBrandCache(slug);
+
+  if (cached) {
+    applyOperadoraBrandSnapshot(cached);
+    setBrand(operadoraBrandFromSnapshot(cached));
+    setReady(true);
+  } else if (opts?.awaitNetwork !== false) {
+    setReady(false);
+  }
+
+  const applyFresh = (snapshot: OperadoraBrandSnapshot) => {
+    writeOperadoraBrandCache(snapshot);
+    applyOperadoraBrandSnapshot(snapshot);
+    setBrand(operadoraBrandFromSnapshot(snapshot));
+    setReady(true);
+  };
+
+  const onNetworkError = () => {
+    if (!cached) {
+      aplicarBrandguideReset();
+      setBrand(null);
+    }
+    setReady(true);
+  };
+
+  if (opts?.awaitNetwork === false) {
+    void fetchOperadoraBrandSnapshot(slug)
+      .then((fresh) => {
+        if (fresh) applyFresh(fresh);
+        else onNetworkError();
+      })
+      .catch(onNetworkError);
+    return;
+  }
+
+  try {
+    const fresh = await fetchOperadoraBrandSnapshot(slug);
+    if (fresh) applyFresh(fresh);
+    else onNetworkError();
+  } catch {
+    onNetworkError();
+  }
 }
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
@@ -615,41 +693,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     const slug = escoposVisiveis.operadorasVisiveis[0];
-    let cancelled = false;
-    setOperadoraHomeReady(false);
-    void (async () => {
-      try {
-        const { data } = await supabase.from("operadoras").select(
-          "nome, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url, home_template"
-        ).eq("slug", slug).single();
-        if (cancelled) return;
-        const hasBrand = !!(
-          data?.brand_action || data?.brand_contrast || data?.brand_bg || data?.brand_text
-          || (data?.logo_url ?? "").trim()
-        );
-        if (hasBrand) {
-          aplicarBrandguideOperadora(data as OperadoraBrandRow);
-        } else {
-          aplicarBrandguideReset();
-        }
-        const nome = (data?.nome ?? "").trim() || null;
-        const logo = (data?.logo_url ?? "").trim() || null;
-        const font = (data?.font_url ?? "").trim() || null;
-        const bg = (data?.brand_bg ?? "").trim() || null;
-        const homeTemplate = (data?.home_template ?? "").trim() || null;
-        setOperadoraBrand({ nome, logo_url: logo, font_url: font, brand_bg: bg, home_template: homeTemplate });
-      } catch {
-        if (!cancelled) {
-          aplicarBrandguideReset();
-          setOperadoraBrand(null);
-        }
-      } finally {
-        if (!cancelled) setOperadoraHomeReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void syncOperadoraBrandState(slug, setOperadoraBrand, setOperadoraHomeReady, { awaitNetwork: false });
   }, [user, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
   // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
@@ -688,6 +732,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
         setEscoposVisiveis(escopos);
+        if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+          await syncOperadoraBrandState(
+            escopos.operadorasVisiveis[0],
+            setOperadoraBrand,
+            setOperadoraHomeReady,
+          );
+        }
         const [perms, acoes] = await Promise.all([
           carregarPermissoes(u.role, {
             operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
@@ -771,6 +822,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             try {
               const escopos = await carregarEscoposVisiveis(u.id, u.role);
               setEscoposVisiveis(escopos);
+              if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+                await syncOperadoraBrandState(
+                  escopos.operadorasVisiveis[0],
+                  setOperadoraBrand,
+                  setOperadoraHomeReady,
+                );
+              }
               const [perms, acoes] = await Promise.all([
                 carregarPermissoes(u.role, {
                   operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,

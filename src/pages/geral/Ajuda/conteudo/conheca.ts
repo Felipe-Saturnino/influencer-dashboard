@@ -178,6 +178,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Ao clicar em Nova Live, o sistema verifica automaticamente os pré-requisitos do influencer. Se algum estiver pendente, um modal de bloqueio é exibido com os itens faltantes e botões de ação direta:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. O botão 'Ir para Influencers' leva diretamente à página para completar o cadastro.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. O botão 'Ir para Playbook Influencers' leva aos termos.\n\nSe todos os pré-requisitos estiverem ok, o formulário de Nova Live abre normalmente (sem o modal de bloqueio).",
       },
       {
+        subtitulo: "Excluindo uma Live",
+        texto:
+          "Ao editar uma live, o botão Excluir no rodapé do modal abre o pop-up padrão de confirmação — disponível para perfis com permissão de exclusão e conforme as regras de status (lives validadas só para Admin e Gestor). Toque em Excluir no pop-up para concluir ou Cancelar para voltar.",
+      },
+      {
         subtitulo: "Visibilidade por Perfil",
         texto:
           "— Influencer / Agência: visualiza e agenda apenas as próprias lives ou as dos influencers sob sua gestão.\n— Operador: visualiza todas as lives dos influencers que atuam na sua operadora.\n— Gestor / Executivo / Admin: visão completa de todas as lives de todos os influencers e operadoras.",
@@ -214,7 +219,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Excluindo uma Live",
         texto:
-          "O botão Excluir aparece para perfis com permissão de exclusão. Para evitar exclusões acidentais, é necessário clicar duas vezes — o primeiro clique transforma o botão em 'Confirmar?', e o segundo executa a exclusão. Clicar fora do botão cancela a operação.",
+          "O botão Excluir (ícone vermelho no card) aparece para perfis com permissão de exclusão. O clique abre um pop-up pedindo confirmação — toque em Excluir para concluir ou Cancelar para voltar. A ação não pode ser desfeita.",
       },
     ],
   },
@@ -253,7 +258,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Excluindo uma Live",
         texto:
-          "O botão Excluir aparece para perfis com permissão de exclusão. Para evitar exclusões acidentais, é necessário clicar duas vezes — o primeiro clique transforma o botão em 'Confirmar?', e o segundo executa a exclusão. Clicar fora do botão cancela a operação.",
+          "O botão Excluir (ícone vermelho no card) aparece para perfis com permissão de exclusão. O clique abre um pop-up pedindo confirmação — toque em Excluir para concluir ou Cancelar para voltar. A ação não pode ser desfeita.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -345,7 +350,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo do elenco de dealers de cassino ao vivo da Spin Gaming vinculados a prestadores ativos em Gestão de Prestadores. Exibe fotos, especialidades por jogo, turno, gênero e operadora — em modo consulta (Ver) e, para operadoras, solicitações de troca ou feedback ao estúdio. O cadastro e a manutenção do perfil de dealer não são feitos nesta página.",
+          "Catálogo de **Game Presenters** (dealers) em operação no estúdio, sincronizado com RH. A operadora consulta especialidades, turno e estúdio e envia solicitações ao estúdio — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor de estúdio configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui para a operadora vinculada ao estúdio.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -365,7 +370,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Origem do cadastro no elenco",
         texto:
-          "Um dealer só aparece nesta listagem quando existe vínculo com um prestador ativo em **Gestão de Prestadores** (perfil Game Presenter / sincronização com a tabela de dealers). Se o colaborador está cadastrado em RH mas não aparece aqui, confira o vínculo e o status do prestador — não há botão de criar ou editar dealer nesta página.",
+          "Um dealer só aparece quando o prestador está no time **Game Presenter** com status **Ativo** ou **Indisponível** em **Gestão de Prestadores** e o perfil operacional foi sincronizado a partir de **Gestão de Staff**. Se o colaborador existe em RH mas não aparece aqui, confira o time no organograma, o status e os dados em Staff — não há botão de criar ou editar dealer nesta página.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -418,7 +423,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões e filtros",
         texto:
-          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais, documentos, formação/competências e experiência profissional de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória (ciclo de 6 meses) aparece apenas quando você visualiza o **seu** cadastro — não se aplica às abas Formação e Competências nem Experiência Profissional.",
+          "— **Ver/Editar Próprios:** abre direto o cadastro vinculado ao seu e-mail de login (e-mail pessoal ou E-mail Spin), sem filtro Staff.\n— **Ver Sim:** barra de filtros com **Staff** (seleção única — um prestador por vez) e botão **Meu Cadastro** para voltar ao seu registro; abas abaixo do filtro.\n— **Ver Sim + Editar Próprios:** pode consultar qualquer prestador, mas salvar/upload/excluir só no próprio cadastro (cadastros alheios em modo leitura).\n— **Ver Sim + Editar Sim:** pode atualizar dados cadastrais, documentos, formação/competências e experiência profissional de qualquer prestador listado — independente da permissão em Gestão de Prestadores.\n\nA revisão cadastral obrigatória aparece apenas no **seu** cadastro: a **primeira** deve ser feita no primeiro acesso (cadastro em Gestão de Prestadores não conta); depois, o ciclo é de 6 meses. Não se aplica às abas Formação e Competências nem Experiência Profissional.",
       },
       {
         subtitulo: "Documentos e revisão",
@@ -486,12 +491,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Repositório de materiais ao vivo por operadora: campanhas com vigência e blocos de roteiro (Abertura, Durante o jogo e Fechamento) com scripts, orientações e alertas. O conteúdo alimenta a Central de Notificações — operadores veem campanhas vigentes e podem abrir conversas com o estúdio quando há solicitação vinculada.",
+          "Repositório de materiais ao vivo por estúdio: campanhas com vigência e blocos de roteiro (Abertura, Durante o jogo e Fechamento) com scripts, orientações e alertas. O conteúdo alimenta a Central de Notificações — operadores veem campanhas vigentes e podem abrir conversas com o estúdio quando há solicitação vinculada.",
       },
       {
-        subtitulo: "Filtros e operadora",
+        subtitulo: "Filtros e estúdio",
         texto:
-          "Selecione a operadora na barra superior (quando o perfil tem acesso a mais de uma). Sem operadora selecionada, a página orienta a escolha antes de exibir blocos.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
+          "Selecione o estúdio na barra superior (quando o perfil tem acesso a mais de um). Com **Todos Estúdios**, gestores veem o inventário completo no escopo; cada item exibe a tag do estúdio.\n\nFiltros de Jogo (Todos, Blackjack, Roleta, Baccarat, Futebol Brasileiro) e Tipo (Script, Orientação, Alerta) refinam as sugestões dentro de cada bloco — não afetam o bloco de Campanhas.\n\nEm telas estreitas, os chips de filtro podem rolar horizontalmente; use o gesto de arrastar ou as setas do touchpad para ver todas as opções.",
       },
       {
         subtitulo: "Campanhas",
@@ -506,7 +511,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas da operadora no escopo.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
       },
     ],
   },
@@ -627,7 +632,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Informativos",
         texto:
-          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (dois cliques), histórico de alterações e excluir (quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (ícone Archive + pop-up de confirmação), histórico de alterações e excluir (ícone vermelho + pop-up de confirmação, quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
       },
       {
         subtitulo: "Permissões",
@@ -666,7 +671,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (dois cliques para confirmar)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra todas as postagens de todos os meses; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra todas as postagens de todos os meses; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",
@@ -690,7 +695,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Solicitações",
         texto:
-          "No bloco **Solicitações** (título de seção padrão), a tabela lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão **Solicitar Banca** na mesma linha do título (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir é irreversível e exige confirmação.",
+          "No bloco **Solicitações** (título de seção padrão), a tabela lista os pedidos em aberto (Solicitado ou Aprovado). Cada linha exibe o influencer, seu perfil (Ativo/Inativo/Cancelado), o ID da conta na operadora, o CPF mascarado — clique no ícone de olho para revelar temporariamente —, o valor e o status atual.\n\nInfluencers e agências podem criar novas solicitações pelo botão **Solicitar Banca** na mesma linha do título (ícone + no padrão de criação da plataforma). Para concluir o cadastro ou aceitar o Playbook, o sistema exibe um aviso e bloqueia a solicitação até que a pendência seja resolvida.\n\nPerfis de gestão interna podem Aprovar, Recusar ou Liberar cada solicitação. A ação de Excluir (ícone vermelho) abre o pop-up padrão de confirmação e remove a solicitação de forma irreversível.",
       },
       {
         subtitulo: "Consolidado de Bancas",
@@ -821,7 +826,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela de Campanhas",
         texto:
-          "Lista todas as campanhas ordenadas pelo campo selecionado. Colunas disponíveis: Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\nO botão Editar abre o formulário preenchido com os dados atuais da campanha, permitindo alterar o nome, a operadora e o status. O botão Excluir remove a campanha permanentemente — os vínculos com UTMs mapeados na Gestão de Links são desfeitos automaticamente, mas os dados históricos de performance permanecem nos dashboards.",
+          "Lista todas as campanhas ordenadas pelo campo selecionado. Colunas disponíveis: Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\nO botão Editar abre o formulário preenchido com os dados atuais da campanha, permitindo alterar o nome, a operadora e o status. O botão Excluir (ícone vermelho) abre o pop-up padrão de confirmação e remove a campanha permanentemente — os vínculos com UTMs mapeados na Gestão de Links são desfeitos automaticamente, mas os dados históricos de performance permanecem nos dashboards.",
       },
       {
         subtitulo: "Criando uma Campanha",
@@ -845,7 +850,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo).",
       },
       {
         subtitulo: "Comunicar",
@@ -859,7 +864,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide), status de operação e horários de turno.",
+          "Página de acesso restrito a administradores. Centraliza o cadastro e a configuração das operadoras parceiras da Spin Gaming, incluindo identidade visual (brandguide) e status de operação.",
       },
       {
         subtitulo: "Lista de operadoras",
@@ -869,7 +874,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar ou editar operadora",
         texto:
-          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): horários de turno dos dealers e lista de mesas cadastradas.\n\nUma operadora só pode ser ativada quando tiver pelo menos uma mesa registrada na Gestão de Mesas. Novas operadoras são criadas como inativas.",
+          "Ao criar ou editar, o modal abre com três abas:\n— Dados cadastrais: nome, identificador interno (gerado automaticamente) e status de ativação.\n— Brandguide: cores de marca, logo e fonte customizada para whitelabel.\n— Operações (só na edição): template de Home do operador e lista de mesas cadastradas.\n\nNovas operadoras são criadas como inativas e podem ser ativadas a qualquer momento.",
       },
       {
         subtitulo: "Excluir operadora",
@@ -879,21 +884,26 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   gestao_mesas: {
-    titulo: "Gestão de Mesas",
+    titulo: "Gestão de Estúdios",
     blocos: [
       {
         texto:
-          "Cadastro e manutenção das mesas físicas de cada operadora. As mesas cadastradas aqui são referência para a programação de lives, escalas de dealers e relatórios de performance.",
+          "Hub de cadastro de estúdios físicos Spin e das mesas vinculadas. Estúdios podem ser do tipo Dedicado ou Network e associam-se a uma ou mais operadoras parceiras.",
       },
       {
         subtitulo: "Filtros e navegação",
         texto:
-          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Os cards de resumo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro de operadora. No bloco Mesas, use a busca abaixo do título para filtrar por nome da mesa, ID Spin ou número da mesa. A tabela pode ser ordenada por qualquer coluna clicando no cabeçalho.",
+          "No topo, use as setas do carrossel para alternar a operadora exibida ou o botão **Todas Operadoras** para ver todas de uma vez. Na segunda linha, alterne entre as abas **Estúdios** e **Mesas**.\n\nNa aba Estúdios, os cards **Mesas Dedicadas** e **Mesas Network** mostram a quantidade de mesas do tipo conforme o filtro de operadora. A tabela lista estúdios com nome, tipo, quantidade de mesas e operadoras vinculadas.\n\nNa aba Mesas, os cards por jogo (Baccarat, Blackjack, Roleta e Futebol Brasileiro) atualizam conforme o filtro. Use a busca para filtrar por nome da mesa, estúdio, ID Spin ou número da mesa.",
+      },
+      {
+        subtitulo: "Cadastrar ou editar estúdio",
+        texto:
+          "Informe nome, tipo (Network ou Dedicado) e selecione as operadoras ativas que utilizam aquele estúdio. Na edição, a aba Operações concentra os horários de início dos turnos da manhã, tarde e noite dos dealers — usados no Calendário e na Gestão de Staff. Cada estúdio pode ter várias operadoras; cada mesa pertence a um único estúdio.",
       },
       {
         subtitulo: "Cadastrar ou editar mesa",
         texto:
-          "Cada mesa exige: operadora, nome, tipo de jogo, número da mesa, ID interno Spin e ID da mesa no catálogo da operadora. O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto. Para tipos de jogo não listados, selecione 'Outro' e especifique.",
+          "Selecione o estúdio, informe nome, tipo de jogo, número da mesa e ID interno Spin. Para cada operadora vinculada ao estúdio, pode preencher o ID no catálogo da parceira (opcional). O ID Spin não pode ser alterado após o cadastro — exclua e recadastre se estiver incorreto.",
       },
     ],
   },

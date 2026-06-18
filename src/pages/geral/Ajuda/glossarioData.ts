@@ -645,8 +645,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Profissional de casino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
         nota:
-          "O perfil é mantido via prestador em Gestão de Prestadores (Game Presenter). Gestão de Dealers exibe o catálogo e solicitações — não cadastra dealer na página.",
-        referencia: "Gestão de Dealers · Gestão de Prestadores",
+          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página.",
+        referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
         termo: "Bloco de Roteiro",
@@ -810,7 +810,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. No topo, cards consolidados (somente time Game Presenter) indicam perfis com lacunas operacionais (Nickname, Turno ou ID Operacional), cadastrais (Gênero, Bio ou Fotos) ou de jogo (Live no Estúdio ou skills inativas).",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo.",
         referencia: "Gestão de Staff",
       },
       {
@@ -843,7 +843,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
         nota:
-          "É a origem do vínculo para dealers (Game Presenter) exibidos em Gestão de Dealers e para listas de retirada em Figurinos.",
+          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o dealer do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data.",
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {
@@ -858,7 +858,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Autoatendimento e consulta cadastral do prestador: dados pessoais, documentos, formação, experiência profissional anterior e histórico de movimentações.",
         nota:
-          "Revisão cadastral de 6 meses aplica-se ao próprio cadastro. Histórico de trabalho (vínculo Spin) é somente leitura nesta página.",
+          "Primeira revisão obrigatória no primeiro acesso (cadastro em Gestão de Prestadores não conta). Depois, ciclo de 6 meses no próprio cadastro. Histórico de trabalho (vínculo Spin) é somente leitura nesta página.",
         referencia: "Dados de Cadastro",
       },
       {
@@ -876,7 +876,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Revisão cadastral",
         definicao:
-          "Ciclo obrigatório de atualização ou confirmação dos dados do prestador a cada seis meses, exibido em Dados de Cadastro no próprio cadastro.",
+          "Atualização ou confirmação obrigatória dos dados do prestador em Dados de Cadastro: a primeira no primeiro login (após cadastro em Gestão de Prestadores); depois, a cada seis meses.",
         referencia: "Dados de Cadastro",
       },
     ],
@@ -970,8 +970,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Operadora ativa",
         definicao:
-          "Parceira com status ativo e ao menos uma mesa cadastrada. Só operadoras ativas aparecem no filtro **Todas Operadoras** das listagens.",
-        referencia: "Gestão de Operadoras · Gestão de Mesas",
+          "Parceira com status ativo em Gestão de Operadoras. Só operadoras ativas aparecem no filtro **Todas Operadoras** das listagens.",
+        referencia: "Gestão de Operadoras · Gestão de Estúdios",
       },
     ],
   },

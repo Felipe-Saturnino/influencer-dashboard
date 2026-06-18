@@ -16,21 +16,23 @@ import {
   SORTABLE_COLS,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
+  STATUS_PRODUTO_ORDEM,
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
-  COMERCIAL_FILTRO_NENHUM_LABEL,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
 } from "./constants";
 import {
   buildRazaoMerge,
+  buildPipelineComercialPopoverOptions,
   fmtDataPipeline,
   pipelineComercialDisplayNome,
-  pipelineComercialIsSiteOffline,
-  pipelineComercialPodeEditar,
-  produtoDisplay,
+  pipelineComercialExibeSiteOffline,
+  pipelineComercialIsMissingOptionValue,
+  pipelineComercialPopoverLabel,
+  pipelineComercialPopoverUserId,
   produtoStatus,
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
@@ -62,14 +64,7 @@ const cellEditable: CSSProperties = {
   width: "100%",
 };
 
-const PRODUTO_OPTS: StatusProduto[] = [
-  "sem_proposta",
-  "em_negociacao",
-  "sem_interesse",
-  "contrato_enviado",
-  "contrato_assinado",
-  "ativo",
-];
+const PRODUTO_OPTS = STATUS_PRODUTO_ORDEM;
 
 const STATUS_OPTS: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
 
@@ -128,7 +123,7 @@ export function PipelineTable({
   }
 
   const comercialOpts = useMemo(
-    () => ["", ...comerciais.map((c) => c.id)] as const,
+    () => buildPipelineComercialPopoverOptions(comerciais),
     [comerciais],
   );
 
@@ -172,8 +167,8 @@ export function PipelineTable({
             </tr>
           </thead>
           <tbody>
-            {merged.map(({ row, rowSpan, showRazao }, i) => {
-              const hoverBg = dataTable.zebraRow(i);
+            {merged.map(({ row, rowSpan, showRazao, razaoStripeIndex }) => {
+              const hoverBg = dataTable.zebraRow(razaoStripeIndex);
               return (
                 <tr
                   key={row.id}
@@ -196,6 +191,7 @@ export function PipelineTable({
                         maxWidth: 150,
                         verticalAlign: "middle",
                         borderRight: `1px solid color-mix(in srgb, ${t.cardBorder} 80%, transparent)`,
+                        background: hoverBg,
                       }}
                       title={`${row.empresa.razao_social} — CNPJ ${row.empresa.cnpj}`}
                     >
@@ -290,19 +286,18 @@ export function PipelineTable({
                   {cfg.cols.includes("comercial") ? (
                     <td style={dataTable.tdCenter}>
                       {(() => {
-                        const siteOffline = pipelineComercialIsSiteOffline(row);
-                        const comercialEditavel = canEditar && pipelineComercialPodeEditar(row);
+                        const siteOffline = pipelineComercialExibeSiteOffline(row);
                         const conteudo = siteOffline ? (
                           <span
                             style={badgePipelineStyle(PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR)}
-                            title="Domínio inativo — atribuição automática"
+                            title="Domínio inativo — clique para atribuir comercial"
                           >
                             {PIPELINE_COMERCIAL_SITE_OFFLINE_LABEL}
                           </span>
                         ) : (
                           pipelineComercialDisplayNome(row, comerciais)
                         );
-                        if (!comercialEditavel) {
+                        if (!canEditar) {
                           return conteudo;
                         }
                         return (
@@ -345,13 +340,14 @@ export function PipelineTable({
                         style={canEditar ? cellEditable : undefined}
                         onClick={(e) => openPopover(e, "dedicada", row, "mesa_dedicada")}
                       >
-                        {produtoStatus(row, "mesa_dedicada") ? (
-                          <span style={badgeProdutoStyle()}>
-                            {produtoDisplay(row, "mesa_dedicada")}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                        {(() => {
+                          const dedSt = produtoStatus(row, "mesa_dedicada");
+                          return dedSt ? (
+                            <span style={badgeProdutoStyle(dedSt)}>{STATUS_PRODUTO_LABEL[dedSt]}</span>
+                          ) : (
+                            "—"
+                          );
+                        })()}
                       </div>
                     </td>
                   ) : null}
@@ -363,11 +359,14 @@ export function PipelineTable({
                         style={canEditar ? cellEditable : undefined}
                         onClick={(e) => openPopover(e, "network", row, "mesa_network")}
                       >
-                        {produtoStatus(row, "mesa_network") ? (
-                          <span style={badgeProdutoStyle()}>{produtoDisplay(row, "mesa_network")}</span>
-                        ) : (
-                          "—"
-                        )}
+                        {(() => {
+                          const netSt = produtoStatus(row, "mesa_network");
+                          return netSt ? (
+                            <span style={badgeProdutoStyle(netSt)}>{STATUS_PRODUTO_LABEL[netSt]}</span>
+                          ) : (
+                            "—"
+                          );
+                        })()}
                       </div>
                     </td>
                   ) : null}
@@ -411,12 +410,14 @@ export function PipelineTable({
           anchorRect={popover.rect}
           options={comercialOpts}
           value={popover.row.comercial_user_id ?? ""}
-          onSelect={(v) => onUpdateComercial(popover.row, v || null)}
-          onClose={() => setPopover(null)}
-          labelOption={(v) => {
-            if (!v) return COMERCIAL_FILTRO_NENHUM_LABEL;
-            return comerciais.find((c) => c.id === v)?.name ?? "—";
+          onSelect={(v) => {
+            if (pipelineComercialIsMissingOptionValue(v)) return;
+            onUpdateComercial(popover.row, pipelineComercialPopoverUserId(v));
           }}
+          onClose={() => setPopover(null)}
+          labelOption={(v) => pipelineComercialPopoverLabel(v, comerciais)}
+          isOptionDisabled={pipelineComercialIsMissingOptionValue}
+          disabledOptionTitle="Usuário não encontrado no cadastro — crie o perfil com este nome em Gestão de Usuários."
           t={t}
         />
       ) : null}

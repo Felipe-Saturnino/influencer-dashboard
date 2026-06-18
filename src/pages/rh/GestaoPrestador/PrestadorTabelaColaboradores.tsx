@@ -126,7 +126,7 @@ export function PrestadorTabelaColaboradores({
                 sortDir={sortPrestadores.dir}
                 onSort={onSortPrestadores}
                 thStyle={dataTable.thHeader}
-                align="center"
+                align="left"
               />
               <SortTableTh<PrestadoresSortCol>
                 label="Função"
@@ -252,31 +252,49 @@ export function PrestadorTabelaColaboradores({
                     <td
                       style={{
                         ...dataTable.tdCenter,
+                        textAlign: "left",
                         maxWidth: 200,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
-                      title={nomeExibicao !== "—" ? row.nome.trim() : undefined}
                     >
-                      {nomeExibicao}
-                      {revisaoCadastralPendenteParaFuncionario(row) ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 0,
+                          width: "100%",
+                        }}
+                      >
                         <span
                           style={{
-                            display: "inline-block",
-                            marginLeft: 8,
-                            padding: "2px 8px",
-                            borderRadius: 999,
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#f59e0b",
-                            border: "1px solid rgba(245, 158, 11, 0.45)",
-                            background: "rgba(245, 158, 11, 0.12)",
-                            verticalAlign: "middle",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                            flex: "1 1 auto",
                           }}
+                          title={nomeExibicao !== "—" ? row.nome.trim() : undefined}
                         >
-                          Revisão pendente
+                          {nomeExibicao}
                         </span>
-                      ) : null}
+                        {revisaoCadastralPendenteParaFuncionario(row) ? (
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#f59e0b",
+                              border: "1px solid rgba(245, 158, 11, 0.45)",
+                              background: "rgba(245, 158, 11, 0.12)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Revisão pendente
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td style={dataTable.tdCenter}>{row.cargo}</td>
                     <td

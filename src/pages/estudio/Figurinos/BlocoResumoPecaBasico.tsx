@@ -5,11 +5,11 @@ import { fmtDataSóDia, labelCondicaoPeca } from "./figurinosPageHelpers"
 
 export function BlocoResumoPecaBasico({
   peca,
-  operadorasTexto,
+  estudiosTexto,
   t,
 }: {
   peca: RhFigurinoPeca;
-  operadorasTexto: string;
+  estudiosTexto: string;
   t: ReturnType<typeof useApp>["theme"];
 }) {
   const row = (label: string, value: string) => (
@@ -29,7 +29,7 @@ export function BlocoResumoPecaBasico({
       }}
     >
       {row("Código", peca.code)}
-      {row("Operadora", operadorasTexto)}
+      {row("Estúdio", estudiosTexto)}
       {row("Categoria", peca.category)}
       {row("Tamanho", peca.size)}
       {row("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
