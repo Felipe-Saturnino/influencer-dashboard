@@ -60,6 +60,9 @@ Detalhes: `docs/SETUP-PLATFORM-HEALTH.md`.
 | `boasVindasUsuario.ts` | Sim |
 | `enviarBoasVindas.ts` | Sim |
 | `common.ts` | Sim |
+| `accessGrantedByFelipe.ts` | Só **`criar-usuario`** — auditoria `access_granted_by` na criação manual (Gestão de Usuários) |
+
+**Nota:** cada function tem ficheiros **no mesmo nível** que o `index.ts`. Não usar pasta `_shared` — o painel Supabase não a inclui no deploy.
 
 ---
 

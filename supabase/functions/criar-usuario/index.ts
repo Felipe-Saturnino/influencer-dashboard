@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { accessGrantedByPayload } from './accessGrantedByFelipe.ts'
 
 // Edge Function: criar-usuario — senha padrão + e-mail de boas-vindas + troca obrigatória no primeiro login
 
@@ -353,6 +354,8 @@ serve(async (req) => {
     const uid = created.uid
     console.log('[criar-usuario] auth user criado', uid)
 
+    const accessAudit = await accessGrantedByPayload(supabase)
+
     // 2. Upsert profile (trigger já pode ter inserido; atualiza role e must_change_password)
     const { error: profileErr } = await supabase.from('profiles').upsert(
       {
@@ -362,6 +365,8 @@ serve(async (req) => {
         role,
         must_change_password: true,
         emprestado_para: emprestadoParaDb,
+        access_granted_by: accessAudit.access_granted_by,
+        access_granted_at: accessAudit.access_granted_at,
       },
       { onConflict: 'id' }
     )

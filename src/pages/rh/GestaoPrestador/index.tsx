@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   FileSignature,
   FolderOpen,
+  KeyRound,
   Landmark,
   Loader2,
   UserCircle2,
@@ -58,6 +59,13 @@ import {
   defaultsNovoPrestadorDeVinculoOrganograma,
   defaultsNovoPrestadorSemVinculoOrganograma,
 } from "../../../lib/rhPrestadorNovoDefaults";
+import {
+  buscarRhPrestadorAcessoPlataforma,
+  type RhPrestadorAcessoPlataforma,
+} from "../../../lib/rhPrestadorAcessoPlataforma";
+import { PrestadorAcessoPlataformaPanel } from "./PrestadorAcessoPlataformaPanel";
+import { PrestadorDocumentosGestaoPanel } from "./PrestadorDocumentosGestaoPanel";
+import { podeEnviarDocumentosGestaoPrestador } from "../../../lib/rhPrestadorDocumentosCadastro";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import {
@@ -151,6 +159,9 @@ export default function RhPrestadoresPage() {
   const [salvando, setSalvando] = useState(false);
 
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
+  const [acessoPlataforma, setAcessoPlataforma] = useState<RhPrestadorAcessoPlataforma | null>(null);
+  const [acessoPlataformaLoading, setAcessoPlataformaLoading] = useState(false);
+  const [acessoPlataformaErro, setAcessoPlataformaErro] = useState<string | null>(null);
 
   const {
     lista,
@@ -331,6 +342,7 @@ export default function RhPrestadoresPage() {
     tabs.push({ key: "bancarios", label: "Dados bancários" });
     if (modalForm === "editar" || modalForm === "ver") {
       tabs.push({ key: "documentos", label: "Documentos" });
+      tabs.push({ key: "acesso_plataforma", label: "Acesso a Plataforma" });
     }
     return tabs;
   }, [ehPJ, modalForm]);
@@ -348,12 +360,33 @@ export default function RhPrestadoresPage() {
       empresa: 0,
       bancarios: 0,
       documentos: 0,
+      acesso_plataforma: 0,
     };
     for (const k of Object.keys(fieldErr)) {
       c[abaDoCampoRhModal(k, ehPJ)] += 1;
     }
     return c;
   }, [fieldErr, ehPJ]);
+
+  const carregarAcessoPlataforma = useCallback(async (funcionarioId: string) => {
+    setAcessoPlataformaLoading(true);
+    setAcessoPlataformaErro(null);
+    const { data, error } = await buscarRhPrestadorAcessoPlataforma(funcionarioId);
+    setAcessoPlataforma(data);
+    setAcessoPlataformaErro(error);
+    setAcessoPlataformaLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (modalForm !== "ver" && modalForm !== "editar") {
+      setAcessoPlataforma(null);
+      setAcessoPlataformaErro(null);
+      setAcessoPlataformaLoading(false);
+      return;
+    }
+    if (!editId) return;
+    void carregarAcessoPlataforma(editId);
+  }, [modalForm, editId, carregarAcessoPlataforma]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim();
@@ -1241,6 +1274,7 @@ export default function RhPrestadoresPage() {
   }
 
   const leitura = modalForm === "ver";
+  const podeEnviarDocumentos = podeEnviarDocumentosGestaoPrestador(perm, modalForm);
   const snapshotEdicao = modalForm === "editar" && editId ? lista.find((x) => x.id === editId) ?? null : null;
   const cpfCampoTravadoEdicao = Boolean(modalForm === "editar" && somenteDigitos(snapshotEdicao?.cpf ?? "").length === 11);
   const bloquearOrgEdit = Boolean(
@@ -1297,6 +1331,7 @@ export default function RhPrestadoresPage() {
     if (k === "contratacao") return <FileSignature {...p} />;
     if (k === "empresa") return <Building2 {...p} />;
     if (k === "bancarios") return <Landmark {...p} />;
+    if (k === "acesso_plataforma") return <KeyRound {...p} />;
     return <FolderOpen {...p} />;
   };
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
@@ -1305,6 +1340,9 @@ export default function RhPrestadoresPage() {
     setModalForm("fechado");
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
+    setAcessoPlataforma(null);
+    setAcessoPlataformaErro(null);
+    setAcessoPlataformaLoading(false);
     setAlertaValidacaoModal(null);
     setFieldErr({});
     setErroGlobal(null);
@@ -2431,7 +2469,21 @@ export default function RhPrestadoresPage() {
               )
             ) : null}
 
-            {abaModal === "documentos" ? <div style={{ minHeight: 120 }} aria-hidden /> : null}
+            {abaModal === "documentos" ? (
+              <PrestadorDocumentosGestaoPanel
+                funcionarioId={editId}
+                tipoContrato={form.tipo_contrato}
+                podeEditar={podeEnviarDocumentos}
+              />
+            ) : null}
+
+            {abaModal === "acesso_plataforma" ? (
+              <PrestadorAcessoPlataformaPanel
+                loading={acessoPlataformaLoading}
+                erro={acessoPlataformaErro}
+                dados={acessoPlataforma}
+              />
+            ) : null}
           </div>
 
           {!leitura ? (

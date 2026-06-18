@@ -843,7 +843,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
         nota:
-          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o dealer do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data.",
+          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o dealer do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data. Modal Ver/Editar: aba **Acesso a Plataforma** (somente leitura) mostra login, liberação e histórico de acessos.",
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {

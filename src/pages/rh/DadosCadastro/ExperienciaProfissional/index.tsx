@@ -32,6 +32,7 @@ type Props = {
   podeEditar: boolean;
   usuarioLabel: string;
   onHistoricoRefresh?: () => void;
+  onCompletudeAlterada?: () => void;
   onErro?: (msg: string) => void;
 };
 
@@ -63,6 +64,7 @@ export default function ExperienciaProfissionalPainel({
   podeEditar,
   usuarioLabel,
   onHistoricoRefresh,
+  onCompletudeAlterada,
   onErro,
 }: Props) {
   const { theme: t } = useApp();
@@ -142,6 +144,7 @@ export default function ExperienciaProfissionalPainel({
     }
     setModal(null);
     await carregar();
+    onCompletudeAlterada?.();
   };
 
   const confirmarExclusao = async () => {
@@ -153,6 +156,7 @@ export default function ExperienciaProfissionalPainel({
       await logHistorico("excluir", deleteRow.cargo, deleteRow.empresa);
       setDeleteRow(null);
       await carregar();
+      onCompletudeAlterada?.();
     } catch {
       notifyErro("Não foi possível excluir.");
     } finally {

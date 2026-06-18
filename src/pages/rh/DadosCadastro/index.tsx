@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlertTriangle, CheckCircle2, Download, Loader2, Upload } from "lucide-react";
-import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -28,7 +25,7 @@ import {
   validarDataNascimentoOpcional,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
-import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
+import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { filtraFuncionariosParaLoginEmail } from "../../../lib/rhFuncionarioLoginMatch";
@@ -48,6 +45,7 @@ import {
 import { ABAS_CADASTRO, CADASTRO_TAB_ICONS, CADASTRO_TAB_IDS } from "./constants";
 import FormacaoCompetenciasPainel from "./FormacaoCompetencias";
 import ExperienciaProfissionalPainel from "./ExperienciaProfissional";
+import { PrestadorDocumentosCadastroBlocos } from "./PrestadorDocumentosCadastroBlocos";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
@@ -58,6 +56,7 @@ import {
   historicoVisivelAbaDadosCadastro,
   podeEditarFuncionarioDadosCadastro,
 } from "../../../lib/rhDadosCadastroHelpers";
+import { podeEnviarDocumentosDadosCadastro } from "../../../lib/rhPrestadorDocumentosCadastro";
 import {
   MESES_CICLO_REVISAO_CADASTRO,
   payloadMarcarRevisaoCadastral,
@@ -68,8 +67,11 @@ import {
   revisaoCadastralPendenteParaFuncionario,
   notificarRevisaoCadastralAtualizada,
 } from "../../../lib/rhCadastroRevisao";
-
-const RH_SELF_MEDIA_BUCKET = "rh-prestador-self-media";
+import {
+  avaliarCompletudeCadastroRevisao,
+  carregarCompletudeExternaCadastro,
+  type RhCadastroCompletudeExterna,
+} from "../../../lib/rhCadastroRevisaoCompleteness";
 
 const UFS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
@@ -177,10 +179,6 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   };
 }
 
-function sanitizeStorageFileName(name: string): string {
-  return name.replace(/[/\\]/g, "_").slice(0, 180) || "arquivo";
-}
-
 function validarCadastroSelf(form: FormState): Record<string, string> {
   const e: Record<string, string> = {};
   const req = (k: keyof FormState, label: string, v: string) => {
@@ -266,12 +264,9 @@ export default function RhDadosCadastroPage() {
   const [histItems, setHistItems] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
 
-  const [mediaRows, setMediaRows] = useState<RhFuncionarioSelfMedia[]>([]);
-  const [midiaExcluir, setMidiaExcluir] = useState<RhFuncionarioSelfMedia | null>(null);
-  const [excluindoMidia, setExcluindoMidia] = useState(false);
-  const [signedById, setSignedById] = useState<Record<string, string>>({});
-  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [declaracaoSemAlteracao, setDeclaracaoSemAlteracao] = useState(false);
+  const [completudeExterna, setCompletudeExterna] = useState<RhCadastroCompletudeExterna | null>(null);
+  const [completudeLoading, setCompletudeLoading] = useState(false);
   const [confirmandoSemAlteracao, setConfirmandoSemAlteracao] = useState(false);
 
   const vistaCompleta = !perm.loading && dadosCadastroVistaCompleta(perm.canView);
@@ -311,6 +306,37 @@ export default function RhDadosCadastroPage() {
   const podeEditarSelecionado = podeEditarFuncionarioDadosCadastro(perm, meuPrestadorId, row?.id ?? null, {
     vistaApenasProprio,
   });
+  const podeEnviarDocumentos = podeEnviarDocumentosDadosCadastro(perm, meuPrestadorId, row?.id ?? null, {
+    vistaApenasProprio,
+  });
+
+  const completudeRevisao = useMemo(() => {
+    if (!form || !completudeExterna) return { ok: false, pendencias: [] as string[] };
+    return avaliarCompletudeCadastroRevisao(form, completudeExterna);
+  }, [form, completudeExterna]);
+
+  const recarregarCompletude = useCallback(async (fid: string) => {
+    setCompletudeLoading(true);
+    const { data, error } = await carregarCompletudeExternaCadastro(fid);
+    setCompletudeLoading(false);
+    if (error || !data) {
+      setCompletudeExterna(null);
+      return;
+    }
+    setCompletudeExterna(data);
+  }, []);
+
+  useEffect(() => {
+    if (!row?.id) {
+      setCompletudeExterna(null);
+      return;
+    }
+    void recarregarCompletude(row.id);
+  }, [row?.id, recarregarCompletude]);
+
+  useEffect(() => {
+    if (!completudeRevisao.ok) setDeclaracaoSemAlteracao(false);
+  }, [completudeRevisao.ok]);
   const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
   const podeEditarExperiencia = podeEditarSelecionado && row?.status !== "encerrado";
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
@@ -476,46 +502,10 @@ export default function RhDadosCadastroPage() {
     );
   }, []);
 
-  const carregarMedia = useCallback(async (fid: string) => {
-    const { data, error } = await supabase
-      .from("rh_funcionario_self_media")
-      .select("*")
-      .eq("rh_funcionario_id", fid)
-      .order("created_at", { ascending: false });
-    if (error) {
-      setMediaRows([]);
-      return;
-    }
-    setMediaRows((data ?? []) as RhFuncionarioSelfMedia[]);
-  }, []);
-
   useEffect(() => {
     if (!row?.id) return;
     void carregarHistorico(row.id, visualizandoProprioCadastro);
-    void carregarMedia(row.id);
-  }, [row?.id, visualizandoProprioCadastro, carregarHistorico, carregarMedia]);
-
-  const mediaDocs = useMemo(() => mediaRows.filter((m) => m.kind === "documento"), [mediaRows]);
-
-  useEffect(() => {
-    const list = [...mediaDocs];
-    if (list.length === 0) {
-      setSignedById({});
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const next: Record<string, string> = {};
-      for (const m of list) {
-        const { data } = await supabase.storage.from(RH_SELF_MEDIA_BUCKET).createSignedUrl(m.storage_path, 7200);
-        if (data?.signedUrl) next[m.id] = data.signedUrl;
-      }
-      if (!cancelled) setSignedById(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [mediaDocs]);
+  }, [row?.id, visualizandoProprioCadastro, carregarHistorico]);
 
   const handleCepBlur = (qual: "res" | "emp", cepRaw: string) => {
     void (async () => {
@@ -562,8 +552,31 @@ export default function RhDadosCadastroPage() {
     return error;
   };
 
+  const handleDocumentosAlterados = async () => {
+    if (!row) return;
+    await recarregarCompletude(row.id);
+    if (!visualizandoProprioCadastro || !prestadorExigeRevisaoCadastral(row.status) || !revisaoPendente) return;
+    setErroGlobal(null);
+    const revErr = await marcarRevisaoCadastralNoBanco(row.id, true);
+    if (revErr) {
+      setErroGlobal("Não foi possível registrar a revisão cadastral. Se o problema persistir, entre em contato com o suporte.");
+      return;
+    }
+    setMsgOk("Documentos atualizados e revisão cadastral concluída.");
+    if (vistaCompleta && row.id) {
+      await carregarFuncionarioPorId(row.id);
+    } else {
+      await carregarFuncionarioProprio();
+    }
+    notificarRevisaoCadastralAtualizada();
+  };
+
   const confirmarSemAlteracoes = async () => {
     if (!podeEditarSelecionado || !visualizandoProprioCadastro || !row || !form || !declaracaoSemAlteracao) return;
+    if (!completudeRevisao.ok) {
+      setErroGlobal("Complete todos os campos obrigatórios do cadastro antes de confirmar sem alterações.");
+      return;
+    }
     const e = validarCadastroSelf(form);
     setFieldErr(e);
     if (Object.keys(e).length > 0) {
@@ -625,80 +638,8 @@ export default function RhDadosCadastroPage() {
       await carregarFuncionarioProprio();
     }
     await carregarHistorico(row.id, visualizandoProprioCadastro);
+    await recarregarCompletude(row.id);
     if (revisaoPendente && visualizandoProprioCadastro) notificarRevisaoCadastralAtualizada();
-  };
-
-  const uploadMidia = async (files: FileList | null) => {
-    if (!podeEditarSelecionado || !row || !files?.length) return;
-    setUploadingDoc(true);
-    setErroGlobal(null);
-    let uploaded = 0;
-    try {
-      for (const file of Array.from(files)) {
-        const path = `${row.id}/${crypto.randomUUID()}_${sanitizeStorageFileName(file.name)}`;
-        const { error: upErr } = await supabase.storage.from(RH_SELF_MEDIA_BUCKET).upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || undefined,
-        });
-        if (upErr) {
-          setErroGlobal(upErr.message);
-          break;
-        }
-        const { error: insErr } = await supabase.from("rh_funcionario_self_media").insert({
-          rh_funcionario_id: row.id,
-          kind: "documento",
-          storage_path: path,
-          file_name: file.name,
-          mime_type: file.type || null,
-        });
-        if (insErr) {
-          await supabase.storage.from(RH_SELF_MEDIA_BUCKET).remove([path]);
-          setErroGlobal(insErr.message);
-          break;
-        }
-        uploaded += 1;
-      }
-      if (uploaded > 0 && visualizandoProprioCadastro && prestadorExigeRevisaoCadastral(row.status)) {
-        const revErr = await marcarRevisaoCadastralNoBanco(row.id, true);
-        if (revErr) {
-          setErroGlobal(revErr.message);
-        } else if (revisaoPendente) {
-          setMsgOk("Documentos enviados e revisão cadastral concluída.");
-          if (vistaCompleta && row.id) {
-            await carregarFuncionarioPorId(row.id);
-          } else {
-            await carregarFuncionarioProprio();
-          }
-          notificarRevisaoCadastralAtualizada();
-        }
-      }
-      await carregarMedia(row.id);
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
-  const confirmarExcluirMidia = async () => {
-    if (!podeEditarSelecionado || !row || !midiaExcluir) return;
-    setErroGlobal(null);
-    setExcluindoMidia(true);
-    const m = midiaExcluir;
-    const { error: rmErr } = await supabase.storage.from(RH_SELF_MEDIA_BUCKET).remove([m.storage_path]);
-    if (rmErr) {
-      setErroGlobal(rmErr.message);
-      setExcluindoMidia(false);
-      return;
-    }
-    const { error: delErr } = await supabase.from("rh_funcionario_self_media").delete().eq("id", m.id);
-    if (delErr) {
-      setErroGlobal(delErr.message);
-      setExcluindoMidia(false);
-      return;
-    }
-    setMidiaExcluir(null);
-    setExcluindoMidia(false);
-    await carregarMedia(row.id);
   };
 
   const inputStyle: CSSProperties = {
@@ -947,11 +888,37 @@ export default function RhDadosCadastroPage() {
               </h2>
               <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT.body }}>
                 A cada {MESES_CICLO_REVISAO_CADASTRO} meses você deve revisar seu cadastro nesta página. Se algo mudou,
-                atualize os dados nas abas <strong>Dados cadastrais</strong>, <strong>Formação e Competências</strong> ou{" "}
-                <strong>Experiência Profissional</strong> e/ou envie novos documentos; em seguida salve ou envie os
-                arquivos. Se nada mudou, marque a declaração abaixo e use{" "}
-                <strong>Confirmar sem alterações</strong>.
+                atualize os dados nas abas <strong>Dados cadastrais</strong>, <strong>Documentos</strong>,{" "}
+                <strong>Formação e Competências</strong> ou <strong>Experiência Profissional</strong> e salve ou envie os
+                arquivos. Para usar <strong>Confirmar sem alterações</strong>, todo o cadastro deve estar completo (campos,
+                documentos e registros exigidos por tipo de contrato).
               </p>
+              {completudeLoading ? (
+                <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Verificando completude do cadastro…
+                </p>
+              ) : !completudeRevisao.ok && completudeRevisao.pendencias.length > 0 ? (
+                <div
+                  role="status"
+                  style={{
+                    margin: "0 0 12px",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    fontSize: 12,
+                    color: t.text,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Pendências para confirmar sem alterações:</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55 }}>
+                    {completudeRevisao.pendencias.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {cadastroRevisaoJaRegistradaPeloPrestador(row.cadastro_revisado_em) ? (
                 <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                   Última revisão: {fmtDataIsoPtBr(String(row.cadastro_revisado_em).slice(0, 10))}
@@ -978,7 +945,13 @@ export default function RhDadosCadastroPage() {
                 <input
                   type="checkbox"
                   checked={declaracaoSemAlteracao}
-                  disabled={!podeEditarSelecionado || confirmandoSemAlteracao || salvando}
+                  disabled={
+                    !podeEditarSelecionado ||
+                    confirmandoSemAlteracao ||
+                    salvando ||
+                    completudeLoading ||
+                    !completudeRevisao.ok
+                  }
                   onChange={(ev) => setDeclaracaoSemAlteracao(ev.target.checked)}
                   aria-label="Confirmar que não houve alteração nos dados cadastrais neste período"
                   style={{ marginTop: 3, flexShrink: 0 }}
@@ -992,8 +965,20 @@ export default function RhDadosCadastroPage() {
               </label>
               <button
                 type="button"
-                disabled={!podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando}
+                disabled={
+                  !podeEditarSelecionado ||
+                  !declaracaoSemAlteracao ||
+                  confirmandoSemAlteracao ||
+                  salvando ||
+                  completudeLoading ||
+                  !completudeRevisao.ok
+                }
                 onClick={() => void confirmarSemAlteracoes()}
+                title={
+                  !completudeRevisao.ok
+                    ? "Complete todos os campos obrigatórios do cadastro antes de confirmar."
+                    : undefined
+                }
                 style={{
                   padding: "10px 16px",
                   borderRadius: 10,
@@ -1005,11 +990,23 @@ export default function RhDadosCadastroPage() {
                   fontSize: 13,
                   fontWeight: 700,
                   cursor:
-                    !podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando
+                    !podeEditarSelecionado ||
+                    !declaracaoSemAlteracao ||
+                    confirmandoSemAlteracao ||
+                    salvando ||
+                    completudeLoading ||
+                    !completudeRevisao.ok
                       ? "not-allowed"
                       : "pointer",
                   opacity:
-                    !podeEditarSelecionado || !declaracaoSemAlteracao || confirmandoSemAlteracao || salvando ? 0.55 : 1,
+                    !podeEditarSelecionado ||
+                    !declaracaoSemAlteracao ||
+                    confirmandoSemAlteracao ||
+                    salvando ||
+                    completudeLoading ||
+                    !completudeRevisao.ok
+                      ? 0.55
+                      : 1,
                   fontFamily: FONT.body,
                   display: "inline-flex",
                   alignItems: "center",
@@ -1630,86 +1627,13 @@ export default function RhDadosCadastroPage() {
         </section>
       ) : null}
 
-      {aba === "documentos" ? (
-        <section>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Documentos</h2>
-          {podeEditarSelecionado ? (
-            <>
-              <input
-                id="dc-upload-docs"
-                type="file"
-                multiple
-                disabled={uploadingDoc}
-                style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: uploadingDoc ? "none" : "auto" }}
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-                onChange={(e) => void uploadMidia(e.target.files)}
-              />
-              <label
-                htmlFor="dc-upload-docs"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 16px",
-                  borderRadius: 12,
-                  border: `1px dashed ${t.cardBorder}`,
-                  cursor: uploadingDoc ? "wait" : "pointer",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: brand.primary,
-                  fontFamily: FONT.body,
-                  marginBottom: 16,
-                }}
-              >
-                <Upload size={16} aria-hidden />
-                {uploadingDoc ? "Enviando…" : "Enviar documentos"}
-              </label>
-            </>
-          ) : null}
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {mediaDocs.length === 0 ? (
-              <li style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</li>
-            ) : (
-              mediaDocs.map((m) => {
-                const url = signedById[m.id];
-                return (
-                  <li
-                    key={m.id}
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "10px 0",
-                      borderBottom: `1px solid ${t.cardBorder}`,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                    }}
-                  >
-                    <span style={{ color: t.text, flex: 1, minWidth: 160 }}>{m.file_name}</span>
-                    {url ? (
-                      <>
-                        <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand-action, #7c3aed)", fontWeight: 600 }}>
-                          Visualizar
-                        </a>
-                        <a href={url} download={m.file_name} style={{ color: t.textMuted, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <Download size={14} aria-hidden />
-                          Download
-                        </a>
-                      </>
-                    ) : null}
-                    {podeEditarSelecionado ? (
-                      <BtnExcluirLinha
-                        descricaoItem={descricaoBotaoExcluir("documento", m.file_name)}
-                        onClick={() => setMidiaExcluir(m)}
-                      />
-                    ) : null}
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </section>
+      {aba === "documentos" && row && form ? (
+        <PrestadorDocumentosCadastroBlocos
+          funcionarioId={row.id}
+          tipoContrato={form.tipo_contrato}
+          podeEditar={podeEnviarDocumentos}
+          onDocumentosAlterados={handleDocumentosAlterados}
+        />
       ) : null}
 
       {aba === "formacao" && row ? (
@@ -1718,6 +1642,7 @@ export default function RhDadosCadastroPage() {
           podeEditar={podeEditarFormacao}
           usuarioLabel={user?.email ?? String(user?.id ?? "—")}
           onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
+          onCompletudeAlterada={() => void recarregarCompletude(row.id)}
           onErro={setErroGlobal}
         />
       ) : null}
@@ -1728,6 +1653,7 @@ export default function RhDadosCadastroPage() {
           podeEditar={podeEditarExperiencia}
           usuarioLabel={user?.email ?? String(user?.id ?? "—")}
           onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
+          onCompletudeAlterada={() => void recarregarCompletude(row.id)}
           onErro={setErroGlobal}
         />
       ) : null}
@@ -1737,17 +1663,6 @@ export default function RhDadosCadastroPage() {
           <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Histórico de RH</h2>
           <ListaHistoricoRh items={histItems} loading={histLoading} t={t} />
         </section>
-      ) : null}
-
-      {midiaExcluir ? (
-        <ModalConfirmExcluirPadrao
-          descricaoItem={descricaoModalExcluirItem("o documento", midiaExcluir.file_name)}
-          onCancel={() => {
-            if (!excluindoMidia) setMidiaExcluir(null);
-          }}
-          onConfirm={() => void confirmarExcluirMidia()}
-          loading={excluindoMidia}
-        />
       ) : null}
     </div>
   );

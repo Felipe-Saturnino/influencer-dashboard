@@ -148,6 +148,8 @@ export interface RhFuncionarioSelfMedia {
   id: string;
   rh_funcionario_id: string;
   kind: RhFuncionarioSelfMediaKind;
+  /** Categoria do documento cadastral (RG, CPF, …); legado sem valor = outros. */
+  document_category?: string | null;
   storage_path: string;
   file_name: string;
   mime_type: string | null;
