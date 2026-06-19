@@ -10,6 +10,7 @@ import {
   Dices,
   Factory,
   Files,
+  Images,
   LayoutGrid,
   Link2,
   Megaphone,
@@ -89,6 +90,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "campanhas", label: "Campanhas", icon: Megaphone },
       { key: "gestao_links", label: "Gestão de Links", icon: Link2 },
+      { key: "galeria_fotos", label: "Galeria de Fotos", icon: Images },
     ],
   },
   {

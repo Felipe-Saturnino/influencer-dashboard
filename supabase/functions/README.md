@@ -2,7 +2,11 @@
 
 Cada pasta desta directory é **uma Edge Function** no Supabase. Todos os ficheiros ficam **no mesmo nível** que o `index.ts` — o painel **não suporta subpastas** (+ Add File só cria ficheiros planos).
 
-**Deploy manual:** abra a function → crie/atualize cada ficheiro listado abaixo → **Deploy updates**.
+**Deploy manual:** abra a function → crie/atualize **cada** ficheiro listado abaixo → **Deploy updates**.
+
+**Ficheiro novo no Git que não aparece no painel:** o Dashboard **não sincroniza** com o repositório. Use **+ Add File** com o mesmo nome do ficheiro em `supabase/functions/<nome-da-function>/`, cole o conteúdo do Git, depois **Deploy updates**. Alternativa: `supabase functions deploy <nome-da-function>` na CLI (envia a pasta inteira).
+
+**Não existe pasta no painel** — só ficheiros planos ao lado do `index.ts`. `_shared/` ou subpastas **nunca** entram no deploy manual.
 
 **Secrets:** Supabase → Project Settings → Edge Functions → Secrets.
 
@@ -60,6 +64,11 @@ Detalhes: `docs/SETUP-PLATFORM-HEALTH.md`.
 | `boasVindasUsuario.ts` | Sim |
 | `enviarBoasVindas.ts` | Sim |
 | `common.ts` | Sim |
+| `common.ts` | Sim — inclui `accessGrantedByPayload` (**só `criar-usuario`**) para auditoria `access_granted_by` na criação manual |
+
+**Nota:** cada function tem ficheiros **no mesmo nível** que o `index.ts`. Não usar pasta `_shared` — o painel Supabase não a inclui no deploy.
+
+**Painel Supabase — ficheiros que “somem” após Deploy updates:** o editor **só persiste ficheiros importados** (directa ou indirectamente) a partir de `index.ts`. Ficheiros criados com **+ Add File** mas **sem** `import` no `index.ts` (ou sem gravar o `index.ts` antes do deploy) são **omitidos do bundle** e desaparecem da lista. **Não criar ficheiro novo** para lógica de `criar-usuario` — colocar helpers em `common.ts` (já listado) e importar de `./common.ts` no `index.ts`.
 
 ---
 

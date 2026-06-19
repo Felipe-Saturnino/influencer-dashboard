@@ -30,7 +30,8 @@ export type AppRouteTabAccess =
   | "portal_gerenciamento"
   | "informativos_gerenciamento"
   | "vagas_gerenciamento"
-  | "vagas_candidaturas";
+  | "vagas_candidaturas"
+  | "galeria_upload";
 
 export type AppRouteTabDefFull = AppRouteTabDef & {
   access: AppRouteTabAccess;
@@ -61,6 +62,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Financeiro", "financeiro", "Financeiro"),
   page("Banca de Jogo", "banca_jogo", "BancaDeJogo"),
   page("Campanhas", "campanhas", "Campanhas"),
+  page("Galeria de Fotos", "galeria_fotos", "GaleriaDeFotos", [
+    { tabId: "galeria", slug: "Galeria", label: "Galeria", access: "always" },
+    { tabId: "upload", slug: "Upload", label: "Upload", access: "galeria_upload" },
+  ]),
   page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
     { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
     { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
@@ -354,6 +359,8 @@ export function isTabAllowedForUser(
     }
     case "vagas_candidaturas":
       return podeExecutarPerm(acoes.rh_vagas?.criar ?? null);
+    case "galeria_upload":
+      return podeExecutarPerm(acoes.galeria_fotos?.criar ?? null);
     default:
       return true;
   }

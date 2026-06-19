@@ -55,6 +55,7 @@ type Props = {
   podeEditar: boolean;
   usuarioLabel: string;
   onHistoricoRefresh?: () => void;
+  onCompletudeAlterada?: () => void;
   onErro?: (msg: string) => void;
 };
 
@@ -115,6 +116,7 @@ export default function FormacaoCompetenciasPainel({
   podeEditar,
   usuarioLabel,
   onHistoricoRefresh,
+  onCompletudeAlterada,
   onErro,
 }: Props) {
   const { theme: t } = useApp();
@@ -264,6 +266,7 @@ export default function FormacaoCompetenciasPainel({
     }
     setModalFormacao(null);
     await carregar();
+    onCompletudeAlterada?.();
   };
 
   const salvarIdioma = async (payload: IdiomaPayload, edit?: RhFuncionarioIdioma | null) => {
@@ -285,6 +288,7 @@ export default function FormacaoCompetenciasPainel({
     }
     setModalIdioma(null);
     await carregar();
+    onCompletudeAlterada?.();
   };
 
   const salvarCurso = async (payload: CursoPayload, edit?: RhFuncionarioCurso | null) => {
@@ -388,23 +392,24 @@ export default function FormacaoCompetenciasPainel({
 
   const confirmarExclusao = async () => {
     if (!deleteTarget) return;
+    const alvo = deleteTarget;
     setDeleting(true);
     try {
-      if (deleteTarget.kind === "formacao") {
-        const { error } = await supabase.from("rh_funcionario_formacao").delete().eq("id", deleteTarget.row.id);
+      if (alvo.kind === "formacao") {
+        const { error } = await supabase.from("rh_funcionario_formacao").delete().eq("id", alvo.row.id);
         if (error) throw error;
-        await logHistorico("excluir", "formacao_academica", deleteTarget.row.curso);
-      } else if (deleteTarget.kind === "idioma") {
-        const nome = deleteTarget.row.rh_idiomas?.nome ?? "Idioma";
-        const { error } = await supabase.from("rh_funcionario_idioma").delete().eq("id", deleteTarget.row.id);
+        await logHistorico("excluir", "formacao_academica", alvo.row.curso);
+      } else if (alvo.kind === "idioma") {
+        const nome = alvo.row.rh_idiomas?.nome ?? "Idioma";
+        const { error } = await supabase.from("rh_funcionario_idioma").delete().eq("id", alvo.row.id);
         if (error) throw error;
         await logHistorico("excluir", "idioma", nome);
-      } else if (deleteTarget.kind === "curso") {
-        const { error } = await supabase.from("rh_funcionario_curso").delete().eq("id", deleteTarget.row.id);
+      } else if (alvo.kind === "curso") {
+        const { error } = await supabase.from("rh_funcionario_curso").delete().eq("id", alvo.row.id);
         if (error) throw error;
-        await logHistorico("excluir", "curso", deleteTarget.row.nome);
+        await logHistorico("excluir", "curso", alvo.row.nome);
       } else {
-        const row = deleteTarget.row;
+        const row = alvo.row;
         if (row.storage_path) {
           await supabase.storage.from(RH_FORMACAO_PORTFOLIO_BUCKET).remove([row.storage_path]);
         }
@@ -414,6 +419,9 @@ export default function FormacaoCompetenciasPainel({
       }
       setDeleteTarget(null);
       await carregar();
+      if (alvo.kind === "formacao" || alvo.kind === "idioma") {
+        onCompletudeAlterada?.();
+      }
     } catch {
       notifyErro("Não foi possível excluir.");
     } finally {

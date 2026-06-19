@@ -30,26 +30,31 @@ O projeto usa `--max-warnings 0`: qualquer aviso tratado como erro também bloqu
 
 Depois de `npm install`, o script `prepare` instala um hook Git (`.git/hooks/pre-commit`) que executa:
 
-1. `npm run precommit` → **lint-staged** (`eslint --max-warnings 0` só nos ficheiros **em stage**)
-2. `npm run test`
+1. `npm run typecheck` → **`tsc --noEmit` em todo `src/`** (mesma verificação que o Cloudflare Pages faz no deploy)
+2. `npm run precommit` → **lint-staged** (`eslint --max-warnings 0` só nos ficheiros **em stage**)
+3. `npm run test`
 
-Se o commit falhar no ESLint, a mensagem indica ficheiro e linha (ex.: variável declarada e não usada — `@typescript-eslint/no-unused-vars`).
+O **ESLint não substitui o TypeScript compiler**: erros como import errado, props inexistentes ou cast inválido em joins Supabase só aparecem no `typecheck` / `build`. O hook local evita descobrir isso só no deploy.
 
-**Antes de commitar**, na raiz do projeto:
+Se o commit falhar, a mensagem indica ficheiro e linha (ESLint ou `tsc`).
+
+**Antes de push/deploy** (especialmente se o hook foi ignorado ou o commit veio de outra máquina):
 
 ```bash
+npm run typecheck
 npm run lint
+npm run build
 ```
-
-Valida **todo** o `src/` (não só o que está em stage) e evita surpresas ao fazer commit parcial ou após refactors que removem uso de variáveis.
 
 Comandos úteis:
 
 | Comando | Quando usar |
 |---------|-------------|
+| `npm run typecheck` | Refactors, hooks novos, joins Supabase, props de componentes — **rápido, sem bundler** |
 | `npm run lint` | Antes de cada commit (recomendado) |
 | `npm run lint:fix` | Corrigir o que o ESLint conseguir automaticamente |
 | `npm run precommit` | Simular só o lint dos ficheiros em stage |
+| `npm run build` | Paridade com Cloudflare Pages (`typecheck` + Vite) |
 | `npm run ci` | Mesmo conjunto do CI: lint + test + build |
 
 **Ignorar o hook uma vez** (emergência): `SKIP_SIMPLE_GIT_HOOKS=1 git commit ...`

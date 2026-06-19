@@ -21,6 +21,7 @@ alwaysApply: false
 | PageKey | h1 | Subtítulo |
 |---|---|---|
 | `campanhas` | Campanhas | Cadastre campanhas de mídia e vincule UTMs para monitorar performance nos dashboards. |
+| `galeria_fotos` | Galeria de Fotos | Organize fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores. |
 | `gestao_links` | Gestão de Links | Mapeie UTMs detectados a influencers, afiliados ou campanhas e alimente os relatórios. |
 
 Texto de **afiliados** no subtítulo de Gestão de Links é intencional (roadmap da secção Afiliados).
@@ -32,6 +33,7 @@ Texto de **afiliados** no subtítulo de Gestão de Links é intencional (roadmap
 | PageKey | Página | Caminho |
 |---------|--------|---------|
 | `campanhas` | Campanhas | `marketing/Campanhas/` |
+| `galeria_fotos` | Galeria de Fotos | `marketing/GaleriaFotos/` |
 | `gestao_links` | Gestão de Links | `marketing/GestaoLinks/` |
 
 Perfis: Gestor (operação interna).
@@ -62,6 +64,19 @@ Perfis: Gestor (operação interna).
 
 ---
 
+## Galeria de Fotos (`galeria_fotos`)
+
+- Abas `galeria | upload`: `FiltroBarTabButton` + `useRouteTab`; aba **Upload** só com permissão de **Criar** (`galeria_upload` em `appRoutes`).
+- **Galeria:** filtros por evento (chips + **Todos os eventos**), tipo **Gerais / Colaboradores** (só equipe com Criar/Editar/Excluir), busca insensível a acentos; blocos por evento com `SectionTitle` + data no `sub`; grid de thumbnails; lightbox + download; exclusão com `BtnExcluirLinha` + `ModalConfirmExcluirPadrao` quando `canExcluirOk`.
+- Perfis só com **Ver:** veem apenas fotos **gerais** — não fotos de colaborador (RLS + UI).
+- **Upload:** evento obrigatório (`SelectComIcone` + **Novo Evento**); tipo geral ou colaborador (prestador ativo/indisponível); legenda opcional; múltiplos arquivos JPG/PNG/WebP até 10 MB.
+- Storage: `marketing-fotos-gerais` (público) e `marketing-fotos-prestadores` (privado, URL assinada).
+- Coluna `visivel_prestador` reservada para liberação futura aos colaboradores — **fora do escopo v1**.
+- Vazio galeria filtrada: `Nenhuma foto encontrada para os filtros selecionados.`
+- Vazio sem eventos no upload: orientar criar evento antes do envio.
+
+---
+
 ## Estados de interface
 
 | Estado | Mensagem |
@@ -69,6 +84,7 @@ Perfis: Gestor (operação interna).
 | Links pendentes vazio | `Nenhum link pendente. Tudo mapeado!` |
 | Mapeados vazio | `Nenhum link mapeado ainda.` |
 | Ignorados vazio | `Nenhum link ignorado.` |
+| Galeria sem fotos (filtros) | `Nenhuma foto encontrada para os filtros selecionados.` |
 | Sem permissão | String Global |
 
 ---

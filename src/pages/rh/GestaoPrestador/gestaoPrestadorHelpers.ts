@@ -460,7 +460,8 @@ export type AbaFuncModal =
   | "contratacao"
   | "empresa"
   | "bancarios"
-  | "documentos";
+  | "documentos"
+  | "acesso_plataforma";
 
 /** Aba do modal onde o campo aparece (para saltar à primeira com erro). */
 export function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {

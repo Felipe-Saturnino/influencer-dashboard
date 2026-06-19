@@ -428,7 +428,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Documentos e revisão",
         texto:
-          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica pode ser concluída atualizando dados, enviando novos arquivos ou marcando «Confirmar sem alterações» quando nada mudou.",
+          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica pode ser concluída atualizando dados, enviando novos arquivos ou marcando «Confirmar sem alterações» quando nada mudou — **desde que o cadastro esteja completo** (todos os campos em Dados cadastrais; documentos obrigatórios do seu tipo de contrato, exceto Outros; ao menos 1 formação acadêmica e 1 idioma; ao menos 1 experiência profissional, exceto Estágio e Temporário). Enquanto houver pendências, o botão permanece desabilitado e a lista de itens faltantes aparece no banner de revisão.",
       },
       {
         subtitulo: "Formação e Competências",
@@ -832,6 +832,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Criando uma Campanha",
         texto:
           "No bloco **Campanhas cadastradas**, use **Nova Campanha** na mesma linha do título (ícone + no padrão de criação) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+      },
+    ],
+  },
+  galeria_fotos: {
+    titulo: "Galeria de Fotos",
+    blocos: [
+      {
+        texto:
+          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. A equipe de Marketing envia fotos **gerais** (visíveis e baixáveis por quem tem permissão de Ver) e fotos **individuais de colaboradores** (visíveis apenas para quem tem permissão de Criar, Editar ou Excluir na página — liberação aos próprios colaboradores será tratada em evolução futura).",
+      },
+      {
+        subtitulo: "Aba Galeria",
+        texto:
+          "Filtre por evento nos chips da barra superior ou use **Todos os eventos**. Quem gerencia a galeria também filtra por **Gerais** ou **Colaboradores**. A busca localiza evento, nome do colaborador ou legenda.\n\nAs fotos aparecem em blocos por evento (título + data). Clique na miniatura para ampliar; use o ícone de download para salvar o arquivo. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+      },
+      {
+        subtitulo: "Aba Upload",
+        texto:
+          "Disponível com permissão de **Criar**. Selecione ou cadastre um **evento** (**Novo Evento**), escolha o tipo (**Fotos gerais** ou **Fotos de colaborador**), vincule o colaborador quando for individual, opcionalmente informe uma legenda e selecione um ou mais arquivos (JPG, PNG ou WebP, até 10 MB cada).",
       },
     ],
   },

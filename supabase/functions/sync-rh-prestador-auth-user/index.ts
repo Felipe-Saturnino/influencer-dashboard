@@ -502,6 +502,8 @@ serve(async (req) => {
       email: loginEmail,
       role: perfilRole,
       must_change_password: true,
+      access_granted_by: whoami.userId,
+      access_granted_at: new Date().toISOString(),
     },
     { onConflict: 'id' },
   )

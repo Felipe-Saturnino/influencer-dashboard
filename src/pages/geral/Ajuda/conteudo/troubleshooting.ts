@@ -444,7 +444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O banner de revisão cadastral não aparece ou não some?",
         texto:
-          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. Formação e Experiência profissional anterior não entram nesse ciclo.",
+          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. **Confirmar sem alterações** só fica disponível com cadastro completo — veja a lista de pendências no banner quando algo faltar. Formação e Experiência profissional anterior não entram no ciclo de 6 meses, mas são exigidas para usar essa confirmação.",
       },
       {
         subtitulo: "Aparece um aviso ao tentar acessar outras páginas?",
@@ -860,6 +860,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
           "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+      },
+    ],
+  },
+  galeria_fotos: {
+    titulo: "Galeria de Fotos",
+    blocos: [
+      {
+        subtitulo: "Não vejo a aba Upload?",
+        texto:
+          "A aba Upload exige permissão de **Criar** em Gestão de Usuários → Permissões para a página Galeria de Fotos. Quem tem apenas Ver acessa somente a galeria de fotos gerais.",
+      },
+      {
+        subtitulo: "Não encontro fotos de colaboradores na galeria?",
+        texto:
+          "Fotos individuais de colaboradores são visíveis apenas para perfis com permissão de Criar, Editar ou Excluir na Galeria de Fotos. Demais perfis veem somente fotos gerais. A liberação das fotos individuais para cada colaborador será tratada em evolução futura da plataforma.",
+      },
+      {
+        subtitulo: "O envio de fotos falhou?",
+        texto:
+          "Confirme que um evento foi selecionado (ou cadastre um com **Novo Evento**), que o colaborador foi escolhido em fotos individuais e que cada arquivo está em JPG, PNG ou WebP com até 10 MB. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },

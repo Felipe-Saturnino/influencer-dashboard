@@ -46,7 +46,7 @@ Sempre que criar ou alterar de forma relevante uma página em `src/pages/**`:
 1. Atualizar o **MDC da secção** correspondente (nova subsecção por `PageKey`, personas, fluxos, exceções, strings de vazio específicas).
 2. Se a UI distinguir **jogos Spin** com cor/ícone e houver **exceção** à paleta canónica, documentar em **«Exceções — identidade de jogo»** no MDC da secção (Global § Identidade visual por jogo).
 3. Se a secção ainda não tiver MDC, **criar** o ficheiro `.cursor/rules/<secao>.mdc` com `globs` das pastas reais antes de considerar a feature fechada.
-4. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários) e `App.tsx` — ver Permissões.
+4. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários), **`ALL_PAGE_KEYS`** (`AppContext.tsx`), `App.tsx` e, se aplicável, `appRoutes.ts` — ver Permissões.
 
 ### Ajuda e glossário (qualquer secção)
 
@@ -166,7 +166,7 @@ styles/         # global.css, responsive.css
 types/          # PageKey, Role, PermissaoValor, …
 ```
 
-Ao criar página nova: alinhar `types` (`PageKey`), `constants/menu.ts`, `App.tsx`, `GestaoUsuarios/constants.ts` (`PAGES`) — ver secção Permissões.
+Ao criar página nova: alinhar `types` (`PageKey`), `constants/menu.ts`, `App.tsx`, `GestaoUsuarios/constants.ts` (`PAGES`), **`ALL_PAGE_KEYS`** em `context/AppContext.tsx` e `lib/appRoutes.ts` quando houver abas/URL — ver secção Permissões.
 
 ---
 
@@ -260,17 +260,20 @@ Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não 
 
 ### Administrador
 
-- Perfil **`admin`**: acesso **irrestrito** em todas as páginas — `usePermission` devolve `sim` em Ver/Criar/Editar/Excluir sem consultar a matriz (implementado em `usePermission.ts`).
-- Demais perfis: **somente** o que estiver liberado em Gestão de Usuários (e escopo operadora/influencer quando aplicável).
+- Perfil **`admin`**: acesso **irrestrito** em todas as páginas — `usePermission` devolve `sim` em Ver/Criar/Editar/Excluir **sem consultar** a matriz em Gestão de Usuários (implementado em `usePermission.ts`). O perfil **admin não aparece** na aba Permissões — isso é intencional.
+- **Menu lateral (admin incluído):** o Sidebar só mostra itens cujo `permissions[pageKey]` é `"sim"` ou `"proprios"`. Esse mapa vem de `carregarPermissoes` em **`src/context/AppContext.tsx`**. Para **admin**, todas as entradas são `"sim"`, mas **somente** para chaves listadas em **`ALL_PAGE_KEYS`** (mesmo ficheiro). **Omitir uma `PageKey` nova nesse array faz a página sumir do menu mesmo para administrador** — a matriz `role_permissions` e `PAGES` não compensam essa omissão.
+- Demais perfis: **somente** o que estiver liberado em Gestão de Usuários (e escopo operadora/influencer / gestor_tipo / prestador_tipo quando aplicável).
 
 ### Página nova — checklist obrigatório
 
 1. Adicionar `PageKey` em `src/types/index.ts`.
 2. Registrar em `PAGES` (`GestaoUsuarios/constants.ts`) com `hasCriar` / `hasEditar` / `hasExcluir` corretos.
-3. Item no menu (`constants/menu.ts`) e rota em `App.tsx`.
-4. **Permissões iniciais:** em Gestão de Usuários, para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir devem ficar **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (ou abas Gestores / Prestadores / Operadora, conforme o perfil).
-5. **Não** pré-conceder `sim` em seeds ou defaults de código para roles não-admin.
-6. Implementar gate no início da página:
+3. Item no menu (`constants/menu.ts`), lazy import + entrada no `PAGE_MAP` de `App.tsx`.
+4. **Incluir a mesma chave em `ALL_PAGE_KEYS`** (`src/context/AppContext.tsx`) — obrigatório para o item aparecer no menu (admin e universo de permissões no contexto). Verificar após implementação: admin deve ver o item na secção correta do menu sem alterar Gestão de Usuários.
+5. Se a página tiver abas ou segmento de URL: registrar em **`APP_ROUTE_CATALOG`** (`src/lib/appRoutes.ts`); sincronizar com `useRouteTab` quando aplicável.
+6. **Permissões iniciais (demais perfis):** migração SQL ou seed em `role_permissions` — para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (ou abas Gestores / Prestadores / Operadora, conforme o perfil). Replicar em `gestor_tipo_pages` / `prestador_tipo_pages` quando a secção usar essas matrizes.
+7. **Não** pré-conceder `sim` em seeds ou defaults de código para roles não-admin.
+8. Implementar gate no início da página:
 
 ```typescript
 const perm = usePermission("page_key");
@@ -1107,13 +1110,59 @@ O `index.html` gerado **não** deve ter `modulepreload` para `vendor-*-icons-*`;
 
 Ao adicionar **novo** grupo em `codeSplitting.groups`: fazer deploy de teste e validar esse ficheiro em `/assets/` antes de considerar estável.
 
+### TypeScript — verificação pré-deploy (obrigatório)
+
+**Contrato Cloudflare / CI:** `npm run build` = **`npm run typecheck`** (`tsc --noEmit` em `src/`) + `vite build`. O **ESLint não cobre** a maioria destes erros (módulo inexistente, props inválidas, cast de join Supabase).
+
+| Comando | Uso |
+|---------|-----|
+| `npm run typecheck` | Verificação TypeScript completa — preferir após refactors e antes de push |
+| `npm run build` | Paridade exacta com deploy Cloudflare Pages |
+| `npm run ci` | lint + test + build (GitHub Actions) |
+
+**Pre-commit local** (após `npm install`): `typecheck` → lint-staged → test. Ignorar só em emergência: `SKIP_SIMPLE_GIT_HOOKS=1 git commit …`.
+
+**Checklist ao criar ou alterar código em `src/`:**
+
+1. **Imports e camadas**
+   - Ficheiros em `src/hooks/**` importam helpers de **`../lib/`** ou **`../types/`** — **proibido** `./modulo` como se o helper estivesse na pasta do hook (ex.: `useRhPrestadorDocumentosCategoria` → `../lib/rhPrestadorSelfMediaDocs`, não `./rhPrestadorSelfMediaDocs`).
+   - Componentes partilhados: preferir barrel **`components/dashboard`** quando existir reexport (`SectionTitle`, filtros, `SortTableTh`, …).
+   - **`SectionTitle`:** export **default** no ficheiro — usar `import { SectionTitle } from "../components/dashboard"` ou `import SectionTitle from "…/SectionTitle"`; **não** `{ SectionTitle }` importado directamente de `SectionTitle.tsx` se o bundler/TS acusar export inexistente.
+   - **Edge Functions** (`supabase/functions/**`): ficheiros auxiliares **no mesmo nível** que `index.ts` — **sem** pasta `_shared/` (painel Supabase não a inclui no deploy). Ver `supabase/functions/README.md`.
+
+2. **Joins Supabase (`.select(…, relacao(cols))`)**
+   - Tipos de embed e helpers de normalização em **`src/lib/<dominio>.ts`** (ex.: `MarketingFotoComEvento`, `fotoEventoEmbed`, `fotoPrestadorEmbed` em `marketingGaleriaFotos.ts`).
+   - Nome da propriedade no tipo = **nome exacto** da relação no select (`rh_funcionarios`, não `rh_funcionario`).
+   - PostgREST pode devolver embed como **objeto ou array** — tipar `T | T[] | null` e usar helper `unwrapEmbed` / funções `*Embed()` na página; **não** aceder `.nome` directamente no embed sem normalizar.
+   - **Proibido** `(data ?? []) as MeuTipo[]` quando o tipo não reflecte colunas/relações do select — ajustar interface ou mapper antes do cast.
+
+3. **Props de componentes**
+   - Usar **só** props declaradas na interface exportada (`FiltroSemanticoTabPillProps`, etc.) — consultar o componente ou `components/dashboard/index.ts`.
+   - **`showClearIcon`:** `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` — **não** `FiltroSemanticoTabPill` nem `FiltroBarTabButton`.
+   - Copiar props de outra página só depois de confirmar que o **mesmo** componente as expõe.
+
+4. **Strict mode**
+   - Parâmetros em `.then()` / callbacks: tipo explícito se o TS não inferir (`TS7006` implicit `any`).
+
+5. **Antes de fechar feature que toca `src/`**
+   - Correr **`npm run typecheck`** (mínimo) ou **`npm run build`** (deploy).
+   - **`npm run lint`** na raiz — lint-staged no pre-commit só ficheiros em stage.
+
+Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
+
 ---
 
 ## Anti-patterns (global)
 
+- Concluir alterações em `src/**` sem **`npm run typecheck`** ou **`npm run build`** — o deploy Cloudflare corre `tsc` e falha com erros que o ESLint não vê.
 - Concluir alterações em `src/**/*.tsx` sem correr `npm run lint` na raiz (o pre-commit só linta ficheiros em stage; variáveis órfãs após refactor bloqueiam o commit).
+- Hook em `src/hooks/` importando de `./` um módulo que vive em `src/lib/` (caminho relativo errado — `TS2307`).
+- Cast `(data as Tipo[])` após query Supabase com joins sem tipo alinhado ao `.select()` — usar lib de domínio + helpers de embed.
+- Prop copiada de chip de status/plataforma num componente tab semântico (ou vice-versa) — `TS2322` em deploy.
+- Pasta `_shared/` ou subpastas auxiliares em Edge Functions fora do padrão por function (deploy manual Supabase → `Module not found`).
 - Implementar página sem ler Brand + MDC da secção.
 - Ignorar matriz de Gestão de Usuários (exceto admin).
+- **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`AppContext.tsx`)** — item não aparece no menu lateral (inclusive para admin).
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
