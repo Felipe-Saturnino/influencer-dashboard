@@ -36,6 +36,10 @@ export type SyncRhPrestadorAuthUserResponse = {
   skipped?: boolean;
   reason?: string;
   created?: boolean;
+  /** Perfil/escopos atualizados conforme organograma (usuário já existia). */
+  updated?: boolean;
+  role?: string;
+  roleChanged?: boolean;
   /** Usuário da plataforma desativado após encerramento do vínculo. */
   deactivated?: boolean;
   userId?: string;
@@ -51,10 +55,10 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
   if (typeof res.error === "string" && res.error.trim()) {
     return `Sincronização com Gestão de Usuários: ${res.error.trim()}`;
   }
-  if (res.created === true) return null;
+  if (res.created === true || res.updated === true) return null;
   if (!res.skipped) return null;
-  if (res.reason === "usuario_email_ja_existe" || res.reason === "usuario_email_ja_existe_auth") {
-    return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com o e-mail usado para login (E-mail Spin ou e-mail pessoal). Ajuste em Gestão de Usuários, se necessário.";
+  if (res.reason === "usuario_email_ja_existe_auth") {
+    return "Prestador salvo, mas não foi possível sincronizar o login na plataforma: já existe conta Auth com o e-mail, sem perfil vinculado. Ajuste em Gestão de Usuários, se necessário.";
   }
   if (res.reason === "sem_email" || res.reason === "sem_email_spin") {
     return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal no cadastro e salve de novo).";
@@ -63,6 +67,17 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
     return null;
   }
   return `Prestador salvo, mas o usuário não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
+}
+
+/** Mensagem de sucesso quando o organograma alterou perfil/escopos de usuário existente. */
+export function mensagemSucessoSyncPrestadorAtualizado(
+  res: SyncRhPrestadorAuthUserResponse | null | undefined,
+): string | null {
+  if (!res?.updated) return null;
+  if (res.roleChanged) {
+    return "Perfil e permissões na plataforma atualizados conforme o organograma.";
+  }
+  return "Permissões na plataforma sincronizadas com o organograma.";
 }
 
 /** Mensagem de sucesso quando o encerramento desativou o login na plataforma. */

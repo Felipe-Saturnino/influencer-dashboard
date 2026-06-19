@@ -6,12 +6,13 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 
 /**
  * Edge: sync-rh-prestador-auth-user
- * Cria usuário Auth + profile + user_scopes (prestador_tipo) quando aplicável.
+ * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
  * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento → Gestor) >
  *   times (Performance Coach → Gestor Treinamento, Shift Leader, Service Manager, GP, CS, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
+ * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
@@ -173,6 +174,110 @@ async function goTrueAdminDeleteUser(supabaseUrl: string, serviceRoleKey: string
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function goTrueAdminUpdateUser(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userId: string,
+  opts: { name: string; perfilRole: string; email?: string },
+): Promise<{ error?: string }> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const url = `${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), AUTH_ADMIN_MS)
+  try {
+    const body: Record<string, unknown> = {
+      user_metadata: { name: opts.name, role: opts.perfilRole },
+    }
+    if (opts.email) body.email = opts.email
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: authAdminHeaders(serviceRoleKey),
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    })
+    const text = await res.text()
+    if (!res.ok) {
+      let parsed: Record<string, unknown> = {}
+      try {
+        parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+      } catch {
+        /* */
+      }
+      const msg =
+        (typeof parsed.msg === 'string' && parsed.msg) ||
+        (typeof parsed.message === 'string' && parsed.message) ||
+        (typeof parsed.error_description === 'string' && parsed.error_description) ||
+        `HTTP ${res.status}: ${text.slice(0, 240)}`
+      return { error: msg }
+    }
+    return {}
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { error: `Auth Admin excedeu ${AUTH_ADMIN_MS / 1000}s` }
+    }
+    return { error: e instanceof Error ? e.message : 'Falha ao contactar Auth Admin' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+type PerfilExistente = { id: string; role: string; email: string; ativo: boolean | null }
+
+async function findProfileByEmails(
+  supabase: SupabaseSvc,
+  emails: string[],
+): Promise<PerfilExistente | null> {
+  const uniq = [...new Set(emails.filter((e) => e.includes('@')))]
+  for (const em of uniq) {
+    const { data: perfil } = await supabase
+      .from('profiles')
+      .select('id, role, email, ativo')
+      .ilike('email', em)
+      .limit(1)
+      .maybeSingle()
+    if (!perfil?.id) continue
+    const pe = String((perfil as { email?: string }).email ?? '').trim().toLowerCase()
+    if (pe !== em) continue
+    return perfil as PerfilExistente
+  }
+  return null
+}
+
+async function syncEscoposRhPrestador(
+  supabase: SupabaseSvc,
+  userId: string,
+  perfilRole: PerfilRhSync,
+  tipoSlug: PrestadorTipoSlug | null,
+  gestorSlug: GestorTipoSlug | null,
+): Promise<{ error?: string }> {
+  const { error: delErr } = await supabase
+    .from('user_scopes')
+    .delete()
+    .eq('user_id', userId)
+    .in('scope_type', ['prestador_tipo', 'gestor_tipo'])
+  if (delErr) return { error: `Erro ao limpar escopos RH: ${delErr.message}` }
+
+  if (gestorSlug !== null && perfilRole === 'gestor') {
+    const { error: scopeGestorErr } = await supabase.from('user_scopes').insert({
+      user_id: userId,
+      scope_type: 'gestor_tipo',
+      scope_ref: gestorSlug,
+    })
+    if (scopeGestorErr) return { error: `Erro ao salvar tipo de gestor: ${scopeGestorErr.message}` }
+  }
+
+  if (tipoSlug !== null && perfilRole === 'prestador') {
+    const { error: scopeErr } = await supabase.from('user_scopes').insert({
+      user_id: userId,
+      scope_type: 'prestador_tipo',
+      scope_ref: tipoSlug,
+    })
+    if (scopeErr) return { error: `Erro ao salvar área de atuação: ${scopeErr.message}` }
+  }
+
+  return {}
 }
 
 function normTimeNome(s: string | null | undefined): string {
@@ -443,14 +548,6 @@ serve(async (req) => {
     })
   }
 
-  const { data: perfilComEmailRows } = await supabase.from('profiles').select('id').ilike('email', loginEmail).limit(1)
-  if (perfilComEmailRows?.length) {
-    return new Response(JSON.stringify({ success: true, skipped: true, reason: 'usuario_email_ja_existe' }), {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-
   let timeNome: string | null = null
   if (row.org_time_id) {
     const { data: tr } = await supabase.from('rh_org_times').select('nome').eq('id', row.org_time_id).maybeSingle()
@@ -470,6 +567,65 @@ serve(async (req) => {
     timeNome,
     (row as { area_atuacao?: string | null }).area_atuacao,
   )
+
+  const emailsBusca = [...new Set([loginEmail, spin, personal].filter((e) => e.includes('@')))]
+  const perfilExistente = await findProfileByEmails(supabase, emailsBusca)
+
+  if (perfilExistente) {
+    const roleAnterior = String(perfilExistente.role ?? '').trim()
+    const emailAnterior = String(perfilExistente.email ?? '').trim().toLowerCase()
+    const emailMudou = emailAnterior !== loginEmail
+
+    const patchProfile: Record<string, unknown> = {
+      name: nomePlataforma,
+      role: perfilRole,
+      ativo: true,
+    }
+    if (emailMudou) patchProfile.email = loginEmail
+
+    const { error: profileUpErr } = await supabase
+      .from('profiles')
+      .update(patchProfile)
+      .eq('id', perfilExistente.id)
+    if (profileUpErr) {
+      return new Response(JSON.stringify({ error: profileUpErr.message }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const authUp = await goTrueAdminUpdateUser(supabaseUrl, serviceRoleKey, perfilExistente.id, {
+      name: nomePlataforma,
+      perfilRole,
+      ...(emailMudou ? { email: loginEmail } : {}),
+    })
+    if (authUp.error) {
+      console.error('[sync-rh-prestador-auth-user] Auth metadata:', authUp.error)
+      return new Response(JSON.stringify({ error: authUp.error }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const escopos = await syncEscoposRhPrestador(supabase, perfilExistente.id, perfilRole, tipoSlug, gestorSlug)
+    if (escopos.error) {
+      return new Response(JSON.stringify({ error: escopos.error }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        updated: true,
+        userId: perfilExistente.id,
+        role: perfilRole,
+        roleChanged: roleAnterior !== perfilRole,
+      }),
+      { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+    )
+  }
 
   const created = await goTrueAdminCreateUser(
     supabaseUrl,
@@ -516,36 +672,14 @@ serve(async (req) => {
     })
   }
 
-  if (gestorSlug !== null) {
-    const { error: scopeGestorErr } = await supabase.from('user_scopes').insert({
-      user_id: uid,
-      scope_type: 'gestor_tipo',
-      scope_ref: gestorSlug,
+  const escoposCreate = await syncEscoposRhPrestador(supabase, uid, perfilRole, tipoSlug, gestorSlug)
+  if (escoposCreate.error) {
+    await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
+    await supabase.from('profiles').delete().eq('id', uid)
+    return new Response(JSON.stringify({ error: escoposCreate.error }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
-    if (scopeGestorErr) {
-      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      await supabase.from('profiles').delete().eq('id', uid)
-      return new Response(JSON.stringify({ error: `Erro ao salvar tipo de gestor: ${scopeGestorErr.message}` }), {
-        status: 500,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
-  }
-
-  if (tipoSlug !== null) {
-    const { error: scopeErr } = await supabase.from('user_scopes').insert({
-      user_id: uid,
-      scope_type: 'prestador_tipo',
-      scope_ref: tipoSlug,
-    })
-    if (scopeErr) {
-      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-      await supabase.from('profiles').delete().eq('id', uid)
-      return new Response(JSON.stringify({ error: `Erro ao salvar área de atuação: ${scopeErr.message}` }), {
-        status: 500,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
   }
 
   if (
