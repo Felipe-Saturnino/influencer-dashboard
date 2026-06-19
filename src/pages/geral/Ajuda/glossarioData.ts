@@ -681,7 +681,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Peça de Figurino",
         definicao:
-          "Item de vestuário ou acessório cadastrado no acervo da plataforma, identificado por um código único (ex: FIG-000003) e código de barras para rastreamento físico.",
+          "Item de vestuário ou acessório cadastrado no acervo da plataforma, identificado por um código único (ex.: CAM-000003 para Camisa, VES-000001 para Vestido) e código de barras para rastreamento físico.",
         referencia: "Figurinos",
       },
       {

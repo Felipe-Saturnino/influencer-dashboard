@@ -474,7 +474,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O código bipado retornou 'não reconhecido'?",
         texto:
-          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. Certifique-se de que o código começa com 'FIG-' (ex: FIG-000003). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
+          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. O código segue o formato PREFIX-000001, com prefixo de três letras da categoria (ex.: CAM-000003 para Camisa). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
       },
       {
         subtitulo: "O prestador não aparece na lista de retirada?",
@@ -494,7 +494,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
         texto:
-          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex: FIG-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
+          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex.: CAM-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
       },
       {
         subtitulo: "Não consigo registrar uma movimentação?",

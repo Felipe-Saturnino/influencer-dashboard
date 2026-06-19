@@ -467,7 +467,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar Peça",
         texto:
-          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema. Selecione as operadoras vinculadas à peça (pode ser mais de uma), a categoria, o tamanho e a data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
+          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema com prefixo das três primeiras letras da categoria (ex.: Camisa → CAM-000001, Vestido → VES-000001). Selecione os estúdios vinculados à peça (pode ser mais de um), a categoria, o tamanho e a data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
       },
       {
         subtitulo: "Retirada e Devolução",
