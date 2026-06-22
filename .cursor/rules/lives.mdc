@@ -596,6 +596,14 @@ try {
 }
 ```
 
+**Registro do prospecto (`created_by` / `created_at`):**
+
+- **Novo Influencer:** no insert, `created_by = usuário logado`; não exibir na UI do modal de criação.
+- **Aba Anotações** (Ver / Editar): bloco **`ProspectoRegistroMeta`** no topo — **Registrado por** + **Data de Registro** (`fmtProspectoDataRegistro`).
+- **`created_by` vazio** (ex.: site público `tipo_contato = site_spin`): só data; botão **Atribuir a mim** no Editar (grava no **Salvar**); imutável após preenchido.
+- **Flag no card:** **`ProspectoCardFlags`** — `registradoPorLabel` → pill **Registrado · {nome}** (`PROSPECTO_FLAG_REGISTRADO_COLOR`); omitir quando sem registrador.
+- Nomes: `enrichProspectosComCriadorNome` em `lib/prospectoRegistroMeta.ts`.
+
 ---
 
 ## Modais — Padrão Geral

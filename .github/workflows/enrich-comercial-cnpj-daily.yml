@@ -1,0 +1,45 @@
+# Pipeline B2B — enriquecimento cidade/UF por CNPJ via Edge Function `enrich-comercial-cnpj`
+# ~8h30 BRT → 11h30 UTC (após validação de domínios 8h / 11h UTC)
+# Secrets GitHub: SUPABASE_URL, SUPABASE_ANON_KEY
+name: Enrich Comercial CNPJ (8h30 BRT)
+
+on:
+  schedule:
+    - cron: "30 11 * * *"
+  workflow_dispatch:
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar enrich-comercial-cnpj
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Defina os secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/enrich-comercial-cnpj"
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | sed '$d')
+          echo "HTTP ${HTTP}"
+          echo "$BODY_RES" | head -c 4000
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "Falha HTTP"
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
+          if [ "$OK" != "true" ]; then
+            echo "Resposta com ok != true (ver erros no JSON acima)."
+            exit 1
+          fi
+          echo "Enriquecimento CNPJ Pipeline B2B concluído com sucesso."

@@ -33,6 +33,12 @@ import { X, Eye, Pencil, ChevronDown, Loader2, Coins, Contact, Share2, StickyNot
 import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
 import { ProspectoCacheFlag, ProspectoCardFlags } from "../../../components/ProspectoCardFlags";
 import { resolveProspectoOrigemLabel } from "../../../lib/prospectoCardFlagsStyles";
+import {
+  enrichProspectosComCriadorNome,
+  fmtProspectoDataRegistro,
+  prospectoRegistradoPorLabel,
+} from "../../../lib/prospectoRegistroMeta";
+import { ProspectoRegistroMeta } from "../../../components/ProspectoRegistroMeta";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
@@ -179,6 +185,8 @@ export interface ScoutInfluencer {
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
+  /** Preenchido no loadData via profiles.name. */
+  criador_nome?: string | null;
 }
 
 interface ScoutAnotacao {
@@ -314,9 +322,10 @@ export default function Scout() {
     const { data, error } = await supabase.from("scout_influencer").select("*").order("nome_artistico");
     if (error) { console.error("[Scout] Erro ao carregar:", error); setList([]); }
     else {
-      setList((data ?? []) as ScoutInfluencer[]);
-      const caches = (data ?? []).map((s: ScoutInfluencer) => toCacheNumber(s.cache_negociado)).filter((v: number) => v > 0);
-      const viewsAll = (data ?? []).map((s: ScoutInfluencer) => getViewsTotal(s)).filter((v: number) => v > 0);
+      const rows = await enrichProspectosComCriadorNome((data ?? []) as ScoutInfluencer[]);
+      setList(rows);
+      const caches = rows.map((s) => toCacheNumber(s.cache_negociado)).filter((v: number) => v > 0);
+      const viewsAll = rows.map((s) => getViewsTotal(s)).filter((v: number) => v > 0);
       if (caches.length > 0) { const cm = Math.max(...caches, 5000); setCacheMax(cm); setCacheLimit(cm); }
       if (viewsAll.length > 0) { const vm = Math.max(...viewsAll, 100000); setViewsMax(vm); setViewsLimit(vm); }
     }
@@ -688,6 +697,7 @@ export default function Scout() {
                         : null
                     }
                     origemLabel={resolveProspectoOrigemLabel(s.tipo_contato, TIPO_CONTATO_OPTS)}
+                    registradoPorLabel={prospectoRegistradoPorLabel(s.criador_nome)}
                     marginTop={plats.length > 0 ? 6 : 8}
                   />
                   {toCacheNumber(s.cache_negociado) > 0 && (
@@ -838,6 +848,14 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
         )}
         {tab === "anotacoes" && (
           <div role="tabpanel" id="scout-viz-panel-anotacoes" aria-labelledby="scout-viz-tab-anotacoes">
+          <ProspectoRegistroMeta
+            registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
+            dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
+            textColor={t.text}
+            textMuted={t.textMuted}
+            cardBorder={t.cardBorder}
+            inputBg={t.inputBg ?? t.cardBg}
+          />
           <div style={row}>
             <label style={labelStyle}>Histórico de Anotações</label>
             <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -894,6 +912,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   const [error, setError] = useState("");
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [criandoUsuario, setCriandoUsuario] = useState(false);
+  const [atribuirRegistroAMim, setAtribuirRegistroAMim] = useState(false);
 
   useEffect(() => {
     if (scout) {
@@ -910,6 +929,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
       setCategorias(scout.categorias ?? []);
       setLinks({ twitch: scout.link_twitch ?? "", youtube: scout.link_youtube ?? "", kick: scout.link_kick ?? "", instagram: scout.link_instagram ?? "", tiktok: scout.link_tiktok ?? "", discord: scout.link_discord ?? "", whatsapp: scout.link_whatsapp ?? "", telegram: scout.link_telegram ?? "" });
       setViews({ twitch: scout.views_twitch ?? 0, youtube: scout.views_youtube ?? 0, kick: scout.views_kick ?? 0, instagram: scout.views_instagram ?? 0, tiktok: scout.views_tiktok ?? 0, discord: scout.views_discord ?? 0, whatsapp: scout.views_whatsapp ?? 0, telegram: scout.views_telegram ?? 0 });
+      setAtribuirRegistroAMim(false);
     } else {
       setNomeArtistico("");
       setStatus("visualizado");
@@ -924,6 +944,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
       setCategorias([]);
       setLinks({ twitch: "", youtube: "", kick: "", instagram: "", tiktok: "", discord: "", whatsapp: "", telegram: "" });
       setViews({ twitch: 0, youtube: 0, kick: 0, instagram: 0, tiktok: 0, discord: 0, whatsapp: 0, telegram: 0 });
+      setAtribuirRegistroAMim(false);
     }
   }, [scout]);
 
@@ -1081,6 +1102,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
       if (userId) payload.user_id = userId;
 
       if (scout) {
+        if (!scout.created_by && atribuirRegistroAMim && user?.id) {
+          payload.created_by = user.id;
+        }
         const { error: err } = await supabase.from("scout_influencer").update(payload).eq("id", scout.id);
         if (err) throw new Error(err.message);
         // Sincronizar cache para influencer_perfil quando status fechado (userId = recém-criado, scout.user_id = já existia)
@@ -1372,6 +1396,19 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
 
         {scout ? (
           <ModalTabPanel active={tab === "anotacoes"} id="scout-edit-panel-anotacoes" labelledBy="scout-edit-tab-anotacoes">
+            <ProspectoRegistroMeta
+              registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
+              dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
+              editMode
+              podeAtribuir={perm.canEditarOk && !scout.created_by}
+              atribuirPendente={atribuirRegistroAMim}
+              atribuirNomePreview={user?.name ?? null}
+              onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
+              textColor={t.text}
+              textMuted={t.textMuted}
+              cardBorder={t.cardBorder}
+              inputBg={t.inputBg ?? t.cardBg}
+            />
             <div style={row}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />

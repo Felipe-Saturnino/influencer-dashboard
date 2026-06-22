@@ -11,6 +11,12 @@ import { DashboardPageHeader, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onF
 import { FunilProspeccaoKpiGrid } from "../../../components/FunilProspeccaoKpiGrid";
 import { ProspectoCardFlags } from "../../../components/ProspectoCardFlags";
 import { resolveProspectoOrigemLabel } from "../../../lib/prospectoCardFlagsStyles";
+import {
+  enrichProspectosComCriadorNome,
+  fmtProspectoDataRegistro,
+  prospectoRegistradoPorLabel,
+} from "../../../lib/prospectoRegistroMeta";
+import { ProspectoRegistroMeta } from "../../../components/ProspectoRegistroMeta";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -124,6 +130,8 @@ export interface AfiliadoNetworkRow {
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
+  /** Preenchido no loadData via profiles.name. */
+  criador_nome?: string | null;
 }
 
 async function criarAfiliadoDesdeNetwork(networkId: string): Promise<void> {
@@ -205,7 +213,8 @@ export default function AfiliadosNetwork() {
       console.error("[Afiliados Network] Erro ao carregar:", error);
       setList([]);
     } else {
-      setList((data ?? []) as AfiliadoNetworkRow[]);
+      const rows = await enrichProspectosComCriadorNome((data ?? []) as AfiliadoNetworkRow[]);
+      setList(rows);
     }
     setLoading(false);
   }, []);
@@ -417,6 +426,7 @@ export default function AfiliadosNetwork() {
                       : null
                   }
                   origemLabel={resolveProspectoOrigemLabel(r.tipo_contato, TIPO_CONTATO_OPTS)}
+                  registradoPorLabel={prospectoRegistradoPorLabel(r.criador_nome)}
                 />
               </div>
             </div>
@@ -630,6 +640,14 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
         )}
         {tab === "anotacoes" && (
           <div role="tabpanel" id="panel-af-viz-anotacoes" aria-labelledby="tab-af-viz-anotacoes">
+            <ProspectoRegistroMeta
+              registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
+              dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
+              textColor={t.text}
+              textMuted={t.textMuted}
+              cardBorder={t.cardBorder}
+              inputBg={t.inputBg ?? t.cardBg}
+            />
             <label style={labelStyle}>Histórico de Anotações</label>
             <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               {anotacoes.length === 0 ? (
@@ -682,6 +700,7 @@ function ModalEditar({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [atribuirRegistroAMim, setAtribuirRegistroAMim] = useState(false);
   useModalEscape(onClose, true);
 
   useEffect(() => {
@@ -694,6 +713,7 @@ function ModalEditar({
       setLiveCassino(row.live_cassino ?? "");
       setOperadoraSlug(row.operadora_slug ?? "");
       setOperacao(row.operacao ?? "");
+      setAtribuirRegistroAMim(false);
     } else {
       setNome("");
       setStatus("visualizado");
@@ -703,6 +723,7 @@ function ModalEditar({
       setLiveCassino("");
       setOperadoraSlug("");
       setOperacao("");
+      setAtribuirRegistroAMim(false);
     }
   }, [row]);
 
@@ -772,6 +793,9 @@ function ModalEditar({
         updated_at: new Date().toISOString(),
       };
       if (row) {
+        if (!row.created_by && atribuirRegistroAMim && user?.id) {
+          (payload as Record<string, unknown>).created_by = user.id;
+        }
         const { error: err } = await supabase.from("afiliados_network").update(payload).eq("id", row.id);
         if (err) throw new Error(err.message);
         if (!row.afiliado_user_id) {
@@ -1003,6 +1027,19 @@ function ModalEditar({
 
         {tab === "anotacoes" && row && (
           <div role="tabpanel" id="panel-af-ed-anotacoes" aria-labelledby="tab-af-ed-anotacoes">
+            <ProspectoRegistroMeta
+              registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
+              dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
+              editMode
+              podeAtribuir={perm.canEditarOk && !row.created_by}
+              atribuirPendente={atribuirRegistroAMim}
+              atribuirNomePreview={user?.name ?? null}
+              onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
+              textColor={t.text}
+              textMuted={t.textMuted}
+              cardBorder={t.cardBorder}
+              inputBg={t.inputBg ?? t.cardBg}
+            />
             <div style={rowS}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />

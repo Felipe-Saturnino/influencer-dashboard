@@ -14,6 +14,10 @@ export interface ComercialEmpresa {
   portaria_retificacoes: string[];
   requerimento_numero: string | null;
   requerimento_ano: string | null;
+  /** Município da sede (enriquecimento CNPJ — comercial_empresas). */
+  cidade?: string | null;
+  /** UF da sede (2 letras). */
+  estado?: string | null;
 }
 
 export interface ComercialContato {

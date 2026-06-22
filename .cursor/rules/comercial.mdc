@@ -78,7 +78,9 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 ### Dados (Supabase)
 
-Tabelas: `comercial_empresas`, `comercial_marcas`, `comercial_marca_contatos`, `comercial_marca_produtos`, `comercial_marca_anotacoes`, `comercial_marca_historico`. RLS: `_comercial_pipeline_b2b_perm`.
+Tabelas: `comercial_empresas`, `comercial_marcas`, … RLS: `_comercial_pipeline_b2b_perm`.
+
+**Enriquecimento CNPJ (cidade/UF):** colunas `cidade`, `estado`, `cnpj_enriquecido_em` em **`comercial_empresas`** — compartilhadas por todas as marcas do mesmo CNPJ (`empresa_id`). **Sem UI** nesta fase. Edge **`enrich-comercial-cnpj`** (Brasil API / cadastro Receita); cron `enrich-comercial-cnpj-daily.yml` **8h30 BRT** (~11h30 UTC). Processa até **80** empresas/dia sem `cnpj_enriquecido_em`; logs `sync_logs.integracao_slug = comercial_cnpj_enriquecimento`. Teste: `POST {}`, `{ "dry_run": true }` ou `{ "force": true, "limit": 10 }`.
 
 ### Sync automático — Lista SPA/MF (cron)
 

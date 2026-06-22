@@ -82,3 +82,7 @@ verify_jwt = false
 [functions.validate-comercial-dominios]
 verify_jwt = false
 # Validação HTTP status_dominio das marcas Pipeline B2B (service role interno).
+
+[functions.enrich-comercial-cnpj]
+verify_jwt = false
+# Enriquecimento cidade/UF por CNPJ em comercial_empresas (Brasil API; service role interno).
