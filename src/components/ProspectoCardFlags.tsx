@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { Building2, Coins, Dices, Signpost } from "lucide-react";
+import { Building2, Coins, Dices, Signpost, User } from "lucide-react";
 import OperadoraTag from "./OperadoraTag";
 import {
   PROSPECTO_FLAG_CACHE_COLOR,
   PROSPECTO_FLAG_LIVE_CASSINO_COLOR,
   PROSPECTO_FLAG_ORIGEM_COLOR,
+  PROSPECTO_FLAG_REGISTRADO_COLOR,
   prospectoCardFlagPillFromHex,
 } from "../lib/prospectoCardFlagsStyles";
 
@@ -14,6 +15,8 @@ export type ProspectoCardFlagsProps = {
   /** Cor primária da operadora (`operadoras.brand_action`) — `OperadoraTag` quando preenchida. */
   operadoraCorPrimaria?: string | null;
   origemLabel?: string | null;
+  /** Nome de quem registrou na plataforma — omitir quando vazio (ex.: site público). */
+  registradoPorLabel?: string | null;
   /** Espaço acima quando há conteúdo anterior no card (ex.: plataformas). */
   marginTop?: number;
 };
@@ -23,13 +26,15 @@ export function ProspectoCardFlags({
   operadoraNome,
   operadoraCorPrimaria,
   origemLabel,
+  registradoPorLabel,
   marginTop = 6,
 }: ProspectoCardFlagsProps) {
   const showLiveCassino = liveCassino === "sim";
   const opNome = (operadoraNome ?? "").trim();
   const origem = (origemLabel ?? "").trim();
+  const registrado = (registradoPorLabel ?? "").trim();
 
-  if (!showLiveCassino && !opNome && !origem) return null;
+  if (!showLiveCassino && !opNome && !origem && !registrado) return null;
 
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop }}>
@@ -53,6 +58,15 @@ export function ProspectoCardFlags({
         >
           <Signpost size={11} aria-hidden="true" />
           Origem · {origem}
+        </span>
+      )}
+      {registrado && (
+        <span
+          style={prospectoCardFlagPillFromHex(PROSPECTO_FLAG_REGISTRADO_COLOR)}
+          title={`Registrado por ${registrado}`}
+        >
+          <User size={11} aria-hidden="true" />
+          Registrado · {registrado}
         </span>
       )}
     </div>

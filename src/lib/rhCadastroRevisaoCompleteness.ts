@@ -164,6 +164,19 @@ export function avaliarCompletudeCadastroRevisao(
   return { ok: pendencias.length === 0, pendencias };
 }
 
+/** Carrega dados externos e avalia completude (fonte única para concluir revisão cadastral). */
+export async function verificarCompletudeCadastroRevisao(
+  funcionarioId: string,
+  form: RhCadastroFormCompletudeInput,
+): Promise<RhCadastroCompletudeRevisao & { externo: RhCadastroCompletudeExterna | null; error: string | null }> {
+  const { data, error } = await carregarCompletudeExternaCadastro(funcionarioId);
+  if (error || !data) {
+    return { ok: false, pendencias: [], externo: null, error: error ?? "Erro ao verificar completude." };
+  }
+  const avaliacao = avaliarCompletudeCadastroRevisao(form, data);
+  return { ...avaliacao, externo: data, error: null };
+}
+
 export async function carregarCompletudeExternaCadastro(
   funcionarioId: string,
 ): Promise<{ data: RhCadastroCompletudeExterna | null; error: string | null }> {

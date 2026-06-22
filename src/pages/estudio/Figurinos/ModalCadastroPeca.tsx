@@ -39,14 +39,17 @@ export function ModalCadastroPeca({
 
   useEffect(() => {
     let cancel = false;
+    setPreviewCode("…");
     (async () => {
-      const { data, error } = await supabase.rpc("rh_figurino_preview_proximo_code");
+      const { data, error } = await supabase.rpc("rh_figurino_preview_proximo_code", {
+        p_category: cat,
+      });
       if (!cancel && !error && typeof data === "string") setPreviewCode(data);
     })();
     return () => {
       cancel = true;
     };
-  }, []);
+  }, [cat]);
 
   const toggleSlug = (slug: string) => {
     setSlugsSel((prev) => {

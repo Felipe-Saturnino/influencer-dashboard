@@ -1,202 +1,130 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
-import { PermissaoValor, PageKey } from "../types";
+import type { PermissoesAcoesMapa } from "../lib/appRoutes";
+import type { PermissaoValor, PageKey, User } from "../types";
+import type { PermissoesMapa } from "../context/AppContext";
 
 export interface Permissoes {
-  canView:    PermissaoValor;
-  canCriar:   PermissaoValor;
-  canEditar:  PermissaoValor;
+  canView: PermissaoValor;
+  canCriar: PermissaoValor;
+  canEditar: PermissaoValor;
   canExcluir: PermissaoValor;
-  loading:    boolean;
+  loading: boolean;
   /** true se pode criar (sim ou proprios) */
-  canCriarOk:   boolean;
+  canCriarOk: boolean;
   /** true se pode editar (sim ou proprios) */
-  canEditarOk:  boolean;
+  canEditarOk: boolean;
   /** true se pode excluir (sim ou proprios) */
   canExcluirOk: boolean;
 }
+
+const SEM_PERMISSAO: Permissoes = {
+  canView: "nao",
+  canCriar: null,
+  canEditar: null,
+  canExcluir: null,
+  loading: false,
+  canCriarOk: false,
+  canEditarOk: false,
+  canExcluirOk: false,
+};
+
+const ADMIN_PERMISSAO: Permissoes = {
+  canView: "sim",
+  canCriar: "sim",
+  canEditar: "sim",
+  canExcluir: "sim",
+  loading: false,
+  canCriarOk: true,
+  canEditarOk: true,
+  canExcluirOk: true,
+};
 
 function podeExecutar(val: PermissaoValor): boolean {
   return val === "sim" || val === "proprios";
 }
 
-const CACHE: Record<string, Permissoes> = {};
+function acoesEfetivas(
+  podeVerPagina: boolean,
+  acoes: { criar: PermissaoValor; editar: PermissaoValor; excluir: PermissaoValor },
+): Pick<Permissoes, "canCriar" | "canEditar" | "canExcluir" | "canCriarOk" | "canEditarOk" | "canExcluirOk"> {
+  if (!podeVerPagina) {
+    return {
+      canCriar: null,
+      canEditar: null,
+      canExcluir: null,
+      canCriarOk: false,
+      canEditarOk: false,
+      canExcluirOk: false,
+    };
+  }
+  const cc = acoes.criar ?? null;
+  const ce = acoes.editar ?? null;
+  const cx = acoes.excluir ?? null;
+  return {
+    canCriar: cc,
+    canEditar: ce,
+    canExcluir: cx,
+    canCriarOk: podeExecutar(cc),
+    canEditarOk: podeExecutar(ce),
+    canExcluirOk: podeExecutar(cx),
+  };
+}
+
+function canViewEfetivo(cv: PermissaoValor | null | undefined): PermissaoValor {
+  if (cv === "sim" || cv === "proprios") return cv;
+  return "nao";
+}
+
+/** Deriva permissões da página a partir do boot do AppContext (sem Supabase por navegação). */
+export function permissoesFromContext(
+  pageKey: PageKey,
+  user: User | null,
+  permissions: PermissoesMapa,
+  permissionsAcoes: PermissoesAcoesMapa,
+  routeReady: boolean,
+): Permissoes {
+  if (!user) return SEM_PERMISSAO;
+  if (!routeReady) {
+    return {
+      canView: null,
+      canCriar: null,
+      canEditar: null,
+      canExcluir: null,
+      loading: true,
+      canCriarOk: false,
+      canEditarOk: false,
+      canExcluirOk: false,
+    };
+  }
+
+  if (user.role === "admin") return ADMIN_PERMISSAO;
+
+  const acoes = permissionsAcoes[pageKey] ?? { criar: null, editar: null, excluir: null };
+  const cvFromContext = permissions[pageKey];
+
+  if (user.role === "operador" || user.role === "gestor" || user.role === "prestador") {
+    const canView = canViewEfetivo(cvFromContext);
+    return {
+      canView,
+      loading: false,
+      ...acoesEfetivas(canView !== "nao", acoes),
+    };
+  }
+
+  const canView = canViewEfetivo(cvFromContext);
+  return {
+    canView,
+    loading: false,
+    ...acoesEfetivas(true, acoes),
+  };
+}
 
 export function usePermission(pageKey: PageKey): Permissoes {
-  const { user, permissions } = useApp();
-  const cvFromContext = permissions[pageKey];
-  const cacheKey =
-    user?.role === "admin"
-      ? `admin:${pageKey}`
-      : user?.role === "operador"
-        ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-        : user?.role === "gestor"
-          ? `gestor:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-          : user?.role === "prestador"
-            ? `prestador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-            : `${user?.role ?? "none"}:${pageKey}`;
+  const { user, permissions, permissionsAcoes, routeReady } = useApp();
 
-  const [perm, setPerm] = useState<Permissoes>(
-    CACHE[cacheKey] ?? { canView: null, canCriar: null, canEditar: null, canExcluir: null, loading: true, canCriarOk: false, canEditarOk: false, canExcluirOk: false }
+  return useMemo(
+    () => permissoesFromContext(pageKey, user, permissions, permissionsAcoes, routeReady),
+    [pageKey, user, permissions, permissionsAcoes, routeReady],
   );
-
-  useEffect(() => {
-    if (!user) {
-      setPerm({ canView: "nao", canCriar: null, canEditar: null, canExcluir: null, loading: false, canCriarOk: false, canEditarOk: false, canExcluirOk: false });
-      return;
-    }
-
-    const cvFromContextVal = permissions[pageKey];
-    const operadorCanView = user.role === "operador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
-    const gestorCanView = user.role === "gestor" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
-    const prestadorCanView = user.role === "prestador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
-
-    if (user.role === "admin") {
-      const result: Permissoes = {
-        canView: "sim",
-        canCriar: "sim",
-        canEditar: "sim",
-        canExcluir: "sim",
-        loading: false,
-        canCriarOk: true,
-        canEditarOk: true,
-        canExcluirOk: true,
-      };
-      CACHE[cacheKey] = result;
-      setPerm(result);
-      return;
-    }
-
-    if (user.role === "operador") {
-      const cv = cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
-      const cached = CACHE[cacheKey];
-      if (cached && cached.canView === cv) {
-        setPerm(cached);
-        return;
-      }
-      supabase
-        .from("role_permissions")
-        .select("can_criar, can_editar, can_excluir")
-        .eq("role", "operador")
-        .eq("page_key", pageKey)
-        .single()
-        .then(({ data }) => {
-          const cc = (operadorCanView ? (data?.can_criar as PermissaoValor) : null) ?? null;
-          const ce = (operadorCanView ? (data?.can_editar as PermissaoValor) : null) ?? null;
-          const cx = (operadorCanView ? (data?.can_excluir as PermissaoValor) : null) ?? null;
-          const result: Permissoes = {
-            canView: cv,
-            canCriar: cc,
-            canEditar: ce,
-            canExcluir: cx,
-            loading: false,
-            canCriarOk: podeExecutar(cc),
-            canEditarOk: podeExecutar(ce),
-            canExcluirOk: podeExecutar(cx),
-          };
-          CACHE[cacheKey] = result;
-          setPerm(result);
-        });
-      return;
-    }
-
-    // Gestor: can_view efetivo vem do AppContext (role_permissions + aba Gestores / gestor_tipo_pages)
-    if (user.role === "gestor") {
-      const cv =
-        cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
-      const cached = CACHE[cacheKey];
-      if (cached && cached.canView === cv) {
-        setPerm(cached);
-        return;
-      }
-      supabase
-        .from("role_permissions")
-        .select("can_criar, can_editar, can_excluir")
-        .eq("role", "gestor")
-        .eq("page_key", pageKey)
-        .single()
-        .then(({ data }) => {
-          const cc = (gestorCanView ? (data?.can_criar as PermissaoValor) : null) ?? null;
-          const ce = (gestorCanView ? (data?.can_editar as PermissaoValor) : null) ?? null;
-          const cx = (gestorCanView ? (data?.can_excluir as PermissaoValor) : null) ?? null;
-          const result: Permissoes = {
-            canView: cv,
-            canCriar: cc,
-            canEditar: ce,
-            canExcluir: cx,
-            loading: false,
-            canCriarOk: podeExecutar(cc),
-            canEditarOk: podeExecutar(ce),
-            canExcluirOk: podeExecutar(cx),
-          };
-          CACHE[cacheKey] = result;
-          setPerm(result);
-        });
-      return;
-    }
-
-    // Prestador: mesmo modelo (role_permissions prestador + prestador_tipo_pages no AppContext)
-    if (user.role === "prestador") {
-      const cv =
-        cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
-      const cached = CACHE[cacheKey];
-      if (cached && cached.canView === cv) {
-        setPerm(cached);
-        return;
-      }
-      supabase
-        .from("role_permissions")
-        .select("can_criar, can_editar, can_excluir")
-        .eq("role", "prestador")
-        .eq("page_key", pageKey)
-        .single()
-        .then(({ data }) => {
-          const cc = (prestadorCanView ? (data?.can_criar as PermissaoValor) : null) ?? null;
-          const ce = (prestadorCanView ? (data?.can_editar as PermissaoValor) : null) ?? null;
-          const cx = (prestadorCanView ? (data?.can_excluir as PermissaoValor) : null) ?? null;
-          const result: Permissoes = {
-            canView: cv,
-            canCriar: cc,
-            canEditar: ce,
-            canExcluir: cx,
-            loading: false,
-            canCriarOk: podeExecutar(cc),
-            canEditarOk: podeExecutar(ce),
-            canExcluirOk: podeExecutar(cx),
-          };
-          CACHE[cacheKey] = result;
-          setPerm(result);
-        });
-      return;
-    }
-
-    // Demais roles: o que está em Gestão de Usuários (role_permissions)
-    supabase
-      .from("role_permissions")
-      .select("can_view, can_criar, can_editar, can_excluir")
-      .eq("role", user.role)
-      .eq("page_key", pageKey)
-      .single()
-      .then(({ data }) => {
-        const cv = (data?.can_view as PermissaoValor) ?? "nao";
-        const cc = (data?.can_criar as PermissaoValor) ?? null;
-        const ce = (data?.can_editar as PermissaoValor) ?? null;
-        const cx = (data?.can_excluir as PermissaoValor) ?? null;
-        const result: Permissoes = {
-          canView: cv,
-          canCriar: cc,
-          canEditar: ce,
-          canExcluir: cx,
-          loading: false,
-          canCriarOk: podeExecutar(cc),
-          canEditarOk: podeExecutar(ce),
-          canExcluirOk: podeExecutar(cx),
-        };
-        CACHE[cacheKey] = result;
-        setPerm(result);
-      });
-  }, [user, pageKey, cacheKey, permissions]);
-
-  return perm;
 }

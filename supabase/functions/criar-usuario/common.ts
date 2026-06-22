@@ -147,11 +147,54 @@ export function emailHeaderStyles(): string {
     .email-header .subtitle { color:rgba(255,255,255,0.80) !important; }
     .header-logo-dark { display:block !important; }
     .header-logo-light { display:none !important; }
+    .email-shell { border-color:#e5e7eb !important; }
+    .email-body { background-color:#ffffff !important; }
+    .email-footer { background-color:#f9f7ff !important; border-top:1px solid #e5e7eb !important; }
+    .email-footer-text { color:#9ca3af !important; }
+    .email-body-text { color:#374151 !important; }
+    .email-body-text-strong { color:#111827 !important; }
+    .email-body-label { color:#6b7280 !important; }
+    .email-credential-box { background-color:#f9fafb !important; border:1px solid #e5e7eb !important; }
+    .email-link { color:#1e36f8 !important; }
+    .email-cta-cell { background-color:#4a2082 !important; border-radius:10px; }
+    .email-cta-link {
+      display:inline-block;
+      padding:12px 28px;
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      font-size:14px;
+      font-weight:700;
+      line-height:1.2;
+      color:#ffffff !important;
+      -webkit-text-fill-color:#ffffff !important;
+      text-decoration:none !important;
+      border-radius:10px;
+      border:2px solid #4a2082;
+      background-color:#4a2082 !important;
+      mso-line-height-rule:exactly;
+    }
     @media (prefers-color-scheme: light) {
       .email-header { background:#f0eef8 !important; background-color:#f0eef8 !important; }
       .email-header h1 { color:#4a2082 !important; }
       .email-header .subtitle { color:#6b7280 !important; }
       .header-logo-dark { display:none !important; }
       .header-logo-light { display:block !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background:#1a1625 !important; }
+      .email-shell { border-color:#374151 !important; }
+      .email-body { background-color:#111827 !important; }
+      .email-footer { background-color:#1f2937 !important; border-top-color:#374151 !important; }
+      .email-body-text { color:#d1d5db !important; }
+      .email-body-text-strong { color:#f9fafb !important; }
+      .email-body-label { color:#9ca3af !important; }
+      .email-credential-box { background-color:#1f2937 !important; border-color:#374151 !important; }
+      .email-link { color:#93c5fd !important; }
+      .email-cta-cell { background-color:#7c3aed !important; }
+      .email-cta-link {
+        background-color:#7c3aed !important;
+        border-color:#7c3aed !important;
+        color:#ffffff !important;
+        -webkit-text-fill-color:#ffffff !important;
+      }
     }`
 }

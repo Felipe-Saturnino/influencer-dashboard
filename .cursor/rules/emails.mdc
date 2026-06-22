@@ -174,7 +174,7 @@ import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 | Envio + remetente | `resendMail.ts` | **`sendResendEmail`** — nunca `fetch` direto ao Resend em código novo |
 | Destinatários | `resolveDestinatarios(secretName, body)` | Cron vs teste |
 | **Marca + subtítulo** | `emailBrand.ts` | **`MARCA_PRODUTO`**, **`subtituloEmailComData(data)`** |
-| Layout transacional | `transacionalShell.ts` | Shell boas-vindas / reset |
+| Layout transacional | `transacionalShell.ts` | Shell boas-vindas / reset + **`emailCtaButton`** |
 | Boas-vindas | `enviarBoasVindas.ts` | **`enviarEmailBoasVindasConta`** |
 | Reset senha | `enviarRecuperacaoSenha.ts` | **`enviarEmailRecuperacaoSenhaConta`** |
 | Layout + formatos | `common.ts` | Estilos, datas, moeda, seções |
@@ -203,7 +203,35 @@ URLs públicas Supabase Storage (mesmas das funções atuais):
 - **Dark header:** `…/logos/Logo%20Spin%20Gaming%20White.png` — classe `header-logo-dark`
 - **Light header:** `…/logos/Logo%20Spin%20Gaming.png` — classe `header-logo-light`
 
-Largura **160px**, centralizado. Usar `emailHeaderStyles()` de `common.ts` (`prefers-color-scheme: light` inverte fundo do header e troca logo).
+Largura **160px**, centralizado. Usar `emailHeaderStyles()` de `common.ts` (`prefers-color-scheme: light` inverte fundo do header e troca logo; `prefers-color-scheme: dark` escurece corpo, credenciais e rodapé).
+
+### Dark / Light mode — transacionais (conta / reset)
+
+Meta obrigatória no `<head>`: `color-scheme` + `supported-color-schemes` = `light dark`.
+
+| Superfície | Light | Dark (`prefers-color-scheme: dark`) |
+|------------|-------|-------------------------------------|
+| Header | `#f0eef8` + logo colorida + `h1` `#4a2082` | Gradiente Spin + logo branca (default CSS) |
+| Corpo | `#ffffff` / textos `#374151` / `#111827` | `#111827` / textos `#d1d5db` / `#f9fafb` |
+| Caixa credenciais | `#f9fafb` + borda `#e5e7eb` | `#1f2937` + borda `#374151` |
+| Rodapé | `#f9f7ff` | `#1f2937` |
+
+Classes CSS em `emailHeaderStyles()` (`common.ts`): `.email-body`, `.email-body-text`, `.email-credential-box`, `.email-footer`, etc. — **inline + classe** para clientes que ignoram `<style>`.
+
+**Limitação:** Outlook desktop (Windows) **não** aplica `prefers-color-scheme` de forma fiável; o header pode ficar claro mesmo em tema escuro do SO. O corpo mantém inline legível. Testar boas-vindas no Outlook light após deploy.
+
+### CTA primário transacional — `emailCtaButton`
+
+Helper em `transacionalShell.ts` — rótulo canônico **`Acessar a Plataforma Spin`** (`EMAIL_CTA_LABEL`).
+
+| Regra | Valor |
+|-------|--------|
+| Markup | `<table role="presentation">` + `<td bgcolor="#4a2082">` + link inline |
+| Fundo | **Sólido `#4a2082`** — **proibido** `linear-gradient` no botão (Outlook ignora → texto branco invisível em fundo branco) |
+| Texto | `#ffffff` + `-webkit-text-fill-color` + borda `2px solid #4a2082` |
+| Dark mode | CSS `.email-cta-cell` / `.email-cta-link` → `#7c3aed` |
+
+**Proibido em código novo:** `<a>` com `background:linear-gradient(...)` como único estilo de CTA transacional.
 
 ### Cabeçalho (`h1` + subtítulo)
 
@@ -373,5 +401,6 @@ Transacionais migrados para `transacionalShell.ts` — **não** listar como «pe
 - Cabeçalhos de coluna com `R$`/`#` em blocos analíticos (exceto exceção Influencers D-1).
 - Marca invertida **“Data Intelligence Spin Gaming”** em subtítulo, rodapé ou CTA — usar **`MARCA_PRODUTO`** (`Spin Gaming Data Intelligence`).
 - Rodapé transacional **`E-mail sistemico`** sem acento — usar **`E-mail sistêmico`**.
+- CTA transacional com **`linear-gradient`** inline — usar **`emailCtaButton`** (Outlook light).
 - Copy de reset com «primeiro acesso» — usar **«próximo login»** em `recuperacaoSenha.ts`.
 - Novo envio Resend fora de `sendResendEmail` ou sem entrada no § Inventário deste MDC.

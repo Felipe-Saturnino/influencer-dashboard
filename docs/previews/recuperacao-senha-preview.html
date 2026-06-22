@@ -17,12 +17,43 @@
     .email-header .subtitle { color:rgba(255,255,255,0.80) !important; }
     .header-logo-dark { display:block !important; }
     .header-logo-light { display:none !important; }
+    .email-shell { border-color:#e5e7eb !important; }
+    .email-body { background-color:#ffffff !important; }
+    .email-footer { background-color:#f9f7ff !important; border-top:1px solid #e5e7eb !important; }
+    .email-footer-text { color:#9ca3af !important; }
+    .email-body-text { color:#374151 !important; }
+    .email-body-text-strong { color:#111827 !important; }
+    .email-body-label { color:#6b7280 !important; }
+    .email-credential-box { background-color:#f9fafb !important; border:1px solid #e5e7eb !important; }
+    .email-link { color:#1e36f8 !important; }
+    .email-cta-cell { background-color:#4a2082 !important; border-radius:10px; }
+    .email-cta-link {
+      display:inline-block; padding:12px 28px;
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      font-size:14px; font-weight:700; line-height:1.2;
+      color:#ffffff !important; -webkit-text-fill-color:#ffffff !important;
+      text-decoration:none !important; border-radius:10px;
+      border:2px solid #4a2082; background-color:#4a2082 !important;
+    }
     @media (prefers-color-scheme: light) {
       .email-header { background:#f0eef8 !important; background-color:#f0eef8 !important; }
       .email-header h1 { color:#4a2082 !important; }
       .email-header .subtitle { color:#6b7280 !important; }
       .header-logo-dark { display:none !important; }
       .header-logo-light { display:block !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background:#1a1625 !important; }
+      .email-shell { border-color:#374151 !important; }
+      .email-body { background-color:#111827 !important; }
+      .email-footer { background-color:#1f2937 !important; border-top-color:#374151 !important; }
+      .email-body-text { color:#d1d5db !important; }
+      .email-body-text-strong { color:#f9fafb !important; }
+      .email-body-label { color:#9ca3af !important; }
+      .email-credential-box { background-color:#1f2937 !important; border-color:#374151 !important; }
+      .email-link { color:#93c5fd !important; }
+      .email-cta-cell { background-color:#7c3aed !important; }
+      .email-cta-link { background-color:#7c3aed !important; border-color:#7c3aed !important; color:#ffffff !important; -webkit-text-fill-color:#ffffff !important; }
     }
   </style>
 </head>
@@ -34,7 +65,7 @@
     Cabeçalho interno: <em>Redefinição de senha</em>. Dados fictícios abaixo.
   </div>
 
-  <div style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
+  <div class="email-shell" style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
 
     <div class="email-header">
       <img src="https://dzyuqibobeujzedomlsc.supabase.co/storage/v1/object/public/logos/Logo%20Spin%20Gaming%20White.png" alt="Spin Gaming" class="header-logo-dark" width="160" style="display:block;margin:0 auto 16px;max-width:160px;height:auto;" />
@@ -47,7 +78,7 @@
       </p>
     </div>
 
-    <div style="background:#ffffff;">
+    <div class="email-body" style="background:#ffffff;">
 
       <div style="padding:28px 32px;">
 
@@ -69,17 +100,23 @@
         </p>
 
         <div style="text-align:center;">
-          <a href="https://data-intelligence.spingaming.com.br" style="display:inline-block;background:linear-gradient(135deg,#4a2082,#1e36f8);color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;">
-            Acessar a Plataforma Spin
-          </a>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="email-cta" style="margin:0 auto;">
+            <tr>
+              <td align="center" bgcolor="#4a2082" class="email-cta-cell" style="border-radius:10px;background-color:#4a2082;">
+                <a href="https://data-intelligence.spingaming.com.br" target="_blank" class="email-cta-link" style="display:inline-block;padding:12px 28px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:10px;border:2px solid #4a2082;background-color:#4a2082;">
+                  Acessar a Plataforma Spin
+                </a>
+              </td>
+            </tr>
+          </table>
         </div>
 
       </div>
 
     </div>
 
-    <div style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
-      <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
+    <div class="email-footer" style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
+      <p class="email-footer-text" style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
         Spin Gaming Data Intelligence · E-mail sistêmico ·
         Enviado em 09/06/2026, 11:42:00
       </p>

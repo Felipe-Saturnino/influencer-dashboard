@@ -444,7 +444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O banner de revisão cadastral não aparece ou não some?",
         texto:
-          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui (atualizar dados/documentos ou **Confirmar sem alterações**). Depois, o ciclo é de 6 meses desde a última revisão concluída. **Confirmar sem alterações** só fica disponível com cadastro completo — veja a lista de pendências no banner quando algo faltar. Formação e Experiência profissional anterior não entram no ciclo de 6 meses, mas são exigidas para usar essa confirmação.",
+          "A revisão obrigatória vale apenas no **seu** cadastro — não aparece ao consultar terceiros. **Primeiro acesso:** após o cadastro em Gestão de Prestadores, ainda é preciso concluir a primeira revisão aqui. Depois, o ciclo é de 6 meses desde a última revisão concluída. Salvar dados incompletos ou enviar só parte dos documentos **não** remove o banner nem libera o menu — o bloqueio só encerra quando todas as pendências do banner forem resolvidas (ou ao usar **Confirmar sem alterações** com cadastro já completo). Veja a lista de itens faltantes no banner.",
       },
       {
         subtitulo: "Aparece um aviso ao tentar acessar outras páginas?",
@@ -474,7 +474,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O código bipado retornou 'não reconhecido'?",
         texto:
-          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. Certifique-se de que o código começa com 'FIG-' (ex: FIG-000003). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
+          "O código pode não estar cadastrado no sistema ou pode ter sido lido incorretamente. Tente digitar o código manualmente no campo abaixo do leitor. O código segue o formato PREFIX-000001, com prefixo de três letras da categoria (ex.: CAM-000003 para Camisa). Se o código foi cadastrado recentemente, aguarde alguns segundos e tente novamente.",
       },
       {
         subtitulo: "O prestador não aparece na lista de retirada?",
@@ -494,7 +494,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
         texto:
-          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex: FIG-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
+          "O download da etiqueta é opcional — você pode fechar o modal e baixar depois pelo botão Baixar etiqueta nos detalhes da peça. Para acessar os detalhes, clique no código da peça (ex.: CAM-000003) na tabela. Se o download falhar mesmo tentando, verifique se o bloqueador de pop-ups do navegador está impedindo o download.",
       },
       {
         subtitulo: "Não consigo registrar uma movimentação?",

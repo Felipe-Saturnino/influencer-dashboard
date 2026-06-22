@@ -256,6 +256,7 @@ Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não 
 
 - Matriz por **perfil (role)** e **página (`PageKey`)** configurada em **Gestão de Usuários** (`src/pages/plataforma/GestaoUsuarios/`, tabela `role_permissions`, lista `PAGES` em `constants.ts`).
 - Na página: `usePermission("page_key")` — respeitar `canView`, `canCriar`, `canEditar`, `canExcluir`, `canCriarOk`, `canEditarOk`, `canExcluirOk`.
+- **`usePermission` não consulta Supabase por navegação** — deriva `canView` de `permissions` e ações de `permissionsAcoes` carregados no boot (`AppContext`, `routeReady`). **Proibido** reintroduzir query a `role_permissions` dentro do hook ou por página; alterações em Gestão de Usuários exigem novo login ou refresh de sessão.
 - Valores: `"sim"` | `"proprios"` | `"nao"` | `null` (ação não aplicável à página).
 
 ### Administrador
@@ -1162,6 +1163,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Pasta `_shared/` ou subpastas auxiliares em Edge Functions fora do padrão por function (deploy manual Supabase → `Module not found`).
 - Implementar página sem ler Brand + MDC da secção.
 - Ignorar matriz de Gestão de Usuários (exceto admin).
+- **`usePermission` com query Supabase por página** — usar só `permissions` / `permissionsAcoes` do `AppContext` (§ Permissões).
 - **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`AppContext.tsx`)** — item não aparece no menu lateral (inclusive para admin).
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.

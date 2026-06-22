@@ -326,12 +326,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Card de Prospecto",
         texto:
-          "Cada card exibe nome artístico, StatusBadge com dropdown para alterar a etapa do funil, plataformas com métricas inline e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide da parceira — igual Gestão de Dealers), **Origem** (cinza — tipo de contato) e, quando informado, **cachê negociado** (ouro/âmbar).\n\nAs métricas variam por plataforma: YouTube, Twitch, Kick e TikTok mostram Média de Views; Instagram, Discord, WhatsApp e Telegram mostram Seguidores.",
+          "Cada card exibe nome artístico, StatusBadge com dropdown para alterar a etapa do funil, plataformas com métricas inline e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide da parceira — igual Gestão de Dealers), **Origem** (cinza — tipo de contato), **Registrado** (índigo — usuário que cadastrou na plataforma) e, quando informado, **cachê negociado** (ouro/âmbar).\n\nProspectos enviados pelo site público não exibem flag Registrado até alguém atribuir na edição.\n\nAs métricas variam por plataforma: YouTube, Twitch, Kick e TikTok mostram Média de Views; Instagram, Discord, WhatsApp e Telegram mostram Seguidores.",
       },
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação com botão 'Adicionar Anotação' e histórico de todas as anotações anteriores com usuário e data de registro",
+          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro** do cadastro na plataforma; se **Registrado por** estiver vazio, use **Atribuir a mim** e Salvar.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação e histórico com autor e data de cada anotação",
       },
       {
         subtitulo: "Fechando uma Parceria",
@@ -341,7 +341,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Anotações",
         texto:
-          "A aba Anotações permite registrar observações sobre o prospecto ao longo de todo o processo de prospecção. Cada anotação registra o usuário que a criou e a data e hora do registro. As anotações são visíveis tanto no modal de edição quanto no modal de visualização (somente leitura).",
+          "A aba Anotações concentra observações ao longo da prospecção; cada anotação guarda autor e data. **Registrado por** e **Data de Registro** (cadastro na plataforma) ficam no cabeçalho do modal, abaixo de Nome e Status — distintos das anotações do funil.",
       },
     ],
   },
@@ -428,7 +428,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Documentos e revisão",
         texto:
-          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica pode ser concluída atualizando dados, enviando novos arquivos ou marcando «Confirmar sem alterações» quando nada mudou — **desde que o cadastro esteja completo** (todos os campos em Dados cadastrais; documentos obrigatórios do seu tipo de contrato, exceto Outros; ao menos 1 formação acadêmica e 1 idioma; ao menos 1 experiência profissional, exceto Estágio e Temporário). Enquanto houver pendências, o botão permanece desabilitado e a lista de itens faltantes aparece no banner de revisão.",
+          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica **só é concluída** quando o cadastro estiver **100% completo** — salvar parcialmente ou enviar apenas um documento **não** encerra o bloqueio. Você pode avançar por etapas nas abas; ao resolver a última pendência, a revisão é registrada automaticamente, ou use **Confirmar sem alterações** se nada mudou. Requisitos: todos os campos em Dados cadastrais (exceto Nickname); documentos obrigatórios do seu tipo de contrato (exceto Outros); ao menos 1 formação acadêmica e 1 idioma; ao menos 1 experiência profissional (exceto Estágio e Temporário). Enquanto houver pendências, **Confirmar sem alterações** permanece desabilitado e a lista aparece no banner de revisão.",
       },
       {
         subtitulo: "Formação e Competências",
@@ -467,7 +467,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar Peça",
         texto:
-          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema. Selecione as operadoras vinculadas à peça (pode ser mais de uma), a categoria, o tamanho e a data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
+          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema com prefixo das três primeiras letras da categoria (ex.: Camisa → CAM-000001, Vestido → VES-000001). Selecione os estúdios vinculados à peça (pode ser mais de um), a categoria, o tamanho e a data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
       },
       {
         subtitulo: "Retirada e Devolução",
@@ -758,12 +758,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista de Prospectos",
         texto:
-          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil, uma prévia do campo Operação (truncado em 2 linhas) e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide), **Origem** (cinza). O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
+          "Com permissão de criar, use **Novo Afiliado** (botão com ícone + e gradiente de criação) na barra de filtros para abrir o cadastro de prospecto.\n\nCada card exibe nome, status do funil, uma prévia do campo Operação (truncado em 2 linhas) e flags na parte inferior quando preenchidas: **Live Cassino** (roxo), **Operadora** (cor do brand guide), **Origem** (cinza), **Registrado** (índigo — quem cadastrou na plataforma). Prospectos do site público não exibem Registrado até atribuição manual. O botão Ver abre o modal de visualização completa. O botão Editar abre o formulário de edição. Pressione Esc para fechar qualquer modal.",
       },
       {
         subtitulo: "Cadastro e Edição",
         texto:
-          "O formulário é organizado em abas (Contato, Operação, Anotações), com navegação por teclado (← →) e Esc para fechar.\n\n— Contato: e-mail, telefone, tipo de contato (Direto, Agência, Site Spin), Live Cassino e operadora\n— Operação: descrição livre das atividades\n— Anotações: histórico (salvo com 'Adicionar Anotação', não no Salvar principal)\n\nEnquanto o registro não tiver usuário na plataforma, o modal exibe aviso de que e-mail e operadora serão obrigatórios ao salvar. Depois da criação, e-mail e operadora ficam bloqueados.",
+          "O formulário é organizado em abas (Contato, Operação, Anotações), com navegação por teclado (← →) e Esc para fechar.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro**; **Atribuir a mim** quando registrador vazio (ex.: site Spin).\n\n— Contato: e-mail, telefone, tipo de contato (Direto, Agência, Site Spin), Live Cassino e operadora\n— Operação: descrição livre das atividades\n— Anotações: histórico salvo com 'Adicionar Anotação'\n\nEnquanto o registro não tiver usuário na plataforma, o modal exibe aviso de que e-mail e operadora serão obrigatórios ao salvar. Depois da criação, e-mail e operadora ficam bloqueados.",
       },
       {
         subtitulo: "Criação de usuário na plataforma",
@@ -773,7 +773,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Anotações",
         texto:
-          "Cada prospecto tem um histórico de anotações com autoria e data. Anotações são salvas individualmente ao clicar em 'Adicionar Anotação' — não fazem parte do botão Salvar principal. O histórico fica disponível tanto no modal de visualização quanto no de edição.",
+          "Cada prospecto tem um histórico de anotações com autoria e data. **Registrado por** e **Data de Registro** referem-se ao cadastro na plataforma e aparecem no cabeçalho do modal (abaixo de Nome e Status), não na aba Anotações. Anotações são salvas individualmente ao clicar em 'Adicionar Anotação'.",
       },
     ],
   },

@@ -31,6 +31,22 @@ function logoImg(url: string, className: string): string {
   return `<img src="${url}" alt="Spin Gaming" class="${className}" width="160" style="display:block;margin:0 auto 16px;max-width:160px;height:auto;" />`
 }
 
+export const EMAIL_CTA_LABEL = 'Acessar a Plataforma Spin'
+
+/** Botão CTA compatível com Outlook (bgcolor sólido — sem gradiente) e dark/light via CSS. */
+export function emailCtaButton(href: string, label = EMAIL_CTA_LABEL): string {
+  const safeLabel = escapeHtml(label)
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" class="email-cta" style="margin:0 auto;">
+  <tr>
+    <td align="center" bgcolor="#4a2082" class="email-cta-cell" style="border-radius:10px;background-color:#4a2082;">
+      <a href="${href}" target="_blank" class="email-cta-link" style="display:inline-block;padding:12px 28px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:10px;border:2px solid #4a2082;background-color:#4a2082;mso-line-height-rule:exactly;">
+        ${safeLabel}
+      </a>
+    </td>
+  </tr>
+</table>`
+}
+
 export function emailTransacionalShell(params: {
   title: string
   /** Linha abaixo do h1 — ex.: data · Spin Gaming Data Intelligence */
@@ -62,7 +78,7 @@ export function emailTransacionalShell(params: {
 </head>
 <body style="margin:0;padding:24px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0eef8;">
 
-  <div style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
+  <div class="email-shell" style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
 
     <div class="email-header">
       ${logoImg(params.logoDark, 'header-logo-dark')}
@@ -75,12 +91,12 @@ export function emailTransacionalShell(params: {
       </p>
     </div>
 
-    <div style="background:#ffffff;">
+    <div class="email-body" style="background:#ffffff;">
       ${params.bodyHtml}
     </div>
 
-    <div style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
-      <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
+    <div class="email-footer" style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
+      <p class="email-footer-text" style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
         ${footerBrand} · ${footerLabel} ·
         Enviado em ${enviadoEm}
       </p>

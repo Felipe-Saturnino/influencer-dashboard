@@ -2,7 +2,17 @@ import type { RhFigurinoStatus, RhWithdrawalType } from "./types"
 
 export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "Acessório"] as const;
 
-export const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "34", "36", "38", "40", "42", "44", "46", "48", "Único"] as const;
+export const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "Único"] as const;
+
+/** Prefixo de 3 letras do código (ex.: Camisa → CAM, Vestido → VES). Espelha `_rh_figurino_category_code_prefix` no Postgres. */
+export function prefixoCodigoFigurinoCategoria(categoria: string): string {
+  const base = categoria
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim();
+  return base.slice(0, 3).toUpperCase();
+}
 
 export function labelAba(s: RhFigurinoStatus): string {
   switch (s) {

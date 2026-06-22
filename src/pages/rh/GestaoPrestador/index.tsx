@@ -53,6 +53,7 @@ import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePre
 import {
   mensagemFeedbackSyncPrestador,
   mensagemSucessoDesativacaoPrestadorEncerrado,
+  mensagemSucessoSyncPrestadorAtualizado,
   syncUsuarioPrestadorAposSalvarRh,
 } from "../../../lib/rhPrestadorUsuarioSync";
 import {
@@ -749,7 +750,7 @@ export default function RhPrestadoresPage() {
         if (form.area_atuacao === "estudio") {
           const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
           if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
-          if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
+          if (modalForm === "novo" && !form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
         } else if (form.area_atuacao === "escritorio") {
           const sal = numeroDeCentavosStr(form.salarioCentavos);
           if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
@@ -770,7 +771,10 @@ export default function RhPrestadoresPage() {
    * (evita que `emailSpin: ""` / `emailPessoal: ""` apaguem os da BD e impeçam a sync
    * quando o operador não vê dados sensíveis ou não abriu o separador de e-mails).
    */
-  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario, emailsDoFormulario?: { emailSpin?: string; emailPessoal?: string }) => {
+  const dispararSyncUsuarioPrestadorSeEmailSpin = async (
+    row: RhFuncionario,
+    emailsDoFormulario?: { emailSpin?: string; emailPessoal?: string },
+  ): Promise<Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null> => {
     const emailValidoNormalizado = (s: string | null | undefined) => {
       const t = String(s ?? "").trim().toLowerCase();
       return t.length > 0 && validarEmail(t) ? t : "";
@@ -786,6 +790,7 @@ export default function RhPrestadoresPage() {
     });
     const m = mensagemFeedbackSyncPrestador(res);
     if (m) setErroGlobal(m);
+    return res;
   };
 
   const salvar = async (opts?: { outro?: boolean }) => {
@@ -882,17 +887,21 @@ export default function RhPrestadoresPage() {
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
       if (atualizadoRh) {
         try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario, {
+          const syncRes = await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario, {
             emailSpin: form.email_spin.trim(),
             emailPessoal: form.email.trim(),
           });
+          const syncOk = mensagemSucessoSyncPrestadorAtualizado(syncRes);
+          setSucessoMsg(syncOk ? `Dados atualizados. ${syncOk}` : "Dados atualizados.");
         } catch (e) {
           setErroGlobal(
             `Dados atualizados, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
           );
+          setSucessoMsg("Dados atualizados.");
         }
+      } else {
+        setSucessoMsg("Dados atualizados.");
       }
-      setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
       setAlertaValidacaoModal(null);
@@ -1244,7 +1253,9 @@ export default function RhPrestadoresPage() {
         );
       }
       const extraDesativacao = mensagemSucessoDesativacaoPrestadorEncerrado(resSync);
-      setSucessoMsg(extraDesativacao ? `Ação registrada. ${extraDesativacao}` : "Ação registrada.");
+      const extraAtualizacao = mensagemSucessoSyncPrestadorAtualizado(resSync);
+      const extra = extraDesativacao ?? extraAtualizacao;
+      setSucessoMsg(extra ? `Ação registrada. ${extra}` : "Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
@@ -2220,7 +2231,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 {isEstudioContratacao ? (
                   <div style={{ marginBottom: 10 }}>
-                    {lblReqCad("f-turno-estudio", "Turno")}
+                    {lblReqCad("f-turno-estudio", "Turno", modalForm === "novo")}
                     <select
                       id="f-turno-estudio"
                       disabled={desabilitarCampos}
@@ -2228,7 +2239,7 @@ export default function RhPrestadoresPage() {
                       onChange={(e) => setForm((s) => ({ ...s, staff_turno: e.target.value }))}
                       style={inputStyle}
                       aria-label="Turno"
-                      aria-required={!leitura}
+                      aria-required={!leitura && modalForm === "novo"}
                     >
                       <option value="">— Selecione —</option>
                       {opcoesTurnoPorEscalaRh(form.escala).map((tn) => (

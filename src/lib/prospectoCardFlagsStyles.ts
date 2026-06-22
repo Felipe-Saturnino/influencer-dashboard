@@ -7,6 +7,9 @@ export const PROSPECTO_FLAG_LIVE_CASSINO_COLOR = "#a855f7";
 /** Metadado de prospecção (tipo de contato → Origem). */
 export const PROSPECTO_FLAG_ORIGEM_COLOR = "#6b7280";
 
+/** Usuário que registrou o prospecto na plataforma. */
+export const PROSPECTO_FLAG_REGISTRADO_COLOR = "#6366f1";
+
 /** Cachê negociado — tom ouro/âmbar de domínio financeiro (não semântica de alerta). */
 export const PROSPECTO_FLAG_CACHE_COLOR = "#b45309";
 

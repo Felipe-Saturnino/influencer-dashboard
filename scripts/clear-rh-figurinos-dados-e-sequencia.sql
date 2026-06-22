@@ -1,12 +1,12 @@
--- Limpa todas as tabelas do módulo RH Figurinos e reinicia a sequência de código FIG-######.
+-- Limpa todas as tabelas do módulo RH Figurinos e reinicia contadores por categoria.
 -- Executar no SQL Editor do Supabase (role com permissão nas tabelas, ex. postgres).
 
 BEGIN;
 
--- Remove peças e, em cascata, empréstimos, histórico de status e N:N operadoras.
+-- Remove peças e, em cascata, empréstimos, histórico de status e N:N operadoras/estúdios.
 TRUNCATE TABLE public.rh_figurino_pecas CASCADE;
 
--- Próximo cadastro volta a usar FIG-000001 (enquanto não colidir com regra da RPC).
-ALTER SEQUENCE public.rh_figurino_code_seq RESTART WITH 1;
+-- Próximo cadastro por categoria volta a PREFIX-000001 (ex.: CAM-000001, VES-000001).
+TRUNCATE TABLE public.rh_figurino_category_code_counters;
 
 COMMIT;
