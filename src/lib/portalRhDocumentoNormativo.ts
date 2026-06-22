@@ -1,15 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { flattenVinculosDeGrupos, vinculoParaSelectValue } from "./rhOrganogramaTree";
+import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao } from "../types/rhOrganograma";
 import type { ValidacaoPublicar } from "./portalRhWorkflow";
 
 export type RhDocumentoTipo = "politica_rh" | "procedimento" | "codigo" | "politica_ops";
 
-export type RhDocumentoClassificacao = "uso_interno" | "publico_interno";
+export type RhDocumentoClassificacao = "uso_interno" | "uso_publico" | "confidencial";
+
+/** Valor agregador canónico no campo aplicável a. */
+export const PORTAL_RH_APLICAVEL_TODOS = "Todos os prestadores";
 
 export const RH_DOCUMENTO_TIPOS: { value: RhDocumentoTipo; label: string; prefixo: string }[] = [
-  { value: "politica_rh", label: "Política RH (POL-RH-…)", prefixo: "POL-RH-" },
-  { value: "procedimento", label: "Procedimento (PROC-OPS-…)", prefixo: "PROC-OPS-" },
-  { value: "codigo", label: "Código (COD-…)", prefixo: "COD-" },
-  { value: "politica_ops", label: "Política OPS (POL-OPS-…)", prefixo: "POL-OPS-" },
+  { value: "politica_rh", label: "Política RH", prefixo: "POL-RH-" },
+  { value: "procedimento", label: "Procedimento", prefixo: "PROC-OPS-" },
+  { value: "codigo", label: "Código", prefixo: "COD-" },
+  { value: "politica_ops", label: "Política OPS", prefixo: "POL-OPS-" },
 ];
 
 export const RH_DOCUMENTO_FILTRO_SUBTABS: { key: string; label: string; tipos: RhDocumentoTipo[] }[] = [
@@ -19,33 +24,16 @@ export const RH_DOCUMENTO_FILTRO_SUBTABS: { key: string; label: string; tipos: R
   { key: "operacoes", label: "Operações", tipos: ["politica_ops"] },
 ];
 
-export const RH_DOCUMENTO_AREAS = [
-  "Recursos Humanos",
-  "Operações",
-  "Figurino",
-  "RH e Gestão de Operações",
-  "Diretoria",
-] as const;
-
 export const RH_DOCUMENTO_CLASSIFICACOES: { value: RhDocumentoClassificacao; label: string }[] = [
   { value: "uso_interno", label: "Uso Interno" },
-  { value: "publico_interno", label: "Público Interno" },
+  { value: "uso_publico", label: "Uso Público" },
+  { value: "confidencial", label: "Confidencial" },
 ];
-
-export const RH_DOCUMENTO_APLICAVEL_OPCOES = [
-  "Todos os prestadores",
-  "Game Presenters",
-  "Shufflers",
-  "Shift Leaders",
-  "Lideranças operacionais",
-  "Customer Service",
-] as const;
 
 export type RhDocumentoNormativoCampos = {
   tipoDocumento: RhDocumentoTipo | "";
   codigo: string;
   versao: string;
-  dataEmissao: string;
   titulo: string;
   areaResponsavel: string;
   classificacao: RhDocumentoClassificacao | "";
@@ -61,8 +49,98 @@ export type RhDocumentoNormativoCampos = {
   relacionadosIds: string[];
 };
 
+export const FORM_POLITICA_NORMATIVA_VAZIO: RhDocumentoNormativoCampos = {
+  tipoDocumento: "",
+  codigo: "",
+  versao: "1.0",
+  titulo: "",
+  areaResponsavel: "",
+  classificacao: "",
+  aplicavelA: [PORTAL_RH_APLICAVEL_TODOS],
+  resumo: "",
+  pdfPath: null,
+  pdfNome: null,
+  exigeCiencia: "",
+  requerAprovacao: "",
+  elaboradoPor: "",
+  revisadoPor: "",
+  aprovadoPorDoc: "",
+  relacionadosIds: [],
+};
+
 export function prefixoCodigoDocumento(tipo: RhDocumentoTipo): string {
   return RH_DOCUMENTO_TIPOS.find((t) => t.value === tipo)?.prefixo ?? "";
+}
+
+/** Prefixo exibido entre parênteses no select (sem hífen final). */
+export function prefixoCodigoRotulo(tipo: RhDocumentoTipo): string {
+  return prefixoCodigoDocumento(tipo).replace(/-$/, "");
+}
+
+export function labelTipoDocumentoSelect(tipo: RhDocumentoTipo): string {
+  const cfg = RH_DOCUMENTO_TIPOS.find((t) => t.value === tipo);
+  if (!cfg) return tipo;
+  return `${cfg.label} (${prefixoCodigoRotulo(tipo)})`;
+}
+
+export function extrairSufixoNumericoCodigo(codigo: string, prefixo: string): string {
+  const upper = codigo.trim().toUpperCase();
+  const p = prefixo.toUpperCase();
+  if (p && upper.startsWith(p)) return upper.slice(p.length).replace(/\D/g, "");
+  return upper.replace(/^.*?(\d+)$/, "$1").replace(/\D/g, "");
+}
+
+export function montarCodigoDocumento(prefixo: string, sufixoNumerico: string): string {
+  const digits = sufixoNumerico.replace(/\D/g, "");
+  const padded = digits.length > 0 ? digits.padStart(3, "0") : "000";
+  return `${prefixo}${padded}`;
+}
+
+export function fmtDataEmissaoDocumentoPortal(date = new Date()): string {
+  const meses = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+  return `${meses[date.getMonth()]}/${date.getFullYear()}`;
+}
+
+export function opcoesOrganogramaGerenciaTime(
+  grupos: RhOrgOrganogramaGrupoPrestador[],
+): { id: string; label: string }[] {
+  return flattenVinculosDeGrupos(grupos)
+    .filter((v) => v.nivel === "gerencia" || v.nivel === "time")
+    .map((v) => ({ id: v.setorNome, label: v.label }));
+}
+
+export function areaResponsavelPadraoRh(grupos: RhOrgOrganogramaGrupoPrestador[]): string {
+  const vinculos = flattenVinculosDeGrupos(grupos).filter((v) => v.nivel === "gerencia" || v.nivel === "time");
+  const rh =
+    vinculos.find((v) => /^rh$/i.test(v.setorNome.trim())) ??
+    vinculos.find((v) => /recursos humanos/i.test(v.setorNome));
+  return rh?.setorNome ?? "";
+}
+
+export function vinculoSelectValuePorSetorNome(
+  grupos: RhOrgOrganogramaGrupoPrestador[],
+  setorNome: string,
+): string {
+  if (!setorNome.trim()) return "";
+  const v = flattenVinculosDeGrupos(grupos).find((x) => x.setorNome === setorNome);
+  return v ? vinculoParaSelectValue(v) : "";
+}
+
+export function setorNomeDeVinculo(v: RhOrgPrestadorVinculoOpcao | null): string {
+  return v?.setorNome ?? "";
 }
 
 export function labelTipoDocumentoPortal(tipo: RhDocumentoTipo | null | undefined): string {
@@ -85,8 +163,9 @@ export function tagTipoDocumentoCor(tipo: RhDocumentoTipo | null | undefined): s
   }
 }
 
-export function labelClassificacaoDocumento(val: RhDocumentoClassificacao | null | undefined): string {
+export function labelClassificacaoDocumento(val: RhDocumentoClassificacao | "publico_interno" | null | undefined): string {
   if (!val) return "—";
+  if (val === "publico_interno") return "Uso Público";
   return RH_DOCUMENTO_CLASSIFICACOES.find((c) => c.value === val)?.label ?? val;
 }
 
@@ -127,14 +206,13 @@ export function validarPublicarDocumentoNormativo(f: RhDocumentoNormativoCampos)
   if (!f.tipoDocumento) err.tipoDocumento = "Selecione o tipo de documento.";
   if (!f.codigo.trim()) err.codigo = "Informe o código do documento.";
   if (!f.versao.trim()) err.versao = "Informe a versão.";
-  if (!f.dataEmissao.trim()) err.dataEmissao = "Informe a data de emissão.";
-  if (!f.titulo.trim()) err.titulo = "Informe o título oficial.";
+  if (!f.titulo.trim()) err.titulo = "Informe o título do documento.";
   if (!f.areaResponsavel.trim()) err.areaResponsavel = "Selecione a área responsável.";
   if (!f.classificacao) err.classificacao = "Selecione a classificação.";
   if (f.aplicavelA.length === 0) err.aplicavelA = "Selecione ao menos um público aplicável.";
-  if (!f.resumo.trim()) err.resumo = "Informe o resumo para listagem.";
-  else if (f.resumo.length > 400) err.resumo = "Resumo deve ter no máximo 400 caracteres.";
-  if (!f.pdfPath?.trim() && !f.pdfNome) err.pdf = "Envie o PDF oficial do documento.";
+  if (!f.resumo.trim()) err.resumo = "Informe o objetivo da política.";
+  else if (f.resumo.length > 400) err.resumo = "Objetivo deve ter no máximo 400 caracteres.";
+  if (!f.pdfPath?.trim() && !f.pdfNome) err.pdf = "Envie o documento PDF.";
   if (!f.exigeCiencia.trim()) err.exigeCiencia = "Informe se exige ciência do colaborador.";
   if (!f.requerAprovacao.trim()) err.requerAprovacao = "Informe se é necessária aprovação.";
   return err;
@@ -142,7 +220,7 @@ export function validarPublicarDocumentoNormativo(f: RhDocumentoNormativoCampos)
 
 export function fmtAplicavelDocumento(aplicavel: string[] | null | undefined): string {
   if (!aplicavel?.length) return "—";
-  if (aplicavel.includes("Todos os prestadores")) return "Todos os prestadores";
+  if (aplicavel.includes(PORTAL_RH_APLICAVEL_TODOS)) return PORTAL_RH_APLICAVEL_TODOS;
   return aplicavel.join(", ");
 }
 

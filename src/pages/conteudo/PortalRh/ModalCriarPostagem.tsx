@@ -11,16 +11,19 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import {
   documentoUsaModeloNormativo,
+  fmtDataEmissaoDocumentoPortal,
+  FORM_POLITICA_NORMATIVA_VAZIO,
+  PORTAL_RH_APLICAVEL_TODOS,
+  areaResponsavelPadraoRh,
   sincronizarRelacionadosDocumentoPortal,
   validarPublicarDocumentoNormativo,
   type RhDocumentoClassificacao,
   type RhDocumentoNormativoCampos,
   type RhDocumentoTipo,
 } from "../../../lib/portalRhDocumentoNormativo";
-import {
-  FORM_POLITICA_NORMATIVA_VAZIO,
-  ModalFormPoliticaNormativa,
-} from "./ModalFormPoliticaNormativa";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
+import { ModalFormPoliticaNormativa } from "./ModalFormPoliticaNormativa";
 import {
   contentTypeFromTipoUi,
   diffEdicaoRascunho,
@@ -103,6 +106,8 @@ export function ModalCriarPostagem({
   const [documentosCatalogo, setDocumentosCatalogo] = useState<
     { id: string; codigo: string | null; titulo: string; versao: string | null }[]
   >([]);
+  const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
+  const [dataEmissaoPersistida, setDataEmissaoPersistida] = useState<string | null>(null);
 
   const buildSnapshot = useCallback(
     (paths: { imagem: string | null; anexo: string | null; anexoNome: string | null }): SnapshotPostagemEdicao | null => {
@@ -143,6 +148,8 @@ export function ModalCriarPostagem({
     setNormativo(FORM_POLITICA_NORMATIVA_VAZIO);
     setPdfFile(null);
     setLegadoPolitica(false);
+    setOrganogramaGrupos([]);
+    setDataEmissaoPersistida(null);
   }, []);
 
   const aplicarSnapshotAposCarga = (
@@ -155,15 +162,34 @@ export function ModalCriarPostagem({
   useEffect(() => {
     if (!open || tipoPostagem !== "politica") return;
     void (async () => {
-      const { data } = await supabase
-        .from("rh_portal_documento")
-        .select("id, codigo, titulo, versao, status")
-        .neq("status", "arquivado");
+      const [{ data }, org] = await Promise.all([
+        supabase
+          .from("rh_portal_documento")
+          .select("id, codigo, titulo, versao, status")
+          .neq("status", "arquivado"),
+        carregarOpcoesTimesOrganograma(),
+      ]);
       const rows = (data ?? []) as { id: string; codigo: string | null; titulo: string; versao: string | null }[];
-      setCodigosExistentes(rows.map((r) => r.codigo ?? "").filter(Boolean));
+      setCodigosExistentes(
+        rows.filter((r) => r.id !== editRef?.id).map((r) => r.codigo ?? "").filter(Boolean),
+      );
       setDocumentosCatalogo(rows.filter((r) => r.id !== editRef?.id));
+      if (!org.error) {
+        setOrganogramaGrupos(org.grupos);
+        if (modo === "criar" && !legadoPolitica) {
+          setNormativo((prev) => {
+            const patch: Partial<RhDocumentoNormativoCampos> = {};
+            if (!prev.areaResponsavel.trim()) {
+              const padrao = areaResponsavelPadraoRh(org.grupos);
+              if (padrao) patch.areaResponsavel = padrao;
+            }
+            if (prev.aplicavelA.length === 0) patch.aplicavelA = [PORTAL_RH_APLICAVEL_TODOS];
+            return Object.keys(patch).length > 0 ? { ...prev, ...patch } : prev;
+          });
+        }
+      }
     })();
-  }, [open, tipoPostagem, editRef?.id]);
+  }, [open, tipoPostagem, editRef?.id, modo, legadoPolitica]);
 
   const carregarEdicao = useCallback(async (ref: PostagemEditRef) => {
     setLoadingData(true);
@@ -266,11 +292,10 @@ export function ModalCriarPostagem({
           tipoDocumento: row.tipo_documento ?? "",
           codigo: row.codigo ?? "",
           versao: row.versao ?? "1.0",
-          dataEmissao: row.data_emissao ?? "",
           titulo: row.titulo,
           areaResponsavel: row.area_responsavel ?? "",
           classificacao: row.classificacao ?? "",
-          aplicavelA: row.aplicavel_a ?? [],
+          aplicavelA: row.aplicavel_a?.length ? row.aplicavel_a : [PORTAL_RH_APLICAVEL_TODOS],
           resumo: row.resumo ?? row.introducao ?? "",
           pdfPath: row.anexo_storage_path,
           pdfNome: row.anexo_nome,
@@ -281,6 +306,7 @@ export function ModalCriarPostagem({
           aprovadoPorDoc: row.aprovado_por_doc ?? "",
           relacionadosIds,
         };
+        setDataEmissaoPersistida(row.data_emissao ?? null);
         setNormativo(norm);
         setAssunto(row.titulo);
         setRequerAprovacao(reqApr);
@@ -562,6 +588,8 @@ export function ModalCriarPostagem({
             pdfNome = pdfFile.name;
           }
           const reqApr = requerAprovacaoEhSim(normativo.requerAprovacao);
+          const dataEmissaoSalvar =
+            novoStatus === "publicado" ? fmtDataEmissaoDocumentoPortal(new Date()) : dataEmissaoPersistida;
           const payload = {
             titulo: normativo.titulo.trim() || "Rascunho",
             codigo: normativo.codigo.trim().toUpperCase(),
@@ -572,7 +600,7 @@ export function ModalCriarPostagem({
             aplicavel_a: normativo.aplicavelA,
             resumo: normativo.resumo.trim(),
             introducao: normativo.resumo.trim(),
-            data_emissao: normativo.dataEmissao.trim(),
+            data_emissao: dataEmissaoSalvar,
             elaborado_por: normativo.elaboradoPor.trim() || null,
             revisado_por: normativo.revisadoPor.trim() || null,
             aprovado_por_doc: normativo.aprovadoPorDoc.trim() || null,
@@ -870,6 +898,7 @@ export function ModalCriarPostagem({
               pdfFile={pdfFile}
               onPdfFileChange={setPdfFile}
               pdfNomeAtual={normativo.pdfNome}
+              organogramaGrupos={organogramaGrupos}
             />
           ) : null}
 

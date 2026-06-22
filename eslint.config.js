@@ -11,6 +11,7 @@ export default tseslint.config(
       'dist',
       'coverage',
       'node_modules',
+      'docs/mockups/**',
       'scripts/split-*.mjs',
       'scripts/fix-*.mjs',
       'scripts/prune-*.mjs',
