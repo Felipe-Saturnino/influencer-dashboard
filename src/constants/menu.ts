@@ -12,6 +12,7 @@ import {
   Files,
   Images,
   LayoutGrid,
+  LineChart,
   Link2,
   Megaphone,
   MessageCircle,
@@ -96,6 +97,7 @@ export const MENU: MenuSection[] = [
   {
     section: "Comercial",
     items: [
+      { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
       { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
     ],
   },

@@ -85,12 +85,25 @@ export function formatarCnpjDigitos(d14: string): string {
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
 }
 
+/** Comprimento máximo do RG — formatos legados variam por estado (alfanumérico, UF, órgão emissor). */
+export const RG_INPUT_MAX_LENGTH = 25;
+
+/**
+ * Normaliza RG na digitação: aceita letras, dígitos e separadores comuns (. - / espaço).
+ * Não impõe máscara única (evita cortar RGs antigos de outros estados).
+ */
 export function formatarRgInput(raw: string): string {
-  const d = somenteDigitos(raw).slice(0, 9);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}-${d.slice(8)}`;
+  return raw
+    .replace(/[^\dA-Za-z.\-/ ]/g, "")
+    .slice(0, RG_INPUT_MAX_LENGTH)
+    .replace(/[a-z]/g, (c) => c.toUpperCase());
+}
+
+/** RG preenchido deve conter ao menos um caractere alfanumérico. */
+export function validarRgInput(rg: string): boolean {
+  const t = rg.trim();
+  if (!t) return false;
+  return /[\dA-Za-z]/.test(t);
 }
 
 export function formatarTelefoneBr(raw: string): string {

@@ -32,10 +32,12 @@ import {
   formatarRgInput,
   formatarTelefoneBr,
   numeroDeCentavosStr,
+  RG_INPUT_MAX_LENGTH,
   somenteDigitos,
   validarCpfDigitos,
   validarDataNascimentoOpcional,
   validarEmail,
+  validarRgInput,
 } from "../../../lib/rhFuncionarioValidators";
 import { buscarEnderecoPorCep, mesclarCamposEnderecoViaCep } from "../../../lib/rhViaCep";
 import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
@@ -735,6 +737,9 @@ export default function RhPrestadoresPage() {
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
         e.email_spin = "E-mail Spin inválido.";
+      }
+      if (form.rg.trim() && !validarRgInput(form.rg)) {
+        e.rg = "RG inválido.";
       }
       if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
         e.data_nascimento = "Data de nascimento inválida.";
@@ -1712,8 +1717,8 @@ export default function RhPrestadoresPage() {
                     id="f-rg"
                     disabled={desabilitarCampos}
                     value={form.rg}
+                    maxLength={RG_INPUT_MAX_LENGTH}
                     onChange={(e) => setForm((s) => ({ ...s, rg: formatarRgInput(e.target.value) }))}
-                    placeholder="00.000.000-0"
                     style={{ ...inputStyle, ...(sensivelBlurDoc ? blurSensivel : {}) }}
                   />
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}

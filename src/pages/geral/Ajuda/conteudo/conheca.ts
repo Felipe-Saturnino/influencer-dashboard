@@ -854,6 +854,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_overview: {
+    titulo: "Overview Comercial",
+    blocos: [
+      {
+        texto:
+          "O **Overview Comercial** consolida KPIs, funil, produtos Live Cassino, mapa por UF, carteira por comercial, marcas recentes e alertas acionáveis. É **somente leitura** — edição de marcas e contatos permanece no **Pipeline B2B**. O acesso depende da permissão de Ver em Gestão de Usuários (página independente do Pipeline).",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Use **Comercial** para restringir ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor canónico). **UF** filtra pela sede do CNPJ (UF preenchida pelo enriquecimento de cadastro). Os chips de status (Disponíveis, Conexão, Negociação, Fechado) refinam todos os blocos; clique de novo no chip ativo para voltar a **Todos**.",
+      },
+      {
+        subtitulo: "Mapa e prioridades",
+        texto:
+          "No bloco **Distribuição geográfica**, clique em um estado no mapa ou na lista para ver as empresas (razão social) da região. KPIs e linhas de **Prioridades & alertas** com link **Ver pipeline** abrem o **Pipeline B2B** na aba correspondente quando aplicável.",
+      },
+    ],
+  },
   comercial_pipeline_b2b: {
     titulo: "Pipeline B2B",
     blocos: [

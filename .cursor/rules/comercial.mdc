@@ -18,6 +18,7 @@ alwaysApply: false
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
+| `comercial_overview` | Overview Comercial | Visão consolidada do funil B2B, produtos Live Cassino e prioridades da equipe comercial. |
 | `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
 
 ---
@@ -26,9 +27,46 @@ alwaysApply: false
 
 | PageKey | Página | Caminho |
 |---------|--------|---------|
+| `comercial_overview` | Overview Comercial | `comercial/OverviewComercial/` |
 | `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` |
 
 Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos exceto Admin — liberar em Gestão de Usuários.
+
+---
+
+## Overview Comercial (`comercial_overview`)
+
+Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas`, `comercial_marcas`, produtos e histórico. Permissão própria (`comercial_overview`); ver exige liberação independente do Pipeline B2B.
+
+### Filtros (bloco nível 2)
+
+- **Comercial:** `FiltroBarCampoSelect` + ícone `User` — **Todos Comerciais** (default), **Nenhum** + nomes canónicos (`PIPELINE_COMERCIAL_NOMES`).
+- **UF:** `FiltroBarCampoSelect` + ícone `MapPin` — agregadora **Todas UFs**; opções derivadas de `comercial_empresas.estado` (enriquecimento CNPJ).
+- **Status pipeline:** `FiltroSemanticoTabPill` — Todos + Disponíveis / Conexão / Negociação / Fechado (cores `PIPELINE_COLOR`); toggle off no segundo clique.
+- **Alinhamento:** centralizado — Global § Filtros.
+
+### Blocos (nível 3)
+
+| Bloco | Conteúdo |
+|-------|----------|
+| KPIs consolidados | Empresas (CNPJs únicos), Marcas, Site ativo, Negociação, Fechado, Sem comercial — clique navega para Pipeline B2B (aba correspondente quando aplicável). |
+| Funil do pipeline | SVG funil + taxas de conversão entre etapas (estoque filtrado). |
+| Produto Dedicada × Network | Barras por `STATUS_PRODUTO_ORDEM` / `STATUS_PRODUTO_COLOR`. |
+| Distribuição geográfica | Mapa SVG Brasil (`src/assets/comercial/brazil-states-paths.json`) + lista UF; clique no mapa ou linha lista empresas (razão social) da região. |
+| Carteira por comercial | Barras por comercial canónico + «Nenhum»; clique → Pipeline B2B. |
+| Novas marcas | Marcas com `created_at` nos últimos 30 dias. |
+| Prioridades & alertas | Tabela canónica (até 15 linhas): sem contato, site offline, sem comercial, oportunidade (contrato enviado). |
+| Movimentação recente | Contagens em `comercial_marca_historico` (30 dias): → Negociação, → Fechado, sem interesse, total. |
+
+### Estados de vazio (secção)
+
+| Contexto | Mensagem |
+|----------|----------|
+| UF sem dados no mapa/lista | `Nenhuma empresa com UF cadastrada para os filtros selecionados.` |
+| Carteira vazia | `Nenhuma marca atribuída para os filtros selecionados.` |
+| Novas marcas vazias | `Nenhuma marca cadastrada nos últimos 30 dias.` |
+| Alertas vazios | `Nenhum alerta para os filtros selecionados.` |
+| Sem permissão | String Global |
 
 ---
 

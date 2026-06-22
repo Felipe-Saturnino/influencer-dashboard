@@ -13,6 +13,7 @@ import {
   Shield,
   SlidersHorizontal,
   TriangleAlert,
+  UsersRound,
   Wallet,
 } from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
@@ -137,6 +138,7 @@ const SUBTABS_POLITICA: SubtabCategoriaConfig[] = [
   { key: "seguranca", label: "Segurança", slugs: ["seguranca"] },
   { key: "bonificacao", label: "Bonificação", slugs: ["bonificacao", "beneficios_pol"] },
   { key: "folha_pagamento", label: "Folha de Pagamento", slugs: ["folha_pagamento", "operacional"] },
+  { key: "rh", label: "RH", slugs: ["rh"] },
 ];
 
 function resolveCategoriaTab(
@@ -203,6 +205,7 @@ const SUBTAB_ICONS: Record<string, ReactNode> = {
   seguranca: <Shield {...FILTRO_BAR_TAB_ICON_PROPS} />,
   bonificacao: <Gift {...FILTRO_BAR_TAB_ICON_PROPS} />,
   folha_pagamento: <Banknote {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  rh: <UsersRound {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
 function FiltroSubtabPills({

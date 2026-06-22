@@ -66,6 +66,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "galeria", slug: "Galeria", label: "Galeria", access: "always" },
     { tabId: "upload", slug: "Upload", label: "Upload", access: "galeria_upload" },
   ]),
+  page("Overview Comercial", "comercial_overview", "OverviewComercial"),
   page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
     { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
     { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
