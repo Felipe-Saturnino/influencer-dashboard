@@ -37,8 +37,10 @@ import {
   ERRO_SYNC_COMERCIAL_SPA,
   LABEL_UI_COMERCIAL_SPA_LISTA,
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+  LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
+  ERRO_SYNC_COMERCIAL_CNPJ,
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
@@ -126,6 +128,8 @@ interface FluxoDia {
   lobbyBlaze: number;
   /** Mesas localizadas no lobby CDA (sync_logs lobby_cda). */
   lobbyCda: number;
+  /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
+  comercialCnpj: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
@@ -152,6 +156,8 @@ export default function StatusTecnico() {
   const [syncComercialSpaMensagem, setSyncComercialSpaMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncComercialDominioExecutando, setSyncComercialDominioExecutando] = useState(false);
   const [syncComercialDominioMensagem, setSyncComercialDominioMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncComercialCnpjExecutando, setSyncComercialCnpjExecutando] = useState(false);
+  const [syncComercialCnpjMensagem, setSyncComercialCnpjMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncLobbyBlazeExecutando, setSyncLobbyBlazeExecutando] = useState(false);
   const [syncLobbyBlazeMensagem, setSyncLobbyBlazeMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
@@ -177,7 +183,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -250,7 +256,7 @@ export default function StatusTecnico() {
     const dataInicioStr = subDiasIso(hoje, 14);
     const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
-    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resComercialCnpjSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -272,6 +278,13 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_cda")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, registros_atualizados, status")
+        .eq("integracao_slug", "comercial_cnpj_enriquecimento")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -297,6 +310,14 @@ export default function StatusTecnico() {
     );
     const lobbyCdaPorData = agregarSyncPorData(
       (resLobbyCdaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    );
+    const comercialCnpjPorData = agregarSyncPorData(
+      (resComercialCnpjSync.data ?? []) as {
+        executado_em: string;
+        registros_inseridos: number | null;
+        registros_atualizados: number | null;
+        status: string;
+      }[],
     );
 
     const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
@@ -332,6 +353,7 @@ export default function StatusTecnico() {
       ...Object.keys(spinPorData),
       ...Object.keys(lobbyBlazePorData),
       ...Object.keys(lobbyCdaPorData),
+      ...Object.keys(comercialCnpjPorData),
       ...Object.keys(emailsPorData),
       hoje,
     ]);
@@ -344,6 +366,7 @@ export default function StatusTecnico() {
         const spinRss = spinPorData[data] ?? 0;
         const lobbyBlaze = lobbyBlazePorData[data] ?? 0;
         const lobbyCda = lobbyCdaPorData[data] ?? 0;
+        const comercialCnpj = comercialCnpjPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
         return {
@@ -353,8 +376,9 @@ export default function StatusTecnico() {
           spinRss,
           lobbyBlaze,
           lobbyCda,
+          comercialCnpj,
           emails,
-          total: cda + social + spinRss + lobbyBlaze + lobbyCda + emailTotal,
+          total: cda + social + spinRss + lobbyBlaze + lobbyCda + comercialCnpj + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -731,6 +755,73 @@ export default function StatusTecnico() {
     }
   };
 
+  const executarSyncComercialCnpj = async () => {
+    if (syncComercialCnpjExecutando || !perm.canEditarOk) return;
+    setSyncComercialCnpjExecutando(true);
+    setSyncComercialCnpjMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncComercialCnpjMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncComercialCnpjExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("enrich-comercial-cnpj", {
+        body: {},
+      });
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        empresas_selecionadas?: number;
+        consultadas?: number;
+        atualizadas?: number;
+        sem_alteracao?: number;
+        falhas?: number;
+        erros?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0
+            ? resData.erro
+            : ERRO_SYNC_COMERCIAL_CNPJ;
+        if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Edge Function enrich-comercial-cnpj não encontrada. Execute: supabase functions deploy enrich-comercial-cnpj";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncComercialCnpjMensagem({ tipo: "erro", texto });
+        setSyncComercialCnpjExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        setSyncComercialCnpjMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : "Enriquecimento Estado / Cidade concluído com erros (ver resposta da função).",
+        });
+        setSyncComercialCnpjExecutando(false);
+        return;
+      }
+
+      setSyncComercialCnpjMensagem({
+        tipo: "ok",
+        texto: `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE}: ${resData.atualizadas ?? 0} empresa(s) atualizada(s) (${resData.consultadas ?? 0} consultada(s), ${resData.sem_alteracao ?? 0} sem alteração).`,
+      });
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncComercialCnpjMensagem({ tipo: "erro", texto: ERRO_SYNC_COMERCIAL_CNPJ });
+    } finally {
+      setSyncComercialCnpjExecutando(false);
+    }
+  };
+
   const executarSyncLobbyBlaze = async () => {
     if (syncLobbyBlazeExecutando || !perm.canEditarOk) return;
     setSyncLobbyBlazeExecutando(true);
@@ -1056,6 +1147,7 @@ export default function StatusTecnico() {
   const passouHorarioSocial = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.social);
   const passouHorarioComercialSpa = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialSpa);
   const passouHorarioComercialDominio = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialDominio);
+  const passouHorarioComercialCnpj = passouHorarioAgendadoBr(HORARIO_AGENDADO_BR.comercialCnpj);
 
   // Integrações Ativas: jobs diários — OK se executou com sucesso hoje (SP); antes do horário, aceita último OK
   const syncLogsCdaKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
@@ -1084,6 +1176,15 @@ export default function StatusTecnico() {
   const comercialDominioStatusOk =
     comercialDominioOkHoje ||
     (!passouHorarioComercialDominio && ultimoSyncComercialDominioLog?.status === "ok");
+
+  const syncLogsComercialCnpjKpi = syncLogs.filter(
+    (l) => l.integracao_slug === "comercial_cnpj_enriquecimento",
+  );
+  const ultimoSyncComercialCnpjLog = syncLogsComercialCnpjKpi[0];
+  const comercialCnpjOkHoje = syncLogOkNoDia(syncLogsComercialCnpjKpi, hojeIsoKpi);
+  const comercialCnpjStatusOk =
+    comercialCnpjOkHoje ||
+    (!passouHorarioComercialCnpj && ultimoSyncComercialCnpjLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
   const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
@@ -1132,12 +1233,13 @@ export default function StatusTecnico() {
     spinNaRedeRssStatusOk,
     comercialSpaStatusOk,
     comercialDominioStatusOk,
+    comercialCnpjStatusOk,
     lobbyBlazeStatusOk,
     lobbyCdaStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 9;
+  const totalIntegracoes = 10;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -1151,6 +1253,12 @@ export default function StatusTecnico() {
     timestamps.push({
       ts: ultimoSyncComercialDominioLog.executado_em,
       label: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+    });
+  }
+  if (ultimoSyncComercialCnpjLog?.executado_em) {
+    timestamps.push({
+      ts: ultimoSyncComercialCnpjLog.executado_em,
+      label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
     });
   }
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
@@ -1174,6 +1282,10 @@ export default function StatusTecnico() {
   const comercialDominioFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "comercial_dominio_validacao" && l.status === "falha",
   ).length;
+  const comercialCnpjTotal = syncLogs.filter((l) => l.integracao_slug === "comercial_cnpj_enriquecimento").length;
+  const comercialCnpjFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "comercial_cnpj_enriquecimento" && l.status === "falha",
+  ).length;
   const lobbyBlazeTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze").length;
   const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
   const lobbyCdaTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_cda").length;
@@ -1192,6 +1304,7 @@ export default function StatusTecnico() {
     spinRssTotal +
     comercialSpaTotal +
     comercialDominioTotal +
+    comercialCnpjTotal +
     lobbyBlazeTotal +
     lobbyCdaTotal +
     socialTotal +
@@ -1201,6 +1314,7 @@ export default function StatusTecnico() {
     spinRssFalhas +
     comercialSpaFalhas +
     comercialDominioFalhas +
+    comercialCnpjFalhas +
     lobbyBlazeFalhas +
     lobbyCdaFalhas +
     socialFalhas +
@@ -1382,6 +1496,42 @@ export default function StatusTecnico() {
     });
   }
 
+  // ── Pipeline B2B — Estado / Cidade (CNPJ) — Actions 8h30 BRT ──
+  const syncLogsComercialCnpj = syncLogsComercialCnpjKpi;
+  const ultimoSyncComercialCnpjOk = syncLogsComercialCnpj.find((l) => l.status === "ok");
+  const ultimoSyncComercialCnpjFalha = syncLogsComercialCnpj.find((l) => l.status === "falha");
+  const comercialCnpjTeveHistorico = syncLogsComercialCnpj.some((l) => l.status === "ok");
+  const taxaErroComercialCnpj =
+    syncLogsComercialCnpj.length > 0
+      ? (
+          (syncLogsComercialCnpj.filter((l) => l.status === "falha").length / syncLogsComercialCnpj.length) *
+          100
+        ).toFixed(1)
+      : "0";
+
+  if (
+    syncLogsComercialCnpj.length > 0 &&
+    !ultimoSyncComercialCnpjOk &&
+    ultimoSyncComercialCnpjFalha
+  ) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Nenhum enriquecimento ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} com sucesso`,
+    });
+  }
+  if (passouHorarioComercialCnpj && comercialCnpjTeveHistorico && !comercialCnpjOkHoje) {
+    alertas.push({
+      nivel: "erro",
+      msg: `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} não executou hoje (agendado 8h30)`,
+    });
+  }
+  if (parseFloat(taxaErroComercialCnpj) > 5 && syncLogsComercialCnpj.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta em ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} (${taxaErroComercialCnpj}%)`,
+    });
+  }
+
   // ── Lobby Blaze ──
   const syncLogsLobbyBlaze = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze");
   const ultimoSyncLobbyOk = syncLogsLobbyBlaze.find((l) => l.status === "ok");
@@ -1447,6 +1597,8 @@ export default function StatusTecnico() {
                 ? ("comercial_spa" as const)
                 : int.slug === "comercial_dominio_validacao"
                   ? ("comercial_dominio" as const)
+                  : int.slug === "comercial_cnpj_enriquecimento"
+                    ? ("comercial_cnpj" as const)
                 : int.slug === "lobby_blaze"
                 ? ("lobby_blaze" as const)
                 : int.slug === "lobby_cda"
@@ -1572,6 +1724,7 @@ export default function StatusTecnico() {
           pickIntegracaoRow("spin_na_rede_rss"),
           pickIntegracaoRow("comercial_spa_lista"),
           pickIntegracaoRow("comercial_dominio_validacao"),
+          pickIntegracaoRow("comercial_cnpj_enriquecimento"),
           pickIntegracaoRow("painel_noticias_rss"),
           {
             slug: socialKpisRow.slug,
@@ -1640,6 +1793,7 @@ export default function StatusTecnico() {
           spin_na_rede_rss: "Spin na Rede (RSS)",
           comercial_spa_lista: LABEL_UI_COMERCIAL_SPA_LISTA,
           comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
+          comercial_cnpj_enriquecimento: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
           painel_noticias_rss: "Painel de Notícias (RSS)",
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
@@ -1685,6 +1839,7 @@ export default function StatusTecnico() {
       cda: "CDA (Casa de Apostas)",
       social: "Social Media",
       spin_rss: "Spin na Rede (RSS)",
+      comercial_cnpj: `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} (Pipeline B2B)`,
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
       relatorio_diretoria: "E-mail: Relatório",
@@ -1697,6 +1852,7 @@ export default function StatusTecnico() {
       cda: BRAND.roxoVivo,
       social: BRAND.azul,
       spin_rss: "#a78bfa",
+      comercial_cnpj: "#0d9488",
       lobby_blaze: "#f97316",
       lobby_cda: "#0ea5e9",
       relatorio_diretoria: BRAND.verde,
@@ -1747,10 +1903,11 @@ export default function StatusTecnico() {
     syncSpinRssExecutando,
     syncComercialSpaExecutando,
     syncComercialDominioExecutando,
+    syncComercialCnpjExecutando,
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio") =>
+    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
       setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
@@ -1912,6 +2069,7 @@ export default function StatusTecnico() {
         syncSpinRssMensagem ||
         syncComercialSpaMensagem ||
         syncComercialDominioMensagem ||
+        syncComercialCnpjMensagem ||
         syncLobbyBlazeMensagem ||
         emailMensagem ||
         emailAgendaMensagem) && (
@@ -1926,6 +2084,10 @@ export default function StatusTecnico() {
               syncComercialDominioMensagem && {
                 prefix: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
                 msg: syncComercialDominioMensagem,
+              },
+              syncComercialCnpjMensagem && {
+                prefix: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
+                msg: syncComercialCnpjMensagem,
               },
               syncLobbyBlazeMensagem && { prefix: "Lobby Blaze", msg: syncLobbyBlazeMensagem },
               emailMensagem && { prefix: "E-mail de Relatório", msg: emailMensagem },
@@ -2024,6 +2186,7 @@ export default function StatusTecnico() {
             { key: "spin_rss", label: "Spin RSS" },
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
+            { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
             { key: "email_agenda_diaria", label: "E-mail de Agenda" },
             { key: "boas_vindas", label: "Boas-vindas" },
@@ -2090,6 +2253,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyCda)}%`, minWidth: f.lobbyCda > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_cda"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.comercialCnpj > 0 && (
+                      <div
+                        title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.comercialCnpj)}%`, minWidth: f.comercialCnpj > 0 ? 8 : 0, height: "100%", background: fluxoCor("comercial_cnpj"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                       <div
                         key={tipo}
@@ -2127,6 +2296,7 @@ export default function StatusTecnico() {
                       {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
                       {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
                       {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
+                      {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -2479,6 +2649,18 @@ export default function StatusTecnico() {
                     `Taxa de erro alta em ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`,
                     "> 5% em sync_logs (slug comercial_dominio_validacao)",
                   ],
+                  [
+                    `Nenhum enriquecimento ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} com sucesso`,
+                    "Último sync_logs com falha, nenhum OK (slug comercial_cnpj_enriquecimento)",
+                  ],
+                  [
+                    `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} não executou hoje (agendado 8h30)`,
+                    "Após 9h BRT, sem sync_logs OK na data civil de hoje (slug comercial_cnpj_enriquecimento)",
+                  ],
+                  [
+                    `Taxa de erro alta em ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE}`,
+                    "> 5% em sync_logs (slug comercial_cnpj_enriquecimento)",
+                  ],
                   ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
                   ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
@@ -2544,6 +2726,8 @@ export default function StatusTecnico() {
               {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
               {confirmarSync === "comercial_dominio" &&
                 `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
+              {confirmarSync === "comercial_cnpj" &&
+                `Confirmar enriquecimento ${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE}`}
               {confirmarSync === "lobby_blaze" && "Confirmar coleta Lobby Blaze"}
               {confirmarEmail === "diretoria" && "Confirmar envio — E-mail de Relatório"}
               {confirmarEmail === "agenda" && "Confirmar envio — E-mail de Agenda"}
@@ -2598,6 +2782,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "comercial_dominio") {
                     setConfirmarSync(null);
                     void executarSyncComercialDominio();
+                  } else if (confirmarSync === "comercial_cnpj") {
+                    setConfirmarSync(null);
+                    void executarSyncComercialCnpj();
                   } else if (confirmarSync === "lobby_blaze") {
                     setConfirmarSync(null);
                     void executarSyncLobbyBlaze();

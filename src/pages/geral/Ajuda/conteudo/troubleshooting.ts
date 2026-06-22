@@ -979,7 +979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações CDA, Social Media KPIs e Spin na Rede RSS possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações CDA, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",

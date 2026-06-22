@@ -955,7 +955,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico.",
+          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e grava município/UF em `comercial_empresas` (cron diário ~8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
       },
       {
         subtitulo: "Logs Recentes",
@@ -965,7 +965,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo de dados",
         texto:
-          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados. Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
+          "Gráfico de barras empilhadas com os últimos 14 dias. Cada cor representa uma fonte de dados — incluindo **Estado / Cidade** (empresas do Pipeline B2B enriquecidas com município/UF por CNPJ). Passe o cursor sobre uma barra para ver o detalhamento por fonte naquele dia.",
       },
       {
         subtitulo: "Alertas automáticos",

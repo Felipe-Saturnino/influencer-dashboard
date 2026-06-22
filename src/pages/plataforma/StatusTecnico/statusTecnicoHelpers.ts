@@ -8,6 +8,8 @@ export const HORARIO_AGENDADO_BR = {
   spinRss: 6,
   comercialSpa: 7,
   comercialDominio: 8,
+  /** Enriquecimento cidade/UF — cron 8h30 BRT; checagem após 9h para evitar falso positivo antes do job. */
+  comercialCnpj: 9,
   emailDiretoria: 6,
   emailAgenda: 6,
 } as const;
@@ -40,9 +42,13 @@ export const LABEL_UI_COMERCIAL_SPA_LISTA = "Lista SPA";
 /** Rótulo na UI de Status Técnico (slug `comercial_dominio_validacao`); automação/DB mantém nome legado. */
 export const LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO = "Validação de domínios de Marcas";
 
+/** Rótulo na UI de Status Técnico (slug `comercial_cnpj_enriquecimento`). */
+export const LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE = "Estado / Cidade";
+
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
   if (slug === "comercial_dominio_validacao") return LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO;
+  if (slug === "comercial_cnpj_enriquecimento") return LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE;
   return nome;
 }
 
@@ -56,6 +62,8 @@ export const ERRO_SYNC_COMERCIAL_SPA =
   "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_DOMINIO =
   "Não foi possível validar os domínios do Pipeline B2B. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_COMERCIAL_CNPJ =
+  "Não foi possível enriquecer cidade/UF dos CNPJs do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_LOBBY_BLAZE =
   "Não foi possível executar o monitor Lobby Blaze. Verifique a Edge Function e tente novamente.";
 export const ERRO_EMAIL_DIRETORIA =
