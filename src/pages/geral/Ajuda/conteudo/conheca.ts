@@ -331,7 +331,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: no topo, **Registrado por** e **Data de Registro**; campo para nova anotação e histórico. Se **Registrado por** estiver vazio, use **Atribuir a mim** e Salvar.",
+          "Clique em Novo Influencer (botão com ícone + e gradiente de criação) para registrar um novo prospecto. O formulário tem Nome Artístico e Status no topo, mais três abas (tablist acessível — Contato, Canais, Anotações). Pressione Esc para fechar o modal.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro** do cadastro na plataforma; se **Registrado por** estiver vazio, use **Atribuir a mim** e Salvar.\n\n— Contato: Tipo de Contato (Agente, Plataforma ou Direto), Nome do Agente (quando tipo for Agente), Telefone, Cachê Negociado, Live Cassino (Sim/Não), E-mail e Operadora\n— Canais: toggle de plataformas ativas. Cada plataforma ativa exige link e métrica correspondente (Views ou Seguidores conforme a plataforma). Abaixo, seleção de Categorias em multi-seleção: Vida Real, Jogos Populares, Variedades, Esportes, Cassino\n— Anotações: campo para nova anotação e histórico com autor e data de cada anotação",
       },
       {
         subtitulo: "Fechando uma Parceria",
@@ -341,7 +341,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Anotações",
         texto:
-          "A aba Anotações exibe **Registrado por** e **Data de Registro** do cadastro na plataforma (distinto das anotações do funil). Permite registrar observações ao longo da prospecção; cada anotação guarda autor e data. Visível em Ver e Editar.",
+          "A aba Anotações concentra observações ao longo da prospecção; cada anotação guarda autor e data. **Registrado por** e **Data de Registro** (cadastro na plataforma) ficam no cabeçalho do modal, abaixo de Nome e Status — distintos das anotações do funil.",
       },
     ],
   },
@@ -428,7 +428,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Documentos e revisão",
         texto:
-          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica pode ser concluída atualizando dados, enviando novos arquivos ou marcando «Confirmar sem alterações» quando nada mudou — **desde que o cadastro esteja completo** (todos os campos em Dados cadastrais; documentos obrigatórios do seu tipo de contrato, exceto Outros; ao menos 1 formação acadêmica e 1 idioma; ao menos 1 experiência profissional, exceto Estágio e Temporário). Enquanto houver pendências, o botão permanece desabilitado e a lista de itens faltantes aparece no banner de revisão.",
+          "Na aba Documentos, envie PDF ou imagens (até 15 MB por arquivo). A revisão periódica **só é concluída** quando o cadastro estiver **100% completo** — salvar parcialmente ou enviar apenas um documento **não** encerra o bloqueio. Você pode avançar por etapas nas abas; ao resolver a última pendência, a revisão é registrada automaticamente, ou use **Confirmar sem alterações** se nada mudou. Requisitos: todos os campos em Dados cadastrais (exceto Nickname); documentos obrigatórios do seu tipo de contrato (exceto Outros); ao menos 1 formação acadêmica e 1 idioma; ao menos 1 experiência profissional (exceto Estágio e Temporário). Enquanto houver pendências, **Confirmar sem alterações** permanece desabilitado e a lista aparece no banner de revisão.",
       },
       {
         subtitulo: "Formação e Competências",
@@ -763,7 +763,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastro e Edição",
         texto:
-          "O formulário é organizado em abas (Contato, Operação, Anotações), com navegação por teclado (← →) e Esc para fechar.\n\n— Contato: e-mail, telefone, tipo de contato (Direto, Agência, Site Spin), Live Cassino e operadora\n— Operação: descrição livre das atividades\n— Anotações: **Registrado por** e **Data de Registro** no topo; histórico salvo com 'Adicionar Anotação'. **Atribuir a mim** quando registrador vazio (ex.: site Spin).\n\nEnquanto o registro não tiver usuário na plataforma, o modal exibe aviso de que e-mail e operadora serão obrigatórios ao salvar. Depois da criação, e-mail e operadora ficam bloqueados.",
+          "O formulário é organizado em abas (Contato, Operação, Anotações), com navegação por teclado (← →) e Esc para fechar.\n\nAbaixo de Nome e Status (Ver / Editar), **Registrado por** e **Data de Registro**; **Atribuir a mim** quando registrador vazio (ex.: site Spin).\n\n— Contato: e-mail, telefone, tipo de contato (Direto, Agência, Site Spin), Live Cassino e operadora\n— Operação: descrição livre das atividades\n— Anotações: histórico salvo com 'Adicionar Anotação'\n\nEnquanto o registro não tiver usuário na plataforma, o modal exibe aviso de que e-mail e operadora serão obrigatórios ao salvar. Depois da criação, e-mail e operadora ficam bloqueados.",
       },
       {
         subtitulo: "Criação de usuário na plataforma",
@@ -773,7 +773,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Anotações",
         texto:
-          "Cada prospecto tem um histórico de anotações com autoria e data. No topo da aba, **Registrado por** e **Data de Registro** referem-se ao cadastro na plataforma (não confundir com anotações). Anotações são salvas individualmente ao clicar em 'Adicionar Anotação'. O histórico fica disponível tanto no modal de visualização quanto no de edição.",
+          "Cada prospecto tem um histórico de anotações com autoria e data. **Registrado por** e **Data de Registro** referem-se ao cadastro na plataforma e aparecem no cabeçalho do modal (abaixo de Nome e Status), não na aba Anotações. Anotações são salvas individualmente ao clicar em 'Adicionar Anotação'.",
       },
     ],
   },

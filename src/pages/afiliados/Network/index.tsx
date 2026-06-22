@@ -589,6 +589,14 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
             <X size={18} aria-hidden="true" />
           </button>
         </div>
+        <ProspectoRegistroMeta
+          registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
+          dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
+          textColor={t.text}
+          textMuted={t.textMuted}
+          cardBorder={t.cardBorder}
+          inputBg={t.inputBg ?? t.cardBg}
+        />
         <div
           style={{
             display: "flex",
@@ -640,14 +648,6 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
         )}
         {tab === "anotacoes" && (
           <div role="tabpanel" id="panel-af-viz-anotacoes" aria-labelledby="tab-af-viz-anotacoes">
-            <ProspectoRegistroMeta
-              registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
-              dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
-              textColor={t.text}
-              textMuted={t.textMuted}
-              cardBorder={t.cardBorder}
-              inputBg={t.inputBg ?? t.cardBg}
-            />
             <label style={labelStyle}>Histórico de Anotações</label>
             <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               {anotacoes.length === 0 ? (
@@ -935,6 +935,22 @@ function ModalEditar({
           </select>
         </div>
 
+        {row ? (
+          <ProspectoRegistroMeta
+            registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
+            dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
+            editMode
+            podeAtribuir={perm.canEditarOk && !row.created_by}
+            atribuirPendente={atribuirRegistroAMim}
+            atribuirNomePreview={user?.name ?? null}
+            onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
+            textColor={t.text}
+            textMuted={t.textMuted}
+            cardBorder={t.cardBorder}
+            inputBg={t.inputBg ?? t.cardBg}
+          />
+        ) : null}
+
         <NetworkModalTabs tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" ariaLabel="Seções do cadastro" />
 
         {error && (
@@ -1027,19 +1043,6 @@ function ModalEditar({
 
         {tab === "anotacoes" && row && (
           <div role="tabpanel" id="panel-af-ed-anotacoes" aria-labelledby="tab-af-ed-anotacoes">
-            <ProspectoRegistroMeta
-              registradoPorNome={prospectoRegistradoPorLabel(row.criador_nome)}
-              dataRegistroFmt={fmtProspectoDataRegistro(row.created_at)}
-              editMode
-              podeAtribuir={perm.canEditarOk && !row.created_by}
-              atribuirPendente={atribuirRegistroAMim}
-              atribuirNomePreview={user?.name ?? null}
-              onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
-              textColor={t.text}
-              textMuted={t.textMuted}
-              cardBorder={t.cardBorder}
-              inputBg={t.inputBg ?? t.cardBg}
-            />
             <div style={rowS}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />

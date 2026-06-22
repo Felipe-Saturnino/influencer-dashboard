@@ -79,7 +79,7 @@ Botão **Adicionar Anotação** (Network): `var(--brand-secondary)` com `brand.u
 - Prospecto sem usuário: microcopy no modal de edição explicando e-mail/operadora obrigatórios ao salvar
 - **Afiliados:** **sem** ação Excluir no modal de edição — a página não expõe exclusão (`hasExcluir: false` em Gestão de Usuários). **Network** mantém exclusão via `BtnExcluirComTexto` + modal padrão.
 
-**Registro do prospecto (`created_by` / `created_at`):** paridade Scout — **`ProspectoRegistroMeta`** na aba Anotações; flag **Registrado · {nome}** em **`ProspectoCardFlags`**; **Atribuir a mim** quando `created_by` vazio; insert em **Novo Afiliado** grava usuário logado. Ver `lib/prospectoRegistroMeta.ts`.
+**Registro do prospecto (`created_by` / `created_at`):** paridade Scout — **`ProspectoRegistroMeta`** no cabeçalho do modal (abaixo de Nome e Status); flag **Registrado · {nome}** em **`ProspectoCardFlags`**; **Atribuir a mim** quando `created_by` vazio; insert em **Novo Afiliado** grava usuário logado. Ver `lib/prospectoRegistroMeta.ts`.
 
 ---
 

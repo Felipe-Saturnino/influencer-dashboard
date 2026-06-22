@@ -70,7 +70,9 @@ import {
 import {
   avaliarCompletudeCadastroRevisao,
   carregarCompletudeExternaCadastro,
+  verificarCompletudeCadastroRevisao,
   type RhCadastroCompletudeExterna,
+  type RhCadastroFormCompletudeInput,
 } from "../../../lib/rhCadastroRevisaoCompleteness";
 
 const UFS_BR = [
@@ -176,6 +178,39 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     conta_corrente: f.conta_corrente,
     pix: f.pix ?? "",
     observacao_rh: f.observacao_rh ?? "",
+  };
+}
+
+function formParaCompletudeInput(f: FormState): RhCadastroFormCompletudeInput {
+  return {
+    nome: f.nome,
+    rg: f.rg,
+    cpf: f.cpf,
+    telefone: f.telefone,
+    email: f.email,
+    data_nascimento: f.data_nascimento,
+    res_cep: f.res_cep,
+    res_logradouro: f.res_logradouro,
+    res_numero: f.res_numero,
+    res_complemento: f.res_complemento,
+    res_cidade: f.res_cidade,
+    res_estado: f.res_estado,
+    emerg_nome: f.emerg_nome,
+    emerg_parentesco: f.emerg_parentesco,
+    emerg_telefone: f.emerg_telefone,
+    tipo_contrato: f.tipo_contrato,
+    nome_empresa: f.nome_empresa,
+    cnpj: f.cnpj,
+    emp_cep: f.emp_cep,
+    emp_logradouro: f.emp_logradouro,
+    emp_numero: f.emp_numero,
+    emp_complemento: f.emp_complemento,
+    emp_cidade: f.emp_cidade,
+    emp_estado: f.emp_estado,
+    banco: f.banco,
+    agencia: f.agencia,
+    conta_corrente: f.conta_corrente,
+    pix: f.pix,
   };
 }
 
@@ -315,15 +350,16 @@ export default function RhDadosCadastroPage() {
     return avaliarCompletudeCadastroRevisao(form, completudeExterna);
   }, [form, completudeExterna]);
 
-  const recarregarCompletude = useCallback(async (fid: string) => {
+  const recarregarCompletude = useCallback(async (fid: string): Promise<RhCadastroCompletudeExterna | null> => {
     setCompletudeLoading(true);
     const { data, error } = await carregarCompletudeExternaCadastro(fid);
     setCompletudeLoading(false);
     if (error || !data) {
       setCompletudeExterna(null);
-      return;
+      return null;
     }
     setCompletudeExterna(data);
+    return data;
   }, []);
 
   useEffect(() => {
@@ -571,40 +607,101 @@ export default function RhDadosCadastroPage() {
     return error;
   };
 
-  const handleDocumentosAlterados = async () => {
-    if (!row) return;
-    await recarregarCompletude(row.id);
-    if (!visualizandoProprioCadastro || !prestadorExigeRevisaoCadastral(row.status) || !revisaoPendente) return;
-    setErroGlobal(null);
-    const revErr = await marcarRevisaoCadastralNoBanco(row.id, true);
+  /**
+   * Só marca `cadastro_revisado_em` quando todo o cadastro exigido está completo.
+   * Permite salvar/enviar por etapas sem encerrar o bloqueio antes da hora.
+   */
+  const tentarConcluirRevisaoCadastralSeCompleto = async (
+    funcionarioId: string,
+    formCompletude: RhCadastroFormCompletudeInput,
+    revisaoEstavaPendente: boolean,
+  ): Promise<{ concluiu: boolean; pendencias: string[] }> => {
+    if (
+      !visualizandoProprioCadastro ||
+      !prestadorExigeRevisaoCadastral(row?.status ?? "encerrado") ||
+      !revisaoEstavaPendente
+    ) {
+      return { concluiu: false, pendencias: [] };
+    }
+    const verificacao = await verificarCompletudeCadastroRevisao(funcionarioId, formCompletude);
+    if (verificacao.externo) setCompletudeExterna(verificacao.externo);
+    if (verificacao.error) {
+      return { concluiu: false, pendencias: [] };
+    }
+    if (!verificacao.ok) {
+      return { concluiu: false, pendencias: verificacao.pendencias };
+    }
+    const revErr = await marcarRevisaoCadastralNoBanco(funcionarioId, true);
     if (revErr) {
       setErroGlobal("Não foi possível registrar a revisão cadastral. Se o problema persistir, entre em contato com o suporte.");
-      return;
-    }
-    setMsgOk("Documentos atualizados e revisão cadastral concluída.");
-    if (vistaCompleta && row.id) {
-      await carregarFuncionarioPorId(row.id);
-    } else {
-      await carregarFuncionarioProprio();
+      return { concluiu: false, pendencias: [] };
     }
     notificarRevisaoCadastralAtualizada();
+    return { concluiu: true, pendencias: [] };
+  };
+
+  const handleDocumentosAlterados = async () => {
+    if (!row || !form) return;
+    setErroGlobal(null);
+    await recarregarCompletude(row.id);
+    const revisaoEstavaPendente = revisaoCadastralPendenteParaFuncionario(row);
+    const { concluiu } = await tentarConcluirRevisaoCadastralSeCompleto(
+      row.id,
+      formParaCompletudeInput(form),
+      revisaoEstavaPendente,
+    );
+    if (concluiu) {
+      setMsgOk("Documentos atualizados e revisão cadastral concluída.");
+      if (vistaCompleta && row.id) {
+        await carregarFuncionarioPorId(row.id);
+      } else {
+        await carregarFuncionarioProprio();
+      }
+      await carregarHistorico(row.id, true);
+    } else {
+      setMsgOk("Documentos atualizados.");
+    }
+  };
+
+  const handleCompletudeExternaAlterada = async () => {
+    if (!row || !form) return;
+    await recarregarCompletude(row.id);
+    const revisaoEstavaPendente = revisaoCadastralPendenteParaFuncionario(row);
+    const { concluiu } = await tentarConcluirRevisaoCadastralSeCompleto(
+      row.id,
+      formParaCompletudeInput(form),
+      revisaoEstavaPendente,
+    );
+    if (concluiu) {
+      setMsgOk("Revisão cadastral concluída.");
+      if (vistaCompleta && row.id) {
+        await carregarFuncionarioPorId(row.id);
+      } else {
+        await carregarFuncionarioProprio();
+      }
+      await carregarHistorico(row.id, true);
+    }
   };
 
   const confirmarSemAlteracoes = async () => {
     if (!podeEditarSelecionado || !visualizandoProprioCadastro || !row || !form || !declaracaoSemAlteracao) return;
-    if (!completudeRevisao.ok) {
-      setErroGlobal("Complete todos os campos obrigatórios do cadastro antes de confirmar sem alterações.");
-      return;
-    }
-    const e = validarCadastroSelf(form);
-    setFieldErr(e);
-    if (Object.keys(e).length > 0) {
-      setErroGlobal("Complete os dados obrigatórios antes de confirmar que nada mudou.");
-      return;
-    }
     setConfirmandoSemAlteracao(true);
     setErroGlobal(null);
     setMsgOk(null);
+    const verificacao = await verificarCompletudeCadastroRevisao(row.id, formParaCompletudeInput(form));
+    if (verificacao.externo) setCompletudeExterna(verificacao.externo);
+    if (verificacao.error) {
+      setConfirmandoSemAlteracao(false);
+      setErroGlobal(verificacao.error);
+      return;
+    }
+    if (!verificacao.ok) {
+      setConfirmandoSemAlteracao(false);
+      setErroGlobal(
+        "Complete todas as informações obrigatórias do cadastro antes de confirmar sem alterações.",
+      );
+      return;
+    }
     const { error } = await supabase.rpc("rh_registrar_revisao_cadastral_sem_alteracao", {
       p_funcionario_id: row.id,
     });
@@ -632,11 +729,8 @@ export default function RhDadosCadastroPage() {
     setSalvando(true);
     setErroGlobal(null);
     setMsgOk(null);
-    const incluirRevisao = visualizandoProprioCadastro && prestadorExigeRevisaoCadastral(row.status);
-    const payload = {
-      ...buildPayloadCadastralDadosCadastro(form, row.status),
-      ...(incluirRevisao ? payloadMarcarRevisaoCadastral("alteracao") : {}),
-    };
+    const revisaoEstavaPendente = revisaoCadastralPendenteParaFuncionario(row);
+    const payload = buildPayloadCadastralDadosCadastro(form, row.status);
     const { data: atualizado, error } = await supabase.from("rh_funcionarios").update(payload).eq("id", row.id).select("*").maybeSingle();
     setSalvando(false);
     if (error) {
@@ -647,10 +741,22 @@ export default function RhDadosCadastroPage() {
       }
       return;
     }
-    setMsgOk(revisaoPendente && visualizandoProprioCadastro ? "Dados atualizados e revisão cadastral concluída." : "Dados atualizados.");
     if (atualizado) {
       await syncGamePresenterDealerFromRhFuncionario(atualizado as RhFuncionario);
     }
+    const formPosSave = atualizado ? formDeFuncionario(atualizado as RhFuncionario) : form;
+    const { concluiu } = await tentarConcluirRevisaoCadastralSeCompleto(
+      row.id,
+      formParaCompletudeInput(formPosSave),
+      revisaoEstavaPendente,
+    );
+    setMsgOk(
+      concluiu
+        ? "Dados atualizados e revisão cadastral concluída."
+        : revisaoEstavaPendente && visualizandoProprioCadastro
+          ? "Dados atualizados. A revisão cadastral permanece pendente até completar todas as informações obrigatórias."
+          : "Dados atualizados.",
+    );
     if (vistaCompleta && row.id) {
       await carregarFuncionarioPorId(row.id);
     } else {
@@ -658,7 +764,6 @@ export default function RhDadosCadastroPage() {
     }
     await carregarHistorico(row.id, visualizandoProprioCadastro);
     await recarregarCompletude(row.id);
-    if (revisaoPendente && visualizandoProprioCadastro) notificarRevisaoCadastralAtualizada();
   };
 
   const inputStyle: CSSProperties = {
@@ -930,7 +1035,7 @@ export default function RhDadosCadastroPage() {
                     fontFamily: FONT.body,
                   }}
                 >
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Pendências para confirmar sem alterações:</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Pendências para concluir a atualização cadastral:</div>
                   <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55 }}>
                     {completudeRevisao.pendencias.map((item) => (
                       <li key={item}>{item}</li>
@@ -1680,7 +1785,7 @@ export default function RhDadosCadastroPage() {
           podeEditar={podeEditarFormacao}
           usuarioLabel={user?.email ?? String(user?.id ?? "—")}
           onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
-          onCompletudeAlterada={() => void recarregarCompletude(row.id)}
+          onCompletudeAlterada={() => void handleCompletudeExternaAlterada()}
           onErro={setErroGlobal}
         />
       ) : null}
@@ -1691,7 +1796,7 @@ export default function RhDadosCadastroPage() {
           podeEditar={podeEditarExperiencia}
           usuarioLabel={user?.email ?? String(user?.id ?? "—")}
           onHistoricoRefresh={() => void carregarHistorico(row.id, visualizandoProprioCadastro)}
-          onCompletudeAlterada={() => void recarregarCompletude(row.id)}
+          onCompletudeAlterada={() => void handleCompletudeExternaAlterada()}
           onErro={setErroGlobal}
         />
       ) : null}

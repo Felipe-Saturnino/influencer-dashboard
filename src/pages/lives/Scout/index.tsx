@@ -801,6 +801,14 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
             <X size={18} aria-hidden="true" />
           </button>
         </div>
+        <ProspectoRegistroMeta
+          registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
+          dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
+          textColor={t.text}
+          textMuted={t.textMuted}
+          cardBorder={t.cardBorder}
+          inputBg={t.inputBg ?? t.cardBg}
+        />
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? brand.primaryTransparentBg : `${BRAND.azul}0d`, border: brand.useBrand ? brand.primaryTransparentBorder : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
@@ -848,14 +856,6 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
         )}
         {tab === "anotacoes" && (
           <div role="tabpanel" id="scout-viz-panel-anotacoes" aria-labelledby="scout-viz-tab-anotacoes">
-          <ProspectoRegistroMeta
-            registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
-            dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
-            textColor={t.text}
-            textMuted={t.textMuted}
-            cardBorder={t.cardBorder}
-            inputBg={t.inputBg ?? t.cardBg}
-          />
           <div style={row}>
             <label style={labelStyle}>Histórico de Anotações</label>
             <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1256,6 +1256,22 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           </select>
         </div>
 
+        {scout ? (
+          <ProspectoRegistroMeta
+            registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
+            dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
+            editMode
+            podeAtribuir={perm.canEditarOk && !scout.created_by}
+            atribuirPendente={atribuirRegistroAMim}
+            atribuirNomePreview={user?.name ?? null}
+            onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
+            textColor={t.text}
+            textMuted={t.textMuted}
+            cardBorder={t.cardBorder}
+            inputBg={t.inputBg ?? t.cardBg}
+          />
+        ) : null}
+
         <ScoutModalTabs tab={tab} setTab={setTab} tabIdPrefix="scout-edit-tab-" panelIdPrefix="scout-edit-panel-" />
 
         {error && (
@@ -1396,19 +1412,6 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
 
         {scout ? (
           <ModalTabPanel active={tab === "anotacoes"} id="scout-edit-panel-anotacoes" labelledBy="scout-edit-tab-anotacoes">
-            <ProspectoRegistroMeta
-              registradoPorNome={prospectoRegistradoPorLabel(scout.criador_nome)}
-              dataRegistroFmt={fmtProspectoDataRegistro(scout.created_at)}
-              editMode
-              podeAtribuir={perm.canEditarOk && !scout.created_by}
-              atribuirPendente={atribuirRegistroAMim}
-              atribuirNomePreview={user?.name ?? null}
-              onAtribuirAMim={() => setAtribuirRegistroAMim(true)}
-              textColor={t.text}
-              textMuted={t.textMuted}
-              cardBorder={t.cardBorder}
-              inputBg={t.inputBg ?? t.cardBg}
-            />
             <div style={row}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />
