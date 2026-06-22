@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   Banknote,
+  BookOpen,
+  Briefcase,
   CalendarDays,
+  ClipboardList,
   FileText,
   Gift,
   LayoutGrid,
@@ -22,8 +25,19 @@ import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } 
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
-import { ComunicadoCard, PoliticaCard, RhTalkCard } from "./PortalRhCards";
+import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
+import { ModalVisualizarDocumento, type DocumentoRelacionadoView } from "./ModalVisualizarDocumento";
+import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
+import {
+  RH_DOCUMENTO_FILTRO_SUBTABS,
+  carregarRelacionadosDocumentoPortal,
+  documentoUsaModeloNormativo,
+  itemNoFiltroDocumento,
+  tagTipoDocumentoCor,
+  type RhDocumentoClassificacao,
+  type RhDocumentoTipo,
+} from "../../../lib/portalRhDocumentoNormativo";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -76,7 +90,7 @@ type RhPortalDocumento = {
   id: string;
   titulo: string;
   corpo: string | null;
-  categoria_id: string;
+  categoria_id: string | null;
   paginas: number | null;
   requires_acknowledgment: boolean;
   storage_path: string | null;
@@ -84,12 +98,23 @@ type RhPortalDocumento = {
   status?: RhPostagemStatus | null;
   published_at?: string | null;
   introducao?: string | null;
+  resumo?: string | null;
   imagem_storage_path?: string | null;
   anexo_storage_path?: string | null;
   anexo_nome?: string | null;
   created_by?: string | null;
   approved_at?: string | null;
   approved_by?: string | null;
+  codigo?: string | null;
+  versao?: string | null;
+  tipo_documento?: RhDocumentoTipo | null;
+  area_responsavel?: string | null;
+  classificacao?: RhDocumentoClassificacao | null;
+  aplicavel_a?: string[] | null;
+  data_emissao?: string | null;
+  elaborado_por?: string | null;
+  revisado_por?: string | null;
+  aprovado_por_doc?: string | null;
   categoria?: RhPortalCategoria | null;
 };
 
@@ -132,14 +157,57 @@ const SUBTABS_COMUNICADO: SubtabCategoriaConfig[] = [
   { key: "eventos", label: "Eventos", slugs: ["eventos"] },
 ];
 
-/** Ordem fixa das sub-abas de Políticas (após «Todos»). */
-const SUBTABS_POLITICA: SubtabCategoriaConfig[] = [
-  { key: "conduta", label: "Conduta", slugs: ["conduta"] },
-  { key: "seguranca", label: "Segurança", slugs: ["seguranca"] },
-  { key: "bonificacao", label: "Bonificação", slugs: ["bonificacao", "beneficios_pol"] },
-  { key: "folha_pagamento", label: "Folha de Pagamento", slugs: ["folha_pagamento", "operacional"] },
-  { key: "rh", label: "RH", slugs: ["rh"] },
-];
+/** Ordem fixa dos filtros de documentos normativos (após «Todos»). */
+const SUBTAB_DOC_ICON: Record<string, ReactNode> = {
+  politica_rh: <UsersRound {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  procedimento: <ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  codigo: <BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  operacoes: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
+};
+
+function FiltroDocumentoTipoPills({
+  filtroAtivo,
+  onFiltro,
+}: {
+  filtroAtivo: string;
+  onFiltro: (key: string) => void;
+}) {
+  const tabKeys = ["todos", ...RH_DOCUMENTO_FILTRO_SUBTABS.map((c) => c.key)] as const;
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Filtrar por tipo de documento"
+      style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", width: "100%" }}
+      onKeyDown={(e) => onFiltroBarTabsKeyDown(e, tabKeys, onFiltro, (k) => `tab-rh-portal-doc-${k}`)}
+    >
+      <FiltroBarTabButton
+        id="tab-rh-portal-doc-todos"
+        active={filtroAtivo === "todos"}
+        onClick={() => onFiltro("todos")}
+        icon={<LayoutGrid {...FILTRO_BAR_TAB_ICON_PROPS} />}
+      >
+        Todos
+      </FiltroBarTabButton>
+      {RH_DOCUMENTO_FILTRO_SUBTABS.map((cfg) => {
+        const ativo = filtroAtivo === cfg.key;
+        const cor = cfg.tipos[0] ? tagTipoDocumentoCor(cfg.tipos[0]) : undefined;
+        return (
+          <FiltroBarTabButton
+            key={cfg.key}
+            id={`tab-rh-portal-doc-${cfg.key}`}
+            active={ativo}
+            onClick={() => onFiltro(cfg.key)}
+            activeColor={cor}
+            icon={SUBTAB_DOC_ICON[cfg.key] ?? <FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            {cfg.label}
+          </FiltroBarTabButton>
+        );
+      })}
+    </div>
+  );
+}
 
 function resolveCategoriaTab(
   cats: RhPortalCategoria[],
@@ -293,7 +361,12 @@ export default function PortalRhPage() {
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
+  const [modalDocRelacionados, setModalDocRelacionados] = useState<DocumentoRelacionadoView[]>([]);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
+  const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
+    col: "codigo",
+    dir: "asc",
+  });
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
 
@@ -474,7 +547,7 @@ export default function PortalRhPage() {
       case "politicas":
         return {
           placeholder: PAGE_SEARCH.portalRh,
-          ariaLabel: "Pesquisar políticas por assunto ou descrição",
+          ariaLabel: "Pesquisar documentos por código, título ou palavra-chave",
         };
       case "rhtalks":
         return {
@@ -507,12 +580,7 @@ export default function PortalRhPage() {
     }
     if (aba === "politicas") {
       return (
-        <FiltroSubtabPills
-          filtroAtivo={filtroCatPol}
-          onFiltro={setFiltroCatPol}
-          configs={SUBTABS_POLITICA}
-          categorias={categoriasPol}
-        />
+        <FiltroDocumentoTipoPills filtroAtivo={filtroCatPol} onFiltro={setFiltroCatPol} />
       );
     }
     if (aba === "gerenciamento" && perm.canEditarOk) {
@@ -531,7 +599,7 @@ export default function PortalRhPage() {
       );
     }
     return null;
-  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, categoriasPol, filtroTipoGer, filtroStatusGer, perm.canEditarOk]);
+  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, filtroTipoGer, filtroStatusGer, perm.canEditarOk]);
 
   useEffect(() => {
     if (comunicados.length > 0 && mesesCom.length > 0) setIdxMesCom(mesesCom.length - 1);
@@ -606,19 +674,25 @@ export default function PortalRhPage() {
       list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
     }
     if (filtroCatPol !== "todos") {
-      const cfg = SUBTABS_POLITICA.find((x) => x.key === filtroCatPol);
-      if (cfg) list = list.filter((d) => itemNaSubtabCategoria(d.categoria, cfg));
+      list = list.filter((d) => itemNoFiltroDocumento(d, filtroCatPol));
     }
     if (buscaDeb) {
       list = list.filter(
         (d) =>
           hitBuscaTexto(d.titulo) ||
+          hitBuscaTexto(d.codigo) ||
+          hitBuscaTexto(d.resumo) ||
           hitBuscaCorpo(d.corpo) ||
           hitBuscaTexto(d.introducao) ||
           hitBuscaTexto(d.categoria?.label) ||
           hitBuscaTexto(d.categoria?.slug),
       );
     }
+    list = [...list].sort((a, b) => {
+      const codA = a.codigo ?? a.titulo;
+      const codB = b.codigo ?? b.titulo;
+      return codA.localeCompare(codB, "pt-BR", { numeric: true });
+    });
     return list;
   }, [documentos, filtroCatPol, modoHistorico, mesesPol, idxMesPol, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
 
@@ -719,6 +793,45 @@ export default function PortalRhPage() {
   function metaAutor(uid: string | null | undefined): PortalRhAutorInfo | undefined {
     if (!uid) return undefined;
     return metaAutores[uid];
+  }
+
+  const cienciaPendenteDocIds = useMemo(() => {
+    const set = new Set<string>();
+    if (!user?.id) return set;
+    for (const d of documentosFiltrados) {
+      if (d.requires_acknowledgment && !receipts.get(receiptKey("documento", d.id))?.acknowledged_at) {
+        set.add(d.id);
+      }
+    }
+    return set;
+  }, [documentosFiltrados, receipts, user?.id]);
+
+  const cienciaRegistradaEm = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of documentosFiltrados) {
+      const rec = receipts.get(receiptKey("documento", d.id));
+      if (rec?.acknowledged_at) map.set(d.id, rec.acknowledged_at);
+    }
+    return map;
+  }, [documentosFiltrados, receipts]);
+
+  async function abrirDocumento(id: string) {
+    const doc = documentos.find((d) => d.id === id);
+    if (!doc) return;
+    setModalDoc(doc);
+    if (documentoUsaModeloNormativo(doc)) {
+      const rel = await carregarRelacionadosDocumentoPortal(supabase, doc.id);
+      setModalDocRelacionados(rel);
+    } else {
+      setModalDocRelacionados([]);
+    }
+  }
+
+  function handleSortDoc(col: "codigo" | "titulo" | "versao" | "ciencia") {
+    setSortDoc((prev) => ({
+      col,
+      dir: prev.col === col && prev.dir === "asc" ? "desc" : "asc",
+    }));
   }
 
   function podeVerAta(tk: RhPortalRhTalk): boolean {
@@ -897,27 +1010,28 @@ export default function PortalRhPage() {
                       : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                    {documentosFiltrados.map((d) => {
-                      const rec = user?.id ? receipts.get(receiptKey("documento", d.id)) : undefined;
-                      const isNovoCard = !rec?.acknowledged_at;
-                      const dataPub = d.published_at ?? d.updated_at;
-                      return (
-                        <li key={d.id}>
-                          <PoliticaCard
-                            titulo={d.titulo}
-                            introducao={d.introducao}
-                            categoria={d.categoria}
-                            autorInfo={metaAutor(autorIdPostagem(d))}
-                            dataPublicacao={dataPub}
-                            isNovo={isNovoCard}
-                            onAbrirLeitura={() => setModalDoc(d)}
-                            cardShadow={cardShadow}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <PortalRhDocumentosTabela
+                    rows={documentosFiltrados.map((d) => ({
+                      id: d.id,
+                      codigo: d.codigo ?? null,
+                      versao: d.versao ?? null,
+                      titulo: d.titulo,
+                      tipo_documento: d.tipo_documento ?? null,
+                      resumo: d.resumo ?? null,
+                      aplicavel_a: d.aplicavel_a ?? null,
+                      classificacao: d.classificacao ?? null,
+                      published_at: d.published_at ?? null,
+                      updated_at: d.updated_at,
+                      requires_acknowledgment: d.requires_acknowledgment,
+                      introducao: d.introducao,
+                      categoriaLabel: d.categoria?.label ?? null,
+                    }))}
+                    cienciaPendenteIds={cienciaPendenteDocIds}
+                    cienciaRegistradaEm={cienciaRegistradaEm}
+                    onAbrir={(id) => void abrirDocumento(id)}
+                    sort={sortDoc}
+                    onSort={handleSortDoc}
+                  />
                 )}
               </div>
             ) : (
@@ -958,22 +1072,51 @@ export default function PortalRhPage() {
       )}
 
       {modalDoc ? (
-        <ModalLerPolitica
-          titulo={modalDoc.titulo}
-          introducao={modalDoc.introducao}
-          corpo={modalDoc.corpo}
-          imagemPath={modalDoc.imagem_storage_path}
-          anexoPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
-          anexoNome={modalDoc.anexo_nome}
-          autorInfo={metaAutor(autorIdPostagem(modalDoc))}
-          dataPublicacao={modalDoc.published_at ?? modalDoc.updated_at}
-          aprovadorInfo={metaAutor(modalDoc.approved_by)}
-          dataAprovacao={modalDoc.approved_at}
-          temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
-          jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
-          onClose={() => setModalDoc(null)}
-          onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
-        />
+        documentoUsaModeloNormativo(modalDoc) ? (
+          <ModalVisualizarDocumento
+            codigo={modalDoc.codigo ?? null}
+            versao={modalDoc.versao ?? null}
+            titulo={modalDoc.titulo}
+            tipoDocumento={modalDoc.tipo_documento ?? null}
+            resumo={modalDoc.resumo ?? modalDoc.introducao ?? null}
+            areaResponsavel={modalDoc.area_responsavel ?? null}
+            classificacao={modalDoc.classificacao ?? null}
+            aplicavelA={modalDoc.aplicavel_a ?? null}
+            dataEmissao={modalDoc.data_emissao ?? null}
+            dataPublicacao={modalDoc.published_at ?? modalDoc.updated_at}
+            elaboradoPor={modalDoc.elaborado_por ?? null}
+            revisadoPor={modalDoc.revisado_por ?? null}
+            aprovadoPorDoc={modalDoc.aprovado_por_doc ?? null}
+            pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
+            pdfNome={modalDoc.anexo_nome ?? null}
+            relacionados={modalDocRelacionados}
+            autorInfo={metaAutor(autorIdPostagem(modalDoc))}
+            exigeCiencia={modalDoc.requires_acknowledgment}
+            jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
+            onClose={() => {
+              setModalDoc(null);
+              setModalDocRelacionados([]);
+            }}
+            onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
+          />
+        ) : (
+          <ModalLerPolitica
+            titulo={modalDoc.titulo}
+            introducao={modalDoc.introducao}
+            corpo={modalDoc.corpo}
+            imagemPath={modalDoc.imagem_storage_path}
+            anexoPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
+            anexoNome={modalDoc.anexo_nome}
+            autorInfo={metaAutor(autorIdPostagem(modalDoc))}
+            dataPublicacao={modalDoc.published_at ?? modalDoc.updated_at}
+            aprovadorInfo={metaAutor(modalDoc.approved_by)}
+            dataAprovacao={modalDoc.approved_at}
+            temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
+            jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
+            onClose={() => setModalDoc(null)}
+            onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
+          />
+        )
       ) : null}
 
       {modalTalk ? (

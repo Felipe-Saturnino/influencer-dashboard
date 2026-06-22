@@ -508,3 +508,10 @@
   padding-bottom: 8px;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Portal RH — viewer de documento normativo */
+@media (max-width: 900px) {
+  .app-portal-rh-doc-viewer {
+    grid-template-columns: 1fr !important;
+  }
+}

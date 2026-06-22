@@ -22,6 +22,7 @@ import {
   type RhPostagemTipoUi,
 } from "../../../lib/portalRhWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { labelTipoDocumentoPortal, type RhDocumentoTipo } from "../../../lib/portalRhDocumentoNormativo";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
@@ -211,7 +212,7 @@ export function GerenciamentoPostagens({
         .order("created_at", { ascending: false }),
       supabase
         .from("rh_portal_documento")
-        .select("id, titulo, corpo, introducao, status, created_at, published_at, approved_at, approved_by, created_by, categoria:rh_portal_categoria(slug)")
+        .select("id, titulo, corpo, introducao, resumo, status, created_at, published_at, approved_at, approved_by, created_by, codigo, versao, tipo_documento, categoria:rh_portal_categoria(slug)")
         .order("created_at", { ascending: false }),
       supabase
         .from("rh_portal_rh_talk")
@@ -279,24 +280,35 @@ export function GerenciamentoPostagens({
         approved_at: string | null;
         approved_by: string | null;
         created_by: string | null;
+        codigo: string | null;
+        versao: string | null;
+        tipo_documento: RhDocumentoTipo | null;
+        resumo: string | null;
         categoria?: { slug: string } | { slug: string }[] | null;
       };
       const catSlug = Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug;
       if (row.created_by) userIds.add(row.created_by);
       if (row.approved_by) userIds.add(row.approved_by);
+      const tipoLabel = row.codigo
+        ? `${row.codigo}${row.versao ? ` v${row.versao}` : ""}`
+        : row.tipo_documento
+          ? labelTipoDocumentoPortal(row.tipo_documento)
+          : labelPoliticaFromSlug(catSlug ?? "");
       built.push({
         id: row.id,
         contentType: "documento",
         tipoUi: "politica",
         assunto: row.titulo,
         autorNome: "",
-        tipoPostagemLabel: labelPoliticaFromSlug(catSlug ?? ""),
+        tipoPostagemLabel: tipoLabel,
         createdAt: row.created_at,
         status: row.status ?? "publicado",
         approvedAt: row.approved_at,
         aprovadorNome: "",
         publishedAt: row.published_at,
-        textoBusca: normalizarTextoBusca(`${row.titulo} ${row.introducao ?? ""} ${stripHtmlText(row.corpo ?? "")}`),
+        textoBusca: normalizarTextoBusca(
+          `${row.titulo} ${row.codigo ?? ""} ${row.resumo ?? row.introducao ?? ""} ${stripHtmlText(row.corpo ?? "")}`,
+        ),
         _autorId: row.created_by,
         _aprovadorId: row.approved_by,
       } as PostagemGerenciamentoRow & { _autorId?: string | null; _aprovadorId?: string | null });

@@ -10,6 +10,18 @@ import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFo
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import {
+  documentoUsaModeloNormativo,
+  sincronizarRelacionadosDocumentoPortal,
+  validarPublicarDocumentoNormativo,
+  type RhDocumentoClassificacao,
+  type RhDocumentoNormativoCampos,
+  type RhDocumentoTipo,
+} from "../../../lib/portalRhDocumentoNormativo";
+import {
+  FORM_POLITICA_NORMATIVA_VAZIO,
+  ModalFormPoliticaNormativa,
+} from "./ModalFormPoliticaNormativa";
+import {
   contentTypeFromTipoUi,
   diffEdicaoRascunho,
   labelComunicadoFromSlug,
@@ -30,7 +42,6 @@ import {
   type RhPostagemTipoUi,
   type SnapshotPostagemEdicao,
   TIPOS_COMUNICADO,
-  TIPOS_POLITICA,
 } from "../../../lib/portalRhWorkflow";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
@@ -85,6 +96,13 @@ export function ModalCriarPostagem({
   const [erro, setErro] = useState<string | null>(null);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const [snapshotEdicao, setSnapshotEdicao] = useState<SnapshotPostagemEdicao | null>(null);
+  const [normativo, setNormativo] = useState<RhDocumentoNormativoCampos>(FORM_POLITICA_NORMATIVA_VAZIO);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [legadoPolitica, setLegadoPolitica] = useState(false);
+  const [codigosExistentes, setCodigosExistentes] = useState<string[]>([]);
+  const [documentosCatalogo, setDocumentosCatalogo] = useState<
+    { id: string; codigo: string | null; titulo: string; versao: string | null }[]
+  >([]);
 
   const buildSnapshot = useCallback(
     (paths: { imagem: string | null; anexo: string | null; anexoNome: string | null }): SnapshotPostagemEdicao | null => {
@@ -122,6 +140,9 @@ export function ModalCriarPostagem({
     setFieldErr({});
     setErro(null);
     setSnapshotEdicao(null);
+    setNormativo(FORM_POLITICA_NORMATIVA_VAZIO);
+    setPdfFile(null);
+    setLegadoPolitica(false);
   }, []);
 
   const aplicarSnapshotAposCarga = (
@@ -130,6 +151,19 @@ export function ModalCriarPostagem({
   ) => {
     setSnapshotEdicao({ tipoPostagem: tipoUi, ...snap });
   };
+
+  useEffect(() => {
+    if (!open || tipoPostagem !== "politica") return;
+    void (async () => {
+      const { data } = await supabase
+        .from("rh_portal_documento")
+        .select("id, codigo, titulo, versao, status")
+        .neq("status", "arquivado");
+      const rows = (data ?? []) as { id: string; codigo: string | null; titulo: string; versao: string | null }[];
+      setCodigosExistentes(rows.map((r) => r.codigo ?? "").filter(Boolean));
+      setDocumentosCatalogo(rows.filter((r) => r.id !== editRef?.id));
+    })();
+  }, [open, tipoPostagem, editRef?.id]);
 
   const carregarEdicao = useCallback(async (ref: PostagemEditRef) => {
     setLoadingData(true);
@@ -183,8 +217,8 @@ export function ModalCriarPostagem({
         .select("*, categoria:rh_portal_categoria(slug)")
         .eq("id", ref.id)
         .single();
-      setLoadingData(false);
       if (error || !data) {
+        setLoadingData(false);
         console.error("[ModalCriarPostagem] carregar documento:", error);
         setErro(ERRO_CARREGAR_EDICAO);
         return;
@@ -193,35 +227,95 @@ export function ModalCriarPostagem({
         titulo: string;
         corpo: string | null;
         introducao: string | null;
+        resumo: string | null;
         status: RhPostagemStatus;
         requer_aprovacao: boolean;
+        requires_acknowledgment: boolean;
         imagem_storage_path: string | null;
         anexo_storage_path: string | null;
         anexo_nome: string | null;
+        codigo: string | null;
+        versao: string | null;
+        tipo_documento: RhDocumentoTipo | null;
+        area_responsavel: string | null;
+        classificacao: RhDocumentoClassificacao | null;
+        aplicavel_a: string[] | null;
+        data_emissao: string | null;
+        elaborado_por: string | null;
+        revisado_por: string | null;
+        aprovado_por_doc: string | null;
         categoria?: { slug: string } | null;
       };
-      setAssunto(row.titulo);
-      setDescricao(row.corpo ?? "");
-      setIntroducao(row.introducao ?? "");
+      const usaNormativo = documentoUsaModeloNormativo(row);
+      setLegadoPolitica(!usaNormativo);
       setStatusAtual(row.status);
-      const reqApr = requerAprovacaoLabelFromDb(row.requer_aprovacao);
-      setRequerAprovacao(reqApr);
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
-      const tipoPol = labelPoliticaFromSlug(row.categoria?.slug ?? "");
-      setTipoPolitica(tipoPol);
-      aplicarSnapshotAposCarga("politica", {
-        tipoComunicado: "",
-        tipoPolitica: tipoPol,
-        requerAprovacao: reqApr,
-        assunto: row.titulo,
-        introducao: row.introducao ?? "",
-        descricao: row.corpo ?? "",
-        imagemPath: row.imagem_storage_path,
-        anexoPath: row.anexo_storage_path,
-        anexoNome: row.anexo_nome,
-      });
+      setPdfFile(null);
+
+      if (usaNormativo) {
+        const reqApr = requerAprovacaoLabelFromDb(row.requer_aprovacao);
+        const exige = requerAprovacaoLabelFromDb(row.requires_acknowledgment);
+        const { data: relData } = await supabase
+          .from("rh_portal_documento_relacao")
+          .select("relacionado_id")
+          .eq("documento_id", ref.id);
+        const relacionadosIds = (relData ?? []).map((r) => (r as { relacionado_id: string }).relacionado_id);
+        const norm: RhDocumentoNormativoCampos = {
+          tipoDocumento: row.tipo_documento ?? "",
+          codigo: row.codigo ?? "",
+          versao: row.versao ?? "1.0",
+          dataEmissao: row.data_emissao ?? "",
+          titulo: row.titulo,
+          areaResponsavel: row.area_responsavel ?? "",
+          classificacao: row.classificacao ?? "",
+          aplicavelA: row.aplicavel_a ?? [],
+          resumo: row.resumo ?? row.introducao ?? "",
+          pdfPath: row.anexo_storage_path,
+          pdfNome: row.anexo_nome,
+          exigeCiencia: exige,
+          requerAprovacao: reqApr,
+          elaboradoPor: row.elaborado_por ?? "",
+          revisadoPor: row.revisado_por ?? "",
+          aprovadoPorDoc: row.aprovado_por_doc ?? "",
+          relacionadosIds,
+        };
+        setNormativo(norm);
+        setAssunto(row.titulo);
+        setRequerAprovacao(reqApr);
+        aplicarSnapshotAposCarga("politica", {
+          tipoComunicado: "",
+          tipoPolitica: row.tipo_documento ?? "",
+          requerAprovacao: reqApr,
+          assunto: row.titulo,
+          introducao: norm.resumo,
+          descricao: "",
+          imagemPath: row.imagem_storage_path,
+          anexoPath: row.anexo_storage_path,
+          anexoNome: row.anexo_nome,
+        });
+      } else {
+        setAssunto(row.titulo);
+        setDescricao(row.corpo ?? "");
+        setIntroducao(row.introducao ?? "");
+        const reqApr = requerAprovacaoLabelFromDb(row.requer_aprovacao);
+        setRequerAprovacao(reqApr);
+        const tipoPol = labelPoliticaFromSlug(row.categoria?.slug ?? "");
+        setTipoPolitica(tipoPol);
+        aplicarSnapshotAposCarga("politica", {
+          tipoComunicado: "",
+          tipoPolitica: tipoPol,
+          requerAprovacao: reqApr,
+          assunto: row.titulo,
+          introducao: row.introducao ?? "",
+          descricao: row.corpo ?? "",
+          imagemPath: row.imagem_storage_path,
+          anexoPath: row.anexo_storage_path,
+          anexoNome: row.anexo_nome,
+        });
+      }
+      setLoadingData(false);
     } else {
       const { data, error } = await supabase.from("rh_portal_rh_talk").select("*").eq("id", ref.id).single();
       setLoadingData(false);
@@ -317,7 +411,9 @@ export function ModalCriarPostagem({
       acao === "salvar"
         ? "rascunho"
         : tipoPostagem === "politica"
-          ? statusPosPublicar(requerAprovacaoEhSim(requerAprovacao))
+          ? statusPosPublicar(
+              legadoPolitica ? requerAprovacaoEhSim(requerAprovacao) : requerAprovacaoEhSim(normativo.requerAprovacao),
+            )
           : "publicado";
 
     if (acao === "publicar") {
@@ -325,7 +421,15 @@ export function ModalCriarPostagem({
       if (tipoPostagem === "comunicado") {
         errs = validarPublicarComunicado({ tipoComunicado, assunto, descricao });
       } else if (tipoPostagem === "politica") {
-        errs = validarPublicarPolitica({ tipoPolitica, requerAprovacao, assunto, introducao, descricao });
+        if (legadoPolitica) {
+          errs = validarPublicarPolitica({ tipoPolitica, requerAprovacao, assunto, introducao, descricao });
+        } else {
+          errs = validarPublicarDocumentoNormativo({
+            ...normativo,
+            pdfPath: normativo.pdfPath ?? (pdfFile ? "pending" : null),
+            pdfNome: normativo.pdfNome ?? pdfFile?.name ?? null,
+          });
+        }
       } else {
         errs = validarPublicarRhTalk({ assunto, introducao, descricao });
       }
@@ -400,43 +504,118 @@ export function ModalCriarPostagem({
           }
         }
       } else if (tipoPostagem === "politica") {
-        const catId = resolveCategoriaId("politica", slugPoliticaFromLabel(tipoPolitica));
-        if (!catId) {
-          setErro("Categoria de política indisponível.");
-          setSalvando(false);
-          return;
-        }
-        const reqApr = requerAprovacaoEhSim(requerAprovacao);
-        const payload = {
-          titulo: assunto.trim() || "Rascunho",
-          corpo: descricao,
-          introducao: introducao.trim() || null,
-          categoria_id: catId,
-          status: novoStatus,
-          requer_aprovacao: reqApr,
-          imagem_storage_path: up.imagem,
-          anexo_storage_path: up.anexo,
-          anexo_nome: up.anexoNomeOut,
-          created_by: user.id,
-          published_at: novoStatus === "publicado" ? now : null,
-          updated_by: user.id,
-        };
-        if (modo === "editar" && editRef) {
-          const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
-          if (error) {
-            console.error("[ModalCriarPostagem] salvar documento:", error);
+        if (legadoPolitica) {
+          const catId = resolveCategoriaId("politica", slugPoliticaFromLabel(tipoPolitica));
+          if (!catId) {
+            setErro("Categoria de política indisponível.");
             setSalvando(false);
-            setErro(ERRO_SALVAR);
             return;
           }
-          await registrarEdicoesRascunho(editRef.id);
-          if (statusAnterior !== novoStatus) {
-            await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
+          const reqApr = requerAprovacaoEhSim(requerAprovacao);
+          const payload = {
+            titulo: assunto.trim() || "Rascunho",
+            corpo: descricao,
+            introducao: introducao.trim() || null,
+            categoria_id: catId,
+            status: novoStatus,
+            requer_aprovacao: reqApr,
+            imagem_storage_path: up.imagem,
+            anexo_storage_path: up.anexo,
+            anexo_nome: up.anexoNomeOut,
+            created_by: user.id,
+            published_at: novoStatus === "publicado" ? now : null,
+            updated_by: user.id,
+          };
+          if (modo === "editar" && editRef) {
+            const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
+            if (error) {
+              console.error("[ModalCriarPostagem] salvar documento legado:", error);
+              setSalvando(false);
+              setErro(ERRO_SALVAR);
+              return;
+            }
+            await registrarEdicoesRascunho(editRef.id);
+            if (statusAnterior !== novoStatus) {
+              await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
+            }
+          } else {
+            const { error } = await supabase.from("rh_portal_documento").insert(payload);
+            if (error) {
+              console.error("[ModalCriarPostagem] inserir documento legado:", error);
+              setSalvando(false);
+              setErro(ERRO_SALVAR);
+              return;
+            }
           }
         } else {
-          const { error } = await supabase.from("rh_portal_documento").insert(payload);
-          if (error) {
-            console.error("[ModalCriarPostagem] inserir documento:", error);
+          let pdfPath = normativo.pdfPath;
+          let pdfNome = normativo.pdfNome;
+          if (pdfFile) {
+            const upPdf = await uploadPortalRhAsset(pdfFile, "pdfs");
+            if (upPdf.error) {
+              console.error("[ModalCriarPostagem] upload pdf:", upPdf.error);
+              setSalvando(false);
+              setErro(ERRO_UPLOAD);
+              return;
+            }
+            pdfPath = upPdf.path;
+            pdfNome = pdfFile.name;
+          }
+          const reqApr = requerAprovacaoEhSim(normativo.requerAprovacao);
+          const payload = {
+            titulo: normativo.titulo.trim() || "Rascunho",
+            codigo: normativo.codigo.trim().toUpperCase(),
+            versao: normativo.versao.trim() || "1.0",
+            tipo_documento: normativo.tipoDocumento,
+            area_responsavel: normativo.areaResponsavel.trim(),
+            classificacao: normativo.classificacao,
+            aplicavel_a: normativo.aplicavelA,
+            resumo: normativo.resumo.trim(),
+            introducao: normativo.resumo.trim(),
+            data_emissao: normativo.dataEmissao.trim(),
+            elaborado_por: normativo.elaboradoPor.trim() || null,
+            revisado_por: normativo.revisadoPor.trim() || null,
+            aprovado_por_doc: normativo.aprovadoPorDoc.trim() || null,
+            corpo: null,
+            categoria_id: null,
+            status: novoStatus,
+            requer_aprovacao: reqApr,
+            requires_acknowledgment: requerAprovacaoEhSim(normativo.exigeCiencia),
+            anexo_storage_path: pdfPath,
+            anexo_nome: pdfNome,
+            storage_path: pdfPath,
+            imagem_storage_path: null,
+            created_by: user.id,
+            published_at: novoStatus === "publicado" ? now : null,
+            updated_by: user.id,
+          };
+          let docId = editRef?.id ?? "";
+          if (modo === "editar" && editRef) {
+            const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
+            if (error) {
+              console.error("[ModalCriarPostagem] salvar documento normativo:", error);
+              setSalvando(false);
+              setErro(ERRO_SALVAR);
+              return;
+            }
+            docId = editRef.id;
+            await registrarEdicoesRascunho(docId);
+            if (statusAnterior !== novoStatus) {
+              await registrarHistoricoStatus(supabase, ct, docId, statusAnterior, novoStatus, user.id);
+            }
+          } else {
+            const { data: inserted, error } = await supabase.from("rh_portal_documento").insert(payload).select("id").single();
+            if (error || !inserted) {
+              console.error("[ModalCriarPostagem] inserir documento normativo:", error);
+              setSalvando(false);
+              setErro(ERRO_SALVAR);
+              return;
+            }
+            docId = (inserted as { id: string }).id;
+          }
+          const relErr = await sincronizarRelacionadosDocumentoPortal(supabase, docId, normativo.relacionadosIds);
+          if (relErr) {
+            console.error("[ModalCriarPostagem] relacionados:", relErr);
             setSalvando(false);
             setErro(ERRO_SALVAR);
             return;
@@ -527,8 +706,10 @@ export function ModalCriarPostagem({
   const selectStyle: CSSProperties = { ...inputStyle, cursor: "pointer" };
   const tipoLocked = modo === "editar";
 
+  const modalLargura = tipoPostagem === "politica" && !legadoPolitica ? 720 : 640;
+
   return (
-    <ModalBase maxWidth={640} onClose={onClose} zIndex={1100}>
+    <ModalBase maxWidth={modalLargura} onClose={onClose} zIndex={1100}>
       <ModalHeader title={modo === "editar" ? "Editar postagem" : "Criar postagem"} onClose={onClose} />
 
       {loadingData ? (
@@ -549,7 +730,11 @@ export function ModalCriarPostagem({
               id="mp-tipo-post"
               value={tipoPostagem}
               disabled={tipoLocked}
-              onChange={(e) => setTipoPostagem(e.target.value as RhPostagemTipoUi | "")}
+              onChange={(e) => {
+                const v = e.target.value as RhPostagemTipoUi | "";
+                setTipoPostagem(v);
+                if (v === "politica" && modo === "criar") setLegadoPolitica(false);
+              }}
               style={selectStyle}
               aria-label="Tipo de postagem"
             >
@@ -602,7 +787,7 @@ export function ModalCriarPostagem({
             </>
           ) : null}
 
-          {tipoPostagem === "politica" ? (
+          {tipoPostagem === "politica" && legadoPolitica ? (
             <>
               <div>
                 {lbl("mp-tipo-pol", "Tipo de Política/Normativa", true)}
@@ -614,7 +799,7 @@ export function ModalCriarPostagem({
                   aria-label="Tipo de política ou normativa"
                 >
                   <option value="">Selecione…</option>
-                  {TIPOS_POLITICA.map((v) => (
+                  {["Conduta", "Segurança", "Bonificação", "Folha de Pagamento", "RH"].map((v) => (
                     <option key={v} value={v}>
                       {v}
                     </option>
@@ -673,6 +858,21 @@ export function ModalCriarPostagem({
             </>
           ) : null}
 
+          {tipoPostagem === "politica" && !legadoPolitica ? (
+            <ModalFormPoliticaNormativa
+              values={normativo}
+              onChange={(patch) => setNormativo((prev) => ({ ...prev, ...patch }))}
+              fieldErr={fieldErr}
+              inputStyle={inputStyle}
+              selectStyle={selectStyle}
+              codigosExistentes={codigosExistentes}
+              documentosParaRelacionar={documentosCatalogo}
+              pdfFile={pdfFile}
+              onPdfFileChange={setPdfFile}
+              pdfNomeAtual={normativo.pdfNome}
+            />
+          ) : null}
+
           {tipoPostagem === "rh_talk" ? (
             <>
               <div>
@@ -713,7 +913,7 @@ export function ModalCriarPostagem({
             </>
           ) : null}
 
-          {tipoPostagem ? (
+          {tipoPostagem && (tipoPostagem !== "politica" || legadoPolitica) ? (
             <>
               <div>
                 {lbl("mp-imagem", "Imagem")}

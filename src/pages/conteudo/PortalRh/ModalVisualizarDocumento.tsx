@@ -1,0 +1,331 @@
+import { useEffect, useState } from "react";
+import { Download, ExternalLink, Loader2 } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
+import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { urlAssinadaPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
+import { fmtDataPt } from "../../../lib/portalRhWorkflow";
+import {
+  fmtAplicavelDocumento,
+  labelClassificacaoDocumento,
+  labelTipoDocumentoPortal,
+  tagTipoDocumentoCor,
+  type RhDocumentoClassificacao,
+  type RhDocumentoTipo,
+} from "../../../lib/portalRhDocumentoNormativo";
+import { linhaMetaAutorPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
+
+export type DocumentoRelacionadoView = {
+  id: string;
+  codigo: string | null;
+  titulo: string;
+  versao: string | null;
+};
+
+export function ModalVisualizarDocumento({
+  codigo,
+  versao,
+  titulo,
+  tipoDocumento,
+  resumo,
+  areaResponsavel,
+  classificacao,
+  aplicavelA,
+  dataEmissao,
+  dataPublicacao,
+  elaboradoPor,
+  revisadoPor,
+  aprovadoPorDoc,
+  pdfPath,
+  pdfNome,
+  relacionados,
+  autorInfo,
+  exigeCiencia,
+  jaCiente,
+  onClose,
+  onCiente,
+}: {
+  codigo: string | null;
+  versao: string | null;
+  titulo: string;
+  tipoDocumento: RhDocumentoTipo | null;
+  resumo: string | null;
+  areaResponsavel: string | null;
+  classificacao: RhDocumentoClassificacao | null;
+  aplicavelA: string[] | null;
+  dataEmissao: string | null;
+  dataPublicacao: string | null;
+  elaboradoPor: string | null;
+  revisadoPor: string | null;
+  aprovadoPorDoc: string | null;
+  pdfPath: string | null;
+  pdfNome: string | null;
+  relacionados: DocumentoRelacionadoView[];
+  autorInfo: PortalRhAutorInfo | undefined;
+  exigeCiencia: boolean;
+  jaCiente: boolean;
+  onClose: () => void;
+  onCiente: () => void;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingPdf(true);
+    void (async () => {
+      const url = await urlAssinadaPortalRhAsset(pdfPath);
+      if (!cancelled) {
+        setPdfUrl(url);
+        setLoadingPdf(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfPath]);
+
+  const tagCor = tagTipoDocumentoCor(tipoDocumento);
+  const tituloModal = codigo ? `${codigo}${versao ? ` · v${versao}` : ""}` : titulo;
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={1100}>
+      <div style={{ margin: "-28px" }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
+        <ModalHeader title={tituloModal} onClose={onClose} />
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            {tipoDocumento ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  padding: "3px 9px",
+                  borderRadius: 20,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: `${tagCor}22`,
+                  color: tagCor,
+                  border: `1px solid ${tagCor}44`,
+                }}
+              >
+                {labelTipoDocumentoPortal(tipoDocumento)}
+              </span>
+            ) : null}
+            {classificacao ? (
+              <span style={{ fontSize: 11, color: t.textMuted }}>{labelClassificacaoDocumento(classificacao)}</span>
+            ) : null}
+          </div>
+          <div style={{ fontSize: 17, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.3 }}>{titulo}</div>
+        </div>
+      </div>
+
+      <div className="app-portal-rh-doc-viewer" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", minHeight: 480 }}>
+        <div style={{ background: "#525659", display: "flex", flexDirection: "column", minHeight: 420 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 14px",
+              color: "#fff",
+              fontSize: 12,
+              borderBottom: "1px solid rgba(255,255,255,.12)",
+            }}
+          >
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {pdfNome ?? "Documento PDF"}
+            </span>
+            {pdfUrl ? (
+              <>
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,.25)",
+                  }}
+                >
+                  <ExternalLink size={13} aria-hidden />
+                  Nova aba
+                </a>
+                <a
+                  href={pdfUrl}
+                  download={pdfNome ?? undefined}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,.25)",
+                  }}
+                >
+                  <Download size={13} aria-hidden />
+                  Baixar
+                </a>
+              </>
+            ) : null}
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "stretch", justifyContent: "center", padding: 12 }}>
+            {loadingPdf ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", color: "#fff" }}>
+                <Loader2 size={22} className="app-lucide-spin" aria-hidden />
+                <span style={{ marginLeft: 8, fontSize: 13 }}>Carregando PDF…</span>
+              </div>
+            ) : pdfUrl ? (
+              <iframe
+                title={`Visualização de ${titulo}`}
+                src={pdfUrl}
+                style={{ width: "100%", minHeight: 420, border: "none", borderRadius: 4, background: "#fff" }}
+              />
+            ) : (
+              <div style={{ color: "#fff", fontSize: 13, alignSelf: "center" }}>Não foi possível carregar o PDF.</div>
+            )}
+          </div>
+        </div>
+
+        <aside style={{ padding: 16, borderLeft: `1px solid ${t.cardBorder}`, overflowY: "auto", background: t.cardBg }}>
+          {resumo?.trim() ? (
+            <MetaBlock label="Resumo">
+              <p style={{ fontSize: 12, lineHeight: 1.5, margin: 0, color: t.text }}>{resumo.trim()}</p>
+            </MetaBlock>
+          ) : null}
+          <MetaBlock label="Metadados">
+            <MetaRow label="Área" value={areaResponsavel ?? "—"} />
+            <MetaRow label="Aplicável a" value={fmtAplicavelDocumento(aplicavelA)} />
+            <MetaRow label="Emissão" value={dataEmissao ?? "—"} />
+            <MetaRow label="Publicado" value={fmtDataPt(dataPublicacao)} />
+          </MetaBlock>
+          {elaboradoPor || revisadoPor || aprovadoPorDoc ? (
+            <MetaBlock label="Aprovações">
+              {elaboradoPor ? <MetaRow label="Elaborado" value={elaboradoPor} /> : null}
+              {revisadoPor ? <MetaRow label="Revisado" value={revisadoPor} /> : null}
+              {aprovadoPorDoc ? <MetaRow label="Aprovado" value={aprovadoPorDoc} /> : null}
+            </MetaBlock>
+          ) : null}
+          {relacionados.length > 0 ? (
+            <MetaBlock label="Documentos relacionados">
+              {relacionados.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    fontSize: 12,
+                    padding: "6px 0",
+                    borderBottom: `1px solid ${t.cardBorder}`,
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "baseline",
+                  }}
+                >
+                  <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--brand-primary, #7c3aed)" }}>
+                    {r.codigo ?? "—"}
+                  </span>
+                  <span style={{ color: t.text, flex: 1 }}>{r.titulo}</span>
+                </div>
+              ))}
+            </MetaBlock>
+          ) : null}
+          {autorInfo ? (
+            <MetaBlock label="Publicação">
+              <p style={{ fontSize: 12, color: t.textMuted, margin: 0 }}>{linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}</p>
+            </MetaBlock>
+          ) : null}
+        </aside>
+      </div>
+
+      {exigeCiencia ? (
+        <div
+          style={{
+            padding: "14px 20px",
+            borderTop: `1px solid ${t.cardBorder}`,
+            background: "color-mix(in srgb, #f59e0b 8%, #fff)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <p style={{ fontSize: 12, color: t.text, margin: 0, maxWidth: 560, fontFamily: FONT.body }}>
+            {jaCiente ? (
+              <strong style={{ color: "#22c55e" }}>Ciência registrada.</strong>
+            ) : (
+              <>
+                <strong>Ciência obrigatória.</strong> Ao confirmar, você declara ter lido o documento oficial (PDF) e estar ciente das regras aplicáveis.
+              </>
+            )}
+          </p>
+          {!jaCiente ? (
+            <button
+              type="button"
+              onClick={onCiente}
+              style={{
+                background: ctaGradientPortalRh(brand),
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 20px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+              }}
+            >
+              Li e estou ciente
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      </div>
+    </ModalBase>
+  );
+}
+
+function MetaBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: t.textMuted,
+          marginBottom: 8,
+          fontFamily: FONT.body,
+        }}
+      >
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, marginBottom: 6, fontFamily: FONT.body }}>
+      <span style={{ color: t.textMuted }}>{label}</span>
+      <span style={{ color: t.text, textAlign: "right" }}>{value}</span>
+    </div>
+  );
+}

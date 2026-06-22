@@ -661,7 +661,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Políticas e Normativas",
         texto:
-          "Lista documentos oficiais como códigos de conduta, políticas de segurança, normas de bonificação e folha de pagamento.\n\nClique em Ler Política/Normativa para abrir o documento completo. No modal, você pode ler a introdução, a descrição completa e acessar anexos. Ao clicar em Lido e Ciente, a plataforma registra a sua confirmação de leitura. O badge Novo some após isso.",
+          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em tabela com código, versão, tipo e aplicabilidade.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique em Abrir para visualizar o PDF publicado no modal — metadados da capa, documentos relacionados e botão Li e estou ciente quando a ciência for exigida. Documentos antigos sem código continuam abrindo no formato anterior (texto + anexo opcional).",
       },
       {
         subtitulo: "RH Talks",
@@ -676,7 +676,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Criar e Publicar Postagens",
         texto:
-          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).\n\nÉ possível anexar uma imagem e um arquivo a qualquer tipo de postagem.",
+          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nPolíticas e normativas novas usam cadastro normativo: tipo de documento, código, versão, PDF obrigatório, área responsável, classificação, aplicabilidade, resumo e documentos relacionados. Comunicados e RH Talks mantêm o editor de texto e anexos opcionais.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).",
       },
     ],
   },
@@ -859,17 +859,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** consolida KPIs, funil, produtos Live Cassino, mapa por UF, carteira por comercial, marcas recentes e alertas acionáveis. É **somente leitura** — edição de marcas e contatos permanece no **Pipeline B2B**. O acesso depende da permissão de Ver em Gestão de Usuários (página independente do Pipeline).",
+          "O **Overview Comercial** consolida KPIs, funil, produtos Live Cassino, mapa por UF, carteira por comercial, marcas recentes e movimentação do histórico. É **somente leitura** — edição permanece no **Pipeline B2B**.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Use **Comercial** para restringir ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor canónico). **UF** filtra pela sede do CNPJ (UF preenchida pelo enriquecimento de cadastro). Os chips de status (Disponíveis, Conexão, Negociação, Fechado) refinam todos os blocos; clique de novo no chip ativo para voltar a **Todos**.",
+          "Use **Comercial** para restringir ao responsável interno. **Estados** lista os 27 UFs (**Todos Estados** por defeito). Os chips de status refinam todos os blocos.",
       },
       {
-        subtitulo: "Mapa e prioridades",
+        subtitulo: "Mapa e movimentação",
         texto:
-          "No bloco **Distribuição geográfica**, clique em um estado no mapa ou na lista para ver as empresas (razão social) da região. KPIs e linhas de **Prioridades & alertas** com link **Ver pipeline** abrem o **Pipeline B2B** na aba correspondente quando aplicável.",
+          "No bloco **Distribuição geográfica**, clique em um estado para ver as **marcas** com sede na região. Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
       },
     ],
   },
