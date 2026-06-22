@@ -18,7 +18,7 @@ alwaysApply: false
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
-| `comercial_overview` | Overview Comercial | Visão consolidada do funil B2B, produtos Live Cassino e prioridades da equipe comercial. |
+| `comercial_overview` | Overview Comercial | Visão consolidada do funil B2B, produtos Live Cassino e carteira da equipe comercial. |
 | `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
 
 ---
@@ -41,7 +41,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 ### Filtros (bloco nível 2)
 
 - **Comercial:** `FiltroBarCampoSelect` + ícone `User` — **Todos Comerciais** (default), **Nenhum** + nomes canónicos (`PIPELINE_COMERCIAL_NOMES`).
-- **UF:** `FiltroBarCampoSelect` + ícone `MapPin` — agregadora **Todas UFs**; opções derivadas de `comercial_empresas.estado` (enriquecimento CNPJ).
+- **UF:** `FiltroBarCampoSelect` + ícone `MapPin` — agregadora **Todos Estados**; lista fixa dos 27 estados (`UF_FILTRO_OPTIONS`).
 - **Status pipeline:** `FiltroSemanticoTabPill` — Todos + Disponíveis / Conexão / Negociação / Fechado (cores `PIPELINE_COLOR`); toggle off no segundo clique.
 - **Alinhamento:** centralizado — Global § Filtros.
 
@@ -49,14 +49,13 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 | Bloco | Conteúdo |
 |-------|----------|
-| KPIs consolidados | Empresas (CNPJs únicos), Marcas, Site ativo, Negociação, Fechado, Sem comercial — clique navega para Pipeline B2B (aba correspondente quando aplicável). |
-| Funil do pipeline | SVG funil + taxas de conversão entre etapas (estoque filtrado). |
-| Produto Dedicada × Network | Barras por `STATUS_PRODUTO_ORDEM` / `STATUS_PRODUTO_COLOR`. |
-| Distribuição geográfica | Mapa SVG Brasil (`src/assets/comercial/brazil-states-paths.json`) + lista UF; clique no mapa ou linha lista empresas (razão social) da região. |
-| Carteira por comercial | Barras por comercial canónico + «Nenhum»; clique → Pipeline B2B. |
-| Novas marcas | Marcas com `created_at` nos últimos 30 dias. |
-| Prioridades & alertas | Tabela canónica (até 15 linhas): sem contato, site offline, sem comercial, oportunidade (contrato enviado). |
-| Movimentação recente | Contagens em `comercial_marca_historico` (30 dias): → Negociação, → Fechado, sem interesse, total. |
+| KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado, Sem comercial — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
+| Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
+| Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` + linha **Sem Status** (coluna vazia). |
+| Distribuição geográfica | Mapa + lista UF; clique lista **marcas** com sede na região (intensidade = empresas). |
+| Carteira por comercial | Barras por comercial canónico + «Nenhum» — **sem** link para Pipeline. |
+| Novas marcas | `created_at` ≥ **20/06/2026** (corte pontual pós-import); badge = status pipeline (`PIPELINE_TAB_LABEL` / `PIPELINE_COLOR`). |
+| Movimentação recente | Histórico 30 dias; hover no número abre pop-up com nomes das marcas alteradas (respeita filtros). |
 
 ### Estados de vazio (secção)
 
@@ -64,8 +63,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 |----------|----------|
 | UF sem dados no mapa/lista | `Nenhuma empresa com UF cadastrada para os filtros selecionados.` |
 | Carteira vazia | `Nenhuma marca atribuída para os filtros selecionados.` |
-| Novas marcas vazias | `Nenhuma marca cadastrada nos últimos 30 dias.` |
-| Alertas vazios | `Nenhum alerta para os filtros selecionados.` |
+| Novas marcas vazias | `Nenhuma marca cadastrada a partir de 20/06/2026.` |
 | Sem permissão | String Global |
 
 ---

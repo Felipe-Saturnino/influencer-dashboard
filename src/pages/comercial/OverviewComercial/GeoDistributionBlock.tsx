@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { FONT } from "../../../constants/theme";
-import brazilMap from "../../../assets/comercial/brazil-states-paths.json";
+import type { GeoUfEntry } from "./helpers";
 import { UF_NOMES } from "./helpers";
+import brazilMap from "../../../assets/comercial/brazil-states-paths.json";
 
 type BrazilMapData = {
   viewBox: string;
@@ -10,10 +11,8 @@ type BrazilMapData = {
 
 const MAP = brazilMap as BrazilMapData;
 
-type EmpresaUf = { id: string; razao: string };
-
 type Props = {
-  porUf: Map<string, { count: number; empresas: EmpresaUf[] }>;
+  porUf: Map<string, GeoUfEntry>;
   brandPrimary: string;
   brandAccent: string;
   t: {
@@ -27,23 +26,11 @@ type Props = {
 export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Props) {
   const [selectedUf, setSelectedUf] = useState<string | null>(null);
 
-  const maxCount = useMemo(() => {
-    let m = 0;
-    for (const v of porUf.values()) m = Math.max(m, v.count);
-    return m || 1;
-  }, [porUf]);
+  const maxCount = Math.max(1, ...[...porUf.values()].map((v) => v.count));
 
-  const sortedUfs = useMemo(
-    () =>
-      [...porUf.entries()]
-        .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
-        .map(([uf]) => uf),
-    [porUf],
-  );
-
-  const selectUf = useCallback((uf: string) => {
-    setSelectedUf((prev) => (prev === uf ? null : uf));
-  }, []);
+  const sortedUfs = [...porUf.entries()]
+    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .map(([uf]) => uf);
 
   const panel = selectedUf ? porUf.get(selectedUf) : null;
   const panelNome = selectedUf ? UF_NOMES[selectedUf] ?? selectedUf : "";
@@ -96,11 +83,11 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
                 role="button"
                 tabIndex={0}
                 aria-label={`${st.nome}${count ? ` — ${count} empresas` : " — sem empresas"}`}
-                onClick={() => selectUf(st.sigla)}
+                onClick={() => setSelectedUf((prev) => (prev === st.sigla ? null : st.sigla))}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    selectUf(st.sigla);
+                    setSelectedUf((prev) => (prev === st.sigla ? null : st.sigla));
                   }
                 }}
               />
@@ -158,11 +145,11 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
                     key={uf}
                     role="listitem"
                     tabIndex={0}
-                    onClick={() => selectUf(uf)}
+                    onClick={() => setSelectedUf((prev) => (prev === uf ? null : uf))}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        selectUf(uf);
+                        setSelectedUf((prev) => (prev === uf ? null : uf));
                       }
                     }}
                     style={{
@@ -247,38 +234,39 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
           >
             {panel ? (
               <>
-                Empresas em{" "}
+                Marcas em{" "}
                 <span style={{ color: brandPrimary, fontStyle: "normal" }}>
                   {panelNome} ({selectedUf})
                 </span>
               </>
             ) : (
-              "Empresas na região"
+              "Marcas na região"
             )}
           </h4>
           {!panel ? (
             <p style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
-              Selecione um estado no mapa ou na lista para ver as empresas cadastradas na região.
+              Selecione um estado no mapa ou na lista para ver as marcas com sede na região.
             </p>
-          ) : panel.empresas.length === 0 ? (
-            <p style={{ fontSize: 12, color: t.textMuted }}>Nenhuma empresa neste estado.</p>
+          ) : panel.marcas.length === 0 ? (
+            <p style={{ fontSize: 12, color: t.textMuted }}>Nenhuma marca neste estado.</p>
           ) : (
             <>
-              {panel.empresas.slice(0, 12).map((e) => (
+              {panel.marcas.slice(0, 12).map((m) => (
                 <div
-                  key={e.id}
+                  key={m.id}
                   style={{
                     padding: "6px 0",
                     borderBottom: `1px solid color-mix(in srgb, ${t.cardBorder} 70%, transparent)`,
                     fontSize: 12,
                   }}
                 >
-                  {e.razao}
+                  <strong>{m.nome}</strong>
+                  <span style={{ color: t.textMuted }}> · {m.empresa}</span>
                 </div>
               ))}
-              {panel.empresas.length > 12 ? (
+              {panel.marcas.length > 12 ? (
                 <p style={{ marginTop: 8, fontSize: 11, color: t.textMuted }}>
-                  Mostrando 12 de {panel.empresas.length} empresas nesta região.
+                  Mostrando 12 de {panel.marcas.length} marcas nesta região.
                 </p>
               ) : null}
             </>

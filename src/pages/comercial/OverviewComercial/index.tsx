@@ -20,8 +20,6 @@ import {
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
-import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import {
   COMERCIAL_FILTRO_ARIA,
   COMERCIAL_FILTRO_TODOS,
@@ -41,25 +39,27 @@ import {
 } from "../PipelineB2B/helpers";
 import type { ComercialOpcao } from "../PipelineB2B/types";
 import { GeoDistributionBlock } from "./GeoDistributionBlock";
+import { OverviewPipelineFunnel } from "./OverviewPipelineFunnel";
+import { MovimentacaoHoverCard } from "./MovimentacaoHoverCard";
 import {
   UF_FILTRO_ARIA_LABEL,
+  UF_FILTRO_OPTIONS,
   UF_FILTRO_TODAS,
   UF_FILTRO_TODAS_LABEL,
-  UF_NOMES,
-  buildAlertasPrioridade,
+  buildMovimentacaoDetalhe,
   buildNovasMarcas,
   carteiraPorComercial,
   countProdutoByStatus,
   countSemComercial,
   countSiteAtivo,
   countUniqueEmpresas,
-  empresasPorUf,
   filterOverviewRows,
   formatDataBr,
-  funnelConversionRates,
+  marcasPorUf,
   maxProdutoCount,
   pipelineFunnelCounts,
   STATUS_PRODUTO_LABEL,
+  type HistoricoOverviewRow,
   type OverviewMarcaRow,
   type OverviewPipelineFilter,
 } from "./helpers";
@@ -110,13 +110,6 @@ function mapOverviewRow(
     })),
   };
 }
-
-type MovimentacaoStats = {
-  negociacao: number;
-  fechado: number;
-  semInteresse: number;
-  total: number;
-};
 
 function OverviewKpiButton({
   label,
@@ -184,14 +177,13 @@ export default function OverviewComercial() {
   const { theme: t, navigateTo } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("comercial_overview");
-  const dataTable = useDataTableBlock();
 
   const [comercialFiltro, setComercialFiltro] = useState(COMERCIAL_FILTRO_TODOS);
   const [ufFiltro, setUfFiltro] = useState(UF_FILTRO_TODAS);
   const [pipelineFiltro, setPipelineFiltro] = useState<OverviewPipelineFilter>("todos");
   const [rows, setRows] = useState<OverviewMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
-  const [movimentacao, setMovimentacao] = useState<MovimentacaoStats | null>(null);
+  const [historico, setHistorico] = useState<HistoricoOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -220,7 +212,7 @@ export default function OverviewComercial() {
         .or("ativo.is.null,ativo.eq.true"),
       supabase
         .from("comercial_marca_historico")
-        .select("campo, valor_novo")
+        .select("campo, valor_novo, marca_id, marca:comercial_marcas(nome)")
         .gte("created_at", cutoff),
     ]);
 
@@ -235,16 +227,18 @@ export default function OverviewComercial() {
     );
     setRows((marcasRes.data ?? []).map((r) => mapOverviewRow(r as Record<string, unknown>, names)));
 
-    const hist = histRes.data ?? [];
-    let neg = 0;
-    let fech = 0;
-    let sem = 0;
-    for (const h of hist) {
-      if (h.campo === "status_pipeline" && h.valor_novo === "negociacao") neg += 1;
-      if (h.campo === "status_pipeline" && h.valor_novo === "fechado") fech += 1;
-      if (h.campo === "status_produto" && h.valor_novo === "sem_interesse") sem += 1;
-    }
-    setMovimentacao({ negociacao: neg, fechado: fech, semInteresse: sem, total: hist.length });
+    setHistorico(
+      (histRes.data ?? []).map((h) => {
+        const raw = h as Record<string, unknown>;
+        const marcaRaw = raw.marca as { nome?: string } | null;
+        return {
+          marca_id: String(raw.marca_id ?? ""),
+          marca_nome: String(marcaRaw?.nome ?? "—"),
+          campo: String(raw.campo ?? ""),
+          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+        };
+      }),
+    );
     setLoading(false);
   }, []);
 
@@ -257,22 +251,12 @@ export default function OverviewComercial() {
     [rows, comercialFiltro, ufFiltro, pipelineFiltro, comerciais],
   );
 
-  const ufOptions = useMemo(() => {
-    const ufs = new Set<string>();
-    for (const r of rows) {
-      const uf = (r.empresa.estado ?? "").toUpperCase().trim();
-      if (uf.length === 2) ufs.add(uf);
-    }
-    return [...ufs].sort().map((uf) => ({ value: uf, label: `${uf} — ${UF_NOMES[uf] ?? uf}` }));
-  }, [rows]);
-
   const funnel = useMemo(() => pipelineFunnelCounts(filtered), [filtered]);
   const funnelCounts = useMemo(
     () =>
       Object.fromEntries(funnel.map((f) => [f.stage, f.count])) as Record<StatusPipeline, number>,
     [funnel],
   );
-  const taxas = useMemo(() => funnelConversionRates(funnelCounts), [funnelCounts]);
 
   const dedicadaCounts = useMemo(
     () => countProdutoByStatus(filtered, "mesa_dedicada"),
@@ -285,7 +269,7 @@ export default function OverviewComercial() {
   const maxDed = maxProdutoCount(dedicadaCounts);
   const maxNet = maxProdutoCount(networkCounts);
 
-  const porUf = useMemo(() => empresasPorUf(filtered), [filtered]);
+  const porUf = useMemo(() => marcasPorUf(filtered), [filtered]);
   const carteira = useMemo(
     () => carteiraPorComercial(filtered, comerciais),
     [filtered, comerciais],
@@ -295,9 +279,10 @@ export default function OverviewComercial() {
     () => buildNovasMarcas(filtered, comerciais),
     [filtered, comerciais],
   );
-  const alertas = useMemo(
-    () => buildAlertasPrioridade(filtered, comerciais),
-    [filtered, comerciais],
+  const filteredMarcaIds = useMemo(() => new Set(filtered.map((r) => r.id)), [filtered]);
+  const movimentacao = useMemo(
+    () => buildMovimentacaoDetalhe(historico, filteredMarcaIds),
+    [historico, filteredMarcaIds],
   );
 
   const goPipeline = useCallback(
@@ -315,18 +300,12 @@ export default function OverviewComercial() {
     );
   }
 
-  const W = 420;
-  const H = 340;
-  const levels = 4;
-  const stepH = H / levels;
-  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
-
   return (
     <div className="app-page-shell app-page-shell--pb64">
       <PageHeader
         icon={<PageMenuIcon pageKey="comercial_overview" />}
         title={getPageMenuLabel("comercial_overview")}
-        subtitle="Visão consolidada do funil B2B, produtos Live Cassino e prioridades da equipe comercial."
+        subtitle="Visão consolidada do funil B2B, produtos Live Cassino e carteira da equipe comercial."
       />
 
       <div style={filterBox}>
@@ -359,7 +338,7 @@ export default function OverviewComercial() {
             ariaLabel={UF_FILTRO_ARIA_LABEL}
             todasValue={UF_FILTRO_TODAS}
             todasLabel={UF_FILTRO_TODAS_LABEL}
-            options={ufOptions}
+            options={UF_FILTRO_OPTIONS}
             minWidth={200}
           />
         </div>
@@ -416,7 +395,7 @@ export default function OverviewComercial() {
       ) : (
         <>
           <div style={pageBox}>
-            <SectionTitle sub="Clique para abrir o Pipeline B2B filtrado — estoque atual, não série temporal">
+            <SectionTitle sub="Clique para abrir o Pipeline B2B detalhado">
               KPIs consolidados
             </SectionTitle>
             <div className="app-grid-kpi-6">
@@ -455,7 +434,7 @@ export default function OverviewComercial() {
               <OverviewKpiButton
                 label="Fechado"
                 value={funnelCounts.fechado}
-                hint="Contrato / ativo"
+                hint="Assinado / Ativo"
                 accent={PIPELINE_COLOR.fechado}
                 onClick={() => goPipeline("Fechado")}
                 t={t}
@@ -463,7 +442,7 @@ export default function OverviewComercial() {
               <OverviewKpiButton
                 label="Sem comercial"
                 value={countSemComercial(filtered, comerciais)}
-                hint="Sem owner"
+                hint="Aguardando Comercial"
                 accent="#e84025"
                 onClick={() => goPipeline("Todos")}
                 t={t}
@@ -473,121 +452,12 @@ export default function OverviewComercial() {
 
           <div className="app-grid-2">
             <div style={pageBox}>
-              <SectionTitle sub="Por marca — taxas de passagem entre etapas">Funil do pipeline</SectionTitle>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 24,
-                  alignItems: "stretch",
-                  minHeight: 340,
-                }}
-                className="app-conversao-funil-duo"
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg
-                    viewBox={`0 0 ${W} ${H}`}
-                    style={{ width: "100%", maxHeight: 340, display: "block" }}
-                    preserveAspectRatio="xMidYMid meet"
-                    aria-label="Funil do pipeline comercial"
-                  >
-                    {funnel.map((level, i) => {
-                      const wTop = widths[i];
-                      const wBot = widths[i + 1] ?? widths[i] * 0.7;
-                      const xTop = (W - wTop) / 2;
-                      const xBot = (W - wBot) / 2;
-                      const yTop = i * stepH;
-                      const yBot = yTop + stepH - 2;
-                      const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
-                      return (
-                        <g key={level.stage}>
-                          <defs>
-                            <linearGradient id={`ov-funnel-${i}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={level.color} stopOpacity={0.85} />
-                              <stop offset="100%" stopColor={level.color} stopOpacity={0.55} />
-                            </linearGradient>
-                          </defs>
-                          <path d={path} fill={`url(#ov-funnel-${i})`} />
-                          <text
-                            x={W / 2}
-                            y={yTop + 25}
-                            textAnchor="middle"
-                            fill="#fff"
-                            fontSize={10}
-                            fontWeight={600}
-                            letterSpacing="0.08em"
-                          >
-                            {PIPELINE_TAB_LABEL[level.stage].toUpperCase()}
-                          </text>
-                          <text
-                            x={W / 2}
-                            y={yTop + 44}
-                            textAnchor="middle"
-                            fill="#fff"
-                            fontSize={16}
-                            fontWeight={800}
-                          >
-                            {level.count}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: t.textMuted,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      fontWeight: 600,
-                      marginBottom: 6,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    Taxas de conversão
-                  </div>
-                  {[
-                    { label: "Disponíveis → Conexão", val: taxas.dispConexao, cor: PIPELINE_COLOR.conexao },
-                    { label: "Conexão → Negociação", val: taxas.conexNeg, cor: PIPELINE_COLOR.negociacao },
-                    { label: "Negociação → Fechado", val: taxas.negFech, cor: PIPELINE_COLOR.fechado },
-                    { label: "Disponíveis → Fechado", val: taxas.dispFech, cor: brand.accent, highlight: true },
-                  ].map((row) => (
-                    <div
-                      key={row.label}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: row.highlight
-                          ? `color-mix(in srgb, ${brand.accent} 8%, transparent)`
-                          : "rgba(255,255,255,0.5)",
-                        marginBottom: 6,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: t.textMuted,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.07em",
-                        }}
-                      >
-                        {row.label}
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: row.cor }}>{row.val}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <SectionTitle sub="Marcas reguladas">Funil do pipeline</SectionTitle>
+              <OverviewPipelineFunnel funnel={funnel} funnelCounts={funnelCounts} />
             </div>
 
             <div style={pageBox}>
-              <SectionTitle sub="Progressão de status — cores do Pipeline B2B">
-                Produto — Dedicada × Network
-              </SectionTitle>
+              <SectionTitle sub="Status de Dedicada x Network">Produto</SectionTitle>
               <div className="app-grid-2" style={{ gap: 20 }}>
                 {(
                   [
@@ -644,6 +514,48 @@ export default function OverviewComercial() {
                         </span>
                       </div>
                     ))}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 8,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
+                        Sem Status
+                      </span>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: 10,
+                          background: t.inputBg,
+                          borderRadius: 999,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${(counts.sem_status / maxVal) * 100}%`,
+                            borderRadius: 999,
+                            background: "#6b7280",
+                            opacity: 0.85,
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{
+                          width: 28,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textAlign: "right",
+                        }}
+                      >
+                        {counts.sem_status}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -651,7 +563,7 @@ export default function OverviewComercial() {
           </div>
 
           <div style={pageBox}>
-            <SectionTitle sub="Empresas por UF — sede do CNPJ · clique no mapa ou na linha do estado para ver empresas da região">
+            <SectionTitle sub="Clique no estado para ver as marcas com sede na região">
               Distribuição geográfica
             </SectionTitle>
             <GeoDistributionBlock
@@ -664,7 +576,7 @@ export default function OverviewComercial() {
 
           <div className="app-grid-2">
             <div style={pageBox}>
-              <SectionTitle sub="Marcas atribuídas — clique abre Pipeline B2B">
+              <SectionTitle sub="Comercial atribuído a cada Marca">
                 Carteira por comercial
               </SectionTitle>
               {carteira.length === 0 ? (
@@ -673,22 +585,14 @@ export default function OverviewComercial() {
                 </p>
               ) : (
                 carteira.map((c) => (
-                  <button
+                  <div
                     key={c.label}
-                    type="button"
-                    onClick={() => goPipeline("Todos")}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
                       marginBottom: 10,
-                      width: "100%",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 0,
                       fontFamily: FONT.body,
-                      textAlign: "left",
                     }}
                   >
                     <span
@@ -722,18 +626,18 @@ export default function OverviewComercial() {
                     <span style={{ fontSize: 11, color: t.textMuted, width: 90, textAlign: "right" }}>
                       {c.count} marcas
                     </span>
-                  </button>
+                  </div>
                 ))
               )}
             </div>
 
             <div style={pageBox}>
-              <SectionTitle sub="Cadastradas nos últimos 30 dias — marca, empresa e comercial responsável">
+              <SectionTitle sub="Marcas cadastradas nos últimos 30 dias">
                 Novas marcas
               </SectionTitle>
               {novasMarcas.length === 0 ? (
                 <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhuma marca cadastrada nos últimos 30 dias.
+                  Nenhuma marca cadastrada a partir de 20/06/2026.
                 </p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -783,121 +687,41 @@ export default function OverviewComercial() {
           </div>
 
           <div style={pageBox}>
-            <SectionTitle sub="Top 15 acionáveis — link para Pipeline B2B">
-              Prioridades & alertas
-            </SectionTitle>
-            {alertas.length === 0 ? (
-              <p style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>
-                Nenhum alerta para os filtros selecionados.
-              </p>
-            ) : (
-              <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-                <table style={getDataTableStyle({ minWidth: 720 })}>
-                  <caption style={{ display: "none" }}>Prioridades e alertas comerciais</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col" style={dataTable.thHeader}>Tipo</th>
-                      <th scope="col" style={dataTable.thHeader}>Marca</th>
-                      <th scope="col" style={dataTable.thHeader}>Empresa</th>
-                      <th scope="col" style={dataTable.thHeader}>UF</th>
-                      <th scope="col" style={dataTable.thHeader}>Comercial</th>
-                      <th scope="col" style={dataTable.thHeader}>Motivo</th>
-                      <th scope="col" style={dataTable.thHeader}>Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {alertas.map((a, i) => (
-                      <tr key={`${a.marca}-${i}`} style={{ background: dataTable.zebraRow(i) }}>
-                        <td style={dataTable.tdCenter}>
-                          <span
-                            aria-hidden
-                            style={{
-                              display: "inline-block",
-                              width: 8,
-                              height: 8,
-                              borderRadius: 999,
-                              background: a.tipoCor,
-                              marginRight: 6,
-                            }}
-                          />
-                          {a.tipo}
-                        </td>
-                        <td style={dataTable.tdCenter}>{a.marca}</td>
-                        <td style={dataTable.tdCenter}>{a.empresa}</td>
-                        <td style={dataTable.tdCenter}>{a.uf}</td>
-                        <td style={dataTable.tdCenter}>{a.comercial}</td>
-                        <td style={dataTable.tdCenter}>{a.motivo}</td>
-                        <td style={dataTable.tdCenter}>
-                          <button
-                            type="button"
-                            onClick={() => goPipeline("Todos")}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: brand.primary,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              fontFamily: FONT.body,
-                            }}
-                          >
-                            Ver pipeline
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div style={pageBox}>
-            <SectionTitle sub="Últimos 30 dias — fonte histórico de alterações">
+            <SectionTitle sub="Alterações dos últimos 30 dias">
               Movimentação recente
             </SectionTitle>
             <div className="app-grid-kpi-4">
-              {[
-                { label: "→ Negociação", val: movimentacao?.negociacao ?? 0, pos: true },
-                { label: "→ Fechado", val: movimentacao?.fechado ?? 0, pos: true },
-                { label: "Sem interesse", val: movimentacao?.semInteresse ?? 0, pos: false },
-                {
-                  label: "Alterações totais",
-                  val: movimentacao?.total ?? 0,
-                  pos: undefined,
-                  brand: true,
-                },
-              ].map((card) => (
-                <div
-                  key={card.label}
-                  style={{
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 14,
-                    padding: "14px 16px",
-                    background: t.inputBg,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: t.textMuted, fontWeight: 600 }}>{card.label}</div>
-                  <div
-                    style={{
-                      fontSize: 22,
-                      fontWeight: 800,
-                      marginTop: 4,
-                      fontVariantNumeric: "tabular-nums",
-                      color:
-                        card.brand === true
-                          ? brand.primary
-                          : card.pos === true
-                            ? PIPELINE_COLOR.fechado
-                            : "#e84025",
-                    }}
-                  >
-                    {card.val > 0 && card.pos !== undefined && card.pos ? "+" : ""}
-                    {card.val.toLocaleString("pt-BR")}
-                  </div>
-                </div>
-              ))}
+              <MovimentacaoHoverCard
+                label="→ Negociação"
+                value={movimentacao.negociacao.length}
+                marcas={movimentacao.negociacao}
+                valueColor={PIPELINE_COLOR.negociacao}
+                prefixPlus
+                t={t}
+              />
+              <MovimentacaoHoverCard
+                label="→ Fechado"
+                value={movimentacao.fechado.length}
+                marcas={movimentacao.fechado}
+                valueColor={PIPELINE_COLOR.fechado}
+                prefixPlus
+                t={t}
+              />
+              <MovimentacaoHoverCard
+                label="Sem interesse"
+                value={movimentacao.semInteresse.length}
+                marcas={movimentacao.semInteresse}
+                valueColor="#e84025"
+                prefixPlus
+                t={t}
+              />
+              <MovimentacaoHoverCard
+                label="Alterações totais"
+                value={movimentacao.total.length}
+                marcas={movimentacao.total}
+                valueColor={brand.primary}
+                t={t}
+              />
             </div>
           </div>
         </>

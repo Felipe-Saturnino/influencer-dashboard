@@ -3,6 +3,7 @@ import {
   COMERCIAL_FILTRO_NENHUM,
   COMERCIAL_FILTRO_TODOS,
   PIPELINE_COLOR,
+  PIPELINE_TAB_LABEL,
   STATUS_PRODUTO_ORDEM,
   STATUS_PRODUTO_LABEL,
   type StatusPipeline,
@@ -20,8 +21,11 @@ export type OverviewMarcaRow = PipelineMarcaRow & { created_at: string | null };
 export type OverviewPipelineFilter = StatusPipeline | "todos";
 
 export const UF_FILTRO_TODAS = "todas";
-export const UF_FILTRO_TODAS_LABEL = "Todas UFs";
-export const UF_FILTRO_ARIA_LABEL = "UF";
+export const UF_FILTRO_TODAS_LABEL = "Todos Estados";
+export const UF_FILTRO_ARIA_LABEL = "Estados";
+
+/** Corte pontual — exclui legado do import em massa anterior a 20/06/2026. */
+export const NOVAS_MARCAS_DESDE_ISO = "2026-06-20T00:00:00.000-03:00";
 
 export const UF_NOMES: Record<string, string> = {
   AC: "Acre",
@@ -52,6 +56,10 @@ export const UF_NOMES: Record<string, string> = {
   SP: "São Paulo",
   TO: "Tocantins",
 };
+
+export const UF_FILTRO_OPTIONS = Object.keys(UF_NOMES)
+  .sort((a, b) => UF_NOMES[a].localeCompare(UF_NOMES[b], "pt-BR"))
+  .map((uf) => ({ value: uf, label: `${uf} — ${UF_NOMES[uf]}` }));
 
 export function filterOverviewRows(
   rows: OverviewMarcaRow[],
@@ -103,6 +111,7 @@ export function pipelineFunnelCounts(rows: OverviewMarcaRow[]) {
   const stages: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
   return stages.map((s) => ({
     stage: s,
+    label: PIPELINE_TAB_LABEL[s],
     count: countByPipeline(rows, s),
     color: PIPELINE_COLOR[s],
   }));
@@ -119,42 +128,56 @@ export function funnelConversionRates(counts: Record<StatusPipeline, number>) {
   };
 }
 
+export type ProdutoStatusCounts = Record<StatusProduto, number> & { sem_status: number };
+
 export function countProdutoByStatus(
   rows: OverviewMarcaRow[],
   produto: ProdutoTipo,
-): Record<StatusProduto, number> {
+): ProdutoStatusCounts {
   const base = Object.fromEntries(
     STATUS_PRODUTO_ORDEM.map((s) => [s, 0]),
   ) as Record<StatusProduto, number>;
+  let semStatus = 0;
   for (const row of rows) {
     const p = row.produtos.find((x) => x.produto === produto);
-    if (p?.status_produto) base[p.status_produto] += 1;
+    if (!p?.status_produto) {
+      semStatus += 1;
+    } else {
+      base[p.status_produto] += 1;
+    }
   }
-  return base;
+  return { ...base, sem_status: semStatus };
 }
 
-export function maxProdutoCount(counts: Record<StatusProduto, number>): number {
+export function maxProdutoCount(counts: ProdutoStatusCounts): number {
   return Math.max(1, ...Object.values(counts));
 }
 
-export function empresasPorUf(rows: OverviewMarcaRow[]): Map<string, { count: number; empresas: { id: string; razao: string }[] }> {
-  const map = new Map<string, { count: number; empresas: Map<string, string> }>();
+export type GeoUfEntry = {
+  count: number;
+  marcas: { id: string; nome: string; empresa: string }[];
+};
+
+export function marcasPorUf(rows: OverviewMarcaRow[]): Map<string, GeoUfEntry> {
+  const map = new Map<string, { count: number; empresas: Set<string>; marcas: GeoUfEntry["marcas"] }>();
   for (const row of rows) {
     const uf = (row.empresa.estado ?? "").toUpperCase().trim();
     if (!uf || uf.length !== 2) continue;
-    if (!map.has(uf)) map.set(uf, { count: 0, empresas: new Map() });
+    if (!map.has(uf)) map.set(uf, { count: 0, empresas: new Set(), marcas: [] });
     const entry = map.get(uf)!;
     if (!entry.empresas.has(row.empresa.id)) {
-      entry.empresas.set(row.empresa.id, row.empresa.razao_social);
+      entry.empresas.add(row.empresa.id);
       entry.count += 1;
     }
-  }
-  const out = new Map<string, { count: number; empresas: { id: string; razao: string }[] }>();
-  for (const [uf, v] of map) {
-    out.set(uf, {
-      count: v.count,
-      empresas: [...v.empresas.entries()].map(([id, razao]) => ({ id, razao })),
+    entry.marcas.push({
+      id: row.id,
+      nome: row.nome,
+      empresa: row.empresa.razao_social,
     });
+  }
+  const out = new Map<string, GeoUfEntry>();
+  for (const [uf, v] of map) {
+    out.set(uf, { count: v.count, marcas: v.marcas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")) });
   }
   return out;
 }
@@ -192,87 +215,6 @@ export function carteiraPorComercial(
   return list;
 }
 
-export type AlertaPrioridade = {
-  tipo: string;
-  tipoCor: string;
-  marca: string;
-  empresa: string;
-  uf: string;
-  comercial: string;
-  motivo: string;
-};
-
-export function buildAlertasPrioridade(
-  rows: OverviewMarcaRow[],
-  comerciais: ComercialOpcao[],
-  limit = 15,
-): AlertaPrioridade[] {
-  const out: AlertaPrioridade[] = [];
-  const canonicalIds = pipelineComercialCanonicoIds(comerciais);
-  const comercialNome = (row: OverviewMarcaRow) => {
-    if (pipelineComercialExibeSiteOffline(row)) return "Site Offline";
-    if (!row.comercial_user_id) return "—";
-    return (
-      row.comercial_nome ??
-      comerciais.find((c) => c.id === row.comercial_user_id)?.name ??
-      "—"
-    );
-  };
-
-  for (const row of rows) {
-    if (row.contatos.length === 0) {
-      out.push({
-        tipo: "Sem contato",
-        tipoCor: "#e84025",
-        marca: row.nome,
-        empresa: row.empresa.razao_social,
-        uf: row.empresa.estado ?? "—",
-        comercial: comercialNome(row),
-        motivo: "0 contatos cadastrados",
-      });
-    }
-    if (row.status_dominio === "inativo") {
-      out.push({
-        tipo: "Site offline",
-        tipoCor: "#f59e0b",
-        marca: row.nome,
-        empresa: row.empresa.razao_social,
-        uf: row.empresa.estado ?? "—",
-        comercial: comercialNome(row),
-        motivo: "Domínio inativo",
-      });
-    }
-    if (
-      row.status_dominio === "ok" &&
-      (!row.comercial_user_id || !canonicalIds.has(row.comercial_user_id))
-    ) {
-      out.push({
-        tipo: "Sem comercial",
-        tipoCor: "#6b7280",
-        marca: row.nome,
-        empresa: row.empresa.razao_social,
-        uf: row.empresa.estado ?? "—",
-        comercial: "—",
-        motivo: "Domínio OK, sem owner",
-      });
-    }
-    const temContratoEnviado = row.produtos.some((p) => p.status_produto === "contrato_enviado");
-    if (temContratoEnviado) {
-      out.push({
-        tipo: "Oportunidade",
-        tipoCor: "#1e36f8",
-        marca: row.nome,
-        empresa: row.empresa.razao_social,
-        uf: row.empresa.estado ?? "—",
-        comercial: comercialNome(row),
-        motivo: "Contrato enviado",
-      });
-    }
-  }
-
-  return out.slice(0, limit);
-}
-
 export type NovaMarcaItem = {
   id: string;
   nome: string;
@@ -287,15 +229,13 @@ export type NovaMarcaItem = {
 export function buildNovasMarcas(
   rows: OverviewMarcaRow[],
   comerciais: ComercialOpcao[],
-  dias = 30,
 ): NovaMarcaItem[] {
-  const cutoff = Date.now() - dias * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(NOVAS_MARCAS_DESDE_ISO).getTime();
   return rows
     .filter((r) => r.created_at && new Date(r.created_at).getTime() >= cutoff)
     .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
     .slice(0, 8)
     .map((r) => {
-      const ativo = r.produtos.some((p) => p.status_produto === "ativo");
       const comercial =
         r.comercial_nome ??
         comerciais.find((c) => c.id === r.comercial_user_id)?.name ??
@@ -307,10 +247,51 @@ export function buildNovasMarcas(
         uf: r.empresa.estado ?? "—",
         created_at: r.created_at!,
         comercial,
-        statusLabel: ativo ? "Ativo" : r.status_pipeline === "fechado" ? "Fechado" : "Pendente",
-        statusCor: ativo ? "#22c55e" : r.status_pipeline === "fechado" ? "#22c55e" : "#f59e0b",
+        statusLabel: PIPELINE_TAB_LABEL[r.status_pipeline],
+        statusCor: PIPELINE_COLOR[r.status_pipeline],
       };
     });
+}
+
+export type HistoricoOverviewRow = {
+  marca_id: string;
+  marca_nome: string;
+  campo: string;
+  valor_novo: string | null;
+};
+
+export type MovimentacaoDetalhe = {
+  negociacao: string[];
+  fechado: string[];
+  semInteresse: string[];
+  total: string[];
+};
+
+export function buildMovimentacaoDetalhe(
+  historico: HistoricoOverviewRow[],
+  marcaIds: Set<string>,
+): MovimentacaoDetalhe {
+  const neg: string[] = [];
+  const fech: string[] = [];
+  const sem: string[] = [];
+  const total = new Set<string>();
+
+  for (const h of historico) {
+    if (!marcaIds.has(h.marca_id)) continue;
+    total.add(h.marca_nome);
+    if (h.campo === "status_pipeline" && h.valor_novo === "negociacao") neg.push(h.marca_nome);
+    if (h.campo === "status_pipeline" && h.valor_novo === "fechado") fech.push(h.marca_nome);
+    if (h.campo === "status_produto" && h.valor_novo === "sem_interesse") sem.push(h.marca_nome);
+  }
+
+  const uniq = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  return {
+    negociacao: uniq(neg),
+    fechado: uniq(fech),
+    semInteresse: uniq(sem),
+    total: [...total].sort((a, b) => a.localeCompare(b, "pt-BR")),
+  };
 }
 
 export function formatDataBr(iso: string): string {
