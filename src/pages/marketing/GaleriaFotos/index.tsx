@@ -45,7 +45,6 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -61,6 +60,7 @@ import {
   uploadMarketingFotoArquivo,
   urlAssinadaFotoPrestador,
   urlPublicaFotoGeral,
+  buscarMeuColaboradorGaleria,
   MARKETING_FOTO_MIME_PERMITIDOS,
   marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
@@ -228,13 +228,13 @@ export default function GaleriaFotos() {
   }, [perm.canView, recarregar]);
 
   useEffect(() => {
-    if (perm.canView === "nao" || !user?.email?.trim()) {
+    if (perm.canView === "nao") {
       setMeuRhFuncionarioId(null);
       setMeuRhFuncionarioNome(null);
       return;
     }
     let cancel = false;
-    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((row) => {
+    void buscarMeuColaboradorGaleria().then((row) => {
       if (cancel) return;
       setMeuRhFuncionarioId(row?.id ?? null);
       setMeuRhFuncionarioNome(row?.nome ?? null);
@@ -242,7 +242,7 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [perm.canView, user?.email]);
+  }, [perm.canView]);
 
   useEffect(() => {
     const prestadorFotos = fotos.filter((f) => f.tipo === "prestador");
@@ -289,16 +289,14 @@ export default function GaleriaFotos() {
       }
     } else {
       list = list.filter((f) => f.tipo === "prestador");
-      const prestadorId = podeFiltrarPrestador
-        ? filtroPrestador === FILTRO_PRESTADOR_TODOS
-          ? null
-          : filtroPrestador
-        : meuRhFuncionarioId;
-      if (prestadorId) {
-        list = list.filter((f) => f.rh_funcionario_id === prestadorId);
-      } else if (!podeFiltrarPrestador) {
-        list = [];
+      if (podeFiltrarPrestador) {
+        if (filtroPrestador !== FILTRO_PRESTADOR_TODOS) {
+          list = list.filter((f) => f.rh_funcionario_id === filtroPrestador);
+        }
+      } else if (meuRhFuncionarioId) {
+        list = list.filter((f) => f.rh_funcionario_id === meuRhFuncionarioId);
       }
+      // Sem Editar: RLS já limita às fotos do próprio colaborador quando o vínculo existe.
     }
 
     if (buscaGaleria.trim()) {

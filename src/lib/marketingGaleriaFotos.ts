@@ -131,3 +131,14 @@ export function fmtDataEvento(iso: string | null | undefined): string {
   if (!y || !m || !d) return "—";
   return `${d}/${m}/${y}`;
 }
+
+export type GaleriaMeuColaborador = { id: string; nome: string };
+
+/** Colaborador vinculado ao login (RPC SECURITY DEFINER — mesmo critério do RLS Minhas Fotos). */
+export async function buscarMeuColaboradorGaleria(): Promise<GaleriaMeuColaborador | null> {
+  const { data, error } = await supabase.rpc("galeria_fotos_meu_colaborador");
+  if (error || data == null) return null;
+  const row = data as { id?: string; nome?: string };
+  if (!row.id || !row.nome) return null;
+  return { id: row.id, nome: row.nome };
+}

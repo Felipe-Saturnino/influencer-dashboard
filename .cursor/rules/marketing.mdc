@@ -70,11 +70,11 @@ Perfis: Gestor (operação interna).
 - **Galeria:** sub-abas **Gerais** | **Minhas Fotos** (`FiltroBarTabButton`); busca insensível a acentos.
   - **Gerais:** `SelectComIcone` de eventos com agregadora **Todos Eventos** (default `todos`) + todos os eventos ativos; blocos por evento (`SectionTitle` + data no `sub`).
   - **Minhas Fotos:** `FiltroEntidadeBarSelect` de colaborador com agregadora **Todos Colaboradores** (default) — **somente** com permissão de **Editar** (`canEditarOk`); quem tem só **Ver** vê o filtro travado no colaborador vinculado ao login (`buscarRhFuncionarioAtivoPorEmailLogin`); blocos por nome do colaborador.
-- Perfis só com **Ver:** aba **Gerais** = fotos gerais; aba **Minhas Fotos** = fotos de colaborador próprias com `visivel_prestador = true` (RLS).
+- Perfis só com **Ver** (incl. **próprios** / prestador): aba **Gerais** = todas as fotos gerais; aba **Minhas Fotos** = fotos `prestador` cujo `rh_funcionario_id` coincide com o login (e-mail ou e-mail Spin) — **sem** exigir `visivel_prestador`.
 - Perfis com **Editar** (ou Criar/Excluir): veem todas as fotos de colaborador em **Minhas Fotos**.
 - **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de colaborador**); gerais → evento + **Novo Evento**; colaborador → `FiltroEntidadeBarSelect` (`mode="single"`, busca no painel); múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
 - Storage: `marketing-fotos-gerais` (público) e `marketing-fotos-prestadores` (privado, URL assinada).
-- Coluna `visivel_prestador`: quando `true`, o colaborador vinculado ao login pode ver a foto na aba **Minhas Fotos** (perfil só Ver). Equipe com Editar vê todas as fotos de colaborador independentemente do flag.
+- Coluna `visivel_prestador`: reservada para liberação explícita futura; leitura na aba **Minhas Fotos** (Ver sem Editar) usa vínculo `rh_funcionarios` + login via RPC `galeria_fotos_meu_colaborador`.
 - Vazio galeria filtrada: `Nenhuma foto encontrada para os filtros selecionados.`
 - Vazio sem eventos no upload: orientar criar evento antes do envio.
 

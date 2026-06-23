@@ -17,6 +17,7 @@ export const ROLES_SEM_RESTRICAO_ESCOPO: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];
 
@@ -28,6 +29,7 @@ export const ROLES_STAFF_APENAS_PERMISSOES: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];
 
@@ -44,6 +46,7 @@ export const ROLES_VISAO_OPERACAO_SPIN: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];
 
@@ -57,6 +60,7 @@ export const ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];
 
@@ -68,5 +72,6 @@ export const ROLES_STAFF_OPERACOES_LIVES: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];

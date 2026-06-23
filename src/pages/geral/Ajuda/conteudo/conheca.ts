@@ -840,7 +840,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de colaboradores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer colaborador; quem tem só **Ver** vê apenas as próprias fotos liberadas (`visivel_prestador`), com o filtro de colaborador travado no cadastro vinculado ao login.",
+          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de colaboradores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer colaborador; quem tem **Ver (próprios)** vê todas as gerais e, em Minhas Fotos, apenas as fotos atribuídas ao seu cadastro de colaborador (e-mail de login ou e-mail Spin), com o filtro travado no próprio nome.",
       },
       {
         subtitulo: "Aba Galeria",
