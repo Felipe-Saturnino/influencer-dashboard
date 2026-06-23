@@ -509,50 +509,9 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Portal RH — tabela de documentos normativos (sem scroll horizontal em desktop) */
+/* Portal RH — tabela de documentos normativos (scroll só em viewport estreita) */
 .app-table-wrap--portal-rh-docs {
   overflow-x: visible;
-}
-
-.app-portal-rh-documentos-table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.app-portal-rh-documentos-table .col-doc {
-  width: 32%;
-}
-
-.app-portal-rh-documentos-table .col-versao {
-  width: 11%;
-}
-
-.app-portal-rh-documentos-table .col-tipo {
-  width: 13%;
-}
-
-.app-portal-rh-documentos-table .col-aplicavel {
-  width: 22%;
-}
-
-.app-portal-rh-documentos-table .col-ciencia {
-  width: 16%;
-}
-
-.app-portal-rh-documentos-table .col-acao {
-  width: 52px;
-}
-
-.app-portal-rh-documentos-table th,
-.app-portal-rh-documentos-table td {
-  white-space: normal;
-}
-
-.app-portal-rh-documentos-table .col-acao-cell {
-  white-space: nowrap;
-  width: 52px;
-  padding-left: 6px;
-  padding-right: 6px;
 }
 
 @media (max-width: 720px) {
@@ -561,7 +520,7 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  .app-portal-rh-documentos-table {
+  .app-table-wrap--portal-rh-docs table {
     min-width: 640px;
   }
 }

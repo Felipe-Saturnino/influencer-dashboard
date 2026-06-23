@@ -39,11 +39,17 @@ export type PortalRhDocumentoRow = {
 type SortCol = "codigo" | "titulo" | "versao" | "ciencia";
 type SortDir = "asc" | "desc";
 
-const cellWrap: CSSProperties = {
-  verticalAlign: "top",
-  overflowWrap: "anywhere",
-  wordBreak: "break-word",
-};
+function cellStackCenter(extra?: CSSProperties): CSSProperties {
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    width: "100%",
+    ...extra,
+  };
+}
 
 export function PortalRhDocumentosTabela({
   rows,
@@ -65,17 +71,30 @@ export function PortalRhDocumentosTabela({
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
 
+  const tdCell: CSSProperties = {
+    ...dataTable.tdCenter,
+    verticalAlign: "middle",
+  };
+
+  const tdWrap: CSSProperties = {
+    ...tdCell,
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  };
+
   const cellStackPrimary: CSSProperties = {
     fontSize: 13,
     fontWeight: 700,
     color: t.text,
     lineHeight: 1.35,
+    textAlign: "center",
   };
+
   const cellStackSecondary: CSSProperties = {
     fontSize: 11,
     color: t.textMuted,
-    marginTop: 4,
     lineHeight: 1.4,
+    textAlign: "center",
   };
 
   const sorted = [...rows].sort((a, b) => {
@@ -97,16 +116,8 @@ export function PortalRhDocumentosTabela({
     <div style={pageBox}>
       <SectionTitle sub="PDFs publicados para leitura e aceite">Documentos oficiais</SectionTitle>
       <div className="app-table-wrap app-table-wrap--portal-rh-docs" style={getDataTableWrapStyle()}>
-        <table className="app-portal-rh-documentos-table" style={getDataTableStyle()}>
+        <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Políticas e normativas publicadas no portal de RH</caption>
-          <colgroup>
-            <col className="col-doc" />
-            <col className="col-versao" />
-            <col className="col-tipo" />
-            <col className="col-aplicavel" />
-            <col className="col-ciencia" />
-            <col className="col-acao" />
-          </colgroup>
           <thead>
             <tr>
               <SortTableTh
@@ -142,7 +153,7 @@ export function PortalRhDocumentosTabela({
                 thStyle={dataTable.thHeader}
                 align="center"
               />
-              <th scope="col" className="col-acao-cell" style={dataTable.thHeader}>
+              <th scope="col" style={{ ...dataTable.thHeader, minWidth: 72 }}>
                 Ação
               </th>
             </tr>
@@ -153,53 +164,67 @@ export function PortalRhDocumentosTabela({
               const pendente = cienciaPendenteIds.has(row.id);
               const cienteEm = cienciaRegistradaEm.get(row.id);
               const dataPub = row.published_at ?? row.updated_at;
+              const zebraBg = dataTable.zebraRow(i);
+
               return (
-                <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
-                  <td style={{ ...dataTable.tdCenter, ...cellWrap, textAlign: "left" }}>
-                    <div
-                      style={{
-                        fontFamily: "ui-monospace, monospace",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "var(--brand-primary, #7c3aed)",
-                      }}
-                    >
-                      {row.codigo ?? "—"}
-                    </div>
-                    <div style={{ ...cellStackPrimary, marginTop: 4 }}>{row.titulo}</div>
-                  </td>
-                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
-                    <div style={cellStackPrimary}>{row.versao ?? "—"}</div>
-                    <div style={cellStackSecondary}>{fmtDataPt(dataPub)}</div>
-                  </td>
-                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <span
+                <tr
+                  key={row.id}
+                  style={{ background: zebraBg }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebraBg;
+                  }}
+                >
+                  <td style={{ ...tdWrap, maxWidth: 220 }}>
+                    <div style={cellStackCenter()}>
+                      <div
                         style={{
-                          display: "inline-flex",
-                          padding: "3px 9px",
-                          borderRadius: 20,
-                          fontSize: 10,
+                          fontFamily: "ui-monospace, monospace",
+                          fontSize: 12,
                           fontWeight: 700,
-                          background: `${tagCor}22`,
-                          color: tagCor,
-                          border: `1px solid ${tagCor}44`,
-                          whiteSpace: "normal",
-                          textAlign: "center",
-                          maxWidth: "100%",
+                          color: "var(--brand-primary, #7c3aed)",
                         }}
                       >
-                        {row.tipo_documento ? labelTipoDocumentoPortal(row.tipo_documento) : row.categoriaLabel ?? "Legado"}
-                      </span>
-                    </div>
-                    <div style={{ ...cellStackSecondary, textAlign: "center" }}>
-                      {row.classificacao ? labelClassificacaoDocumento(row.classificacao) : "—"}
+                        {row.codigo ?? "—"}
+                      </div>
+                      <div style={cellStackPrimary}>{row.titulo}</div>
                     </div>
                   </td>
-                  <td style={{ ...dataTable.tdCenter, ...cellWrap, fontSize: 12 }}>
-                    {fmtAplicavelDocumento(row.aplicavel_a)}
+                  <td style={tdWrap}>
+                    <div style={cellStackCenter()}>
+                      <div style={cellStackPrimary}>{row.versao ?? "—"}</div>
+                      <div style={cellStackSecondary}>{fmtDataPt(dataPub)}</div>
+                    </div>
                   </td>
-                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
+                  <td style={tdWrap}>
+                    <div style={cellStackCenter()}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            padding: "3px 9px",
+                            borderRadius: 20,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            background: `${tagCor}22`,
+                            color: tagCor,
+                            border: `1px solid ${tagCor}44`,
+                            whiteSpace: "normal",
+                            textAlign: "center",
+                          }}
+                        >
+                          {row.tipo_documento ? labelTipoDocumentoPortal(row.tipo_documento) : row.categoriaLabel ?? "Legado"}
+                        </span>
+                      </div>
+                      <div style={cellStackSecondary}>
+                        {row.classificacao ? labelClassificacaoDocumento(row.classificacao) : "—"}
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ ...tdWrap, fontSize: 12 }}>{fmtAplicavelDocumento(row.aplicavel_a)}</td>
+                  <td style={tdWrap}>
                     {row.requires_acknowledgment ? (
                       pendente ? (
                         <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
@@ -212,27 +237,29 @@ export function PortalRhDocumentosTabela({
                       <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
                     )}
                   </td>
-                  <td className="col-acao-cell" style={dataTable.tdCenter}>
-                    <button
-                      type="button"
-                      aria-label={`Abrir documento ${row.codigo ?? row.titulo}`}
-                      title={`Abrir ${row.codigo ?? row.titulo}`}
-                      onClick={() => onAbrir(row.id)}
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: t.text,
-                      }}
-                    >
-                      <Eye size={14} aria-hidden />
-                    </button>
+                  <td style={tdCell}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <button
+                        type="button"
+                        aria-label={`Abrir documento ${row.codigo ?? row.titulo}`}
+                        title={`Abrir ${row.codigo ?? row.titulo}`}
+                        onClick={() => onAbrir(row.id)}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 10,
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: t.text,
+                        }}
+                      >
+                        <Eye size={14} aria-hidden />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

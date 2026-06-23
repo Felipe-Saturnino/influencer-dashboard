@@ -98,15 +98,6 @@ export function countSiteAtivo(rows: OverviewMarcaRow[]): number {
   return rows.filter((r) => r.status_dominio === "ok").length;
 }
 
-export function countSemComercial(rows: OverviewMarcaRow[], comerciais: ComercialOpcao[]): number {
-  const canonicalIds = pipelineComercialCanonicoIds(comerciais);
-  return rows.filter(
-    (r) =>
-      !pipelineComercialExibeSiteOffline(r) &&
-      (!r.comercial_user_id || !canonicalIds.has(r.comercial_user_id)),
-  ).length;
-}
-
 export function pipelineFunnelCounts(rows: OverviewMarcaRow[]) {
   const stages: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
   return stages.map((s) => ({

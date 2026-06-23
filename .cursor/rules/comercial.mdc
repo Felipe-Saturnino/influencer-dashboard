@@ -49,7 +49,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 | Bloco | Conteúdo |
 |-------|----------|
-| KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado, Sem comercial — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
+| KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
 | Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
 | Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` + linha **Sem Status** (coluna vazia). |
 | Distribuição geográfica | Mapa + lista UF; clique lista **marcas** com sede na região (intensidade = empresas). |

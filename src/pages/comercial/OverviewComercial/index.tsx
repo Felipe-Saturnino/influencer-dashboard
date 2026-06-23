@@ -50,7 +50,6 @@ import {
   buildNovasMarcas,
   carteiraPorComercial,
   countProdutoByStatus,
-  countSemComercial,
   countSiteAtivo,
   countUniqueEmpresas,
   filterOverviewRows,
@@ -398,7 +397,7 @@ export default function OverviewComercial() {
             <SectionTitle sub="Clique para abrir o Pipeline B2B detalhado">
               KPIs consolidados
             </SectionTitle>
-            <div className="app-grid-kpi-6">
+            <div className="app-grid-kpi-5">
               <OverviewKpiButton
                 label="Empresas"
                 value={countUniqueEmpresas(filtered)}
@@ -437,14 +436,6 @@ export default function OverviewComercial() {
                 hint="Assinado / Ativo"
                 accent={PIPELINE_COLOR.fechado}
                 onClick={() => goPipeline("Fechado")}
-                t={t}
-              />
-              <OverviewKpiButton
-                label="Sem comercial"
-                value={countSemComercial(filtered, comerciais)}
-                hint="Aguardando Comercial"
-                accent="#e84025"
-                onClick={() => goPipeline("Todos")}
                 t={t}
               />
             </div>
