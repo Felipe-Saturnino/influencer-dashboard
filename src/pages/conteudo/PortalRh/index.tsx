@@ -27,11 +27,10 @@ import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from 
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
-import { ModalVisualizarDocumento, type DocumentoRelacionadoView } from "./ModalVisualizarDocumento";
+import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
 import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
 import {
   RH_DOCUMENTO_FILTRO_SUBTABS,
-  carregarRelacionadosDocumentoPortal,
   documentoUsaModeloNormativo,
   itemNoFiltroDocumento,
   tagTipoDocumentoCor,
@@ -361,7 +360,6 @@ export default function PortalRhPage() {
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
-  const [modalDocRelacionados, setModalDocRelacionados] = useState<DocumentoRelacionadoView[]>([]);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
   const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
     col: "codigo",
@@ -813,16 +811,10 @@ export default function PortalRhPage() {
     return map;
   }, [documentosFiltrados, receipts]);
 
-  async function abrirDocumento(id: string) {
+  function abrirDocumento(id: string) {
     const doc = documentos.find((d) => d.id === id);
     if (!doc) return;
     setModalDoc(doc);
-    if (documentoUsaModeloNormativo(doc)) {
-      const rel = await carregarRelacionadosDocumentoPortal(supabase, doc.id);
-      setModalDocRelacionados(rel);
-    } else {
-      setModalDocRelacionados([]);
-    }
   }
 
   function handleSortDoc(col: "codigo" | "titulo" | "versao" | "ciencia") {
@@ -1076,25 +1068,12 @@ export default function PortalRhPage() {
             versao={modalDoc.versao ?? null}
             titulo={modalDoc.titulo}
             tipoDocumento={modalDoc.tipo_documento ?? null}
-            resumo={modalDoc.resumo ?? modalDoc.introducao ?? null}
-            areaResponsavel={modalDoc.area_responsavel ?? null}
             classificacao={modalDoc.classificacao ?? null}
-            aplicavelA={modalDoc.aplicavel_a ?? null}
-            dataEmissao={modalDoc.data_emissao ?? null}
-            dataPublicacao={modalDoc.published_at ?? modalDoc.updated_at}
-            elaboradoPor={modalDoc.elaborado_por ?? null}
-            revisadoPor={modalDoc.revisado_por ?? null}
-            aprovadoPorDoc={modalDoc.aprovado_por_doc ?? null}
             pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
             pdfNome={modalDoc.anexo_nome ?? null}
-            relacionados={modalDocRelacionados}
-            autorInfo={metaAutor(autorIdPostagem(modalDoc))}
             exigeCiencia={modalDoc.requires_acknowledgment}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
-            onClose={() => {
-              setModalDoc(null);
-              setModalDocRelacionados([]);
-            }}
+            onClose={() => setModalDoc(null)}
             onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
           />
         ) : (
