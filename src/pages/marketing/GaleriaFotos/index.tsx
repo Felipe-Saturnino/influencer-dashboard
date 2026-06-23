@@ -762,7 +762,6 @@ export default function GaleriaFotos() {
                     setUploadTipo("geral");
                     setUploadPrestadorId("");
                   }}
-                  showClearIcon={false}
                 />
                 <FiltroSemanticoTabPill
                   label="Fotos de colaborador"
@@ -772,7 +771,6 @@ export default function GaleriaFotos() {
                     setUploadTipo("prestador");
                     setUploadEventoId("");
                   }}
-                  showClearIcon={false}
                 />
               </div>
             </div>
