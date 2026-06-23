@@ -6,6 +6,7 @@ import {
   PIPELINE_TAB_LABEL,
   STATUS_PRODUTO_ORDEM,
   STATUS_PRODUTO_LABEL,
+  STATUS_PRODUTO_LINHA_SEM_INTERESSE,
   type StatusPipeline,
   type StatusProduto,
   type ProdutoTipo,
@@ -299,7 +300,12 @@ export function buildMovimentacaoDetalhe(
     total.add(h.marca_nome);
     if (h.campo === "status_pipeline" && h.valor_novo === "negociacao") neg.push(h.marca_nome);
     if (h.campo === "status_pipeline" && h.valor_novo === "fechado") fech.push(h.marca_nome);
-    if (h.campo === "status_produto" && h.valor_novo === "sem_interesse") sem.push(h.marca_nome);
+    if (
+      h.campo === "status_produto" &&
+      STATUS_PRODUTO_LINHA_SEM_INTERESSE.includes(h.valor_novo as StatusProduto)
+    ) {
+      sem.push(h.marca_nome);
+    }
   }
 
   const uniq = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b, "pt-BR"));
