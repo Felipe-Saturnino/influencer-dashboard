@@ -850,7 +850,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Upload",
         texto:
-          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de colaborador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Para **Fotos de colaborador**, selecione o colaborador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
+          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de colaborador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Com permissão de **Editar**, use **Editar Eventos** para alterar um evento existente ou excluí-lo; se o evento tiver fotos, a confirmação avisa que as imagens serão perdidas. Para **Fotos de colaborador**, selecione o colaborador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
       },
     ],
   },

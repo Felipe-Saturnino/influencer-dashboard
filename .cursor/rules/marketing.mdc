@@ -72,7 +72,7 @@ Perfis: Gestor (operação interna).
   - **Minhas Fotos:** `FiltroEntidadeBarSelect` de colaborador com agregadora **Todos Colaboradores** (default) — **somente** com permissão de **Editar** (`canEditarOk`); quem tem só **Ver** vê o filtro travado no colaborador vinculado ao login (`buscarRhFuncionarioAtivoPorEmailLogin`); blocos por nome do colaborador.
 - Perfis só com **Ver** (incl. **próprios** / prestador): aba **Gerais** = todas as fotos gerais; aba **Minhas Fotos** = fotos `prestador` cujo `rh_funcionario_id` coincide com o login (e-mail ou e-mail Spin) — **sem** exigir `visivel_prestador`.
 - Perfis com **Editar** (ou Criar/Excluir): veem todas as fotos de colaborador em **Minhas Fotos**.
-- **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de colaborador**); gerais → evento + **Novo Evento**; colaborador → `FiltroEntidadeBarSelect` (`mode="single"`, busca no painel); múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
+- **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de colaborador**); gerais → evento + **Novo Evento** + **Editar Eventos** (perm. **Editar**); modal editar: selecionar evento, alterar nome/data/descrição, **Excluir** (perm. **Excluir**) com aviso se houver fotos gerais vinculadas; múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
 - Storage: `marketing-fotos-gerais` (público) e `marketing-fotos-prestadores` (privado, URL assinada).
 - Coluna `visivel_prestador`: reservada para liberação explícita futura; leitura na aba **Minhas Fotos** (Ver sem Editar) usa vínculo `rh_funcionarios` + login via RPC `galeria_fotos_meu_colaborador`.
 - Vazio galeria filtrada: `Nenhuma foto encontrada para os filtros selecionados.`

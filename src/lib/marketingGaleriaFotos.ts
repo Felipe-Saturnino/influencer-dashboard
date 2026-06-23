@@ -125,6 +125,27 @@ export async function removerMarketingFotoStorage(
   await supabase.storage.from(bucket).remove([storagePath]);
 }
 
+/** Fotos gerais vinculadas ao evento (para contagem e exclusão em cascata manual no storage). */
+export function fotosGeraisDoEvento(
+  fotos: MarketingFotoComEvento[],
+  eventoId: string,
+): MarketingFotoComEvento[] {
+  return fotos.filter((f) => f.tipo === "geral" && f.evento_id === eventoId);
+}
+
+/** Remove arquivos no storage e exclui o evento (DB cascade em marketing_fotos). */
+export async function excluirMarketingEventoGaleria(
+  eventoId: string,
+  fotosEvento: MarketingFotoComEvento[],
+): Promise<{ ok: true } | { ok: false }> {
+  for (const f of fotosEvento) {
+    await removerMarketingFotoStorage("geral", f.storage_path);
+  }
+  const { error } = await supabase.from("marketing_eventos").delete().eq("id", eventoId);
+  if (error) return { ok: false };
+  return { ok: true };
+}
+
 export function fmtDataEvento(iso: string | null | undefined): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("T")[0].split("-");
