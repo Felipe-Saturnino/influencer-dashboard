@@ -9,7 +9,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino, Comunicação e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -38,6 +38,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "gestor", label: "Gestor" },
   { value: "rh", label: "RH" },
   { value: "figurino", label: "Figurino" },
+  { value: "comunicacao", label: "Comunicação" },
   { value: "service_manager", label: "Service Manager" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
@@ -51,7 +52,7 @@ export const ROLES: { value: Role; label: string }[] = [
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "service_manager", "shift_leader", "prestador"] },
+  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "service_manager", "shift_leader", "prestador"] },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
@@ -163,6 +164,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "gestor",
   "rh",
   "figurino",
+  "comunicacao",
   "service_manager",
   "shift_leader",
   "prestador",
@@ -209,6 +211,7 @@ export function roleBadgeColor(role: Role): string {
     shift_leader: BRAND.amarelo,
     service_manager: BRAND.azul,
     figurino: BRAND.roxoVivo,
+    comunicacao: BRAND.ciano,
     rh: BRAND.roxo,
     influencer: BRAND.verde,
     afiliado: BRAND.ciano,

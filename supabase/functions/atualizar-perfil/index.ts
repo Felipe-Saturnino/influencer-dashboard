@@ -27,6 +27,7 @@ const ROLES_BLOQUEADOS = [
   'shift_leader',
   'service_manager',
   'figurino',
+  'comunicacao',
   'rh',
 ]
 

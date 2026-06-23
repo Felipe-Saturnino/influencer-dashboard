@@ -874,7 +874,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro fotos em Minhas Fotos?",
         texto:
-          "Com permissão de **Editar**, todas as fotos individuais de colaboradores aparecem em **Minhas Fotos** — confira o filtro de colaborador e a busca. Com permissão só de **Ver**, você vê apenas fotos suas já liberadas (`visivel_prestador`) e o filtro de colaborador fica fixo no cadastro vinculado ao seu e-mail de login. Se não houver vínculo, a mensagem será **Nenhum colaborador vinculado ao seu login.**",
+          "Com permissão de **Editar**, todas as fotos individuais de colaboradores aparecem em **Minhas Fotos** — confira o filtro de colaborador e a busca. Com **Ver (próprios)** (perfil prestador ou equivalente), você vê todas as fotos em **Gerais** e, em **Minhas Fotos**, só as fotos atribuídas ao seu cadastro; o filtro de colaborador fica fixo no seu nome. Se não houver vínculo entre login e cadastro RH, a mensagem será **Nenhum colaborador vinculado ao seu login.** Confira se o e-mail de login coincide com o e-mail ou e-mail Spin em **Dados de Cadastro**.",
       },
       {
         subtitulo: "O envio de fotos falhou?",

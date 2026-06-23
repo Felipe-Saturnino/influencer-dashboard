@@ -30,6 +30,7 @@ const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
+  "comunicacao",
   "rh",
 ];
 

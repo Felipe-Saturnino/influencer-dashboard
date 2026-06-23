@@ -7,6 +7,7 @@ export type Role =
   | "shift_leader"
   | "service_manager"
   | "figurino"
+  | "comunicacao"
   | "rh"
   | "influencer"
   | "afiliado"

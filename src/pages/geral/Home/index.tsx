@@ -121,6 +121,7 @@ const ROLE_LABELS: Record<Role, string> = {
   shift_leader: "Shift Leader",
   service_manager: "Service Manager",
   figurino: "Figurino",
+  comunicacao: "Comunicação",
   rh: "RH",
   influencer: "Influencer",
   afiliado: "Afiliado",
@@ -165,6 +166,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Figurino",
     subtitle:
       "Foco em figurinos e fluxos de estúdio liberados ao seu perfil.",
+  },
+  comunicacao: {
+    title: "Comunicação",
+    subtitle:
+      "Conteúdo, informativos e ferramentas de comunicação liberadas ao seu perfil.",
   },
   rh: {
     title: "RH",
