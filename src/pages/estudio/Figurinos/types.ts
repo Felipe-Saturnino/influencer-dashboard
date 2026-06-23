@@ -28,6 +28,8 @@ export interface RhFigurinoPeca {
   name: string;
   category: string;
   size: string;
+  genero: string;
+  cor: string;
   description: string | null;
   status: RhFigurinoStatus;
   condition: RhFigurinoCondition;

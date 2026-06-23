@@ -98,6 +98,8 @@ export function ModalDetalhe({
             {linhaLeitura("Estúdio", estudiosTexto)}
             {linhaLeitura("Categoria", peca.category)}
             {linhaLeitura("Tamanho", peca.size)}
+            {linhaLeitura("Gênero", peca.genero ?? "—")}
+            {linhaLeitura("Cor", peca.cor ?? "—")}
             {linhaLeitura("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
             {linhaLeitura("Condição", labelCondicaoPeca(peca.condition))}
             {linhaLeitura("Status", labelStatusPeca(peca.status))}

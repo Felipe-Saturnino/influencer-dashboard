@@ -1,22 +1,15 @@
--- Carga em lote — RH Figurinos
--- Executar no SQL Editor do Supabase (role postgres / service_role).
+-- Legado Figurinos — Camisa Blaze + CDA (self-contained)
+-- Executar no SQL Editor do Supabase (role postgres) — arquivo INTEIRO de uma vez.
 --
--- Pré-requisito: migrações aplicadas até 20260619160000_rh_figurino_genero_cor.sql
--- (códigos PREFIX-###### por categoria; gênero/cor obrigatórios).
+-- Pré-requisito Supabase: migrações aplicadas
+--   • 20260619140000_rh_figurino_codigo_por_categoria.sql
+--   • 20260619150000_rh_figurino_atende_todos_estudios.sql
+--   • 20260619160000_rh_figurino_genero_cor.sql
 --
--- IMPORTANTE: informe sempre ESTÚDIOS (`estudios_spin.slug`), não operadoras.
--- Uma operadora (ex.: Blaze) pode ter vários estúdios — o vínculo N:N operadora
--- é derivado automaticamente de `estudios_spin_operadoras` a partir dos estúdios escolhidos.
---
--- ─── 1) Conferir slugs dos estúdios antes de cadastrar ───────────────────────
--- SELECT e.slug AS estudio_slug, e.nome AS estudio_nome, e.tipo,
---        array_agg(eo.operadora_slug ORDER BY eo.operadora_slug) AS operadoras_vinculadas
--- FROM public.estudios_spin e
--- LEFT JOIN public.estudios_spin_operadoras eo ON eo.estudio_slug = e.slug
--- WHERE e.ativo = true
--- GROUP BY e.slug, e.nome, e.tipo
--- ORDER BY e.nome;
--- ─── 2) Função de lote (idempotente — pode rodar CREATE OR REPLACE várias vezes) ─
+-- Total: 77 peças (34 M + 21 G + 14 GG + 8 XG)
+-- Estúdios: slug blaze + cda
+
+-- ─── Função de lote (criada aqui se ainda não existir no banco) ───────────────
 
 CREATE OR REPLACE FUNCTION public.rh_figurino_criar_pecas_lote(
   p_estudio_slugs   text[],
@@ -41,10 +34,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_i      int;
+  v_i      integer;
   v_code   text;
   v_bar    text;
-  v_tries  int;
+  v_tries  integer;
   v_row    public.rh_figurino_pecas%ROWTYPE;
   v_slug   text;
   v_genero text;
@@ -54,7 +47,7 @@ BEGIN
   v_cor := trim(coalesce(p_cor, 'Único'));
   IF p_estudio_slugs IS NULL OR cardinality(p_estudio_slugs) = 0 THEN
     RAISE EXCEPTION
-      'rh_figurino_validation: informe ao menos um estúdio (array vazio). Confira slugs: SELECT slug, nome FROM estudios_spin WHERE ativo;'
+      'rh_figurino_validation: informe ao menos um estúdio (array vazio).'
       USING ERRCODE = 'P0001';
   END IF;
   IF trim(coalesce(p_category, '')) = '' OR trim(coalesce(p_size, '')) = '' THEN
@@ -140,60 +133,64 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text) IS
-  'Carga em lote de peças de figurino (SQL Editor / postgres). p_estudio_slugs = slugs de estudios_spin; operadoras legadas sincronizadas via N:N do estúdio.';
--- Somente postgres/service_role — não expor à app autenticada.
 REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text) FROM authenticated;
 REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text) FROM anon;
 
--- ─── 3) Exemplo — Camisa P, Estúdio Blaze + Estúdio CDA, 22 peças ───────────
--- Opção A (recomendada): slugs explícitos — copie do SELECT do passo 1.
---
--- BEGIN;
--- SELECT *
--- FROM public.rh_figurino_criar_pecas_lote(
---   p_estudio_slugs   := ARRAY['blaze', 'cda'],
---   p_category        := 'Camisa',
---   p_size            := 'P',
---   p_purchase_date   := DATE '2026-01-01',
---   p_quantidade      := 22,
---   p_actor           := 'carga-lote',
---   p_description     := NULL
--- );
--- COMMIT;
---
--- Opção B: resolver slugs pelo nome (`estudios_spin.nome` = Blaze, CDA)
+-- ─── Carga legado Camisa (Blaze + CDA) ───────────────────────────────────────
 
--- BEGIN;
--- SELECT *
--- FROM public.rh_figurino_criar_pecas_lote(
---   p_estudio_slugs := (
---     SELECT coalesce(array_agg(e.slug ORDER BY e.nome), ARRAY[]::text[])
---     FROM public.estudios_spin e
---     WHERE e.ativo = true
---       AND e.slug IN ('blaze', 'cda')
---   ),
---   p_category      := 'Camisa',
---   p_size          := 'P',
---   p_purchase_date := DATE '2026-01-01',
---   p_quantidade    := 22,
---   p_actor         := 'carga-lote',
---   p_description   := NULL
--- );
--- COMMIT;
+DO $carga$
+DECLARE
+  v_est   text[] := ARRAY['blaze', 'cda']::text[];
+  v_row   record;
+  v_n     bigint;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = '_rh_figurino_next_category_code'
+  ) THEN
+    RAISE EXCEPTION
+      'Função _rh_figurino_next_category_code não encontrada. Aplique a migração 20260619140000_rh_figurino_codigo_por_categoria.sql no Supabase.';
+  END IF;
 
--- Legado Camisa Blaze+CDA (77 peças): scripts/carga-legado-figurinos-camisa-blaze-cda-2026.sql
+  IF (SELECT count(*) FROM public.estudios_spin WHERE slug = ANY (v_est) AND ativo = true) <> 2 THEN
+    RAISE EXCEPTION 'Estúdios blaze/cda não encontrados ou inativos. SELECT slug, nome FROM estudios_spin WHERE ativo;';
+  END IF;
 
--- ─── 4) Outros lotes — copie e altere só os parâmetros ───────────────────────
---
--- SELECT * FROM public.rh_figurino_criar_pecas_lote(
---   p_estudio_slugs := ARRAY['blaze'],
---   p_category      := 'Vestido',
---   p_size          := 'M',
---   p_purchase_date := DATE '2026-01-01',
---   p_quantidade    := 10
--- );
---
--- Prefixos por categoria: Camisa→CAM, Calça→CAL, Colete→COL, Vestido→VES,
--- Gravata→GRA, Acessório→ACE.
+  RAISE NOTICE 'Estúdios: %', array_to_string(v_est, ', ');
+
+  FOR v_row IN
+    SELECT tamanho::text AS tamanho, quantidade::integer AS quantidade
+    FROM (VALUES
+      ('M',  34),
+      ('G',  21),
+      ('GG', 14),
+      ('XG', 8)
+    ) AS lotes(tamanho, quantidade)
+  LOOP
+    SELECT count(*) INTO v_n
+    FROM public.rh_figurino_criar_pecas_lote(
+      p_estudio_slugs   := v_est,
+      p_category        := 'Camisa'::text,
+      p_size            := v_row.tamanho,
+      p_purchase_date   := DATE '2026-01-01',
+      p_quantidade      := v_row.quantidade,
+      p_actor           := 'carga-legado'::text,
+      p_description     := ('Legado — Camisa ' || v_row.tamanho || ' — Blaze + CDA')::text
+    );
+
+    RAISE NOTICE 'Camisa %: % peça(s) cadastrada(s).', v_row.tamanho, v_row.quantidade;
+  END LOOP;
+
+  RAISE NOTICE 'Carga concluída — 77 peças.';
+END;
+$carga$;
+
+-- ─── Conferência ─────────────────────────────────────────────────────────────
+-- SELECT size, count(*) AS qtd, min(code) AS primeiro, max(code) AS ultimo
+-- FROM public.rh_figurino_pecas
+-- WHERE category = 'Camisa'
+-- GROUP BY size
+-- ORDER BY size;

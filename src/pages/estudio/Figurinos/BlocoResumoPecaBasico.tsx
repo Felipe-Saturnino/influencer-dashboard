@@ -32,6 +32,8 @@ export function BlocoResumoPecaBasico({
       {row("Estúdio", estudiosTexto)}
       {row("Categoria", peca.category)}
       {row("Tamanho", peca.size)}
+      {row("Gênero", peca.genero ?? "—")}
+      {row("Cor", peca.cor ?? "—")}
       {row("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
       {row("Condição", labelCondicaoPeca(peca.condition))}
     </div>

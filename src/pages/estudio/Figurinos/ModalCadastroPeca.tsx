@@ -7,7 +7,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { type RhFigurinoPeca } from "./types"
-import { CATEGORIAS, TAMANHOS, FIGURINO_ESTUDIO_CADASTRO_TODOS, figurinoEstudioAtendeTodos } from "./figurinosConstants"
+import { CATEGORIAS, TAMANHOS, GENEROS, CORES, GENERO_PADRAO, COR_PADRAO, FIGURINO_ESTUDIO_CADASTRO_TODOS, figurinoEstudioAtendeTodos } from "./figurinosConstants"
 import { ctaButtonContent } from "./figurinosPageHelpers"
 import { FigurinoEstudioCampoSelect } from "./FigurinoEstudioCampoSelect"
 
@@ -33,6 +33,8 @@ export function ModalCadastroPeca({
   });
   const [cat, setCat] = useState<string>(CATEGORIAS[0]);
   const [tam, setTam] = useState<string>(TAMANHOS[3]);
+  const [genero, setGenero] = useState<string>(GENERO_PADRAO);
+  const [cor, setCor] = useState<string>(COR_PADRAO);
   const [desc, setDesc] = useState("");
   const [dataEntrada, setDataEntrada] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -69,6 +71,8 @@ export function ModalCadastroPeca({
       p_estudio_slugs: atendeTodos ? [] : slugsEspecificos,
       p_category: cat,
       p_size: tam,
+      p_genero: genero,
+      p_cor: cor,
       p_purchase_date: dataEntrada,
       p_description: desc,
       p_actor: actor,
@@ -160,6 +164,58 @@ export function ModalCadastroPeca({
               }}
             >
               {TAMANHOS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+            Gênero
+            <CampoObrigatorioMark />
+            <select
+              value={genero}
+              onChange={(ev) => setGenero(ev.target.value)}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 6,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+              }}
+            >
+              {GENEROS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+            Cor
+            <CampoObrigatorioMark />
+            <select
+              value={cor}
+              onChange={(ev) => setCor(ev.target.value)}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 6,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+              }}
+            >
+              {CORES.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

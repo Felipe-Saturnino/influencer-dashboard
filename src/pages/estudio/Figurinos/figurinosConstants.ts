@@ -4,6 +4,14 @@ export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "
 
 export const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "Único"] as const;
 
+export const GENEROS = ["Masculino", "Feminino", "Unisex"] as const;
+
+export const CORES = ["Branco", "Preto", "Cinza", "Único"] as const;
+
+export const GENERO_PADRAO = "Unisex" as const;
+
+export const COR_PADRAO = "Único" as const;
+
 /** Valor interno ao cadastrar peça disponível em qualquer estúdio (espelha Staff). */
 export const FIGURINO_ESTUDIO_CADASTRO_TODOS = "todos";
 
