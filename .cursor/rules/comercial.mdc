@@ -52,7 +52,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 | KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
 | Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
 | Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` + linha **Sem Status** (coluna vazia). |
-| Distribuição geográfica | Mapa + lista UF; clique lista **marcas** com sede na região (intensidade = empresas). |
+| Distribuição geográfica | Mapa + painel lateral: **UF / Estado / Marcas** (visão geral) ou **Cidade + marcas** ao selecionar UF (intensidade = marcas). |
 | Carteira por comercial | Barras por comercial canónico + «Nenhum» — **sem** link para Pipeline. |
 | Novas marcas | `created_at` ≥ **20/06/2026** (corte pontual pós-import); badge = status pipeline (`PIPELINE_TAB_LABEL` / `PIPELINE_COLOR`). |
 | Movimentação recente | Histórico 30 dias; hover no número abre pop-up com nomes das marcas alteradas (respeita filtros). |
@@ -61,9 +61,9 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 | Contexto | Mensagem |
 |----------|----------|
-| UF sem dados no mapa/lista | `Nenhuma empresa com UF cadastrada para os filtros selecionados.` |
+| UF sem dados no mapa/lista | `Nenhuma marca com UF cadastrada para os filtros selecionados.` |
 | Carteira vazia | `Nenhuma marca atribuída para os filtros selecionados.` |
-| Novas marcas vazias | `Nenhuma marca cadastrada a partir de 20/06/2026.` |
+| Novas marcas vazias | `Nenhuma marca cadastrada nos últimos 30 dias.` |
 | Sem permissão | String Global |
 
 ---

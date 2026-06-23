@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
-import type { GeoUfEntry } from "./helpers";
-import { UF_NOMES } from "./helpers";
+import { groupMarcasPorCidade, type GeoUfEntry, UF_NOMES } from "./helpers";
 import brazilMap from "../../../assets/comercial/brazil-states-paths.json";
 
 type BrazilMapData = {
@@ -11,6 +10,17 @@ type BrazilMapData = {
 
 const MAP = brazilMap as BrazilMapData;
 
+const PANEL_HEADER: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: "inherit",
+  padding: "0 4px 10px",
+  borderBottom: "1px solid var(--geo-panel-border)",
+  fontFamily: FONT.body,
+};
+
 type Props = {
   porUf: Map<string, GeoUfEntry>;
   brandPrimary: string;
@@ -18,6 +28,7 @@ type Props = {
   t: {
     cardBorder: string;
     inputBg: string;
+    text: string;
     textMuted: string;
     isDark?: boolean;
   };
@@ -33,7 +44,12 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
     .map(([uf]) => uf);
 
   const panel = selectedUf ? porUf.get(selectedUf) : null;
-  const panelNome = selectedUf ? UF_NOMES[selectedUf] ?? selectedUf : "";
+  const panelNome = selectedUf ? (UF_NOMES[selectedUf] ?? selectedUf) : "";
+  const porCidade = panel ? groupMarcasPorCidade(panel.marcas) : [];
+
+  const toggleUf = (uf: string) => {
+    setSelectedUf((prev) => (prev === uf ? null : uf));
+  };
 
   return (
     <div
@@ -62,7 +78,7 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
         <svg
           viewBox={MAP.viewBox}
           preserveAspectRatio="xMidYMid meet"
-          aria-label="Mapa do Brasil — empresas por estado"
+          aria-label="Mapa do Brasil — marcas por estado"
           style={{ width: "100%", maxHeight: 420, display: "block" }}
         >
           {MAP.states.map((st) => {
@@ -82,196 +98,247 @@ export function GeoDistributionBlock({ porUf, brandPrimary, brandAccent, t }: Pr
                 style={{ cursor: "pointer", transition: "fill-opacity 0.15s" }}
                 role="button"
                 tabIndex={0}
-                aria-label={`${st.nome}${count ? ` — ${count} empresas` : " — sem empresas"}`}
-                onClick={() => setSelectedUf((prev) => (prev === st.sigla ? null : st.sigla))}
+                aria-label={`${st.nome}${count ? ` — ${count} marcas` : " — sem marcas"}`}
+                aria-pressed={isSel}
+                onClick={() => toggleUf(st.sigla)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setSelectedUf((prev) => (prev === st.sigla ? null : st.sigla));
+                    toggleUf(st.sigla);
                   }
                 }}
               />
             );
           })}
           <text x="16" y="838" fill="#6b7280" fontSize="10">
-            Intensidade = nº de empresas
+            Intensidade = nº de marcas
           </text>
         </svg>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 400 }}>
-        <div style={{ display: "flex", flexDirection: "column", maxHeight: 420 }}>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: t.textMuted,
-              padding: "0 4px 10px",
-              borderBottom: `1px solid ${t.cardBorder}`,
-              display: "grid",
-              gridTemplateColumns: "36px 1fr 56px",
-              gap: 8,
-            }}
-          >
-            <span>UF</span>
-            <span>Estado</span>
-            <span style={{ textAlign: "right" }}>Empresas</span>
-          </div>
-          <div
-            role="list"
-            aria-label="Estados por volume de empresas"
-            style={{ overflowY: "auto", flex: 1, maxHeight: 220, paddingTop: 4 }}
-          >
-            {sortedUfs.length === 0 ? (
-              <p
-                style={{
-                  padding: "16px 4px",
-                  fontSize: 12,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                }}
-              >
-                Nenhuma empresa com UF cadastrada para os filtros selecionados.
-              </p>
-            ) : (
-              sortedUfs.map((uf) => {
-                const entry = porUf.get(uf)!;
-                const pct = Math.round((entry.count / maxCount) * 100);
-                const isSel = selectedUf === uf;
-                return (
-                  <div
-                    key={uf}
-                    role="listitem"
-                    tabIndex={0}
-                    onClick={() => setSelectedUf((prev) => (prev === uf ? null : uf))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelectedUf((prev) => (prev === uf ? null : uf));
-                      }
-                    }}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "36px 1fr 56px",
-                      gap: 8,
-                      alignItems: "center",
-                      padding: "7px 4px",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontFamily: FONT.body,
-                      background: isSel
-                        ? `color-mix(in srgb, ${brandAccent} 12%, ${t.inputBg})`
-                        : undefined,
-                      outline: isSel
-                        ? `1px solid color-mix(in srgb, ${brandAccent} 35%, transparent)`
-                        : undefined,
-                    }}
-                  >
-                    <span style={{ fontWeight: 800, color: brandPrimary }}>{uf}</span>
-                    <span>
-                      <span style={{ color: t.textMuted, fontSize: 11 }}>
-                        {UF_NOMES[uf] ?? uf}
-                      </span>
-                      <div
-                        style={{
-                          height: 4,
-                          background: t.inputBg,
-                          borderRadius: 999,
-                          overflow: "hidden",
-                          marginTop: 2,
-                        }}
-                      >
-                        <div
-                          style={{
-                            height: "100%",
-                            width: `${pct}%`,
-                            borderRadius: 999,
-                            background: `linear-gradient(90deg, ${brandPrimary}, ${brandAccent})`,
-                          }}
-                        />
-                      </div>
-                    </span>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontVariantNumeric: "tabular-nums",
-                        textAlign: "right",
-                      }}
-                    >
-                      {entry.count}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div
-          aria-live="polite"
-          style={{
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 10,
-            background: t.inputBg,
-            padding: "12px 14px",
-            minHeight: 120,
+      <div
+        style={
+          {
+            "--geo-panel-border": t.cardBorder,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 400,
+            maxHeight: 420,
             fontFamily: FONT.body,
-          }}
-        >
-          <h4
-            style={{
-              margin: "0 0 8px",
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: t.textMuted,
-              fontFamily: FONT.body,
-            }}
-          >
-            {panel ? (
-              <>
-                Marcas em{" "}
-                <span style={{ color: brandPrimary, fontStyle: "normal" }}>
-                  {panelNome} ({selectedUf})
-                </span>
-              </>
-            ) : (
-              "Marcas na região"
-            )}
-          </h4>
-          {!panel ? (
-            <p style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
-              Selecione um estado no mapa ou na lista para ver as marcas com sede na região.
-            </p>
-          ) : panel.marcas.length === 0 ? (
-            <p style={{ fontSize: 12, color: t.textMuted }}>Nenhuma marca neste estado.</p>
-          ) : (
-            <>
-              {panel.marcas.slice(0, 12).map((m) => (
-                <div
-                  key={m.id}
+          } as CSSProperties
+        }
+      >
+        {!selectedUf ? (
+          <>
+            <div
+              style={{
+                ...PANEL_HEADER,
+                color: t.textMuted,
+                display: "grid",
+                gridTemplateColumns: "36px 1fr 56px",
+                gap: 8,
+              }}
+            >
+              <span>UF</span>
+              <span>Estado</span>
+              <span style={{ textAlign: "right" }}>Marcas</span>
+            </div>
+            <div
+              role="list"
+              aria-label="Estados por volume de marcas"
+              style={{ overflowY: "auto", flex: 1, paddingTop: 4 }}
+            >
+              {sortedUfs.length === 0 ? (
+                <p
                   style={{
-                    padding: "6px 0",
-                    borderBottom: `1px solid color-mix(in srgb, ${t.cardBorder} 70%, transparent)`,
+                    padding: "16px 4px",
                     fontSize: 12,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
                   }}
                 >
-                  <strong>{m.nome}</strong>
-                  <span style={{ color: t.textMuted }}> · {m.empresa}</span>
-                </div>
-              ))}
-              {panel.marcas.length > 12 ? (
-                <p style={{ marginTop: 8, fontSize: 11, color: t.textMuted }}>
-                  Mostrando 12 de {panel.marcas.length} marcas nesta região.
+                  Nenhuma marca com UF cadastrada para os filtros selecionados.
                 </p>
-              ) : null}
-            </>
-          )}
-        </div>
+              ) : (
+                sortedUfs.map((uf) => {
+                  const entry = porUf.get(uf)!;
+                  const pct = Math.round((entry.count / maxCount) * 100);
+                  return (
+                    <div
+                      key={uf}
+                      role="listitem"
+                      tabIndex={0}
+                      onClick={() => toggleUf(uf)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleUf(uf);
+                        }
+                      }}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "36px 1fr 56px",
+                        gap: 8,
+                        alignItems: "center",
+                        padding: "7px 4px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      <span style={{ fontWeight: 800, color: brandPrimary }}>{uf}</span>
+                      <span>
+                        <span style={{ color: t.textMuted, fontSize: 11 }}>
+                          {UF_NOMES[uf] ?? uf}
+                        </span>
+                        <div
+                          style={{
+                            height: 4,
+                            background: t.inputBg,
+                            borderRadius: 999,
+                            overflow: "hidden",
+                            marginTop: 2,
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${pct}%`,
+                              borderRadius: 999,
+                              background: `linear-gradient(90deg, ${brandPrimary}, ${brandAccent})`,
+                            }}
+                          />
+                        </div>
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontVariantNumeric: "tabular-nums",
+                          textAlign: "right",
+                          color: t.text,
+                        }}
+                      >
+                        {entry.count}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                ...PANEL_HEADER,
+                color: t.textMuted,
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <span>
+                Cidade —{" "}
+                <span style={{ color: brandPrimary, textTransform: "none", letterSpacing: 0 }}>
+                  {panelNome} ({selectedUf})
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedUf(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: brandAccent,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Todos estados
+              </button>
+            </div>
+            <div
+              aria-live="polite"
+              aria-label={`Marcas por cidade em ${panelNome}`}
+              style={{ overflowY: "auto", flex: 1, paddingTop: 8 }}
+            >
+              {!panel || panel.marcas.length === 0 ? (
+                <p style={{ padding: "8px 4px", fontSize: 12, color: t.textMuted }}>
+                  Nenhuma marca neste estado.
+                </p>
+              ) : (
+                porCidade.map(({ cidade, marcas }) => (
+                  <div
+                    key={cidade}
+                    style={{
+                      marginBottom: 14,
+                      paddingBottom: 12,
+                      borderBottom: `1px solid color-mix(in srgb, ${t.cardBorder} 80%, transparent)`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: t.text,
+                        marginBottom: 6,
+                        padding: "0 4px",
+                      }}
+                    >
+                      <span>{cidade}</span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fontVariantNumeric: "tabular-nums",
+                          color: t.textMuted,
+                        }}
+                      >
+                        {marcas.length}
+                      </span>
+                    </div>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        margin: 0,
+                        padding: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      {marcas.map((m) => (
+                        <li
+                          key={m.id}
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 4px 4px 12px",
+                            color: t.text,
+                            borderLeft: `2px solid color-mix(in srgb, ${brandAccent} 35%, transparent)`,
+                          }}
+                        >
+                          <strong>{m.nome}</strong>
+                          <span style={{ color: t.textMuted }}> · {m.empresa}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

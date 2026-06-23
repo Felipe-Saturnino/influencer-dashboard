@@ -869,7 +869,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mapa e movimentação",
         texto:
-          "No bloco **Distribuição geográfica**, clique em um estado para ver as **marcas** com sede na região. Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
+          "No bloco **Distribuição geográfica**, a coluna à direita lista **UF, Estado e Marcas**; ao clicar em um estado no mapa ou na lista, aparecem as marcas agrupadas por **cidade** (com a quantidade por cidade). Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
       },
     ],
   },

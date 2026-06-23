@@ -894,7 +894,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mapa ou lista de UF vazios?",
         texto:
-          "A distribuição geográfica usa a **UF da sede do CNPJ**, preenchida pelo enriquecimento automático de cadastro. Empresas ainda não enriquecidas não aparecem no mapa até o processamento diário.",
+          "A distribuição geográfica usa a **UF da sede do CNPJ** de cada marca (via empresa), preenchida pelo enriquecimento automático de cadastro. Marcas cujo CNPJ ainda não foi enriquecido não aparecem no mapa até o processamento diário.",
       },
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
