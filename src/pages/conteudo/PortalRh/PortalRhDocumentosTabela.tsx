@@ -39,6 +39,12 @@ export type PortalRhDocumentoRow = {
 type SortCol = "codigo" | "titulo" | "versao" | "ciencia";
 type SortDir = "asc" | "desc";
 
+const cellWrap: CSSProperties = {
+  verticalAlign: "top",
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
+};
+
 export function PortalRhDocumentosTabela({
   rows,
   cienciaPendenteIds,
@@ -59,6 +65,19 @@ export function PortalRhDocumentosTabela({
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
 
+  const cellStackPrimary: CSSProperties = {
+    fontSize: 13,
+    fontWeight: 700,
+    color: t.text,
+    lineHeight: 1.35,
+  };
+  const cellStackSecondary: CSSProperties = {
+    fontSize: 11,
+    color: t.textMuted,
+    marginTop: 4,
+    lineHeight: 1.4,
+  };
+
   const sorted = [...rows].sort((a, b) => {
     if (sort.col === "ciencia") {
       const pendA = cienciaPendenteIds.has(a.id) ? 0 : 1;
@@ -74,36 +93,20 @@ export function PortalRhDocumentosTabela({
     return compareLocaleTexto(a.titulo, b.titulo, sort.dir);
   });
 
-  const cellStackPrimary: CSSProperties = {
-    fontSize: 13,
-    fontWeight: 700,
-    color: t.text,
-    whiteSpace: "normal",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  };
-  const cellStackSecondary: CSSProperties = {
-    fontSize: 11,
-    color: t.textMuted,
-    marginTop: 4,
-    lineHeight: 1.4,
-    whiteSpace: "normal",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  };
-  const cellWrap: CSSProperties = {
-    textAlign: "left",
-    verticalAlign: "top",
-    overflowWrap: "anywhere",
-    wordBreak: "break-word",
-  };
-
   return (
     <div style={pageBox}>
       <SectionTitle sub="PDFs publicados para leitura e aceite">Documentos oficiais</SectionTitle>
-      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-        <table style={getDataTableStyle({ minWidth: 880, tableLayout: "fixed", width: "100%" })}>
+      <div className="app-table-wrap app-table-wrap--portal-rh-docs" style={getDataTableWrapStyle()}>
+        <table className="app-portal-rh-documentos-table" style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Políticas e normativas publicadas no portal de RH</caption>
+          <colgroup>
+            <col className="col-doc" />
+            <col className="col-versao" />
+            <col className="col-tipo" />
+            <col className="col-aplicavel" />
+            <col className="col-ciencia" />
+            <col className="col-acao" />
+          </colgroup>
           <thead>
             <tr>
               <SortTableTh
@@ -112,7 +115,7 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={{ ...dataTable.thHeader, width: "28%" }}
+                thStyle={dataTable.thHeader}
                 align="center"
               />
               <SortTableTh
@@ -121,13 +124,13 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={{ ...dataTable.thHeader, width: "14%" }}
+                thStyle={dataTable.thHeader}
                 align="center"
               />
-              <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
+              <th scope="col" style={dataTable.thHeader}>
                 Tipo
               </th>
-              <th scope="col" style={{ ...dataTable.thHeader, width: "16%" }}>
+              <th scope="col" style={dataTable.thHeader}>
                 Aplicável a
               </th>
               <SortTableTh
@@ -136,10 +139,10 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={{ ...dataTable.thHeader, width: "14%" }}
+                thStyle={dataTable.thHeader}
                 align="center"
               />
-              <th scope="col" style={dataTable.thHeader}>
+              <th scope="col" className="col-acao-cell" style={dataTable.thHeader}>
                 Ação
               </th>
             </tr>
@@ -152,14 +155,7 @@ export function PortalRhDocumentosTabela({
               const dataPub = row.published_at ?? row.updated_at;
               return (
                 <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
-                  <td
-                    style={{
-                      ...dataTable.tdCenter,
-                      ...cellWrap,
-                      width: "28%",
-                      maxWidth: 0,
-                    }}
-                  >
+                  <td style={{ ...dataTable.tdCenter, ...cellWrap, textAlign: "left" }}>
                     <div
                       style={{
                         fontFamily: "ui-monospace, monospace",
@@ -172,27 +168,11 @@ export function PortalRhDocumentosTabela({
                     </div>
                     <div style={{ ...cellStackPrimary, marginTop: 4 }}>{row.titulo}</div>
                   </td>
-                  <td
-                    style={{
-                      ...dataTable.tdCenter,
-                      ...cellWrap,
-                      textAlign: "center",
-                      width: "14%",
-                      maxWidth: 0,
-                    }}
-                  >
-                    <div style={{ ...cellStackPrimary, textAlign: "center" }}>{row.versao ?? "—"}</div>
-                    <div style={{ ...cellStackSecondary, textAlign: "center" }}>{fmtDataPt(dataPub)}</div>
+                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
+                    <div style={cellStackPrimary}>{row.versao ?? "—"}</div>
+                    <div style={cellStackSecondary}>{fmtDataPt(dataPub)}</div>
                   </td>
-                  <td
-                    style={{
-                      ...dataTable.tdCenter,
-                      ...cellWrap,
-                      textAlign: "center",
-                      width: "18%",
-                      maxWidth: 0,
-                    }}
-                  >
+                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <span
                         style={{
@@ -216,15 +196,15 @@ export function PortalRhDocumentosTabela({
                       {row.classificacao ? labelClassificacaoDocumento(row.classificacao) : "—"}
                     </div>
                   </td>
-                  <td style={{ ...dataTable.tdCenter, fontSize: 12, overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                  <td style={{ ...dataTable.tdCenter, ...cellWrap, fontSize: 12 }}>
                     {fmtAplicavelDocumento(row.aplicavel_a)}
                   </td>
-                  <td style={dataTable.tdCenter}>
+                  <td style={{ ...dataTable.tdCenter, ...cellWrap }}>
                     {row.requires_acknowledgment ? (
                       pendente ? (
                         <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
                       ) : (
-                        <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12 }}>
+                        <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, lineHeight: 1.35 }}>
                           Ciente{cienteEm ? ` · ${fmtDataPt(cienteEm)}` : ""}
                         </span>
                       )
@@ -232,29 +212,27 @@ export function PortalRhDocumentosTabela({
                       <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
                     )}
                   </td>
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        aria-label={`Abrir documento ${row.codigo ?? row.titulo}`}
-                        title={`Abrir ${row.codigo ?? row.titulo}`}
-                        onClick={() => onAbrir(row.id)}
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 10,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: t.text,
-                        }}
-                      >
-                        <Eye size={14} aria-hidden />
-                      </button>
-                    </div>
+                  <td className="col-acao-cell" style={dataTable.tdCenter}>
+                    <button
+                      type="button"
+                      aria-label={`Abrir documento ${row.codigo ?? row.titulo}`}
+                      title={`Abrir ${row.codigo ?? row.titulo}`}
+                      onClick={() => onAbrir(row.id)}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: t.text,
+                      }}
+                    >
+                      <Eye size={14} aria-hidden />
+                    </button>
                   </td>
                 </tr>
               );
