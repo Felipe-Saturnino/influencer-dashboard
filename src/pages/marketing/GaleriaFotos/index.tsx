@@ -45,6 +45,7 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -73,7 +74,11 @@ type GaleriaBloco = {
 };
 
 type Aba = "galeria" | "upload";
-type FiltroTipoGaleria = "todos" | "geral" | "prestador";
+type GaleriaSubAba = "gerais" | "minhas_fotos";
+
+const GALERIA_SUB_ABAS: GaleriaSubAba[] = ["gerais", "minhas_fotos"];
+const FILTRO_EVENTO_TODOS = "todos";
+const FILTRO_PRESTADOR_TODOS = "todos";
 
 const ABAS_GALERIA: Aba[] = ["galeria"];
 const ABAS_COM_UPLOAD: Aba[] = ["galeria", "upload"];
@@ -111,7 +116,7 @@ export default function GaleriaFotos() {
   const brand = useDashboardBrand();
   const perm = usePermission("galeria_fotos");
   const podeUpload = perm.canCriarOk;
-  const podeGerir = perm.canCriarOk || perm.canEditarOk || perm.canExcluirOk;
+  const podeFiltrarPrestador = perm.canEditarOk;
 
   const abasDisponiveis = podeUpload ? ABAS_COM_UPLOAD : ABAS_GALERIA;
   const [aba, setAba] = useRouteTab("galeria_fotos", "galeria", abasDisponiveis);
@@ -122,9 +127,12 @@ export default function GaleriaFotos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [filtroEvento, setFiltroEvento] = useState<string>("todos");
-  const [filtroTipo, setFiltroTipo] = useState<FiltroTipoGaleria>("geral");
+  const [filtroEvento, setFiltroEvento] = useState(FILTRO_EVENTO_TODOS);
+  const [galeriaSubAba, setGaleriaSubAba] = useState<GaleriaSubAba>("gerais");
+  const [filtroPrestador, setFiltroPrestador] = useState(FILTRO_PRESTADOR_TODOS);
   const [buscaGaleria, setBuscaGaleria] = useState("");
+  const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
+  const [meuRhFuncionarioNome, setMeuRhFuncionarioNome] = useState<string | null>(null);
 
   const [uploadEventoId, setUploadEventoId] = useState("");
   const [uploadTipo, setUploadTipo] = useState<MarketingFotoTipo>("geral");
@@ -155,6 +163,20 @@ export default function GaleriaFotos() {
     () => prestadores.map((p) => ({ id: p.id, name: p.nome })),
     [prestadores],
   );
+  const prestadorItensMinhas = useMemo(() => {
+    if (podeFiltrarPrestador) return prestadorItens;
+    if (meuRhFuncionarioId && meuRhFuncionarioNome) {
+      return [{ id: meuRhFuncionarioId, name: meuRhFuncionarioNome }];
+    }
+    return [];
+  }, [podeFiltrarPrestador, prestadorItens, meuRhFuncionarioId, meuRhFuncionarioNome]);
+  const prestadorFiltroSelecionado = useMemo(() => {
+    if (galeriaSubAba !== "minhas_fotos") return [];
+    if (podeFiltrarPrestador) {
+      return filtroPrestador === FILTRO_PRESTADOR_TODOS ? [] : [filtroPrestador];
+    }
+    return meuRhFuncionarioId ? [meuRhFuncionarioId] : [];
+  }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
@@ -191,20 +213,38 @@ export default function GaleriaFotos() {
     setLoading(true);
     setErro(null);
     try {
-      await Promise.all([carregarEventos(), carregarFotos(), podeUpload ? carregarPrestadores() : Promise.resolve()]);
+      const tarefas: Promise<void>[] = [carregarEventos(), carregarFotos()];
+      if (podeUpload || podeFiltrarPrestador) tarefas.push(carregarPrestadores());
+      await Promise.all(tarefas);
     } catch {
       setErro(MSG_ERRO_CARREGAR);
     } finally {
       setLoading(false);
     }
-  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload]);
+  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload, podeFiltrarPrestador]);
 
   useEffect(() => {
     if (perm.canView !== "nao") void recarregar();
   }, [perm.canView, recarregar]);
 
   useEffect(() => {
-    if (!podeGerir) return;
+    if (perm.canView === "nao" || !user?.email?.trim()) {
+      setMeuRhFuncionarioId(null);
+      setMeuRhFuncionarioNome(null);
+      return;
+    }
+    let cancel = false;
+    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((row) => {
+      if (cancel) return;
+      setMeuRhFuncionarioId(row?.id ?? null);
+      setMeuRhFuncionarioNome(row?.nome ?? null);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [perm.canView, user?.email]);
+
+  useEffect(() => {
     const prestadorFotos = fotos.filter((f) => f.tipo === "prestador");
     if (!prestadorFotos.length) return;
     let cancel = false;
@@ -219,7 +259,7 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [fotos, podeGerir]);
+  }, [fotos]);
 
   useEffect(() => {
     if (!lightbox) {
@@ -239,17 +279,28 @@ export default function GaleriaFotos() {
     };
   }, [lightbox]);
 
-  useEffect(() => {
-    if (!podeGerir && filtroTipo !== "geral") setFiltroTipo("geral");
-  }, [podeGerir, filtroTipo]);
-
   const fotosFiltradas = useMemo(() => {
     let list = fotos;
-    if (!podeGerir) list = list.filter((f) => f.tipo === "geral");
-    else if (filtroTipo !== "todos") list = list.filter((f) => f.tipo === filtroTipo);
-    if (filtroEvento !== "todos") {
-      list = list.filter((f) => f.tipo === "prestador" || f.evento_id === filtroEvento);
+
+    if (galeriaSubAba === "gerais") {
+      list = list.filter((f) => f.tipo === "geral");
+      if (filtroEvento !== FILTRO_EVENTO_TODOS) {
+        list = list.filter((f) => f.evento_id === filtroEvento);
+      }
+    } else {
+      list = list.filter((f) => f.tipo === "prestador");
+      const prestadorId = podeFiltrarPrestador
+        ? filtroPrestador === FILTRO_PRESTADOR_TODOS
+          ? null
+          : filtroPrestador
+        : meuRhFuncionarioId;
+      if (prestadorId) {
+        list = list.filter((f) => f.rh_funcionario_id === prestadorId);
+      } else if (!podeFiltrarPrestador) {
+        list = [];
+      }
     }
+
     if (buscaGaleria.trim()) {
       list = list.filter((f) => {
         const ev = fotoEventoEmbed(f);
@@ -264,7 +315,15 @@ export default function GaleriaFotos() {
       });
     }
     return list;
-  }, [fotos, podeGerir, filtroTipo, filtroEvento, buscaGaleria]);
+  }, [
+    fotos,
+    galeriaSubAba,
+    filtroEvento,
+    filtroPrestador,
+    podeFiltrarPrestador,
+    meuRhFuncionarioId,
+    buscaGaleria,
+  ]);
 
   const galeriaBlocos = useMemo((): GaleriaBloco[] => {
     const eventoMap = new Map<string, GaleriaBloco>();
@@ -309,8 +368,8 @@ export default function GaleriaFotos() {
     const prestadorBlocos = [...prestadorMap.values()].sort((a, b) =>
       compareLocaleTexto(a.titulo, b.titulo, "asc"),
     );
-    return [...eventoBlocos, ...prestadorBlocos];
-  }, [fotosFiltradas]);
+    return galeriaSubAba === "gerais" ? eventoBlocos : prestadorBlocos;
+  }, [fotosFiltradas, galeriaSubAba]);
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
     if (f.tipo === "geral") return urlPublicaFotoGeral(f.storage_path);
@@ -528,6 +587,11 @@ export default function GaleriaFotos() {
         >
           <div style={getPageFilterBoxStyle(brand, t)}>
             <div
+              role="tablist"
+              aria-label="Modo da galeria"
+              onKeyDown={(e) =>
+                onFiltroBarTabsKeyDown(e, GALERIA_SUB_ABAS, setGaleriaSubAba, (k) => `tab-galeria-sub-${k}`)
+              }
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -538,61 +602,99 @@ export default function GaleriaFotos() {
                 marginBottom: 10,
               }}
             >
-              <FiltroSemanticoTabPill
-                label="Todos os eventos"
-                semanticColor={brand.primary}
-                active={filtroEvento === "todos"}
-                onClick={() => setFiltroEvento("todos")}
-              />
-              {eventos.map((ev) => (
-                <FiltroSemanticoTabPill
-                  key={ev.id}
-                  label={ev.nome}
-                  semanticColor={brand.accent}
-                  active={filtroEvento === ev.id}
-                  onClick={() => setFiltroEvento(filtroEvento === ev.id ? "todos" : ev.id)}
-                />
-              ))}
-            </div>
-            {podeGerir ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  width: "100%",
-                  marginBottom: 10,
-                }}
+              <FiltroBarTabButton
+                id="tab-galeria-sub-gerais"
+                active={galeriaSubAba === "gerais"}
+                aria-controls="panel-galeria-sub-gerais"
+                onClick={() => setGaleriaSubAba("gerais")}
+                icon={<Images {...FILTRO_BAR_TAB_ICON_PROPS} />}
               >
-                <FiltroSemanticoTabPill
-                  label="Todas"
-                  semanticColor="#6b7280"
-                  active={filtroTipo === "todos"}
-                  onClick={() => setFiltroTipo("todos")}
+                Gerais
+              </FiltroBarTabButton>
+              <FiltroBarTabButton
+                id="tab-galeria-sub-minhas_fotos"
+                active={galeriaSubAba === "minhas_fotos"}
+                aria-controls="panel-galeria-sub-minhas_fotos"
+                onClick={() => setGaleriaSubAba("minhas_fotos")}
+                icon={<User {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                Minhas Fotos
+              </FiltroBarTabButton>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                gap: 10,
+                width: "100%",
+              }}
+            >
+              <BarraPesquisaPagina
+                value={buscaGaleria}
+                onChange={setBuscaGaleria}
+                placeholder={
+                  galeriaSubAba === "gerais"
+                    ? "Pesquisar evento ou arquivo..."
+                    : "Pesquisar colaborador ou arquivo..."
+                }
+                aria-label={
+                  galeriaSubAba === "gerais"
+                    ? "Buscar fotos gerais por evento ou arquivo"
+                    : "Buscar minhas fotos por colaborador ou arquivo"
+                }
+                wrapperStyle={{ width: "100%", maxWidth: 420, flex: "1 1 240px" }}
+              />
+              {galeriaSubAba === "gerais" ? (
+                <SelectComIcone
+                  icon={<Calendar size={15} aria-hidden />}
+                  label="Eventos"
+                  value={filtroEvento}
+                  onChange={setFiltroEvento}
+                  minWidth={220}
+                  pill
+                >
+                  <option value={FILTRO_EVENTO_TODOS}>Todos Eventos</option>
+                  {eventos.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nome} ({fmtDataEvento(ev.data_evento)})
+                    </option>
+                  ))}
+                </SelectComIcone>
+              ) : podeFiltrarPrestador ? (
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={prestadorFiltroSelecionado}
+                  onChange={(ids) =>
+                    setFiltroPrestador(ids[0] ?? FILTRO_PRESTADOR_TODOS)
+                  }
+                  items={prestadorItensMinhas}
+                  icon={<User size={15} aria-hidden />}
+                  triggerEmptyLabel="Todos Colaboradores"
+                  ariaFilterPrefix="Filtrar por colaborador"
+                  listboxAriaLabel="Colaboradores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  enableSearch={prestadorItensMinhas.length > 5}
                 />
-                <FiltroSemanticoTabPill
-                  label="Gerais"
-                  semanticColor="#22c55e"
-                  active={filtroTipo === "geral"}
-                  onClick={() => setFiltroTipo(filtroTipo === "geral" ? "todos" : "geral")}
+              ) : meuRhFuncionarioId ? (
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={prestadorFiltroSelecionado}
+                  onChange={() => {}}
+                  items={prestadorItensMinhas}
+                  icon={<User size={15} aria-hidden />}
+                  triggerEmptyLabel={meuRhFuncionarioNome ?? "Colaborador"}
+                  ariaFilterPrefix="Colaborador"
+                  listboxAriaLabel="Colaborador"
+                  disabled
                 />
-                <FiltroSemanticoTabPill
-                  label="Colaboradores"
-                  semanticColor="#1e36f8"
-                  active={filtroTipo === "prestador"}
-                  onClick={() => setFiltroTipo(filtroTipo === "prestador" ? "todos" : "prestador")}
-                />
-              </div>
-            ) : null}
-            <BarraPesquisaPagina
-              value={buscaGaleria}
-              onChange={setBuscaGaleria}
-              placeholder="Pesquisar evento, colaborador ou legenda..."
-              aria-label="Buscar na galeria"
-              wrapperStyle={{ width: "100%", maxWidth: 420 }}
-            />
+              ) : (
+                <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum colaborador vinculado ao seu login.
+                </span>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -609,7 +711,9 @@ export default function GaleriaFotos() {
           ) : galeriaBlocos.length === 0 ? (
             <div style={pageBox}>
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Nenhuma foto encontrada para os filtros selecionados.
+                {galeriaSubAba === "minhas_fotos" && !podeFiltrarPrestador && !meuRhFuncionarioId
+                  ? "Nenhum colaborador vinculado ao seu login."
+                  : "Nenhuma foto encontrada para os filtros selecionados."}
               </div>
             </div>
           ) : (

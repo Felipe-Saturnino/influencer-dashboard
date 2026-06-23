@@ -840,12 +840,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. A equipe de Marketing envia fotos **gerais** (visíveis e baixáveis por quem tem permissão de Ver) e fotos **individuais de colaboradores** (visíveis apenas para quem tem permissão de Criar, Editar ou Excluir na página — liberação aos próprios colaboradores será tratada em evolução futura).",
+          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de colaboradores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer colaborador; quem tem só **Ver** vê apenas as próprias fotos liberadas (`visivel_prestador`), com o filtro de colaborador travado no cadastro vinculado ao login.",
       },
       {
         subtitulo: "Aba Galeria",
         texto:
-          "Filtre por evento nos chips da barra superior ou use **Todos os eventos**. Quem gerencia a galeria também filtra por **Gerais** ou **Colaboradores**. A busca localiza evento, nome do colaborador ou nome do arquivo.\n\n**Fotos gerais** aparecem em blocos por evento (título + data). **Fotos de colaborador** aparecem em blocos pelo nome do colaborador. Clique na miniatura para ampliar; use o ícone de download para salvar o arquivo. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por defeito) e busque por nome do evento ou arquivo. Em **Minhas Fotos**, quem tem permissão de **Editar** filtra por colaborador (**Todos Colaboradores** por defeito); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por colaborador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
       },
       {
         subtitulo: "Aba Upload",

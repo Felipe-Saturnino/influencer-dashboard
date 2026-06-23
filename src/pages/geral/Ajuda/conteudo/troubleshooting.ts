@@ -869,12 +869,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a aba Upload?",
         texto:
-          "A aba Upload exige permissão de **Criar** em Gestão de Usuários → Permissões para a página Galeria de Fotos. Quem tem apenas Ver acessa somente a galeria de fotos gerais.",
+          "A aba Upload exige permissão de **Criar** em Gestão de Usuários → Permissões para a página Galeria de Fotos. Quem tem apenas Ver acessa a aba **Galeria** (sub-abas Gerais e Minhas Fotos).",
       },
       {
-        subtitulo: "Não encontro fotos de colaboradores na galeria?",
+        subtitulo: "Não encontro fotos em Minhas Fotos?",
         texto:
-          "Fotos individuais de colaboradores são visíveis apenas para perfis com permissão de Criar, Editar ou Excluir na Galeria de Fotos. Demais perfis veem somente fotos gerais. A liberação das fotos individuais para cada colaborador será tratada em evolução futura da plataforma.",
+          "Com permissão de **Editar**, todas as fotos individuais de colaboradores aparecem em **Minhas Fotos** — confira o filtro de colaborador e a busca. Com permissão só de **Ver**, você vê apenas fotos suas já liberadas (`visivel_prestador`) e o filtro de colaborador fica fixo no cadastro vinculado ao seu e-mail de login. Se não houver vínculo, a mensagem será **Nenhum colaborador vinculado ao seu login.**",
       },
       {
         subtitulo: "O envio de fotos falhou?",
