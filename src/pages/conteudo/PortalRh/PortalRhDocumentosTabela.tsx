@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Eye } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { SectionTitle } from "../../../components/dashboard";
@@ -73,9 +74,33 @@ export function PortalRhDocumentosTabela({
     return compareLocaleTexto(a.titulo, b.titulo, sort.dir);
   });
 
+  const cellStackPrimary: CSSProperties = {
+    fontSize: 13,
+    fontWeight: 700,
+    color: t.text,
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  };
+  const cellStackSecondary: CSSProperties = {
+    fontSize: 11,
+    color: t.textMuted,
+    marginTop: 4,
+    lineHeight: 1.4,
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  };
+  const cellWrap: CSSProperties = {
+    textAlign: "left",
+    verticalAlign: "top",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+  };
+
   return (
     <div style={pageBox}>
-      <SectionTitle sub="PDF publicado · ordenação por código · ciência quando indicado">Documentos oficiais</SectionTitle>
+      <SectionTitle sub="PDFs publicados para leitura e aceite">Documentos oficiais</SectionTitle>
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 880, tableLayout: "fixed", width: "100%" })}>
           <caption style={{ display: "none" }}>Políticas e normativas publicadas no portal de RH</caption>
@@ -87,7 +112,7 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={{ ...dataTable.thHeader, width: "38%" }}
+                thStyle={{ ...dataTable.thHeader, width: "28%" }}
                 align="center"
               />
               <SortTableTh
@@ -96,22 +121,22 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={dataTable.thHeader}
+                thStyle={{ ...dataTable.thHeader, width: "14%" }}
                 align="center"
               />
-              <th scope="col" style={dataTable.thHeader}>
+              <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
                 Tipo
               </th>
-              <th scope="col" style={dataTable.thHeader}>
+              <th scope="col" style={{ ...dataTable.thHeader, width: "16%" }}>
                 Aplicável a
               </th>
               <SortTableTh
-                label="Sua ciência"
+                label="Sua Ciência"
                 col="ciencia"
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={dataTable.thHeader}
+                thStyle={{ ...dataTable.thHeader, width: "14%" }}
                 align="center"
               />
               <th scope="col" style={dataTable.thHeader}>
@@ -130,81 +155,66 @@ export function PortalRhDocumentosTabela({
                   <td
                     style={{
                       ...dataTable.tdCenter,
-                      textAlign: "left",
-                      verticalAlign: "top",
-                      width: "38%",
+                      ...cellWrap,
+                      width: "28%",
                       maxWidth: 0,
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
                     }}
                   >
-                    <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 700, color: "var(--brand-primary, #7c3aed)" }}>
-                      {row.codigo ?? "—"}
-                    </div>
                     <div
                       style={{
+                        fontFamily: "ui-monospace, monospace",
+                        fontSize: 12,
                         fontWeight: 700,
-                        marginTop: 4,
-                        fontSize: 13,
-                        color: t.text,
-                        whiteSpace: "normal",
-                        overflowWrap: "anywhere",
-                        wordBreak: "break-word",
+                        color: "var(--brand-primary, #7c3aed)",
                       }}
                     >
-                      {row.titulo}
+                      {row.codigo ?? "—"}
                     </div>
-                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-                      {fmtDataPt(dataPub)}
-                      {row.classificacao ? ` · ${labelClassificacaoDocumento(row.classificacao)}` : ""}
-                    </div>
-                    {row.resumo?.trim() ? (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: t.textMuted,
-                          marginTop: 4,
-                          lineHeight: 1.45,
-                          whiteSpace: "normal",
-                          overflowWrap: "anywhere",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {row.resumo.trim()}
-                      </div>
-                    ) : row.introducao?.trim() ? (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: t.textMuted,
-                          marginTop: 4,
-                          lineHeight: 1.45,
-                          whiteSpace: "normal",
-                          overflowWrap: "anywhere",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {row.introducao.trim()}
-                      </div>
-                    ) : null}
+                    <div style={{ ...cellStackPrimary, marginTop: 4 }}>{row.titulo}</div>
                   </td>
-                  <td style={dataTable.tdCenter}>{row.versao ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        padding: "3px 9px",
-                        borderRadius: 20,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        background: `${tagCor}22`,
-                        color: tagCor,
-                        border: `1px solid ${tagCor}44`,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {row.tipo_documento ? labelTipoDocumentoPortal(row.tipo_documento) : row.categoriaLabel ?? "Legado"}
-                    </span>
+                  <td
+                    style={{
+                      ...dataTable.tdCenter,
+                      ...cellWrap,
+                      textAlign: "center",
+                      width: "14%",
+                      maxWidth: 0,
+                    }}
+                  >
+                    <div style={{ ...cellStackPrimary, textAlign: "center" }}>{row.versao ?? "—"}</div>
+                    <div style={{ ...cellStackSecondary, textAlign: "center" }}>{fmtDataPt(dataPub)}</div>
+                  </td>
+                  <td
+                    style={{
+                      ...dataTable.tdCenter,
+                      ...cellWrap,
+                      textAlign: "center",
+                      width: "18%",
+                      maxWidth: 0,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          padding: "3px 9px",
+                          borderRadius: 20,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: `${tagCor}22`,
+                          color: tagCor,
+                          border: `1px solid ${tagCor}44`,
+                          whiteSpace: "normal",
+                          textAlign: "center",
+                          maxWidth: "100%",
+                        }}
+                      >
+                        {row.tipo_documento ? labelTipoDocumentoPortal(row.tipo_documento) : row.categoriaLabel ?? "Legado"}
+                      </span>
+                    </div>
+                    <div style={{ ...cellStackSecondary, textAlign: "center" }}>
+                      {row.classificacao ? labelClassificacaoDocumento(row.classificacao) : "—"}
+                    </div>
                   </td>
                   <td style={{ ...dataTable.tdCenter, fontSize: 12, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     {fmtAplicavelDocumento(row.aplicavel_a)}
