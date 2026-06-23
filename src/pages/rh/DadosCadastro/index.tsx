@@ -378,8 +378,8 @@ export default function RhDadosCadastroPage() {
   }, [completudeRevisao.ok]);
   const podeEditarFormacao = podeEditarSelecionado && row?.status !== "encerrado";
   const podeEditarExperiencia = podeEditarSelecionado && row?.status !== "encerrado";
-  /** E-mail pessoal: somente leitura quando já preenchido; vazio permite inclusão na aba Dados cadastrais. */
-  const emailPessoalEditavel = Boolean(podeEditarSelecionado && form && !form.email.trim());
+  /** E-mail pessoal: somente leitura quando já gravado no cadastro; vazio no banco → inclusão editável até salvar. */
+  const emailPessoalEditavel = Boolean(podeEditarSelecionado && row && !(row.email ?? "").trim());
   const meuCadastroAtivo = Boolean(meuPrestadorId && filterStaffId === meuPrestadorId);
   const staffSelectItems = useMemo(
     () => prestadores.map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" })),
