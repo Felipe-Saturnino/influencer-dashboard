@@ -111,6 +111,30 @@ function inputStyle(t: ReturnType<typeof useApp>["theme"]): CSSProperties {
   };
 }
 
+/** Miniatura — retrato (colaborador) ancora no topo para não cortar o rosto. */
+function estiloThumbGaleria(tipo: MarketingFotoTipo): CSSProperties {
+  if (tipo === "prestador") {
+    return {
+      display: "block",
+      width: "100%",
+      aspectRatio: "3 / 4",
+      objectFit: "cover",
+      objectPosition: "top center",
+    };
+  }
+  return {
+    display: "block",
+    width: "100%",
+    aspectRatio: "4 / 3",
+    objectFit: "cover",
+    objectPosition: "center center",
+  };
+}
+
+function aspectRatioThumbPlaceholder(tipo: MarketingFotoTipo): string {
+  return tipo === "prestador" ? "3 / 4" : "4 / 3";
+}
+
 export default function GaleriaFotos() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -754,17 +778,12 @@ export default function GaleriaFotos() {
                               alt=""
                               loading="lazy"
                               decoding="async"
-                              style={{
-                                display: "block",
-                                width: "100%",
-                                aspectRatio: "4 / 3",
-                                objectFit: "cover",
-                              }}
+                              style={estiloThumbGaleria(f.tipo)}
                             />
                           ) : (
                             <div
                               style={{
-                                aspectRatio: "4 / 3",
+                                aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
