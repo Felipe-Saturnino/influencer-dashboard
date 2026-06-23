@@ -83,7 +83,6 @@ export function pendenciasDadosCadastraisCompletos(form: RhCadastroFormCompletud
   reqCampo(p, cepRes.length === 8, "Dados cadastrais: CEP residencial.");
   reqCampo(p, form.res_logradouro.trim().length > 0, "Dados cadastrais: logradouro residencial.");
   reqCampo(p, form.res_numero.trim().length > 0, "Dados cadastrais: número residencial.");
-  reqCampo(p, form.res_complemento.trim().length > 0, "Dados cadastrais: complemento residencial.");
   reqCampo(p, form.res_cidade.trim().length > 0, "Dados cadastrais: cidade residencial.");
   reqCampo(
     p,
@@ -102,7 +101,6 @@ export function pendenciasDadosCadastraisCompletos(form: RhCadastroFormCompletud
     reqCampo(p, cepEmp.length === 8, "Dados cadastrais: CEP da empresa (PJ).");
     reqCampo(p, form.emp_logradouro.trim().length > 0, "Dados cadastrais: logradouro da empresa (PJ).");
     reqCampo(p, form.emp_numero.trim().length > 0, "Dados cadastrais: número da empresa (PJ).");
-    reqCampo(p, form.emp_complemento.trim().length > 0, "Dados cadastrais: complemento da empresa (PJ).");
     reqCampo(p, form.emp_cidade.trim().length > 0, "Dados cadastrais: cidade da empresa (PJ).");
     reqCampo(
       p,
