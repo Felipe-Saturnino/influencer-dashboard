@@ -845,12 +845,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Galeria",
         texto:
-          "Filtre por evento nos chips da barra superior ou use **Todos os eventos**. Quem gerencia a galeria também filtra por **Gerais** ou **Colaboradores**. A busca localiza evento, nome do colaborador ou legenda.\n\nAs fotos aparecem em blocos por evento (título + data). Clique na miniatura para ampliar; use o ícone de download para salvar o arquivo. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+          "Filtre por evento nos chips da barra superior ou use **Todos os eventos**. Quem gerencia a galeria também filtra por **Gerais** ou **Colaboradores**. A busca localiza evento, nome do colaborador ou nome do arquivo.\n\n**Fotos gerais** aparecem em blocos por evento (título + data). **Fotos de colaborador** aparecem em blocos pelo nome do colaborador. Clique na miniatura para ampliar; use o ícone de download para salvar o arquivo. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
       },
       {
         subtitulo: "Aba Upload",
         texto:
-          "Disponível com permissão de **Criar**. Selecione ou cadastre um **evento** (**Novo Evento**), escolha o tipo (**Fotos gerais** ou **Fotos de colaborador**), vincule o colaborador quando for individual, opcionalmente informe uma legenda e selecione um ou mais arquivos (JPG, PNG ou WebP, até 10 MB cada).",
+          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de colaborador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Para **Fotos de colaborador**, selecione o colaborador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
       },
     ],
   },

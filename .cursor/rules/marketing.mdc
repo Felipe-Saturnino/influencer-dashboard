@@ -69,7 +69,7 @@ Perfis: Gestor (operação interna).
 - Abas `galeria | upload`: `FiltroBarTabButton` + `useRouteTab`; aba **Upload** só com permissão de **Criar** (`galeria_upload` em `appRoutes`).
 - **Galeria:** filtros por evento (chips + **Todos os eventos**), tipo **Gerais / Colaboradores** (só equipe com Criar/Editar/Excluir), busca insensível a acentos; blocos por evento com `SectionTitle` + data no `sub`; grid de thumbnails; lightbox + download; exclusão com `BtnExcluirLinha` + `ModalConfirmExcluirPadrao` quando `canExcluirOk`.
 - Perfis só com **Ver:** veem apenas fotos **gerais** — não fotos de colaborador (RLS + UI).
-- **Upload:** evento obrigatório (`SelectComIcone` + **Novo Evento**); tipo geral ou colaborador (prestador ativo/indisponível); legenda opcional; múltiplos arquivos JPG/PNG/WebP até 10 MB.
+- **Upload:** tipo primeiro (**Fotos gerais** | **Fotos de colaborador**); gerais → evento + **Novo Evento**; colaborador → `FiltroEntidadeBarSelect` (`mode="single"`, busca no painel); múltiplos arquivos JPG/PNG/WebP até **25 MB**; sem campo Legenda.
 - Storage: `marketing-fotos-gerais` (público) e `marketing-fotos-prestadores` (privado, URL assinada).
 - Coluna `visivel_prestador` reservada para liberação futura aos colaboradores — **fora do escopo v1**.
 - Vazio galeria filtrada: `Nenhuma foto encontrada para os filtros selecionados.`

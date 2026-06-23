@@ -879,7 +879,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O envio de fotos falhou?",
         texto:
-          "Confirme que um evento foi selecionado (ou cadastre um com **Novo Evento**), que o colaborador foi escolhido em fotos individuais e que cada arquivo está em JPG, PNG ou WebP com até 10 MB. Se o problema persistir, entre em contato com o suporte.",
+          "Confirme o tipo de foto, o evento (gerais) ou o colaborador (individuais) e que cada arquivo está em JPG, PNG ou WebP com até 25 MB. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },

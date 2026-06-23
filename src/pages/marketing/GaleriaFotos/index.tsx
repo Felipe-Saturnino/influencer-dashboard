@@ -35,13 +35,16 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
+  FiltroEntidadeBarSelect,
   FiltroSemanticoTabPill,
   SelectComIcone,
   onFiltroBarTabsKeyDown,
   SectionTitle,
 } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -58,7 +61,16 @@ import {
   urlAssinadaFotoPrestador,
   urlPublicaFotoGeral,
   MARKETING_FOTO_MIME_PERMITIDOS,
+  marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
+
+type GaleriaBloco = {
+  kind: "evento" | "prestador";
+  id: string;
+  titulo: string;
+  sub: string;
+  fotos: MarketingFotoComEvento[];
+};
 
 type Aba = "galeria" | "upload";
 type FiltroTipoGaleria = "todos" | "geral" | "prestador";
@@ -117,7 +129,6 @@ export default function GaleriaFotos() {
   const [uploadEventoId, setUploadEventoId] = useState("");
   const [uploadTipo, setUploadTipo] = useState<MarketingFotoTipo>("geral");
   const [uploadPrestadorId, setUploadPrestadorId] = useState("");
-  const [uploadLegenda, setUploadLegenda] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadErro, setUploadErro] = useState<string | null>(null);
   const [uploadOk, setUploadOk] = useState<string | null>(null);
@@ -139,6 +150,11 @@ export default function GaleriaFotos() {
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
+  const uploadPronto = uploadTipo === "geral" ? !!uploadEventoId : !!uploadPrestadorId;
+  const prestadorItens = useMemo(
+    () => prestadores.map((p) => ({ id: p.id, name: p.nome })),
+    [prestadores],
+  );
 
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
@@ -231,7 +247,9 @@ export default function GaleriaFotos() {
     let list = fotos;
     if (!podeGerir) list = list.filter((f) => f.tipo === "geral");
     else if (filtroTipo !== "todos") list = list.filter((f) => f.tipo === filtroTipo);
-    if (filtroEvento !== "todos") list = list.filter((f) => f.evento_id === filtroEvento);
+    if (filtroEvento !== "todos") {
+      list = list.filter((f) => f.tipo === "prestador" || f.evento_id === filtroEvento);
+    }
     if (buscaGaleria.trim()) {
       list = list.filter((f) => {
         const ev = fotoEventoEmbed(f);
@@ -248,26 +266,50 @@ export default function GaleriaFotos() {
     return list;
   }, [fotos, podeGerir, filtroTipo, filtroEvento, buscaGaleria]);
 
-  const blocosPorEvento = useMemo(() => {
-    const map = new Map<string, { evento: MarketingEvento; fotos: MarketingFotoComEvento[] }>();
+  const galeriaBlocos = useMemo((): GaleriaBloco[] => {
+    const eventoMap = new Map<string, GaleriaBloco>();
+    const prestadorMap = new Map<string, GaleriaBloco>();
+
     for (const f of fotosFiltradas) {
-      const ev = fotoEventoEmbed(f);
-      if (!ev) continue;
-      const key = ev.id;
-      if (!map.has(key)) {
-        map.set(key, {
-          evento: {
+      if (f.tipo === "geral") {
+        const ev = fotoEventoEmbed(f);
+        if (!ev) continue;
+        if (!eventoMap.has(ev.id)) {
+          eventoMap.set(ev.id, {
+            kind: "evento",
             id: ev.id,
-            nome: ev.nome,
-            data_evento: ev.data_evento,
-            ativo: ev.ativo ?? true,
-          },
+            titulo: ev.nome,
+            sub: fmtDataEvento(ev.data_evento),
+            fotos: [],
+          });
+        }
+        eventoMap.get(ev.id)!.fotos.push(f);
+        continue;
+      }
+
+      const prest = fotoPrestadorEmbed(f);
+      if (!prest) continue;
+      if (!prestadorMap.has(prest.id)) {
+        prestadorMap.set(prest.id, {
+          kind: "prestador",
+          id: prest.id,
+          titulo: prest.nome,
+          sub: "Fotos individuais",
           fotos: [],
         });
       }
-      map.get(key)!.fotos.push(f);
+      prestadorMap.get(prest.id)!.fotos.push(f);
     }
-    return [...map.values()].sort((a, b) => b.evento.data_evento.localeCompare(a.evento.data_evento));
+
+    const eventoBlocos = [...eventoMap.values()].sort((a, b) => {
+      const da = fotoEventoEmbed(a.fotos[0])?.data_evento ?? "";
+      const db = fotoEventoEmbed(b.fotos[0])?.data_evento ?? "";
+      return db.localeCompare(da);
+    });
+    const prestadorBlocos = [...prestadorMap.values()].sort((a, b) =>
+      compareLocaleTexto(a.titulo, b.titulo, "asc"),
+    );
+    return [...eventoBlocos, ...prestadorBlocos];
   }, [fotosFiltradas]);
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
@@ -286,8 +328,9 @@ export default function GaleriaFotos() {
 
   const salvarEvento = async () => {
     const nome = eventoNome.trim();
-    if (!nome || !eventoData) {
-      setEventoErro("Informe o nome e a data do evento.");
+    const descricao = eventoDescricao.trim();
+    if (!nome || !eventoData || !descricao) {
+      setEventoErro("Informe o nome, a data e a descrição do evento.");
       return;
     }
     setSalvandoEvento(true);
@@ -298,7 +341,7 @@ export default function GaleriaFotos() {
         .insert({
           nome,
           data_evento: eventoData,
-          descricao: eventoDescricao.trim() || null,
+          descricao,
           created_by: user?.id ?? null,
         })
         .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
@@ -316,7 +359,11 @@ export default function GaleriaFotos() {
   };
 
   const handleUpload = async (files: FileList | null) => {
-    if (!files?.length || !uploadEventoId) return;
+    if (!files?.length || !uploadPronto) return;
+    if (uploadTipo === "geral" && !uploadEventoId) {
+      setUploadErro("Selecione um evento.");
+      return;
+    }
     if (uploadTipo === "prestador" && !uploadPrestadorId) {
       setUploadErro("Selecione o colaborador para fotos individuais.");
       return;
@@ -330,7 +377,7 @@ export default function GaleriaFotos() {
         const up = await uploadMarketingFotoArquivo(
           file,
           uploadTipo,
-          uploadEventoId,
+          uploadTipo === "geral" ? uploadEventoId : null,
           uploadTipo === "prestador" ? uploadPrestadorId : null,
         );
         if (!up.ok) {
@@ -338,13 +385,13 @@ export default function GaleriaFotos() {
           break;
         }
         const { error: insErr } = await supabase.from("marketing_fotos").insert({
-          evento_id: uploadEventoId,
+          evento_id: uploadTipo === "geral" ? uploadEventoId : null,
           tipo: uploadTipo,
           rh_funcionario_id: uploadTipo === "prestador" ? uploadPrestadorId : null,
           storage_path: up.path,
           file_name: file.name,
           mime_type: file.type || null,
-          legenda: uploadLegenda.trim() || null,
+          legenda: null,
           uploaded_by: user?.id ?? null,
         });
         if (insErr) {
@@ -559,21 +606,21 @@ export default function GaleriaFotos() {
               />
               <div style={{ fontSize: 13 }}>Carregando…</div>
             </div>
-          ) : blocosPorEvento.length === 0 ? (
+          ) : galeriaBlocos.length === 0 ? (
             <div style={pageBox}>
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
                 Nenhuma foto encontrada para os filtros selecionados.
               </div>
             </div>
           ) : (
-            blocosPorEvento.map(({ evento, fotos: fotosBloco }) => (
-              <div key={evento.id} style={pageBox}>
-                <SectionTitle sub={fmtDataEvento(evento.data_evento)}>{evento.nome}</SectionTitle>
+            galeriaBlocos.map((bloco) => (
+              <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
                 <div
                   className="app-grid-3"
                   style={{ gap: 12, marginTop: 14 }}
                 >
-                  {fotosBloco.map((f) => {
+                  {bloco.fotos.map((f) => {
                     const thumb = urlThumbnail(f);
                     return (
                       <div
@@ -641,7 +688,7 @@ export default function GaleriaFotos() {
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {f.tipo === "prestador" && fotoPrestadorEmbed(f)?.nome
                               ? fotoPrestadorEmbed(f)!.nome
-                              : f.legenda || "Foto geral"}
+                              : f.file_name}
                           </span>
                           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                             <button
@@ -701,35 +748,6 @@ export default function GaleriaFotos() {
               <div style={{ color: "#22c55e", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>{uploadOk}</div>
             ) : null}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16, alignItems: "flex-end" }}>
-              <div style={{ flex: "1 1 220px", minWidth: 200 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
-                  Evento
-                  <CampoObrigatorioMark />
-                </label>
-                <SelectComIcone
-                  icon={<Calendar size={15} aria-hidden />}
-                  label="Evento"
-                  value={uploadEventoId}
-                  onChange={setUploadEventoId}
-                  minWidth={280}
-                  pill={false}
-                >
-                  <option value="">Selecione um evento</option>
-                  {eventos.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.nome} ({fmtDataEvento(ev.data_evento)})
-                    </option>
-                  ))}
-                </SelectComIcone>
-              </div>
-              {perm.canCriarOk ? (
-                <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
-                  Novo Evento
-                </CtaCriarButton>
-              ) : null}
-            </div>
-
             <div style={{ marginTop: 16 }}>
               <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 8, fontFamily: FONT.body }}>
                 Tipo de foto
@@ -744,53 +762,70 @@ export default function GaleriaFotos() {
                     setUploadTipo("geral");
                     setUploadPrestadorId("");
                   }}
+                  showClearIcon={false}
                 />
                 <FiltroSemanticoTabPill
                   label="Fotos de colaborador"
                   semanticColor="#1e36f8"
                   active={uploadTipo === "prestador"}
-                  onClick={() => setUploadTipo("prestador")}
+                  onClick={() => {
+                    setUploadTipo("prestador");
+                    setUploadEventoId("");
+                  }}
+                  showClearIcon={false}
                 />
               </div>
             </div>
 
-            {uploadTipo === "prestador" ? (
+            {uploadTipo === "geral" ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16, alignItems: "flex-end" }}>
+                <div style={{ flex: "1 1 220px", minWidth: 200 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
+                    Evento
+                    <CampoObrigatorioMark />
+                  </label>
+                  <SelectComIcone
+                    icon={<Calendar size={15} aria-hidden />}
+                    label="Evento"
+                    value={uploadEventoId}
+                    onChange={setUploadEventoId}
+                    minWidth={280}
+                    pill={false}
+                  >
+                    <option value="">Selecione um evento</option>
+                    {eventos.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.nome} ({fmtDataEvento(ev.data_evento)})
+                      </option>
+                    ))}
+                  </SelectComIcone>
+                </div>
+                {perm.canCriarOk ? (
+                  <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
+                    Novo Evento
+                  </CtaCriarButton>
+                ) : null}
+              </div>
+            ) : (
               <div style={{ marginTop: 16, maxWidth: 360 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
                   Colaborador
                   <CampoObrigatorioMark />
                 </label>
-                <SelectComIcone
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={uploadPrestadorId ? [uploadPrestadorId] : []}
+                  onChange={(ids) => setUploadPrestadorId(ids[0] ?? "")}
+                  items={prestadorItens}
                   icon={<User size={15} aria-hidden />}
-                  label="Colaborador"
-                  value={uploadPrestadorId}
-                  onChange={setUploadPrestadorId}
-                  minWidth={280}
-                  pill={false}
-                >
-                  <option value="">Selecione o colaborador</option>
-                  {prestadores.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </SelectComIcone>
+                  triggerEmptyLabel="Selecione o colaborador"
+                  ariaFilterPrefix="Filtrar por colaborador"
+                  listboxAriaLabel="Colaboradores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  enableSearch
+                />
               </div>
-            ) : null}
-
-            <div style={{ marginTop: 16, maxWidth: 480 }}>
-              <label htmlFor="galeria-legenda" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
-                Legenda
-              </label>
-              <input
-                id="galeria-legenda"
-                type="text"
-                value={uploadLegenda}
-                onChange={(e) => setUploadLegenda(e.target.value)}
-                style={inputStyle(t)}
-                placeholder="Descrição opcional para o lote"
-              />
-            </div>
+            )}
 
             <div style={{ marginTop: 20 }}>
               <label
@@ -807,7 +842,7 @@ export default function GaleriaFotos() {
                   fontSize: 13,
                   fontFamily: FONT.body,
                   cursor: uploading ? "wait" : "pointer",
-                  opacity: !uploadEventoId || uploading ? 0.55 : 1,
+                  opacity: !uploadPronto || uploading ? 0.55 : 1,
                 }}
               >
                 {uploading ? (
@@ -828,12 +863,12 @@ export default function GaleriaFotos() {
                 type="file"
                 accept={MARKETING_FOTO_MIME_PERMITIDOS.join(",")}
                 multiple
-                disabled={!uploadEventoId || uploading}
+                disabled={!uploadPronto || uploading}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => void handleUpload(e.target.files)}
                 style={{ display: "none" }}
               />
               <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                JPG, PNG ou WebP — até 10 MB por arquivo.
+                JPG, PNG ou WebP — até {marketingFotoTamanhoMaxMb()} MB por arquivo.
               </p>
             </div>
           </div>
@@ -877,6 +912,7 @@ export default function GaleriaFotos() {
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
                 Descrição
+                <CampoObrigatorioMark />
               </label>
               <textarea
                 value={eventoDescricao}
