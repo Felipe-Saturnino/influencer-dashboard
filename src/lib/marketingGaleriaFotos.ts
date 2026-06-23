@@ -4,7 +4,11 @@ export const MARKETING_FOTOS_GERAIS_BUCKET = "marketing-fotos-gerais";
 export const MARKETING_FOTOS_PRESTADORES_BUCKET = "marketing-fotos-prestadores";
 
 export const MARKETING_FOTO_MIME_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"] as const;
-export const MARKETING_FOTO_TAMANHO_MAX_BYTES = 10 * 1024 * 1024;
+export const MARKETING_FOTO_TAMANHO_MAX_BYTES = 25 * 1024 * 1024;
+
+export function marketingFotoTamanhoMaxMb(): number {
+  return MARKETING_FOTO_TAMANHO_MAX_BYTES / (1024 * 1024);
+}
 
 export type MarketingFotoTipo = "geral" | "prestador";
 
@@ -20,7 +24,7 @@ export interface MarketingEvento {
 
 export interface MarketingFoto {
   id: string;
-  evento_id: string;
+  evento_id: string | null;
   tipo: MarketingFotoTipo;
   rh_funcionario_id: string | null;
   storage_path: string;
@@ -63,7 +67,7 @@ export function validarArquivoMarketingFoto(file: File): string | null {
     return "Formato não suportado. Use JPG, PNG ou WebP.";
   }
   if (file.size > MARKETING_FOTO_TAMANHO_MAX_BYTES) {
-    return "Arquivo muito grande. O limite é 10 MB por foto.";
+    return `Arquivo muito grande. O limite é ${marketingFotoTamanhoMaxMb()} MB por foto.`;
   }
   return null;
 }
@@ -84,16 +88,24 @@ export async function urlAssinadaFotoPrestador(storagePath: string): Promise<str
 export async function uploadMarketingFotoArquivo(
   file: File,
   tipo: MarketingFotoTipo,
-  eventoId: string,
+  eventoId: string | null,
   prestadorId?: string | null,
 ): Promise<{ ok: true; path: string } | { ok: false; message: string }> {
   const validacao = validarArquivoMarketingFoto(file);
   if (validacao) return { ok: false, message: validacao };
 
+  if (tipo === "geral" && !eventoId) {
+    return { ok: false, message: "Selecione um evento." };
+  }
+  if (tipo === "prestador" && !prestadorId) {
+    return { ok: false, message: "Selecione o colaborador." };
+  }
+
   const safe = sanitizeStorageFileName(file.name);
-  const pasta = tipo === "geral" ? "gerais" : "prestadores";
-  const sub = tipo === "prestador" && prestadorId ? `${prestadorId}/` : "";
-  const path = `${pasta}/${eventoId}/${sub}${crypto.randomUUID()}_${safe}`;
+  const path =
+    tipo === "geral"
+      ? `gerais/${eventoId}/${crypto.randomUUID()}_${safe}`
+      : `prestadores/${prestadorId}/${crypto.randomUUID()}_${safe}`;
 
   const bucket = tipo === "geral" ? MARKETING_FOTOS_GERAIS_BUCKET : MARKETING_FOTOS_PRESTADORES_BUCKET;
   const { error } = await supabase.storage.from(bucket).upload(path, file, {

@@ -35,13 +35,17 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
+  FiltroEntidadeBarSelect,
   FiltroSemanticoTabPill,
   SelectComIcone,
   onFiltroBarTabsKeyDown,
   SectionTitle,
 } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -58,10 +62,23 @@ import {
   urlAssinadaFotoPrestador,
   urlPublicaFotoGeral,
   MARKETING_FOTO_MIME_PERMITIDOS,
+  marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
 
+type GaleriaBloco = {
+  kind: "evento" | "prestador";
+  id: string;
+  titulo: string;
+  sub: string;
+  fotos: MarketingFotoComEvento[];
+};
+
 type Aba = "galeria" | "upload";
-type FiltroTipoGaleria = "todos" | "geral" | "prestador";
+type GaleriaSubAba = "gerais" | "minhas_fotos";
+
+const GALERIA_SUB_ABAS: GaleriaSubAba[] = ["gerais", "minhas_fotos"];
+const FILTRO_EVENTO_TODOS = "todos";
+const FILTRO_PRESTADOR_TODOS = "todos";
 
 const ABAS_GALERIA: Aba[] = ["galeria"];
 const ABAS_COM_UPLOAD: Aba[] = ["galeria", "upload"];
@@ -99,7 +116,7 @@ export default function GaleriaFotos() {
   const brand = useDashboardBrand();
   const perm = usePermission("galeria_fotos");
   const podeUpload = perm.canCriarOk;
-  const podeGerir = perm.canCriarOk || perm.canEditarOk || perm.canExcluirOk;
+  const podeFiltrarPrestador = perm.canEditarOk;
 
   const abasDisponiveis = podeUpload ? ABAS_COM_UPLOAD : ABAS_GALERIA;
   const [aba, setAba] = useRouteTab("galeria_fotos", "galeria", abasDisponiveis);
@@ -110,14 +127,16 @@ export default function GaleriaFotos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [filtroEvento, setFiltroEvento] = useState<string>("todos");
-  const [filtroTipo, setFiltroTipo] = useState<FiltroTipoGaleria>("geral");
+  const [filtroEvento, setFiltroEvento] = useState(FILTRO_EVENTO_TODOS);
+  const [galeriaSubAba, setGaleriaSubAba] = useState<GaleriaSubAba>("gerais");
+  const [filtroPrestador, setFiltroPrestador] = useState(FILTRO_PRESTADOR_TODOS);
   const [buscaGaleria, setBuscaGaleria] = useState("");
+  const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
+  const [meuRhFuncionarioNome, setMeuRhFuncionarioNome] = useState<string | null>(null);
 
   const [uploadEventoId, setUploadEventoId] = useState("");
   const [uploadTipo, setUploadTipo] = useState<MarketingFotoTipo>("geral");
   const [uploadPrestadorId, setUploadPrestadorId] = useState("");
-  const [uploadLegenda, setUploadLegenda] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadErro, setUploadErro] = useState<string | null>(null);
   const [uploadOk, setUploadOk] = useState<string | null>(null);
@@ -139,6 +158,25 @@ export default function GaleriaFotos() {
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
+  const uploadPronto = uploadTipo === "geral" ? !!uploadEventoId : !!uploadPrestadorId;
+  const prestadorItens = useMemo(
+    () => prestadores.map((p) => ({ id: p.id, name: p.nome })),
+    [prestadores],
+  );
+  const prestadorItensMinhas = useMemo(() => {
+    if (podeFiltrarPrestador) return prestadorItens;
+    if (meuRhFuncionarioId && meuRhFuncionarioNome) {
+      return [{ id: meuRhFuncionarioId, name: meuRhFuncionarioNome }];
+    }
+    return [];
+  }, [podeFiltrarPrestador, prestadorItens, meuRhFuncionarioId, meuRhFuncionarioNome]);
+  const prestadorFiltroSelecionado = useMemo(() => {
+    if (galeriaSubAba !== "minhas_fotos") return [];
+    if (podeFiltrarPrestador) {
+      return filtroPrestador === FILTRO_PRESTADOR_TODOS ? [] : [filtroPrestador];
+    }
+    return meuRhFuncionarioId ? [meuRhFuncionarioId] : [];
+  }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
@@ -175,20 +213,38 @@ export default function GaleriaFotos() {
     setLoading(true);
     setErro(null);
     try {
-      await Promise.all([carregarEventos(), carregarFotos(), podeUpload ? carregarPrestadores() : Promise.resolve()]);
+      const tarefas: Promise<void>[] = [carregarEventos(), carregarFotos()];
+      if (podeUpload || podeFiltrarPrestador) tarefas.push(carregarPrestadores());
+      await Promise.all(tarefas);
     } catch {
       setErro(MSG_ERRO_CARREGAR);
     } finally {
       setLoading(false);
     }
-  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload]);
+  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload, podeFiltrarPrestador]);
 
   useEffect(() => {
     if (perm.canView !== "nao") void recarregar();
   }, [perm.canView, recarregar]);
 
   useEffect(() => {
-    if (!podeGerir) return;
+    if (perm.canView === "nao" || !user?.email?.trim()) {
+      setMeuRhFuncionarioId(null);
+      setMeuRhFuncionarioNome(null);
+      return;
+    }
+    let cancel = false;
+    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((row) => {
+      if (cancel) return;
+      setMeuRhFuncionarioId(row?.id ?? null);
+      setMeuRhFuncionarioNome(row?.nome ?? null);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [perm.canView, user?.email]);
+
+  useEffect(() => {
     const prestadorFotos = fotos.filter((f) => f.tipo === "prestador");
     if (!prestadorFotos.length) return;
     let cancel = false;
@@ -203,7 +259,7 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [fotos, podeGerir]);
+  }, [fotos]);
 
   useEffect(() => {
     if (!lightbox) {
@@ -223,15 +279,28 @@ export default function GaleriaFotos() {
     };
   }, [lightbox]);
 
-  useEffect(() => {
-    if (!podeGerir && filtroTipo !== "geral") setFiltroTipo("geral");
-  }, [podeGerir, filtroTipo]);
-
   const fotosFiltradas = useMemo(() => {
     let list = fotos;
-    if (!podeGerir) list = list.filter((f) => f.tipo === "geral");
-    else if (filtroTipo !== "todos") list = list.filter((f) => f.tipo === filtroTipo);
-    if (filtroEvento !== "todos") list = list.filter((f) => f.evento_id === filtroEvento);
+
+    if (galeriaSubAba === "gerais") {
+      list = list.filter((f) => f.tipo === "geral");
+      if (filtroEvento !== FILTRO_EVENTO_TODOS) {
+        list = list.filter((f) => f.evento_id === filtroEvento);
+      }
+    } else {
+      list = list.filter((f) => f.tipo === "prestador");
+      const prestadorId = podeFiltrarPrestador
+        ? filtroPrestador === FILTRO_PRESTADOR_TODOS
+          ? null
+          : filtroPrestador
+        : meuRhFuncionarioId;
+      if (prestadorId) {
+        list = list.filter((f) => f.rh_funcionario_id === prestadorId);
+      } else if (!podeFiltrarPrestador) {
+        list = [];
+      }
+    }
+
     if (buscaGaleria.trim()) {
       list = list.filter((f) => {
         const ev = fotoEventoEmbed(f);
@@ -246,29 +315,61 @@ export default function GaleriaFotos() {
       });
     }
     return list;
-  }, [fotos, podeGerir, filtroTipo, filtroEvento, buscaGaleria]);
+  }, [
+    fotos,
+    galeriaSubAba,
+    filtroEvento,
+    filtroPrestador,
+    podeFiltrarPrestador,
+    meuRhFuncionarioId,
+    buscaGaleria,
+  ]);
 
-  const blocosPorEvento = useMemo(() => {
-    const map = new Map<string, { evento: MarketingEvento; fotos: MarketingFotoComEvento[] }>();
+  const galeriaBlocos = useMemo((): GaleriaBloco[] => {
+    const eventoMap = new Map<string, GaleriaBloco>();
+    const prestadorMap = new Map<string, GaleriaBloco>();
+
     for (const f of fotosFiltradas) {
-      const ev = fotoEventoEmbed(f);
-      if (!ev) continue;
-      const key = ev.id;
-      if (!map.has(key)) {
-        map.set(key, {
-          evento: {
+      if (f.tipo === "geral") {
+        const ev = fotoEventoEmbed(f);
+        if (!ev) continue;
+        if (!eventoMap.has(ev.id)) {
+          eventoMap.set(ev.id, {
+            kind: "evento",
             id: ev.id,
-            nome: ev.nome,
-            data_evento: ev.data_evento,
-            ativo: ev.ativo ?? true,
-          },
+            titulo: ev.nome,
+            sub: fmtDataEvento(ev.data_evento),
+            fotos: [],
+          });
+        }
+        eventoMap.get(ev.id)!.fotos.push(f);
+        continue;
+      }
+
+      const prest = fotoPrestadorEmbed(f);
+      if (!prest) continue;
+      if (!prestadorMap.has(prest.id)) {
+        prestadorMap.set(prest.id, {
+          kind: "prestador",
+          id: prest.id,
+          titulo: prest.nome,
+          sub: "Fotos individuais",
           fotos: [],
         });
       }
-      map.get(key)!.fotos.push(f);
+      prestadorMap.get(prest.id)!.fotos.push(f);
     }
-    return [...map.values()].sort((a, b) => b.evento.data_evento.localeCompare(a.evento.data_evento));
-  }, [fotosFiltradas]);
+
+    const eventoBlocos = [...eventoMap.values()].sort((a, b) => {
+      const da = fotoEventoEmbed(a.fotos[0])?.data_evento ?? "";
+      const db = fotoEventoEmbed(b.fotos[0])?.data_evento ?? "";
+      return db.localeCompare(da);
+    });
+    const prestadorBlocos = [...prestadorMap.values()].sort((a, b) =>
+      compareLocaleTexto(a.titulo, b.titulo, "asc"),
+    );
+    return galeriaSubAba === "gerais" ? eventoBlocos : prestadorBlocos;
+  }, [fotosFiltradas, galeriaSubAba]);
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
     if (f.tipo === "geral") return urlPublicaFotoGeral(f.storage_path);
@@ -286,8 +387,9 @@ export default function GaleriaFotos() {
 
   const salvarEvento = async () => {
     const nome = eventoNome.trim();
-    if (!nome || !eventoData) {
-      setEventoErro("Informe o nome e a data do evento.");
+    const descricao = eventoDescricao.trim();
+    if (!nome || !eventoData || !descricao) {
+      setEventoErro("Informe o nome, a data e a descrição do evento.");
       return;
     }
     setSalvandoEvento(true);
@@ -298,7 +400,7 @@ export default function GaleriaFotos() {
         .insert({
           nome,
           data_evento: eventoData,
-          descricao: eventoDescricao.trim() || null,
+          descricao,
           created_by: user?.id ?? null,
         })
         .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
@@ -316,7 +418,11 @@ export default function GaleriaFotos() {
   };
 
   const handleUpload = async (files: FileList | null) => {
-    if (!files?.length || !uploadEventoId) return;
+    if (!files?.length || !uploadPronto) return;
+    if (uploadTipo === "geral" && !uploadEventoId) {
+      setUploadErro("Selecione um evento.");
+      return;
+    }
     if (uploadTipo === "prestador" && !uploadPrestadorId) {
       setUploadErro("Selecione o colaborador para fotos individuais.");
       return;
@@ -330,7 +436,7 @@ export default function GaleriaFotos() {
         const up = await uploadMarketingFotoArquivo(
           file,
           uploadTipo,
-          uploadEventoId,
+          uploadTipo === "geral" ? uploadEventoId : null,
           uploadTipo === "prestador" ? uploadPrestadorId : null,
         );
         if (!up.ok) {
@@ -338,13 +444,13 @@ export default function GaleriaFotos() {
           break;
         }
         const { error: insErr } = await supabase.from("marketing_fotos").insert({
-          evento_id: uploadEventoId,
+          evento_id: uploadTipo === "geral" ? uploadEventoId : null,
           tipo: uploadTipo,
           rh_funcionario_id: uploadTipo === "prestador" ? uploadPrestadorId : null,
           storage_path: up.path,
           file_name: file.name,
           mime_type: file.type || null,
-          legenda: uploadLegenda.trim() || null,
+          legenda: null,
           uploaded_by: user?.id ?? null,
         });
         if (insErr) {
@@ -481,6 +587,11 @@ export default function GaleriaFotos() {
         >
           <div style={getPageFilterBoxStyle(brand, t)}>
             <div
+              role="tablist"
+              aria-label="Modo da galeria"
+              onKeyDown={(e) =>
+                onFiltroBarTabsKeyDown(e, GALERIA_SUB_ABAS, setGaleriaSubAba, (k) => `tab-galeria-sub-${k}`)
+              }
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -491,61 +602,99 @@ export default function GaleriaFotos() {
                 marginBottom: 10,
               }}
             >
-              <FiltroSemanticoTabPill
-                label="Todos os eventos"
-                semanticColor={brand.primary}
-                active={filtroEvento === "todos"}
-                onClick={() => setFiltroEvento("todos")}
-              />
-              {eventos.map((ev) => (
-                <FiltroSemanticoTabPill
-                  key={ev.id}
-                  label={ev.nome}
-                  semanticColor={brand.accent}
-                  active={filtroEvento === ev.id}
-                  onClick={() => setFiltroEvento(filtroEvento === ev.id ? "todos" : ev.id)}
-                />
-              ))}
-            </div>
-            {podeGerir ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  width: "100%",
-                  marginBottom: 10,
-                }}
+              <FiltroBarTabButton
+                id="tab-galeria-sub-gerais"
+                active={galeriaSubAba === "gerais"}
+                aria-controls="panel-galeria-sub-gerais"
+                onClick={() => setGaleriaSubAba("gerais")}
+                icon={<Images {...FILTRO_BAR_TAB_ICON_PROPS} />}
               >
-                <FiltroSemanticoTabPill
-                  label="Todas"
-                  semanticColor="#6b7280"
-                  active={filtroTipo === "todos"}
-                  onClick={() => setFiltroTipo("todos")}
+                Gerais
+              </FiltroBarTabButton>
+              <FiltroBarTabButton
+                id="tab-galeria-sub-minhas_fotos"
+                active={galeriaSubAba === "minhas_fotos"}
+                aria-controls="panel-galeria-sub-minhas_fotos"
+                onClick={() => setGaleriaSubAba("minhas_fotos")}
+                icon={<User {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                Minhas Fotos
+              </FiltroBarTabButton>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                gap: 10,
+                width: "100%",
+              }}
+            >
+              <BarraPesquisaPagina
+                value={buscaGaleria}
+                onChange={setBuscaGaleria}
+                placeholder={
+                  galeriaSubAba === "gerais"
+                    ? "Pesquisar evento ou arquivo..."
+                    : "Pesquisar colaborador ou arquivo..."
+                }
+                aria-label={
+                  galeriaSubAba === "gerais"
+                    ? "Buscar fotos gerais por evento ou arquivo"
+                    : "Buscar minhas fotos por colaborador ou arquivo"
+                }
+                wrapperStyle={{ width: "100%", maxWidth: 420, flex: "1 1 240px" }}
+              />
+              {galeriaSubAba === "gerais" ? (
+                <SelectComIcone
+                  icon={<Calendar size={15} aria-hidden />}
+                  label="Eventos"
+                  value={filtroEvento}
+                  onChange={setFiltroEvento}
+                  minWidth={220}
+                  pill
+                >
+                  <option value={FILTRO_EVENTO_TODOS}>Todos Eventos</option>
+                  {eventos.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nome} ({fmtDataEvento(ev.data_evento)})
+                    </option>
+                  ))}
+                </SelectComIcone>
+              ) : podeFiltrarPrestador ? (
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={prestadorFiltroSelecionado}
+                  onChange={(ids) =>
+                    setFiltroPrestador(ids[0] ?? FILTRO_PRESTADOR_TODOS)
+                  }
+                  items={prestadorItensMinhas}
+                  icon={<User size={15} aria-hidden />}
+                  triggerEmptyLabel="Todos Colaboradores"
+                  ariaFilterPrefix="Filtrar por colaborador"
+                  listboxAriaLabel="Colaboradores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  enableSearch={prestadorItensMinhas.length > 5}
                 />
-                <FiltroSemanticoTabPill
-                  label="Gerais"
-                  semanticColor="#22c55e"
-                  active={filtroTipo === "geral"}
-                  onClick={() => setFiltroTipo(filtroTipo === "geral" ? "todos" : "geral")}
+              ) : meuRhFuncionarioId ? (
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={prestadorFiltroSelecionado}
+                  onChange={() => {}}
+                  items={prestadorItensMinhas}
+                  icon={<User size={15} aria-hidden />}
+                  triggerEmptyLabel={meuRhFuncionarioNome ?? "Colaborador"}
+                  ariaFilterPrefix="Colaborador"
+                  listboxAriaLabel="Colaborador"
+                  disabled
                 />
-                <FiltroSemanticoTabPill
-                  label="Colaboradores"
-                  semanticColor="#1e36f8"
-                  active={filtroTipo === "prestador"}
-                  onClick={() => setFiltroTipo(filtroTipo === "prestador" ? "todos" : "prestador")}
-                />
-              </div>
-            ) : null}
-            <BarraPesquisaPagina
-              value={buscaGaleria}
-              onChange={setBuscaGaleria}
-              placeholder="Pesquisar evento, colaborador ou legenda..."
-              aria-label="Buscar na galeria"
-              wrapperStyle={{ width: "100%", maxWidth: 420 }}
-            />
+              ) : (
+                <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum colaborador vinculado ao seu login.
+                </span>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -559,21 +708,23 @@ export default function GaleriaFotos() {
               />
               <div style={{ fontSize: 13 }}>Carregando…</div>
             </div>
-          ) : blocosPorEvento.length === 0 ? (
+          ) : galeriaBlocos.length === 0 ? (
             <div style={pageBox}>
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Nenhuma foto encontrada para os filtros selecionados.
+                {galeriaSubAba === "minhas_fotos" && !podeFiltrarPrestador && !meuRhFuncionarioId
+                  ? "Nenhum colaborador vinculado ao seu login."
+                  : "Nenhuma foto encontrada para os filtros selecionados."}
               </div>
             </div>
           ) : (
-            blocosPorEvento.map(({ evento, fotos: fotosBloco }) => (
-              <div key={evento.id} style={pageBox}>
-                <SectionTitle sub={fmtDataEvento(evento.data_evento)}>{evento.nome}</SectionTitle>
+            galeriaBlocos.map((bloco) => (
+              <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
                 <div
                   className="app-grid-3"
                   style={{ gap: 12, marginTop: 14 }}
                 >
-                  {fotosBloco.map((f) => {
+                  {bloco.fotos.map((f) => {
                     const thumb = urlThumbnail(f);
                     return (
                       <div
@@ -641,7 +792,7 @@ export default function GaleriaFotos() {
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {f.tipo === "prestador" && fotoPrestadorEmbed(f)?.nome
                               ? fotoPrestadorEmbed(f)!.nome
-                              : f.legenda || "Foto geral"}
+                              : f.file_name}
                           </span>
                           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                             <button
@@ -701,35 +852,6 @@ export default function GaleriaFotos() {
               <div style={{ color: "#22c55e", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>{uploadOk}</div>
             ) : null}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16, alignItems: "flex-end" }}>
-              <div style={{ flex: "1 1 220px", minWidth: 200 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
-                  Evento
-                  <CampoObrigatorioMark />
-                </label>
-                <SelectComIcone
-                  icon={<Calendar size={15} aria-hidden />}
-                  label="Evento"
-                  value={uploadEventoId}
-                  onChange={setUploadEventoId}
-                  minWidth={280}
-                  pill={false}
-                >
-                  <option value="">Selecione um evento</option>
-                  {eventos.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.nome} ({fmtDataEvento(ev.data_evento)})
-                    </option>
-                  ))}
-                </SelectComIcone>
-              </div>
-              {perm.canCriarOk ? (
-                <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
-                  Novo Evento
-                </CtaCriarButton>
-              ) : null}
-            </div>
-
             <div style={{ marginTop: 16 }}>
               <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 8, fontFamily: FONT.body }}>
                 Tipo de foto
@@ -749,48 +871,63 @@ export default function GaleriaFotos() {
                   label="Fotos de colaborador"
                   semanticColor="#1e36f8"
                   active={uploadTipo === "prestador"}
-                  onClick={() => setUploadTipo("prestador")}
+                  onClick={() => {
+                    setUploadTipo("prestador");
+                    setUploadEventoId("");
+                  }}
                 />
               </div>
             </div>
 
-            {uploadTipo === "prestador" ? (
+            {uploadTipo === "geral" ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 16, alignItems: "flex-end" }}>
+                <div style={{ flex: "1 1 220px", minWidth: 200 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
+                    Evento
+                    <CampoObrigatorioMark />
+                  </label>
+                  <SelectComIcone
+                    icon={<Calendar size={15} aria-hidden />}
+                    label="Evento"
+                    value={uploadEventoId}
+                    onChange={setUploadEventoId}
+                    minWidth={280}
+                    pill={false}
+                  >
+                    <option value="">Selecione um evento</option>
+                    {eventos.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.nome} ({fmtDataEvento(ev.data_evento)})
+                      </option>
+                    ))}
+                  </SelectComIcone>
+                </div>
+                {perm.canCriarOk ? (
+                  <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
+                    Novo Evento
+                  </CtaCriarButton>
+                ) : null}
+              </div>
+            ) : (
               <div style={{ marginTop: 16, maxWidth: 360 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
                   Colaborador
                   <CampoObrigatorioMark />
                 </label>
-                <SelectComIcone
+                <FiltroEntidadeBarSelect
+                  mode="single"
+                  selected={uploadPrestadorId ? [uploadPrestadorId] : []}
+                  onChange={(ids) => setUploadPrestadorId(ids[0] ?? "")}
+                  items={prestadorItens}
                   icon={<User size={15} aria-hidden />}
-                  label="Colaborador"
-                  value={uploadPrestadorId}
-                  onChange={setUploadPrestadorId}
-                  minWidth={280}
-                  pill={false}
-                >
-                  <option value="">Selecione o colaborador</option>
-                  {prestadores.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </SelectComIcone>
+                  triggerEmptyLabel="Selecione o colaborador"
+                  ariaFilterPrefix="Filtrar por colaborador"
+                  listboxAriaLabel="Colaboradores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  enableSearch
+                />
               </div>
-            ) : null}
-
-            <div style={{ marginTop: 16, maxWidth: 480 }}>
-              <label htmlFor="galeria-legenda" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
-                Legenda
-              </label>
-              <input
-                id="galeria-legenda"
-                type="text"
-                value={uploadLegenda}
-                onChange={(e) => setUploadLegenda(e.target.value)}
-                style={inputStyle(t)}
-                placeholder="Descrição opcional para o lote"
-              />
-            </div>
+            )}
 
             <div style={{ marginTop: 20 }}>
               <label
@@ -807,7 +944,7 @@ export default function GaleriaFotos() {
                   fontSize: 13,
                   fontFamily: FONT.body,
                   cursor: uploading ? "wait" : "pointer",
-                  opacity: !uploadEventoId || uploading ? 0.55 : 1,
+                  opacity: !uploadPronto || uploading ? 0.55 : 1,
                 }}
               >
                 {uploading ? (
@@ -828,12 +965,12 @@ export default function GaleriaFotos() {
                 type="file"
                 accept={MARKETING_FOTO_MIME_PERMITIDOS.join(",")}
                 multiple
-                disabled={!uploadEventoId || uploading}
+                disabled={!uploadPronto || uploading}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => void handleUpload(e.target.files)}
                 style={{ display: "none" }}
               />
               <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                JPG, PNG ou WebP — até 10 MB por arquivo.
+                JPG, PNG ou WebP — até {marketingFotoTamanhoMaxMb()} MB por arquivo.
               </p>
             </div>
           </div>
@@ -877,6 +1014,7 @@ export default function GaleriaFotos() {
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
                 Descrição
+                <CampoObrigatorioMark />
               </label>
               <textarea
                 value={eventoDescricao}

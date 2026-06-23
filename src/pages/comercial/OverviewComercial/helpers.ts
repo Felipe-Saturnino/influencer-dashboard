@@ -6,6 +6,7 @@ import {
   PIPELINE_TAB_LABEL,
   STATUS_PRODUTO_ORDEM,
   STATUS_PRODUTO_LABEL,
+  STATUS_PRODUTO_LINHA_SEM_INTERESSE,
   type StatusPipeline,
   type StatusProduto,
   type ProdutoTipo,
@@ -144,31 +145,58 @@ export function maxProdutoCount(counts: ProdutoStatusCounts): number {
   return Math.max(1, ...Object.values(counts));
 }
 
-export type GeoUfEntry = {
-  count: number;
-  marcas: { id: string; nome: string; empresa: string }[];
+export type GeoMarcaItem = {
+  id: string;
+  nome: string;
+  empresa: string;
+  cidade: string;
 };
 
+export type GeoUfEntry = {
+  count: number;
+  marcas: GeoMarcaItem[];
+};
+
+export function groupMarcasPorCidade(marcas: GeoMarcaItem[]): { cidade: string; marcas: GeoMarcaItem[] }[] {
+  const map = new Map<string, GeoMarcaItem[]>();
+  for (const m of marcas) {
+    const key = m.cidade.trim() || "Sem cidade cadastrada";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(m);
+  }
+  return [...map.entries()]
+    .map(([cidade, items]) => ({
+      cidade,
+      marcas: [...items].sort((a, b) => {
+        const byEmpresa = a.empresa.localeCompare(b.empresa, "pt-BR");
+        if (byEmpresa !== 0) return byEmpresa;
+        return a.nome.localeCompare(b.nome, "pt-BR");
+      }),
+    }))
+    .sort((a, b) => {
+      const byCount = b.marcas.length - a.marcas.length;
+      if (byCount !== 0) return byCount;
+      return a.cidade.localeCompare(b.cidade, "pt-BR");
+    });
+}
+
 export function marcasPorUf(rows: OverviewMarcaRow[]): Map<string, GeoUfEntry> {
-  const map = new Map<string, { count: number; empresas: Set<string>; marcas: GeoUfEntry["marcas"] }>();
+  const map = new Map<string, GeoMarcaItem[]>();
   for (const row of rows) {
     const uf = (row.empresa.estado ?? "").toUpperCase().trim();
     if (!uf || uf.length !== 2) continue;
-    if (!map.has(uf)) map.set(uf, { count: 0, empresas: new Set(), marcas: [] });
-    const entry = map.get(uf)!;
-    if (!entry.empresas.has(row.empresa.id)) {
-      entry.empresas.add(row.empresa.id);
-      entry.count += 1;
-    }
-    entry.marcas.push({
+    if (!map.has(uf)) map.set(uf, []);
+    map.get(uf)!.push({
       id: row.id,
       nome: row.nome,
       empresa: row.empresa.razao_social,
+      cidade: (row.empresa.cidade ?? "").trim(),
     });
   }
   const out = new Map<string, GeoUfEntry>();
-  for (const [uf, v] of map) {
-    out.set(uf, { count: v.count, marcas: v.marcas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")) });
+  for (const [uf, marcas] of map) {
+    const sorted = marcas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    out.set(uf, { count: sorted.length, marcas: sorted });
   }
   return out;
 }
@@ -272,7 +300,12 @@ export function buildMovimentacaoDetalhe(
     total.add(h.marca_nome);
     if (h.campo === "status_pipeline" && h.valor_novo === "negociacao") neg.push(h.marca_nome);
     if (h.campo === "status_pipeline" && h.valor_novo === "fechado") fech.push(h.marca_nome);
-    if (h.campo === "status_produto" && h.valor_novo === "sem_interesse") sem.push(h.marca_nome);
+    if (
+      h.campo === "status_produto" &&
+      STATUS_PRODUTO_LINHA_SEM_INTERESSE.includes(h.valor_novo as StatusProduto)
+    ) {
+      sem.push(h.marca_nome);
+    }
   }
 
   const uniq = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b, "pt-BR"));

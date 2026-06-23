@@ -6,6 +6,7 @@ import {
   STATUS_FOLHA_LABEL,
   STATUS_PIPELINE_LABEL,
   STATUS_PRODUTO_LABEL,
+  STATUS_PRODUTO_LINHA_SEM_INTERESSE,
   COMERCIAL_FILTRO_NENHUM,
   COMERCIAL_FILTRO_NENHUM_LABEL,
   COMERCIAL_FILTRO_TODOS,
@@ -213,21 +214,24 @@ export function rowMatchesConsolidadoFolha(
       return row.status_pipeline === "conexao" && produtosAmbosVazios(row);
     case "conexao_realizada":
       if (row.status_pipeline !== "conexao") return false;
-      if (context === "kpi" && algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (context === "kpi" && algumProdutoStatus(row, STATUS_PRODUTO_LINHA_SEM_INTERESSE)) return false;
       return algumProdutoComValor(row);
     case "neg_sem":
       if (context === "hierarchy") {
-        return row.status_pipeline === "negociacao" && algumProdutoStatus(row, ["sem_interesse"]);
+        return (
+          row.status_pipeline === "negociacao" &&
+          algumProdutoStatus(row, STATUS_PRODUTO_LINHA_SEM_INTERESSE)
+        );
       }
-      return row.status_pipeline === "conexao" && algumProdutoStatus(row, ["sem_interesse"]);
+      return row.status_pipeline === "conexao" && algumProdutoStatus(row, STATUS_PRODUTO_LINHA_SEM_INTERESSE);
     case "neg_enviar":
       if (row.status_pipeline !== "negociacao") return false;
-      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, STATUS_PRODUTO_LINHA_SEM_INTERESSE)) return false;
       if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       return algumProdutoStatus(row, ["sem_proposta"]) || produtosAmbosVazios(row);
     case "neg_interessado":
       if (row.status_pipeline !== "negociacao") return false;
-      if (algumProdutoStatus(row, ["sem_interesse"])) return false;
+      if (algumProdutoStatus(row, STATUS_PRODUTO_LINHA_SEM_INTERESSE)) return false;
       if (algumProdutoStatus(row, ["contrato_enviado", "contrato_assinado", "ativo"])) return false;
       if (context === "hierarchy") {
         return algumProdutoComValor(row);

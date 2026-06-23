@@ -21,6 +21,7 @@ export type StatusProduto =
   | "sem_proposta"
   | "em_negociacao"
   | "sem_interesse"
+  | "desinteresse_comercial"
   | "contrato_enviado"
   | "contrato_assinado"
   | "ativo";
@@ -58,6 +59,7 @@ export const PIPELINE_COLOR: Record<StatusPipeline, string> = {
 /** Progressão visual Dedicada / Network — pior → melhor (funil comercial, não semântica KPI). */
 export const STATUS_PRODUTO_COLOR: Record<StatusProduto, string> = {
   sem_interesse: "#e84025",
+  desinteresse_comercial: "#b91c1c",
   sem_proposta: "#6b7280",
   em_negociacao: "#f59e0b",
   contrato_enviado: "#1e36f8",
@@ -67,6 +69,7 @@ export const STATUS_PRODUTO_COLOR: Record<StatusProduto, string> = {
 
 export const STATUS_PRODUTO_ORDEM: StatusProduto[] = [
   "sem_interesse",
+  "desinteresse_comercial",
   "sem_proposta",
   "em_negociacao",
   "contrato_enviado",
@@ -78,10 +81,17 @@ export const STATUS_PRODUTO_LABEL: Record<StatusProduto, string> = {
   sem_proposta: "Sem proposta",
   em_negociacao: "Em negociação",
   sem_interesse: "Sem interesse",
+  desinteresse_comercial: "Desinteresse Comercial",
   contrato_enviado: "Contrato enviado",
   contrato_assinado: "Contrato Assinado",
   ativo: "Ativo",
 };
+
+/** Status de produto contabilizados na linha «Sem interesse» do consolidado/KPI. */
+export const STATUS_PRODUTO_LINHA_SEM_INTERESSE: StatusProduto[] = [
+  "sem_interesse",
+  "desinteresse_comercial",
+];
 
 export const STATUS_PIPELINE_LABEL: Record<StatusPipeline, string> = {
   disponiveis: "Disponíveis",

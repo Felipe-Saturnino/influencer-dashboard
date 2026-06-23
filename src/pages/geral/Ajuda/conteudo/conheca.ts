@@ -840,17 +840,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. A equipe de Marketing envia fotos **gerais** (visíveis e baixáveis por quem tem permissão de Ver) e fotos **individuais de colaboradores** (visíveis apenas para quem tem permissão de Criar, Editar ou Excluir na página — liberação aos próprios colaboradores será tratada em evolução futura).",
+          "A página **Galeria de Fotos** centraliza imagens de eventos e ações da Spin. Fotos **gerais** ficam na sub-aba **Gerais** (visíveis a quem tem permissão de Ver). Fotos **individuais de colaboradores** ficam em **Minhas Fotos** — a equipe com permissão de **Editar** filtra por qualquer colaborador; quem tem só **Ver** vê apenas as próprias fotos liberadas (`visivel_prestador`), com o filtro de colaborador travado no cadastro vinculado ao login.",
       },
       {
         subtitulo: "Aba Galeria",
         texto:
-          "Filtre por evento nos chips da barra superior ou use **Todos os eventos**. Quem gerencia a galeria também filtra por **Gerais** ou **Colaboradores**. A busca localiza evento, nome do colaborador ou legenda.\n\nAs fotos aparecem em blocos por evento (título + data). Clique na miniatura para ampliar; use o ícone de download para salvar o arquivo. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por defeito) e busque por nome do evento ou arquivo. Em **Minhas Fotos**, quem tem permissão de **Editar** filtra por colaborador (**Todos Colaboradores** por defeito); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por colaborador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
       },
       {
         subtitulo: "Aba Upload",
         texto:
-          "Disponível com permissão de **Criar**. Selecione ou cadastre um **evento** (**Novo Evento**), escolha o tipo (**Fotos gerais** ou **Fotos de colaborador**), vincule o colaborador quando for individual, opcionalmente informe uma legenda e selecione um ou mais arquivos (JPG, PNG ou WebP, até 10 MB cada).",
+          "Disponível com permissão de **Criar**. Escolha o **tipo de foto** (gerais ou de colaborador). Para **Fotos gerais**, selecione ou cadastre um **evento** (**Novo Evento** — nome, data e descrição obrigatórios). Para **Fotos de colaborador**, selecione o colaborador na lista com busca (seleção única). Em seguida, selecione um ou mais arquivos (JPG, PNG ou WebP, até 25 MB cada).",
       },
     ],
   },
@@ -869,7 +869,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mapa e movimentação",
         texto:
-          "No bloco **Distribuição geográfica**, clique em um estado para ver as **marcas** com sede na região. Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
+          "No bloco **Distribuição geográfica**, a coluna à direita lista **UF, Estado e Marcas**; ao clicar em um estado no mapa ou na lista, aparecem as marcas agrupadas por **cidade** (com a quantidade por cidade). Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
       },
     ],
   },
@@ -888,7 +888,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo).",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.",
       },
       {
         subtitulo: "Comunicar",

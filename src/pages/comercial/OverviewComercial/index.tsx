@@ -628,7 +628,7 @@ export default function OverviewComercial() {
               </SectionTitle>
               {novasMarcas.length === 0 ? (
                 <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhuma marca cadastrada a partir de 20/06/2026.
+                  Nenhuma marca cadastrada nos últimos 30 dias.
                 </p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

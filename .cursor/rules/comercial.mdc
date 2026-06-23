@@ -51,8 +51,8 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 |-------|----------|
 | KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
 | Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
-| Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` + linha **Sem Status** (coluna vazia). |
-| Distribuição geográfica | Mapa + lista UF; clique lista **marcas** com sede na região (intensidade = empresas). |
+| Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` (incl. **Desinteresse Comercial**) + linha **Sem Status** (coluna vazia). |
+| Distribuição geográfica | Mapa + painel lateral: **UF / Estado / Marcas** (visão geral) ou **Cidade + marcas** ao selecionar UF — cidades por volume de marcas (maior → menor); dentro de cada cidade, marcas por **razão social** (intensidade do mapa = marcas). |
 | Carteira por comercial | Barras por comercial canónico + «Nenhum» — **sem** link para Pipeline. |
 | Novas marcas | `created_at` ≥ **20/06/2026** (corte pontual pós-import); badge = status pipeline (`PIPELINE_TAB_LABEL` / `PIPELINE_COLOR`). |
 | Movimentação recente | Histórico 30 dias; hover no número abre pop-up com nomes das marcas alteradas (respeita filtros). |
@@ -61,9 +61,9 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 | Contexto | Mensagem |
 |----------|----------|
-| UF sem dados no mapa/lista | `Nenhuma empresa com UF cadastrada para os filtros selecionados.` |
+| UF sem dados no mapa/lista | `Nenhuma marca com UF cadastrada para os filtros selecionados.` |
 | Carteira vazia | `Nenhuma marca atribuída para os filtros selecionados.` |
-| Novas marcas vazias | `Nenhuma marca cadastrada a partir de 20/06/2026.` |
+| Novas marcas vazias | `Nenhuma marca cadastrada nos últimos 30 dias.` |
 | Sem permissão | String Global |
 
 ---
@@ -84,11 +84,11 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 - **Aba Todos:** total por **Status** (coluna pipeline); sublinhas:
   - **Disponíveis:** Site Offline = `status_dominio` inativo; Site Ativo = domínio ativo.
   - **Conexão:** Iniciada = Dedicada e Network vazias; Realizada = valor em ≥1 coluna.
-  - **Negociação:** Sem Interesse = `sem_interesse` em ≥1 produto; Interessado = valor em ≥1 (exceto sem interesse).
+  - **Negociação:** Sem Interesse = `sem_interesse` ou **`desinteresse_comercial`** em ≥1 produto; Interessado = valor em ≥1 (exceto esses status).
   - **Fechado:** Ativo / Assinado por produto; demais só no total da coluna.
 - **Disponíveis:** Site Ativo / Site Offline = `status_dominio`; Sem contato = zero contatos.
-- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos; **Sem interesse** = `sem_interesse` em ≥1 produto (status Conexão).
-- **Negociação:** Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido (exceto sem interesse); **Contrato enviado** = `contrato_enviado` em ≥1 produto (status Negociação).
+- **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos; **Sem interesse** = `sem_interesse` ou **`desinteresse_comercial`** em ≥1 produto (status Conexão).
+- **Negociação:** Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido (exceto sem interesse / desinteresse comercial); **Contrato enviado** = `contrato_enviado` em ≥1 produto (status Negociação).
 - **Fechado:** Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado).
 - KPIs clicáveis (`aria-pressed`) filtram a tabela; segundo clique limpa.
 
@@ -96,7 +96,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, Última Comunicação — **sem** sort em Marca, Contato, Comercial, Status.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
-- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → … → Ativo (hex em `constants.ts`).
+- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
 - **Comercial — gestores:** nomes em `PIPELINE_COMERCIAL_NOMES` ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.
