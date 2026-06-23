@@ -54,6 +54,7 @@ function cellStackCenter(extra?: CSSProperties): CSSProperties {
 export function PortalRhDocumentosTabela({
   rows,
   cienciaPendenteIds,
+  cienciaExigidaIds,
   cienciaRegistradaEm,
   onAbrir,
   sort,
@@ -61,6 +62,7 @@ export function PortalRhDocumentosTabela({
 }: {
   rows: PortalRhDocumentoRow[];
   cienciaPendenteIds: Set<string>;
+  cienciaExigidaIds: Set<string>;
   cienciaRegistradaEm: Map<string, string>;
   onAbrir: (id: string) => void;
   sort: { col: SortCol; dir: SortDir };
@@ -162,6 +164,7 @@ export function PortalRhDocumentosTabela({
             {sorted.map((row, i) => {
               const tagCor = tagTipoDocumentoCor(row.tipo_documento);
               const pendente = cienciaPendenteIds.has(row.id);
+              const exigeCiencia = cienciaExigidaIds.has(row.id);
               const cienteEm = cienciaRegistradaEm.get(row.id);
               const dataPub = row.published_at ?? row.updated_at;
               const zebraBg = dataTable.zebraRow(i);
@@ -225,16 +228,14 @@ export function PortalRhDocumentosTabela({
                   </td>
                   <td style={{ ...tdWrap, fontSize: 12 }}>{fmtAplicavelDocumento(row.aplicavel_a)}</td>
                   <td style={tdWrap}>
-                    {row.requires_acknowledgment ? (
-                      pendente ? (
-                        <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
-                      ) : (
-                        <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, lineHeight: 1.35 }}>
-                          Ciente{cienteEm ? ` · ${fmtDataPt(cienteEm)}` : ""}
-                        </span>
-                      )
-                    ) : (
+                    {!exigeCiencia ? (
                       <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
+                    ) : pendente ? (
+                      <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
+                    ) : (
+                      <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, lineHeight: 1.35 }}>
+                        Ciente{cienteEm ? ` · ${fmtDataPt(cienteEm)}` : ""}
+                      </span>
                     )}
                   </td>
                   <td style={tdCell}>

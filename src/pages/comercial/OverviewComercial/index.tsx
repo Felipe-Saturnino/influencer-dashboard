@@ -554,7 +554,7 @@ export default function OverviewComercial() {
           </div>
 
           <div style={pageBox}>
-            <SectionTitle sub="Lista por UF; ao selecionar um estado, marcas agrupadas por cidade">
+            <SectionTitle sub="Clique no estado para ver as marcas com sede na região">
               Distribuição geográfica
             </SectionTitle>
             <GeoDistributionBlock

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { flattenVinculosDeGrupos, vinculoParaSelectValue } from "./rhOrganogramaTree";
+import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos, vinculoParaSelectValue } from "./rhOrganogramaTree";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao } from "../types/rhOrganograma";
 import type { ValidacaoPublicar } from "./portalRhWorkflow";
 
@@ -222,6 +222,58 @@ export function fmtAplicavelDocumento(aplicavel: string[] | null | undefined): s
   if (!aplicavel?.length) return "—";
   if (aplicavel.includes(PORTAL_RH_APLICAVEL_TODOS)) return PORTAL_RH_APLICAVEL_TODOS;
   return aplicavel.join(", ");
+}
+
+function normalizarSetorAplicavel(nome: string): string {
+  return nome.trim().toLowerCase();
+}
+
+/**
+ * Nomes de gerência/time do usuário que podem coincidir com `aplicavel_a` do documento.
+ * Prestador em time inclui também a gerência pai (documento aplicável à gerência vale para o time).
+ */
+export function setoresAplicavelDoUsuario(
+  funcionario:
+    | { org_time_id?: string | null; org_gerencia_id?: string | null; org_diretoria_id?: string | null }
+    | null
+    | undefined,
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+): string[] {
+  if (!funcionario) return [];
+  const v = encontrarVinculoParaFuncionarioRow(funcionario, vinculos);
+  if (!v) return [];
+  const setores: string[] = [];
+  if (v.setorNome.trim()) setores.push(v.setorNome);
+  if (v.nivel === "time" && v.gerenciaNome.trim()) setores.push(v.gerenciaNome);
+  return [...new Set(setores)];
+}
+
+/** Documento normativo atinge o organograma do usuário (ou «Todos os prestadores»). */
+export function documentoAplicavelAoUsuario(
+  aplicavel: string[] | null | undefined,
+  setoresUsuario: readonly string[],
+): boolean {
+  if (!aplicavel?.length) return false;
+  if (aplicavel.includes(PORTAL_RH_APLICAVEL_TODOS)) return true;
+  if (setoresUsuario.length === 0) return false;
+  const normUser = new Set(setoresUsuario.map(normalizarSetorAplicavel));
+  return aplicavel.some((a) => normUser.has(normalizarSetorAplicavel(a)));
+}
+
+/** Ciência exigida só quando o documento pede aceite e o público inclui o usuário. */
+export function documentoExigeCienciaDoUsuario(
+  doc: {
+    requires_acknowledgment: boolean;
+    aplicavel_a?: string[] | null;
+    codigo?: string | null;
+    tipo_documento?: RhDocumentoTipo | null;
+  },
+  setoresUsuario: readonly string[],
+): boolean {
+  if (!doc.requires_acknowledgment) return false;
+  if (!documentoUsaModeloNormativo(doc)) return true;
+  if (!doc.aplicavel_a?.length) return true;
+  return documentoAplicavelAoUsuario(doc.aplicavel_a, setoresUsuario);
 }
 
 export async function sincronizarRelacionadosDocumentoPortal(

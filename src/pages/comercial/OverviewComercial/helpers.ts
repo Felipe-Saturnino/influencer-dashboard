@@ -164,11 +164,19 @@ export function groupMarcasPorCidade(marcas: GeoMarcaItem[]): { cidade: string; 
     map.get(key)!.push(m);
   }
   return [...map.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
     .map(([cidade, items]) => ({
       cidade,
-      marcas: items.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    }));
+      marcas: [...items].sort((a, b) => {
+        const byEmpresa = a.empresa.localeCompare(b.empresa, "pt-BR");
+        if (byEmpresa !== 0) return byEmpresa;
+        return a.nome.localeCompare(b.nome, "pt-BR");
+      }),
+    }))
+    .sort((a, b) => {
+      const byCount = b.marcas.length - a.marcas.length;
+      if (byCount !== 0) return byCount;
+      return a.cidade.localeCompare(b.cidade, "pt-BR");
+    });
 }
 
 export function marcasPorUf(rows: OverviewMarcaRow[]): Map<string, GeoUfEntry> {

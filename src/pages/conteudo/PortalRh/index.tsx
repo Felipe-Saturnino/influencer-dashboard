@@ -31,12 +31,17 @@ import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
 import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
 import {
   RH_DOCUMENTO_FILTRO_SUBTABS,
+  documentoExigeCienciaDoUsuario,
   documentoUsaModeloNormativo,
   itemNoFiltroDocumento,
+  setoresAplicavelDoUsuario,
   tagTipoDocumentoCor,
   type RhDocumentoClassificacao,
   type RhDocumentoTipo,
 } from "../../../lib/portalRhDocumentoNormativo";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -361,6 +366,7 @@ export default function PortalRhPage() {
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
+  const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
   const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
     col: "codigo",
     dir: "asc",
@@ -372,6 +378,26 @@ export default function PortalRhPage() {
     const id = window.setTimeout(() => setBuscaDeb(normalizarTextoBusca(busca)), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
+
+  useEffect(() => {
+    if (!user?.email?.trim()) {
+      setSetoresUsuarioAplicavel([]);
+      return;
+    }
+    let cancel = false;
+    void (async () => {
+      const [funcionario, org] = await Promise.all([
+        buscarRhFuncionarioAtivoPorEmailLogin(user.email!),
+        carregarOpcoesTimesOrganograma(),
+      ]);
+      if (cancel) return;
+      const vinculos = flattenVinculosDeGrupos(org.grupos);
+      setSetoresUsuarioAplicavel(setoresAplicavelDoUsuario(funcionario, vinculos));
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user?.email]);
 
   const carregar = useCallback(async () => {
     if (!user?.id) return;
@@ -791,16 +817,26 @@ export default function PortalRhPage() {
     return metaAutores[uid];
   }
 
-  const cienciaPendenteDocIds = useMemo(() => {
+  const cienciaExigidaDocIds = useMemo(() => {
     const set = new Set<string>();
-    if (!user?.id) return set;
     for (const d of documentosFiltrados) {
-      if (d.requires_acknowledgment && !receipts.get(receiptKey("documento", d.id))?.acknowledged_at) {
+      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel)) {
         set.add(d.id);
       }
     }
     return set;
-  }, [documentosFiltrados, receipts, user?.id]);
+  }, [documentosFiltrados, setoresUsuarioAplicavel]);
+
+  const cienciaPendenteDocIds = useMemo(() => {
+    const set = new Set<string>();
+    if (!user?.id) return set;
+    for (const id of cienciaExigidaDocIds) {
+      if (!receipts.get(receiptKey("documento", id))?.acknowledged_at) {
+        set.add(id);
+      }
+    }
+    return set;
+  }, [cienciaExigidaDocIds, receipts, user?.id]);
 
   const cienciaRegistradaEm = useMemo(() => {
     const map = new Map<string, string>();
@@ -1017,6 +1053,7 @@ export default function PortalRhPage() {
                       categoriaLabel: d.categoria?.label ?? null,
                     }))}
                     cienciaPendenteIds={cienciaPendenteDocIds}
+                    cienciaExigidaIds={cienciaExigidaDocIds}
                     cienciaRegistradaEm={cienciaRegistradaEm}
                     onAbrir={(id) => void abrirDocumento(id)}
                     sort={sortDoc}
@@ -1071,7 +1108,7 @@ export default function PortalRhPage() {
             classificacao={modalDoc.classificacao ?? null}
             pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
             pdfNome={modalDoc.anexo_nome ?? null}
-            exigeCiencia={modalDoc.requires_acknowledgment}
+            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, setoresUsuarioAplicavel)}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}

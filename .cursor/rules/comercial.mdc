@@ -52,7 +52,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 | KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
 | Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
 | Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` + linha **Sem Status** (coluna vazia). |
-| Distribuição geográfica | Mapa + painel lateral: **UF / Estado / Marcas** (visão geral) ou **Cidade + marcas** ao selecionar UF (intensidade = marcas). |
+| Distribuição geográfica | Mapa + painel lateral: **UF / Estado / Marcas** (visão geral) ou **Cidade + marcas** ao selecionar UF — cidades por volume de marcas (maior → menor); dentro de cada cidade, marcas por **razão social** (intensidade do mapa = marcas). |
 | Carteira por comercial | Barras por comercial canónico + «Nenhum» — **sem** link para Pipeline. |
 | Novas marcas | `created_at` ≥ **20/06/2026** (corte pontual pós-import); badge = status pipeline (`PIPELINE_TAB_LABEL` / `PIPELINE_COLOR`). |
 | Movimentação recente | Histórico 30 dias; hover no número abre pop-up com nomes das marcas alteradas (respeita filtros). |
