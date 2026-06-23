@@ -77,7 +77,7 @@ export function PortalRhDocumentosTabela({
     <div style={pageBox}>
       <SectionTitle sub="PDF publicado · ordenação por código · ciência quando indicado">Documentos oficiais</SectionTitle>
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-        <table style={getDataTableStyle({ minWidth: 880 })}>
+        <table style={getDataTableStyle({ minWidth: 880, tableLayout: "fixed", width: "100%" })}>
           <caption style={{ display: "none" }}>Políticas e normativas publicadas no portal de RH</caption>
           <thead>
             <tr>
@@ -87,7 +87,7 @@ export function PortalRhDocumentosTabela({
                 sortCol={sort.col}
                 sortDir={sort.dir}
                 onSort={(c) => onSort(c as SortCol)}
-                thStyle={dataTable.thHeader}
+                thStyle={{ ...dataTable.thHeader, width: "38%" }}
                 align="center"
               />
               <SortTableTh
@@ -127,19 +127,65 @@ export function PortalRhDocumentosTabela({
               const dataPub = row.published_at ?? row.updated_at;
               return (
                 <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
-                  <td style={{ ...dataTable.tdCenter, textAlign: "left", maxWidth: 320 }}>
+                  <td
+                    style={{
+                      ...dataTable.tdCenter,
+                      textAlign: "left",
+                      verticalAlign: "top",
+                      width: "38%",
+                      maxWidth: 0,
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }}
+                  >
                     <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 700, color: "var(--brand-primary, #7c3aed)" }}>
                       {row.codigo ?? "—"}
                     </div>
-                    <div style={{ fontWeight: 700, marginTop: 4, fontSize: 13, color: t.text }}>{row.titulo}</div>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        marginTop: 4,
+                        fontSize: 13,
+                        color: t.text,
+                        whiteSpace: "normal",
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {row.titulo}
+                    </div>
                     <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
                       {fmtDataPt(dataPub)}
                       {row.classificacao ? ` · ${labelClassificacaoDocumento(row.classificacao)}` : ""}
                     </div>
                     {row.resumo?.trim() ? (
-                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, lineHeight: 1.4 }}>{row.resumo.trim()}</div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: t.textMuted,
+                          marginTop: 4,
+                          lineHeight: 1.45,
+                          whiteSpace: "normal",
+                          overflowWrap: "anywhere",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {row.resumo.trim()}
+                      </div>
                     ) : row.introducao?.trim() ? (
-                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, lineHeight: 1.4 }}>{row.introducao.trim()}</div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: t.textMuted,
+                          marginTop: 4,
+                          lineHeight: 1.45,
+                          whiteSpace: "normal",
+                          overflowWrap: "anywhere",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {row.introducao.trim()}
+                      </div>
                     ) : null}
                   </td>
                   <td style={dataTable.tdCenter}>{row.versao ?? "—"}</td>
@@ -160,7 +206,7 @@ export function PortalRhDocumentosTabela({
                       {row.tipo_documento ? labelTipoDocumentoPortal(row.tipo_documento) : row.categoriaLabel ?? "Legado"}
                     </span>
                   </td>
-                  <td style={{ ...dataTable.tdCenter, fontSize: 12, maxWidth: 160 }}>
+                  <td style={{ ...dataTable.tdCenter, fontSize: 12, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     {fmtAplicavelDocumento(row.aplicavel_a)}
                   </td>
                   <td style={dataTable.tdCenter}>
