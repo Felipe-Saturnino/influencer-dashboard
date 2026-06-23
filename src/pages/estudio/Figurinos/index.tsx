@@ -48,6 +48,7 @@ import {
   labelEmprestadoParaTabela,
   labelEstudiosPeca,
   normNomeParaFiltroPrestadorFig,
+  pecaPassaFiltroEstudio,
   pecaSlugsEstudiosEfetivos,
   tableRowHoverBg,
 } from "./figurinosPageHelpers"
@@ -174,27 +175,10 @@ export default function FigurinosPage() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroGlobal(null);
-    const opMap = await carregarEstudios();
-    let slugsForcado: string[] | null = null;
-    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      const set = new Set<string>();
-      for (const op of operadoraSlugsForcado) {
-        const e = opMap[op];
-        if (e) set.add(e);
-      }
-      slugsForcado = set.size > 0 ? [...set] : null;
-    }
+    await carregarEstudios();
     const selEmbed =
-      user?.role === "operador" && slugsForcado?.length
-        ? "*, rh_figurino_peca_estudios!inner(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)"
-        : "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
-    let q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
-    if (user?.role === "operador" && slugsForcado?.length) {
-      q = q.or(
-        slugsForcado.map((s) => `estudio_slug.eq.${s}`).join(","),
-        { foreignTable: "rh_figurino_peca_estudios" },
-      );
-    }
+      "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
+    const q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
     const [pr, er] = await Promise.all([
       q,
       supabase.from("rh_figurino_emprestimos").select("*").eq("status", "active").limit(500),
@@ -211,7 +195,7 @@ export default function FigurinosPage() {
     });
     setEmpPorItem(map);
     setLoading(false);
-  }, [user?.role, operadoraSlugsForcado, carregarEstudios]);
+  }, [carregarEstudios]);
 
   useEffect(() => {
     void carregar();
@@ -256,10 +240,7 @@ export default function FigurinosPage() {
 
   const passaFiltroBloco = useCallback(
     (p: RhFigurinoPeca) => {
-      if (
-        filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS &&
-        !pecaSlugsEstudiosEfetivos(p, opParaEstudio).includes(filtroEstudio)
-      ) {
+      if (!pecaPassaFiltroEstudio(p, filtroEstudio, FILTRO_STAFF_ESTUDIO_TODOS, opParaEstudio)) {
         return false;
       }
       if (filtroCat !== "todas" && p.category !== filtroCat) return false;

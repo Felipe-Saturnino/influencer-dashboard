@@ -98,6 +98,7 @@ alwaysApply: false
 - Filtros na barra (strip `primaryTransparent*`): **`FiltroEstudioSelect`** (**Todos Estúdios**), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
 - Peças vinculadas por **`rh_figurino_peca_estudios`** (N:N); cadastro via RPC `rh_figurino_criar_peca` com **`p_estudio_slugs`**. Junction **`rh_figurino_peca_operadoras`** mantida só para legado/sync. Coluna e modais exibem **Estúdio** (`labelEstudiosPeca` com fallback operadora→estúdio).
 - **Código da peça:** prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de 6 dígitos por prefixo (ex.: Camisa → `CAM-000001`, Vestido → `VES-000001`, Acessório → `ACE-000001`). Contador independente por categoria em `rh_figurino_category_code_counters`; pré-visualização no cadastro via `rh_figurino_preview_proximo_code(p_category)`.
+- **Cadastro — estúdios:** modal com **Todos Estúdios** (exclusivo; peça `atende_todos_estudios = true`, visível em qualquer filtro de estúdio) ou um ou mais estúdios específicos (`rh_figurino_peca_estudios`). Referência UI: `FigurinoEstudioCampoSelect` (mesmo padrão exclusivo de Gestão de Staff).
 - **Handoff:** barcode, condição da peça, abas.
 
 ---

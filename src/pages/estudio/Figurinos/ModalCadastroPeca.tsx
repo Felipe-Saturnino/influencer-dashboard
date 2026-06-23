@@ -7,8 +7,9 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { type RhFigurinoPeca } from "./types"
-import { CATEGORIAS, TAMANHOS } from "./figurinosConstants"
+import { CATEGORIAS, TAMANHOS, FIGURINO_ESTUDIO_CADASTRO_TODOS, figurinoEstudioAtendeTodos } from "./figurinosConstants"
 import { ctaButtonContent } from "./figurinosPageHelpers"
+import { FigurinoEstudioCampoSelect } from "./FigurinoEstudioCampoSelect"
 
 export function ModalCadastroPeca({
   onClose,
@@ -26,9 +27,9 @@ export function ModalCadastroPeca({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [previewCode, setPreviewCode] = useState<string>("…");
-  const [slugsSel, setSlugsSel] = useState<Set<string>>(() => {
-    if (estudioSlugsForcado?.length) return new Set(estudioSlugsForcado);
-    return new Set();
+  const [estudioSel, setEstudioSel] = useState<string[]>(() => {
+    if (estudioSlugsForcado?.length) return [...estudioSlugsForcado];
+    return [];
   });
   const [cat, setCat] = useState<string>(CATEGORIAS[0]);
   const [tam, setTam] = useState<string>(TAMANHOS[3]);
@@ -51,19 +52,12 @@ export function ModalCadastroPeca({
     };
   }, [cat]);
 
-  const toggleSlug = (slug: string) => {
-    setSlugsSel((prev) => {
-      const n = new Set(prev);
-      if (n.has(slug)) n.delete(slug);
-      else n.add(slug);
-      return n;
-    });
-  };
-
   const salvar = async () => {
     setErr(null);
-    if (slugsSel.size === 0) {
-      setErr("Selecione ao menos um estúdio.");
+    const atendeTodos = figurinoEstudioAtendeTodos(estudioSel);
+    const slugsEspecificos = estudioSel.filter((s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS);
+    if (!atendeTodos && slugsEspecificos.length === 0) {
+      setErr("Selecione ao menos um estúdio ou Todos Estúdios.");
       return;
     }
     if (!dataEntrada.trim()) {
@@ -72,12 +66,13 @@ export function ModalCadastroPeca({
     }
     setLoading(true);
     const { data, error } = await supabase.rpc("rh_figurino_criar_peca", {
-      p_estudio_slugs: [...slugsSel],
+      p_estudio_slugs: atendeTodos ? [] : slugsEspecificos,
       p_category: cat,
       p_size: tam,
       p_purchase_date: dataEntrada,
       p_description: desc,
       p_actor: actor,
+      p_atende_todos_estudios: atendeTodos,
     });
     setLoading(false);
     if (error) {
@@ -87,8 +82,6 @@ export function ModalCadastroPeca({
     }
     await onCreated(data as RhFigurinoPeca);
   };
-
-  const estVis = [...estudios].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
@@ -114,55 +107,14 @@ export function ModalCadastroPeca({
             }}
           />
         </label>
-        <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
-          <legend style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
             Estúdios
             <CampoObrigatorioMark />
-            <span style={{ fontWeight: 400 }}> (pode marcar vários)</span>
-          </legend>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              maxHeight: 200,
-              overflowY: "auto",
-              padding: "4px 0",
-            }}
-          >
-            {estVis.map((e) => {
-              const ativo = slugsSel.has(e.slug);
-              return (
-                <button
-                  key={e.slug}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={ativo}
-                  aria-label={`Estúdio ${e.nome}`}
-                  onClick={() => toggleSlug(e.slug)}
-                  style={{
-                    textAlign: "left",
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-accent) 12%, transparent)"
-                        : "rgba(124,58,237,0.12)"
-                      : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.accent : t.text,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    fontWeight: ativo ? 700 : 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  {e.nome}
-                </button>
-              );
-            })}
+            <span style={{ fontWeight: 400 }}> (Todos Estúdios ou um ou mais específicos)</span>
           </div>
-        </fieldset>
+          <FigurinoEstudioCampoSelect value={estudioSel} onChange={setEstudioSel} estudios={estudios} />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
             Categoria

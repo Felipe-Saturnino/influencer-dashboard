@@ -4,6 +4,15 @@ export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "
 
 export const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "Único"] as const;
 
+/** Valor interno ao cadastrar peça disponível em qualquer estúdio (espelha Staff). */
+export const FIGURINO_ESTUDIO_CADASTRO_TODOS = "todos";
+
+export const FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL = "Todos Estúdios";
+
+export function figurinoEstudioAtendeTodos(slugs: readonly string[]): boolean {
+  return slugs.includes(FIGURINO_ESTUDIO_CADASTRO_TODOS);
+}
+
 /** Prefixo de 3 letras do código (ex.: Camisa → CAM, Vestido → VES). Espelha `_rh_figurino_category_code_prefix` no Postgres. */
 export function prefixoCodigoFigurinoCategoria(categoria: string): string {
   const base = categoria

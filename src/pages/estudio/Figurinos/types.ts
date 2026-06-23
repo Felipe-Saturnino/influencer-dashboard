@@ -38,6 +38,7 @@ export interface RhFigurinoPeca {
   discarded_at: string | null;
   discard_reason: string | null;
   discarded_by: string | null;
+  atende_todos_estudios?: boolean;
   created_at: string;
   updated_at: string;
 }
