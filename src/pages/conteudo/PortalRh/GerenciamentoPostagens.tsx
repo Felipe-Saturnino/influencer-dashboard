@@ -375,7 +375,7 @@ export function GerenciamentoPostagens({
   }, [carregar]);
 
   const mesesFromRows = useMemo(
-    () => buildMesesCarrossel(rows.map((r) => ({ iso: r.publishedAt }))),
+    () => buildMesesCarrossel(rows.map((r) => ({ iso: r.publishedAt ?? r.createdAt }))),
     [rows],
   );
 
@@ -392,10 +392,18 @@ export function GerenciamentoPostagens({
   }, [onRegisterAbrirCriar]);
 
   const rowsFiltradas = useMemo(() => {
+    const mesSel = mesesDisponiveis[idxMes];
     let list = rows;
     if (!modoHistorico) {
-      const mesSel = mesesDisponiveis[idxMes];
-      list = list.filter((r) => itemNoMesCarrossel(r.publishedAt, mesSel));
+      list = list.filter((row) => {
+        if (row.publishedAt && mesSel && !itemNoMesCarrossel(row.publishedAt, mesSel)) {
+          if (row.status === "publicado" || row.status === "arquivado") return false;
+        }
+        if (!row.publishedAt && mesSel && !itemNoMesCarrossel(row.createdAt, mesSel)) {
+          if (row.status === "rascunho" || row.status === "aprovacao") return false;
+        }
+        return true;
+      });
     }
     if (filtroTipo !== "todos") {
       list = list.filter((r) => r.tipoUi === filtroTipo);

@@ -592,11 +592,11 @@ export function ModalCriarPostagem({
             novoStatus === "publicado" ? fmtDataEmissaoDocumentoPortal(new Date()) : dataEmissaoPersistida;
           const payload = {
             titulo: normativo.titulo.trim() || "Rascunho",
-            codigo: normativo.codigo.trim().toUpperCase(),
+            codigo: normativo.codigo.trim() ? normativo.codigo.trim().toUpperCase() : null,
             versao: normativo.versao.trim() || "1.0",
-            tipo_documento: normativo.tipoDocumento,
-            area_responsavel: normativo.areaResponsavel.trim(),
-            classificacao: normativo.classificacao,
+            tipo_documento: normativo.tipoDocumento || null,
+            area_responsavel: normativo.areaResponsavel.trim() || null,
+            classificacao: normativo.classificacao || null,
             aplicavel_a: normativo.aplicavelA,
             resumo: normativo.resumo.trim(),
             introducao: normativo.resumo.trim(),

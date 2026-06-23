@@ -517,9 +517,6 @@ export default function PortalRhPage() {
   useEffect(() => {
     setIdxMesTalk((i) => Math.min(i, Math.max(0, mesesTalksDisponiveis.length - 1)));
   }, [mesesTalksDisponiveis.length]);
-  useEffect(() => {
-    setIdxMesGer((i) => Math.min(i, Math.max(0, mesesGer.length - 1)));
-  }, [mesesGer.length]);
 
   const handleRegisterAbrirCriar = useCallback((fn: () => void) => {
     abrirCriarGerenciamentoRef.current = fn;
@@ -527,6 +524,7 @@ export default function PortalRhPage() {
 
   const handleMesesGerChange = useCallback((meses: MesCarrosselEntry[]) => {
     setMesesGer(meses);
+    setIdxMesGer(Math.max(0, meses.length - 1));
   }, []);
 
   const filtroCarrossel = useMemo(() => {

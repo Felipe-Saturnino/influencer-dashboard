@@ -257,7 +257,7 @@ export function ModalFormPoliticaNormativa({
             }}
           >
             <Upload size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 8 }} />
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>PDF canônico do documento</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>PDF do documento</div>
             <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12 }}>
               O colaborador lê este arquivo na plataforma. Máx. 15 MB.
             </div>
