@@ -13,6 +13,7 @@ import {
   validarCpfDigitos,
   validarDataNascimentoOpcional,
   validarEmail,
+  validarRgInput,
 } from "./rhFuncionarioValidators";
 
 const UFS_BR = [
@@ -71,7 +72,7 @@ function reqCampo(pendencias: string[], condicao: boolean, mensagem: string) {
 export function pendenciasDadosCadastraisCompletos(form: RhCadastroFormCompletudeInput): string[] {
   const p: string[] = [];
   reqCampo(p, form.nome.trim().length > 0, "Dados cadastrais: nome completo.");
-  reqCampo(p, form.rg.trim().length > 0, "Dados cadastrais: RG.");
+  reqCampo(p, form.rg.trim().length > 0 && validarRgInput(form.rg), "Dados cadastrais: RG.");
   const cpfD = somenteDigitos(form.cpf);
   reqCampo(p, cpfD.length === 11 && validarCpfDigitos(cpfD), "Dados cadastrais: CPF válido.");
   reqCampo(p, form.data_nascimento.trim().length > 0 && validarDataNascimentoOpcional(form.data_nascimento), "Dados cadastrais: data de nascimento.");

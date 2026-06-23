@@ -18,7 +18,7 @@ export const RH_POSTAGEM_TIPO_UI_LABEL: Record<RhPostagemTipoUi, string> = {
 };
 
 export const TIPOS_COMUNICADO = ["Urgente", "Geral", "Pagamento", "Eventos"] as const;
-export const TIPOS_POLITICA = ["Conduta", "Segurança", "Bonificação", "Folha de Pagamento"] as const;
+export const TIPOS_POLITICA = ["Conduta", "Segurança", "Bonificação", "Folha de Pagamento", "RH"] as const;
 
 const SLUG_COMUNICADO: Record<(typeof TIPOS_COMUNICADO)[number], string> = {
   Urgente: "urgente",
@@ -32,6 +32,7 @@ const SLUG_POLITICA: Record<(typeof TIPOS_POLITICA)[number], string> = {
   Segurança: "seguranca",
   Bonificação: "bonificacao",
   "Folha de Pagamento": "folha_pagamento",
+  RH: "rh",
 };
 
 export function contentTypeFromTipoUi(tipo: RhPostagemTipoUi): RhPostagemContentType {

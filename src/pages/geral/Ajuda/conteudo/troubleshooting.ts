@@ -883,6 +883,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_overview: {
+    titulo: "Overview Comercial",
+    blocos: [
+      {
+        subtitulo: "Não vejo Overview Comercial no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para **Overview Comercial** (página distinta do Pipeline B2B). Administradores têm acesso total.",
+      },
+      {
+        subtitulo: "Mapa ou lista de UF vazios?",
+        texto:
+          "A distribuição geográfica usa a **UF da sede do CNPJ**, preenchida pelo enriquecimento automático de cadastro. Empresas ainda não enriquecidas não aparecem no mapa até o processamento diário.",
+      },
+      {
+        subtitulo: "KPIs zerados mas há marcas no Pipeline?",
+        texto:
+          "Verifique os filtros de Comercial, UF e status no topo da página — todos os blocos respeitam a mesma seleção. Limpe os chips de status com um segundo clique ou volte **Todos Comerciais** / **Todas UFs**.",
+      },
+    ],
+  },
   comercial_pipeline_b2b: {
     titulo: "Pipeline B2B",
     blocos: [
@@ -959,7 +979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações CDA, Social Media KPIs e Spin na Rede RSS possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações CDA, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",

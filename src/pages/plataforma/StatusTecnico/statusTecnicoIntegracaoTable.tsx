@@ -30,6 +30,7 @@ export function StatusIntegracaoTable({
   syncSpinRssExecutando,
   syncComercialSpaExecutando,
   syncComercialDominioExecutando,
+  syncComercialCnpjExecutando,
   emailEnviando,
   emailAgendaEnviando,
   canEditarOk,
@@ -52,10 +53,11 @@ export function StatusIntegracaoTable({
   syncSpinRssExecutando: boolean;
   syncComercialSpaExecutando: boolean;
   syncComercialDominioExecutando: boolean;
+  syncComercialCnpjExecutando: boolean;
   emailEnviando: boolean;
   emailAgendaEnviando: boolean;
   canEditarOk: boolean;
-  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio") => void;
+  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") => void;
   onConfirmarEmail: (tipo: "diretoria" | "agenda") => void;
 }) {
   const handleSort = (col: IntegracaoSortCol) => {
@@ -68,6 +70,7 @@ export function StatusIntegracaoTable({
     const isSpinRss = row.syncTipo === "spin_rss";
     const isComercialSpa = row.syncTipo === "comercial_spa";
     const isComercialDominio = row.syncTipo === "comercial_dominio";
+    const isComercialCnpj = row.syncTipo === "comercial_cnpj";
     const isEmailDir = row.syncTipo === "email";
     const isEmailAgenda = row.syncTipo === "email_agenda";
     const syncExecutandoRow = isCda
@@ -80,9 +83,11 @@ export function StatusIntegracaoTable({
             ? syncComercialSpaExecutando
             : isComercialDominio
               ? syncComercialDominioExecutando
+              : isComercialCnpj
+                ? syncComercialCnpjExecutando
             : false;
 
-    if (isCda || isSocial || isSpinRss || isComercialSpa || isComercialDominio) {
+    if (isCda || isSocial || isSpinRss || isComercialSpa || isComercialDominio || isComercialCnpj) {
       return (
         <button
           type="button"
@@ -96,6 +101,8 @@ export function StatusIntegracaoTable({
                     ? "comercial_spa"
                     : isComercialDominio
                       ? "comercial_dominio"
+                      : isComercialCnpj
+                        ? "comercial_cnpj"
                       : "spin_rss",
             )
           }

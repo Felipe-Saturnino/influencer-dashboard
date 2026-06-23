@@ -508,3 +508,26 @@
   padding-bottom: 8px;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Portal RH — tabela de documentos normativos (scroll só em viewport estreita) */
+.app-table-wrap--portal-rh-docs {
+  overflow-x: visible;
+}
+
+@media (max-width: 720px) {
+  .app-table-wrap--portal-rh-docs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-table-wrap--portal-rh-docs table {
+    min-width: 640px;
+  }
+}
+
+/* Portal RH — viewer de documento normativo */
+@media (max-width: 900px) {
+  .app-portal-rh-doc-viewer {
+    grid-template-columns: 1fr !important;
+  }
+}

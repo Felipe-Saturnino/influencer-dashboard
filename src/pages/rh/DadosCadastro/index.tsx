@@ -17,6 +17,8 @@ import {
   formatarCnpjDigitos,
   formatarCpfDigitos,
   formatarRgInput,
+  RG_INPUT_MAX_LENGTH,
+  validarRgInput,
   formatarTelefoneBr,
   numeroDeCentavosStr,
   somenteDigitos,
@@ -221,6 +223,7 @@ function validarCadastroSelf(form: FormState): Record<string, string> {
   };
   req("nome", "Nome completo", form.nome);
   req("rg", "RG", form.rg);
+  if (form.rg.trim() && !validarRgInput(form.rg)) e.rg = "RG inválido.";
   req("telefone", "Telefone", form.telefone);
   req("email", "E-mail", form.email);
   req("res_logradouro", "Logradouro (residencial)", form.res_logradouro);
@@ -1284,6 +1287,7 @@ export default function RhDadosCadastroPage() {
                 id="dc-rg"
                 disabled={!podeEditarSelecionado}
                 value={form.rg}
+                maxLength={RG_INPUT_MAX_LENGTH}
                 onChange={(e) => setForm((s) => (s ? { ...s, rg: formatarRgInput(e.target.value) } : s))}
                 style={inputStyle}
               />

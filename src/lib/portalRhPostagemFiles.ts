@@ -4,7 +4,7 @@ export const RH_PORTAL_ASSETS_BUCKET = "rh-portal-assets";
 
 export async function uploadPortalRhAsset(
   file: File,
-  pasta: "imagens" | "anexos",
+  pasta: "imagens" | "anexos" | "pdfs",
 ): Promise<{ path: string; error: string | null }> {
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
   const path = `${pasta}/${crypto.randomUUID()}.${ext}`;

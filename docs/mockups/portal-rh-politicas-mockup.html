@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Portal RH · Políticas e Normativas (proposta)</title>
+  <style>
+    :root {
+      --brand-primary: #4a2082;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #1e36f8;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --card-border: #e5e7eb;
+      --input-bg: #f9fafb;
+      --card-bg: #ffffff;
+      --page-bg: #f3f4f6;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(74,32,130,.06);
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI", system-ui, sans-serif;
+      --verde: #22c55e;
+      --amarelo: #f59e0b;
+      --vermelho: #e84025;
+      --roxo: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--page-bg); color: var(--text); font-size: 13px; line-height: 1.45; }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; text-align: center; padding: 10px 16px; font-size: 12px; font-weight: 600;
+    }
+    .mock-nav {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+      padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--card-border);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .mock-nav button {
+      border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
+      padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .mock-nav button.active {
+      border-color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 12%, #fff);
+      color: var(--brand-accent);
+    }
+
+    .screen { display: none; max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
+    .screen.active { display: block; }
+
+    .section-label {
+      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--brand-primary); margin: 28px 0 10px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px;
+    }
+    .box.bad { border-color: color-mix(in srgb, var(--vermelho) 35%, var(--card-border)); }
+    .box.good { border-color: color-mix(in srgb, var(--verde) 35%, var(--card-border)); }
+    .box h3 { font-size: 14px; font-weight: 800; margin-bottom: 10px; font-family: var(--font-title); }
+    .box ul { padding-left: 18px; color: var(--text-muted); font-size: 12px; }
+    .box li { margin-bottom: 6px; }
+
+    /* Page header */
+    .page-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+    .page-header-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary); font-size: 14px;
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .page-header p { font-size: 13px; color: var(--text-muted); margin-top: 5px; padding-left: 44px; margin-left: -44px; }
+
+    /* Filter bar */
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; width: 100%; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+      border-radius: 999px; border: 1px solid var(--card-border); background: var(--input-bg); font-size: 12px; font-weight: 600;
+    }
+    .pill.active { border-color: var(--brand-accent); background: color-mix(in srgb, var(--brand-accent) 12%, #fff); color: var(--brand-accent); font-weight: 700; }
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; min-height: 44px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+    }
+    .tab-btn.active { border-color: var(--brand-accent); background: color-mix(in srgb, var(--brand-accent) 12%, #fff); color: var(--brand-accent); font-weight: 700; }
+    .search {
+      flex: 1; min-width: 200px; max-width: 360px; padding: 10px 14px 10px 38px;
+      border-radius: 12px; border: 1px solid var(--card-border); background: var(--input-bg); font-size: 13px;
+    }
+
+    /* Document list */
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px;
+    }
+    .block-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); font-family: var(--font-title); margin-bottom: 4px; }
+    .block-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
+
+    .doc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+    .doc-table th {
+      text-align: center; font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; padding: 10px 8px;
+      background: color-mix(in srgb, #fff 86%, var(--brand-primary) 14%);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .doc-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid var(--card-border); vertical-align: middle; }
+    .doc-table tr:hover td { background: color-mix(in srgb, var(--input-bg) 80%, #fff); }
+    .doc-table .left { text-align: left; }
+    .code { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700; color: var(--brand-primary); }
+    .tag {
+      display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .tag-pol { background: #6366f122; color: #6366f1; border-color: #6366f144; }
+    .tag-proc { background: #1e36f822; color: #1e36f8; border-color: #1e36f844; }
+    .tag-cod { background: #7c3aed22; color: #7c3aed; border-color: #7c3aed44; }
+    .tag-ops { background: #f59e0b22; color: #f59e0b; border-color: #f59e0b44; }
+    .status-ok { color: var(--verde); font-weight: 700; font-size: 12px; }
+    .status-pend { color: var(--amarelo); font-weight: 700; font-size: 12px; }
+    .btn-icon {
+      width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; font-size: 14px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4a2082, #1e36f8); color: #fff; border: none;
+      padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn-outline {
+      background: transparent; color: var(--brand-accent); border: 1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent);
+      padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+
+    /* Modal overlay */
+    .overlay {
+      background: rgba(15,23,42,.45); min-height: 100vh; padding: 24px 16px;
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .modal {
+      background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--card-border);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18); width: 100%; max-width: 720px; max-height: 90dvh; overflow: auto;
+    }
+    .modal.wide { max-width: 1100px; }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 800; font-family: var(--font-title); }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      padding: 16px 20px; border-top: 1px solid var(--card-border);
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;
+    }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid .full { grid-column: 1 / -1; }
+    label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    label .req { color: var(--vermelho); margin-left: 2px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-family: var(--font);
+    }
+    textarea { resize: vertical; min-height: 72px; }
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .upload-zone {
+      border: 2px dashed color-mix(in srgb, var(--brand-accent) 40%, var(--card-border));
+      border-radius: 12px; padding: 24px; text-align: center; background: color-mix(in srgb, var(--brand-accent) 4%, #fff);
+    }
+    .upload-zone strong { display: block; font-size: 14px; margin-bottom: 6px; }
+    .upload-zone p { font-size: 12px; color: var(--text-muted); }
+    .file-chip {
+      display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); text-align: left;
+    }
+    .file-chip .name { font-weight: 700; font-size: 13px; }
+    .file-chip .meta { font-size: 11px; color: var(--text-muted); }
+
+    .rel-list { display: flex; flex-direction: column; gap: 8px; }
+    .rel-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg); font-size: 12px;
+    }
+
+    /* Viewer layout */
+    .viewer-layout { display: grid; grid-template-columns: 1fr 300px; gap: 0; min-height: 520px; }
+    @media (max-width: 900px) { .viewer-layout { grid-template-columns: 1fr; } }
+    .pdf-pane {
+      background: #525659; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .pdf-page {
+      width: 100%; max-width: 520px; background: #fff; border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.35); padding: 28px 32px; min-height: 420px;
+    }
+    .pdf-cover-logo { font-size: 10px; font-weight: 800; color: var(--brand-primary); letter-spacing: 0.06em; }
+    .pdf-cover-area { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+    .pdf-cover-code {
+      display: inline-block; margin-top: 20px; padding: 4px 10px; font-size: 11px; font-weight: 800;
+      background: var(--input-bg); border: 1px solid var(--card-border);
+    }
+    .pdf-cover-title { font-size: 18px; font-weight: 900; margin-top: 24px; line-height: 1.25; font-family: var(--font-title); }
+    .pdf-cover-meta { margin-top: 20px; font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+    .pdf-toolbar {
+      display: flex; gap: 8px; align-items: center; color: #fff; font-size: 12px; width: 100%; max-width: 520px;
+    }
+    .pdf-toolbar button {
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); color: #fff;
+      padding: 6px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
+    }
+    .sidebar-pane { padding: 16px; border-left: 1px solid var(--card-border); overflow: auto; }
+    .meta-block { margin-bottom: 16px; }
+    .meta-block h4 { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+    .meta-row span:first-child { color: var(--text-muted); }
+    .objetivo-box {
+      font-size: 12px; line-height: 1.5; color: var(--text); padding: 10px 12px;
+      border-radius: 10px; background: var(--input-bg); border: 1px solid var(--card-border);
+    }
+    .ciencia-bar {
+      padding: 14px 20px; border-top: 1px solid var(--card-border); background: color-mix(in srgb, var(--amarelo) 8%, #fff);
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .ciencia-bar p { font-size: 12px; color: var(--text); max-width: 480px; }
+
+    .legend { font-size: 11px; color: var(--text-muted); margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    MOCKUP DE PRODUTO — Portal RH · Políticas e Normativas · Proposta v1 · Jun/2026 · Não implementado
+  </div>
+
+  <nav class="mock-nav" aria-label="Telas do mockup">
+    <button type="button" class="active" data-screen="contexto">1. Diagnóstico</button>
+    <button type="button" data-screen="lista">2. Lista (colaborador)</button>
+    <button type="button" data-screen="cadastro">3. Modal cadastro (RH)</button>
+    <button type="button" data-screen="leitura">4. Visualização (colaborador)</button>
+  </nav>
+
+  <!-- ═══ 1. CONTEXTO ═══ -->
+  <section id="contexto" class="screen active">
+    <p class="section-label">Por que o formato atual não serve</p>
+    <div class="compare-grid">
+      <div class="box bad">
+        <h3>Hoje na plataforma</h3>
+        <ul>
+          <li>Tipo genérico (Conduta, Segurança, RH…) — não reflete a taxonomia real (<code>POL-RH</code>, <code>PROC-OPS</code>, <code>COD</code>).</li>
+          <li>Corpo digitado no editor HTML — inviável para documentos de 4–7 páginas com tabelas, capa e controle de versão.</li>
+          <li>PDF como anexo opcional — o arquivo oficial fica secundário ao texto reescrito na mão.</li>
+          <li>Sem código, versão, área responsável, aplicabilidade por cargo ou classificação.</li>
+          <li>Sem vínculo entre política-mãe e procedimentos filhos (ex.: POL-RH-001 ↔ PROC-OPS-003/004/005).</li>
+        </ul>
+      </div>
+      <div class="box good">
+        <h3>Proposta (mockup abaixo)</h3>
+        <ul>
+          <li><strong>PDF como fonte canônica</strong> — upload obrigatório; plataforma indexa metadados + resumo.</li>
+          <li><strong>Código + versão</strong> alinhados ao padrão Spin (POL-RH-007 v1.0).</li>
+          <li><strong>Tipo de documento</strong>: Política · Procedimento · Código · Normativa operacional.</li>
+          <li><strong>Metadados da capa</strong> extraídos ou preenchidos: área, cargos, classificação, emissão.</li>
+          <li><strong>Leitura em viewer</strong> embutido + ciência registrada — sem replicar o Word na tela.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="section-label">Inventário dos seus arquivos (amostra analisada)</p>
+    <div class="content-box">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Área</th>
+            <th>Págs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="code">COD-001</td><td class="left">Código de Ética</td><td><span class="tag tag-cod">Código</span></td><td>RH / Diretoria</td><td>4</td></tr>
+          <tr><td class="code">POL-RH-000</td><td class="left">Política Geral de Recursos Humanos</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>7</td></tr>
+          <tr><td class="code">POL-RH-001</td><td class="left">Cálculo e Pagamento de Bônus — Game Presenter</td><td><span class="tag tag-pol">Política RH</span></td><td>Operações</td><td>5</td></tr>
+          <tr><td class="code">POL-RH-002</td><td class="left">Advertência e Suspensão</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-003</td><td class="left">Atestados Médicos</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-004</td><td class="left">Atrasos e Faltas</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-005</td><td class="left">Adiantamento</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-006</td><td class="left">Troca de Turnos</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-007</td><td class="left">Promoção por Mérito — Game Presenter</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-RH-008</td><td class="left">Promoção por Mérito — Shuffler</td><td><span class="tag tag-pol">Política RH</span></td><td>Recursos Humanos</td><td>—</td></tr>
+          <tr><td class="code">POL-OPS-001</td><td class="left">Figurino</td><td><span class="tag tag-ops">Política OPS</span></td><td>Figurino / Operações</td><td>—</td></tr>
+          <tr><td class="code">PROC-OPS-003</td><td class="left">Bônus de Assiduidade — Game Presenters</td><td><span class="tag tag-proc">Procedimento</span></td><td>Operações</td><td>5</td></tr>
+          <tr><td class="code">PROC-OPS-004</td><td class="left">Bônus Qualitativo — Game Presenters</td><td><span class="tag tag-proc">Procedimento</span></td><td>Operações</td><td>—</td></tr>
+          <tr><td class="code">PROC-OPS-005</td><td class="left">Bônus Quantitativo — Game Presenters</td><td><span class="tag tag-proc">Procedimento</span></td><td>Operações</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p class="legend">Todos compartilham a mesma estrutura de capa: código, versão, área, aplicabilidade, classificação, controle de versão e bloco de aprovações — campos que o cadastro atual não possui.</p>
+    </div>
+  </section>
+
+  <!-- ═══ 2. LISTA COLABORADOR ═══ -->
+  <section id="lista" class="screen">
+    <header class="page-header">
+      <div class="page-header-icon">📰</div>
+      <div>
+        <h1>Portal de RH</h1>
+        <p>Comunicados oficiais, políticas internas e atas das RH Talks.</p>
+      </div>
+    </header>
+
+    <div class="filter-box">
+      <div class="filter-row" style="margin-bottom: 10px;">
+        <span class="tab-btn">Comunicados</span>
+        <span class="tab-btn active">Políticas e normativas</span>
+        <span class="tab-btn">RH Talks</span>
+      </div>
+      <div class="filter-row" style="margin-bottom: 10px;">
+        <span class="pill">◀</span>
+        <span style="font-weight: 800; min-width: 140px; text-align: center;">Junho/2026</span>
+        <span class="pill">▶</span>
+        <span class="pill">Histórico</span>
+      </div>
+      <div class="filter-row" style="margin-bottom: 10px;">
+        <span class="tab-btn active">Todos</span>
+        <span class="tab-btn">Políticas RH</span>
+        <span class="tab-btn">Procedimentos</span>
+        <span class="tab-btn">Códigos</span>
+        <span class="tab-btn">Operações</span>
+      </div>
+      <div class="filter-row">
+        <input class="search" type="search" placeholder="Buscar por código, título ou palavra-chave..." aria-label="Buscar documentos" value="" readonly />
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="block-title">Documentos oficiais</div>
+      <div class="block-sub">— PDF publicado · ordenação por código · ciência obrigatória quando indicado</div>
+
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th class="left">Documento</th>
+            <th>Versão</th>
+            <th>Tipo</th>
+            <th>Aplicável a</th>
+            <th>Sua ciência</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="left">
+              <div class="code">POL-RH-001</div>
+              <div style="font-weight: 700; margin-top: 4px;">Política de Cálculo e Pagamento de Bônus — Game Presenter</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Publicado em 15/05/2026 · Uso Interno</div>
+            </td>
+            <td>1.0</td>
+            <td><span class="tag tag-pol">Política RH</span></td>
+            <td>Game Presenters</td>
+            <td><span class="status-pend">Pendente</span></td>
+            <td><button type="button" class="btn-outline" style="padding: 8px 14px; font-size: 12px;">Abrir PDF</button></td>
+          </tr>
+          <tr>
+            <td class="left">
+              <div class="code">PROC-OPS-003</div>
+              <div style="font-weight: 700; margin-top: 4px;">Bônus de Assiduidade — Game Presenters</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Vinculado a POL-RH-001 · Publicado em 01/06/2026</div>
+            </td>
+            <td>1.0</td>
+            <td><span class="tag tag-proc">Procedimento</span></td>
+            <td>Game Presenters</td>
+            <td><span class="status-pend">Pendente</span></td>
+            <td><button type="button" class="btn-outline" style="padding: 8px 14px; font-size: 12px;">Abrir PDF</button></td>
+          </tr>
+          <tr>
+            <td class="left">
+              <div class="code">COD-001</div>
+              <div style="font-weight: 700; margin-top: 4px;">Código de Ética</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Publicado em 10/06/2026 · Público Interno</div>
+            </td>
+            <td>1.0</td>
+            <td><span class="tag tag-cod">Código</span></td>
+            <td>Todos os prestadores</td>
+            <td><span class="status-ok">Ciente · 12/06/2026</span></td>
+            <td><button type="button" class="btn-outline" style="padding: 8px 14px; font-size: 12px;">Abrir PDF</button></td>
+          </tr>
+          <tr>
+            <td class="left">
+              <div class="code">POL-RH-000</div>
+              <div style="font-weight: 700; margin-top: 4px;">Política Geral de Recursos Humanos</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Publicado em 20/06/2026 · Uso Interno</div>
+            </td>
+            <td>1.0</td>
+            <td><span class="tag tag-pol">Política RH</span></td>
+            <td>Todos os prestadores</td>
+            <td><span class="status-ok">Ciente · 21/06/2026</span></td>
+            <td><button type="button" class="btn-outline" style="padding: 8px 14px; font-size: 12px;">Abrir PDF</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="legend" style="margin: 14px 4px 0;">
+      Alternativa mobile: mesma informação em cards empilhados (código + título + badge de ciência), mantendo o botão «Abrir documento».
+    </p>
+  </section>
+
+  <!-- ═══ 3. MODAL CADASTRO ═══ -->
+  <section id="cadastro" class="screen">
+    <div class="overlay">
+      <div class="modal" role="dialog" aria-labelledby="modal-cadastro-title">
+        <div class="modal-header">
+          <h2 id="modal-cadastro-title">Nova postagem · Política / Normativa</h2>
+          <button type="button" class="btn-icon" aria-label="Fechar">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="full">
+              <label>Tipo de postagem<span class="req">*</span></label>
+              <select disabled><option>Políticas e Normativas</option></select>
+            </div>
+
+            <div>
+              <label>Tipo de documento<span class="req">*</span></label>
+              <select>
+                <option>Política (POL-…)</option>
+                <option>Procedimento (PROC-…)</option>
+                <option>Código (COD-…)</option>
+                <option selected>Política RH (POL-RH-…)</option>
+                <option>Política OPS (POL-OPS-…)</option>
+              </select>
+              <p class="hint">Define prefixo do código e filtros na aba Políticas.</p>
+            </div>
+            <div>
+              <label>Código do documento<span class="req">*</span></label>
+              <input type="text" value="POL-RH-009" />
+              <p class="hint">Sugestão automática do próximo número livre na família.</p>
+            </div>
+
+            <div>
+              <label>Versão<span class="req">*</span></label>
+              <input type="text" value="1.0" />
+            </div>
+            <div>
+              <label>Data de emissão<span class="req">*</span></label>
+              <input type="text" value="Junho/2026" placeholder="Mês/Ano ou data" />
+            </div>
+
+            <div class="full">
+              <label>Título oficial (capa do PDF)<span class="req">*</span></label>
+              <input type="text" value="Política de Promoção por Mérito — Game Presenter" />
+            </div>
+
+            <div>
+              <label>Área responsável<span class="req">*</span></label>
+              <select><option selected>Recursos Humanos</option><option>Operações</option><option>Figurino</option></select>
+            </div>
+            <div>
+              <label>Classificação<span class="req">*</span></label>
+              <select><option selected>Uso Interno</option><option>Público Interno</option></select>
+            </div>
+
+            <div class="full">
+              <label>Aplicável a<span class="req">*</span></label>
+              <select multiple style="min-height: 88px;">
+                <option selected>Todos os prestadores</option>
+                <option selected>Game Presenters</option>
+                <option>Shufflers</option>
+                <option>Shift Leaders</option>
+                <option>Lideranças operacionais</option>
+              </select>
+              <p class="hint">Filtra visibilidade e aparece na listagem do colaborador.</p>
+            </div>
+
+            <div class="full">
+              <label>Resumo para listagem (Objetivo — até 400 caracteres)<span class="req">*</span></label>
+              <textarea>Estabelece critérios, etapas e responsabilidades para promoção por mérito de Game Presenters, assegurando transparência e alinhamento entre RH, Operações e Treinamento.</textarea>
+              <p class="hint">Pode ser pré-preenchido a partir da seção «1. Objetivo» do PDF após upload.</p>
+            </div>
+
+            <div class="full">
+              <label>Arquivo oficial (PDF)<span class="req">*</span></label>
+              <div class="upload-zone">
+                <strong>Arraste o PDF ou clique para selecionar</strong>
+                <p>Documento canônico — o colaborador lê este arquivo na plataforma.<br/>Máx. 15 MB · Somente PDF.</p>
+                <div class="file-chip">
+                  <span style="font-size: 22px;">📄</span>
+                  <div>
+                    <div class="name">POL-RH-007_v1_0_Promocao_Merito_GP.pdf</div>
+                    <div class="meta">842 KB · 6 páginas detectadas · preview disponível</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="full">
+              <label>Documentos relacionados</label>
+              <div class="rel-list">
+                <div class="rel-item"><span class="code">POL-RH-001</span> Política de Bônus — Game Presenter <span style="margin-left: auto; color: var(--text-muted);">Política vinculada</span></div>
+                <div class="rel-item"><span class="code">COD-001</span> Código de Ética <span style="margin-left: auto; color: var(--text-muted);">Referência cruzada</span></div>
+              </div>
+              <p class="hint">Opcional — exibido na lateral ao ler o documento.</p>
+            </div>
+
+            <div>
+              <label>Exige ciência do colaborador?<span class="req">*</span></label>
+              <select><option selected>Sim</option><option>Não</option></select>
+            </div>
+            <div>
+              <label>Enviar para aprovação antes de publicar?<span class="req">*</span></label>
+              <select><option selected>Sim — RH e Gestão de Operações</option><option>Não — publicar direto</option></select>
+            </div>
+          </div>
+
+          <p class="legend" style="margin-top: 20px;">
+            <strong>Removido do fluxo atual:</strong> editor HTML de «Descrição» e «Introdução» longa — o conteúdo normativo vive no PDF. Campos de capa substituem o tipo «Conduta / Segurança / RH».
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-outline">Salvar rascunho</button>
+          <button type="button" class="btn-primary">Enviar para aprovação</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4. LEITURA COLABORADOR ═══ -->
+  <section id="leitura" class="screen">
+    <div class="overlay">
+      <div class="modal wide" role="dialog" aria-labelledby="modal-leitura-title">
+        <div class="modal-header">
+          <div>
+            <div class="code" style="font-size: 11px;">POL-RH-001 · v1.0</div>
+            <h2 id="modal-leitura-title" style="margin-top: 4px;">Política de Cálculo e Pagamento de Bônus — Game Presenter</h2>
+          </div>
+          <button type="button" class="btn-icon" aria-label="Fechar">×</button>
+        </div>
+
+        <div class="viewer-layout">
+          <div class="pdf-pane">
+            <div class="pdf-toolbar">
+              <button type="button">◀ Página</button>
+              <span>Página 1 de 5</span>
+              <button type="button">Página ▶</button>
+              <span style="margin-left: auto;">100%</span>
+              <button type="button">−</button>
+              <button type="button">+</button>
+              <button type="button">Baixar PDF</button>
+            </div>
+            <div class="pdf-page">
+              <div class="pdf-cover-logo">SPIN GAMING</div>
+              <div class="pdf-cover-area">Operações | Recursos Humanos</div>
+              <div class="pdf-cover-code">POL-RH-001 · Uso Interno</div>
+              <div class="pdf-cover-title">POLÍTICA DE CÁLCULO E PAGAMENTO DE BÔNUS — GAME PRESENTER</div>
+              <div class="pdf-cover-meta">
+                Documento POL-RH-001 · Versão 1.0<br/>
+                Área Responsável: Operações<br/>
+                Cargo Aplicável: Game Presenters<br/>
+                Data de Emissão: Maio/2026<br/>
+                Classificação: Uso Interno
+              </div>
+              <div style="margin-top: 28px; font-size: 11px; font-weight: 800; text-transform: uppercase;">1. Objetivo</div>
+              <p style="font-size: 10px; margin-top: 8px; line-height: 1.55; color: var(--text);">
+                Esta Política tem por finalidade estabelecer diretrizes claras, padronizadas e transparentes para o cálculo e o pagamento das bonificações…
+              </p>
+            </div>
+          </div>
+
+          <aside class="sidebar-pane">
+            <div class="meta-block">
+              <h4>Resumo</h4>
+              <div class="objetivo-box">
+                Define regras de bônus (assiduidade 40%, quantitativo 30%, qualitativo 30%) para Game Presenters em operação ao vivo, com referência de R$ 1.000,00 total.
+              </div>
+            </div>
+            <div class="meta-block">
+              <h4>Metadados</h4>
+              <div class="meta-row"><span>Área</span><span>Operações</span></div>
+              <div class="meta-row"><span>Aplicável a</span><span>Game Presenters</span></div>
+              <div class="meta-row"><span>Classificação</span><span>Uso Interno</span></div>
+              <div class="meta-row"><span>Publicado</span><span>15/05/2026</span></div>
+            </div>
+            <div class="meta-block">
+              <h4>Aprovações</h4>
+              <div class="meta-row"><span>Elaborado</span><span>RH</span></div>
+              <div class="meta-row"><span>Revisado</span><span>RH e Gestão OPS</span></div>
+              <div class="meta-row"><span>Aprovado</span><span>Diretoria</span></div>
+            </div>
+            <div class="meta-block">
+              <h4>Documentos relacionados</h4>
+              <div class="rel-item" style="margin-bottom: 6px;"><span class="code">PROC-OPS-003</span> Assiduidade</div>
+              <div class="rel-item" style="margin-bottom: 6px;"><span class="code">PROC-OPS-004</span> Qualitativo</div>
+              <div class="rel-item"><span class="code">PROC-OPS-005</span> Quantitativo</div>
+            </div>
+            <div class="meta-block">
+              <h4>Histórico de versões</h4>
+              <div class="meta-row"><span>v1.0</span><span>Atual · Mai/2026</span></div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="ciencia-bar">
+          <p><strong>Ciência obrigatória.</strong> Ao confirmar, você declara ter lido o documento oficial (PDF) e estar ciente das regras aplicáveis ao seu cargo.</p>
+          <button type="button" class="btn-primary">Li e estou ciente</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll(".mock-nav button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".mock-nav button").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.screen).classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
