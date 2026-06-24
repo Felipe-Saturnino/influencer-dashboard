@@ -133,6 +133,67 @@ export function fotosGeraisDoEvento(
   return fotos.filter((f) => f.tipo === "geral" && f.evento_id === eventoId);
 }
 
+/** Chave de agrupamento para numeração sequencial (evento ou colaborador). */
+export function chaveGrupoFotoGaleria(f: MarketingFotoComEvento): string | null {
+  if (f.tipo === "geral" && f.evento_id) return `geral:${f.evento_id}`;
+  if (f.tipo === "prestador" && f.rh_funcionario_id) return `prestador:${f.rh_funcionario_id}`;
+  return null;
+}
+
+export function nomeBaseGrupoFotoGaleria(f: MarketingFotoComEvento): string {
+  if (f.tipo === "geral") return fotoEventoEmbed(f)?.nome?.trim() || "Evento";
+  return fotoPrestadorEmbed(f)?.nome?.trim() || "Colaborador";
+}
+
+/**
+ * Rótulos «Evento 1», «Colaborador 2»… por grupo, ordenados por data de upload (mais antigo = 1).
+ */
+export function buildRotulosFotoGaleria(fotos: MarketingFotoComEvento[]): Map<string, string> {
+  const map = new Map<string, string>();
+  const grupos = new Map<string, MarketingFotoComEvento[]>();
+  for (const f of fotos) {
+    const key = chaveGrupoFotoGaleria(f);
+    if (!key) continue;
+    const list = grupos.get(key) ?? [];
+    list.push(f);
+    grupos.set(key, list);
+  }
+  for (const list of grupos.values()) {
+    const sorted = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    sorted.forEach((f, i) => {
+      map.set(f.id, `${nomeBaseGrupoFotoGaleria(f)} ${i + 1}`);
+    });
+  }
+  return map;
+}
+
+function extensaoArquivoFoto(f: MarketingFotoComEvento): string {
+  const fromName = f.file_name.includes(".") ? f.file_name.slice(f.file_name.lastIndexOf(".")) : "";
+  if (fromName) return fromName.toLowerCase();
+  if (f.mime_type === "image/png") return ".png";
+  if (f.mime_type === "image/webp") return ".webp";
+  return ".jpg";
+}
+
+function sanitizeNomeArquivoDownload(nome: string): string {
+  return nome.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim();
+}
+
+export function rotuloExibicaoFotoGaleria(
+  f: MarketingFotoComEvento,
+  rotulos: Map<string, string>,
+): string {
+  return rotulos.get(f.id) ?? nomeBaseGrupoFotoGaleria(f);
+}
+
+export function nomeArquivoDownloadFotoGaleria(
+  f: MarketingFotoComEvento,
+  rotulos: Map<string, string>,
+): string {
+  const rotulo = rotuloExibicaoFotoGaleria(f, rotulos);
+  return `${sanitizeNomeArquivoDownload(rotulo)}${extensaoArquivoFoto(f)}`;
+}
+
 /** Remove arquivos no storage e exclui o evento (DB cascade em marketing_fotos). */
 export async function excluirMarketingEventoGaleria(
   eventoId: string,

@@ -65,6 +65,9 @@ import {
   buscarMeuColaboradorGaleria,
   fotosGeraisDoEvento,
   excluirMarketingEventoGaleria,
+  buildRotulosFotoGaleria,
+  rotuloExibicaoFotoGaleria,
+  nomeArquivoDownloadFotoGaleria,
   MARKETING_FOTO_MIME_PERMITIDOS,
   marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
@@ -221,6 +224,8 @@ export default function GaleriaFotos() {
     }
     return meuRhFuncionarioId ? [meuRhFuncionarioId] : [];
   }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
+
+  const rotulosFotoGaleria = useMemo(() => buildRotulosFotoGaleria(fotos), [fotos]);
 
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
@@ -643,7 +648,7 @@ export default function GaleriaFotos() {
     if (!url) return;
     const a = document.createElement("a");
     a.href = url;
-    a.download = f.file_name;
+    a.download = nomeArquivoDownloadFotoGaleria(f, rotulosFotoGaleria);
     a.rel = "noopener noreferrer";
     a.target = "_blank";
     document.body.appendChild(a);
@@ -871,6 +876,7 @@ export default function GaleriaFotos() {
                 >
                   {bloco.fotos.map((f) => {
                     const thumb = urlThumbnail(f);
+                    const rotuloFoto = rotuloExibicaoFotoGaleria(f, rotulosFotoGaleria);
                     return (
                       <div
                         key={f.id}
@@ -885,7 +891,7 @@ export default function GaleriaFotos() {
                         <button
                           type="button"
                           onClick={() => setLightbox(f)}
-                          aria-label={`Visualizar ${f.file_name}`}
+                          aria-label={`Visualizar ${rotuloFoto}`}
                           style={{
                             display: "block",
                             width: "100%",
@@ -930,16 +936,14 @@ export default function GaleriaFotos() {
                           }}
                         >
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {f.tipo === "prestador" && fotoPrestadorEmbed(f)?.nome
-                              ? fotoPrestadorEmbed(f)!.nome
-                              : f.file_name}
+                            {rotuloFoto}
                           </span>
                           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                             <button
                               type="button"
                               onClick={() => void baixarFoto(f)}
-                              aria-label={`Baixar ${f.file_name}`}
-                              title={`Baixar ${f.file_name}`}
+                              aria-label={`Baixar ${rotuloFoto}`}
+                              title={`Baixar ${rotuloFoto}`}
                               style={{
                                 width: 28,
                                 height: 28,
@@ -957,7 +961,7 @@ export default function GaleriaFotos() {
                             </button>
                             {perm.canExcluirOk ? (
                               <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("foto", f.file_name)}
+                                descricaoItem={descricaoBotaoExcluir("foto", rotuloFoto)}
                                 onClick={() => setFotoExcluir(f)}
                               />
                             ) : null}
@@ -1407,7 +1411,10 @@ export default function GaleriaFotos() {
 
       {lightbox ? (
         <ModalBase onClose={() => setLightbox(null)} zIndex={1050} maxWidth={720}>
-          <ModalHeader title={lightbox.file_name} onClose={() => setLightbox(null)} />
+          <ModalHeader
+            title={rotuloExibicaoFotoGaleria(lightbox, rotulosFotoGaleria)}
+            onClose={() => setLightbox(null)}
+          />
           {lightboxUrl ? (
             <img
               src={lightboxUrl}
@@ -1474,7 +1481,10 @@ export default function GaleriaFotos() {
 
       {fotoExcluir ? (
         <ModalConfirmExcluirPadrao
-          descricaoItem={descricaoModalExcluirItem("a foto", fotoExcluir.file_name)}
+          descricaoItem={descricaoModalExcluirItem(
+            "a foto",
+            fotoExcluir ? rotuloExibicaoFotoGaleria(fotoExcluir, rotulosFotoGaleria) : "",
+          )}
           onCancel={() => setFotoExcluir(null)}
           onConfirm={() => void confirmarExcluir()}
           loading={excluindo}
