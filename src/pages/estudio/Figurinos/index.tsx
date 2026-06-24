@@ -50,7 +50,6 @@ import {
   labelEstudiosPeca,
   normNomeParaFiltroPrestadorFig,
   pecaPassaFiltroEstudio,
-  pecaSlugsEstudiosEfetivos,
   tableRowHoverBg,
 } from "./figurinosPageHelpers"
 import { ModalCadastroPeca } from "./ModalCadastroPeca"
