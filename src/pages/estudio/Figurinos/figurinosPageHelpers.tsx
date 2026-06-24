@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Loader2 } from "lucide-react"
 import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync"
 import { normalizarTextoBusca } from "../../../lib/searchText"
+import { FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants"
 import type { RhFigurinoCondition, RhFigurinoEmprestimo, RhFigurinoPeca } from "./types"
 
 export function tableRowHoverBg(isDark: boolean): string {
@@ -72,6 +73,26 @@ export function actorLabel(user: { name: string; email: string } | null): string
   return (user.name || "").trim() || user.email;
 }
 
+export function pecaAtendeTodosEstudios(p: RhFigurinoPeca): boolean {
+  return p.atende_todos_estudios === true;
+}
+
+export function pecaAtendeStaff(p: RhFigurinoPeca): boolean {
+  return p.atende_staff === true;
+}
+
+export function pecaPassaFiltroEstudio(
+  p: RhFigurinoPeca,
+  filtroEstudio: string,
+  filtroTodosValue: string,
+  opParaEstudio: Record<string, string> = {},
+): boolean {
+  if (filtroEstudio === FIGURINO_FILTRO_STAFF) return pecaAtendeStaff(p);
+  if (filtroEstudio === filtroTodosValue) return true;
+  if (pecaAtendeTodosEstudios(p)) return true;
+  return pecaSlugsEstudiosEfetivos(p, opParaEstudio).includes(filtroEstudio);
+}
+
 export function pecaSlugsEstudiosDiretos(p: RhFigurinoPeca): string[] {
   const r = p.rh_figurino_peca_estudios;
   if (!r || !Array.isArray(r)) return [];
@@ -109,9 +130,13 @@ export function labelEstudiosPeca(
   slugParaNome: (slug: string) => string,
   opParaEstudio: Record<string, string> = {},
 ): string {
+  if (pecaAtendeTodosEstudios(p)) return FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL;
+  const partes: string[] = [];
+  if (pecaAtendeStaff(p)) partes.push(FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL);
   const slugs = pecaSlugsEstudiosEfetivos(p, opParaEstudio);
-  if (slugs.length === 0) return "—";
-  return slugs.map(slugParaNome).join(" · ");
+  if (slugs.length > 0) partes.push(...slugs.map(slugParaNome));
+  if (partes.length === 0) return "—";
+  return partes.join(" · ");
 }
 
 /** @deprecated Use labelEstudiosPeca */

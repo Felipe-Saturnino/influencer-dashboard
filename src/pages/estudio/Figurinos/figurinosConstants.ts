@@ -4,6 +4,35 @@ export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "
 
 export const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "Único"] as const;
 
+export const GENEROS = ["Masculino", "Feminino", "Unisex"] as const;
+
+export const CORES = ["Branco", "Preto", "Cinza", "Único"] as const;
+
+export const GENERO_PADRAO = "Unisex" as const;
+
+export const COR_PADRAO = "Único" as const;
+
+/** Valor interno ao cadastrar peça disponível em qualquer estúdio (espelha Staff). */
+export const FIGURINO_ESTUDIO_CADASTRO_TODOS = "todos";
+
+export const FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL = "Todos Estúdios";
+
+/** Acervo da equipe Staff — pode combinar com estúdio(s) específico(s). */
+export const FIGURINO_ESTUDIO_CADASTRO_STAFF = "staff";
+
+export const FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL = "Staff";
+
+/** Filtro da lista — opção agregadora Staff. */
+export const FIGURINO_FILTRO_STAFF = "staff";
+
+export function figurinoEstudioAtendeTodos(slugs: readonly string[]): boolean {
+  return slugs.includes(FIGURINO_ESTUDIO_CADASTRO_TODOS);
+}
+
+export function figurinoEstudioAtendeStaff(slugs: readonly string[]): boolean {
+  return slugs.includes(FIGURINO_ESTUDIO_CADASTRO_STAFF);
+}
+
 /** Prefixo de 3 letras do código (ex.: Camisa → CAM, Vestido → VES). Espelha `_rh_figurino_category_code_prefix` no Postgres. */
 export function prefixoCodigoFigurinoCategoria(categoria: string): string {
   const base = categoria

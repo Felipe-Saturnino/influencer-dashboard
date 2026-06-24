@@ -28,6 +28,8 @@ export interface RhFigurinoPeca {
   name: string;
   category: string;
   size: string;
+  genero: string;
+  cor: string;
   description: string | null;
   status: RhFigurinoStatus;
   condition: RhFigurinoCondition;
@@ -38,6 +40,8 @@ export interface RhFigurinoPeca {
   discarded_at: string | null;
   discard_reason: string | null;
   discarded_by: string | null;
+  atende_todos_estudios?: boolean;
+  atende_staff?: boolean;
   created_at: string;
   updated_at: string;
 }

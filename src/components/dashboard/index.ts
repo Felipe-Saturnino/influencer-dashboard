@@ -117,12 +117,26 @@ export {
   type FiltroFigurinosTamanhoSelectProps,
 } from "../FiltroFigurinosTamanhoSelect";
 export {
+  FiltroFigurinosCorSelect,
+  type FiltroFigurinosCorSelectProps,
+} from "../FiltroFigurinosCorSelect";
+export {
+  FiltroFigurinosGeneroSelect,
+  type FiltroFigurinosGeneroSelectProps,
+} from "../FiltroFigurinosGeneroSelect";
+export {
   FIGURINO_CATEGORIA_TODAS_VALUE,
   FIGURINO_CATEGORIA_TODAS_LABEL,
   FIGURINO_CATEGORIA_ARIA_LABEL,
   FIGURINO_TAMANHO_TODAS_VALUE,
   FIGURINO_TAMANHO_TODAS_LABEL,
   FIGURINO_TAMANHO_ARIA_LABEL,
+  FIGURINO_COR_TODAS_VALUE,
+  FIGURINO_COR_TODAS_LABEL,
+  FIGURINO_COR_ARIA_LABEL,
+  FIGURINO_GENERO_TODOS_VALUE,
+  FIGURINO_GENERO_TODOS_LABEL,
+  FIGURINO_GENERO_ARIA_LABEL,
 } from "../../lib/filtroFigurinosConstants";
 export {
   GESTAO_STAFF_TURNO_FILTRO_OPCOES,

@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Images,
   Loader2,
+  Pencil,
   Upload as UploadIcon,
   User,
 } from "lucide-react";
@@ -27,9 +28,10 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { descricaoBotaoExcluir, descricaoModalExcluirItem, MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../../../lib/excluirItemUi";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
@@ -61,6 +63,8 @@ import {
   urlAssinadaFotoPrestador,
   urlPublicaFotoGeral,
   buscarMeuColaboradorGaleria,
+  fotosGeraisDoEvento,
+  excluirMarketingEventoGaleria,
   MARKETING_FOTO_MIME_PERMITIDOS,
   marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
@@ -91,6 +95,8 @@ const MSG_ERRO_UPLOAD =
   "Não foi possível enviar as fotos. Se o problema persistir, entre em contato com o suporte.";
 const MSG_ERRO_EXCLUIR =
   "Não foi possível excluir a foto. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_EXCLUIR_EVENTO =
+  "Não foi possível excluir o evento. Se o problema persistir, entre em contato com o suporte.";
 
 interface PrestadorOpcao {
   id: string;
@@ -109,6 +115,30 @@ function inputStyle(t: ReturnType<typeof useApp>["theme"]): CSSProperties {
     fontFamily: FONT.body,
     boxSizing: "border-box",
   };
+}
+
+/** Miniatura — retrato (colaborador) ancora no topo para não cortar o rosto. */
+function estiloThumbGaleria(tipo: MarketingFotoTipo): CSSProperties {
+  if (tipo === "prestador") {
+    return {
+      display: "block",
+      width: "100%",
+      aspectRatio: "3 / 4",
+      objectFit: "cover",
+      objectPosition: "top center",
+    };
+  }
+  return {
+    display: "block",
+    width: "100%",
+    aspectRatio: "4 / 3",
+    objectFit: "cover",
+    objectPosition: "center center",
+  };
+}
+
+function aspectRatioThumbPlaceholder(tipo: MarketingFotoTipo): string {
+  return tipo === "prestador" ? "3 / 4" : "4 / 3";
 }
 
 export default function GaleriaFotos() {
@@ -149,6 +179,20 @@ export default function GaleriaFotos() {
   const [salvandoEvento, setSalvandoEvento] = useState(false);
   const [eventoErro, setEventoErro] = useState<string | null>(null);
   const eventoNomeRef = useRef<HTMLInputElement>(null);
+
+  const [modalEditarEvento, setModalEditarEvento] = useState(false);
+  const [editEventoId, setEditEventoId] = useState("");
+  const [editEventoNome, setEditEventoNome] = useState("");
+  const [editEventoData, setEditEventoData] = useState("");
+  const [editEventoDescricao, setEditEventoDescricao] = useState("");
+  const [salvandoEditEvento, setSalvandoEditEvento] = useState(false);
+  const [editEventoErro, setEditEventoErro] = useState<string | null>(null);
+  const [confirmExcluirEvento, setConfirmExcluirEvento] = useState<{
+    id: string;
+    nome: string;
+    qtdFotos: number;
+  } | null>(null);
+  const [excluindoEvento, setExcluindoEvento] = useState(false);
 
   const [lightbox, setLightbox] = useState<MarketingFotoComEvento | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -381,6 +425,109 @@ export default function GaleriaFotos() {
     setEventoErro(null);
     setModalEvento(true);
     setTimeout(() => eventoNomeRef.current?.focus(), 100);
+  };
+
+  const abrirModalEditarEvento = () => {
+    setEditEventoId("");
+    setEditEventoNome("");
+    setEditEventoData("");
+    setEditEventoDescricao("");
+    setEditEventoErro(null);
+    setModalEditarEvento(true);
+  };
+
+  const preencherFormEditarEvento = (eventoId: string) => {
+    setEditEventoId(eventoId);
+    const ev = eventos.find((e) => e.id === eventoId);
+    if (!ev) {
+      setEditEventoNome("");
+      setEditEventoData("");
+      setEditEventoDescricao("");
+      return;
+    }
+    setEditEventoNome(ev.nome);
+    setEditEventoData(ev.data_evento.split("T")[0] ?? "");
+    setEditEventoDescricao(ev.descricao ?? "");
+    setEditEventoErro(null);
+  };
+
+  const salvarEditarEvento = async () => {
+    if (!editEventoId) {
+      setEditEventoErro("Selecione um evento.");
+      return;
+    }
+    const nome = editEventoNome.trim();
+    const descricao = editEventoDescricao.trim();
+    if (!nome || !editEventoData || !descricao) {
+      setEditEventoErro("Informe o nome, a data e a descrição do evento.");
+      return;
+    }
+    setSalvandoEditEvento(true);
+    setEditEventoErro(null);
+    try {
+      const { data, error } = await supabase
+        .from("marketing_eventos")
+        .update({
+          nome,
+          data_evento: editEventoData,
+          descricao,
+        })
+        .eq("id", editEventoId)
+        .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
+        .single();
+      if (error) throw error;
+      const atualizado = data as MarketingEvento;
+      setEventos((prev) =>
+        prev
+          .map((e) => (e.id === atualizado.id ? atualizado : e))
+          .sort((a, b) => b.data_evento.localeCompare(a.data_evento)),
+      );
+      setModalEditarEvento(false);
+      await carregarFotos();
+    } catch {
+      setEditEventoErro(MSG_ERRO_SALVAR);
+    } finally {
+      setSalvandoEditEvento(false);
+    }
+  };
+
+  const solicitarExcluirEvento = () => {
+    if (!editEventoId) {
+      setEditEventoErro("Selecione um evento.");
+      return;
+    }
+    const ev = eventos.find((e) => e.id === editEventoId);
+    if (!ev) return;
+    const qtdFotos = fotosGeraisDoEvento(fotos, editEventoId).length;
+    setConfirmExcluirEvento({ id: ev.id, nome: ev.nome, qtdFotos });
+  };
+
+  const confirmarExcluirEvento = async () => {
+    if (!confirmExcluirEvento) return;
+    setExcluindoEvento(true);
+    try {
+      const fotosDoEvento = fotosGeraisDoEvento(fotos, confirmExcluirEvento.id);
+      const result = await excluirMarketingEventoGaleria(confirmExcluirEvento.id, fotosDoEvento);
+      if (!result.ok) throw new Error("delete failed");
+      setEventos((prev) => prev.filter((e) => e.id !== confirmExcluirEvento.id));
+      setFotos((prev) => prev.filter((f) => f.evento_id !== confirmExcluirEvento.id));
+      if (uploadEventoId === confirmExcluirEvento.id) setUploadEventoId("");
+      if (filtroEvento === confirmExcluirEvento.id) setFiltroEvento(FILTRO_EVENTO_TODOS);
+      setConfirmExcluirEvento(null);
+      setModalEditarEvento(false);
+    } catch {
+      setEditEventoErro(MSG_ERRO_EXCLUIR_EVENTO);
+      setConfirmExcluirEvento(null);
+    } finally {
+      setExcluindoEvento(false);
+    }
+  };
+
+  const textoConfirmExcluirEvento = (nome: string, qtdFotos: number): string => {
+    const fragmento = descricaoModalExcluirItem("o evento", nome);
+    if (qtdFotos <= 0) return textoModalExcluir(fragmento);
+    const rotuloFotos = qtdFotos === 1 ? "1 foto" : `${qtdFotos} fotos`;
+    return `Deseja excluir ${fragmento}?\n\nEste evento possui ${rotuloFotos}. As imagens serão excluídas permanentemente.\n\nEsta ação não poderá ser desfeita.`;
   };
 
   const salvarEvento = async () => {
@@ -754,17 +901,12 @@ export default function GaleriaFotos() {
                               alt=""
                               loading="lazy"
                               decoding="async"
-                              style={{
-                                display: "block",
-                                width: "100%",
-                                aspectRatio: "4 / 3",
-                                objectFit: "cover",
-                              }}
+                              style={estiloThumbGaleria(f.tipo)}
                             />
                           ) : (
                             <div
                               style={{
-                                aspectRatio: "4 / 3",
+                                aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -904,6 +1046,31 @@ export default function GaleriaFotos() {
                   <CtaCriarButton onClick={abrirModalEvento} style={{ flexShrink: 0 }}>
                     Novo Evento
                   </CtaCriarButton>
+                ) : null}
+                {perm.canEditarOk ? (
+                  <button
+                    type="button"
+                    onClick={abrirModalEditarEvento}
+                    aria-label="Editar eventos"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "10px 20px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Pencil size={14} aria-hidden />
+                    Editar Eventos
+                  </button>
                 ) : null}
               </div>
             ) : (
@@ -1071,6 +1238,171 @@ export default function GaleriaFotos() {
             </button>
           </div>
         </ModalBase>
+      ) : null}
+
+      {modalEditarEvento ? (
+        <ModalBase
+          onClose={() => !salvandoEditEvento && !excluindoEvento && setModalEditarEvento(false)}
+          zIndex={1000}
+        >
+          <ModalHeader
+            title="Editar evento"
+            onClose={() => !salvandoEditEvento && !excluindoEvento && setModalEditarEvento(false)}
+          />
+          {editEventoErro ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+            >
+              {editEventoErro}
+            </div>
+          ) : null}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
+                Evento
+                <CampoObrigatorioMark />
+              </label>
+              <SelectComIcone
+                icon={<Calendar size={15} aria-hidden />}
+                label="Selecionar evento para editar"
+                value={editEventoId}
+                onChange={preencherFormEditarEvento}
+                minWidth={280}
+                pill={false}
+              >
+                <option value="">Selecione um evento</option>
+                {eventos.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.nome} ({fmtDataEvento(ev.data_evento)})
+                  </option>
+                ))}
+              </SelectComIcone>
+            </div>
+            {editEventoId ? (
+              <>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
+                    Nome do evento
+                    <CampoObrigatorioMark />
+                  </label>
+                  <input
+                    type="text"
+                    value={editEventoNome}
+                    onChange={(e) => setEditEventoNome(e.target.value)}
+                    style={inputStyle(t)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
+                    Data do evento
+                    <CampoObrigatorioMark />
+                  </label>
+                  <input
+                    type="date"
+                    value={editEventoData}
+                    onChange={(e) => setEditEventoData(e.target.value)}
+                    style={inputStyle(t)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, fontFamily: FONT.body }}>
+                    Descrição
+                    <CampoObrigatorioMark />
+                  </label>
+                  <textarea
+                    value={editEventoDescricao}
+                    onChange={(e) => setEditEventoDescricao(e.target.value)}
+                    rows={3}
+                    style={{ ...inputStyle(t), resize: "vertical" }}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 10,
+              marginTop: 20,
+            }}
+          >
+            <div>
+              {perm.canExcluirOk && editEventoId ? (
+                <BtnExcluirComTexto
+                  descricaoItem={descricaoBotaoExcluir("evento", editEventoNome.trim() || "evento")}
+                  onClick={solicitarExcluirEvento}
+                  disabled={salvandoEditEvento || excluindoEvento}
+                />
+              ) : null}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setModalEditarEvento(false)}
+                disabled={salvandoEditEvento || excluindoEvento}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void salvarEditarEvento()}
+                disabled={!editEventoId || salvandoEditEvento || excluindoEvento}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: ctaGrad,
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: salvandoEditEvento ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  opacity: !editEventoId ? 0.55 : 1,
+                }}
+              >
+                {salvandoEditEvento ? (
+                  <>
+                    <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+                    Salvando…
+                  </>
+                ) : (
+                  "Salvar"
+                )}
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {confirmExcluirEvento ? (
+        <ModalConfirmDelete
+          title={MODAL_EXCLUIR_TITULO}
+          texto={textoConfirmExcluirEvento(confirmExcluirEvento.nome, confirmExcluirEvento.qtdFotos)}
+          confirmLabel="Excluir"
+          onCancel={() => !excluindoEvento && setConfirmExcluirEvento(null)}
+          onConfirm={() => void confirmarExcluirEvento()}
+          loading={excluindoEvento}
+          zIndex={1100}
+        />
       ) : null}
 
       {lightbox ? (
