@@ -8,9 +8,11 @@ import {
   History,
   IdCard,
   ListChecks,
+  Palette,
   Ruler,
   Shield,
   ShieldAlert,
+  Shirt,
   Tags,
   User,
   UsersRound,
@@ -44,6 +46,8 @@ export const FilterBarIcons = {
   acaoSolicitacao: <ListChecks {...FILTRO_BAR_ICON_PROPS} />,
   figurinoCategoria: <Tags {...FILTRO_BAR_ICON_PROPS} />,
   figurinoTamanho: <Ruler {...FILTRO_BAR_ICON_PROPS} />,
+  figurinoCor: <Palette {...FILTRO_BAR_ICON_PROPS} />,
+  figurinoGenero: <Shirt {...FILTRO_BAR_ICON_PROPS} />,
   /** Tipo de compromisso — exclusivo do Calendário RH (Compromissos). */
   tipoCompromisso: <CalendarHeart {...FILTRO_BAR_ICON_PROPS} />,
 } as const satisfies Record<string, ReactNode>;

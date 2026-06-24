@@ -452,12 +452,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Consolidado",
         texto:
-          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de seção) reúne operadora, categoria, tamanho, pesquisa, bipagem e abas de status.",
+          "No topo, cinco cards (formato Financeiro — rótulo em caixa alta acima do valor) mostram **TOTAL DE PEÇAS**, **DISPONÍVEIS**, **EMPRESTADAS**, **FIXOS** e **EM MANUTENÇÃO**; os números refletem os filtros ativos.\n\nAbaixo, a barra de filtros (sem título de seção) reúne estúdio, categoria, tamanho, cor, gênero, pesquisa, bipagem e abas de status.",
       },
       {
         subtitulo: "Abas de Inventário",
         texto:
-          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, categoria, operadora ou nome de quem realizou a retirada.",
+          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, categoria, estúdio ou nome de quem realizou a retirada.",
       },
       {
         subtitulo: "Bipar Código",

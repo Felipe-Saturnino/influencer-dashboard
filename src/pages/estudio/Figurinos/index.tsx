@@ -22,6 +22,8 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import {
   FiltroFigurinosCategoriaSelect,
   FiltroFigurinosTamanhoSelect,
+  FiltroFigurinosCorSelect,
+  FiltroFigurinosGeneroSelect,
   FiltroBarTabButton,
   SortTableTh,
   type SortDir,
@@ -36,14 +38,13 @@ import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/p
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types"
-import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants";
+import { CATEGORIAS, TAMANHOS, CORES, GENEROS, COR_PADRAO, GENERO_PADRAO, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants";
 import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
 import {
   actorLabel,
   ctaButtonContent,
   emprestimoFigurinoEhDoProprioLogin,
   fmtDataHora,
-  fmtDataSóDia,
   labelCondicaoPeca,
   labelEmprestadoParaTabela,
   labelEstudiosPeca,
@@ -86,11 +87,15 @@ export default function FigurinosPage() {
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");
   const [filtroTam, setFiltroTam] = useState<string>("todas");
+  const [filtroCor, setFiltroCor] = useState<string>("todas");
+  const [filtroGenero, setFiltroGenero] = useState<string>("todas");
   type FigSortCol =
     | "codigo"
     | "estudio"
     | "categoria"
     | "tamanho"
+    | "cor"
+    | "genero"
     | "data_aqui"
     | "cond"
     | "tipo_ret"
@@ -245,9 +250,11 @@ export default function FigurinosPage() {
       }
       if (filtroCat !== "todas" && p.category !== filtroCat) return false;
       if (filtroTam !== "todas" && p.size !== filtroTam) return false;
+      if (filtroCor !== "todas" && (p.cor ?? COR_PADRAO) !== filtroCor) return false;
+      if (filtroGenero !== "todas" && (p.genero ?? GENERO_PADRAO) !== filtroGenero) return false;
       return true;
     },
-    [filtroEstudio, filtroCat, filtroTam, opParaEstudio],
+    [filtroEstudio, filtroCat, filtroTam, filtroCor, filtroGenero, opParaEstudio],
   );
 
   const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
@@ -312,6 +319,12 @@ export default function FigurinosPage() {
           break;
         case "tamanho":
           c = compareLocaleTexto(a.size, b.size, dir);
+          break;
+        case "cor":
+          c = compareLocaleTexto(a.cor ?? COR_PADRAO, b.cor ?? COR_PADRAO, dir);
+          break;
+        case "genero":
+          c = compareLocaleTexto(a.genero ?? GENERO_PADRAO, b.genero ?? GENERO_PADRAO, dir);
           break;
         case "data_aqui":
           c = compareLocaleTexto(a.purchase_date ?? "", b.purchase_date ?? "", dir);
@@ -592,6 +605,20 @@ export default function FigurinosPage() {
               onChange={setFiltroTam}
               tamanhos={TAMANHOS}
             />
+            <FiltroFigurinosCorSelect
+              pill
+              minWidth={200}
+              value={filtroCor}
+              onChange={setFiltroCor}
+              cores={CORES}
+            />
+            <FiltroFigurinosGeneroSelect
+              pill
+              minWidth={200}
+              value={filtroGenero}
+              onChange={setFiltroGenero}
+              generos={GENEROS}
+            />
           </div>
 
           <div
@@ -703,7 +730,8 @@ export default function FigurinosPage() {
                       {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
-                      {sortHeader("Data de aquisição", "data_aqui")}
+                      {sortHeader("Cor", "cor")}
+                      {sortHeader("Gênero", "genero")}
                       {sortHeader("Classificação", "cond")}
                       <th scope="col" style={dataTable.thHeader}>
                         Ações
@@ -777,7 +805,8 @@ export default function FigurinosPage() {
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
-                          <td style={dataTable.tdCenter}>{fmtDataSóDia(p.purchase_date)}</td>
+                          <td style={dataTable.tdCenter}>{p.cor ?? COR_PADRAO}</td>
+                          <td style={dataTable.tdCenter}>{p.genero ?? GENERO_PADRAO}</td>
                           <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
                           <td style={dataTable.tdCenter}>
                             <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>

@@ -91,11 +91,12 @@ alwaysApply: false
 ## Figurinos (`rh_figurinos`)
 
 - **Consolidado (topo):** grelha `app-grid-kpi-5` + `getPageKpiSectionGapStyle()` — cards no formato Financeiro (`borderLeft` 3px, rótulo em caixa alta acima do valor: **TOTAL DE PEÇAS**, **DISPONÍVEIS**, etc.); **sem** título de secção nem caixa pai.
-- **Filtros:** só `getPageFilterBoxStyle` (estúdio, categoria, tamanho, busca, abas) — **sem** título **FILTROS**.
+- **Filtros:** só `getPageFilterBoxStyle` (estúdio, categoria, tamanho, cor, gênero, busca, abas) — **sem** título **FILTROS**.
 - KPI: `aria-label` no container.
 - `ScannerPanel`: erro com `role="alert"`.
 - Tabelas 4 abas: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); hover nas linhas; tablist ARIA completo.
-- Filtros na barra (strip `primaryTransparent*`): **`FiltroEstudioSelect`** (**Todos Estúdios** + opção **Staff** via `extraOptions`), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
+- Filtros na barra (strip `primaryTransparent*`): **`FiltroEstudioSelect`** (**Todos Estúdios** + opção **Staff** via `extraOptions`), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px), **`FiltroFigurinosCorSelect`** (**Todas Cores**, ícone `Palette` 15px), **`FiltroFigurinosGeneroSelect`** (**Todos Gêneros**, ícone `Shirt` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
+- Aba **Disponíveis** — colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação, Ações.
 - Peças vinculadas por **`rh_figurino_peca_estudios`** (N:N); cadastro via RPC `rh_figurino_criar_peca` com **`p_estudio_slugs`**. Junction **`rh_figurino_peca_operadoras`** mantida só para legado/sync. Coluna e modais exibem **Estúdio** (`labelEstudiosPeca` com fallback operadora→estúdio).
 - **Código da peça:** prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de 6 dígitos por prefixo (ex.: Camisa → `CAM-000001`, Vestido → `VES-000001`, Acessório → `ACE-000001`). Contador independente por categoria em `rh_figurino_category_code_counters`; pré-visualização no cadastro via `rh_figurino_preview_proximo_code(p_category)`.
 - **Cadastro — estúdios:** modal com **Staff** (pode combinar com um ou mais estúdios; `atende_staff = true` + `rh_figurino_peca_estudios` quando houver slugs), **Todos Estúdios** (exclusivo sozinho; `atende_todos_estudios = true`) ou só estúdio(s) específico(s). Referência UI: `FigurinoEstudioCampoSelect`.
@@ -146,4 +147,5 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - Tabelas de inventário (Figurinos): padrão canónico + hover nas linhas — ver Global § Tabelas.
 - GameIcons no header (`PageHeader` + Lucide).
 - Query de observações sem `.limit()`.
-- Figurinos: `<select>` nativo para categoria/tamanho — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` (**Todas Categorias** / **Todos Tamanhos**). Filtro de estúdio: **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`.
+- Figurinos: `<select>` nativo para categoria/tamanho/cor/gênero — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` / `FiltroFigurinosCorSelect` / `FiltroFigurinosGeneroSelect` (**Todas Categorias** / **Todos Tamanhos** / **Todas Cores** / **Todos Gêneros**). Filtro de estúdio: **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`.
+- Aba **Disponíveis** — colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação, Ações (sem data de aquisição).
