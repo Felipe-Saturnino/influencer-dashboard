@@ -71,7 +71,7 @@ export function ModalCadastroPeca({
     }
     setLoading(true);
     const { data, error } = await supabase.rpc("rh_figurino_criar_peca", {
-      p_estudio_slugs: atendeTodos || atendeStaff ? [] : slugsEspecificos,
+      p_estudio_slugs: atendeTodos ? [] : slugsEspecificos,
       p_category: cat,
       p_size: tam,
       p_genero: genero,
@@ -119,7 +119,7 @@ export function ModalCadastroPeca({
           <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
             Estúdios
             <CampoObrigatorioMark />
-            <span style={{ fontWeight: 400 }}> (Staff, Todos Estúdios ou um ou mais específicos)</span>
+            <span style={{ fontWeight: 400 }}> (Staff pode combinar com estúdios; Todos Estúdios é exclusivo)</span>
           </div>
           <FigurinoEstudioCampoSelect value={estudioSel} onChange={setEstudioSel} estudios={estudios} />
         </div>

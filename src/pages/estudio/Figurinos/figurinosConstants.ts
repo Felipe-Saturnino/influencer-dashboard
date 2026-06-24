@@ -17,7 +17,7 @@ export const FIGURINO_ESTUDIO_CADASTRO_TODOS = "todos";
 
 export const FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL = "Todos Estúdios";
 
-/** Acervo da equipe Staff — sem vínculo N:N a estúdio. */
+/** Acervo da equipe Staff — pode combinar com estúdio(s) específico(s). */
 export const FIGURINO_ESTUDIO_CADASTRO_STAFF = "staff";
 
 export const FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL = "Staff";

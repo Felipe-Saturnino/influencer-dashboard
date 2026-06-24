@@ -88,7 +88,6 @@ export function pecaPassaFiltroEstudio(
   opParaEstudio: Record<string, string> = {},
 ): boolean {
   if (filtroEstudio === FIGURINO_FILTRO_STAFF) return pecaAtendeStaff(p);
-  if (pecaAtendeStaff(p)) return filtroEstudio === filtroTodosValue;
   if (filtroEstudio === filtroTodosValue) return true;
   if (pecaAtendeTodosEstudios(p)) return true;
   return pecaSlugsEstudiosEfetivos(p, opParaEstudio).includes(filtroEstudio);
@@ -131,11 +130,13 @@ export function labelEstudiosPeca(
   slugParaNome: (slug: string) => string,
   opParaEstudio: Record<string, string> = {},
 ): string {
-  if (pecaAtendeStaff(p)) return FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL;
   if (pecaAtendeTodosEstudios(p)) return FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL;
+  const partes: string[] = [];
+  if (pecaAtendeStaff(p)) partes.push(FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL);
   const slugs = pecaSlugsEstudiosEfetivos(p, opParaEstudio);
-  if (slugs.length === 0) return "—";
-  return slugs.map(slugParaNome).join(" · ");
+  if (slugs.length > 0) partes.push(...slugs.map(slugParaNome));
+  if (partes.length === 0) return "—";
+  return partes.join(" · ");
 }
 
 /** @deprecated Use labelEstudiosPeca */

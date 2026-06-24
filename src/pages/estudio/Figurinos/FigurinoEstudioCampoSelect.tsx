@@ -28,7 +28,6 @@ export function FigurinoEstudioCampoSelect({
   const brand = useDashboardBrand();
   const todosAtivo = figurinoEstudioAtendeTodos(value);
   const staffAtivo = figurinoEstudioAtendeStaff(value);
-  const modoAgregador = todosAtivo || staffAtivo;
   const especificos = value.filter(
     (s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS && s !== FIGURINO_ESTUDIO_CADASTRO_STAFF,
   );
@@ -56,27 +55,36 @@ export function FigurinoEstudioCampoSelect({
     fontWeight: ativo ? 700 : 500,
   });
 
+  const toggleStaff = () => {
+    if (disabled) return;
+    if (todosAtivo) {
+      onChange([FIGURINO_ESTUDIO_CADASTRO_STAFF]);
+      return;
+    }
+    if (staffAtivo) {
+      onChange(especificos);
+      return;
+    }
+    onChange([FIGURINO_ESTUDIO_CADASTRO_STAFF, ...especificos]);
+  };
+
   const toggleTodos = () => {
     if (disabled) return;
     onChange(todosAtivo ? [] : [FIGURINO_ESTUDIO_CADASTRO_TODOS]);
   };
 
-  const toggleStaff = () => {
-    if (disabled) return;
-    onChange(staffAtivo ? [] : [FIGURINO_ESTUDIO_CADASTRO_STAFF]);
-  };
-
   const toggleSlug = (slug: string) => {
     if (disabled) return;
-    if (modoAgregador) {
+    if (todosAtivo) {
       onChange([slug]);
       return;
     }
     if (especificos.includes(slug)) {
-      onChange(especificos.filter((s) => s !== slug));
+      const restantes = especificos.filter((s) => s !== slug);
+      onChange(staffAtivo ? [FIGURINO_ESTUDIO_CADASTRO_STAFF, ...restantes] : restantes);
       return;
     }
-    onChange([...especificos, slug]);
+    onChange(staffAtivo ? [FIGURINO_ESTUDIO_CADASTRO_STAFF, ...especificos, slug] : [...especificos, slug]);
   };
 
   return (
@@ -119,7 +127,7 @@ export function FigurinoEstudioCampoSelect({
           }}
         >
           {estVis.map((e) => {
-            const ativo = !modoAgregador && especificos.includes(e.slug);
+            const ativo = !todosAtivo && especificos.includes(e.slug);
             return (
               <button
                 key={e.slug}
