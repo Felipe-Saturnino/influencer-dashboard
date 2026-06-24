@@ -467,7 +467,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastrar Peça",
         texto:
-          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema com prefixo das três primeiras letras da categoria (ex.: Camisa → CAM-000001, Vestido → VES-000001). Selecione **Todos Estúdios** (peça disponível em qualquer estúdio) ou um ou mais estúdios específicos, além da categoria, do tamanho, do gênero (Masculino, Feminino ou Unisex), da cor (Branco, Preto, Cinza ou Único) e da data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
+          "Ao cadastrar uma nova peça, o código é gerado automaticamente pelo sistema com prefixo das três primeiras letras da categoria (ex.: Camisa → CAM-000001, Vestido → VES-000001). Selecione **Staff** (acervo da equipe que atende todos os estúdios, sem vínculo a um estúdio específico), **Todos Estúdios** (peça disponível em qualquer estúdio) ou um ou mais estúdios específicos, além da categoria, do tamanho, do gênero (Masculino, Feminino ou Unisex), da cor (Branco, Preto, Cinza ou Único) e da data de entrada. Após salvar, o sistema exibe o código de barras gerado e permite baixar a etiqueta em PDF para impressão.",
       },
       {
         subtitulo: "Retirada e Devolução",

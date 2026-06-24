@@ -3,8 +3,11 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import {
+  FIGURINO_ESTUDIO_CADASTRO_STAFF,
+  FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL,
   FIGURINO_ESTUDIO_CADASTRO_TODOS,
   FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL,
+  figurinoEstudioAtendeStaff,
   figurinoEstudioAtendeTodos,
 } from "./figurinosConstants";
 
@@ -24,7 +27,11 @@ export function FigurinoEstudioCampoSelect({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const todosAtivo = figurinoEstudioAtendeTodos(value);
-  const especificos = value.filter((s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS);
+  const staffAtivo = figurinoEstudioAtendeStaff(value);
+  const modoAgregador = todosAtivo || staffAtivo;
+  const especificos = value.filter(
+    (s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS && s !== FIGURINO_ESTUDIO_CADASTRO_STAFF,
+  );
   const estVis = [...estudios].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   const chipBase: CSSProperties = {
@@ -54,9 +61,14 @@ export function FigurinoEstudioCampoSelect({
     onChange(todosAtivo ? [] : [FIGURINO_ESTUDIO_CADASTRO_TODOS]);
   };
 
+  const toggleStaff = () => {
+    if (disabled) return;
+    onChange(staffAtivo ? [] : [FIGURINO_ESTUDIO_CADASTRO_STAFF]);
+  };
+
   const toggleSlug = (slug: string) => {
     if (disabled) return;
-    if (todosAtivo) {
+    if (modoAgregador) {
       onChange([slug]);
       return;
     }
@@ -77,6 +89,17 @@ export function FigurinoEstudioCampoSelect({
           type="button"
           id={id}
           role="checkbox"
+          aria-checked={staffAtivo}
+          aria-label={FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL}
+          disabled={disabled}
+          onClick={toggleStaff}
+          style={chipStyle(staffAtivo)}
+        >
+          {FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL}
+        </button>
+        <button
+          type="button"
+          role="checkbox"
           aria-checked={todosAtivo}
           aria-label={FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL}
           disabled={disabled}
@@ -96,7 +119,7 @@ export function FigurinoEstudioCampoSelect({
           }}
         >
           {estVis.map((e) => {
-            const ativo = !todosAtivo && especificos.includes(e.slug);
+            const ativo = !modoAgregador && especificos.includes(e.slug);
             return (
               <button
                 key={e.slug}

@@ -36,7 +36,7 @@ import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/p
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types"
-import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada } from "./figurinosConstants";
+import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants";
 import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
 import {
   actorLabel,
@@ -570,15 +570,14 @@ export default function FigurinosPage() {
               width: "100%",
             }}
           >
-            {estudiosVisiveis.length > 0 ? (
-              <FiltroEstudioSelect
-                pill
-                minWidth={200}
-                value={filtroEstudio}
-                onChange={setFiltroEstudio}
-                estudios={estudiosVisiveis}
-              />
-            ) : null}
+            <FiltroEstudioSelect
+              pill
+              minWidth={200}
+              value={filtroEstudio}
+              onChange={setFiltroEstudio}
+              estudios={estudiosVisiveis}
+              extraOptions={[{ value: FIGURINO_FILTRO_STAFF, label: FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL }]}
+            />
             <FiltroFigurinosCategoriaSelect
               pill
               minWidth={200}

@@ -7,7 +7,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { type RhFigurinoPeca } from "./types"
-import { CATEGORIAS, TAMANHOS, GENEROS, CORES, GENERO_PADRAO, COR_PADRAO, FIGURINO_ESTUDIO_CADASTRO_TODOS, figurinoEstudioAtendeTodos } from "./figurinosConstants"
+import { CATEGORIAS, TAMANHOS, GENEROS, CORES, GENERO_PADRAO, COR_PADRAO, FIGURINO_ESTUDIO_CADASTRO_STAFF, FIGURINO_ESTUDIO_CADASTRO_TODOS, figurinoEstudioAtendeStaff, figurinoEstudioAtendeTodos } from "./figurinosConstants"
 import { ctaButtonContent } from "./figurinosPageHelpers"
 import { FigurinoEstudioCampoSelect } from "./FigurinoEstudioCampoSelect"
 
@@ -57,9 +57,12 @@ export function ModalCadastroPeca({
   const salvar = async () => {
     setErr(null);
     const atendeTodos = figurinoEstudioAtendeTodos(estudioSel);
-    const slugsEspecificos = estudioSel.filter((s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS);
-    if (!atendeTodos && slugsEspecificos.length === 0) {
-      setErr("Selecione ao menos um estúdio ou Todos Estúdios.");
+    const atendeStaff = figurinoEstudioAtendeStaff(estudioSel);
+    const slugsEspecificos = estudioSel.filter(
+      (s) => s !== FIGURINO_ESTUDIO_CADASTRO_TODOS && s !== FIGURINO_ESTUDIO_CADASTRO_STAFF,
+    );
+    if (!atendeTodos && !atendeStaff && slugsEspecificos.length === 0) {
+      setErr("Selecione Staff, Todos Estúdios ou ao menos um estúdio específico.");
       return;
     }
     if (!dataEntrada.trim()) {
@@ -68,7 +71,7 @@ export function ModalCadastroPeca({
     }
     setLoading(true);
     const { data, error } = await supabase.rpc("rh_figurino_criar_peca", {
-      p_estudio_slugs: atendeTodos ? [] : slugsEspecificos,
+      p_estudio_slugs: atendeTodos || atendeStaff ? [] : slugsEspecificos,
       p_category: cat,
       p_size: tam,
       p_genero: genero,
@@ -77,6 +80,7 @@ export function ModalCadastroPeca({
       p_description: desc,
       p_actor: actor,
       p_atende_todos_estudios: atendeTodos,
+      p_atende_staff: atendeStaff,
     });
     setLoading(false);
     if (error) {
@@ -115,7 +119,7 @@ export function ModalCadastroPeca({
           <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
             Estúdios
             <CampoObrigatorioMark />
-            <span style={{ fontWeight: 400 }}> (Todos Estúdios ou um ou mais específicos)</span>
+            <span style={{ fontWeight: 400 }}> (Staff, Todos Estúdios ou um ou mais específicos)</span>
           </div>
           <FigurinoEstudioCampoSelect value={estudioSel} onChange={setEstudioSel} estudios={estudios} />
         </div>

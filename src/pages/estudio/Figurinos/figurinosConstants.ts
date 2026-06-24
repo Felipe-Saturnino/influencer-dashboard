@@ -17,8 +17,20 @@ export const FIGURINO_ESTUDIO_CADASTRO_TODOS = "todos";
 
 export const FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL = "Todos Estúdios";
 
+/** Acervo da equipe Staff — sem vínculo N:N a estúdio. */
+export const FIGURINO_ESTUDIO_CADASTRO_STAFF = "staff";
+
+export const FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL = "Staff";
+
+/** Filtro da lista — opção agregadora Staff. */
+export const FIGURINO_FILTRO_STAFF = "staff";
+
 export function figurinoEstudioAtendeTodos(slugs: readonly string[]): boolean {
   return slugs.includes(FIGURINO_ESTUDIO_CADASTRO_TODOS);
+}
+
+export function figurinoEstudioAtendeStaff(slugs: readonly string[]): boolean {
+  return slugs.includes(FIGURINO_ESTUDIO_CADASTRO_STAFF);
 }
 
 /** Prefixo de 3 letras do código (ex.: Camisa → CAM, Vestido → VES). Espelha `_rh_figurino_category_code_prefix` no Postgres. */

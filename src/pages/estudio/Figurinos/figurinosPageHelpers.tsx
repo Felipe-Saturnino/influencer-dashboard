@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { Loader2 } from "lucide-react"
 import { primeiroUltimoNome } from "../../../lib/rhGamePresenterDealerSync"
 import { normalizarTextoBusca } from "../../../lib/searchText"
-import { FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL } from "./figurinosConstants"
+import { FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants"
 import type { RhFigurinoCondition, RhFigurinoEmprestimo, RhFigurinoPeca } from "./types"
 
 export function tableRowHoverBg(isDark: boolean): string {
@@ -77,12 +77,18 @@ export function pecaAtendeTodosEstudios(p: RhFigurinoPeca): boolean {
   return p.atende_todos_estudios === true;
 }
 
+export function pecaAtendeStaff(p: RhFigurinoPeca): boolean {
+  return p.atende_staff === true;
+}
+
 export function pecaPassaFiltroEstudio(
   p: RhFigurinoPeca,
   filtroEstudio: string,
   filtroTodosValue: string,
   opParaEstudio: Record<string, string> = {},
 ): boolean {
+  if (filtroEstudio === FIGURINO_FILTRO_STAFF) return pecaAtendeStaff(p);
+  if (pecaAtendeStaff(p)) return filtroEstudio === filtroTodosValue;
   if (filtroEstudio === filtroTodosValue) return true;
   if (pecaAtendeTodosEstudios(p)) return true;
   return pecaSlugsEstudiosEfetivos(p, opParaEstudio).includes(filtroEstudio);
@@ -125,6 +131,7 @@ export function labelEstudiosPeca(
   slugParaNome: (slug: string) => string,
   opParaEstudio: Record<string, string> = {},
 ): string {
+  if (pecaAtendeStaff(p)) return FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL;
   if (pecaAtendeTodosEstudios(p)) return FIGURINO_ESTUDIO_CADASTRO_TODOS_LABEL;
   const slugs = pecaSlugsEstudiosEfetivos(p, opParaEstudio);
   if (slugs.length === 0) return "—";

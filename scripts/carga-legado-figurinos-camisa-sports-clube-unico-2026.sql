@@ -1,16 +1,17 @@
--- Legado Figurinos — Camisa Masculino Branco Blaze + CDA (self-contained)
+-- Legado Figurinos — Camisa Masculino Único Sports Club (self-contained)
 -- Executar no SQL Editor do Supabase (role postgres) — arquivo INTEIRO de uma vez.
 --
 -- Pré-requisito Supabase: migrações aplicadas
 --   • 20260619140000_rh_figurino_codigo_por_categoria.sql
 --   • 20260619150000_rh_figurino_atende_todos_estudios.sql
 --   • 20260619160000_rh_figurino_genero_cor.sql
---   • 20260619170000_rh_figurino_lote_todos_estudios.sql (opcional se rodar este arquivo inteiro)
 --
--- Total: 99 peças (22 P + 34 M + 21 G + 14 GG + 8 XG)
--- Estúdios: slug blaze + cda | Gênero: Masculino | Cor: Branco | Entrada: 01/01/2026
+-- Total: 54 peças (13 P + 17 M + 15 G + 9 GG)
+-- Estúdio: slug sports_clube (Sports Club — network)
+-- Gênero: Masculino | Cor: Único | Entrada: 01/01/2026
 --
--- Sugestão: rodar scripts/clear-rh-figurinos-dados-e-sequencia.sql antes se for recarga do zero.
+-- Conferir slug antes de rodar:
+--   SELECT slug, nome, tipo, ativo FROM public.estudios_spin WHERE nome ILIKE '%sports%';
 
 -- ─── Função de lote (criada aqui se ainda não existir no banco) ───────────────
 
@@ -162,11 +163,11 @@ REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, d
 REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text, boolean) FROM authenticated;
 REVOKE ALL ON FUNCTION public.rh_figurino_criar_pecas_lote(text[], text, text, date, integer, text, text, text, text, boolean) FROM anon;
 
--- ─── Carga legado Camisa Masculino Branco (Blaze + CDA) ─────────────────────
+-- ─── Carga legado Camisa Masculino Único (Sports Club) ───────────────────────
 
 DO $carga$
 DECLARE
-  v_est   text[] := ARRAY['blaze', 'cda']::text[];
+  v_est   text[] := ARRAY['sports_clube']::text[];
   v_row   record;
   v_total integer := 0;
   v_n     bigint;
@@ -178,7 +179,7 @@ BEGIN
       AND p.proname = '_rh_figurino_next_category_code'
   ) THEN
     RAISE EXCEPTION
-      'Função _rh_figurino_next_category_code não encontrada. Aplique a migração 20260619140000_rh_figurino_codigo_por_categoria.sql no Supabase.';
+      'Função _rh_figurino_next_category_code não encontrada. Aplique a migração 20260619140000_rh_figurino_codigo_por_categoria.sql.';
   END IF;
 
   IF NOT EXISTS (
@@ -188,25 +189,27 @@ BEGIN
       AND column_name = 'genero'
   ) THEN
     RAISE EXCEPTION
-      'Coluna genero não encontrada. Aplique a migração 20260619160000_rh_figurino_genero_cor.sql no Supabase.';
+      'Coluna genero não encontrada. Aplique a migração 20260619160000_rh_figurino_genero_cor.sql.';
   END IF;
 
-  IF (SELECT count(*) FROM public.estudios_spin WHERE slug = ANY (v_est) AND ativo = true) <> 2 THEN
-    RAISE EXCEPTION 'Estúdios blaze/cda não encontrados ou inativos. SELECT slug, nome FROM estudios_spin WHERE ativo;';
+  IF NOT EXISTS (
+    SELECT 1 FROM public.estudios_spin WHERE slug = 'sports_clube' AND ativo = true
+  ) THEN
+    RAISE EXCEPTION
+      'Estúdio sports_clube não encontrado ou inativo. SELECT slug, nome FROM estudios_spin WHERE ativo;';
   END IF;
 
-  RAISE NOTICE 'Estúdios: % | Gênero: Masculino | Cor: Branco | Data: 2026-01-01', array_to_string(v_est, ', ');
+  RAISE NOTICE 'Estúdio: sports_clube (Sports Club) | Gênero: Masculino | Cor: Único | Data: 2026-01-01';
 
   FOR v_row IN
     SELECT tamanho::text AS tamanho, quantidade::integer AS quantidade
     FROM (VALUES
-      ('P',  22),
-      ('M',  34),
-      ('G',  21),
-      ('GG', 14),
-      ('XG', 8)
+      ('P',  13),
+      ('M',  17),
+      ('G',  15),
+      ('GG', 9)
     ) AS lotes(tamanho, quantidade)
-    ORDER BY array_position(ARRAY['P', 'M', 'G', 'GG', 'XG'], tamanho)
+    ORDER BY array_position(ARRAY['P', 'M', 'G', 'GG'], tamanho)
   LOOP
     SELECT count(*) INTO v_n
     FROM public.rh_figurino_criar_pecas_lote(
@@ -216,9 +219,9 @@ BEGIN
       p_purchase_date   := DATE '2026-01-01',
       p_quantidade      := v_row.quantidade,
       p_actor           := 'carga-legado'::text,
-      p_description     := ('Legado — Camisa ' || v_row.tamanho || ' Masculino Branco — Blaze + CDA')::text,
+      p_description     := ('Legado — Camisa ' || v_row.tamanho || ' Masculino Único — Sports Club')::text,
       p_genero          := 'Masculino'::text,
-      p_cor             := 'Branco'::text
+      p_cor             := 'Único'::text
     );
 
     IF v_n <> v_row.quantidade THEN
@@ -226,16 +229,17 @@ BEGIN
     END IF;
 
     v_total := v_total + v_row.quantidade;
-    RAISE NOTICE 'Camisa % Masculino Branco: % peça(s) cadastrada(s).', v_row.tamanho, v_row.quantidade;
+    RAISE NOTICE 'Camisa % Masculino Único (Sports Club): % peça(s).', v_row.tamanho, v_row.quantidade;
   END LOOP;
 
-  RAISE NOTICE 'Carga concluída — % peça(s) no total (CAM-000001 …).', v_total;
+  RAISE NOTICE 'Carga concluída — % peça(s) Sports Club.', v_total;
 END;
 $carga$;
 
 -- ─── Conferência ─────────────────────────────────────────────────────────────
--- SELECT size, genero, cor, count(*) AS qtd, min(code) AS primeiro, max(code) AS ultimo
--- FROM public.rh_figurino_pecas
--- WHERE category = 'Camisa'
--- GROUP BY size, genero, cor
--- ORDER BY array_position(ARRAY['P','M','G','GG','XG'], size);
+-- SELECT p.size, p.genero, p.cor, count(*) AS qtd
+-- FROM public.rh_figurino_pecas p
+-- INNER JOIN public.rh_figurino_peca_estudios je ON je.peca_id = p.id AND je.estudio_slug = 'sports_clube'
+-- WHERE p.category = 'Camisa' AND p.cor = 'Único' AND p.genero = 'Masculino'
+-- GROUP BY p.size, p.genero, p.cor
+-- ORDER BY array_position(ARRAY['P','M','G','GG'], p.size);
