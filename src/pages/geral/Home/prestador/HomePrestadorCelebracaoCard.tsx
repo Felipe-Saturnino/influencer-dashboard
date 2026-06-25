@@ -81,19 +81,19 @@ export function HomePrestadorCelebracaoCard({
           color: t.textMuted,
           margin: "12px 0 0",
           fontFamily: FONT.body,
-          display: "flex",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 6,
         }}
       >
-        <span>{body}</span>
+        {body}
         <EndIcon
           size={16}
           strokeWidth={2}
           aria-hidden
           color={brand.primaryIconColor}
-          style={{ flexShrink: 0 }}
+          style={{
+            display: "inline-block",
+            verticalAlign: "-0.15em",
+            marginLeft: 4,
+          }}
         />
       </p>
     </section>

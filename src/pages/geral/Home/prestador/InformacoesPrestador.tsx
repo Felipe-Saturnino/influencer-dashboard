@@ -9,6 +9,8 @@ import { FONT } from "../../../../constants/theme";
 import { useHomePrestadorInformacoesFeed, type HomePrestadorInformacaoItem } from "../hooks/useHomePrestadorInformacoesFeed";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_LINK_BUTTON } from "../shared/homeSharedUi";
 
+const ASSUNTO_CARD_GALERIA_ALBUM = "Novo albúm disponível";
+
 function rodapeAutorData(autorNome: string, dataIso: string | null) {
   const dataFmt = dataIso ? fmtDataColunaGerenciamento(dataIso) : "—";
   return autorNome ? `${autorNome} · ${dataFmt}` : dataFmt;
@@ -93,7 +95,7 @@ export function InformacoesPrestador() {
                     fontFamily: FONT.body,
                   }}
                 >
-                  {item.kind === "informativo" ? item.assunto : "Novas fotos disponíveis"}
+                  {item.kind === "informativo" ? item.assunto : ASSUNTO_CARD_GALERIA_ALBUM}
                 </h3>
                 <div style={{ marginTop: 12 }}>
                   {item.kind === "informativo" ? (
