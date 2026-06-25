@@ -61,6 +61,7 @@ import {
 import {
   defaultsNovoPrestadorDeVinculoOrganograma,
   defaultsNovoPrestadorSemVinculoOrganograma,
+  RH_REMUNERACAO_ORGANOGRAMA_HINT,
 } from "../../../lib/rhPrestadorNovoDefaults";
 import {
   buscarRhPrestadorAcessoPlataforma,
@@ -1324,7 +1325,6 @@ export default function RhPrestadoresPage() {
   const bloquearSetorManualEdit = Boolean(!usarSelectOrganograma && snapshotEdicao && snapshotEdicao.setor.trim());
   const bloquearCargoEdit = Boolean(snapshotEdicao?.cargo.trim());
   const bloquearNivelEdit = Boolean(snapshotEdicao?.nivel.trim());
-  const bloquearSalarioEdit = Boolean(podeVerDadosSensiveis && snapshotEdicao && Number(snapshotEdicao.salario) > 0);
   const bloquearTipoContratoEdit = Boolean(snapshotEdicao && String(snapshotEdicao.tipo_contrato).length > 0);
   const bloquearEscalaEdit = Boolean(snapshotEdicao?.escala.trim());
   const desabilitarCampos = leitura || salvando;
@@ -2164,13 +2164,16 @@ export default function RhPrestadoresPage() {
                       {fieldErr.remuneracaoHoraCentavos ? (
                         <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.remuneracaoHoraCentavos}</div>
                       ) : null}
+                      {modalForm === "novo" ? (
+                        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, lineHeight: 1.45 }}>{RH_REMUNERACAO_ORGANOGRAMA_HINT}</div>
+                      ) : null}
                     </div>
                   ) : (
                     <div style={{ marginBottom: 10 }}>
                       {lblReqCad("f-sal", "Remuneração Mensal")}
                       <input
                         id="f-sal"
-                        disabled={desabilitarCampos || bloquearSalarioEdit}
+                        disabled={desabilitarCampos}
                         inputMode="numeric"
                         autoComplete="off"
                         value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
@@ -2180,6 +2183,9 @@ export default function RhPrestadoresPage() {
                       />
                       {fieldErr.salarioCentavos ? (
                         <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
+                      ) : null}
+                      {modalForm === "novo" ? (
+                        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, lineHeight: 1.45 }}>{RH_REMUNERACAO_ORGANOGRAMA_HINT}</div>
                       ) : null}
                     </div>
                   )
@@ -2779,6 +2785,8 @@ export default function RhPrestadoresPage() {
                             setAcaoForm((s) => ({ ...s, org_diretoria_id: null, org_gerencia_id: null, org_time_id: null, setor: "" }));
                             return;
                           }
+                          const defaultsOrg =
+                            acaoTipo === "revisao_contrato" ? defaultsNovoPrestadorDeVinculoOrganograma(op) : null;
                           if (op.nivel === "time") {
                             setAcaoForm((s) => ({
                               ...s,
@@ -2786,6 +2794,7 @@ export default function RhPrestadoresPage() {
                               org_gerencia_id: null,
                               org_time_id: op.timeId,
                               setor: op.setorNome,
+                              ...(defaultsOrg ?? {}),
                             }));
                           } else if (op.nivel === "gerencia") {
                             setAcaoForm((s) => ({
@@ -2794,6 +2803,7 @@ export default function RhPrestadoresPage() {
                               org_gerencia_id: op.gerenciaId,
                               org_time_id: null,
                               setor: op.setorNome,
+                              ...(defaultsOrg ?? {}),
                             }));
                           } else {
                             setAcaoForm((s) => ({
@@ -2802,6 +2812,7 @@ export default function RhPrestadoresPage() {
                               org_gerencia_id: null,
                               org_time_id: null,
                               setor: op.setorNome,
+                              ...(defaultsOrg ?? {}),
                             }));
                           }
                         }}
@@ -2973,6 +2984,9 @@ export default function RhPrestadoresPage() {
                         placeholder="R$ 0,00"
                         style={inputStyle}
                       />
+                      {acaoTipo === "revisao_contrato" ? (
+                        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, lineHeight: 1.45 }}>{RH_REMUNERACAO_ORGANOGRAMA_HINT}</div>
+                      ) : null}
                     </div>
                   ) : (
                     <div style={{ marginBottom: 10 }}>
@@ -2985,6 +2999,9 @@ export default function RhPrestadoresPage() {
                         placeholder="R$ 0,00"
                         style={inputStyle}
                       />
+                      {acaoTipo === "revisao_contrato" ? (
+                        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, lineHeight: 1.45 }}>{RH_REMUNERACAO_ORGANOGRAMA_HINT}</div>
+                      ) : null}
                     </div>
                   )
                 ) : (

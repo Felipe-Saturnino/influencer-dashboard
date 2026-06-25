@@ -380,7 +380,9 @@ function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffN
   return "";
 }
 
-function opcoesSelectCelulaGerar(row: LinhaColaborador): { value: string; label: string }[] {
+function opcoesSelectCelulaGerar(
+  row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
+): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },

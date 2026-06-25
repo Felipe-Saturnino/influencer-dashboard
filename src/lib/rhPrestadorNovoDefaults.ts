@@ -46,7 +46,7 @@ export function inferAreaAtuacaoDefaultNovoPrestador(
   return "";
 }
 
-/** Remuneração por hora (centavos inteiros) por nome do time — somente modal Novo Prestador. */
+/** Remuneração por hora (centavos inteiros) por nome do time — sugerida ao escolher/alterar organograma. */
 const REMUNERACAO_HORA_CENTAVOS_POR_TIME: Readonly<Record<string, number>> = {
   shuffler: 1375,
   "contador de cartas": 1375,
@@ -72,7 +72,11 @@ export type NovoPrestadorDefaultsContratacao = {
   escala: string;
 };
 
-/** Limpa sugestões ao remover o vínculo com o organograma (somente Novo Prestador). */
+/** Copy auxiliar — remuneração sugerida pelo organograma permanece editável no formulário. */
+export const RH_REMUNERACAO_ORGANOGRAMA_HINT =
+  "Valor sugerido conforme o organograma; você pode alterar manualmente antes de salvar.";
+
+/** Limpa sugestões ao remover o vínculo com o organograma (modal Novo Prestador). */
 export function defaultsNovoPrestadorSemVinculoOrganograma(): NovoPrestadorDefaultsContratacao {
   return {
     area_atuacao: "",
@@ -84,8 +88,8 @@ export function defaultsNovoPrestadorSemVinculoOrganograma(): NovoPrestadorDefau
 }
 
 /**
- * Defaults de contratação ao escolher organograma no modal **Novo Prestador**.
- * Não altera cadastros existentes nem modais de edição/ação RH.
+ * Defaults de contratação ao escolher organograma no modal **Novo Prestador** ou ao alterar organograma na ação **Revisão de Contrato**.
+ * Pré-preenche área de atuação, remuneração por hora (times de estúdio), escala e limpa campos incompatíveis com a nova área.
  */
 export function defaultsNovoPrestadorDeVinculoOrganograma(
   op: RhOrgPrestadorVinculoOpcao,
