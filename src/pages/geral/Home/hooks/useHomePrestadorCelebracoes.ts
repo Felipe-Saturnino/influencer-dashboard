@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useApp } from "../../../context/AppContext";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { useApp } from "../../../../context/AppContext";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../../lib/rhFuncionarioLoginMatch";
 import {
   extrairPrimeiroNome,
   isAniversarioEmpresaHoje,
   isAniversarioHoje,
-} from "../../../lib/aniversarioHoje";
+} from "../../../../lib/aniversarioHoje";
 
 export function useHomePrestadorCelebracoes() {
   const { user } = useApp();
