@@ -8,6 +8,7 @@ export type Role =
   | "service_manager"
   | "figurino"
   | "comunicacao"
+  | "performance_coach"
   | "rh"
   | "influencer"
   | "afiliado"

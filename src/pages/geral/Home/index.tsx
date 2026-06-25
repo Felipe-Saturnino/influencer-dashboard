@@ -122,6 +122,7 @@ const ROLE_LABELS: Record<Role, string> = {
   service_manager: "Service Manager",
   figurino: "Figurino",
   comunicacao: "Comunicação",
+  performance_coach: "Performance Coach",
   rh: "RH",
   influencer: "Influencer",
   afiliado: "Afiliado",
@@ -171,6 +172,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Comunicação",
     subtitle:
       "Conteúdo, informativos e ferramentas de comunicação liberadas ao seu perfil.",
+  },
+  performance_coach: {
+    title: "Performance Coach",
+    subtitle:
+      "Acompanhamento de performance e ferramentas liberadas ao seu perfil.",
   },
   rh: {
     title: "RH",

@@ -16,7 +16,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { textoContemBusca } from "../../../lib/searchText";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import {
@@ -72,6 +72,8 @@ type LinhaColaborador = {
   siglaTurnoStaff: string;
   /** Turno na Gestão de Staff (Manhã, Tarde ou Noite) — coluna fixa da tabela. */
   turnoStaffNome: string;
+  /** Live no Estúdio (Gestão de Staff) — primeiro dia do ciclo de escala na sugestão. */
+  liveNoEstudioIso: string | null;
 };
 
 /** Estado persistido em `rh_gestao_escala_grade_status` (null = sem linha na BD ainda). */
@@ -244,6 +246,8 @@ type RpcPrestadorEscala = {
   staff_estudio_slugs?: string[] | null;
   /** Legado — fallback de estúdio quando staff_estudio_slug ausente. */
   staff_operadora_slug?: string | null;
+  /** Data da live no estúdio — ancoragem do padrão de escala (Gestão de Staff). */
+  staff_live_no_estudio?: string | null;
 };
 
 type AreaEscalaKey =
@@ -600,6 +604,13 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(coOp) : "";
   const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? coOp : turnoRh;
   const nomeCadastro = (r.nome ?? "").trim();
+  const liveRaw = r.staff_live_no_estudio;
+  const liveIso =
+    liveRaw == null
+      ? null
+      : typeof liveRaw === "string"
+        ? liveRaw.trim().slice(0, 10) || null
+        : String(liveRaw).slice(0, 10) || null;
   return {
     id: r.id,
     nome: nomeCadastro ? primeiroEUltimoNomePrestador(nomeCadastro) : "—",
@@ -608,6 +619,7 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
     escalaCadastro: esc || "—",
     siglaTurnoStaff,
     turnoStaffNome,
+    liveNoEstudioIso: liveIso,
   };
 }
 
@@ -965,7 +977,9 @@ export default function RhGestaoEscalaPage() {
   const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim();
     if (!q) return linhas;
-    return linhas.filter((row) => textoContemBusca(row.nickname, filtroNicknameEscala));
+    return linhas.filter((row) =>
+      textoContemBuscaEmAlgum(q, row.nome, row.nomeCompletoCadastro, row.nickname),
+    );
   }, [linhas, filtroNicknameEscala]);
 
   const linhasFiltradasEscalaDiaria = useMemo(() => {
@@ -2263,7 +2277,7 @@ export default function RhGestaoEscalaPage() {
                       }}
                     >
                       {linhasAposNickname.length === 0 && filtroNicknameEscala.trim()
-                        ? "Nenhum nickname corresponde à pesquisa."
+                        ? "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
                           ? "Nenhum colaborador com o turno selecionado."
                           : "Nenhum colaborador corresponde aos filtros aplicados."}

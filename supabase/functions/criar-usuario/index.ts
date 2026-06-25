@@ -31,6 +31,7 @@ const ROLES_BLOQUEADOS = [
   'service_manager',
   'figurino',
   'comunicacao',
+  'performance_coach',
   'rh',
 ] // sem user_scopes genérico; staff Spin só role_permissions (aba Permissões)
 

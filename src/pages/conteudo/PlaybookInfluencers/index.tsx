@@ -31,6 +31,7 @@ const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
 

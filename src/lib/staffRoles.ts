@@ -18,6 +18,7 @@ export const ROLES_SEM_RESTRICAO_ESCOPO: readonly Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
 
@@ -30,6 +31,7 @@ export const ROLES_STAFF_APENAS_PERMISSOES: readonly Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
 
@@ -47,6 +49,7 @@ export const ROLES_VISAO_OPERACAO_SPIN: readonly Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
 
@@ -61,6 +64,7 @@ export const ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM: readonly Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
 
@@ -73,5 +77,6 @@ export const ROLES_STAFF_OPERACOES_LIVES: readonly Role[] = [
   "service_manager",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "rh",
 ];
