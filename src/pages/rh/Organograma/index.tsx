@@ -143,11 +143,7 @@ export default function RhOrganogramaPage() {
       supabase.from("rh_org_diretorias").select("*").order("nome"),
       supabase.from("rh_org_gerencias").select("*").order("nome"),
       supabase.from("rh_org_times").select("*").order("nome"),
-      supabase
-        .from("rh_funcionarios")
-        .select("id, nome, org_time_id, org_gerencia_id, org_diretoria_id")
-        .in("status", ["ativo", "indisponivel"])
-        .order("nome"),
+      supabase.rpc("rh_organograma_prestadores_vinculo"),
     ]);
     if (dr.error) setErroGlobal(dr.error.message);
     else if (gr.error) setErroGlobal(gr.error.message);
