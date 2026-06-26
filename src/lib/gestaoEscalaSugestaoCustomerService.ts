@@ -1,7 +1,11 @@
 /**
  * Sugestão de escala Customer Service — lógica alinhada ao simulado de Março/2026,
- * com sequência contínua entre meses (usa offset de dias desde 2000-01-01 UTC + fase K).
+ * com sequência contínua entre meses (usa offset de dias + fase K).
  * Se existirem células salvas do mês anterior, infere K a partir delas para alinhar Maio a Abril, etc.
+ *
+ * **Live no Estúdio** (`liveNoEstudioIso`): quando informado na Gestão de Staff, é o dia 0 do
+ * padrão de escala (3×3, 4×2, 5×1, 5×2). Dias anteriores à live ficam em Folga; a partir da live
+ * aplica-se o cadastro de escala + turno. Sem live, mantém offset legado desde 2000-01-01 UTC.
  */
 
 import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTurnos";
@@ -17,6 +21,8 @@ export type LinhaCS = {
   escalaCadastro: string;
   siglaTurnoStaff: string;
   turnoStaffNome: string;
+  /** YYYY-MM-DD — Live no Estúdio (Gestão de Staff); primeiro dia do ciclo de escala. */
+  liveNoEstudioIso?: string | null;
 };
 
 export type OpcoesSugestaoCs = {
@@ -35,6 +41,28 @@ export function dayOffsetUtc2000(iso: string): number {
   const t0 = Date.UTC(2000, 0, 1);
   const t1 = Date.UTC(y, m - 1, d);
   return Math.round((t1 - t0) / 86400000);
+}
+
+/** Normaliza data da Live no Estúdio para YYYY-MM-DD ou null. */
+export function liveNoEstudioIsoNorm(raw: string | null | undefined): string | null {
+  const s = (raw ?? "").trim().slice(0, 10);
+  if (s.length < 10 || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return s;
+}
+
+/**
+ * Offset do dia para o padrão cíclico: dias desde a Live no Estúdio (se houver);
+ * senão offset absoluto desde 2000-01-01 (legado).
+ */
+export function offsetDiaEscala(diaIso: string, liveNoEstudioIso: string | null): number {
+  if (liveNoEstudioIso) {
+    return dayOffsetUtc2000(diaIso) - dayOffsetUtc2000(liveNoEstudioIso);
+  }
+  return dayOffsetUtc2000(diaIso);
+}
+
+export function diaAntesLiveNoEstudio(diaIso: string, liveNoEstudioIso: string | null): boolean {
+  return liveNoEstudioIso != null && offsetDiaEscala(diaIso, liveNoEstudioIso) < 0;
 }
 
 /** Lista os últimos `n` dias antes do primeiro dia do mês de `primeiroIso` (ordem cronológica crescente). */
@@ -65,7 +93,7 @@ function normOperacional(v: string): "MRN" | "AFT" | "NGT" | "Folga" | null {
 
 /**
  * Escolhe K ∈ [0,5] que melhor explica os valores do mês anterior; se empatar, prefere o que acerta o último dia conhecido.
- * `pred(off, K)` devolve MRN/NGT/Folga.
+ * Com Live no Estúdio, ignora dias anteriores à live e usa offset relativo à data da live.
  */
 function inferirKMod6(
   rowId: string,
@@ -73,6 +101,7 @@ function inferirKMod6(
   prevMap: Record<string, string>,
   pred: (off: number, K: number) => "MRN" | "AFT" | "NGT" | "Folga",
   KDefault: number,
+  liveIso: string | null,
 ): number {
   if (prevIsosAsc.length === 0) return KDefault;
 
@@ -85,11 +114,12 @@ function inferirKMod6(
     let lastMatch = false;
     let any = false;
     for (const iso of prevIsosAsc) {
+      const off = offsetDiaEscala(iso, liveIso);
+      if (liveIso && off < 0) continue;
       const raw = prevMap[chaveCel(rowId, iso)]?.trim() ?? "";
       const v = normOperacional(raw);
       if (v === null) continue;
       any = true;
-      const off = dayOffsetUtc2000(iso);
       const p = pred(off, K);
       if (p === v) {
         score++;
@@ -145,6 +175,24 @@ function pred5x1(off: number, K: number, desloc: number, sigla: "MRN" | "AFT" | 
   return sigla;
 }
 
+function preencherDiasOperacionais(
+  out: Record<string, string>,
+  rowId: string,
+  dias: DiaMesLite[],
+  liveIso: string | null,
+  pred: (off: number) => "MRN" | "AFT" | "NGT" | "Folga" | "Comercial",
+): void {
+  for (const dia of dias) {
+    const k = `${rowId}|${dia.iso}`;
+    if (diaAntesLiveNoEstudio(dia.iso, liveIso)) {
+      out[k] = "Folga";
+      continue;
+    }
+    const off = offsetDiaEscala(dia.iso, liveIso);
+    out[k] = pred(off);
+  }
+}
+
 /**
  * Gera mapa `rowId|iso` → valor da célula (MRN/AFT/NGT/Folga/Comercial).
  * `linhasOrdenadas`: mesma ordem da tabela (ex.: prestadores filtrados).
@@ -164,9 +212,11 @@ export function gerarCelulasSugestaoCustomerService(
   const primeiroIso = dias[0]?.iso ?? "";
   const prevIsosAsc = primeiroIso ? ultimosIsosAntesPrimeiroDiaMes(primeiroIso, 14) : [];
   const monthStartOff = primeiroIso ? dayOffsetUtc2000(primeiroIso) : 0;
-  const KDefault = mod(-monthStartOff, 6);
+  const KDefaultLegado = mod(-monthStartOff, 6);
 
   for (const row of linhasOrdenadas) {
+    const liveIso = liveNoEstudioIsoNorm(row.liveNoEstudioIso);
+    const KDefault = liveIso ? 0 : KDefaultLegado;
     const esc = normalizarEscalaCadastro(row.escalaCadastro);
     const sig = row.siglaTurnoStaff.trim() as "" | "MRN" | "AFT" | "NGT";
     const eh5x2 = esc === "5x2" || turnoStaffEhComercial5x2(row.turnoStaffNome);
@@ -174,7 +224,11 @@ export function gerarCelulasSugestaoCustomerService(
     if (eh5x2) {
       for (const dia of dias) {
         const k = `${row.id}|${dia.iso}`;
-        out[k] = celulaHorarioComercial(dia);
+        if (diaAntesLiveNoEstudio(dia.iso, liveIso)) {
+          out[k] = "Folga";
+        } else {
+          out[k] = celulaHorarioComercial(dia);
+        }
       }
       continue;
     }
@@ -187,12 +241,11 @@ export function gerarCelulasSugestaoCustomerService(
         prevMap ?? {},
         (off, Kk) => (useB ? predMrn33FaseB(off, Kk) : predMrn33FaseA(off, Kk)),
         KDefault,
+        liveIso,
       );
-      for (const dia of dias) {
-        const off = dayOffsetUtc2000(dia.iso);
-        const k = `${row.id}|${dia.iso}`;
-        out[k] = useB ? predMrn33FaseB(off, K) : predMrn33FaseA(off, K);
-      }
+      preencherDiasOperacionais(out, row.id, dias, liveIso, (off) =>
+        useB ? predMrn33FaseB(off, K) : predMrn33FaseA(off, K),
+      );
       idxMrn33 += 1;
       continue;
     }
@@ -205,12 +258,9 @@ export function gerarCelulasSugestaoCustomerService(
         prevMap ?? {},
         (off, Kk) => predNgt33(off, Kk, desloc),
         KDefault,
+        liveIso,
       );
-      for (const dia of dias) {
-        const off = dayOffsetUtc2000(dia.iso);
-        const k = `${row.id}|${dia.iso}`;
-        out[k] = predNgt33(off, K, desloc);
-      }
+      preencherDiasOperacionais(out, row.id, dias, liveIso, (off) => predNgt33(off, K, desloc));
       idxNgt33 += 1;
       continue;
     }
@@ -223,12 +273,11 @@ export function gerarCelulasSugestaoCustomerService(
         prevMap ?? {},
         (off, Kk) => (useB ? predMrn33FaseAftB(off, Kk) : predMrn33FaseAftA(off, Kk)),
         KDefault,
+        liveIso,
       );
-      for (const dia of dias) {
-        const off = dayOffsetUtc2000(dia.iso);
-        const k = `${row.id}|${dia.iso}`;
-        out[k] = useB ? predMrn33FaseAftB(off, K) : predMrn33FaseAftA(off, K);
-      }
+      preencherDiasOperacionais(out, row.id, dias, liveIso, (off) =>
+        useB ? predMrn33FaseAftB(off, K) : predMrn33FaseAftA(off, K),
+      );
       idxAft33 += 1;
       continue;
     }
@@ -244,18 +293,13 @@ export function gerarCelulasSugestaoCustomerService(
           return pred4x2(off, Kk, desloc, sig);
         },
         KDefault,
+        liveIso,
       );
-      for (const dia of dias) {
-        const off = dayOffsetUtc2000(dia.iso);
-        const k = `${row.id}|${dia.iso}`;
-        if (esc === "4x2") {
-          out[k] = pred4x2(off, K, desloc, sig);
-        } else if (esc === "5x1") {
-          out[k] = pred5x1(off, K, desloc, sig);
-        } else {
-          out[k] = pred4x2(off, K, desloc, sig);
-        }
-      }
+      preencherDiasOperacionais(out, row.id, dias, liveIso, (off) => {
+        if (esc === "4x2") return pred4x2(off, K, desloc, sig);
+        if (esc === "5x1") return pred5x1(off, K, desloc, sig);
+        return pred4x2(off, K, desloc, sig);
+      });
       idxOutroOp += 1;
       continue;
     }

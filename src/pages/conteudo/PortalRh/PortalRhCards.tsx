@@ -165,6 +165,7 @@ export function ComunicadoCard({
             type="button"
             onClick={() => setImagemAmpliada(true)}
             aria-label={`Ampliar imagem do comunicado ${titulo}`}
+            title={`Ampliar imagem do comunicado ${titulo}`}
             style={{
               padding: 0,
               border: `1px solid ${t.cardBorder}`,
@@ -197,6 +198,7 @@ export function ComunicadoCard({
               type="button"
               onClick={() => setImagemAmpliada(false)}
               aria-label="Fechar imagem ampliada"
+              title="Fechar imagem ampliada"
               style={{
                 border: "none",
                 background: "transparent",

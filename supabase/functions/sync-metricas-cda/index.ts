@@ -314,6 +314,13 @@ async function fetchTodosUtms(dataInicio: string, dataFim: string, auth: CdaAuth
     }))
 }
 
+type UtmAliasOrfaoRow = {
+  utm_source: string
+  status: string
+  influencer_id: string | null
+  mapeado_por: string | null
+}
+
 async function detectarERegistrarOrfaos(
   supabase: ReturnType<typeof createClient>,
   todosUtmsCda: UtmTotais[],
@@ -322,17 +329,20 @@ async function detectarERegistrarOrfaos(
   const novos: string[] = []
   const atualizados: string[] = []
   const erros: string[] = []
-  const { data: aliasesExistentes } = await supabase.from('utm_aliases').select('utm_source, status')
-  const aliasesMap = new Map<string, string>((aliasesExistentes ?? []).map((a: { utm_source: string; status: string }) => [a.utm_source, a.status]))
+  const { data: aliasesExistentes } = await supabase
+    .from('utm_aliases')
+    .select('utm_source, status, influencer_id, mapeado_por')
+  const aliasesMap = new Map<string, UtmAliasOrfaoRow>(
+    (aliasesExistentes ?? []).map((a: UtmAliasOrfaoRow) => [a.utm_source, a]),
+  )
   const orfaos = todosUtmsCda.filter(u => !utmsMapeados.has(u.utm_source))
   console.log(`[sync-metricas-cda] Órfãos: ${orfaos.length} (total CDA: ${todosUtmsCda.length})`)
   for (const utm of orfaos) {
-    const statusAtual = aliasesMap.get(utm.utm_source)
+    const aliasAtual = aliasesMap.get(utm.utm_source)
+    const statusAtual = aliasAtual?.status
     if (statusAtual === 'mapeado' || statusAtual === 'ignorado') continue
-    const { error } = await supabase.from('utm_aliases').upsert({
-      utm_source: utm.utm_source,
-      operadora_slug: 'casa_apostas',
-      status: 'pendente',
+
+    const metricasPayload = {
       total_visits: utm.total_visits,
       total_registrations: utm.total_registrations,
       total_ftds: utm.total_ftds,
@@ -341,6 +351,31 @@ async function detectarERegistrarOrfaos(
       primeiro_visto: utm.primeiro_visto,
       ultimo_visto: utm.ultimo_visto,
       atualizado_em: new Date().toISOString(),
+    }
+
+    // Link emitido em Links e Materiais: nunca rebaixar para pendente (corrige race com sync)
+    const influencerEmitido = aliasAtual?.influencer_id ?? aliasAtual?.mapeado_por ?? null
+    if (influencerEmitido) {
+      const { error } = await supabase.from('utm_aliases').update({
+        ...metricasPayload,
+        status: 'mapeado',
+        influencer_id: influencerEmitido,
+        operadora_slug: 'casa_apostas',
+      }).eq('utm_source', utm.utm_source)
+      if (error) {
+        erros.push(`Falha órfão emitido ${utm.utm_source}: ${error.message}`)
+      } else {
+        atualizados.push(utm.utm_source)
+      }
+      await new Promise(r => setTimeout(r, 50))
+      continue
+    }
+
+    const { error } = await supabase.from('utm_aliases').upsert({
+      utm_source: utm.utm_source,
+      operadora_slug: 'casa_apostas',
+      status: 'pendente',
+      ...metricasPayload,
     }, { onConflict: 'utm_source', ignoreDuplicates: false })
     if (error) {
       erros.push(`Falha órfão ${utm.utm_source}: ${error.message}`)

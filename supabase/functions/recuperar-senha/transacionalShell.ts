@@ -1,14 +1,21 @@
 import { emailHeaderStyles, formatarData, hojeISO } from './common.ts'
 import { MARCA_PRODUTO } from './emailBrand.ts'
 
-export const DEFAULT_LOGIN_URL = 'https://data-intelligence.spingaming.com.br'
+/** Origem canónica de produção — links transacionais ignoram `loginUrl` do request. */
+export const PRODUCTION_APP_ORIGIN = 'https://data-intelligence.spingaming.com.br'
 
-/** Aba Conheça a Plataforma — alinhado a `buildAppPath('ajuda', 'ConhecaAPlataforma')`. */
-export const AJUDA_CONHECA_PATH = '/Ajuda/ConhecaAPlataforma'
+/** @deprecated Fallback legado em index.ts — preferir PRODUCTION_LOGIN_URL nos templates. */
+export const DEFAULT_LOGIN_URL = PRODUCTION_APP_ORIGIN
 
-export function resolveAjudaConhecaUrl(loginUrl: string): string {
-  const base = (loginUrl.trim() || DEFAULT_LOGIN_URL).replace(/\/$/, '')
-  return `${base}${AJUDA_CONHECA_PATH}`
+/** CTA «Acessar a Plataforma Spin» — alinhado a `buildLoginPath()` (`ROUTE_SLUG_LOGIN`). */
+export const PRODUCTION_LOGIN_URL = `${PRODUCTION_APP_ORIGIN}/Login`
+
+/** Link «página de Ajuda» no corpo de boas-vindas — alinhado a `buildAppPath('ajuda')`. */
+export const PRODUCTION_AJUDA_URL = `${PRODUCTION_APP_ORIGIN}/Ajuda`
+
+/** @deprecated Usar PRODUCTION_AJUDA_URL — sempre produção, independente do ambiente de envio. */
+export function resolveAjudaConhecaUrl(_loginUrl?: string): string {
+  return PRODUCTION_AJUDA_URL
 }
 
 export function escapeHtml(s: string): string {

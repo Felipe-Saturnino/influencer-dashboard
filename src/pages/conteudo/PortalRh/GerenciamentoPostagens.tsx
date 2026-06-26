@@ -6,6 +6,7 @@ import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
+import { propsBotaoIcone, tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -662,7 +663,7 @@ export function GerenciamentoPostagens({
                         {acoes.includes("editar") ? (
                           <button
                             type="button"
-                            aria-label={`Editar ${row.assunto}`}
+                            {...propsBotaoIcone(tooltipAcaoAbreModal("Editar postagem", row.assunto))}
                             disabled={busy}
                             onClick={() => {
                               setEditRef({ contentType: row.contentType, id: row.id });
@@ -676,7 +677,7 @@ export function GerenciamentoPostagens({
                         {acoes.includes("aprovar") ? (
                           <button
                             type="button"
-                            aria-label={`Aprovar ${row.assunto}`}
+                            {...propsBotaoIcone(`Aprovar ${row.assunto}`)}
                             disabled={busy}
                             onClick={() => void aprovarPostagem(row)}
                             style={btnAcao(t)}
@@ -697,7 +698,7 @@ export function GerenciamentoPostagens({
                         {acoes.includes("historico") ? (
                           <button
                             type="button"
-                            aria-label={`Histórico de ${row.assunto}`}
+                            {...propsBotaoIcone(tooltipAcaoAbreModal("Histórico", row.assunto))}
                             disabled={busy}
                             onClick={() =>
                               setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })

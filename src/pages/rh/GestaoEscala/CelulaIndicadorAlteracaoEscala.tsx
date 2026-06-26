@@ -15,6 +15,14 @@ type CelulaIndicadorAlteracaoEscalaProps = {
   meta: EscalaAlteracaoCelulaMeta;
   valorAnteriorLabel: string;
   t: Theme;
+  /** Título do tooltip — default «Alteração de escala». */
+  tituloTooltip?: string;
+  /** Rótulo do detalhe do valor anterior — default «Valor anterior:». */
+  rotuloValorAnterior?: string;
+  /** Rótulo da data/hora — default «Data/hora:». */
+  rotuloDataHora?: string;
+  /** Cor do ícone — default verde semântico (escala). */
+  corIcone?: string;
 };
 
 type TooltipCoords = {
@@ -58,6 +66,10 @@ export function CelulaIndicadorAlteracaoEscala({
   meta,
   valorAnteriorLabel,
   t,
+  tituloTooltip = "Alteração de escala",
+  rotuloValorAnterior = "Valor anterior:",
+  rotuloDataHora = "Data/hora:",
+  corIcone = "#22c55e",
 }: CelulaIndicadorAlteracaoEscalaProps) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<TooltipCoords | null>(null);
@@ -150,17 +162,17 @@ export function CelulaIndicadorAlteracaoEscala({
           pointerEvents: "auto",
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>Alteração de escala</div>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>{tituloTooltip}</div>
         <div>
           <span style={{ color: tooltipMuted }}>Alterado por: </span>
           {meta.alteradoPorNome}
         </div>
         <div>
-          <span style={{ color: tooltipMuted }}>Data/hora: </span>
+          <span style={{ color: tooltipMuted }}>{rotuloDataHora} </span>
           {fmtAlteracaoDataHora(meta.alteradoEm)}
         </div>
         <div>
-          <span style={{ color: tooltipMuted }}>Valor anterior: </span>
+          <span style={{ color: tooltipMuted }}>{rotuloValorAnterior} </span>
           {valorAnteriorLabel}
         </div>
         {obs ? (
@@ -202,7 +214,7 @@ export function CelulaIndicadorAlteracaoEscala({
             border: "none",
             borderRadius: 3,
             background: "transparent",
-            color: "#22c55e",
+            color: corIcone,
             cursor: "help",
           }}
         >
@@ -210,7 +222,7 @@ export function CelulaIndicadorAlteracaoEscala({
             size={11}
             strokeWidth={2.5}
             aria-hidden="true"
-            fill="color-mix(in srgb, #22c55e 18%, transparent)"
+            fill={`color-mix(in srgb, ${corIcone} 18%, transparent)`}
           />
         </button>
       </span>

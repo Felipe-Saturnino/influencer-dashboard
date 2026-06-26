@@ -65,7 +65,9 @@ import {
 } from "./gestaoStaffEstudioHelpers";
 import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
@@ -209,6 +211,12 @@ const STAFF_VER_TAB_LABELS: Record<VerAba, string> = {
   skills: "Dados de skills",
   historico: "Histórico",
 };
+
+const STAFF_VER_TAB_ORDER: VerAba[] = ["pessoal", "funcao", "skills", "historico"];
+
+function staffVerAbasVisiveis(exibirHistorico: boolean): VerAba[] {
+  return exibirHistorico ? STAFF_VER_TAB_ORDER : STAFF_VER_TAB_ORDER.filter((k) => k !== "historico");
+}
 
 const STAFF_EDITAR_TAB_ICONS: Record<EditarAba, ReactNode> = {
   funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -769,10 +777,11 @@ export default function RhGestaoStaffPage() {
   );
 
   const mostrarKpisGamePresenter = useMemo(() => {
+    if (!perm.canEditarOk) return false;
     if (todosTimes) return true;
     const row = times[idxTime];
     return row ? isGamePresenterTimeNome(row.nome) : false;
-  }, [todosTimes, times, idxTime]);
+  }, [perm.canEditarOk, todosTimes, times, idxTime]);
 
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
@@ -783,20 +792,6 @@ export default function RhGestaoStaffPage() {
 
   const podeTimeAnterior = !todosTimes && times.length > 0 && idxTime > 0;
   const podeTimeProximo = !todosTimes && times.length > 0 && idxTime < times.length - 1;
-
-  const btnIconTabela: CSSProperties = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    cursor: "pointer",
-    fontSize: 12,
-    fontFamily: FONT.body,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
 
   if (perm.loading) {
     return (
@@ -1113,27 +1108,28 @@ export default function RhGestaoStaffPage() {
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                          <button
-                            type="button"
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcaoAbreModal("Prestador", row.nome)}
                             onClick={() => setModalVer(row)}
-                            style={btnIconTabela}
-                            aria-label={`Visualizar ${row.nome}`}
                           >
                             <Eye size={14} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                           {perm.canEditarOk ? (
-                            <button type="button" onClick={() => setModalEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Editar", row.nome)}
+                              onClick={() => setModalEditar(row)}
+                            >
                               <Pencil size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setModalAnotacoes(row)}
-                            style={btnIconTabela}
-                            aria-label={`Anotações de ${row.nome}`}
-                          >
-                            <StickyNote size={14} aria-hidden />
-                          </button>
+                          {perm.canEditarOk ? (
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Anotações", row.nome)}
+                              onClick={() => setModalAnotacoes(row)}
+                            >
+                              <StickyNote size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1161,6 +1157,7 @@ export default function RhGestaoStaffPage() {
           }
           onClose={() => setModalVer(null)}
           t={t}
+          exibirAbaHistorico={perm.canEditarOk}
         />
       ) : null}
 
@@ -1208,6 +1205,7 @@ function ModalStaffVer({
   opParaEstudio,
   dadosFuncaoOcultarEstudio = false,
   dadosFuncaoOcultarBioFotos = false,
+  exibirAbaHistorico = true,
   onClose,
   t,
 }: {
@@ -1218,13 +1216,20 @@ function ModalStaffVer({
   dadosFuncaoOcultarEstudio?: boolean;
   /** Inclui Shuffler (só bio/fotos) ou o grupo acima (estúdio + bio + fotos). */
   dadosFuncaoOcultarBioFotos?: boolean;
+  /** Somente com permissão de Editar em Gestão de Staff. */
+  exibirAbaHistorico?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
 }) {
   const [aba, setAba] = useState<VerAba>("pessoal");
+  const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
   const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!exibirAbaHistorico && aba === "historico") setAba("pessoal");
+  }, [exibirAbaHistorico, aba]);
 
   useEffect(() => {
     if (aba !== "historico") return;
@@ -1286,9 +1291,9 @@ function ModalStaffVer({
         role="tablist"
         aria-label="Seções do prestador"
         style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, (["pessoal", "funcao", "skills", "historico"] as VerAba[]), setAba, (k) => `staff-ver-tab-${k}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, verAbas, setAba, (k) => `staff-ver-tab-${k}`)}
       >
-        {(["pessoal", "funcao", "skills", "historico"] as VerAba[]).map((key) => (
+        {verAbas.map((key) => (
           <FiltroBarTabButton
             key={key}
             id={`staff-ver-tab-${key}`}

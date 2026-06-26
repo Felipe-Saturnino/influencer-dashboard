@@ -13,6 +13,7 @@ import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
 import { MODAL_ARQUIVAR_TITULO, textoModalArquivar } from "../lib/arquivarItemUi";
 import { MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../lib/excluirItemUi";
+import { propsBotaoFecharModal } from "../lib/iconOnlyButtonA11y";
 
 const DialogTitleIdContext = createContext<string>("");
 
@@ -141,7 +142,7 @@ export function ModalHeader({
           justifyContent: "center",
           color: t.textMuted,
         }}
-        aria-label="Fechar modal"
+        {...propsBotaoFecharModal()}
       >
         <X size={20} strokeWidth={2} aria-hidden />
       </button>

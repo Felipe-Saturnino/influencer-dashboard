@@ -9,8 +9,8 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
  * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento → Gestor) >
- *   times (Performance Coach → Gestor Treinamento, Shift Leader, Service Manager, GP, CS, Shuffler) >
+ * Perfil / escopo: gerências (Figurino, Comunicação, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento → Gestor) >
+ *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
@@ -29,7 +29,15 @@ type PrestadorTipoSlug =
 
 type GestorTipoSlug = 'operacoes' | 'marketing' | 'afiliados' | 'geral' | 'treinamento'
 
-type PerfilRhSync = 'figurino' | 'rh' | 'shift_leader' | 'service_manager' | 'prestador' | 'gestor'
+type PerfilRhSync =
+  | 'figurino'
+  | 'comunicacao'
+  | 'rh'
+  | 'performance_coach'
+  | 'shift_leader'
+  | 'service_manager'
+  | 'prestador'
+  | 'gestor'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -302,6 +310,9 @@ function resolvePerfilEscopo(
   if (g === 'figurino') {
     return { role: 'figurino', prestadorTipo: null, gestorTipo: null }
   }
+  if (g === 'comunicacao') {
+    return { role: 'comunicacao', prestadorTipo: null, gestorTipo: null }
+  }
   if (g === 'rh' || g === 'recursos humanos') {
     return { role: 'rh', prestadorTipo: null, gestorTipo: null }
   }
@@ -323,7 +334,7 @@ function resolvePerfilEscopo(
 
   const t = normTimeNome(timeNome)
   if (t === 'performance coach') {
-    return { role: 'gestor', prestadorTipo: null, gestorTipo: 'treinamento' }
+    return { role: 'performance_coach', prestadorTipo: null, gestorTipo: null }
   }
   if (t === 'shift leader') {
     return { role: 'shift_leader', prestadorTipo: null, gestorTipo: null }

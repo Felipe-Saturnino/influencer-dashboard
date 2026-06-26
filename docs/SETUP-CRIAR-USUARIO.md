@@ -123,7 +123,7 @@ Resposta típica após criação: `{ success, userId, emailEnviado, emailErro? }
 
 ## Scout, RH e Network
 
-Os três fluxos usam o **mesmo** e-mail de boas-vindas (`Conta criada | Spin Gaming Data Intelligence`), remetente **`RESEND_FROM_SISTEMA`** e `SENHA_PADRAO`. O front envia `loginUrl: window.location.origin` quando disponível.
+Os três fluxos usam o **mesmo** e-mail de boas-vindas (`Conta criada | Spin Gaming Data Intelligence`), remetente **`RESEND_FROM_SISTEMA`** e `SENHA_PADRAO`. Links de Ajuda e Login no corpo/CTA apontam **sempre** para produção (`PRODUCTION_AJUDA_URL` / `PRODUCTION_LOGIN_URL`); o front pode ainda enviar `loginUrl`, mas o template ignora.
 
 - **Scout:** `criar-usuario-scout` — ao marcar Fechado ou salvar com criação de usuário; **não** envia e-mail no modo `vincular_operadora` (usuário já existia).
 - **RH:** `sync-rh-prestador-auth-user` — ao salvar prestador que ainda não tinha login; retorna `skipped` se e-mail já existir.

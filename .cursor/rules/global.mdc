@@ -776,7 +776,7 @@ KPIs e siglas (GGR, ROI, FTD, UAP, MoM, MTD, …); nomes de página/menu (Overvi
 ```
 
 - Ícones **decorativos** em células/badges: `aria-hidden="true"`.
-- Botões só ícone (linha de tabela): `aria-label` + `title` — ver Brand sec. 8.
+- Botões só ícone (linha de tabela): `aria-label` + **`title` obrigatório** (tooltip) — `propsBotaoIcone` / `BtnIconeAcaoLinha` em Brand sec. 8; ações que abrem modal: `tooltipAcaoAbreModal(tituloModal, id)`.
 - Preferir **Lucide** em UI de página e no **menu lateral** (`menu.ts` — `LucideIcon` por item). Cabeçalho de página: `PageMenuIcon` alinhado ao mesmo ícone do menu.
 
 Lista estendida (modais, tabelas clicáveis, abas):
@@ -811,7 +811,7 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 ```
 
 - Overlay: `maxHeight: "90dvh"` no painel (não `90vh`); padding no overlay para telas estreitas.
-- Botão fechar: `<X>` Lucide com `aria-label="Fechar modal"` — nunca `✕` unicode.
+- Botão fechar (`ModalHeader` ou X legado): `<X>` Lucide com **`aria-label="Fechar modal"`** e **`title="Fechar modal"`** (`propsBotaoFecharModal`) — nunca `✕` unicode nem só «Fechar» sem tooltip.
 - Mensagens ao usuário: PT fixo + `console.error` — **nunca** `error.message`, nomes de tabela/RPC/função no DOM.
 - `autoFocus` em input de modal: `ref` + `setTimeout(..., 100)` — evitar `autoFocus` direto (iOS).
 - Modais com `useApp()` + `useDashboardBrand()` **internamente** — não passar props `t` / `brand` salvo exceção documentada na secção.
@@ -1196,6 +1196,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - `90vh` em modais — usar `90dvh`.
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.
+- Botão só ícone (linha/modal) sem `title` ou sem `propsBotaoIcone` / componente canónico (`BtnIconeAcaoLinha`, `BtnExcluirLinha`, `BtnArquivarLinha`).
 - Query de lista UGC sem `.limit()`.
 - CPF ou dado sensível sem máscara em tabela pública.
 - Expor infraestrutura (tabela, RPC, stack) na UI.

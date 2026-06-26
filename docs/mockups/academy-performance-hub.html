@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy — Performance Hub (Mockup)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-success: #22c55e;
+      --brand-danger: #e84025;
+      --brand-warning: #f59e0b;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e2e2ee;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --input-bg: #f8f8fc;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --radius-pill: 999px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Inter", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.4;
+    }
+
+    /* ── Barra de controle do mockup ── */
+    .mockup-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .mockup-bar strong { color: #a78bfa; }
+    .mockup-bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .mockup-bar select, .mockup-bar button {
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #3a3a5c;
+      background: #2a2a40;
+      color: #fff;
+      cursor: pointer;
+    }
+    .mockup-bar button.active { background: var(--brand-primary); border-color: var(--brand-primary); }
+
+    .page-shell { max-width: 1280px; margin: 0 auto; }
+
+    /* ── Nível 1: Cabeçalho ── */
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 10px; }
+    .page-icon {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand-primary);
+      flex-shrink: 0;
+    }
+    .page-header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--brand-primary);
+    }
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      padding-left: 42px;
+    }
+
+    /* ── Nível 2: Filtros ── */
+    .filter-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      box-shadow: var(--shadow);
+      padding: 12px 20px;
+      margin-bottom: 14px;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+
+    .carousel-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text);
+    }
+    .carousel-label {
+      font-size: 18px; font-weight: 800;
+      min-width: 180px; text-align: center;
+    }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px; font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .pill.active {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+    .pill svg { flex-shrink: 0; }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
+      color: var(--brand-secondary);
+      font-weight: 700;
+    }
+
+    /* ── Nível 3: Blocos de conteúdo ── */
+    .content-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--brand-primary);
+      margin-bottom: 14px;
+    }
+    .section-title .sub {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-muted);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .section-title .sub::before { content: " — "; font-size: 12px; }
+
+    /* KPI grid */
+    .kpi-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+    @media (max-width: 900px) {
+      .kpi-grid-2, .kpi-grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .kpi-card {
+      border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      overflow: hidden;
+    }
+    .kpi-card .bar { height: 3px; }
+    .kpi-card .body { padding: 14px 16px; }
+    .kpi-card .label-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .kpi-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; margin-bottom: 6px; }
+    .kpi-vs { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+    .kpi-vs .up { color: var(--brand-success); font-weight: 700; }
+    .kpi-vs .down { color: var(--brand-danger); font-weight: 700; }
+
+    /* Tabela */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 720px;
+      font-size: 13px;
+    }
+    thead th {
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%);
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 10px 12px;
+      text-align: center;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:nth-child(even) { background: var(--input-bg); }
+    tbody tr:hover { background: color-mix(in srgb, var(--brand-primary) 5%, var(--input-bg)); }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px;
+      white-space: nowrap;
+    }
+    .badge-concluida { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge-analise { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge-pendente { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .badge-feedback { background: #a78bfa22; color: #7c3aed; border: 1px solid #a78bfa44; }
+
+    .filtro-select {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 32px 6px 34px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+    .filtro-select.active,
+    .filtro-select:focus {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      background-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary);
+      font-weight: 600;
+      outline: none;
+    }
+    .filtro-select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .filtro-select-wrap .filtro-icon {
+      position: absolute;
+      left: 12px;
+      pointer-events: none;
+      color: inherit;
+      opacity: 0.85;
+    }
+
+    .score { font-weight: 700; }
+    .score-high { color: var(--brand-success); }
+    .score-mid { color: var(--brand-warning); }
+    .score-low { color: var(--brand-danger); }
+
+    .btn-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted);
+      margin: 0 2px;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent); }
+    .btn-icon.analyze { color: var(--brand-warning); }
+    .btn-icon.analyze:hover { border-color: #f59e0b55; }
+    .btn-text {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; color: var(--text);
+      margin: 0 2px;
+    }
+    .btn-text.primary {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; border: none;
+    }
+
+    .video-link {
+      color: var(--brand-secondary);
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .video-link:hover { text-decoration: underline; }
+
+    .col-gestor { display: table-cell; }
+    body.perfil-proprios .col-gestor,
+    body.perfil-proprios .filtro-gestor { display: none !important; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .nota-ring {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 50%;
+      font-weight: 800; font-size: 13px;
+      border: 2px solid;
+    }
+
+    .pendentes-count { font-weight: 800; color: var(--brand-danger); }
+
+    .hint-box {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 30%, transparent);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .hint-box strong { color: var(--brand-primary); }
+
+    /* Barra de pesquisa (padrão BarraPesquisaPagina / Scout) */
+    .barra-pesquisa {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 14px;
+    }
+    .barra-pesquisa .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .barra-pesquisa input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+    }
+    .barra-pesquisa input:focus {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+    }
+    .barra-pesquisa input::placeholder { color: var(--text-muted); }
+
+    /* Cabeçalho ordenável (SortTableTh) */
+    .th-sort {
+      cursor: pointer;
+      user-select: none;
+    }
+    .th-sort:hover { color: var(--text); }
+    .th-sort .th-sort-inner {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .th-sort .sort-icon {
+      display: inline-flex;
+      flex-direction: column;
+      line-height: 0.65;
+      font-size: 8px;
+      opacity: 0.35;
+      color: var(--text-muted);
+    }
+    .th-sort.active { color: var(--brand-primary); }
+    .th-sort.active .sort-icon { opacity: 1; color: var(--brand-primary); }
+
+    tr.row-hidden { display: none !important; }
+
+    /* ── Modal Avaliar ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 15, 26, 0.55);
+      padding: 24px 16px;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-panel {
+      width: min(920px, 100%);
+      max-height: 90dvh;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid var(--card-border);
+      position: relative;
+    }
+    .modal-header h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--brand-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding-right: 36px;
+    }
+    .modal-header .modal-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .field select,
+    .field input[type="text"],
+    .field input[type="file"],
+    .field textarea {
+      width: 100%;
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .field textarea { min-height: 88px; resize: vertical; }
+    .field-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .field-grid-2 { grid-template-columns: 1fr; }
+    }
+    .modal-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 16px;
+    }
+    .modal-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .modal-tab.active {
+      border-color: color-mix(in srgb, var(--brand-secondary) 35%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 15%, transparent);
+      color: var(--brand-secondary);
+      font-weight: 700;
+    }
+    .modal-tab-panel { display: block; }
+    .modal-tab-panel[hidden] { display: none !important; }
+    .modal-persist-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 0 0 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--brand-primary) 6%, var(--input-bg));
+      border: 1px solid var(--card-border);
+    }
+    .modal-footer-left {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-height: 18px;
+      flex: 1;
+    }
+    .modal-footer-left.saved { color: var(--brand-success); font-weight: 600; }
+    .modal-footer-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .criterio-block {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: var(--input-bg);
+    }
+    .criterio-titulo {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .criterio-campos {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    @media (max-width: 640px) {
+      .criterio-campos { grid-template-columns: 1fr; }
+    }
+    .game-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .game-baccarat { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .game-roleta { background: #eab30822; color: #ca8a04; border: 1px solid #eab30844; }
+    .game-blackjack { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .game-fb { background: #ea580c22; color: #ea580c; border: 1px solid #ea580c44; }
+    .btn-modal {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .btn-modal.primary {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff;
+      border: none;
+    }
+    .btn-modal.secondary {
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      color: var(--brand-primary);
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--input-bg));
+      font-weight: 700;
+    }
+    .tipo-extra-placeholder {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      border: 1px dashed var(--card-border);
+      border-radius: 12px;
+    }
+    .upload-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .campo-obrigatorio { color: #e84025; font-weight: 700; margin-left: 2px; }
+    .field.field-invalid select,
+    .field.field-invalid textarea,
+    .field.field-invalid input[type="file"] {
+      border-color: #e84025;
+      box-shadow: 0 0 0 1px rgba(232, 64, 37, 0.2);
+    }
+    .modal-footer-left.error { color: #e84025; font-weight: 600; }
+  </style>
+</head>
+<body class="perfil-gestor">
+
+<!-- ═══ Controles do mockup (não faz parte do produto) ═══ -->
+<div class="mockup-bar">
+  <strong>MOCKUP</strong> Academy → Performance Hub
+  <span style="opacity:0.4">|</span>
+  <label>
+    Perfil simulado:
+    <select id="selPerfil" onchange="setPerfil(this.value)">
+      <option value="gestor">Editar = Sim (gestor / avaliador)</option>
+      <option value="proprios">Editar = Próprios (prestador)</option>
+    </select>
+  </label>
+  <span style="opacity:0.4">|</span>
+  <button class="active" id="btnTabAval" onclick="setTab('avaliacoes')">Aba Avaliações</button>
+  <button id="btnTabGer" onclick="setTab('gerenciamento')">Aba Gerenciamento</button>
+</div>
+
+<div class="page-shell">
+
+  <!-- ═══ NÍVEL 1 — Cabeçalho ═══ -->
+  <header class="page-header">
+    <div class="page-header-row">
+      <div class="page-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 3.3 3 6 3s6-1.3 6-3v-5"/></svg>
+      </div>
+      <h1>Performance Hub</h1>
+    </div>
+    <p class="subtitle">Portal de avaliação de desempenho dos Prestadores.</p>
+  </header>
+
+  <!-- ═══ NÍVEL 2 — Filtros + Abas ═══ -->
+  <div class="filter-box">
+    <div class="filter-row">
+      <!-- Carrossel de período -->
+      <button class="carousel-btn" aria-label="Mês anterior" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <span class="carousel-label">Junho 2026</span>
+      <button class="carousel-btn" aria-label="Próximo mês" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+
+      <!-- Histórico -->
+      <button class="pill" type="button" aria-pressed="false">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+        Histórico
+      </button>
+
+      <!-- Filtros gestor only — time obrigatório; staff escopado ao time -->
+      <div class="filtro-gestor filtro-select-wrap">
+        <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <select id="filtroTime" class="filtro-select active" aria-label="Time" onchange="onTimeChange(this.value)">
+          <option value="game_presenter" selected>Game Presenter</option>
+          <option value="shuffler">Shuffler</option>
+        </select>
+      </div>
+      <div class="filtro-gestor filtro-select-wrap">
+        <svg class="filtro-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+        <select id="filtroStaff" class="filtro-select" aria-label="Staff">
+          <!-- preenchido via JS conforme time -->
+        </select>
+      </div>
+    </div>
+
+    <!-- Abas -->
+    <div class="filter-row" role="tablist" aria-label="Seções do Performance Hub">
+      <button class="tab-btn active" id="tabAvaliacoes" role="tab" aria-selected="true" onclick="setTab('avaliacoes')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+        Avaliações
+      </button>
+      <button class="tab-btn filtro-gestor" id="tabGerenciamento" role="tab" aria-selected="false" onclick="setTab('gerenciamento')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Gerenciamento
+      </button>
+    </div>
+  </div>
+
+  <!-- Hint perfil próprios -->
+  <div class="hint-box perfil-hint-proprios" style="display:none">
+    <strong>Visão Prestador (Editar = Próprios):</strong> filtros de Time/Staff ocultos; aba Gerenciamento oculta; colunas Avaliado e Avaliador ocultas; apenas avaliações finalizadas visíveis (somente leitura).
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PAINEL: ABA AVALIAÇÕES                                -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panelAvaliacoes" class="panel active">
+
+    <!-- Bloco 2 — Consolidados -->
+    <div class="content-box">
+      <div class="section-title">
+        Consolidados
+        <span class="sub">Comparativo MTD vs mesmo período do mês anterior</span>
+      </div>
+
+      <!-- Linha 1 -->
+      <div class="kpi-grid-2">
+        <div class="kpi-card">
+          <div class="bar" style="background:linear-gradient(90deg,#7c3aed,transparent)"></div>
+          <div class="body">
+            <div class="label-row">
+              <span class="kpi-icon" style="background:#7c3aed18;border:1px solid #7c3aed35;color:#7c3aed">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+              </span>
+              <span class="kpi-label">Avaliações</span>
+            </div>
+            <div class="kpi-value">47</div>
+            <div class="kpi-vs">
+              <span class="up">▲ +12,0%</span> vs MTD mai/26 · 42 avaliações
+            </div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="bar" style="background:linear-gradient(90deg,#1e36f8,transparent)"></div>
+          <div class="body">
+            <div class="label-row">
+              <span class="kpi-icon" style="background:#1e36f818;border:1px solid #1e36f835;color:#1e36f8">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </span>
+              <span class="kpi-label">Nota Total</span>
+            </div>
+            <div class="kpi-value">8,4</div>
+            <div class="kpi-vs">
+              <span class="up">▲ +3,7%</span> vs MTD mai/26 · 8,1
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha 2 -->
+      <div class="kpi-grid-3">
+        <div class="kpi-card">
+          <div class="bar" style="background:linear-gradient(90deg,#a78bfa,transparent)"></div>
+          <div class="body">
+            <div class="label-row">
+              <span class="kpi-icon" style="background:#a78bfa18;border:1px solid #a78bfa35;color:#a78bfa">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </span>
+              <span class="kpi-label">Imagem</span>
+            </div>
+            <div class="kpi-value">8,6</div>
+            <div class="kpi-vs"><span class="up">▲ +2,4%</span> vs MTD mai/26 · 8,4</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="bar" style="background:linear-gradient(90deg,#22c55e,transparent)"></div>
+          <div class="body">
+            <div class="label-row">
+              <span class="kpi-icon" style="background:#22c55e18;border:1px solid #22c55e35;color:#22c55e">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              <span class="kpi-label">Comunicação</span>
+            </div>
+            <div class="kpi-value">8,2</div>
+            <div class="kpi-vs"><span class="down">▼ −1,2%</span> vs MTD mai/26 · 8,3</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="bar" style="background:linear-gradient(90deg,#eab308,transparent)"></div>
+          <div class="body">
+            <div class="label-row">
+              <span class="kpi-icon" style="background:#eab30818;border:1px solid #eab30835;color:#eab308">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
+              </span>
+              <span class="kpi-label">Mesa</span>
+            </div>
+            <div class="kpi-value">8,5</div>
+            <div class="kpi-vs"><span class="up">▲ +5,0%</span> vs MTD mai/26 · 8,1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloco 3 — Tabela Avaliações -->
+    <div class="content-box">
+      <div class="section-title">
+        Avaliações
+        <span class="sub">Histórico de avaliações no período</span>
+      </div>
+      <div class="barra-pesquisa col-gestor">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" id="buscaAvaliacoes" placeholder="Buscar por Nome..." aria-label="Buscar avaliado por nome" oninput="filtrarBuscaAvaliacoes(this.value)" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption style="display:none">Avaliações de desempenho no período</caption>
+          <thead>
+            <tr>
+              <th scope="col">Data</th>
+              <th scope="col" class="col-gestor">Avaliado</th>
+              <th scope="col">Total</th>
+              <th scope="col">Imagem</th>
+              <th scope="col">Comunicação</th>
+              <th scope="col">Mesa</th>
+              <th scope="col" class="col-gestor">Avaliador</th>
+              <th scope="col">Status</th>
+              <th scope="col">Video</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyAvaliacoes">
+            <tr data-time="game_presenter" data-nome="Ana Beatriz Silva">
+              <td>24/06/2026</td>
+              <td class="col-gestor">Ana Beatriz Silva</td>
+              <td><span class="score score-high">8,8</span></td>
+              <td><span class="score score-high">9,0</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td><span class="score score-high">9,0</span></td>
+              <td class="col-gestor">Carlos Mendes</td>
+              <td><span class="badge badge-concluida">Concluída</span></td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver avaliação" aria-label="Ver avaliação Ana Beatriz Silva"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze filtro-gestor" title="Analisar avaliação" aria-label="Analisar avaliação Ana Beatriz Silva"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico de avaliação" aria-label="Histórico Ana Beatriz Silva"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Rafael Costa">
+              <td>22/06/2026</td>
+              <td class="col-gestor">Rafael Costa</td>
+              <td><span class="score score-mid">7,5</span></td>
+              <td><span class="score score-mid">7,5</span></td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td><span class="score score-high">8,0</span></td>
+              <td class="col-gestor">Mariana Lima</td>
+              <td><span class="badge badge-analise">Em Análise</span></td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze filtro-gestor" title="Analisar avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Juliana Ferreira">
+              <td>18/06/2026</td>
+              <td class="col-gestor">Juliana Ferreira</td>
+              <td><span class="score score-high">8,7</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td><span class="score score-high">9,0</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td class="col-gestor">Carlos Mendes</td>
+              <td><span class="badge badge-feedback">Feedback</span></td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Fernando Rocha">
+              <td>10/06/2026</td>
+              <td class="col-gestor">Fernando Rocha</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="col-gestor">Mariana Lima</td>
+              <td><span class="badge badge-pendente">Pendente</span></td>
+              <td>—</td>
+              <td>
+                <button class="btn-icon" title="Ver avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="shuffler" style="display:none" data-nome="Diego Santana">
+              <td>20/06/2026</td>
+              <td class="col-gestor">Diego Santana</td>
+              <td><span class="score score-high">8,3</span></td>
+              <td><span class="score score-high">8,0</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td><span class="score score-mid">8,5</span></td>
+              <td class="col-gestor">Carlos Mendes</td>
+              <td><span class="badge badge-concluida">Concluída</span></td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze filtro-gestor" title="Analisar avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" class="row-proprios-only" style="display:none" data-nome="">
+              <td>15/06/2026</td>
+              <td class="col-gestor">—</td>
+              <td><span class="score score-high">8,0</span></td>
+              <td><span class="score score-high">8,0</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td><span class="score score-mid">7,5</span></td>
+              <td class="col-gestor">—</td>
+              <td><span class="badge badge-concluida">Concluída</span></td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver minha avaliação"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PAINEL: ABA GERENCIAMENTO (só gestor)                   -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panelGerenciamento" class="panel filtro-gestor">
+
+    <!-- Bloco 2 — Analisar Avaliações -->
+    <div class="content-box">
+      <div class="section-title">
+        Analisar Avaliações
+        <span class="sub">Avaliações aguardando revisão</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption style="display:none">Avaliações em análise</caption>
+          <thead>
+            <tr>
+              <th scope="col">Data de Avaliação</th>
+              <th scope="col">Avaliado</th>
+              <th scope="col">Nota da Avaliação</th>
+              <th scope="col">Nota de Imagem</th>
+              <th scope="col">Nota de Comunicação</th>
+              <th scope="col">Nota de Mesa</th>
+              <th scope="col">Avaliador</th>
+              <th scope="col">Vídeo</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-time="game_presenter">
+              <td>24/06/2026</td>
+              <td>Lucas Almeida</td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td><span class="score score-low">6,5</span></td>
+              <td><span class="score score-mid">7,5</span></td>
+              <td>Mariana Lima</td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze" title="Analisar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter">
+              <td>23/06/2026</td>
+              <td>Patricia Souza</td>
+              <td><span class="score score-high">7,8</span></td>
+              <td><span class="score score-high">8,0</span></td>
+              <td><span class="score score-high">8,5</span></td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td>Carlos Mendes</td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze" title="Analisar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+            <tr data-time="shuffler" style="display:none">
+              <td>21/06/2026</td>
+              <td>Renata Prado</td>
+              <td><span class="score score-mid">7,2</span></td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td><span class="score score-mid">7,5</span></td>
+              <td><span class="score score-mid">7,0</span></td>
+              <td>Mariana Lima</td>
+              <td><a href="#" class="video-link">Assistir</a></td>
+              <td>
+                <button class="btn-icon" title="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn-icon analyze" title="Analisar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></button>
+                <button class="btn-icon" title="Histórico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bloco 3 — Agenda de Avaliações -->
+    <div class="content-box">
+      <div class="section-title">
+        Agenda de Avaliações
+        <span class="sub">Lista de Prestadores com avaliações no período</span>
+      </div>
+      <div class="barra-pesquisa">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" id="buscaAgenda" placeholder="Buscar por Nome..." aria-label="Buscar prestador por nome" oninput="filtrarBuscaAgenda(this.value)" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption style="display:none">Agenda de avaliações por prestador</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="th-sort active" data-sort-col="nome" aria-sort="ascending" onclick="ordenarAgenda('nome')">
+                <span class="th-sort-inner">Nome do Prestador<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span>
+              </th>
+              <th scope="col" class="th-sort" data-sort-col="golive" aria-sort="none" onclick="ordenarAgenda('golive')">
+                <span class="th-sort-inner">Go-Live<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span>
+              </th>
+              <th scope="col" class="th-sort" data-sort-col="turno" aria-sort="none" onclick="ordenarAgenda('turno')">
+                <span class="th-sort-inner">Turno<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span>
+              </th>
+              <th scope="col" class="th-sort" data-sort-col="realizadas" aria-sort="none" onclick="ordenarAgenda('realizadas')">
+                <span class="th-sort-inner">Realizadas<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span>
+              </th>
+              <th scope="col" class="th-sort" data-sort-col="pendentes" aria-sort="none" onclick="ordenarAgenda('pendentes')">
+                <span class="th-sort-inner">Pendentes<span class="sort-icon" aria-hidden="true"><span>▴</span><span>▾</span></span></span>
+              </th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyAgenda">
+            <tr data-time="game_presenter" data-nome="Fernando Rocha" data-golive="2026-03-10" data-turno="Manhã" data-realizadas="3" data-pendentes="1">
+              <td style="text-align:left;font-weight:600">Fernando Rocha</td>
+              <td>10/03/2026</td>
+              <td>Manhã</td>
+              <td>3</td>
+              <td><span class="pendentes-count">1</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Camila Duarte" data-golive="2026-01-22" data-turno="Tarde" data-realizadas="5" data-pendentes="2">
+              <td style="text-align:left;font-weight:600">Camila Duarte</td>
+              <td>22/01/2026</td>
+              <td>Tarde</td>
+              <td>5</td>
+              <td><span class="pendentes-count">2</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Bruno Nakamura" data-golive="2026-06-05" data-turno="Noite" data-realizadas="1" data-pendentes="1">
+              <td style="text-align:left;font-weight:600">Bruno Nakamura</td>
+              <td>05/06/2026</td>
+              <td>Noite</td>
+              <td>1</td>
+              <td><span class="pendentes-count">1</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+            <tr data-time="game_presenter" data-nome="Isabela Martins" data-golive="2026-04-15" data-turno="Manhã" data-realizadas="4" data-pendentes="0">
+              <td style="text-align:left;font-weight:600">Isabela Martins</td>
+              <td>15/04/2026</td>
+              <td>Manhã</td>
+              <td>4</td>
+              <td><span class="score score-high">0</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+            <tr data-time="shuffler" style="display:none" data-nome="Diego Santana" data-golive="2026-02-08" data-turno="Tarde" data-realizadas="2" data-pendentes="1">
+              <td style="text-align:left;font-weight:600">Diego Santana</td>
+              <td>08/02/2026</td>
+              <td>Tarde</td>
+              <td>2</td>
+              <td><span class="pendentes-count">1</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+            <tr data-time="shuffler" style="display:none" data-nome="Marcos Vieira" data-golive="2026-05-20" data-turno="Noite" data-realizadas="3" data-pendentes="0">
+              <td style="text-align:left;font-weight:600">Marcos Vieira</td>
+              <td>20/05/2026</td>
+              <td>Noite</td>
+              <td>3</td>
+              <td><span class="score score-high">0</span></td>
+              <td>
+                <button type="button" class="btn-text primary btn-avaliar">Avaliar</button>
+                <button class="btn-text">Ver</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ Modal Avaliar ═══ -->
+<div id="modalAvaliarOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAvaliarTitulo" onclick="if(event.target===this)fecharModalAvaliar()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button type="button" class="modal-close" onclick="fecharModalAvaliar()" aria-label="Fechar modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <h2 id="modalAvaliarTitulo">Fernando Rocha · 25/06/2026</h2>
+      <p class="modal-sub" id="modalAvaliarSub">Avaliador Carlos Mendes</p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="tipoAvaliacao">Tipo de Avaliação<span class="campo-obrigatorio">*</span></label>
+        <select id="tipoAvaliacao" onchange="onTipoAvaliacaoChange()" required>
+          <option value="">Selecione...</option>
+          <option value="performance_coach">Avaliação de Performance Coach</option>
+          <option value="extra">Avaliação Extra</option>
+        </select>
+      </div>
+
+      <div id="blocoPerformanceCoach" hidden>
+        <p class="modal-persist-hint">Os campos preenchidos permanecem salvos ao trocar de aba. <strong>Salvar</strong> grava rascunho; <strong>Concluir</strong> exige todos os campos obrigatórios (<span class="campo-obrigatorio">*</span>).</p>
+        <div class="modal-tabs" role="tablist" aria-label="Abas da avaliação">
+          <button type="button" class="modal-tab active" data-modal-tab="dados" onclick="setModalTab('dados')">Dados da Avaliação</button>
+          <button type="button" class="modal-tab" data-modal-tab="comunicacao" onclick="setModalTab('comunicacao')">Comunicação</button>
+          <button type="button" class="modal-tab" data-modal-tab="imagem" onclick="setModalTab('imagem')">Imagem</button>
+          <button type="button" class="modal-tab" id="tabMesaBtn" data-modal-tab="mesa" onclick="setModalTab('mesa')" hidden>Mesa</button>
+          <button type="button" class="modal-tab" data-modal-tab="consideracoes" onclick="setModalTab('consideracoes')">Considerações</button>
+        </div>
+
+        <!-- Dados da Avaliação -->
+        <div id="panelModalDados" class="modal-tab-panel active">
+          <div class="field-grid-2">
+            <div class="field">
+              <label for="modalTurno">Turno<span class="campo-obrigatorio">*</span></label>
+              <select id="modalTurno" required>
+                <option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="modalEstudio">Estúdio<span class="campo-obrigatorio">*</span></label>
+              <select id="modalEstudio" onchange="atualizarJogosModal()" required></select>
+            </div>
+            <div class="field">
+              <label for="modalJogo">Jogo<span class="campo-obrigatorio">*</span> <span id="modalJogoTag"></span></label>
+              <select id="modalJogo" onchange="atualizarMesasModal()" required></select>
+            </div>
+            <div class="field">
+              <label for="modalMesa">Mesa<span class="campo-obrigatorio">*</span></label>
+              <select id="modalMesa" required></select>
+              <p class="upload-hint">Número da mesa (ID Spin) — cadastro em Gestão de Estúdios → Mesas.</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="modalVideo">Vídeo da avaliação<span class="campo-obrigatorio">*</span></label>
+            <input type="file" id="modalVideo" accept="video/*" required />
+            <p class="upload-hint">Envie a gravação da sessão avaliada (formatos de vídeo comuns).</p>
+          </div>
+        </div>
+
+        <!-- Comunicação — painel sempre montado (pré-save entre abas) -->
+        <div id="panelModalComunicacao" class="modal-tab-panel" hidden></div>
+
+        <!-- Imagem -->
+        <div id="panelModalImagem" class="modal-tab-panel" hidden></div>
+
+        <!-- Mesa (cartas vs roleta) -->
+        <div id="panelModalMesa" class="modal-tab-panel" hidden>
+          <div id="panelMesaCartas"></div>
+          <div id="panelMesaRoleta" hidden></div>
+        </div>
+
+        <!-- Considerações -->
+        <div id="panelModalConsideracoes" class="modal-tab-panel" hidden>
+          <div class="field">
+            <label for="pontosFortes">Pontos Fortes<span class="campo-obrigatorio">*</span></label>
+            <textarea id="pontosFortes" required placeholder="Descreva os principais pontos fortes observados..."></textarea>
+          </div>
+          <div class="field">
+            <label for="pontosDesenvolver">Pontos a Desenvolver<span class="campo-obrigatorio">*</span></label>
+            <textarea id="pontosDesenvolver" required placeholder="Descreva oportunidades de melhoria e desenvolvimento..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="blocoAvaliacaoExtra" class="tipo-extra-placeholder" hidden>
+        Fluxo de <strong>Avaliação Extra</strong> — em definição no handoff de produto.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-left" id="modalFooterStatus" aria-live="polite"></div>
+      <div class="modal-footer-actions" id="modalFooterAcoes" hidden>
+        <button type="button" class="btn-modal" onclick="fecharModalAvaliar()">Cancelar</button>
+        <button type="button" class="btn-modal secondary" id="btnSalvarRascunho" onclick="salvarRascunhoAvaliacao()">Salvar</button>
+        <button type="button" class="btn-modal primary" id="btnConcluirAvaliacao" onclick="concluirAvaliacao()">Concluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /** Prestadores por time — staff filtra só o time selecionado */
+  const STAFF_POR_TIME = {
+    game_presenter: [
+      { value: 'todos', label: 'Todos Staff' },
+      { value: 'ana', label: 'Ana Beatriz Silva' },
+      { value: 'rafael', label: 'Rafael Costa' },
+      { value: 'juliana', label: 'Juliana Ferreira' },
+      { value: 'lucas', label: 'Lucas Almeida' },
+      { value: 'fernando', label: 'Fernando Rocha' },
+    ],
+    shuffler: [
+      { value: 'todos', label: 'Todos Staff' },
+      { value: 'diego', label: 'Diego Santana' },
+      { value: 'marcos', label: 'Marcos Vieira' },
+      { value: 'renata', label: 'Renata Prado' },
+    ],
+  };
+
+  let timeAtual = 'game_presenter';
+  let agendaSortCol = 'nome';
+  let agendaSortDir = 'asc';
+
+  function normalizarBusca(s) {
+    return (s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function filtrarBuscaAvaliacoes(termo) {
+    const q = normalizarBusca(termo);
+    document.querySelectorAll('#tbodyAvaliacoes tr').forEach(function (row) {
+      if (row.classList.contains('row-proprios-only')) return;
+      const nome = normalizarBusca(row.getAttribute('data-nome'));
+      const matchBusca = !q || nome.indexOf(q) !== -1;
+      const matchTime = row.getAttribute('data-time') === timeAtual;
+      row.classList.toggle('row-hidden', !(matchBusca && matchTime));
+    });
+  }
+
+  function filtrarBuscaAgenda(termo) {
+    const q = normalizarBusca(termo);
+    document.querySelectorAll('#tbodyAgenda tr').forEach(function (row) {
+      const nome = normalizarBusca(row.getAttribute('data-nome'));
+      const matchBusca = !q || nome.indexOf(q) !== -1;
+      const matchTime = row.getAttribute('data-time') === timeAtual;
+      row.classList.toggle('row-hidden', !(matchBusca && matchTime));
+    });
+  }
+
+  function ordenarAgenda(col) {
+    if (agendaSortCol === col) {
+      agendaSortDir = agendaSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      agendaSortCol = col;
+      agendaSortDir = col === 'golive' ? 'desc' : (col === 'nome' ? 'asc' : 'desc');
+    }
+
+    document.querySelectorAll('#tbodyAgenda').forEach(function (tbody) {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function (a, b) {
+        if (col === 'nome' || col === 'turno') {
+          const va = a.getAttribute('data-' + col) || '';
+          const vb = b.getAttribute('data-' + col) || '';
+          return agendaSortDir === 'asc' ? va.localeCompare(vb, 'pt-BR') : vb.localeCompare(va, 'pt-BR');
+        }
+        if (col === 'golive') {
+          const va = a.getAttribute('data-golive') || '';
+          const vb = b.getAttribute('data-golive') || '';
+          return agendaSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        }
+        const va = parseFloat(a.getAttribute('data-' + col) || '0');
+        const vb = parseFloat(b.getAttribute('data-' + col) || '0');
+        return agendaSortDir === 'asc' ? va - vb : vb - va;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+
+    document.querySelectorAll('.th-sort[data-sort-col]').forEach(function (th) {
+      const ativo = th.getAttribute('data-sort-col') === col;
+      th.classList.toggle('active', ativo);
+      th.setAttribute('aria-sort', ativo ? (agendaSortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    });
+  }
+
+  function setTab(tab) {
+    document.getElementById('panelAvaliacoes').classList.toggle('active', tab === 'avaliacoes');
+    document.getElementById('panelGerenciamento').classList.toggle('active', tab === 'gerenciamento');
+    document.getElementById('tabAvaliacoes').classList.toggle('active', tab === 'avaliacoes');
+    document.getElementById('tabGerenciamento').classList.toggle('active', tab === 'gerenciamento');
+    document.getElementById('btnTabAval').classList.toggle('active', tab === 'avaliacoes');
+    document.getElementById('btnTabGer').classList.toggle('active', tab === 'gerenciamento');
+  }
+
+  function setPerfil(perfil) {
+    document.body.classList.toggle('perfil-gestor', perfil === 'gestor');
+    document.body.classList.toggle('perfil-proprios', perfil === 'proprios');
+    document.querySelector('.perfil-hint-proprios').style.display = perfil === 'proprios' ? 'block' : 'none';
+    if (perfil === 'proprios') setTab('avaliacoes');
+  }
+
+  function preencherStaff(time) {
+    const sel = document.getElementById('filtroStaff');
+    const lista = STAFF_POR_TIME[time] || [];
+    sel.innerHTML = lista.map(function (s) {
+      return '<option value="' + s.value + '">' + s.label + '</option>';
+    }).join('');
+  }
+
+  function filtrarLinhasPorTime(time) {
+    timeAtual = time;
+    document.querySelectorAll('[data-time]').forEach(function (row) {
+      if (row.closest('#tbodyAvaliacoes') || row.closest('#tbodyAgenda')) {
+        const visivel = row.getAttribute('data-time') === time;
+        row.style.display = visivel ? '' : 'none';
+        if (!visivel) row.classList.remove('row-hidden');
+      } else {
+        row.style.display = row.getAttribute('data-time') === time ? '' : 'none';
+      }
+    });
+    filtrarBuscaAvaliacoes(document.getElementById('buscaAvaliacoes').value);
+    filtrarBuscaAgenda(document.getElementById('buscaAgenda').value);
+  }
+
+  function onTimeChange(time) {
+    preencherStaff(time);
+    filtrarLinhasPorTime(time);
+  }
+
+  /* init: Game Presenter default */
+  preencherStaff('game_presenter');
+  filtrarLinhasPorTime('game_presenter');
+  ordenarAgenda('nome');
+
+  /* ── Modal Avaliar ── */
+  const AVALIADOR_MOCK = 'Carlos Mendes';
+
+  const PRESTADOR_STAFF = {
+    'Fernando Rocha': { turno: 'Manhã', estudio: 'sports_club' },
+    'Camila Duarte': { turno: 'Tarde', estudio: 'blaze_dedicado' },
+    'Bruno Nakamura': { turno: 'Noite', estudio: 'sports_club' },
+    'Isabela Martins': { turno: 'Manhã', estudio: 'blaze_dedicado' },
+    'Diego Santana': { turno: 'Tarde', estudio: 'sports_club' },
+    'Marcos Vieira': { turno: 'Noite', estudio: 'sports_club' },
+  };
+
+  const ESTUDIOS_ATIVOS = [
+    { id: 'sports_club', nome: 'Sports Club' },
+    { id: 'blaze_dedicado', nome: 'Blaze Dedicado' },
+  ];
+
+  const JOGOS_POR_ESTUDIO = {
+    sports_club: ['baccarat', 'roleta', 'blackjack'],
+    blaze_dedicado: ['baccarat', 'blackjack', 'futebol_brasileiro'],
+  };
+
+  const MESAS_POR_ESTUDIO_JOGO = {
+    sports_club: {
+      baccarat: [101, 102, 103],
+      roleta: [201, 202],
+      blackjack: [301, 302, 303],
+    },
+    blaze_dedicado: {
+      baccarat: [110, 111],
+      blackjack: [310],
+      futebol_brasileiro: [401],
+    },
+  };
+
+  const JOGOS_META = {
+    baccarat: { label: 'Baccarat', mesaTipo: 'cartas', cls: 'game-baccarat' },
+    roleta: { label: 'Roleta', mesaTipo: 'roleta', cls: 'game-roleta' },
+    blackjack: { label: 'Blackjack', mesaTipo: 'cartas', cls: 'game-blackjack' },
+    futebol_brasileiro: { label: 'Futebol Brasileiro', mesaTipo: 'cartas', cls: 'game-fb' },
+  };
+
+  const CRITERIOS_COMUNICACAO = [
+    'Anúncio de estatísticas',
+    'Boas-vindas',
+    'Comentários sobre o jogo',
+    'Parabéns a vitórias',
+    'Sorriso',
+    'Volume da voz',
+  ];
+
+  const CRITERIOS_IMAGEM = [
+    'Acessórios',
+    'Cabelo',
+    'Maquiagem',
+    'Postura',
+    'Tatuagens',
+    'Unhas',
+    'Uniforme',
+  ];
+
+  const CRITERIOS_MESA_CARTAS = [
+    'Abrir e fechar o jogo',
+    'Contato com a câmera',
+    'Distribuição de cartas',
+    'Gestos relacionados ao jogo',
+    'Pontualidade nas trocas (Dealer Change)',
+    'Procedimentos à mesa',
+    'Recolhimento de cartas',
+    'Regras dos jogos',
+    'Uso de ID',
+    'Velocidade',
+  ];
+
+  const CRITERIOS_MESA_ROULETTE = [
+    'Abrir e fechar o jogo',
+    'Contato com a câmera',
+    'Gestos relacionados ao jogo',
+    'Pontualidade nas trocas (Dealer Change)',
+    'Procedimentos à mesa',
+    'Regras dos jogos',
+    'Técnica de giro',
+    'Uso de ID',
+    'Velocidade',
+  ];
+
+  let modalPrestadorAtual = null;
+
+  function hojeFormatado() {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return dd + '/' + mm + '/' + yyyy;
+  }
+
+  function opcoesNotaSelect() {
+    let html = '<option value="">Selecione...</option>';
+    for (let i = 0; i <= 5; i++) html += '<option value="' + i + '">' + i + '</option>';
+    return html;
+  }
+
+  function renderCriterios(container, prefix, titulos) {
+    container.innerHTML = titulos.map(function (titulo, idx) {
+      const id = prefix + '_' + idx;
+      return (
+        '<div class="criterio-block">' +
+          '<div class="criterio-titulo">' + titulo + '</div>' +
+          '<div class="criterio-campos">' +
+            '<div class="field" style="margin:0" data-campo-obrig="nota">' +
+              '<label for="' + id + '_nota">Nota<span class="campo-obrigatorio">*</span></label>' +
+              '<select id="' + id + '_nota" required>' + opcoesNotaSelect() + '</select>' +
+            '</div>' +
+            '<div class="field" style="margin:0" data-campo-obrig="coment">' +
+              '<label for="' + id + '_coment">Comentário<span class="campo-obrigatorio">*</span></label>' +
+              '<textarea id="' + id + '_coment" rows="2" required placeholder="Observações sobre ' + titulo.toLowerCase() + '..."></textarea>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function initModalCriterios() {
+    if (document.getElementById('panelModalComunicacao').dataset.ready) return;
+    renderCriterios(document.getElementById('panelModalComunicacao'), 'com', CRITERIOS_COMUNICACAO);
+    renderCriterios(document.getElementById('panelModalImagem'), 'img', CRITERIOS_IMAGEM);
+    renderCriterios(document.getElementById('panelMesaCartas'), 'mesa_c', CRITERIOS_MESA_CARTAS);
+    renderCriterios(document.getElementById('panelMesaRoleta'), 'mesa_r', CRITERIOS_MESA_ROULETTE);
+    document.getElementById('panelModalComunicacao').dataset.ready = '1';
+  }
+
+  function preencherEstudiosModal(estudioDefault) {
+    const sel = document.getElementById('modalEstudio');
+    sel.innerHTML = ESTUDIOS_ATIVOS.map(function (e) {
+      return '<option value="' + e.id + '">' + e.nome + '</option>';
+    }).join('');
+    if (estudioDefault) sel.value = estudioDefault;
+  }
+
+  function atualizarJogosModal() {
+    const estudio = document.getElementById('modalEstudio').value;
+    const selJogo = document.getElementById('modalJogo');
+    const jogos = JOGOS_POR_ESTUDIO[estudio] || [];
+    selJogo.innerHTML = '<option value="">Selecione...</option>' + jogos.map(function (j) {
+      return '<option value="' + j + '">' + JOGOS_META[j].label + '</option>';
+    }).join('');
+    selJogo.value = jogos[0] || '';
+    atualizarMesasModal();
+  }
+
+  function atualizarMesasModal() {
+    const estudio = document.getElementById('modalEstudio').value;
+    const jogo = document.getElementById('modalJogo').value;
+    const selMesa = document.getElementById('modalMesa');
+    const mesas = (MESAS_POR_ESTUDIO_JOGO[estudio] && MESAS_POR_ESTUDIO_JOGO[estudio][jogo]) || [];
+    selMesa.innerHTML = '<option value="">Selecione...</option>' + mesas.map(function (m) {
+      return '<option value="' + m + '">' + m + '</option>';
+    }).join('');
+    if (mesas.length) selMesa.value = String(mesas[0]);
+
+    const meta = JOGOS_META[jogo];
+    const tagEl = document.getElementById('modalJogoTag');
+    const tabMesa = document.getElementById('tabMesaBtn');
+    if (meta) {
+      tagEl.innerHTML = '<span class="game-tag ' + meta.cls + '">' + meta.label + '</span>';
+      tabMesa.hidden = false;
+      document.getElementById('panelMesaCartas').hidden = meta.mesaTipo !== 'cartas';
+      document.getElementById('panelMesaRoleta').hidden = meta.mesaTipo !== 'roleta';
+    } else {
+      tagEl.innerHTML = '';
+      tabMesa.hidden = true;
+    }
+  }
+
+  function setModalTab(tab) {
+    document.querySelectorAll('.modal-tab[data-modal-tab]').forEach(function (btn) {
+      const active = btn.getAttribute('data-modal-tab') === tab;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    const map = {
+      dados: 'panelModalDados',
+      comunicacao: 'panelModalComunicacao',
+      imagem: 'panelModalImagem',
+      mesa: 'panelModalMesa',
+      consideracoes: 'panelModalConsideracoes',
+    };
+    Object.keys(map).forEach(function (key) {
+      const panel = document.getElementById(map[key]);
+      if (!panel) return;
+      panel.hidden = key !== tab;
+    });
+  }
+
+  function atualizarFooterAcoes() {
+    const tipo = document.getElementById('tipoAvaliacao').value;
+    document.getElementById('modalFooterAcoes').hidden = !tipo;
+  }
+
+  function horaFormatada() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function limparErrosValidacao() {
+    document.querySelectorAll('#blocoPerformanceCoach .field-invalid').forEach(function (el) {
+      el.classList.remove('field-invalid');
+    });
+  }
+
+  function marcarInvalido(el) {
+    const field = el.closest('.field');
+    if (field) field.classList.add('field-invalid');
+  }
+
+  function validarContainerCriterios(container) {
+    if (!container || container.hidden) return [];
+    const erros = [];
+    container.querySelectorAll('select[id$="_nota"]').forEach(function (sel) {
+      if (sel.value === '') {
+        marcarInvalido(sel);
+        erros.push('Preencha todas as notas dos critérios.');
+      }
+    });
+    container.querySelectorAll('textarea[id$="_coment"]').forEach(function (ta) {
+      if (!ta.value.trim()) {
+        marcarInvalido(ta);
+        erros.push('Preencha todos os comentários dos critérios.');
+      }
+    });
+    return erros;
+  }
+
+  function validarFormularioConcluir() {
+    const erros = [];
+    limparErrosValidacao();
+
+    if (!document.getElementById('tipoAvaliacao').value) {
+      erros.push('Selecione o tipo de avaliação.');
+    }
+
+    ['modalTurno', 'modalEstudio', 'modalJogo', 'modalMesa'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el.value) {
+        marcarInvalido(el);
+        erros.push('Preencha todos os campos em Dados da Avaliação.');
+      }
+    });
+
+    const video = document.getElementById('modalVideo');
+    if (!video.files || !video.files.length) {
+      marcarInvalido(video);
+      erros.push('Envie o vídeo da avaliação.');
+    }
+
+    validarContainerCriterios(document.getElementById('panelModalComunicacao')).forEach(function (e) { erros.push(e); });
+    validarContainerCriterios(document.getElementById('panelModalImagem')).forEach(function (e) { erros.push(e); });
+
+    const mesaCartas = document.getElementById('panelMesaCartas');
+    const mesaRoleta = document.getElementById('panelMesaRoleta');
+    if (!mesaCartas.hidden) {
+      validarContainerCriterios(mesaCartas).forEach(function (e) { erros.push(e); });
+    } else if (!mesaRoleta.hidden) {
+      validarContainerCriterios(mesaRoleta).forEach(function (e) { erros.push(e); });
+    }
+
+    ['pontosFortes', 'pontosDesenvolver'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) {
+        marcarInvalido(el);
+        erros.push('Preencha Pontos Fortes e Pontos a Desenvolver.');
+      }
+    });
+
+    return erros.filter(function (e, i, arr) { return arr.indexOf(e) === i; });
+  }
+
+  function salvarRascunhoAvaliacao() {
+    limparErrosValidacao();
+    const status = document.getElementById('modalFooterStatus');
+    status.textContent = 'Rascunho salvo às ' + horaFormatada() + ' — você pode continuar depois.';
+    status.className = 'modal-footer-left saved';
+  }
+
+  function concluirAvaliacao() {
+    const status = document.getElementById('modalFooterStatus');
+    const erros = validarFormularioConcluir();
+    if (erros.length) {
+      status.textContent = erros[0];
+      status.className = 'modal-footer-left error';
+      return;
+    }
+    status.textContent = 'Avaliação concluída e enviada para análise.';
+    status.className = 'modal-footer-left saved';
+    setTimeout(function () { fecharModalAvaliar(); }, 1200);
+  }
+
+  function limparCamposModal() {
+    limparErrosValidacao();
+    document.querySelectorAll('#blocoPerformanceCoach select').forEach(function (el) {
+      if (el.id === 'modalTurno' || el.id === 'modalEstudio' || el.id === 'modalJogo' || el.id === 'modalMesa') return;
+      el.selectedIndex = 0;
+    });
+    document.querySelectorAll('#blocoPerformanceCoach textarea').forEach(function (el) {
+      el.value = '';
+    });
+    document.getElementById('modalVideo').value = '';
+    document.getElementById('modalFooterStatus').textContent = '';
+    document.getElementById('modalFooterStatus').className = 'modal-footer-left';
+  }
+
+  function onTipoAvaliacaoChange() {
+    const tipo = document.getElementById('tipoAvaliacao').value;
+    document.getElementById('blocoPerformanceCoach').hidden = tipo !== 'performance_coach';
+    document.getElementById('blocoAvaliacaoExtra').hidden = tipo !== 'extra';
+    atualizarFooterAcoes();
+    if (tipo === 'performance_coach') {
+      initModalCriterios();
+      setModalTab('dados');
+    }
+  }
+
+  function abrirModalAvaliar(nome, turno) {
+    modalPrestadorAtual = nome;
+    const cfg = PRESTADOR_STAFF[nome] || { turno: turno || 'Manhã', estudio: 'sports_club' };
+    document.getElementById('modalAvaliarTitulo').textContent = nome + ' · ' + hojeFormatado();
+    document.getElementById('modalAvaliarSub').textContent = 'Avaliador ' + AVALIADOR_MOCK;
+    document.getElementById('tipoAvaliacao').value = '';
+    document.getElementById('blocoPerformanceCoach').hidden = true;
+    document.getElementById('blocoAvaliacaoExtra').hidden = true;
+    document.getElementById('modalFooterAcoes').hidden = true;
+    limparCamposModal();
+    document.getElementById('modalTurno').value = cfg.turno;
+    preencherEstudiosModal(cfg.estudio);
+    atualizarJogosModal();
+    document.getElementById('tabMesaBtn').hidden = true;
+    document.getElementById('modalJogoTag').innerHTML = '';
+    setModalTab('dados');
+    document.getElementById('modalAvaliarOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function fecharModalAvaliar() {
+    limparErrosValidacao();
+    document.getElementById('modalAvaliarOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.btn-avaliar');
+    if (!btn) return;
+    e.preventDefault();
+    const row = btn.closest('tr');
+    const nome = row && row.getAttribute('data-nome') ? row.getAttribute('data-nome') : 'Prestador';
+    const turno = row && row.getAttribute('data-turno') ? row.getAttribute('data-turno') : 'Manhã';
+    abrirModalAvaliar(nome, turno);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') fecharModalAvaliar();
+  });
+</script>
+</body>
+</html>

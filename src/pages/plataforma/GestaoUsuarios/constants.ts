@@ -9,7 +9,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino, Comunicação e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -39,6 +39,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "rh", label: "RH" },
   { value: "figurino", label: "Figurino" },
   { value: "comunicacao", label: "Comunicação" },
+  { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
@@ -52,7 +53,7 @@ export const ROLES: { value: Role; label: string }[] = [
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "service_manager", "shift_leader", "prestador"] },
+  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "shift_leader", "prestador"] },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
@@ -165,6 +166,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "rh",
   "figurino",
   "comunicacao",
+  "performance_coach",
   "service_manager",
   "shift_leader",
   "prestador",
@@ -212,6 +214,7 @@ export function roleBadgeColor(role: Role): string {
     service_manager: BRAND.azul,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,
+    performance_coach: BRAND.verde,
     rh: BRAND.roxo,
     influencer: BRAND.verde,
     afiliado: BRAND.ciano,

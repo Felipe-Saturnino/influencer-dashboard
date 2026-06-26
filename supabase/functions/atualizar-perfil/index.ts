@@ -28,6 +28,7 @@ const ROLES_BLOQUEADOS = [
   'service_manager',
   'figurino',
   'comunicacao',
+  'performance_coach',
   'rh',
 ]
 

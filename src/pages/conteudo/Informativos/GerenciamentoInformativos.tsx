@@ -7,6 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
+import { propsBotaoIcone, tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -488,8 +489,7 @@ export function GerenciamentoInformativos({
                         {acoes.includes("editar") ? (
                           <button
                             type="button"
-                            aria-label={`Editar ${row.assunto}`}
-                            title={`Editar ${row.assunto}`}
+                            {...propsBotaoIcone(tooltipAcaoAbreModal("Editar informativo", row.assunto))}
                             disabled={busy}
                             onClick={() => {
                               setEditId(row.id);
@@ -503,8 +503,7 @@ export function GerenciamentoInformativos({
                         {acoes.includes("aprovar") ? (
                           <button
                             type="button"
-                            aria-label={`Aprovar ${row.assunto}`}
-                            title={`Aprovar ${row.assunto}`}
+                            {...propsBotaoIcone(`Aprovar ${row.assunto}`)}
                             disabled={busy}
                             onClick={() => void aprovar(row)}
                             style={btnAcao(t)}
@@ -525,8 +524,7 @@ export function GerenciamentoInformativos({
                         {acoes.includes("historico") ? (
                           <button
                             type="button"
-                            aria-label={`Histórico de ${row.assunto}`}
-                            title={`Histórico de ${row.assunto}`}
+                            {...propsBotaoIcone(tooltipAcaoAbreModal("Histórico", row.assunto))}
                             disabled={busy}
                             onClick={() => setHistRef({ id: row.id, assunto: row.assunto })}
                             style={btnAcao(t)}

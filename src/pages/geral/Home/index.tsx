@@ -32,6 +32,12 @@ import { ArrowRight, AlertTriangle } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
 import HomeExecutivo from "./HomeExecutivo";
+import HomePrestador from "./HomePrestador";
+import HomeFigurino from "./HomeFigurino";
+import HomeComunicacao from "./HomeComunicacao";
+import HomePerformanceCoach from "./HomePerformanceCoach";
+import HomeServiceManager from "./HomeServiceManager";
+import HomeShiftLeader from "./HomeShiftLeader";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
@@ -122,6 +128,7 @@ const ROLE_LABELS: Record<Role, string> = {
   service_manager: "Service Manager",
   figurino: "Figurino",
   comunicacao: "Comunicação",
+  performance_coach: "Performance Coach",
   rh: "RH",
   influencer: "Influencer",
   afiliado: "Afiliado",
@@ -171,6 +178,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Comunicação",
     subtitle:
       "Conteúdo, informativos e ferramentas de comunicação liberadas ao seu perfil.",
+  },
+  performance_coach: {
+    title: "Performance Coach",
+    subtitle:
+      "Acompanhamento de performance e ferramentas liberadas ao seu perfil.",
   },
   rh: {
     title: "RH",
@@ -364,6 +376,30 @@ export default function Home() {
 
   if (user.role === "executivo") {
     return <HomeExecutivo />;
+  }
+
+  if (user.role === "prestador") {
+    return <HomePrestador />;
+  }
+
+  if (user.role === "figurino") {
+    return <HomeFigurino />;
+  }
+
+  if (user.role === "comunicacao") {
+    return <HomeComunicacao />;
+  }
+
+  if (user.role === "performance_coach") {
+    return <HomePerformanceCoach />;
+  }
+
+  if (user.role === "service_manager") {
+    return <HomeServiceManager />;
+  }
+
+  if (user.role === "shift_leader") {
+    return <HomeShiftLeader />;
   }
 
   if (user.role === "operador") {

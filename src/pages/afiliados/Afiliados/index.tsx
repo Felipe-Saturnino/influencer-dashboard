@@ -491,7 +491,7 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
             </div>
             <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{row.email}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: brand.useBrand ? `1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)` : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary }} /> Modo visualização — somente leitura. Dados sensíveis protegidos.
@@ -672,7 +672,7 @@ function ModalEditar({
             </div>
             <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{row.email}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
         </div>
 
         <AfiliadoModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" />

@@ -10,6 +10,7 @@ import {
 import {
   AlertCircle,
   Calendar,
+  ChevronRight,
   Download,
   Image as ImageIcon,
   Images,
@@ -65,6 +66,9 @@ import {
   buscarMeuColaboradorGaleria,
   fotosGeraisDoEvento,
   excluirMarketingEventoGaleria,
+  buildRotulosFotoGaleria,
+  rotuloExibicaoFotoGaleria,
+  nomeArquivoDownloadFotoGaleria,
   MARKETING_FOTO_MIME_PERMITIDOS,
   marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
@@ -74,6 +78,7 @@ type GaleriaBloco = {
   id: string;
   titulo: string;
   sub: string;
+  descricao?: string | null;
   fotos: MarketingFotoComEvento[];
 };
 
@@ -199,6 +204,7 @@ export default function GaleriaFotos() {
   const [urlsPrestador, setUrlsPrestador] = useState<Record<string, string>>({});
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
@@ -222,6 +228,18 @@ export default function GaleriaFotos() {
     return meuRhFuncionarioId ? [meuRhFuncionarioId] : [];
   }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
+  const rotulosFotoGaleria = useMemo(() => buildRotulosFotoGaleria(fotos), [fotos]);
+  const forcarExpandirEventos = buscaGaleria.trim().length > 0;
+
+  const toggleEventoExpandido = (eventoId: string) => {
+    setEventosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventoId)) next.delete(eventoId);
+      else next.add(eventoId);
+      return next;
+    });
+  };
+
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
       .from("marketing_eventos")
@@ -236,7 +254,7 @@ export default function GaleriaFotos() {
     const { data, error } = await supabase
       .from("marketing_fotos")
       .select(
-        "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, ativo), rh_funcionarios!rh_funcionario_id(id, nome)",
+        "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, descricao, ativo), rh_funcionarios!rh_funcionario_id(id, nome)",
       )
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -381,6 +399,7 @@ export default function GaleriaFotos() {
             id: ev.id,
             titulo: ev.nome,
             sub: fmtDataEvento(ev.data_evento),
+            descricao: ev.descricao?.trim() || null,
             fotos: [],
           });
         }
@@ -643,13 +662,115 @@ export default function GaleriaFotos() {
     if (!url) return;
     const a = document.createElement("a");
     a.href = url;
-    a.download = f.file_name;
+    a.download = nomeArquivoDownloadFotoGaleria(f, rotulosFotoGaleria);
     a.rel = "noopener noreferrer";
     a.target = "_blank";
     document.body.appendChild(a);
     a.click();
     a.remove();
   };
+
+  const renderGradeFotosGaleria = (lista: MarketingFotoComEvento[]) => (
+    <div className="app-grid-3" style={{ gap: 12 }}>
+      {lista.map((f) => {
+        const thumb = urlThumbnail(f);
+        const rotuloFoto = rotuloExibicaoFotoGaleria(f, rotulosFotoGaleria);
+        return (
+          <div
+            key={f.id}
+            style={{
+              position: "relative",
+              borderRadius: 12,
+              overflow: "hidden",
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setLightbox(f)}
+              aria-label={`Visualizar ${rotuloFoto}`}
+              title={`Visualizar ${rotuloFoto}`}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              {thumb ? (
+                <img
+                  src={thumb}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style={estiloThumbGaleria(f.tipo)}
+                />
+              ) : (
+                <div
+                  style={{
+                    aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: t.textMuted,
+                  }}
+                >
+                  <ImageIcon size={28} aria-hidden />
+                </div>
+              )}
+            </button>
+            <div
+              style={{
+                padding: "8px 10px",
+                fontSize: 11,
+                fontFamily: FONT.body,
+                color: t.textMuted,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {rotuloFoto}
+              </span>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => void baixarFoto(f)}
+                  aria-label={`Baixar ${rotuloFoto}`}
+                  title={`Baixar ${rotuloFoto}`}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Download size={13} aria-hidden />
+                </button>
+                {perm.canExcluirOk ? (
+                  <BtnExcluirLinha
+                    descricaoItem={descricaoBotaoExcluir("foto", rotuloFoto)}
+                    onClick={() => setFotoExcluir(f)}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   if (perm.canView === "nao") {
     return (
@@ -862,113 +983,93 @@ export default function GaleriaFotos() {
               </div>
             </div>
           ) : (
-            galeriaBlocos.map((bloco) => (
-              <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
-                <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
-                <div
-                  className="app-grid-3"
-                  style={{ gap: 12, marginTop: 14 }}
-                >
-                  {bloco.fotos.map((f) => {
-                    const thumb = urlThumbnail(f);
-                    return (
-                      <div
-                        key={f.id}
+            galeriaBlocos.map((bloco) => {
+              if (bloco.kind === "evento") {
+                const expandido = forcarExpandirEventos || eventosExpandidos.has(bloco.id);
+                const qtdFotos = bloco.fotos.length;
+                const rotuloQtdFotos = qtdFotos === 1 ? "1 foto" : `${qtdFotos} fotos`;
+                return (
+                  <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                    <button
+                      type="button"
+                      onClick={() => toggleEventoExpandido(bloco.id)}
+                      aria-expanded={expandido}
+                      aria-controls={`panel-galeria-evento-${bloco.id}`}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        padding: 0,
+                        margin: 0,
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <ChevronRight
+                        size={14}
+                        color={t.textMuted}
+                        aria-hidden
                         style={{
-                          position: "relative",
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
+                          marginTop: 4,
+                          transform: expandido ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <SectionTitle sub={bloco.sub} compact>
+                          {bloco.titulo}
+                        </SectionTitle>
+                        {bloco.descricao ? (
+                          <p
+                            style={{
+                              margin: "4px 0 0",
+                              fontSize: 13,
+                              fontWeight: 400,
+                              color: t.textMuted,
+                              fontFamily: FONT.body,
+                              lineHeight: 1.55,
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {bloco.descricao}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: t.textMuted,
+                          fontFamily: FONT.body,
+                          flexShrink: 0,
+                          marginTop: 2,
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setLightbox(f)}
-                          aria-label={`Visualizar ${f.file_name}`}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            padding: 0,
-                            border: "none",
-                            background: "transparent",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              style={estiloThumbGaleria(f.tipo)}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: t.textMuted,
-                              }}
-                            >
-                              <ImageIcon size={28} aria-hidden />
-                            </div>
-                          )}
-                        </button>
-                        <div
-                          style={{
-                            padding: "8px 10px",
-                            fontSize: 11,
-                            fontFamily: FONT.body,
-                            color: t.textMuted,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {f.tipo === "prestador" && fotoPrestadorEmbed(f)?.nome
-                              ? fotoPrestadorEmbed(f)!.nome
-                              : f.file_name}
-                          </span>
-                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                            <button
-                              type="button"
-                              onClick={() => void baixarFoto(f)}
-                              aria-label={`Baixar ${f.file_name}`}
-                              title={`Baixar ${f.file_name}`}
-                              style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: t.inputBg,
-                                color: t.text,
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <Download size={13} aria-hidden />
-                            </button>
-                            {perm.canExcluirOk ? (
-                              <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("foto", f.file_name)}
-                                onClick={() => setFotoExcluir(f)}
-                              />
-                            ) : null}
-                          </div>
-                        </div>
+                        {rotuloQtdFotos}
+                      </span>
+                    </button>
+                    {expandido ? (
+                      <div
+                        id={`panel-galeria-evento-${bloco.id}`}
+                        style={{ marginTop: 14 }}
+                      >
+                        {renderGradeFotosGaleria(bloco.fotos)}
                       </div>
-                    );
-                  })}
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                  <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
+                  <div style={{ marginTop: 14 }}>{renderGradeFotosGaleria(bloco.fotos)}</div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       ) : null}
@@ -1407,7 +1508,10 @@ export default function GaleriaFotos() {
 
       {lightbox ? (
         <ModalBase onClose={() => setLightbox(null)} zIndex={1050} maxWidth={720}>
-          <ModalHeader title={lightbox.file_name} onClose={() => setLightbox(null)} />
+          <ModalHeader
+            title={rotuloExibicaoFotoGaleria(lightbox, rotulosFotoGaleria)}
+            onClose={() => setLightbox(null)}
+          />
           {lightboxUrl ? (
             <img
               src={lightboxUrl}
@@ -1474,7 +1578,10 @@ export default function GaleriaFotos() {
 
       {fotoExcluir ? (
         <ModalConfirmExcluirPadrao
-          descricaoItem={descricaoModalExcluirItem("a foto", fotoExcluir.file_name)}
+          descricaoItem={descricaoModalExcluirItem(
+            "a foto",
+            fotoExcluir ? rotuloExibicaoFotoGaleria(fotoExcluir, rotulosFotoGaleria) : "",
+          )}
           onCancel={() => setFotoExcluir(null)}
           onConfirm={() => void confirmarExcluir()}
           loading={excluindo}

@@ -585,7 +585,7 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
             </h2>
             <StatusAfiliadoBadge value={row.status} />
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} aria-hidden="true" />
           </button>
         </div>
@@ -902,7 +902,7 @@ function ModalEditar({
           <h2 id="modal-af-net-edit-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
             {row ? "Editar afiliado" : "Novo afiliado"}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} aria-hidden="true" />
           </button>
         </div>

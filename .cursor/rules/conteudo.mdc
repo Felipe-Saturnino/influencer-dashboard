@@ -360,6 +360,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Previews QR:** `aspectRatio: "600 / 760"`; skeleton com `app-skeleton-pulse`; `aria-label` específico por variante de download; `Loader2` em "Gerando…".
 - **Strip URL:** `brand.primaryTransparentBorder/Bg`; input UTM `aria-label="Valor do utm_source"`.
 - Gate `verificarElegibilidadeAgendaLive`: manter antes do RPC para `roleParidadeInfluencer` — não remover por permissão.
+- **Emissão → Gestão de Links:** RPC `registrar_utm_alias_tracking_casa_apostas` grava `utm_aliases` com `status = mapeado`, `influencer_id` do alvo e espelha `influencer_perfil.utm_source`; payload do influencer envia `p_influencer_id: user.id`. Sync CDA **não** rebaixa alias com `mapeado_por` / `influencer_id` para pendente.
 
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 

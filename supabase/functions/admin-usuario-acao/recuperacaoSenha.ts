@@ -1,10 +1,10 @@
 import { formatarData, hojeISO, secao } from './common.ts'
 import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 import {
-  DEFAULT_LOGIN_URL,
   emailCtaButton,
   emailTransacionalShell,
   escapeHtml,
+  PRODUCTION_LOGIN_URL,
   resolveLogoUrls,
 } from './transacionalShell.ts'
 
@@ -14,7 +14,8 @@ export interface RecuperacaoSenhaEmailParams {
   nome: string
   email: string
   senhaTemporaria: string
-  loginUrl: string
+  /** @deprecated Ignorado — CTA sempre aponta para produção. */
+  loginUrl?: string
   supabaseUrl: string
 }
 
@@ -22,7 +23,7 @@ export function buildEmailRecuperacaoSenhaHtml(params: RecuperacaoSenhaEmailPara
   const nome = escapeHtml(params.nome)
   const email = escapeHtml(params.email)
   const senha = escapeHtml(params.senhaTemporaria)
-  const loginUrl = escapeHtml(params.loginUrl.trim() || DEFAULT_LOGIN_URL)
+  const loginUrl = escapeHtml(PRODUCTION_LOGIN_URL)
   const { logoDark, logoLight } = resolveLogoUrls(params.supabaseUrl)
 
   const corpo = secao(

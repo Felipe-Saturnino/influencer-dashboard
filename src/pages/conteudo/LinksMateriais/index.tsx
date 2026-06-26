@@ -295,7 +295,7 @@ export default function LinksMateriais() {
     try {
       const payload =
         roleParidadeInfluencer(user.role)
-          ? { p_utm_source: raw, p_influencer_id: null }
+          ? { p_utm_source: raw, p_influencer_id: user.id }
           : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {
