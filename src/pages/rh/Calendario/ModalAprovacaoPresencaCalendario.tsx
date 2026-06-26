@@ -147,6 +147,10 @@ export function ModalAprovacaoPresencaCalendario({
       setErr("Informe a correção de saída no formato HH:MM.");
       return;
     }
+    if (!observacao.trim()) {
+      setErr("Informe a observação da correção.");
+      return;
+    }
     setSalvando(true);
     onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() });
     setSalvando(false);
@@ -201,6 +205,7 @@ export function ModalAprovacaoPresencaCalendario({
         <div style={{ marginBottom: 8 }}>
           <label htmlFor="pres-correcao-obs" style={labelField}>
             Observação
+            <CampoObrigatorioMark />
           </label>
           <textarea
             id="pres-correcao-obs"
@@ -208,6 +213,7 @@ export function ModalAprovacaoPresencaCalendario({
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}
             style={{ ...inputField(t), resize: "vertical" }}
+            aria-required="true"
           />
         </div>
         {err ? (

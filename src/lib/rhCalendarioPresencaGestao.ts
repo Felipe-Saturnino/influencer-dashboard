@@ -240,6 +240,15 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
     };
   }
 
+  if (gestao?.statusGestao === "em_analise") {
+    const temHist = (gestao.historico?.length ?? 0) > 0;
+    return {
+      acaoPrimaria: null,
+      mostrarHistorico: temHist,
+      mostrarTravessaoAcoes: !temHist,
+    };
+  }
+
   const passouLimite =
     situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
@@ -256,7 +265,7 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
     situacao === "Escalado" &&
     temCheckIn &&
     temCheckOut &&
-    (statusBase === "Registrado" || gestao?.statusGestao === "em_analise");
+    statusBase === "Registrado";
 
   if (podeAprovar) {
     return { acaoPrimaria: "aprovar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
@@ -278,4 +287,51 @@ export function appendHistoricoPresenca(
     correcao: gestao?.correcao,
     historico: [...(gestao?.historico ?? []), item],
   };
+}
+
+export type PresencaKpisConsolidados = {
+  escalados: number;
+  trabalhados: number;
+  faltas: number;
+  trocas: number;
+  venda: number;
+  compra: number;
+};
+
+export const PRESENCA_KPIS_ZERO: PresencaKpisConsolidados = {
+  escalados: 0,
+  trabalhados: 0,
+  faltas: 0,
+  trocas: 0,
+  venda: 0,
+  compra: 0,
+};
+
+export type PresencaKpiDiaInput = {
+  situacao: string;
+  status: string;
+  temCheckIn: boolean;
+};
+
+/** KPIs do mês na aba Controle de Presença (staff + dias já resolvidos). */
+export function computePresencaKpisConsolidados(dias: PresencaKpiDiaInput[]): PresencaKpisConsolidados {
+  let escalados = 0;
+  let trabalhados = 0;
+  let faltas = 0;
+  let trocas = 0;
+  let venda = 0;
+  let compra = 0;
+
+  for (const d of dias) {
+    if (d.situacao === "Escalado") {
+      escalados += 1;
+      if (d.temCheckIn) trabalhados += 1;
+    }
+    if (d.status === "Falta") faltas += 1;
+    if (d.situacao === "Troca") trocas += 1;
+    if (d.situacao === "Venda") venda += 1;
+    if (d.situacao === "Compra") compra += 1;
+  }
+
+  return { escalados, trabalhados, faltas, trocas, venda, compra };
 }

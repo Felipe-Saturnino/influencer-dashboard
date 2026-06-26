@@ -92,9 +92,11 @@ import { CelulaIndicadorAlteracaoEscala } from "../GestaoEscala/CelulaIndicadorA
 import {
   appendHistoricoPresenca,
   chavePresencaGestao,
+  computePresencaKpisConsolidados,
   fundoLinhaPresencaDiaHoje,
   linhaPresencaDestaqueHoje,
   PRESENCA_DESTAQUE_VERDE_HEX,
+  PRESENCA_KPIS_ZERO,
   resolverAcoesPresencaLinha,
   resolverStatusPresencaLinha,
   type PresencaDiaGestao,
@@ -1313,6 +1315,98 @@ export default function RhCalendarioPage() {
     return horario ?? "—";
   }
 
+  /** Situação (coluna Controle de Presença) para o dia do prestador em modo «Próprios». */
+  function situacaoPresencaControleModalProprio(iso: string): string {
+    const fid = meuRhFuncionarioId;
+    if (!fid) return "—";
+    const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+    return situacaoGestaoEscalaParaDia(valorG);
+  }
+
+  function ModalDiaReuniaoCardProprio({ item }: { item: CompromissoAgendaExtra }) {
+    const det = item.reuniaoDetalhe;
+    const cardStyle: CSSProperties = {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      padding: "10px 12px",
+      borderRadius: 10,
+      border: "1px solid rgba(245,158,11,0.35)",
+      background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
+      fontFamily: FONT.body,
+    };
+    if (!det) {
+      return (
+        <div role="listitem" style={cardStyle}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: t.text, lineHeight: 1.4 }}>
+            <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>{item.titulo}</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div role="listitem" style={cardStyle}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: t.text, lineHeight: 1.4, minWidth: 0 }}>
+            Reunião com {det.comQuemLabel} - {det.turno}
+          </div>
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: t.text,
+            paddingLeft: 22,
+            lineHeight: 1.45,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {det.motivo}
+        </div>
+      </div>
+    );
+  }
+
+  function ModalDiaTurnoCardProprio({ comp, iso }: { comp: CompromissoEscalaCal; iso: string }) {
+    const horario = horarioSubtituloParaCompromissoCal(comp);
+    const situacao = situacaoPresencaControleModalProprio(iso);
+    const linhaHorario = horario !== undefined ? `${horario} - ${situacao}` : situacao;
+    return (
+      <div
+        role="listitem"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px solid ${BRAND.azul}40`,
+          background: isDark ? "rgba(30,54,248,0.12)" : "rgba(30,54,248,0.08)",
+          fontFamily: FONT.body,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <Clock size={14} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, lineHeight: 1.4, minWidth: 0 }}>
+            Turno de {comp.turno}
+          </div>
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: t.textMuted,
+            paddingLeft: 22,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1.45,
+          }}
+        >
+          {linhaHorario}
+        </div>
+      </div>
+    );
+  }
+
   function AgendaExtraDiaChip({
     linha,
   }: {
@@ -1717,11 +1811,64 @@ export default function RhCalendarioPage() {
     return out;
   }, [current]);
 
+  const kpisPresencaConsolidados = useMemo(() => {
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) return PRESENCA_KPIS_ZERO;
+    const pRow = prestadorPorId.get(fid);
+    const slug = (pRow?.staff_operadora_slug ?? "").trim();
+    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+    const diasInput = diasDoMesPresenca.map((dia) => {
+      const iso = toISO(dia);
+      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+      const situacao = situacaoGestaoEscalaParaDia(valorG);
+      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+      const pt = mapaPontoPorDiaIso.get(iso);
+      const entEsc = esc ? esc.entrada : "—";
+      const saiEsc = esc ? esc.saida : "—";
+      const temCheckIn = Boolean(pt?.check_in_at);
+      const temCheckOut = Boolean(pt?.check_out_at);
+      const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+      const gestaoDia = presencaGestaoPorChave.get(chavePresencaGestao(fid, iso));
+      const status = resolverStatusPresencaLinha({
+        situacao,
+        diaIso: iso,
+        entEsc,
+        saiEsc,
+        temCheckIn,
+        temCheckOut,
+        statusBase: stBase,
+        gestao: gestaoDia,
+      });
+      return { situacao, status, temCheckIn };
+    });
+    return computePresencaKpisConsolidados(diasInput);
+  }, [
+    presencaFilterStaffIds,
+    diasDoMesPresenca,
+    rawGradeRows,
+    mapaPontoPorDiaIso,
+    presencaGestaoPorChave,
+    prestadorPorId,
+    mapOpTurnos,
+  ]);
+
+  const kpisPresencaCarregando =
+    presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes);
+
+  const kpiPresencaSkeletonStyle: CSSProperties = {
+    height: 28,
+    width: "65%",
+    borderRadius: 8,
+    background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+  };
+
   const nomeUsuarioPresencaGestao = useMemo(() => {
+    const nome = user?.name?.trim();
+    if (nome) return nome;
     const email = user?.email?.trim();
-    if (!email) return "Usuário";
-    return email;
-  }, [user?.email]);
+    if (email) return email;
+    return "Usuário";
+  }, [user?.name, user?.email]);
 
   const confirmarAprovacaoPresenca = useCallback(() => {
     if (!presencaAlvoModal) return;
@@ -2089,17 +2236,51 @@ export default function RhCalendarioPage() {
         </div>
       ) : (
         <>
-          <div className="app-grid-kpi-3" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
+          <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>
             {(
               [
-                { label: "TRABALHADOS", display: "—", cor: "#22c55e" },
-                { label: "PENDENTES", display: "—", cor: "#f59e0b" },
-                { label: "APROVADOS", display: "—", cor: "var(--brand-primary, #7c3aed)" },
+                {
+                  label: "ESCALADOS",
+                  value: kpisPresencaConsolidados.escalados,
+                  cor: "var(--brand-primary, #7c3aed)",
+                  detalhe: (
+                    <>
+                      <span style={{ color: "#22c55e", fontWeight: 700 }}>
+                        {kpisPresencaConsolidados.trabalhados.toLocaleString("pt-BR")}
+                      </span>{" "}
+                      Trabalhados
+                      <span style={{ margin: "0 6px", color: t.textMuted }}>·</span>
+                      <span style={{ color: "#e84025", fontWeight: 700 }}>
+                        {kpisPresencaConsolidados.faltas.toLocaleString("pt-BR")}
+                      </span>{" "}
+                      Faltas
+                    </>
+                  ),
+                },
+                {
+                  label: "TROCAS",
+                  value: kpisPresencaConsolidados.trocas,
+                  cor: "#a78bfa",
+                },
+                {
+                  label: "VENDA",
+                  value: kpisPresencaConsolidados.venda,
+                  cor: "#22c55e",
+                },
+                {
+                  label: "COMPRA",
+                  value: kpisPresencaConsolidados.compra,
+                  cor: "#f59e0b",
+                },
               ] as const
             ).map((k) => (
               <div
                 key={k.label}
-                aria-label={`${k.label}: ${k.display}`}
+                aria-label={
+                  kpisPresencaCarregando
+                    ? k.label
+                    : `${k.label}: ${k.value.toLocaleString("pt-BR")}`
+                }
                 style={{
                   borderRadius: 14,
                   border: `1px solid ${t.cardBorder}`,
@@ -2128,10 +2309,35 @@ export default function RhCalendarioPage() {
                     color: k.cor,
                     fontFamily: FONT_TITLE,
                     marginTop: 6,
+                    minHeight: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {k.display}
+                  {kpisPresencaCarregando ? (
+                    <div style={kpiPresencaSkeletonStyle} aria-hidden />
+                  ) : (
+                    k.value.toLocaleString("pt-BR")
+                  )}
                 </div>
+                {"detalhe" in k && k.detalhe ? (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      fontFamily: FONT.body,
+                      lineHeight: 1.5,
+                      color: t.textMuted,
+                    }}
+                  >
+                    {kpisPresencaCarregando ? (
+                      <div style={{ ...kpiPresencaSkeletonStyle, width: "85%", height: 14, marginTop: 0 }} aria-hidden />
+                    ) : (
+                      k.detalhe
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -2311,29 +2517,14 @@ export default function RhCalendarioPage() {
                       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
                       const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
                       const correcao = gestaoDia?.correcao;
-                      const entRealExib = correcao?.entradaCorrigida ?? entReal;
-                      const saiRealExib = correcao?.saidaCorrigida ?? saiReal;
-                      const horasRealExib = correcao
-                        ? formatoDuracaoFmtHorasTotal(correcao.entradaCorrigida, correcao.saidaCorrigida)
-                        : horasReal;
-                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
-                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
-                      const horasRealDesvio = correcao
-                        ? (() => {
-                            const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
-                            const realMin = duracaoMinutosRelogioHHMM(
-                              correcao.entradaCorrigida,
-                              correcao.saidaCorrigida,
-                            );
-                            if (escMin == null || realMin == null) return false;
-                            return Math.abs(realMin - escMin) > 5;
-                          })()
-                        : presencaDesvioHorasMaior5Min(
-                            entEsc,
-                            saiEsc,
-                            pt?.check_in_at ?? null,
-                            pt?.check_out_at ?? null,
-                          );
+                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entReal);
+                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiReal);
+                      const horasRealDesvio = presencaDesvioHorasMaior5Min(
+                        entEsc,
+                        saiEsc,
+                        pt?.check_in_at ?? null,
+                        pt?.check_out_at ?? null,
+                      );
                       const btnIconPresenca: CSSProperties = {
                         width: 32,
                         height: 32,
@@ -2406,23 +2597,20 @@ export default function RhCalendarioPage() {
                               ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {entRealExib}
+                            {entReal}
                             {correcao ? (
                               <CelulaIndicadorAlteracaoEscala
                                 t={t}
                                 tituloTooltip="Correção de Entrada"
-                                rotuloValorAnterior="Entrada realizada:"
-                                valorAnteriorLabel={correcao.entradaRealAnterior}
+                                rotuloValorAnterior="Correção de Entrada:"
+                                rotuloDataHora="Data/Hora da Alteração:"
+                                corIcone="#f59e0b"
+                                valorAnteriorLabel={correcao.entradaCorrigida}
                                 meta={{
-                                  valorAnterior: correcao.entradaRealAnterior,
+                                  valorAnterior: correcao.entradaCorrigida,
                                   alteradoPorNome: correcao.corrigidoPorNome,
                                   alteradoEm: correcao.corrigidoEm,
-                                  observacao: [
-                                    `Corrigido para ${correcao.entradaCorrigida}`,
-                                    correcao.observacao,
-                                  ]
-                                    .filter(Boolean)
-                                    .join("\n\n"),
+                                  observacao: correcao.observacao,
                                 }}
                               />
                             ) : null}
@@ -2442,23 +2630,20 @@ export default function RhCalendarioPage() {
                               ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {saiRealExib}
+                            {saiReal}
                             {correcao ? (
                               <CelulaIndicadorAlteracaoEscala
                                 t={t}
                                 tituloTooltip="Correção de Saída"
-                                rotuloValorAnterior="Saída realizada:"
-                                valorAnteriorLabel={correcao.saidaRealAnterior}
+                                rotuloValorAnterior="Correção de Saída:"
+                                rotuloDataHora="Data/Hora da Alteração:"
+                                corIcone="#f59e0b"
+                                valorAnteriorLabel={correcao.saidaCorrigida}
                                 meta={{
-                                  valorAnterior: correcao.saidaRealAnterior,
+                                  valorAnterior: correcao.saidaCorrigida,
                                   alteradoPorNome: correcao.corrigidoPorNome,
                                   alteradoEm: correcao.corrigidoEm,
-                                  observacao: [
-                                    `Corrigido para ${correcao.saidaCorrigida}`,
-                                    correcao.observacao,
-                                  ]
-                                    .filter(Boolean)
-                                    .join("\n\n"),
+                                  observacao: correcao.observacao,
                                 }}
                               />
                             ) : null}
@@ -2477,7 +2662,7 @@ export default function RhCalendarioPage() {
                               ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {horasRealExib}
+                            {horasReal}
                           </td>
                           <td style={dataTable.tdCenter}>{st}</td>
                           <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
@@ -2501,9 +2686,9 @@ export default function RhCalendarioPage() {
                                           entEsc,
                                           saiEsc,
                                           horasEsc,
-                                          entReal: entRealExib,
-                                          saiReal: saiRealExib,
-                                          horasReal: horasRealExib,
+                                          entReal,
+                                          saiReal,
+                                          horasReal,
                                           entRealOriginal: entReal,
                                           saiRealOriginal: saiReal,
                                         });
@@ -2585,7 +2770,18 @@ export default function RhCalendarioPage() {
               if (mostrarTipo("reunioes") && r.length > 0) {
                 partes.push({
                   key: "reunioes",
-                  node: (
+                  node: soPropriosCal ? (
+                    <div
+                      key="reunioes"
+                      style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}
+                      role="list"
+                      aria-label="Reuniões agendadas para este dia"
+                    >
+                      {r.map((x) => (
+                        <ModalDiaReuniaoCardProprio key={x.id} item={x} />
+                      ))}
+                    </div>
+                  ) : (
                     <div key="reunioes" style={{ marginBottom: 20 }}>
                       <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
                         Reuniões
@@ -2683,7 +2879,18 @@ export default function RhCalendarioPage() {
               if (mostrarTipo("turnos") && turnos.length > 0) {
                 partes.push({
                   key: "turnos",
-                  node: (
+                  node: soPropriosCal ? (
+                    <div
+                      key="turnos"
+                      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                      role="list"
+                      aria-label="Turnos agendados para este dia"
+                    >
+                      {turnos.map((comp) => (
+                        <ModalDiaTurnoCardProprio key={`${comp.prestadorId}-${comp.turno}`} comp={comp} iso={iso} />
+                      ))}
+                    </div>
+                  ) : (
                     <div key="turnos">
                       <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
                         Turnos
