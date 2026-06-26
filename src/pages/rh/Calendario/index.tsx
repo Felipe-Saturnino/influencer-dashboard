@@ -2340,6 +2340,15 @@ export default function RhCalendarioPage() {
                         alignItems: "center",
                         justifyContent: "center",
                         fontFamily: FONT.body,
+                        flexShrink: 0,
+                      };
+                      const acoesCellInner: CSSProperties = {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        minHeight: 32,
+                        flexWrap: "nowrap",
                       };
                       const labelDiaAria = dia.toLocaleDateString("pt-BR", {
                         weekday: "long",
@@ -2455,68 +2464,65 @@ export default function RhCalendarioPage() {
                             {horasRealExib}
                           </td>
                           <td style={dataTable.tdCenter}>{st}</td>
-                          <td style={dataTable.tdCenter}>
-                            {acoesLinha.mostrarTravessaoAcoes ? (
-                              "—"
-                            ) : (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 6,
-                                  justifyContent: "center",
-                                }}
-                              >
-                                {acoesLinha.acaoPrimaria === "aprovar" ? (
-                                  <button
-                                    type="button"
-                                    style={btnIconPresenca}
-                                    aria-label={`Aprovar presença — ${labelDiaAria}`}
-                                    title="Aprovar"
-                                    onClick={() => {
-                                      setPresencaAlvoModal({
-                                        funcionarioId: fid,
-                                        dia,
-                                        entEsc,
-                                        saiEsc,
-                                        horasEsc,
-                                        entReal: entRealExib,
-                                        saiReal: saiRealExib,
-                                        horasReal: horasRealExib,
-                                        entRealOriginal: entReal,
-                                        saiRealOriginal: saiReal,
-                                      });
-                                    }}
-                                  >
-                                    <Check size={14} aria-hidden="true" />
-                                  </button>
-                                ) : null}
-                                {acoesLinha.acaoPrimaria === "justificar" ? (
-                                  <button
-                                    type="button"
-                                    style={btnIconPresenca}
-                                    aria-label={`Justificar presença — ${labelDiaAria}`}
-                                    title="Justificar"
-                                    onClick={() => setPresencaJustificarAberto(true)}
-                                  >
-                                    <ClipboardPen size={14} aria-hidden="true" />
-                                  </button>
-                                ) : null}
-                                {acoesLinha.mostrarHistorico ? (
-                                  <button
-                                    type="button"
-                                    style={btnIconPresenca}
-                                    aria-label={`Histórico de presença — ${labelDiaAria}`}
-                                    title="Histórico"
-                                    onClick={() =>
-                                      setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
-                                    }
-                                  >
-                                    <Clock size={14} aria-hidden="true" />
-                                  </button>
-                                ) : null}
-                              </div>
-                            )}
+                          <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
+                            <div style={acoesCellInner}>
+                              {acoesLinha.mostrarTravessaoAcoes ? (
+                                <span style={{ lineHeight: "32px" }} aria-hidden="true">
+                                  —
+                                </span>
+                              ) : (
+                                <>
+                                  {acoesLinha.acaoPrimaria === "aprovar" ? (
+                                    <button
+                                      type="button"
+                                      style={btnIconPresenca}
+                                      aria-label={`Aprovar presença — ${labelDiaAria}`}
+                                      title="Aprovar"
+                                      onClick={() => {
+                                        setPresencaAlvoModal({
+                                          funcionarioId: fid,
+                                          dia,
+                                          entEsc,
+                                          saiEsc,
+                                          horasEsc,
+                                          entReal: entRealExib,
+                                          saiReal: saiRealExib,
+                                          horasReal: horasRealExib,
+                                          entRealOriginal: entReal,
+                                          saiRealOriginal: saiReal,
+                                        });
+                                      }}
+                                    >
+                                      <Check size={14} aria-hidden="true" />
+                                    </button>
+                                  ) : null}
+                                  {acoesLinha.acaoPrimaria === "justificar" ? (
+                                    <button
+                                      type="button"
+                                      style={btnIconPresenca}
+                                      aria-label={`Justificar presença — ${labelDiaAria}`}
+                                      title="Justificar"
+                                      onClick={() => setPresencaJustificarAberto(true)}
+                                    >
+                                      <ClipboardPen size={14} aria-hidden="true" />
+                                    </button>
+                                  ) : null}
+                                  {acoesLinha.mostrarHistorico ? (
+                                    <button
+                                      type="button"
+                                      style={btnIconPresenca}
+                                      aria-label={`Histórico de presença — ${labelDiaAria}`}
+                                      title="Histórico"
+                                      onClick={() =>
+                                        setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
+                                      }
+                                    >
+                                      <Clock size={14} aria-hidden="true" />
+                                    </button>
+                                  ) : null}
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

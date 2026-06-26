@@ -1127,14 +1127,16 @@ export default function RhGestaoStaffPage() {
                               <Pencil size={14} aria-hidden />
                             </button>
                           ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setModalAnotacoes(row)}
-                            style={btnIconTabela}
-                            aria-label={`Anotações de ${row.nome}`}
-                          >
-                            <StickyNote size={14} aria-hidden />
-                          </button>
+                          {perm.canEditarOk ? (
+                            <button
+                              type="button"
+                              onClick={() => setModalAnotacoes(row)}
+                              style={btnIconTabela}
+                              aria-label={`Anotações de ${row.nome}`}
+                            >
+                              <StickyNote size={14} aria-hidden />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
