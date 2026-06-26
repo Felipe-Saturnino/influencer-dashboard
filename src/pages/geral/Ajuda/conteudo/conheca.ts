@@ -845,7 +845,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Galeria",
         texto:
-          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por defeito) e busque por nome do evento ou arquivo. Em **Minhas Fotos**, quem tem permissão de **Editar** filtra por colaborador (**Todos Colaboradores** por defeito); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por colaborador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
+          "Use as sub-abas **Gerais** e **Minhas Fotos**. Em **Gerais**, filtre por evento no campo **Eventos** (**Todos Eventos** por defeito) e busque por nome do evento ou arquivo. Cada evento aparece em um bloco recolhível (seta à esquerda, **fechado por defeito**): o título e a data ficam no cabeçalho, com a **descrição do evento** logo abaixo; clique na seta para ver as fotos. Com busca ativa, os blocos com resultados abrem automaticamente.\n\nEm **Minhas Fotos**, quem tem permissão de **Editar** filtra por colaborador (**Todos Colaboradores** por defeito); demais perfis veem o filtro fixo no próprio nome.\n\nAs fotos aparecem em blocos por evento (Gerais) ou por colaborador (Minhas Fotos). Clique na miniatura para ampliar; use o ícone de download para salvar. Exclusão exige permissão de Excluir e abre o pop-up padrão de confirmação.",
       },
       {
         subtitulo: "Aba Upload",

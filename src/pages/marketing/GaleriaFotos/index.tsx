@@ -670,6 +670,107 @@ export default function GaleriaFotos() {
     a.remove();
   };
 
+  const renderGradeFotosGaleria = (lista: MarketingFotoComEvento[]) => (
+    <div className="app-grid-3" style={{ gap: 12 }}>
+      {lista.map((f) => {
+        const thumb = urlThumbnail(f);
+        const rotuloFoto = rotuloExibicaoFotoGaleria(f, rotulosFotoGaleria);
+        return (
+          <div
+            key={f.id}
+            style={{
+              position: "relative",
+              borderRadius: 12,
+              overflow: "hidden",
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setLightbox(f)}
+              aria-label={`Visualizar ${rotuloFoto}`}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              {thumb ? (
+                <img
+                  src={thumb}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style={estiloThumbGaleria(f.tipo)}
+                />
+              ) : (
+                <div
+                  style={{
+                    aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: t.textMuted,
+                  }}
+                >
+                  <ImageIcon size={28} aria-hidden />
+                </div>
+              )}
+            </button>
+            <div
+              style={{
+                padding: "8px 10px",
+                fontSize: 11,
+                fontFamily: FONT.body,
+                color: t.textMuted,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {rotuloFoto}
+              </span>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => void baixarFoto(f)}
+                  aria-label={`Baixar ${rotuloFoto}`}
+                  title={`Baixar ${rotuloFoto}`}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Download size={13} aria-hidden />
+                </button>
+                {perm.canExcluirOk ? (
+                  <BtnExcluirLinha
+                    descricaoItem={descricaoBotaoExcluir("foto", rotuloFoto)}
+                    onClick={() => setFotoExcluir(f)}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -881,112 +982,93 @@ export default function GaleriaFotos() {
               </div>
             </div>
           ) : (
-            galeriaBlocos.map((bloco) => (
-              <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
-                <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
-                <div
-                  className="app-grid-3"
-                  style={{ gap: 12, marginTop: 14 }}
-                >
-                  {bloco.fotos.map((f) => {
-                    const thumb = urlThumbnail(f);
-                    const rotuloFoto = rotuloExibicaoFotoGaleria(f, rotulosFotoGaleria);
-                    return (
-                      <div
-                        key={f.id}
+            galeriaBlocos.map((bloco) => {
+              if (bloco.kind === "evento") {
+                const expandido = forcarExpandirEventos || eventosExpandidos.has(bloco.id);
+                const qtdFotos = bloco.fotos.length;
+                const rotuloQtdFotos = qtdFotos === 1 ? "1 foto" : `${qtdFotos} fotos`;
+                return (
+                  <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                    <button
+                      type="button"
+                      onClick={() => toggleEventoExpandido(bloco.id)}
+                      aria-expanded={expandido}
+                      aria-controls={`panel-galeria-evento-${bloco.id}`}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        padding: 0,
+                        margin: 0,
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <ChevronRight
+                        size={14}
+                        color={t.textMuted}
+                        aria-hidden
                         style={{
-                          position: "relative",
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
+                          marginTop: 4,
+                          transform: expandido ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <SectionTitle sub={bloco.sub} compact>
+                          {bloco.titulo}
+                        </SectionTitle>
+                        {bloco.descricao ? (
+                          <p
+                            style={{
+                              margin: "4px 0 0",
+                              fontSize: 13,
+                              fontWeight: 400,
+                              color: t.textMuted,
+                              fontFamily: FONT.body,
+                              lineHeight: 1.55,
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {bloco.descricao}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: t.textMuted,
+                          fontFamily: FONT.body,
+                          flexShrink: 0,
+                          marginTop: 2,
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setLightbox(f)}
-                          aria-label={`Visualizar ${rotuloFoto}`}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            padding: 0,
-                            border: "none",
-                            background: "transparent",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              style={estiloThumbGaleria(f.tipo)}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                aspectRatio: aspectRatioThumbPlaceholder(f.tipo),
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: t.textMuted,
-                              }}
-                            >
-                              <ImageIcon size={28} aria-hidden />
-                            </div>
-                          )}
-                        </button>
-                        <div
-                          style={{
-                            padding: "8px 10px",
-                            fontSize: 11,
-                            fontFamily: FONT.body,
-                            color: t.textMuted,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {rotuloFoto}
-                          </span>
-                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                            <button
-                              type="button"
-                              onClick={() => void baixarFoto(f)}
-                              aria-label={`Baixar ${rotuloFoto}`}
-                              title={`Baixar ${rotuloFoto}`}
-                              style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: t.inputBg,
-                                color: t.text,
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <Download size={13} aria-hidden />
-                            </button>
-                            {perm.canExcluirOk ? (
-                              <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("foto", rotuloFoto)}
-                                onClick={() => setFotoExcluir(f)}
-                              />
-                            ) : null}
-                          </div>
-                        </div>
+                        {rotuloQtdFotos}
+                      </span>
+                    </button>
+                    {expandido ? (
+                      <div
+                        id={`panel-galeria-evento-${bloco.id}`}
+                        style={{ marginTop: 14 }}
+                      >
+                        {renderGradeFotosGaleria(bloco.fotos)}
                       </div>
-                    );
-                  })}
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
+                  <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
+                  <div style={{ marginTop: 14 }}>{renderGradeFotosGaleria(bloco.fotos)}</div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       ) : null}
