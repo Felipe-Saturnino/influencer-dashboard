@@ -65,7 +65,9 @@ import {
 } from "./gestaoStaffEstudioHelpers";
 import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
@@ -785,20 +787,6 @@ export default function RhGestaoStaffPage() {
   const podeTimeAnterior = !todosTimes && times.length > 0 && idxTime > 0;
   const podeTimeProximo = !todosTimes && times.length > 0 && idxTime < times.length - 1;
 
-  const btnIconTabela: CSSProperties = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    cursor: "pointer",
-    fontSize: 12,
-    fontFamily: FONT.body,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320 }}>
@@ -1114,28 +1102,27 @@ export default function RhGestaoStaffPage() {
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-                          <button
-                            type="button"
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcaoAbreModal("Prestador", row.nome)}
                             onClick={() => setModalVer(row)}
-                            style={btnIconTabela}
-                            aria-label={`Visualizar ${row.nome}`}
                           >
                             <Eye size={14} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                           {perm.canEditarOk ? (
-                            <button type="button" onClick={() => setModalEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Editar", row.nome)}
+                              onClick={() => setModalEditar(row)}
+                            >
                               <Pencil size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
                           {perm.canEditarOk ? (
-                            <button
-                              type="button"
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Anotações", row.nome)}
                               onClick={() => setModalAnotacoes(row)}
-                              style={btnIconTabela}
-                              aria-label={`Anotações de ${row.nome}`}
                             >
                               <StickyNote size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
                         </div>
                       </td>

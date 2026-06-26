@@ -16,6 +16,8 @@ import {
 
 } from "../lib/excluirItemUi";
 
+import { propsBotaoIcone } from "../lib/iconOnlyButtonA11y";
+
 
 
 export interface BtnExcluirLinhaProps {
@@ -64,9 +66,7 @@ export function BtnExcluirLinha({
 
       type="button"
 
-      aria-label={label}
-
-      title={label}
+      {...propsBotaoIcone(label)}
 
       disabled={disabled}
 

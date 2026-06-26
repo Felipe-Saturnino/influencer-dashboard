@@ -2,8 +2,9 @@ import { Eye, EyeOff, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { propsBotaoFecharModal } from "../../../lib/iconOnlyButtonA11y";
 import { useDialogTitleId } from "../../../components/OperacoesModal";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 
@@ -114,7 +115,7 @@ export function RhFuncModalHeaderDetalhes({
             justifyContent: "center",
             color: t.textMuted,
           }}
-          aria-label="Fechar modal"
+          {...propsBotaoFecharModal()}
         >
           <X size={20} strokeWidth={2} aria-hidden />
         </button>

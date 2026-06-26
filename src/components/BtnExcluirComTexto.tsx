@@ -10,6 +10,7 @@ import {
   BTN_EXCLUIR_LINHA_ICON_SIZE,
   labelTooltipExcluir,
 } from "../lib/excluirItemUi";
+import { propsBotaoIcone } from "../lib/iconOnlyButtonA11y";
 
 export interface BtnExcluirComTextoProps {
   /** Fragmento após «Excluir» no tooltip — ex.: «vaga Analista», «denúncia PROTO-123». */
@@ -31,8 +32,7 @@ export function BtnExcluirComTexto({
   return (
     <button
       type="button"
-      aria-label={label}
-      title={label}
+      {...propsBotaoIcone(label)}
       disabled={disabled}
       onClick={onClick}
       style={{

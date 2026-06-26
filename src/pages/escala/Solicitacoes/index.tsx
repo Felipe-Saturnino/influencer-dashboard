@@ -570,6 +570,7 @@ export default function EscalaSolicitacoesPage() {
                       <button
                         type="button"
                         aria-label="Ações da solicitação"
+                        title="Ações da solicitação"
                         style={{
                           border: `1px solid ${t.cardBorder}`,
                           background: t.inputBg,

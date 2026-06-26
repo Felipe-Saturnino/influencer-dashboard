@@ -458,10 +458,29 @@ Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sug
 
 Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
 
-- **`aria-label` descritivo** obrigatório (ex.: `` `Editar ${nome}` ``).
-- **`title`** com o mesmo texto (ou rótulo curto) para tooltip no hover.
+- **`aria-label` descritivo** obrigatório.
+- **`title` obrigatório** — tooltip nativo no hover; **mesmo texto** que `aria-label` (ou título canónico do modal alvo).
+- Ação que **abre modal**: preferir **`tooltipAcaoAbreModal(tituloModal, identificador)`** (`lib/iconOnlyButtonA11y.ts`) — ex.: `Editar postagem — Black Friday` alinhado ao `ModalHeader`.
+- Helpers: **`propsBotaoIcone(label)`** (`aria-label` + `title`); **`propsBotaoFecharModal()`** no X do header (`TOOLTIP_FECHAR_MODAL` = «Fechar modal»).
+- Componente preferido em linha: **`BtnIconeAcaoLinha`** (`components/BtnIconeAcaoLinha.tsx`) — ícone 13–14px, ~30×30, `borderRadius` 8, `label` = tooltip.
 - Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px** para ações neutras (Editar).
-- Estilo base (Editar e demais): quadrado ~28–32px, `borderRadius` 8–10, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `btnIconTabela` em RH.
+- Estilo base (Editar e demais): quadrado ~28–32px, `borderRadius` 8–10, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `BtnIconeAcaoLinha` / `btnIconTabela` legado em RH.
+
+```tsx
+import { BtnIconeAcaoLinha } from "../components/BtnIconeAcaoLinha";
+import { propsBotaoIcone, tooltipAcaoAbreModal } from "../lib/iconOnlyButtonA11y";
+
+<BtnIconeAcaoLinha
+  label={tooltipAcaoAbreModal("Editar postagem", row.assunto)}
+  onClick={() => abrirModalEditar(row)}
+>
+  <Pencil size={13} aria-hidden />
+</BtnIconeAcaoLinha>
+
+<button type="button" {...propsBotaoIcone("Ações da oferta")} style={…}>
+  <MoreHorizontal size={16} aria-hidden />
+</button>
+```
 
 ### Exclusão — só ícone (lista / card / tabela)
 
@@ -561,6 +580,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
 - Ação de **linha** só com texto, sem ícone (código novo).
+- Botão **só ícone** sem `title` / sem `propsBotaoIcone` / fora de `BtnIconeAcaoLinha`, `BtnExcluirLinha`, `BtnArquivarLinha`.
 - **Excluir** sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** ou com confirmação em 2 cliques no botão.
 - **Arquivar** (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).

@@ -400,6 +400,7 @@ export default function EscalaMarketplaceTurnosPage() {
                       <button
                         type="button"
                         aria-label="Ações da oferta"
+                        title="Ações da oferta"
                         style={{
                           border: `1px solid ${t.cardBorder}`,
                           background: t.inputBg,
@@ -521,6 +522,7 @@ export default function EscalaMarketplaceTurnosPage() {
                       <button
                         type="button"
                         aria-label="Ações da oferta"
+                        title="Ações da oferta"
                         style={{
                           border: `1px solid ${t.cardBorder}`,
                           background: t.inputBg,
@@ -675,6 +677,7 @@ export default function EscalaMarketplaceTurnosPage() {
                       <button
                         type="button"
                         aria-label="Ações da oferta"
+                        title="Ações da oferta"
                         style={{
                           border: `1px solid ${t.cardBorder}`,
                           background: t.inputBg,

@@ -36,7 +36,6 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
   const brand = useDashboardBrand();
   const panelRef = useRef<HTMLDivElement>(null);
   const linkHref = hrefCanal(live.link);
-  const linkLabel = String(live.link ?? "").trim() || "—";
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
@@ -89,6 +88,7 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Fechar modal"
+            title="Fechar modal"
             style={{
               background: "none",
               border: "none",
@@ -141,15 +141,15 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
             </span>
           </p>
           <p style={{ margin: 0 }}>
-            Assista{" "}
             {linkHref ? (
               <a
                 href={linkHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600, wordBreak: "break-all" }}
+                aria-label={`Assista ao canal na ${live.plataforma} (abre em nova aba)`}
+                style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600, textDecoration: "underline" }}
               >
-                {linkLabel}
+                Assista
               </a>
             ) : (
               "—"

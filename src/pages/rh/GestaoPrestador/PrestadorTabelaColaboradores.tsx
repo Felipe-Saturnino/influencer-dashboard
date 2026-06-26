@@ -7,7 +7,9 @@ import {
   StickyNote,
 } from "lucide-react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
+import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../../constants/theme";
 import { FONT } from "../../../constants/theme";
@@ -337,51 +339,43 @@ export function PrestadorTabelaColaboradores({
                             flexWrap: "wrap",
                           }}
                         >
-                          <button
-                            type="button"
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcaoAbreModal("Detalhes do colaborador", row.nome)}
                             onClick={() => onAbrirVer(row)}
-                            style={btnIconTabela}
-                            aria-label={`Visualizar ${row.nome}`}
                           >
                             <Eye size={14} aria-hidden />
-                          </button>
-                          <button
-                            type="button"
+                          </BtnIconeAcaoLinha>
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcaoAbreModal("Histórico", row.nome)}
                             onClick={() => onAbrirHistorico(row)}
-                            style={btnIconTabela}
-                            aria-label={`Histórico de ${row.nome}`}
                           >
                             <History size={14} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                           {preencherAcoesHeadcount && podeEditar ? (
-                            <button
-                              type="button"
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Editar", row.nome)}
                               onClick={() => onAbrirEditar(row)}
-                              style={btnIconTabela}
-                              aria-label={`Editar ${row.nome}`}
                             >
                               <Pencil size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
                           {tabelaAcoesRh && podeEditar ? (
-                            <button
-                              type="button"
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Registrar Ação", row.nome)}
                               onClick={() => onRegistrarAcao(row)}
                               style={btnIconTabelaCta}
-                              aria-label={`Registrar ação de RH para ${row.nome}`}
                             >
                               <ClipboardList size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
                           {tabelaAnotacoesRh && podeEditar ? (
-                            <button
-                              type="button"
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcaoAbreModal("Registrar Anotação", row.nome)}
                               onClick={() => onRegistrarAnotacao(row)}
                               style={btnIconTabelaCta}
-                              aria-label={`Registrar anotação de RH para ${row.nome}`}
                             >
                               <StickyNote size={14} aria-hidden />
-                            </button>
+                            </BtnIconeAcaoLinha>
                           ) : null}
                           {podeExcluir ? (
                             <BtnExcluirLinha

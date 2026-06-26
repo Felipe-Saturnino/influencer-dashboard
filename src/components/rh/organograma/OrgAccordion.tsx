@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Pencil, Plus, UserX } from "lucide-react";
 import { BtnExcluirLinha } from "../../BtnExcluirLinha";
 import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
+import { propsBotaoIcone, tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import { FONT } from "../../../constants/theme";
 import { ORG_MSG_SEM_DIRETORIAS } from "../../../lib/rhOrganogramaCopy";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
@@ -127,13 +128,13 @@ export function OrgAccordion({
                     <button type="button" style={rowBtn} onClick={() => onAddGerencia(d.id)}>
                       <Plus size={14} style={{ verticalAlign: "middle" }} aria-hidden /> Gerência
                     </button>
-                    <button type="button" style={rowBtn} aria-label={`Editar ${d.nome}`} onClick={() => onEditDiretoria(d)}>
+                    <button type="button" style={rowBtn} {...propsBotaoIcone(tooltipAcaoAbreModal("Editar diretoria", d.nome))} onClick={() => onEditDiretoria(d)}>
                       <Pencil size={14} aria-hidden />
                     </button>
                     <button
                       type="button"
                       style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
-                      aria-label={`Desativar ${d.nome}`}
+                      {...propsBotaoIcone(tooltipAcaoAbreModal("Desativar diretoria", d.nome))}
                       onClick={() => onDeactivateDiretoria(d)}
                     >
                       <UserX size={14} aria-hidden />
@@ -213,13 +214,13 @@ export function OrgAccordion({
                                 <button type="button" style={rowBtn} onClick={() => onAddTime(g.id)}>
                                   <Plus size={14} aria-hidden /> Time
                                 </button>
-                                <button type="button" style={rowBtn} aria-label={`Editar ${g.nome}`} onClick={() => onEditGerencia(g)}>
+                                <button type="button" style={rowBtn} {...propsBotaoIcone(tooltipAcaoAbreModal("Editar gerência", g.nome))} onClick={() => onEditGerencia(g)}>
                                   <Pencil size={14} aria-hidden />
                                 </button>
                                 <button
                                   type="button"
                                   style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
-                                  aria-label={`Desativar ${g.nome}`}
+                                  {...propsBotaoIcone(tooltipAcaoAbreModal("Desativar gerência", g.nome))}
                                   onClick={() => onDeactivateGerencia(g)}
                                 >
                                   <UserX size={14} aria-hidden />
@@ -282,13 +283,13 @@ export function OrgAccordion({
                                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                                           {podeEditar && ti.status === "ativo" ? (
                                             <>
-                                              <button type="button" style={rowBtn} aria-label={`Editar ${ti.nome}`} onClick={() => onEditTime(ti)}>
+                                              <button type="button" style={rowBtn} {...propsBotaoIcone(tooltipAcaoAbreModal("Editar time", ti.nome))} onClick={() => onEditTime(ti)}>
                                                 <Pencil size={14} aria-hidden />
                                               </button>
                                               <button
                                                 type="button"
                                                 style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
-                                                aria-label={`Desativar ${ti.nome}`}
+                                                {...propsBotaoIcone(tooltipAcaoAbreModal("Desativar time", ti.nome))}
                                                 onClick={() => onDeactivateTime(ti)}
                                               >
                                                 <UserX size={14} aria-hidden />

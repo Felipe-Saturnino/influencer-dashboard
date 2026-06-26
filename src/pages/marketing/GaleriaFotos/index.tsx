@@ -690,6 +690,7 @@ export default function GaleriaFotos() {
               type="button"
               onClick={() => setLightbox(f)}
               aria-label={`Visualizar ${rotuloFoto}`}
+              title={`Visualizar ${rotuloFoto}`}
               style={{
                 display: "block",
                 width: "100%",

@@ -271,7 +271,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               {isEdit ? "Editar Live" : "Nova Live"}
             </h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} />
           </button>
         </div>

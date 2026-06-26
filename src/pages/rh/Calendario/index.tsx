@@ -2512,7 +2512,7 @@ export default function RhCalendarioPage() {
                                       type="button"
                                       style={btnIconPresenca}
                                       aria-label={`Histórico de presença — ${labelDiaAria}`}
-                                      title="Histórico"
+                                      title={`Histórico de presença — ${labelDiaAria}`}
                                       onClick={() =>
                                         setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
                                       }

@@ -79,7 +79,7 @@ export function ModalVerDenuncia({
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 2001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <button type="button" aria-label="Fechar" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", border: "none", cursor: "pointer" }} />
+      <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", border: "none", cursor: "pointer" }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -146,7 +146,7 @@ export function ModalVerDenuncia({
               </button>
             ) : null}
           </div>
-          <button type="button" aria-label="Fechar" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4, flexShrink: 0 }}>
+          <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4, flexShrink: 0 }}>
             <X size={20} aria-hidden />
           </button>
         </div>
@@ -382,7 +382,7 @@ export function ModalHistoricoDenuncia({
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 2001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <button type="button" aria-label="Fechar" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", border: "none", cursor: "pointer" }} />
+      <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", border: "none", cursor: "pointer" }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -403,7 +403,7 @@ export function ModalHistoricoDenuncia({
           <h2 id="modal-hist-titulo" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: t.text }}>
             {protocolo}
           </h2>
-          <button type="button" aria-label="Fechar" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
+          <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
             <X size={20} />
           </button>
         </div>

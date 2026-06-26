@@ -147,7 +147,8 @@ export default function ModalBloqueioAgendaLive({
               alignItems: "center",
               padding: 4,
             }}
-            aria-label="Fechar"
+            aria-label="Fechar modal"
+            title="Fechar modal"
           >
             <X size={20} />
           </button>

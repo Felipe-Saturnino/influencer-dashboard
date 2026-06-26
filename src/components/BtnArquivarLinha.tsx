@@ -7,6 +7,7 @@ import {
   BTN_ARQUIVAR_LINHA_SIZE,
   labelTooltipArquivar,
 } from "../lib/arquivarItemUi";
+import { propsBotaoIcone } from "../lib/iconOnlyButtonA11y";
 
 export interface BtnArquivarLinhaProps {
   /** Fragmento após «Arquivar» no tooltip — ex.: «informativo Black Friday». Ver `descricaoBotaoArquivar`. */
@@ -32,8 +33,7 @@ export function BtnArquivarLinha({
   return (
     <button
       type="button"
-      aria-label={label}
-      title={label}
+      {...propsBotaoIcone(label)}
       disabled={disabled}
       onClick={onClick}
       style={{
