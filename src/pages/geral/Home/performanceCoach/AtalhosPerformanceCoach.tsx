@@ -1,16 +1,16 @@
 import { HelpCircle, Network } from "lucide-react";
 import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
 
-const ATALHOS_PRESTADOR = [
+const ATALHOS_PERFORMANCE_COACH = [
   { key: "ajuda" as const, icon: HelpCircle },
   { key: "rh_organograma" as const, icon: Network },
 ];
 
-export function AtalhosPrestador() {
+export function AtalhosPerformanceCoach() {
   return (
     <AtalhosStaffHome
-      sectionIdPrefix="home-prestador"
-      atalhos={ATALHOS_PRESTADOR}
+      sectionIdPrefix="home-performance-coach"
+      atalhos={ATALHOS_PERFORMANCE_COACH}
       gridClassName="app-grid-atalhos-operador"
     />
   );

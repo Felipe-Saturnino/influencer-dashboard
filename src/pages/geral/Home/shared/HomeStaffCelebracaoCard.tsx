@@ -9,9 +9,9 @@ import {
   getPageHeaderTitleRowStyle,
   PAGE_HEADER_ICON_PROPS,
 } from "../../../../lib/pageHeaderStyles";
-import { HOME_BODY_MUTED } from "../shared/homeSharedUi";
+import { HOME_BODY_MUTED } from "./homeSharedUi";
 
-type HomePrestadorCelebracaoCardProps = {
+type HomeStaffCelebracaoCardProps = {
   sectionId: string;
   titleIcon: LucideIcon;
   title: ReactNode;
@@ -20,14 +20,14 @@ type HomePrestadorCelebracaoCardProps = {
   topBarGradient?: string;
 };
 
-export function HomePrestadorCelebracaoCard({
+export function HomeStaffCelebracaoCard({
   sectionId,
   titleIcon: TitleIcon,
   title,
   body,
   endIcon: EndIcon,
   topBarGradient,
-}: HomePrestadorCelebracaoCardProps) {
+}: HomeStaffCelebracaoCardProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const cardBg = brand.useBrand && brand.blockBg ? brand.blockBg : t.cardBg;

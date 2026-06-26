@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
-import { buscarMeuColaboradorGaleria, fotoEventoEmbed, type MarketingFotoComEvento } from "../../../../lib/marketingGaleriaFotos";
+import type { Role } from "../../../../types";
+import {
+  buscarMeuColaboradorGaleria,
+  fotoEventoEmbed,
+  type MarketingFotoComEvento,
+} from "../../../../lib/marketingGaleriaFotos";
 import { getHomePrestadorGaleriaNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 import { useHomeInformativos, type HomeInformativoItem } from "./useHomeInformativos";
 
@@ -21,16 +26,13 @@ export type HomeGaleriaNovidadeMinhas = {
 
 export type HomeInformacaoInformativo = HomeInformativoItem & { kind: "informativo" };
 
-export type HomePrestadorInformacaoItem =
+export type HomeStaffInformacaoItem =
   | HomeInformacaoInformativo
   | HomeGaleriaNovidadeGerais
   | HomeGaleriaNovidadeMinhas;
 
-function tsItem(item: HomePrestadorInformacaoItem): number {
-  const iso =
-    item.kind === "informativo"
-      ? item.published_at
-      : item.created_at;
+function tsItem(item: HomeStaffInformacaoItem): number {
+  const iso = item.kind === "informativo" ? item.published_at : item.created_at;
   if (!iso) return 0;
   const t = Date.parse(iso);
   return Number.isFinite(t) ? t : 0;
@@ -53,9 +55,7 @@ async function buscarNovidadesGaleria(): Promise<(HomeGaleriaNovidadeGerais | Ho
 
   const { data: geraisRows, error: errGerais } = await supabase
     .from("marketing_fotos")
-    .select(
-      "id, created_at, uploaded_by, evento_id, tipo, marketing_eventos(id, nome, ativo)",
-    )
+    .select("id, created_at, uploaded_by, evento_id, tipo, marketing_eventos(id, nome, ativo)")
     .eq("tipo", "geral")
     .gte("created_at", desdeIso)
     .order("created_at", { ascending: false });
@@ -111,13 +111,23 @@ async function buscarNovidadesGaleria(): Promise<(HomeGaleriaNovidadeGerais | Ho
   return cards;
 }
 
-export function useHomePrestadorInformacoesFeed() {
-  const informativos = useHomeInformativos("prestador");
-  const [galeriaLoading, setGaleriaLoading] = useState(true);
+export function useHomeStaffInformacoesFeed(
+  perfil: Role,
+  { includeGaleriaNovidades = true }: { includeGaleriaNovidades?: boolean } = {},
+) {
+  const informativos = useHomeInformativos(perfil);
+  const [galeriaLoading, setGaleriaLoading] = useState(includeGaleriaNovidades);
   const [galeriaErro, setGaleriaErro] = useState(false);
   const [galeriaCards, setGaleriaCards] = useState<(HomeGaleriaNovidadeGerais | HomeGaleriaNovidadeMinhas)[]>([]);
 
   useEffect(() => {
+    if (!includeGaleriaNovidades) {
+      setGaleriaLoading(false);
+      setGaleriaErro(false);
+      setGaleriaCards([]);
+      return;
+    }
+
     let cancelled = false;
 
     void (async () => {
@@ -127,7 +137,7 @@ export function useHomePrestadorInformacoesFeed() {
         const cards = await buscarNovidadesGaleria();
         if (!cancelled) setGaleriaCards(cards);
       } catch (e) {
-        console.error("[HomePrestador] galeria novidades:", e);
+        console.error(`[Home ${perfil}] galeria novidades:`, e);
         if (!cancelled) {
           setGaleriaErro(true);
           setGaleriaCards([]);
@@ -140,12 +150,12 @@ export function useHomePrestadorInformacoesFeed() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [perfil, includeGaleriaNovidades]);
 
   const loading = informativos.loading || galeriaLoading;
   const erro = informativos.erro || galeriaErro;
 
-  const lista: HomePrestadorInformacaoItem[] = [
+  const lista: HomeStaffInformacaoItem[] = [
     ...informativos.lista.map((item) => ({ ...item, kind: "informativo" as const })),
     ...galeriaCards,
   ].sort((a, b) => tsItem(b) - tsItem(a));

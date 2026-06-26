@@ -33,6 +33,11 @@ import { roleParidadeInfluencer } from "../../../lib/staffRoles";
 import HomeInvestidor from "./HomeInvestidor";
 import HomeExecutivo from "./HomeExecutivo";
 import HomePrestador from "./HomePrestador";
+import HomeFigurino from "./HomeFigurino";
+import HomeComunicacao from "./HomeComunicacao";
+import HomePerformanceCoach from "./HomePerformanceCoach";
+import HomeServiceManager from "./HomeServiceManager";
+import HomeShiftLeader from "./HomeShiftLeader";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
@@ -375,6 +380,26 @@ export default function Home() {
 
   if (user.role === "prestador") {
     return <HomePrestador />;
+  }
+
+  if (user.role === "figurino") {
+    return <HomeFigurino />;
+  }
+
+  if (user.role === "comunicacao") {
+    return <HomeComunicacao />;
+  }
+
+  if (user.role === "performance_coach") {
+    return <HomePerformanceCoach />;
+  }
+
+  if (user.role === "service_manager") {
+    return <HomeServiceManager />;
+  }
+
+  if (user.role === "shift_leader") {
+    return <HomeShiftLeader />;
   }
 
   if (user.role === "operador") {

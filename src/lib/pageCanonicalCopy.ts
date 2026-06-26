@@ -11,6 +11,9 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   ajuda: "Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.",
   rh_organograma:
     "Conheça a empresa, saiba mais sobre os times e pessoas que fazem a operação acontecer.",
+  rh_figurinos: "Controle o inventário de peças com retiradas, devoluções e manutenções.",
+  galeria_fotos:
+    "Faça o Upload das fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores.",
 };
 
 export function getPageCanonicalSubtitle(pageKey: PageKey): string {
