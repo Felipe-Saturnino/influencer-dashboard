@@ -47,6 +47,8 @@ import {
 } from "../../../components/dashboard";
 import { ABAS_CADASTRO, CADASTRO_TAB_ICONS, CADASTRO_TAB_IDS } from "./constants";
 import FormacaoCompetenciasPainel from "./FormacaoCompetencias";
+import { getFormacaoSectionHeaderStyle } from "./FormacaoCompetencias/sharedStyles";
+import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import ExperienciaProfissionalPainel from "./ExperienciaProfissional";
 import { PrestadorDocumentosCadastroBlocos } from "./PrestadorDocumentosCadastroBlocos";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
@@ -1289,7 +1291,45 @@ export default function RhDadosCadastroPage() {
       {aba === "cadastral" ? (
         <div style={cadastroBlocosCol}>
           <div style={pageBox}>
-            <SectionTitle sub="Identificação e contato">Dados pessoais</SectionTitle>
+            <div style={getFormacaoSectionHeaderStyle()}>
+              <SectionTitle sub="Identificação e contato">Dados pessoais</SectionTitle>
+              {podeEditarSelecionado ? (
+                <button
+                  type="button"
+                  onClick={() => void salvarCadastro()}
+                  disabled={salvando}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: salvando ? "wait" : "pointer",
+                    color: "#fff",
+                    fontFamily: FONT.body,
+                    background: getCtaCriarGradient(brand),
+                    flexShrink: 0,
+                  }}
+                >
+                  {salvando ? (
+                    <>
+                      <Loader2 size={14} className="app-lucide-spin" aria-hidden color="#fff" />
+                      Salvando…
+                    </>
+                  ) : (
+                    "Salvar alterações"
+                  )}
+                </button>
+              ) : null}
+            </div>
+            {!podeEditarSelecionado ? (
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                Você não tem permissão para editar estes dados. Em caso de erro, fale com o RH.
+              </p>
+            ) : null}
             <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
               <span id="dc-nome-lbl" style={lblCadastralReadOnly("nome")}>
@@ -1770,42 +1810,6 @@ export default function RhDadosCadastroPage() {
               {fieldErr.pix ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.pix}</div> : null}
             </div>
           </div>
-
-          {podeEditarSelecionado ? (
-            <div style={{ marginTop: 20 }}>
-              <button
-                type="button"
-                onClick={() => void salvarCadastro()}
-                disabled={salvando}
-                style={{
-                  padding: "10px 22px",
-                  borderRadius: 12,
-                  border: "none",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: salvando ? "wait" : "pointer",
-                  color: "#fff",
-                  fontFamily: FONT.body,
-                  background: brand.useBrand
-                    ? "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))"
-                    : "linear-gradient(135deg, var(--brand-primary, #7c3aed), var(--brand-accent, #1e36f8))",
-                }}
-              >
-                {salvando ? (
-                  <>
-                    <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
-                    Salvando…
-                  </>
-                ) : (
-                  "Salvar alterações"
-                )}
-              </button>
-            </div>
-          ) : (
-            <p style={{ marginTop: 16, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-              Você não tem permissão para editar estes dados. Em caso de erro, fale com o RH.
-            </p>
-          )}
           </div>
         </div>
       ) : null}
