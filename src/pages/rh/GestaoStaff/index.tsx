@@ -769,10 +769,11 @@ export default function RhGestaoStaffPage() {
   );
 
   const mostrarKpisGamePresenter = useMemo(() => {
+    if (!perm.canEditarOk) return false;
     if (todosTimes) return true;
     const row = times[idxTime];
     return row ? isGamePresenterTimeNome(row.nome) : false;
-  }, [todosTimes, times, idxTime]);
+  }, [perm.canEditarOk, todosTimes, times, idxTime]);
 
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";

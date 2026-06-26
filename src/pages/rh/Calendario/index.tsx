@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  ClipboardPen,
   Clock,
   Loader2,
   MessageSquare,
@@ -85,10 +86,14 @@ import {
   ModalAprovacaoPresencaCalendario,
   type PresencaTurnoAlvo,
 } from "./ModalAprovacaoPresencaCalendario";
+import { ModalHistoricoPresencaCalendario } from "./ModalHistoricoPresencaCalendario";
+import { ModalJustificarPresencaCalendario } from "./ModalJustificarPresencaCalendario";
 import { CelulaIndicadorAlteracaoEscala } from "../GestaoEscala/CelulaIndicadorAlteracaoEscala";
 import {
+  appendHistoricoPresenca,
   chavePresencaGestao,
-  statusExibicaoPresencaLinha,
+  resolverAcoesPresencaLinha,
+  resolverStatusPresencaLinha,
   type PresencaDiaGestao,
 } from "../../../lib/rhCalendarioPresencaGestao";
 
@@ -615,6 +620,10 @@ export default function RhCalendarioPage() {
     () => new Map(),
   );
   const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
+  const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{ dia: Date; funcionarioId: string } | null>(
+    null,
+  );
+  const [presencaJustificarAberto, setPresencaJustificarAberto] = useState(false);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -1684,7 +1693,7 @@ export default function RhCalendarioPage() {
     compFilterStaffIds[0] === meuPrestadorRhIdVistaCompleta;
   const meuIdParaBotoesMeu = perm.canView === "proprios" ? meuRhFuncionarioId : meuPrestadorRhIdVistaCompleta;
   const mostrarBotaoMeuControle =
-    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios") && Boolean(meuIdParaBotoesMeu);
+    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
   const meuControleAtivo =
     Boolean(meuIdParaBotoesMeu) &&
     presencaFilterStaffIds.length === 1 &&
@@ -1726,11 +1735,16 @@ export default function RhCalendarioPage() {
     setPresencaGestaoPorChave((prev) => {
       const next = new Map(prev);
       const atual = next.get(chave);
-      next.set(chave, { statusGestao: "aprovado", correcao: atual?.correcao });
+      const comHistorico = appendHistoricoPresenca(atual, {
+        tipo: "aprovacao",
+        em: new Date().toISOString(),
+        por: nomeUsuarioPresencaGestao,
+      });
+      next.set(chave, { ...comHistorico, statusGestao: "aprovado", correcao: atual?.correcao });
       return next;
     });
     setPresencaAlvoModal(null);
-  }, [presencaAlvoModal]);
+  }, [presencaAlvoModal, nomeUsuarioPresencaGestao]);
 
   const salvarCorrecaoPresenca = useCallback(
     (payload: { entrada: string; saida: string; observacao: string }) => {
@@ -1742,7 +1756,14 @@ export default function RhCalendarioPage() {
       const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
       setPresencaGestaoPorChave((prev) => {
         const next = new Map(prev);
+        const atual = next.get(chave);
+        const comHistorico = appendHistoricoPresenca(atual, {
+          tipo: "correcao",
+          em: new Date().toISOString(),
+          por: nomeUsuarioPresencaGestao,
+        });
         next.set(chave, {
+          ...comHistorico,
           statusGestao: "em_analise",
           correcao: {
             entradaRealAnterior,
@@ -2266,16 +2287,28 @@ export default function RhCalendarioPage() {
                       const saiReal = horaRegistoSP(pt?.check_out_at);
                       const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
                       const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
+                      const situacao = situacaoGestaoEscalaParaDia(valorG);
+                      const temCheckIn = Boolean(pt?.check_in_at);
+                      const temCheckOut = Boolean(pt?.check_out_at);
                       const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
                       const gestaoDia = presencaGestaoPorChave.get(chavePresencaGestao(fid, iso));
-                      const st = statusExibicaoPresencaLinha(stBase, gestaoDia);
+                      const paramsPresencaLinha = {
+                        situacao,
+                        diaIso: iso,
+                        saiEsc,
+                        temCheckIn,
+                        temCheckOut,
+                        statusBase: stBase,
+                        gestao: gestaoDia,
+                      };
+                      const st = resolverStatusPresencaLinha(paramsPresencaLinha);
+                      const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
                       const correcao = gestaoDia?.correcao;
                       const entRealExib = correcao?.entradaCorrigida ?? entReal;
                       const saiRealExib = correcao?.saidaCorrigida ?? saiReal;
                       const horasRealExib = correcao
                         ? formatoDuracaoFmtHorasTotal(correcao.entradaCorrigida, correcao.saidaCorrigida)
                         : horasReal;
-                      const situacao = situacaoGestaoEscalaParaDia(valorG);
                       const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
                       const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
                       const horasRealDesvio = correcao
@@ -2294,20 +2327,6 @@ export default function RhCalendarioPage() {
                             pt?.check_in_at ?? null,
                             pt?.check_out_at ?? null,
                           );
-                      const podeAbrirAprovarPresenca =
-                        gestaoDia?.statusGestao !== "aprovado" &&
-                        (stBase === "Registrado" || gestaoDia?.statusGestao === "em_analise");
-                      const btnPresenca: CSSProperties = {
-                        padding: "4px 10px",
-                        borderRadius: 8,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        color: t.text,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        fontFamily: FONT.body,
-                        cursor: "pointer",
-                      };
                       const btnIconPresenca: CSSProperties = {
                         width: 32,
                         height: 32,
@@ -2316,8 +2335,7 @@ export default function RhCalendarioPage() {
                         border: `1px solid ${t.cardBorder}`,
                         background: t.inputBg,
                         color: t.text,
-                        cursor: podeAbrirAprovarPresenca ? "pointer" : "not-allowed",
-                        opacity: podeAbrirAprovarPresenca ? 1 : 0.4,
+                        cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -2438,45 +2456,67 @@ export default function RhCalendarioPage() {
                           </td>
                           <td style={dataTable.tdCenter}>{st}</td>
                           <td style={dataTable.tdCenter}>
-                            <div
-                              style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 6,
-                                justifyContent: "center",
-                              }}
-                            >
-                              <button
-                                type="button"
-                                style={btnIconPresenca}
-                                disabled={!podeAbrirAprovarPresenca}
-                                aria-label={`Aprovar presença — ${labelDiaAria}`}
-                                title="Aprovar"
-                                onClick={() => {
-                                  if (!podeAbrirAprovarPresenca) return;
-                                  setPresencaAlvoModal({
-                                    funcionarioId: fid,
-                                    dia,
-                                    entEsc,
-                                    saiEsc,
-                                    horasEsc,
-                                    entReal: entRealExib,
-                                    saiReal: saiRealExib,
-                                    horasReal: horasRealExib,
-                                    entRealOriginal: entReal,
-                                    saiRealOriginal: saiReal,
-                                  });
+                            {acoesLinha.mostrarTravessaoAcoes ? (
+                              "—"
+                            ) : (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 6,
+                                  justifyContent: "center",
                                 }}
                               >
-                                <Check size={14} aria-hidden="true" />
-                              </button>
-                              <button type="button" style={btnPresenca} aria-label={`Editar presença — ${labelDiaAria}`}>
-                                Editar
-                              </button>
-                              <button type="button" style={btnPresenca} aria-label={`Histórico de presença — ${labelDiaAria}`}>
-                                Histórico
-                              </button>
-                            </div>
+                                {acoesLinha.acaoPrimaria === "aprovar" ? (
+                                  <button
+                                    type="button"
+                                    style={btnIconPresenca}
+                                    aria-label={`Aprovar presença — ${labelDiaAria}`}
+                                    title="Aprovar"
+                                    onClick={() => {
+                                      setPresencaAlvoModal({
+                                        funcionarioId: fid,
+                                        dia,
+                                        entEsc,
+                                        saiEsc,
+                                        horasEsc,
+                                        entReal: entRealExib,
+                                        saiReal: saiRealExib,
+                                        horasReal: horasRealExib,
+                                        entRealOriginal: entReal,
+                                        saiRealOriginal: saiReal,
+                                      });
+                                    }}
+                                  >
+                                    <Check size={14} aria-hidden="true" />
+                                  </button>
+                                ) : null}
+                                {acoesLinha.acaoPrimaria === "justificar" ? (
+                                  <button
+                                    type="button"
+                                    style={btnIconPresenca}
+                                    aria-label={`Justificar presença — ${labelDiaAria}`}
+                                    title="Justificar"
+                                    onClick={() => setPresencaJustificarAberto(true)}
+                                  >
+                                    <ClipboardPen size={14} aria-hidden="true" />
+                                  </button>
+                                ) : null}
+                                {acoesLinha.mostrarHistorico ? (
+                                  <button
+                                    type="button"
+                                    style={btnIconPresenca}
+                                    aria-label={`Histórico de presença — ${labelDiaAria}`}
+                                    title="Histórico"
+                                    onClick={() =>
+                                      setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
+                                    }
+                                  >
+                                    <Clock size={14} aria-hidden="true" />
+                                  </button>
+                                ) : null}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -2678,6 +2718,26 @@ export default function RhCalendarioPage() {
           brand={brand}
         />
       ) : null}
+
+      {presencaHistoricoAlvo ? (
+        <ModalHistoricoPresencaCalendario
+          open
+          dia={presencaHistoricoAlvo.dia}
+          historico={
+            presencaGestaoPorChave.get(
+              chavePresencaGestao(presencaHistoricoAlvo.funcionarioId, toISO(presencaHistoricoAlvo.dia)),
+            )?.historico ?? []
+          }
+          onClose={() => setPresencaHistoricoAlvo(null)}
+          t={t}
+        />
+      ) : null}
+
+      <ModalJustificarPresencaCalendario
+        open={presencaJustificarAberto}
+        onClose={() => setPresencaJustificarAberto(false)}
+        t={t}
+      />
 
       {pontoSucessoModal ? (
         <ModalBase maxWidth={440} onClose={() => setPontoSucessoModal(null)} zIndex={1200}>
