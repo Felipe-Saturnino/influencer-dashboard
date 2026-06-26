@@ -10,6 +10,7 @@ import {
 import {
   AlertCircle,
   Calendar,
+  ChevronRight,
   Download,
   Image as ImageIcon,
   Images,
@@ -77,6 +78,7 @@ type GaleriaBloco = {
   id: string;
   titulo: string;
   sub: string;
+  descricao?: string | null;
   fotos: MarketingFotoComEvento[];
 };
 
@@ -202,6 +204,7 @@ export default function GaleriaFotos() {
   const [urlsPrestador, setUrlsPrestador] = useState<Record<string, string>>({});
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
@@ -226,6 +229,16 @@ export default function GaleriaFotos() {
   }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
   const rotulosFotoGaleria = useMemo(() => buildRotulosFotoGaleria(fotos), [fotos]);
+  const forcarExpandirEventos = buscaGaleria.trim().length > 0;
+
+  const toggleEventoExpandido = (eventoId: string) => {
+    setEventosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventoId)) next.delete(eventoId);
+      else next.add(eventoId);
+      return next;
+    });
+  };
 
   const carregarEventos = useCallback(async () => {
     const { data, error } = await supabase
@@ -241,7 +254,7 @@ export default function GaleriaFotos() {
     const { data, error } = await supabase
       .from("marketing_fotos")
       .select(
-        "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, ativo), rh_funcionarios!rh_funcionario_id(id, nome)",
+        "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, descricao, ativo), rh_funcionarios!rh_funcionario_id(id, nome)",
       )
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -386,6 +399,7 @@ export default function GaleriaFotos() {
             id: ev.id,
             titulo: ev.nome,
             sub: fmtDataEvento(ev.data_evento),
+            descricao: ev.descricao?.trim() || null,
             fotos: [],
           });
         }

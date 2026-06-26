@@ -36,7 +36,7 @@ export interface MarketingFoto {
   created_at: string;
 }
 
-export type MarketingEventoEmbed = Pick<MarketingEvento, "id" | "nome" | "data_evento" | "ativo">;
+export type MarketingEventoEmbed = Pick<MarketingEvento, "id" | "nome" | "data_evento" | "descricao" | "ativo">;
 export type MarketingPrestadorEmbed = { id: string; nome: string };
 
 export interface MarketingFotoComEvento extends MarketingFoto {

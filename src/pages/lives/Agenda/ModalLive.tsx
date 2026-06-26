@@ -9,6 +9,7 @@ import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { Live, Plataforma, type Role } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
+import ModalLiveSomenteVer from "./ModalLiveSomenteVer";
 import { X, Lock, Video, Loader2 } from "lucide-react";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
@@ -64,7 +65,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const podeEditar   = isEdit && perm.canEditarOk && (!statusValidado || isAdminOuGestor);
   const podeExcluir  = isEdit && perm.canExcluirOk && (!statusValidado || isAdminOuGestor);
   const podeCriar    = !isEdit && perm.canCriarOk;
-  const somenteLeitura = isEdit && !podeEditar;
+  const apenasPermissaoVer =
+    isEdit &&
+    (perm.canView === "sim" || perm.canView === "proprios") &&
+    !perm.canEditarOk;
+  const somenteLeitura = isEdit && !podeEditar && !apenasPermissaoVer;
   // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores (data/hora no passado)
   const podeAlterarPeriodoAnterior = isAdminOuGestor;
 
@@ -223,6 +228,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   };
   const row: React.CSSProperties = { marginBottom: 14 };
   const showReqMark = !somenteLeitura && (podeCriar || podeEditar);
+
+  if (isEdit && live && apenasPermissaoVer) {
+    return <ModalLiveSomenteVer live={live} onClose={onClose} />;
+  }
 
   return (
     <>

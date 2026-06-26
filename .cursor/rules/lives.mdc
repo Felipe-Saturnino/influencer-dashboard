@@ -416,9 +416,11 @@ const brand = useDashboardBrand(); // chamar dentro do modal
   display: "flex", alignItems: "center", justifyContent: "center",
   color: brand.primaryIconColor,
 }}>
-  <GiFilmProjector size={14} aria-hidden="true" />
+  <Video size={14} aria-hidden="true" />
 </span>
 ```
+
+**Modal ao clicar numa live — somente Ver (sem Editar na Gestão de Usuários):** componente **`ModalLiveSomenteVer`** (`ModalLiveSomenteVer.tsx`) — não reutilizar o formulário `ModalLive`. Título **Live agendada**; subtítulo = nome do influencer; corpo com data (`dd/mm/aaaa`), horário (`HH:mm`), plataforma (`PlatLogo` + rótulo) e linha **Assista** com hiperlink do canal; fechar só pelo **X** (sem botão no rodapé). Quem tem `canEditarOk` mas está bloqueado por status validado continua no `ModalLive` em modo somente leitura legado (formulário desabilitado + Fechar).
 
 ---
 
