@@ -1367,6 +1367,12 @@ export default function RhGestaoEscalaPage() {
   const celulasGerarAtivas = estGradeFiltro?.celulas;
   const alteracoesPorCelulaAtivas = estGradeFiltro?.alteracoesPorCelula;
   const podeEditarCelulasDia = Boolean(podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro));
+  const mostrarBotaoAlterarEscala = Boolean(
+    mostrarFiltroArea &&
+      podeAlterarEscalaAprovada &&
+      posSugestaoAtiva(estGradeFiltro) &&
+      escalaGradeAprovadaNaBase(estGradeFiltro),
+  );
 
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
@@ -2035,16 +2041,6 @@ export default function RhGestaoEscalaPage() {
                           >
                             Nova Escala
                           </button>
-                          {escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea]) && podeAlterarEscalaAprovada ? (
-                            <button
-                              type="button"
-                              onClick={() => setAlterarEscalaModalAberto(true)}
-                              aria-label="Alterar status de um prestador em um dia da escala aprovada"
-                              style={escalaToolbarBtnAzul({ cursor: "pointer" })}
-                            >
-                              Alterar Escala
-                            </button>
-                          ) : null}
                           {mostrarSalvarAlteracoes ? (
                             <button
                               type="button"
@@ -2129,6 +2125,16 @@ export default function RhGestaoEscalaPage() {
                         </button>
                       ) : null}
                     </>
+                  ) : null}
+                  {mostrarBotaoAlterarEscala ? (
+                    <button
+                      type="button"
+                      onClick={() => setAlterarEscalaModalAberto(true)}
+                      aria-label="Alterar status de um prestador em um dia da escala aprovada"
+                      style={escalaToolbarBtnAzul({ cursor: "pointer" })}
+                    >
+                      Alterar Escala
+                    </button>
                   ) : null}
                 </div>
                 <div
