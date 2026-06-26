@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   BookOpen,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -80,6 +81,16 @@ import {
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
+import {
+  ModalAprovacaoPresencaCalendario,
+  type PresencaTurnoAlvo,
+} from "./ModalAprovacaoPresencaCalendario";
+import { CelulaIndicadorAlteracaoEscala } from "../GestaoEscala/CelulaIndicadorAlteracaoEscala";
+import {
+  chavePresencaGestao,
+  statusExibicaoPresencaLinha,
+  type PresencaDiaGestao,
+} from "../../../lib/rhCalendarioPresencaGestao";
 
 const MONTHS = [
   "Janeiro",
@@ -461,6 +472,26 @@ function horaRegistoSP(isoTs: string | null | undefined): string {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 }
 
+/** Subtítulo do modal de ponto — ex.: «21:52 EM 01 DE JUNHO». */
+function formatarSubtituloPontoRealizado(d: Date): string {
+  const hora = d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+  const dia = d.toLocaleDateString("pt-BR", { day: "2-digit", timeZone: "America/Sao_Paulo" });
+  const mes = d
+    .toLocaleDateString("pt-BR", { month: "long", timeZone: "America/Sao_Paulo" })
+    .toUpperCase();
+  return `${hora} EM ${dia} DE ${mes}`;
+}
+
+type PontoSucessoModalData = {
+  tipo: "check_in" | "check_out";
+  subtitulo: string;
+  corpo: string;
+};
+
 function duracaoEntreTimestamps(isoIn: string | null | undefined, isoOut: string | null | undefined): string {
   if (!isoIn || !isoOut) return "—";
   const t0 = new Date(isoIn).getTime();
@@ -574,11 +605,16 @@ export default function RhCalendarioPage() {
   const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
   const [pontoSubmitting, setPontoSubmitting] = useState(false);
   const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
+  const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
   const [reunioesMesTick, setReunioesMesTick] = useState(0);
+  const [presencaGestaoPorChave, setPresencaGestaoPorChave] = useState<Map<string, PresencaDiaGestao>>(
+    () => new Map(),
+  );
+  const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -1553,6 +1589,8 @@ export default function RhCalendarioPage() {
 
   const onPrestadorPontoRegistrar = useCallback(async () => {
     setPontoMsgModal(null);
+    setPontoSucessoModal(null);
+    const tipoRegistro = pontoEstado?.proximoTipo;
     const { data: { session } } = await supabase.auth.getSession();
     const tok = session?.access_token;
     if (!tok) return;
@@ -1562,6 +1600,43 @@ export default function RhCalendarioPage() {
       if (res.ok && res.estado) {
         setPontoEstado(res.estado);
         setPontoMesTick((x) => x + 1);
+        if (tipoRegistro === "check_in" || tipoRegistro === "check_out") {
+          const agora = new Date();
+          const subtitulo = formatarSubtituloPontoRealizado(agora);
+          if (tipoRegistro === "check_in") {
+            setPontoSucessoModal({
+              tipo: "check_in",
+              subtitulo,
+              corpo: "Turno iniciado, bom turno.",
+            });
+          } else {
+            const diaIso = String(res.estado.diaSp ?? toISO(agora)).slice(0, 10);
+            let checkInAt = mapaPontoPorDiaIso.get(diaIso)?.check_in_at ?? null;
+            if (!checkInAt && res.estado.rhFuncionarioId) {
+              const refIso = refMesPrimeiroDiaISO(new Date(`${diaIso}T12:00:00`));
+              const { data } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
+                p_funcionario_id: res.estado.rhFuncionarioId,
+                p_ref_mes: refIso,
+              });
+              const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null }[];
+              for (const row of rows) {
+                const raw = row.dia_sp;
+                const ds =
+                  typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw as Date));
+                if (ds === diaIso) {
+                  checkInAt = row.check_in_at;
+                  break;
+                }
+              }
+            }
+            const horas = duracaoEntreTimestamps(checkInAt, agora.toISOString());
+            setPontoSucessoModal({
+              tipo: "check_out",
+              subtitulo,
+              corpo: `Turno encerrado, você cumpriu ${horas} horas neste turno.`,
+            });
+          }
+        }
         return;
       }
       if (res.code === "rede" || res.code === "config") {
@@ -1573,7 +1648,7 @@ export default function RhCalendarioPage() {
     } finally {
       setPontoSubmitting(false);
     }
-  }, []);
+  }, [pontoEstado?.proximoTipo, mapaPontoPorDiaIso]);
 
   const mostrarBotaoPontoCalendario =
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
@@ -1638,6 +1713,53 @@ export default function RhCalendarioPage() {
   }, [current]);
 
   const hojeIsoCalendario = toISO(new Date());
+
+  const nomeUsuarioPresencaGestao = useMemo(() => {
+    const email = user?.email?.trim();
+    if (!email) return "Usuário";
+    return email;
+  }, [user?.email]);
+
+  const confirmarAprovacaoPresenca = useCallback(() => {
+    if (!presencaAlvoModal) return;
+    const chave = chavePresencaGestao(presencaAlvoModal.funcionarioId, toISO(presencaAlvoModal.dia));
+    setPresencaGestaoPorChave((prev) => {
+      const next = new Map(prev);
+      const atual = next.get(chave);
+      next.set(chave, { statusGestao: "aprovado", correcao: atual?.correcao });
+      return next;
+    });
+    setPresencaAlvoModal(null);
+  }, [presencaAlvoModal]);
+
+  const salvarCorrecaoPresenca = useCallback(
+    (payload: { entrada: string; saida: string; observacao: string }) => {
+      if (!presencaAlvoModal) return;
+      const diaIso = toISO(presencaAlvoModal.dia);
+      const chave = chavePresencaGestao(presencaAlvoModal.funcionarioId, diaIso);
+      const pt = mapaPontoPorDiaIso.get(diaIso);
+      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
+      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
+      setPresencaGestaoPorChave((prev) => {
+        const next = new Map(prev);
+        next.set(chave, {
+          statusGestao: "em_analise",
+          correcao: {
+            entradaRealAnterior,
+            saidaRealAnterior,
+            entradaCorrigida: payload.entrada,
+            saidaCorrigida: payload.saida,
+            observacao: payload.observacao.trim() || null,
+            corrigidoPorNome: nomeUsuarioPresencaGestao,
+            corrigidoEm: new Date().toISOString(),
+          },
+        });
+        return next;
+      });
+      setPresencaAlvoModal(null);
+    },
+    [presencaAlvoModal, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao],
+  );
 
   if (perm.canView === "nao") {
     return (
@@ -2037,35 +2159,94 @@ export default function RhCalendarioPage() {
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
+                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Data
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
+                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Situação
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Entrada Escalada
+                      <th
+                        colSpan={2}
+                        scope="colgroup"
+                        style={{
+                          ...dataTable.thHeader,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                          borderBottom: "none",
+                        }}
+                      >
+                        Entrada
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Entrada Realizada
+                      <th
+                        colSpan={2}
+                        scope="colgroup"
+                        style={{
+                          ...dataTable.thHeader,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                          borderBottom: "none",
+                        }}
+                      >
+                        Saída
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Saída Escalada
+                      <th
+                        colSpan={2}
+                        scope="colgroup"
+                        style={{
+                          ...dataTable.thHeader,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                          borderBottom: "none",
+                        }}
+                      >
+                        Horas
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Saída Realizada
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Horas Escaladas
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Horas Realizadas
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
+                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Status
                       </th>
-                      <th scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
+                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Ações
+                      </th>
+                    </tr>
+                    <tr>
+                      <th
+                        scope="col"
+                        style={{
+                          ...dataTable.thHeaderSub,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                        }}
+                      >
+                        Escalada
+                      </th>
+                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
+                        Realizada
+                      </th>
+                      <th
+                        scope="col"
+                        style={{
+                          ...dataTable.thHeaderSub,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                        }}
+                      >
+                        Escalada
+                      </th>
+                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
+                        Realizada
+                      </th>
+                      <th
+                        scope="col"
+                        style={{
+                          ...dataTable.thHeaderSub,
+                          whiteSpace: "normal",
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                        }}
+                      >
+                        Escalada
+                      </th>
+                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
+                        Realizada
                       </th>
                     </tr>
                   </thead>
@@ -2085,16 +2266,37 @@ export default function RhCalendarioPage() {
                       const saiReal = horaRegistoSP(pt?.check_out_at);
                       const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
                       const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
-                      const st = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+                      const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+                      const gestaoDia = presencaGestaoPorChave.get(chavePresencaGestao(fid, iso));
+                      const st = statusExibicaoPresencaLinha(stBase, gestaoDia);
+                      const correcao = gestaoDia?.correcao;
+                      const entRealExib = correcao?.entradaCorrigida ?? entReal;
+                      const saiRealExib = correcao?.saidaCorrigida ?? saiReal;
+                      const horasRealExib = correcao
+                        ? formatoDuracaoFmtHorasTotal(correcao.entradaCorrigida, correcao.saidaCorrigida)
+                        : horasReal;
                       const situacao = situacaoGestaoEscalaParaDia(valorG);
-                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entReal);
-                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiReal);
-                      const horasRealDesvio = presencaDesvioHorasMaior5Min(
-                        entEsc,
-                        saiEsc,
-                        pt?.check_in_at ?? null,
-                        pt?.check_out_at ?? null,
-                      );
+                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
+                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
+                      const horasRealDesvio = correcao
+                        ? (() => {
+                            const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
+                            const realMin = duracaoMinutosRelogioHHMM(
+                              correcao.entradaCorrigida,
+                              correcao.saidaCorrigida,
+                            );
+                            if (escMin == null || realMin == null) return false;
+                            return Math.abs(realMin - escMin) > 5;
+                          })()
+                        : presencaDesvioHorasMaior5Min(
+                            entEsc,
+                            saiEsc,
+                            pt?.check_in_at ?? null,
+                            pt?.check_out_at ?? null,
+                          );
+                      const podeAbrirAprovarPresenca =
+                        gestaoDia?.statusGestao !== "aprovado" &&
+                        (stBase === "Registrado" || gestaoDia?.statusGestao === "em_analise");
                       const btnPresenca: CSSProperties = {
                         padding: "4px 10px",
                         borderRadius: 8,
@@ -2105,6 +2307,21 @@ export default function RhCalendarioPage() {
                         fontWeight: 600,
                         fontFamily: FONT.body,
                         cursor: "pointer",
+                      };
+                      const btnIconPresenca: CSSProperties = {
+                        width: 32,
+                        height: 32,
+                        padding: 0,
+                        borderRadius: 8,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg,
+                        color: t.text,
+                        cursor: podeAbrirAprovarPresenca ? "pointer" : "not-allowed",
+                        opacity: podeAbrirAprovarPresenca ? 1 : 0.4,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: FONT.body,
                       };
                       const labelDiaAria = dia.toLocaleDateString("pt-BR", {
                         weekday: "long",
@@ -2131,32 +2348,93 @@ export default function RhCalendarioPage() {
                             {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
                           </td>
                           <td style={dataTable.tdCenter}>{situacao}</td>
-                          <td style={dataTable.tdCenter}>{entEsc}</td>
                           <td
                             style={{
                               ...dataTable.tdCenter,
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                            }}
+                          >
+                            {entEsc}
+                          </td>
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              position: "relative",
                               ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {entReal}
+                            {entRealExib}
+                            {correcao ? (
+                              <CelulaIndicadorAlteracaoEscala
+                                t={t}
+                                tituloTooltip="Correção de Entrada"
+                                rotuloValorAnterior="Entrada realizada:"
+                                valorAnteriorLabel={correcao.entradaRealAnterior}
+                                meta={{
+                                  valorAnterior: correcao.entradaRealAnterior,
+                                  alteradoPorNome: correcao.corrigidoPorNome,
+                                  alteradoEm: correcao.corrigidoEm,
+                                  observacao: [
+                                    `Corrigido para ${correcao.entradaCorrigida}`,
+                                    correcao.observacao,
+                                  ]
+                                    .filter(Boolean)
+                                    .join("\n\n"),
+                                }}
+                              />
+                            ) : null}
                           </td>
-                          <td style={dataTable.tdCenter}>{saiEsc}</td>
                           <td
                             style={{
                               ...dataTable.tdCenter,
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                            }}
+                          >
+                            {saiEsc}
+                          </td>
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              position: "relative",
                               ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {saiReal}
+                            {saiRealExib}
+                            {correcao ? (
+                              <CelulaIndicadorAlteracaoEscala
+                                t={t}
+                                tituloTooltip="Correção de Saída"
+                                rotuloValorAnterior="Saída realizada:"
+                                valorAnteriorLabel={correcao.saidaRealAnterior}
+                                meta={{
+                                  valorAnterior: correcao.saidaRealAnterior,
+                                  alteradoPorNome: correcao.corrigidoPorNome,
+                                  alteradoEm: correcao.corrigidoEm,
+                                  observacao: [
+                                    `Corrigido para ${correcao.saidaCorrigida}`,
+                                    correcao.observacao,
+                                  ]
+                                    .filter(Boolean)
+                                    .join("\n\n"),
+                                }}
+                              />
+                            ) : null}
                           </td>
-                          <td style={dataTable.tdCenter}>{horasEsc}</td>
+                          <td
+                            style={{
+                              ...dataTable.tdCenter,
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                            }}
+                          >
+                            {horasEsc}
+                          </td>
                           <td
                             style={{
                               ...dataTable.tdCenter,
                               ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {horasReal}
+                            {horasRealExib}
                           </td>
                           <td style={dataTable.tdCenter}>{st}</td>
                           <td style={dataTable.tdCenter}>
@@ -2168,8 +2446,29 @@ export default function RhCalendarioPage() {
                                 justifyContent: "center",
                               }}
                             >
-                              <button type="button" style={btnPresenca} aria-label={`Aprovar presença — ${labelDiaAria}`}>
-                                Aprovar
+                              <button
+                                type="button"
+                                style={btnIconPresenca}
+                                disabled={!podeAbrirAprovarPresenca}
+                                aria-label={`Aprovar presença — ${labelDiaAria}`}
+                                title="Aprovar"
+                                onClick={() => {
+                                  if (!podeAbrirAprovarPresenca) return;
+                                  setPresencaAlvoModal({
+                                    funcionarioId: fid,
+                                    dia,
+                                    entEsc,
+                                    saiEsc,
+                                    horasEsc,
+                                    entReal: entRealExib,
+                                    saiReal: saiRealExib,
+                                    horasReal: horasRealExib,
+                                    entRealOriginal: entReal,
+                                    saiRealOriginal: saiReal,
+                                  });
+                                }}
+                              >
+                                <Check size={14} aria-hidden="true" />
                               </button>
                               <button type="button" style={btnPresenca} aria-label={`Editar presença — ${labelDiaAria}`}>
                                 Editar
@@ -2366,6 +2665,61 @@ export default function RhCalendarioPage() {
           solicitanteFuncionarioId={solicitanteAgendarId}
           diasEscalados={diasEscaladosAgendarMes}
         />
+      ) : null}
+
+      {presencaAlvoModal ? (
+        <ModalAprovacaoPresencaCalendario
+          open
+          alvo={presencaAlvoModal}
+          onClose={() => setPresencaAlvoModal(null)}
+          onAprovar={confirmarAprovacaoPresenca}
+          onSalvarCorrecao={salvarCorrecaoPresenca}
+          t={t}
+          brand={brand}
+        />
+      ) : null}
+
+      {pontoSucessoModal ? (
+        <ModalBase maxWidth={440} onClose={() => setPontoSucessoModal(null)} zIndex={1200}>
+          <ModalHeader
+            title={pontoSucessoModal.tipo === "check_in" ? "Check-in Realizado" : "Check-out Realizado"}
+            onClose={() => setPontoSucessoModal(null)}
+          />
+          <p
+            style={{
+              margin: "0 0 12px",
+              color: t.textMuted,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              letterSpacing: "0.04em",
+            }}
+          >
+            {pontoSucessoModal.subtitulo}
+          </p>
+          <p style={{ margin: 0, color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
+            {pontoSucessoModal.corpo}
+          </p>
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              onClick={() => setPontoSucessoModal(null)}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 10,
+                border: "none",
+                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
+                color: "#fff",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </ModalBase>
       ) : null}
 
       {pontoMsgModal ? (

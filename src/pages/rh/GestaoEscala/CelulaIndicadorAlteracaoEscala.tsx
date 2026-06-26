@@ -15,6 +15,10 @@ type CelulaIndicadorAlteracaoEscalaProps = {
   meta: EscalaAlteracaoCelulaMeta;
   valorAnteriorLabel: string;
   t: Theme;
+  /** Título do tooltip — default «Alteração de escala». */
+  tituloTooltip?: string;
+  /** Rótulo do detalhe do valor anterior — default «Valor anterior:». */
+  rotuloValorAnterior?: string;
 };
 
 type TooltipCoords = {
@@ -58,6 +62,8 @@ export function CelulaIndicadorAlteracaoEscala({
   meta,
   valorAnteriorLabel,
   t,
+  tituloTooltip = "Alteração de escala",
+  rotuloValorAnterior = "Valor anterior:",
 }: CelulaIndicadorAlteracaoEscalaProps) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<TooltipCoords | null>(null);
@@ -150,7 +156,7 @@ export function CelulaIndicadorAlteracaoEscala({
           pointerEvents: "auto",
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>Alteração de escala</div>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>{tituloTooltip}</div>
         <div>
           <span style={{ color: tooltipMuted }}>Alterado por: </span>
           {meta.alteradoPorNome}
@@ -160,7 +166,7 @@ export function CelulaIndicadorAlteracaoEscala({
           {fmtAlteracaoDataHora(meta.alteradoEm)}
         </div>
         <div>
-          <span style={{ color: tooltipMuted }}>Valor anterior: </span>
+          <span style={{ color: tooltipMuted }}>{rotuloValorAnterior} </span>
           {valorAnteriorLabel}
         </div>
         {obs ? (
