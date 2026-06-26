@@ -10,6 +10,7 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import {
   RH_PRESTADOR_DOC_ACCEPT,
   RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL,
+  subtituloDocumentoPrestadorCategoria,
   agruparDocumentosPorCategoria,
   categoriasDocumentoPorTipoContrato,
   inputIdDocumentoPrestador,
@@ -81,7 +82,7 @@ export function PrestadorDocumentosCadastroBlocos({
 
         return (
           <section key={cat} style={pageBox}>
-            <SectionTitle sub="Visualize ou substitua os arquivos desta categoria">
+            <SectionTitle sub={subtituloDocumentoPrestadorCategoria(cat)}>
               {RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}
             </SectionTitle>
 

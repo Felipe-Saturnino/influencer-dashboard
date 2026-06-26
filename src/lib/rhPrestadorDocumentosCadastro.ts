@@ -28,6 +28,32 @@ export const RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL: Record<RhPrestadorDocumento
   outros: "Outros",
 };
 
+/** Subtítulo (`SectionTitle sub`) dos blocos na aba Documentos — Dados de Cadastro. */
+export const RH_PRESTADOR_DOCUMENTO_CATEGORIA_SUB: Partial<
+  Record<RhPrestadorDocumentoCategoria, string>
+> = {
+  rg: "Pode ser a CNH ou outro documento que contenha o RG visível",
+  cpf: "Pode ser a CNH ou outro documento que contenha o CPF visível",
+  comprovante_residencia:
+    "Contas ou outros documentos que apareçam o endereço registrado no bloco de Endereço residencial",
+  cartao_cnpj:
+    "Documento com CNPJ e endereço da empresa no contrato com a Spin, pode ser adquirido no site da Receita Federal",
+  comprovante_contas_bancarias:
+    "Comprovação do CNPJ titular da conta e dados da conta (Agência, Conta e Banco) da conta onde será realizado o pagamento",
+  outros: "Outros documentos que acredite ser necessário ou forem solicitados pelo RH",
+};
+
+export const RH_PRESTADOR_DOCUMENTO_CATEGORIA_SUB_PADRAO =
+  "Visualize ou substitua os arquivos desta categoria";
+
+export function subtituloDocumentoPrestadorCategoria(
+  categoria: RhPrestadorDocumentoCategoria,
+): string {
+  return (
+    RH_PRESTADOR_DOCUMENTO_CATEGORIA_SUB[categoria] ?? RH_PRESTADOR_DOCUMENTO_CATEGORIA_SUB_PADRAO
+  );
+}
+
 const BASE_CATEGORIAS: RhPrestadorDocumentoCategoria[] = [
   "rg",
   "cpf",
