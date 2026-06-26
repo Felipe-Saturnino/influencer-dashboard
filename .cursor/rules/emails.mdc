@@ -3,6 +3,9 @@ description: Padrão de envio de e-mail (Resend + Edge Functions) — template H
 globs:
   - supabase/functions/**/resendMail.ts
   - supabase/functions/**/emailBrand.ts
+  - supabase/functions/**/transacionalShell.ts
+  - supabase/functions/**/boasVindasUsuario.ts
+  - supabase/functions/**/recuperacaoSenha.ts
   - supabase/functions/**/common.ts
   - supabase/functions/README.md
   - supabase/functions/relatorio-diario-diretoria/**
@@ -26,6 +29,8 @@ alwaysApply: false
 **Antes de implementar ou alterar envio de e-mail:** `global.mdc` (copy PT-BR, formatos, erros) → **este MDC** → `docs/SETUP-RESEND.md`.
 
 **Marca canônica em todo e-mail:** **`Spin Gaming Data Intelligence`** — constante `MARCA_PRODUTO` em `emailTemplates/emailBrand.ts` (cópia local em cada function com e-mail). **Proibido** inverter para “Data Intelligence Spin Gaming” em subtítulo, rodapé, CTA ou copy.
+
+**Links da app em todo e-mail:** sempre **produção** (`PRODUCTION_*` em `transacionalShell.ts`) — ver § Links da plataforma — mesmo quando o envio parte de staging.
 
 **Layout do repo:** cada Edge Function é **autocontida** — todos os ficheiros **no mesmo nível** que `index.ts` (painel Supabase não suporta subpastas). Inventário: `supabase/functions/README.md`.
 
@@ -55,6 +60,39 @@ Sem domínio **Verified** no Resend, o envio falha independentemente das Secrets
 | **Transacionais** (conta, reset) | `fromKind: 'sistema'` → **`RESEND_FROM_SISTEMA`** | `emailTemplates/transacionalShell.ts` + `boasVindasUsuario.ts` / `recuperacaoSenha.ts` |
 
 **Envio Resend:** `resendMail.ts` na **mesma pasta** da function → `sendResendEmail`. Não há outro provedor nem `fetch` direto ao Resend fora desse helper. Ao alterar, replicar em todas as functions que enviam e-mail (ver README).
+
+---
+
+## Links da plataforma — sempre produção
+
+**Regra absoluta:** todo hiperlink no corpo ou CTA de e-mail que aponte para a aplicação web usa o **ambiente de produção** (`https://data-intelligence.spingaming.com.br`), **independentemente** de onde a Edge Function foi invocada (staging, preview Cloudflare, teste manual, `loginUrl` no body).
+
+| Constante (`transacionalShell.ts`) | URL canónica | Uso |
+|-----------------------------------|--------------|-----|
+| `PRODUCTION_APP_ORIGIN` | `https://data-intelligence.spingaming.com.br` | Origem base; rodapé de crons (link marca) |
+| `PRODUCTION_LOGIN_URL` | `…/Login` | CTA **Acessar a Plataforma Spin** (boas-vindas e reset) |
+| `PRODUCTION_AJUDA_URL` | `…/Ajuda` | Link **página de Ajuda** no corpo de boas-vindas |
+
+Paths alinhados ao front: `ROUTE_SLUG_LOGIN` (`/Login`) e `buildAppPath('ajuda')` (`/Ajuda`).
+
+```typescript
+// transacionalShell.ts — cópia local em cada function transacional
+import { PRODUCTION_LOGIN_URL, PRODUCTION_AJUDA_URL } from './transacionalShell.ts'
+
+${emailCtaButton(PRODUCTION_LOGIN_URL)}
+<a href="${escapeHtml(PRODUCTION_AJUDA_URL)}">página de Ajuda</a>
+```
+
+| Permitido | Proibido em código novo |
+|-----------|-------------------------|
+| Constantes `PRODUCTION_*` nos templates | Montar `href` com `loginUrl` do request |
+| URL fixa no HTML de crons (mesma origem) | `window.location.origin` no front para definir link do e-mail |
+| Campo `loginUrl` no body só por compat legada (template **ignora**) | Origin derivada de host do request, `SUPABASE_URL` ou preview `*.pages.dev` |
+| | `resolveAjudaConhecaUrl(loginUrl)` ou equivalente que varie com ambiente |
+
+**Crons** (`relatorio-diario-diretoria`, `email-agenda-diaria`): link de marca no rodapé → `PRODUCTION_APP_ORIGIN` + `/` (já fixo no template).
+
+**Transacionais:** nunca enviar usuário para staging no e-mail — credenciais são reais; o destinatário deve cair sempre em produção.
 
 ---
 
@@ -112,7 +150,8 @@ Helper único: **`enviarEmailBoasVindasConta`** → template `boasVindasUsuario.
 |-------|----------------|
 | **Assunto** | `Conta criada \| Spin Gaming Data Intelligence` |
 | **Cabeçalho interno (`h1`)** | `Boas Vindas` |
-| **Link Ajuda (corpo)** | `{origin}/Ajuda/ConhecaAPlataforma` — `resolveAjudaConhecaUrl(loginUrl)` em `transacionalShell.ts` |
+| **Link Ajuda (corpo)** | `PRODUCTION_AJUDA_URL` — ver § Links da plataforma |
+| **CTA «Acessar a Plataforma Spin»** | `PRODUCTION_LOGIN_URL` — ver § Links da plataforma |
 
 | Fluxo | Edge Function |
 |-------|---------------|
@@ -135,6 +174,7 @@ Helper único: **`enviarEmailRecuperacaoSenhaConta`** → template `recuperacaoS
 | **Assunto** | `Senha redefinida \| Spin Gaming Data Intelligence` |
 | **Cabeçalho interno (`h1`)** | `Redefinição de senha` |
 | **Copy pós-credenciais** | Aviso de segurança (sem link Ajuda — diferente de boas-vindas) |
+| **CTA «Acessar a Plataforma Spin»** | `PRODUCTION_LOGIN_URL` — ver § Links da plataforma |
 
 | Fluxo | Edge Function |
 |-------|---------------|
@@ -174,7 +214,7 @@ import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 | Envio + remetente | `resendMail.ts` | **`sendResendEmail`** — nunca `fetch` direto ao Resend em código novo |
 | Destinatários | `resolveDestinatarios(secretName, body)` | Cron vs teste |
 | **Marca + subtítulo** | `emailBrand.ts` | **`MARCA_PRODUTO`**, **`subtituloEmailComData(data)`** |
-| Layout transacional | `transacionalShell.ts` | Shell boas-vindas / reset + **`emailCtaButton`** |
+| Layout transacional | `transacionalShell.ts` | Shell boas-vindas / reset + **`emailCtaButton`** + **`PRODUCTION_*`** (§ Links) |
 | Boas-vindas | `enviarBoasVindas.ts` | **`enviarEmailBoasVindasConta`** |
 | Reset senha | `enviarRecuperacaoSenha.ts` | **`enviarEmailRecuperacaoSenhaConta`** |
 | Layout + formatos | `common.ts` | Estilos, datas, moeda, seções |
@@ -229,6 +269,7 @@ Helper em `transacionalShell.ts` — rótulo canônico **`Acessar a Plataforma S
 | Markup | `<table role="presentation">` + `<td bgcolor="#4a2082">` + link inline |
 | Fundo | **Sólido `#4a2082`** — **proibido** `linear-gradient` no botão (Outlook ignora → texto branco invisível em fundo branco) |
 | Texto | `#ffffff` + `-webkit-text-fill-color` + borda `2px solid #4a2082` |
+| **`href`** | **`PRODUCTION_LOGIN_URL`** — § Links da plataforma (nunca origin do request) |
 | Dark mode | CSS `.email-cta-cell` / `.email-cta-link` → `#7c3aed` |
 
 **Proibido em código novo:** `<a>` com `background:linear-gradient(...)` como único estilo de CTA transacional.
@@ -346,7 +387,7 @@ Rótulos: `Relatório automático` (diretoria) · `E-mail automático (agenda)` 
 
 **Copy PT-BR (transacionais):** acentuação correta (`E-mail sistêmico`, `página de Ajuda`); boas-vindas usa «No **primeiro** acesso»; reset usa «No **próximo login**» (usuário já tinha conta). Proibido `sistemico` sem acento, PT-PT (`utilizador`, `secção`) e expor infra no corpo.
 
-**Caixa CTA** (penúltimo bloco): fundo `#f0eef8`, link **Spin Gaming Data Intelligence** → `https://data-intelligence.spingaming.com.br/`.
+**Caixa CTA** (penúltimo bloco): fundo `#f0eef8`, link **Spin Gaming Data Intelligence** → `PRODUCTION_APP_ORIGIN` + `/` (§ Links da plataforma).
 
 Copy diretoria: *Estes são os dados sumarizados do dia…*  
 Copy agenda: *Dados operacionais do dia. Painel completo em…*
@@ -367,11 +408,20 @@ Registrar `destinatarios_count`; **não** gravar lista de e-mails em log públic
 ## Checklist — e-mail cron novo
 
 1. Template HTML segue § shell + blocos + tabelas + rodapé.
-2. `sendResendEmail` + `fromKind: 'relatorios'`.
-3. Secret **própria** de destinatários + constante em `resendMail.ts`.
-4. Documentar em `docs/SETUP-RESEND.md` e workflow GitHub se houver cron.
-5. Preview HTML em `docs/previews/` quando layout for novo ou complexo.
-6. Copy PT-BR — Global § Linguagem e copy.
+2. Links da app → § **Links da plataforma — sempre produção**.
+3. `sendResendEmail` + `fromKind: 'relatorios'`.
+4. Secret **própria** de destinatários + constante em `resendMail.ts`.
+5. Documentar em `docs/SETUP-RESEND.md` e workflow GitHub se houver cron.
+6. Preview HTML em `docs/previews/` quando layout for novo ou complexo.
+7. Copy PT-BR — Global § Linguagem e copy.
+
+## Checklist — e-mail transacional novo ou alterado
+
+1. Template via `transacionalShell.ts` + `boasVindasUsuario.ts` / `recuperacaoSenha.ts` (ou helper equivalente).
+2. **Links da app** só com `PRODUCTION_LOGIN_URL`, `PRODUCTION_AJUDA_URL` ou `PRODUCTION_APP_ORIGIN` — § Links da plataforma.
+3. `sendResendEmail` + `fromKind: 'sistema'`.
+4. CTA com **`emailCtaButton(PRODUCTION_LOGIN_URL)`** — sem gradiente inline.
+5. Entrada no § Inventário deste MDC + preview em `docs/previews/` se layout mudar.
 
 ---
 
@@ -402,5 +452,7 @@ Transacionais migrados para `transacionalShell.ts` — **não** listar como «pe
 - Marca invertida **“Data Intelligence Spin Gaming”** em subtítulo, rodapé ou CTA — usar **`MARCA_PRODUTO`** (`Spin Gaming Data Intelligence`).
 - Rodapé transacional **`E-mail sistemico`** sem acento — usar **`E-mail sistêmico`**.
 - CTA transacional com **`linear-gradient`** inline — usar **`emailCtaButton`** (Outlook light).
+- **Link da app** com origin de staging, preview ou `loginUrl` do request — usar **`PRODUCTION_*`** (§ Links da plataforma).
+- CTA transacional para `/` ou origin sem `/Login` — usar **`PRODUCTION_LOGIN_URL`**.
 - Copy de reset com «primeiro acesso» — usar **«próximo login»** em `recuperacaoSenha.ts`.
 - Novo envio Resend fora de `sendResendEmail` ou sem entrada no § Inventário deste MDC.

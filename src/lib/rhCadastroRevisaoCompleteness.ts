@@ -64,6 +64,145 @@ export type RhCadastroCompletudeRevisao = {
   pendencias: string[];
 };
 
+/** Chaves de campos da aba Dados cadastrais (exceto opcionais: nickname, complementos). */
+export type RhCadastroCampoKey =
+  | "nome"
+  | "rg"
+  | "cpf"
+  | "data_nascimento"
+  | "telefone"
+  | "email"
+  | "res_cep"
+  | "res_logradouro"
+  | "res_numero"
+  | "res_cidade"
+  | "res_estado"
+  | "emerg_nome"
+  | "emerg_parentesco"
+  | "emerg_telefone"
+  | "nome_empresa"
+  | "cnpj"
+  | "emp_cep"
+  | "emp_logradouro"
+  | "emp_numero"
+  | "emp_cidade"
+  | "emp_estado"
+  | "banco"
+  | "agencia"
+  | "conta_corrente"
+  | "pix";
+
+const CAMPOS_CADASTRO_BASE: RhCadastroCampoKey[] = [
+  "nome",
+  "rg",
+  "cpf",
+  "data_nascimento",
+  "telefone",
+  "email",
+  "res_cep",
+  "res_logradouro",
+  "res_numero",
+  "res_cidade",
+  "res_estado",
+  "emerg_nome",
+  "emerg_parentesco",
+  "emerg_telefone",
+  "banco",
+  "agencia",
+  "conta_corrente",
+  "pix",
+];
+
+const CAMPOS_CADASTRO_PJ: RhCadastroCampoKey[] = [
+  "nome_empresa",
+  "cnpj",
+  "emp_cep",
+  "emp_logradouro",
+  "emp_numero",
+  "emp_cidade",
+  "emp_estado",
+];
+
+function ufValida(uf: string): boolean {
+  return ufsBrIncludes(uf.trim().toUpperCase());
+}
+
+function ufsBrIncludes(uf: string): uf is (typeof UFS_BR)[number] {
+  return UFS_BR.includes(uf as (typeof UFS_BR)[number]);
+}
+
+function campoCadastralIncompleto(form: RhCadastroFormCompletudeInput, key: RhCadastroCampoKey): boolean {
+  switch (key) {
+    case "nome":
+      return form.nome.trim().length === 0;
+    case "rg":
+      return form.rg.trim().length === 0 || !validarRgInput(form.rg);
+    case "cpf": {
+      const cpfD = somenteDigitos(form.cpf);
+      return cpfD.length !== 11 || !validarCpfDigitos(cpfD);
+    }
+    case "data_nascimento":
+      return form.data_nascimento.trim().length === 0 || !validarDataNascimentoOpcional(form.data_nascimento);
+    case "telefone": {
+      const telD = somenteDigitos(form.telefone);
+      return telD.length < 10 || telD.length > 11;
+    }
+    case "email":
+      return form.email.trim().length === 0 || !validarEmail(form.email);
+    case "res_cep":
+      return somenteDigitos(form.res_cep).length !== 8;
+    case "res_logradouro":
+      return form.res_logradouro.trim().length === 0;
+    case "res_numero":
+      return form.res_numero.trim().length === 0;
+    case "res_cidade":
+      return form.res_cidade.trim().length === 0;
+    case "res_estado":
+      return form.res_estado.trim().length === 0 || !ufValida(form.res_estado);
+    case "emerg_nome":
+      return form.emerg_nome.trim().length === 0;
+    case "emerg_parentesco":
+      return form.emerg_parentesco.trim().length === 0;
+    case "emerg_telefone": {
+      const telEmerg = somenteDigitos(form.emerg_telefone);
+      return telEmerg.length < 10 || telEmerg.length > 11;
+    }
+    case "nome_empresa":
+      return form.nome_empresa.trim().length === 0;
+    case "cnpj": {
+      const cnpjD = somenteDigitos(form.cnpj);
+      return cnpjD.length !== 14 || !validarCnpjDigitos(cnpjD);
+    }
+    case "emp_cep":
+      return somenteDigitos(form.emp_cep).length !== 8;
+    case "emp_logradouro":
+      return form.emp_logradouro.trim().length === 0;
+    case "emp_numero":
+      return form.emp_numero.trim().length === 0;
+    case "emp_cidade":
+      return form.emp_cidade.trim().length === 0;
+    case "emp_estado":
+      return form.emp_estado.trim().length === 0 || !ufValida(form.emp_estado);
+    case "banco":
+      return form.banco.trim().length === 0;
+    case "agencia":
+      return form.agencia.trim().length === 0;
+    case "conta_corrente":
+      return form.conta_corrente.trim().length === 0;
+    case "pix":
+      return form.pix.trim().length === 0;
+    default:
+      return false;
+  }
+}
+
+/** Campos obrigatórios da aba Dados cadastrais ainda vazios ou inválidos (UI — rótulo em vermelho). */
+export function camposCadastraisIncompletos(form: RhCadastroFormCompletudeInput): Set<RhCadastroCampoKey> {
+  const keys =
+    form.tipo_contrato === "PJ" ? [...CAMPOS_CADASTRO_BASE, ...CAMPOS_CADASTRO_PJ] : CAMPOS_CADASTRO_BASE;
+  return new Set(keys.filter((k) => campoCadastralIncompleto(form, k)));
+}
+
 function reqCampo(pendencias: string[], condicao: boolean, mensagem: string) {
   if (!condicao) pendencias.push(mensagem);
 }
@@ -71,47 +210,33 @@ function reqCampo(pendencias: string[], condicao: boolean, mensagem: string) {
 /** Dados cadastrais — todos os campos editáveis da aba devem estar preenchidos e válidos. */
 export function pendenciasDadosCadastraisCompletos(form: RhCadastroFormCompletudeInput): string[] {
   const p: string[] = [];
-  reqCampo(p, form.nome.trim().length > 0, "Dados cadastrais: nome completo.");
-  reqCampo(p, form.rg.trim().length > 0 && validarRgInput(form.rg), "Dados cadastrais: RG.");
-  const cpfD = somenteDigitos(form.cpf);
-  reqCampo(p, cpfD.length === 11 && validarCpfDigitos(cpfD), "Dados cadastrais: CPF válido.");
-  reqCampo(p, form.data_nascimento.trim().length > 0 && validarDataNascimentoOpcional(form.data_nascimento), "Dados cadastrais: data de nascimento.");
-  const telD = somenteDigitos(form.telefone);
-  reqCampo(p, telD.length >= 10 && telD.length <= 11, "Dados cadastrais: telefone.");
-  reqCampo(p, form.email.trim().length > 0 && validarEmail(form.email), "Dados cadastrais: e-mail.");
-  const cepRes = somenteDigitos(form.res_cep);
-  reqCampo(p, cepRes.length === 8, "Dados cadastrais: CEP residencial.");
-  reqCampo(p, form.res_logradouro.trim().length > 0, "Dados cadastrais: logradouro residencial.");
-  reqCampo(p, form.res_numero.trim().length > 0, "Dados cadastrais: número residencial.");
-  reqCampo(p, form.res_cidade.trim().length > 0, "Dados cadastrais: cidade residencial.");
-  reqCampo(
-    p,
-    form.res_estado.trim().length > 0 && UFS_BR.includes(form.res_estado.trim().toUpperCase() as (typeof UFS_BR)[number]),
-    "Dados cadastrais: UF residencial.",
-  );
-  reqCampo(p, form.emerg_nome.trim().length > 0, "Dados cadastrais: nome do contato de emergência.");
-  reqCampo(p, form.emerg_parentesco.trim().length > 0, "Dados cadastrais: parentesco do contato de emergência.");
-  const telEmerg = somenteDigitos(form.emerg_telefone);
-  reqCampo(p, telEmerg.length >= 10 && telEmerg.length <= 11, "Dados cadastrais: telefone de emergência.");
+  reqCampo(p, !campoCadastralIncompleto(form, "nome"), "Dados cadastrais: nome completo.");
+  reqCampo(p, !campoCadastralIncompleto(form, "rg"), "Dados cadastrais: RG.");
+  reqCampo(p, !campoCadastralIncompleto(form, "cpf"), "Dados cadastrais: CPF válido.");
+  reqCampo(p, !campoCadastralIncompleto(form, "data_nascimento"), "Dados cadastrais: data de nascimento.");
+  reqCampo(p, !campoCadastralIncompleto(form, "telefone"), "Dados cadastrais: telefone.");
+  reqCampo(p, !campoCadastralIncompleto(form, "email"), "Dados cadastrais: e-mail.");
+  reqCampo(p, !campoCadastralIncompleto(form, "res_cep"), "Dados cadastrais: CEP residencial.");
+  reqCampo(p, !campoCadastralIncompleto(form, "res_logradouro"), "Dados cadastrais: logradouro residencial.");
+  reqCampo(p, !campoCadastralIncompleto(form, "res_numero"), "Dados cadastrais: número residencial.");
+  reqCampo(p, !campoCadastralIncompleto(form, "res_cidade"), "Dados cadastrais: cidade residencial.");
+  reqCampo(p, !campoCadastralIncompleto(form, "res_estado"), "Dados cadastrais: UF residencial.");
+  reqCampo(p, !campoCadastralIncompleto(form, "emerg_nome"), "Dados cadastrais: nome do contato de emergência.");
+  reqCampo(p, !campoCadastralIncompleto(form, "emerg_parentesco"), "Dados cadastrais: parentesco do contato de emergência.");
+  reqCampo(p, !campoCadastralIncompleto(form, "emerg_telefone"), "Dados cadastrais: telefone de emergência.");
   if (form.tipo_contrato === "PJ") {
-    reqCampo(p, form.nome_empresa.trim().length > 0, "Dados cadastrais: nome da empresa (PJ).");
-    const cnpjD = somenteDigitos(form.cnpj);
-    reqCampo(p, cnpjD.length === 14 && validarCnpjDigitos(cnpjD), "Dados cadastrais: CNPJ válido (PJ).");
-    const cepEmp = somenteDigitos(form.emp_cep);
-    reqCampo(p, cepEmp.length === 8, "Dados cadastrais: CEP da empresa (PJ).");
-    reqCampo(p, form.emp_logradouro.trim().length > 0, "Dados cadastrais: logradouro da empresa (PJ).");
-    reqCampo(p, form.emp_numero.trim().length > 0, "Dados cadastrais: número da empresa (PJ).");
-    reqCampo(p, form.emp_cidade.trim().length > 0, "Dados cadastrais: cidade da empresa (PJ).");
-    reqCampo(
-      p,
-      form.emp_estado.trim().length > 0 && UFS_BR.includes(form.emp_estado.trim().toUpperCase() as (typeof UFS_BR)[number]),
-      "Dados cadastrais: UF da empresa (PJ).",
-    );
+    reqCampo(p, !campoCadastralIncompleto(form, "nome_empresa"), "Dados cadastrais: nome da empresa (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "cnpj"), "Dados cadastrais: CNPJ válido (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "emp_cep"), "Dados cadastrais: CEP da empresa (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "emp_logradouro"), "Dados cadastrais: logradouro da empresa (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "emp_numero"), "Dados cadastrais: número da empresa (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "emp_cidade"), "Dados cadastrais: cidade da empresa (PJ).");
+    reqCampo(p, !campoCadastralIncompleto(form, "emp_estado"), "Dados cadastrais: UF da empresa (PJ).");
   }
-  reqCampo(p, form.banco.trim().length > 0, "Dados cadastrais: banco.");
-  reqCampo(p, form.agencia.trim().length > 0, "Dados cadastrais: agência.");
-  reqCampo(p, form.conta_corrente.trim().length > 0, "Dados cadastrais: conta corrente.");
-  reqCampo(p, form.pix.trim().length > 0, "Dados cadastrais: PIX.");
+  reqCampo(p, !campoCadastralIncompleto(form, "banco"), "Dados cadastrais: banco.");
+  reqCampo(p, !campoCadastralIncompleto(form, "agencia"), "Dados cadastrais: agência.");
+  reqCampo(p, !campoCadastralIncompleto(form, "conta_corrente"), "Dados cadastrais: conta corrente.");
+  reqCampo(p, !campoCadastralIncompleto(form, "pix"), "Dados cadastrais: PIX.");
   return p;
 }
 

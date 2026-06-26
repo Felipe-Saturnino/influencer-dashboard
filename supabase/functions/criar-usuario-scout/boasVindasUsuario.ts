@@ -1,11 +1,11 @@
 import { formatarData, hojeISO, secao } from './common.ts'
 import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 import {
-  DEFAULT_LOGIN_URL,
   emailCtaButton,
   emailTransacionalShell,
   escapeHtml,
-  resolveAjudaConhecaUrl,
+  PRODUCTION_AJUDA_URL,
+  PRODUCTION_LOGIN_URL,
   resolveLogoUrls,
 } from './transacionalShell.ts'
 
@@ -15,7 +15,8 @@ export interface BoasVindasEmailParams {
   nome: string
   email: string
   senhaTemporaria: string
-  loginUrl: string
+  /** @deprecated Ignorado — links sempre apontam para produção. */
+  loginUrl?: string
   supabaseUrl: string
   /** Marca o corpo como envio de teste (senha fictícia). */
   isPreview?: boolean
@@ -25,9 +26,8 @@ export function buildEmailBoasVindasHtml(params: BoasVindasEmailParams): string 
   const nome = escapeHtml(params.nome)
   const email = escapeHtml(params.email)
   const senha = escapeHtml(params.senhaTemporaria)
-  const loginUrlRaw = params.loginUrl.trim() || DEFAULT_LOGIN_URL
-  const loginUrl = escapeHtml(loginUrlRaw)
-  const ajudaUrl = escapeHtml(resolveAjudaConhecaUrl(loginUrlRaw))
+  const loginUrl = escapeHtml(PRODUCTION_LOGIN_URL)
+  const ajudaUrl = escapeHtml(PRODUCTION_AJUDA_URL)
   const { logoDark, logoLight } = resolveLogoUrls(params.supabaseUrl)
 
   const avisoPreview = params.isPreview

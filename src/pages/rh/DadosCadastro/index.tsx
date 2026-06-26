@@ -43,13 +43,14 @@ import {
   FiltroCalendarioStaffSelect,
   FiltroMeuCalendarioButton,
   onFiltroBarTabsKeyDown,
+  SectionTitle,
 } from "../../../components/dashboard";
 import { ABAS_CADASTRO, CADASTRO_TAB_ICONS, CADASTRO_TAB_IDS } from "./constants";
 import FormacaoCompetenciasPainel from "./FormacaoCompetencias";
 import ExperienciaProfissionalPainel from "./ExperienciaProfissional";
 import { PrestadorDocumentosCadastroBlocos } from "./PrestadorDocumentosCadastroBlocos";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
-import { getPageFilterBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
+import { getPageFilterBoxStyle, getPageContentBoxStyle, PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   buildPayloadCadastralDadosCadastro,
@@ -71,8 +72,10 @@ import {
 } from "../../../lib/rhCadastroRevisao";
 import {
   avaliarCompletudeCadastroRevisao,
+  camposCadastraisIncompletos,
   carregarCompletudeExternaCadastro,
   verificarCompletudeCadastroRevisao,
+  type RhCadastroCampoKey,
   type RhCadastroCompletudeExterna,
   type RhCadastroFormCompletudeInput,
 } from "../../../lib/rhCadastroRevisaoCompleteness";
@@ -352,6 +355,11 @@ export default function RhDadosCadastroPage() {
     if (!form || !completudeExterna) return { ok: false, pendencias: [] as string[] };
     return avaliarCompletudeCadastroRevisao(form, completudeExterna);
   }, [form, completudeExterna]);
+
+  const camposIncompletos = useMemo(
+    () => (form ? camposCadastraisIncompletos(formParaCompletudeInput(form)) : new Set<RhCadastroCampoKey>()),
+    [form],
+  );
 
   const recarregarCompletude = useCallback(async (fid: string): Promise<RhCadastroCompletudeExterna | null> => {
     setCompletudeLoading(true);
@@ -882,6 +890,29 @@ export default function RhDadosCadastroPage() {
       : "—"
     : salarioFmt;
 
+  const pageBox = getPageContentBoxStyle(brand, t);
+  const cadastroBlocosCol: CSSProperties = { display: "flex", flexDirection: "column", gap: PAGE_CONTENT_BOX_GAP };
+
+  const campoVazio = (key: RhCadastroCampoKey) => camposIncompletos.has(key);
+
+  const lblCadastral = (key: RhCadastroCampoKey | null): CSSProperties => ({
+    display: "block",
+    fontSize: 12,
+    fontWeight: 600,
+    color: key && campoVazio(key) ? "#e84025" : t.textMuted,
+    fontFamily: FONT.body,
+    marginBottom: 4,
+  });
+
+  const lblCadastralReadOnly = (key: RhCadastroCampoKey): CSSProperties => ({
+    display: "block",
+    fontSize: 12,
+    fontWeight: 600,
+    color: campoVazio(key) ? "#e84025" : t.textMuted,
+    fontFamily: FONT.body,
+    marginBottom: 4,
+  });
+
   const filterBarTabsRow = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
     width: "100%",
@@ -1228,42 +1259,40 @@ export default function RhDadosCadastroPage() {
       )}
 
       {aba === "trabalho" ? (
-        <section aria-labelledby="sec-contratacao">
-          <h2 id="sec-contratacao" style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>
-            Dados da contratação
-          </h2>
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 16 }}>
-            Estes dados são mantidos pelo RH e não podem ser alterados por aqui.
-          </p>
-          <div className="app-grid-form">
-            {(
-              [
-                ["Organograma", orgLabel],
-                ["Função", form.cargo],
-                ["Nível", form.nivel],
-                ["Tipo de contrato", TIPOS_CONTRATO_LABEL[form.tipo_contrato]],
-                ["E-mail Spin", form.email_spin?.trim() || "—"],
-                [remuneracaoTrabalhoLabel, remuneracaoTrabalhoValor],
-                ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
-                ["Escala", form.escala],
-                ["Turno", turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"],
-              ] as [string, string][]
-            ).map(([k, v]) => (
-              <div key={k} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>{k}</div>
-                <div style={readOnlyBox}>{v || "—"}</div>
-              </div>
-            ))}
+        <div style={cadastroBlocosCol}>
+          <div style={pageBox}>
+            <SectionTitle sub="Mantidos pelo RH — não podem ser alterados por aqui">Dados da contratação</SectionTitle>
+            <div className="app-grid-form" style={{ marginTop: 4 }}>
+              {(
+                [
+                  ["Organograma", orgLabel],
+                  ["Função", form.cargo],
+                  ["Nível", form.nivel],
+                  ["Tipo de contrato", TIPOS_CONTRATO_LABEL[form.tipo_contrato]],
+                  ["E-mail Spin", form.email_spin?.trim() || "—"],
+                  [remuneracaoTrabalhoLabel, remuneracaoTrabalhoValor],
+                  ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
+                  ["Escala", form.escala],
+                  ["Turno", turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"],
+                ] as [string, string][]
+              ).map(([k, v]) => (
+                <div key={k} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>{k}</div>
+                  <div style={readOnlyBox}>{v || "—"}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </section>
+        </div>
       ) : null}
 
       {aba === "cadastral" ? (
-        <section style={{ minWidth: 0, width: "100%" }}>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12 }}>Dados pessoais</h2>
-          <div className="app-grid-form">
+        <div style={cadastroBlocosCol}>
+          <div style={pageBox}>
+            <SectionTitle sub="Identificação e contato">Dados pessoais</SectionTitle>
+            <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
-              <span id="dc-nome-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+              <span id="dc-nome-lbl" style={lblCadastralReadOnly("nome")}>
                 Nome completo
               </span>
               <div id="dc-nome" style={readOnlyBox} aria-labelledby="dc-nome-lbl">
@@ -1272,7 +1301,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <span id="dc-nickname-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+              <span id="dc-nickname-lbl" style={lblCadastral(null)}>
                 Nickname
               </span>
               <div id="dc-nickname" style={readOnlyBox} aria-labelledby="dc-nickname-lbl">
@@ -1280,7 +1309,7 @@ export default function RhDadosCadastroPage() {
               </div>
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-rg" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-rg" style={lblCadastral("rg")}>
                 RG
               </label>
               <input
@@ -1294,7 +1323,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-cpf" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-cpf" style={lblCadastral("cpf")}>
                 CPF
               </label>
               <input
@@ -1307,7 +1336,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-data-nasc" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-data-nasc" style={lblCadastral("data_nascimento")}>
                 Data de nascimento
               </label>
               {podeEditarSelecionado ? (
@@ -1327,7 +1356,7 @@ export default function RhDadosCadastroPage() {
               ) : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-tel" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-tel" style={lblCadastral("telefone")}>
                 Telefone
               </label>
               <input
@@ -1342,7 +1371,7 @@ export default function RhDadosCadastroPage() {
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               {emailPessoalEditavel ? (
                 <>
-                  <label htmlFor="dc-email" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+                  <label htmlFor="dc-email" style={lblCadastral("email")}>
                     E-mail
                   </label>
                   <input
@@ -1357,7 +1386,7 @@ export default function RhDadosCadastroPage() {
                 </>
               ) : (
                 <>
-                  <span id="dc-email-lbl" style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginBottom: 4 }}>
+                  <span id="dc-email-lbl" style={lblCadastralReadOnly("email")}>
                     E-mail
                   </span>
                   <div id="dc-email" style={{ ...readOnlyBox, wordBreak: "break-word" }} aria-labelledby="dc-email-lbl">
@@ -1368,11 +1397,13 @@ export default function RhDadosCadastroPage() {
               {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
             </div>
           </div>
+          </div>
 
-          <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Endereço residencial</h3>
-          <div className="app-grid-form">
+          <div style={pageBox}>
+            <SectionTitle sub="CEP, logradouro e complemento">Endereço residencial</SectionTitle>
+            <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>CEP</span>
+              <span style={lblCadastral("res_cep")}>CEP</span>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <input
                   id="dc-cep-res"
@@ -1408,7 +1439,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
             </div>
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-log" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-log" style={lblCadastral("res_logradouro")}>
                 Logradouro
               </label>
               <input
@@ -1421,7 +1452,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.res_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_logradouro}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-num" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-num" style={lblCadastral("res_numero")}>
                 Número
               </label>
               <input
@@ -1434,7 +1465,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.res_numero ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_numero}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-compl" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-compl" style={lblCadastral(null)}>
                 Complemento
               </label>
               <input
@@ -1446,7 +1477,7 @@ export default function RhDadosCadastroPage() {
               />
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-cid" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-cid" style={lblCadastral("res_cidade")}>
                 Cidade
               </label>
               <input
@@ -1459,7 +1490,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.res_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cidade}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-uf" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-uf" style={lblCadastral("res_estado")}>
                 Estado (UF)
               </label>
               <select
@@ -1480,11 +1511,13 @@ export default function RhDadosCadastroPage() {
               {fieldErr.res_estado ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_estado}</div> : null}
             </div>
           </div>
+          </div>
 
-          <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Contato de emergência</h3>
-          <div className="app-grid-form">
+          <div style={pageBox}>
+            <SectionTitle sub="Nome, parentesco e telefone">Contato de emergência</SectionTitle>
+            <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-em-nome" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-em-nome" style={lblCadastral("emerg_nome")}>
                 Nome
               </label>
               <input
@@ -1497,7 +1530,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.emerg_nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emerg_nome}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-em-par" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-em-par" style={lblCadastral("emerg_parentesco")}>
                 Parentesco
               </label>
               <input
@@ -1509,7 +1542,7 @@ export default function RhDadosCadastroPage() {
               />
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-em-tel" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-em-tel" style={lblCadastral("emerg_telefone")}>
                 Telefone
               </label>
               <input
@@ -1522,13 +1555,14 @@ export default function RhDadosCadastroPage() {
               {fieldErr.emerg_telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emerg_telefone}</div> : null}
             </div>
           </div>
+          </div>
 
           {isPj ? (
-            <>
-              <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Dados da empresa (PJ)</h3>
-              <div className="app-grid-form">
+            <div style={pageBox}>
+              <SectionTitle sub="Razão social e endereço da empresa">Dados da empresa (PJ)</SectionTitle>
+              <div className="app-grid-form" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-nome" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-nome" style={lblCadastral("nome_empresa")}>
                     Nome da empresa
                   </label>
                   <input
@@ -1541,7 +1575,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.nome_empresa ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome_empresa}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-cnpj" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-cnpj" style={lblCadastral("cnpj")}>
                     CNPJ
                   </label>
                   <input
@@ -1554,7 +1588,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.cnpj ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cnpj}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>CEP</span>
+                  <span style={lblCadastral("emp_cep")}>CEP</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <input
                       disabled={!podeEditarSelecionado}
@@ -1588,7 +1622,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
                 </div>
                 <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-log" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-log" style={lblCadastral("emp_logradouro")}>
                     Logradouro
                   </label>
                   <input
@@ -1601,7 +1635,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.emp_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_logradouro}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-num" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-num" style={lblCadastral("emp_numero")}>
                     Número
                   </label>
                   <input
@@ -1614,7 +1648,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.emp_numero ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_numero}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-compl" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-compl" style={lblCadastral(null)}>
                     Complemento
                   </label>
                   <input
@@ -1626,7 +1660,7 @@ export default function RhDadosCadastroPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-cid" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-cid" style={lblCadastral("emp_cidade")}>
                     Cidade
                   </label>
                   <input
@@ -1639,7 +1673,7 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.emp_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cidade}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <label htmlFor="dc-emp-uf" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                  <label htmlFor="dc-emp-uf" style={lblCadastral("emp_estado")}>
                     Estado (UF)
                   </label>
                   <select
@@ -1660,13 +1694,14 @@ export default function RhDadosCadastroPage() {
                   {fieldErr.emp_estado ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_estado}</div> : null}
                 </div>
               </div>
-            </>
+            </div>
           ) : null}
 
-          <h3 style={{ fontFamily: FONT_TITLE, fontSize: 14, color: t.text, margin: "20px 0 10px" }}>Dados bancários</h3>
-          <div className="app-grid-form">
+          <div style={pageBox}>
+            <SectionTitle sub="Conta para pagamentos">Dados bancários</SectionTitle>
+            <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-banco" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-banco" style={lblCadastral("banco")}>
                 Banco
               </label>
               <select
@@ -1696,7 +1731,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-ag" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-ag" style={lblCadastral("agencia")}>
                 Agência
               </label>
               <input
@@ -1709,7 +1744,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-cc" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-cc" style={lblCadastral("conta_corrente")}>
                 Conta corrente
               </label>
               <input
@@ -1722,7 +1757,7 @@ export default function RhDadosCadastroPage() {
               {fieldErr.conta_corrente ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.conta_corrente}</div> : null}
             </div>
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
-              <label htmlFor="dc-pix" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+              <label htmlFor="dc-pix" style={lblCadastral("pix")}>
                 PIX
               </label>
               <input
@@ -1771,7 +1806,8 @@ export default function RhDadosCadastroPage() {
               Você não tem permissão para editar estes dados. Em caso de erro, fale com o RH.
             </p>
           )}
-        </section>
+          </div>
+        </div>
       ) : null}
 
       {aba === "documentos" && row && form ? (

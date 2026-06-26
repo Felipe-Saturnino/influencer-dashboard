@@ -92,6 +92,9 @@ import { CelulaIndicadorAlteracaoEscala } from "../GestaoEscala/CelulaIndicadorA
 import {
   appendHistoricoPresenca,
   chavePresencaGestao,
+  fundoLinhaPresencaDiaHoje,
+  linhaPresencaDestaqueHoje,
+  PRESENCA_DESTAQUE_VERDE_HEX,
   resolverAcoesPresencaLinha,
   resolverStatusPresencaLinha,
   type PresencaDiaGestao,
@@ -1297,13 +1300,6 @@ export default function RhCalendarioPage() {
     return isDark ? "rgba(34,197,94,0.75)" : "rgba(34,197,94,0.85)";
   }
 
-  /** Fundo opaco da linha «hoje» na tabela Controle de Presença (mesma família visual que `dayStyle`). */
-  function fundoLinhaPresencaDiaHoje(colBg: string): string {
-    return isDark
-      ? `color-mix(in srgb, ${colBg} 78%, var(--brand-accent, #1e36f8) 22%)`
-      : `color-mix(in srgb, ${colBg} 88%, var(--brand-accent, #1e36f8) 12%)`;
-  }
-
   const contentBox = getPageContentBoxStyle(brand, t);
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -1720,8 +1716,6 @@ export default function RhCalendarioPage() {
     for (let d = 1; d <= last; d++) out.push(new Date(y, m, d));
     return out;
   }, [current]);
-
-  const hojeIsoCalendario = toISO(new Date());
 
   const nomeUsuarioPresencaGestao = useMemo(() => {
     const email = user?.email?.trim();
@@ -2275,7 +2269,13 @@ export default function RhCalendarioPage() {
                     {diasDoMesPresenca.map((dia, i) => {
                       const fid = presencaFilterStaffIds[0]!;
                       const iso = toISO(dia);
+                      const diaAnterior = i > 0 ? diasDoMesPresenca[i - 1]! : null;
+                      const isoAnterior = diaAnterior ? toISO(diaAnterior) : null;
                       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+                      const valorGAnterior =
+                        diaAnterior && isoAnterior
+                          ? primeiroValorGradeDia(rawGradeRows, fid, isoAnterior)
+                          : null;
                       const pRow = prestadorPorId.get(fid);
                       const slug = (pRow?.staff_operadora_slug ?? "").trim();
                       const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
@@ -2283,6 +2283,12 @@ export default function RhCalendarioPage() {
                       const pt = mapaPontoPorDiaIso.get(iso);
                       const entEsc = esc ? esc.entrada : "—";
                       const saiEsc = esc ? esc.saida : "—";
+                      const escAnterior =
+                        valorGAnterior != null
+                          ? obterEntradaSaidaEscaladasPrestadorDia(pRow, valorGAnterior, opRow)
+                          : null;
+                      const entEscAnterior = escAnterior ? escAnterior.entrada : undefined;
+                      const saiEscAnterior = escAnterior ? escAnterior.saida : undefined;
                       const entReal = horaRegistoSP(pt?.check_in_at);
                       const saiReal = horaRegistoSP(pt?.check_out_at);
                       const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
@@ -2295,6 +2301,7 @@ export default function RhCalendarioPage() {
                       const paramsPresencaLinha = {
                         situacao,
                         diaIso: iso,
+                        entEsc,
                         saiEsc,
                         temCheckIn,
                         temCheckOut,
@@ -2356,20 +2363,29 @@ export default function RhCalendarioPage() {
                         month: "long",
                         year: "numeric",
                       });
-                      const isHojePresenca = iso === hojeIsoCalendario;
+                      const isDestaqueHojePresenca = linhaPresencaDestaqueHoje({
+                        diaIso: iso,
+                        entEsc,
+                        saiEsc,
+                        entEscDiaAnterior: entEscAnterior,
+                        saiEscDiaAnterior: saiEscAnterior,
+                        diaIsoEscalonadoAnterior: isoAnterior ?? undefined,
+                      });
                       return (
                         <tr
                           key={iso}
                           style={{
-                            background: isHojePresenca
-                              ? fundoLinhaPresencaDiaHoje(dataTable.colBg)
+                            background: isDestaqueHojePresenca
+                              ? fundoLinhaPresencaDiaHoje(dataTable.colBg, isDark)
                               : dataTable.zebraRow(i),
                           }}
                         >
                           <td
                             style={{
                               ...dataTable.tdCenter,
-                              ...(isHojePresenca ? { fontWeight: 700, color: BRAND.azul } : {}),
+                              ...(isDestaqueHojePresenca
+                                ? { fontWeight: 700, color: PRESENCA_DESTAQUE_VERDE_HEX }
+                                : {}),
                             }}
                           >
                             {dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}

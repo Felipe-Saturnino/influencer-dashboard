@@ -212,6 +212,12 @@ const STAFF_VER_TAB_LABELS: Record<VerAba, string> = {
   historico: "Histórico",
 };
 
+const STAFF_VER_TAB_ORDER: VerAba[] = ["pessoal", "funcao", "skills", "historico"];
+
+function staffVerAbasVisiveis(exibirHistorico: boolean): VerAba[] {
+  return exibirHistorico ? STAFF_VER_TAB_ORDER : STAFF_VER_TAB_ORDER.filter((k) => k !== "historico");
+}
+
 const STAFF_EDITAR_TAB_ICONS: Record<EditarAba, ReactNode> = {
   funcao: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
   skills: <Star {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -1151,6 +1157,7 @@ export default function RhGestaoStaffPage() {
           }
           onClose={() => setModalVer(null)}
           t={t}
+          exibirAbaHistorico={perm.canEditarOk}
         />
       ) : null}
 
@@ -1198,6 +1205,7 @@ function ModalStaffVer({
   opParaEstudio,
   dadosFuncaoOcultarEstudio = false,
   dadosFuncaoOcultarBioFotos = false,
+  exibirAbaHistorico = true,
   onClose,
   t,
 }: {
@@ -1208,13 +1216,20 @@ function ModalStaffVer({
   dadosFuncaoOcultarEstudio?: boolean;
   /** Inclui Shuffler (só bio/fotos) ou o grupo acima (estúdio + bio + fotos). */
   dadosFuncaoOcultarBioFotos?: boolean;
+  /** Somente com permissão de Editar em Gestão de Staff. */
+  exibirAbaHistorico?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
 }) {
   const [aba, setAba] = useState<VerAba>("pessoal");
+  const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
   const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!exibirAbaHistorico && aba === "historico") setAba("pessoal");
+  }, [exibirAbaHistorico, aba]);
 
   useEffect(() => {
     if (aba !== "historico") return;
@@ -1276,9 +1291,9 @@ function ModalStaffVer({
         role="tablist"
         aria-label="Seções do prestador"
         style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, (["pessoal", "funcao", "skills", "historico"] as VerAba[]), setAba, (k) => `staff-ver-tab-${k}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, verAbas, setAba, (k) => `staff-ver-tab-${k}`)}
       >
-        {(["pessoal", "funcao", "skills", "historico"] as VerAba[]).map((key) => (
+        {verAbas.map((key) => (
           <FiltroBarTabButton
             key={key}
             id={`staff-ver-tab-${key}`}

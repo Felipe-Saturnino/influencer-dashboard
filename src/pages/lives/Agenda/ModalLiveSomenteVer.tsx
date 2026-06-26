@@ -83,7 +83,29 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
           outline: "none",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 6,
+          }}
+        >
+          <h2
+            id="modal-live-ver-title"
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 800,
+              color: brand.primary,
+              fontFamily: FONT_TITLE,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+            }}
+          >
+            Live agendada
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -96,27 +118,13 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
               color: t.textMuted,
               display: "flex",
               alignItems: "center",
+              flexShrink: 0,
               padding: 4,
             }}
           >
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-
-        <h2
-          id="modal-live-ver-title"
-          style={{
-            margin: "0 0 6px",
-            fontSize: 15,
-            fontWeight: 800,
-            color: brand.primary,
-            fontFamily: FONT_TITLE,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          Live agendada
-        </h2>
         <p
           style={{
             margin: "0 0 18px",

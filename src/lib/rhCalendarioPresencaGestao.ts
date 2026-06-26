@@ -38,6 +38,18 @@ export type PresencaAcoesLinha = {
   mostrarTravessaoAcoes: boolean;
 };
 
+export type ResolverPresencaLinhaParams = {
+  situacao: string;
+  diaIso: string;
+  entEsc: string;
+  saiEsc: string;
+  temCheckIn: boolean;
+  temCheckOut: boolean;
+  statusBase: string;
+  gestao?: PresencaDiaGestao;
+  agora?: Date;
+};
+
 export function chavePresencaGestao(funcionarioId: string, diaIso: string): string {
   return `${funcionarioId}:${diaIso}`;
 }
@@ -71,30 +83,117 @@ export function diaIsoEhAmanhaOuFuturo(diaIso: string, ref = new Date()): boolea
   return diaIso >= toIsoLocal(amanha);
 }
 
-/** Agora >= saída escalada (HH:mm) + 30 min no dia civil indicado. */
-export function passouHorarioSaidaEscaladaMais30Min(diaIso: string, saiEsc: string, agora = new Date()): boolean {
+/** Verde semântico (positivo) — destaque da linha «hoje» na tabela de presença. */
+export const PRESENCA_DESTAQUE_VERDE_HEX = "#22c55e";
+
+export function turnoEscaladoCruzaMeiaNoite(entEsc: string, saiEsc: string): boolean {
+  if (entEsc === "—" || saiEsc === "—") return false;
+  const minEnt = minutosRelogioHHmm(entEsc);
+  const minSai = minutosRelogioHHmm(saiEsc);
+  if (minEnt == null || minSai == null) return false;
+  return minSai <= minEnt;
+}
+
+/**
+ * Agora >= saída escalada + 30 min.
+ * Turno que cruza meia-noite (ex.: entra hoje 22:00, sai amanhã 06:00) usa o dia civil seguinte.
+ */
+export function passouHorarioSaidaEscaladaMais30Min(
+  diaIso: string,
+  saiEsc: string,
+  agora = new Date(),
+  entEsc?: string,
+): boolean {
   if (saiEsc === "—") return false;
   const minSaida = minutosRelogioHHmm(saiEsc);
   if (minSaida == null) return false;
   const [y, mo, d] = diaIso.split("-").map((x) => parseInt(x, 10));
   const limite = new Date(y, mo - 1, d, 0, 0, 0, 0);
+  if (entEsc && turnoEscaladoCruzaMeiaNoite(entEsc, saiEsc)) {
+    limite.setDate(limite.getDate() + 1);
+  }
   limite.setMinutes(minSaida + 30);
   return agora.getTime() >= limite.getTime();
 }
 
-export type ResolverPresencaLinhaParams = {
-  situacao: string;
+/** Fundo opaco da linha em destaque — mesma intensidade do mix anterior (brand-accent). */
+export function fundoLinhaPresencaDiaHoje(colBg: string, isDark: boolean): string {
+  return isDark
+    ? `color-mix(in srgb, ${colBg} 78%, ${PRESENCA_DESTAQUE_VERDE_HEX} 22%)`
+    : `color-mix(in srgb, ${colBg} 88%, ${PRESENCA_DESTAQUE_VERDE_HEX} 12%)`;
+}
+
+/** ISO do dia civil da saída escalada (dia seguinte se o turno cruza meia-noite). */
+export function diaIsoSaidaTurnoEscalonado(diaIsoEscalonado: string, entEsc: string, saiEsc: string): string {
+  if (!turnoEscaladoCruzaMeiaNoite(entEsc, saiEsc)) return diaIsoEscalonado;
+  const [y, mo, d] = diaIsoEscalonado.split("-").map((x) => parseInt(x, 10));
+  const dt = new Date(y, mo - 1, d);
+  dt.setDate(dt.getDate() + 1);
+  return toIsoLocal(dt);
+}
+
+export type LinhaPresencaDestaqueParams = {
   diaIso: string;
+  entEsc: string;
   saiEsc: string;
-  temCheckIn: boolean;
-  temCheckOut: boolean;
-  statusBase: string;
-  gestao?: PresencaDiaGestao;
+  /** Escala do dia civil anterior (turno noturno cuja saída pode ser diaIso). */
+  entEscDiaAnterior?: string;
+  saiEscDiaAnterior?: string;
+  diaIsoEscalonadoAnterior?: string;
   agora?: Date;
 };
 
+/**
+ * Destaque «hoje» na linha do dia da saída:
+ * - turno no mesmo dia civil → linha do dia escalado;
+ * - turno que cruza meia-noite → linha do dia seguinte (saída), não a da entrada.
+ */
+export function linhaPresencaDestaqueHoje(params: LinhaPresencaDestaqueParams): boolean {
+  const {
+    diaIso,
+    entEsc,
+    saiEsc,
+    entEscDiaAnterior,
+    saiEscDiaAnterior,
+    diaIsoEscalonadoAnterior,
+    agora = new Date(),
+  } = params;
+  const hojeIso = toIsoLocal(agora);
+
+  if (hojeIso !== diaIso) return false;
+
+  if (entEsc !== "—" && saiEsc !== "—" && !turnoEscaladoCruzaMeiaNoite(entEsc, saiEsc)) {
+    return true;
+  }
+
+  if (
+    entEscDiaAnterior &&
+    saiEscDiaAnterior &&
+    diaIsoEscalonadoAnterior &&
+    entEscDiaAnterior !== "—" &&
+    saiEscDiaAnterior !== "—" &&
+    turnoEscaladoCruzaMeiaNoite(entEscDiaAnterior, saiEscDiaAnterior)
+  ) {
+    const diaSaidaOntem = diaIsoSaidaTurnoEscalonado(
+      diaIsoEscalonadoAnterior,
+      entEscDiaAnterior,
+      saiEscDiaAnterior,
+    );
+    if (diaSaidaOntem === diaIso) {
+      return !passouHorarioSaidaEscaladaMais30Min(
+        diaIsoEscalonadoAnterior,
+        saiEscDiaAnterior,
+        agora,
+        entEscDiaAnterior,
+      );
+    }
+  }
+
+  return false;
+}
+
 export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams): string {
-  const { situacao, diaIso, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
+  const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
   if (gestao?.statusGestao === "aprovado") return "Aprovado";
   if (gestao?.statusGestao === "em_analise") return "Em análise";
@@ -103,7 +202,7 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
 
   if (
     situacao === "Escalado" &&
-    passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora)
+    passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc)
   ) {
     if (!temCheckIn && !temCheckOut) return "Falta";
     if (temCheckIn !== temCheckOut) return "Pendente";
@@ -118,7 +217,7 @@ function historicoAcaoVisivel(gestao?: PresencaDiaGestao): boolean {
 }
 
 export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams): PresencaAcoesLinha {
-  const { situacao, diaIso, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
+  const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
   const temHistorico = historicoAcaoVisivel(gestao);
 
   if (situacao === "Escalado" && diaIsoEhAmanhaOuFuturo(diaIso, agora)) {
@@ -142,7 +241,7 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
   }
 
   const passouLimite =
-    situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora);
+    situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
   if (passouLimite) {
     if (!temCheckIn && !temCheckOut) {
