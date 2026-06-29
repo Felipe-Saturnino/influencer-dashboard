@@ -291,7 +291,7 @@ export default function FigurinosPage() {
       if (!busca.trim()) return true;
       const emp = empPorItem[p.id];
       const estNames = labelEstudiosPeca(p, estudioNome, opParaEstudio);
-      const hay = `${p.code} ${p.category} ${estNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`;
+      const hay = `${p.code} ${p.barcode} ${p.category} ${estNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`;
       return textoContemBusca(hay, busca);
     });
   }, [pecasVisiveisPermissao, aba, busca, empPorItem, estudioNome, opParaEstudio]);
