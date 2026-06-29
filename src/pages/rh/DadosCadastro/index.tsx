@@ -1263,7 +1263,7 @@ export default function RhDadosCadastroPage() {
       {aba === "trabalho" ? (
         <div style={cadastroBlocosCol}>
           <div style={pageBox}>
-            <SectionTitle sub="Mantidos pelo RH — não podem ser alterados por aqui">Dados da contratação</SectionTitle>
+            <SectionTitle sub="Geridos pelo RH, para qualquer alteração procure o RH">Dados da contratação</SectionTitle>
             <div className="app-grid-form" style={{ marginTop: 4 }}>
               {(
                 [
@@ -1440,7 +1440,7 @@ export default function RhDadosCadastroPage() {
           </div>
 
           <div style={pageBox}>
-            <SectionTitle sub="CEP, logradouro e complemento">Endereço residencial</SectionTitle>
+            <SectionTitle sub="CEP, logradouro e complemento da sua casa">Endereço residencial</SectionTitle>
             <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
               <span style={lblCadastral("res_cep")}>CEP</span>
@@ -1554,7 +1554,7 @@ export default function RhDadosCadastroPage() {
           </div>
 
           <div style={pageBox}>
-            <SectionTitle sub="Nome, parentesco e telefone">Contato de emergência</SectionTitle>
+            <SectionTitle sub="Com quem devemos entrar em contato em uma situação emergencial?">Contato de emergência</SectionTitle>
             <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div style={{ marginBottom: 10 }}>
               <label htmlFor="dc-em-nome" style={lblCadastral("emerg_nome")}>
@@ -1599,7 +1599,7 @@ export default function RhDadosCadastroPage() {
 
           {isPj ? (
             <div style={pageBox}>
-              <SectionTitle sub="Razão social e endereço da empresa">Dados da empresa (PJ)</SectionTitle>
+              <SectionTitle sub="Dados da sua empresa que tem contrato com a Spin">Dados da empresa (PJ)</SectionTitle>
               <div className="app-grid-form" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10 }}>
                   <label htmlFor="dc-emp-nome" style={lblCadastral("nome_empresa")}>
@@ -1738,7 +1738,7 @@ export default function RhDadosCadastroPage() {
           ) : null}
 
           <div style={pageBox}>
-            <SectionTitle sub="Conta para pagamentos">Dados bancários</SectionTitle>
+            <SectionTitle sub="Conta para pagamentos deve ser do CNPJ de Contrato">Dados bancários</SectionTitle>
             <div className="app-grid-form" style={{ marginTop: 4 }}>
             <div className="app-grid-form-span-full" style={{ marginBottom: 10 }}>
               <label htmlFor="dc-banco" style={lblCadastral("banco")}>

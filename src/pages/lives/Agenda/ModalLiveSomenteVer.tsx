@@ -141,24 +141,24 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
           <p style={{ margin: "0 0 12px" }}>
             Data: {fmtDataLive(live.data)} - Horário {fmtHorarioLive(live.horario)}
           </p>
-          <p style={{ margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span>Plataforma</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <PlatLogo plataforma={live.plataforma} size={14} isDark={isDark ?? false} />
-              {live.plataforma}
-            </span>
-          </p>
-          <p style={{ margin: 0 }}>
+          <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
             {linkHref ? (
-              <a
-                href={linkHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Assista ao canal na ${live.plataforma} (abre em nova aba)`}
-                style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600, textDecoration: "underline" }}
-              >
-                Assista
-              </a>
+              <>
+                <a
+                  href={linkHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Assista na ${live.plataforma} (abre em nova aba)`}
+                  style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600, textDecoration: "underline" }}
+                >
+                  Assista
+                </a>
+                <span> na plataforma </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <PlatLogo plataforma={live.plataforma} size={14} isDark={isDark ?? false} />
+                  {live.plataforma}
+                </span>
+              </>
             ) : (
               "—"
             )}

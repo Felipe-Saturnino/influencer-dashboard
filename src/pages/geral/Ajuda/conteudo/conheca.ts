@@ -170,7 +170,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Restrições de Data e Permissão",
         texto:
-          "Influencers e operadores só podem agendar lives a partir do dia seguinte — o agendamento para o mesmo dia não é permitido. Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados.\n\nLives com status Realizada ou Não Realizada são bloqueadas para edição por influencers, agências e operadores — o modal abre em modo somente leitura para esses perfis. Apenas Admin e Gestor podem editar ou corrigir lives já validadas.\n\nPerfis com permissão **Ver** na Agenda, mas **sem Editar**, ao clicar numa live no calendário veem o modal **Live agendada** (data, horário, plataforma e link **Assista** para abrir o canal em nova aba) — sem formulário de edição; fecham pelo X no topo.",
+          "Influencers e operadores só podem agendar lives a partir do dia seguinte — o agendamento para o mesmo dia não é permitido. Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados.\n\nLives com status Realizada ou Não Realizada são bloqueadas para edição por influencers, agências e operadores — o modal abre em modo somente leitura para esses perfis. Apenas Admin e Gestor podem editar ou corrigir lives já validadas.\n\nPerfis com permissão **Ver** na Agenda, mas **sem Editar**, ao clicar numa live no calendário veem o modal **Live agendada** (data, horário e link **Assista** na plataforma com ícone e nome) — sem formulário de edição; fecham pelo X no topo.",
       },
       {
         subtitulo: "Bloqueio de Agendamento",
@@ -457,7 +457,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas de Inventário",
         texto:
-          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, categoria, estúdio ou nome de quem realizou a retirada.",
+          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, código de barras, categoria, estúdio ou nome de quem realizou a retirada.",
       },
       {
         subtitulo: "Bipar Código",
