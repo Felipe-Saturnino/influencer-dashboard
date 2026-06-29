@@ -80,9 +80,29 @@ export function presencaCorrecaoTemCampoAlterado(correcao: PresencaCorrecaoMeta)
   return presencaCorrecaoCampoAlterado("entrada", correcao) || presencaCorrecaoCampoAlterado("saida", correcao);
 }
 
+export type PresencaJustificativaMotivo = "medico" | "esquecimento" | "outro";
+
+export type PresencaJustificativaMeta = {
+  motivo: PresencaJustificativaMotivo;
+  registradoPorNome: string;
+  registradoEm: string;
+  atestadoInicio?: string;
+  atestadoFim?: string;
+  atestadoStoragePath?: string;
+  atestadoFileName?: string;
+  observacao?: string | null;
+};
+
+export const PRESENCA_JUSTIFICATIVA_MOTIVO_LABEL: Record<PresencaJustificativaMotivo, string> = {
+  medico: "Médico",
+  esquecimento: "Esquecimento",
+  outro: "Outro",
+};
+
 export type PresencaDiaGestao = {
   statusGestao?: PresencaGestaoStatus;
   correcao?: PresencaCorrecaoMeta;
+  justificativa?: PresencaJustificativaMeta;
   historico?: PresencaHistoricoItem[];
 };
 
@@ -274,6 +294,10 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
   return statusBase;
 }
 
+function temJustificativaRegistrada(gestao?: PresencaDiaGestao): boolean {
+  return Boolean(gestao?.justificativa);
+}
+
 function historicoAcaoVisivel(gestao?: PresencaDiaGestao): boolean {
   const historico = gestao?.historico ?? [];
   return historico.some((h) => h.tipo === "aprovacao" || h.tipo === "justificativa");
@@ -321,7 +345,7 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
   const passouLimite =
     situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
-  if (passouLimite) {
+  if (passouLimite && !temJustificativaRegistrada(gestao)) {
     if (!temCheckIn && !temCheckOut) {
       return { acaoPrimaria: "justificar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
     }
@@ -354,6 +378,7 @@ export function appendHistoricoPresenca(
   return {
     statusGestao: gestao?.statusGestao,
     correcao: gestao?.correcao,
+    justificativa: gestao?.justificativa,
     historico: [...(gestao?.historico ?? []), item],
   };
 }

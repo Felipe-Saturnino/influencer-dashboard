@@ -4,12 +4,14 @@ import {
   type PresencaCorrecaoMeta,
   type PresencaDiaGestao,
   type PresencaGestaoStatus,
+  type PresencaJustificativaMeta,
 } from "./rhCalendarioPresencaGestao";
 
 export type RpcPresencaGestaoMesRow = {
   dia_iso: string | Date;
   status_gestao: PresencaGestaoStatus | null;
   correcao: PresencaCorrecaoMeta | null;
+  justificativa: PresencaJustificativaMeta | null;
   historico: PresencaDiaGestao["historico"] | null;
 };
 
@@ -28,6 +30,7 @@ export function mapRpcPresencaGestaoMesRow(row: RpcPresencaGestaoMesRow): { diaI
     gestao: {
       statusGestao: row.status_gestao ?? undefined,
       correcao: row.correcao ?? undefined,
+      justificativa: row.justificativa ?? undefined,
       historico: row.historico ?? undefined,
     },
   };
@@ -62,6 +65,7 @@ export async function salvarPresencaGestaoDia(
     p_dia_iso: diaIso,
     p_status_gestao: gestao.statusGestao ?? null,
     p_correcao: gestao.correcao ?? null,
+    p_justificativa: gestao.justificativa ?? null,
     p_historico: gestao.historico ?? [],
   });
   return { ok: !error };

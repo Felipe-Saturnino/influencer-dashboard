@@ -93,7 +93,11 @@ import {
   type PresencaTurnoAlvo,
 } from "./ModalAprovacaoPresencaCalendario";
 import { ModalHistoricoPresencaCalendario } from "./ModalHistoricoPresencaCalendario";
-import { ModalJustificarPresencaCalendario } from "./ModalJustificarPresencaCalendario";
+import {
+  ModalJustificarPresencaCalendario,
+  type PresencaJustificativaSubmitPayload,
+  type PresencaJustificarAlvo,
+} from "./ModalJustificarPresencaCalendario";
 import { CelulaIndicadorCorrecaoPresencaCalendario } from "./CelulaIndicadorCorrecaoPresencaCalendario";
 import {
   appendHistoricoPresenca,
@@ -108,8 +112,10 @@ import {
   resolverAcoesPresencaLinha,
   resolverStatusPresencaLinha,
   type PresencaDiaGestao,
+  type PresencaJustificativaMeta,
 } from "../../../lib/rhCalendarioPresencaGestao";
 import { carregarPresencaGestaoMes, salvarPresencaGestaoDia } from "../../../lib/rhCalendarioPresencaGestaoDb";
+import { uploadAtestadoPresencaCalendario } from "../../../lib/rhCalendarioPresencaAtestadoFiles";
 
 const MONTHS = [
   "Janeiro",
@@ -640,7 +646,7 @@ export default function RhCalendarioPage() {
   const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{ dia: Date; funcionarioId: string } | null>(
     null,
   );
-  const [presencaJustificarAberto, setPresencaJustificarAberto] = useState(false);
+  const [presencaJustificarAlvo, setPresencaJustificarAlvo] = useState<PresencaJustificarAlvo | null>(null);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -2049,6 +2055,116 @@ export default function RhCalendarioPage() {
     [nomeUsuarioPresencaGestao, persistirPresencaGestao],
   );
 
+  const salvarJustificativaPresenca = useCallback(
+    async (payload: PresencaJustificativaSubmitPayload): Promise<boolean> => {
+      if (!presencaJustificarAlvo) return false;
+      const diaIso = toISO(presencaJustificarAlvo.dia);
+      const fid = presencaJustificarAlvo.funcionarioId;
+      const chave = chavePresencaGestao(fid, diaIso);
+      const pt = mapaPontoPorDiaIso.get(diaIso);
+      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
+      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
+      const em = new Date().toISOString();
+
+      let novo: PresencaDiaGestao;
+
+      if (payload.motivo === "medico") {
+        const up = await uploadAtestadoPresencaCalendario(fid, diaIso, payload.arquivo);
+        if (!up.ok) return false;
+        setPresencaGestaoPorChave((prev) => {
+          const atual = prev.get(chave);
+          const comHistorico = appendHistoricoPresenca(atual, {
+            tipo: "justificativa",
+            em,
+            por: nomeUsuarioPresencaGestao,
+          });
+          const justificativa: PresencaJustificativaMeta = {
+            motivo: "medico",
+            registradoPorNome: nomeUsuarioPresencaGestao,
+            registradoEm: em,
+            atestadoInicio: payload.atestadoInicio,
+            atestadoFim: payload.atestadoFim,
+            atestadoStoragePath: up.storagePath,
+            atestadoFileName: up.fileName,
+            observacao: payload.observacao.trim() || null,
+          };
+          novo = { ...comHistorico, justificativa };
+          void persistirPresencaGestao(fid, diaIso, novo);
+          const next = new Map(prev);
+          next.set(chave, novo);
+          return next;
+        });
+        setPresencaJustificarAlvo(null);
+        return true;
+      }
+
+      if (payload.motivo === "esquecimento") {
+        setPresencaGestaoPorChave((prev) => {
+          const atual = prev.get(chave);
+          let base = appendHistoricoPresenca(atual, {
+            tipo: "justificativa",
+            em,
+            por: nomeUsuarioPresencaGestao,
+          });
+          base = appendHistoricoPresenca(base, {
+            tipo: "correcao",
+            em,
+            por: nomeUsuarioPresencaGestao,
+          });
+          const justificativa: PresencaJustificativaMeta = {
+            motivo: "esquecimento",
+            registradoPorNome: nomeUsuarioPresencaGestao,
+            registradoEm: em,
+          };
+          novo = {
+            ...base,
+            statusGestao: "em_analise",
+            justificativa,
+            correcao: {
+              entradaRealAnterior,
+              saidaRealAnterior,
+              entradaCorrigida: payload.entrada,
+              saidaCorrigida: payload.saida,
+              observacao: null,
+              corrigidoPorNome: nomeUsuarioPresencaGestao,
+              corrigidoEm: em,
+              analiseStatus: "pendente",
+            },
+          };
+          void persistirPresencaGestao(fid, diaIso, novo);
+          const next = new Map(prev);
+          next.set(chave, novo);
+          return next;
+        });
+        setPresencaJustificarAlvo(null);
+        return true;
+      }
+
+      setPresencaGestaoPorChave((prev) => {
+        const atual = prev.get(chave);
+        const comHistorico = appendHistoricoPresenca(atual, {
+          tipo: "justificativa",
+          em,
+          por: nomeUsuarioPresencaGestao,
+        });
+        const justificativa: PresencaJustificativaMeta = {
+          motivo: "outro",
+          registradoPorNome: nomeUsuarioPresencaGestao,
+          registradoEm: em,
+          observacao: payload.observacao,
+        };
+        novo = { ...comHistorico, justificativa };
+        void persistirPresencaGestao(fid, diaIso, novo);
+        const next = new Map(prev);
+        next.set(chave, novo);
+        return next;
+      });
+      setPresencaJustificarAlvo(null);
+      return true;
+    },
+    [presencaJustificarAlvo, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao, persistirPresencaGestao],
+  );
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -2853,7 +2969,14 @@ export default function RhCalendarioPage() {
                                       style={btnIconPresenca}
                                       aria-label={`Justificar presença — ${labelDiaAria}`}
                                       title="Justificar"
-                                      onClick={() => setPresencaJustificarAberto(true)}
+                                      onClick={() =>
+                                        setPresencaJustificarAlvo({
+                                          funcionarioId: fid,
+                                          dia,
+                                          entRealOriginal: entReal,
+                                          saiRealOriginal: saiReal,
+                                        })
+                                      }
                                     >
                                       <ClipboardPen size={14} aria-hidden="true" />
                                     </button>
@@ -3113,9 +3236,12 @@ export default function RhCalendarioPage() {
       ) : null}
 
       <ModalJustificarPresencaCalendario
-        open={presencaJustificarAberto}
-        onClose={() => setPresencaJustificarAberto(false)}
+        open={presencaJustificarAlvo != null}
+        alvo={presencaJustificarAlvo}
+        onClose={() => setPresencaJustificarAlvo(null)}
+        onSalvar={salvarJustificativaPresenca}
         t={t}
+        brand={brand}
       />
 
       {pontoSucessoModal ? (
