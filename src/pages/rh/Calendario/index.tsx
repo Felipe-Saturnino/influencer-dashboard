@@ -81,6 +81,12 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { carregarArvoreOrganograma } from "../../../lib/rhOrganogramaFetch";
+import {
+  cadeiaLideresFuncionarioIdsPrestador,
+  usuarioEhLiderNaCadeiaPresenca,
+} from "../../../lib/rhOrganogramaLiderImediato";
+import type { RhOrgDiretoriaComFilhos } from "../../../types/rhOrganograma";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 import {
   ModalAprovacaoPresencaCalendario,
@@ -88,19 +94,22 @@ import {
 } from "./ModalAprovacaoPresencaCalendario";
 import { ModalHistoricoPresencaCalendario } from "./ModalHistoricoPresencaCalendario";
 import { ModalJustificarPresencaCalendario } from "./ModalJustificarPresencaCalendario";
-import { CelulaIndicadorAlteracaoEscala } from "../GestaoEscala/CelulaIndicadorAlteracaoEscala";
+import { CelulaIndicadorCorrecaoPresencaCalendario } from "./CelulaIndicadorCorrecaoPresencaCalendario";
 import {
   appendHistoricoPresenca,
   chavePresencaGestao,
   computePresencaKpisConsolidados,
   fundoLinhaPresencaDiaHoje,
   linhaPresencaDestaqueHoje,
+  presencaCorrecaoAnaliseStatusEfetivo,
+  presencaCorrecaoCampoAlterado,
   PRESENCA_DESTAQUE_VERDE_HEX,
   PRESENCA_KPIS_ZERO,
   resolverAcoesPresencaLinha,
   resolverStatusPresencaLinha,
   type PresencaDiaGestao,
 } from "../../../lib/rhCalendarioPresencaGestao";
+import { carregarPresencaGestaoMes, salvarPresencaGestaoDia } from "../../../lib/rhCalendarioPresencaGestaoDb";
 
 const MONTHS = [
   "Janeiro",
@@ -618,12 +627,15 @@ export default function RhCalendarioPage() {
   const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
+  const [orgArvorePresenca, setOrgArvorePresenca] = useState<RhOrgDiretoriaComFilhos[]>([]);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
   const [reunioesMesTick, setReunioesMesTick] = useState(0);
   const [presencaGestaoPorChave, setPresencaGestaoPorChave] = useState<Map<string, PresencaDiaGestao>>(
     () => new Map(),
   );
+  const [loadingPresencaGestao, setLoadingPresencaGestao] = useState(false);
+  const [presencaGestaoTick, setPresencaGestaoTick] = useState(0);
   const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
   const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{ dia: Date; funcionarioId: string } | null>(
     null,
@@ -994,6 +1006,18 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  const cadeiaLideresPorPrestadorId = useMemo(() => {
+    const m = new Map<string, string[]>();
+    if (orgArvorePresenca.length === 0) return m;
+    for (const p of prestadores) {
+      m.set(p.id, cadeiaLideresFuncionarioIdsPrestador(p, orgArvorePresenca));
+    }
+    return m;
+  }, [prestadores, orgArvorePresenca]);
+
+  const meuFuncionarioIdOrganograma = meuRhFuncionarioId ?? meuPrestadorRhIdVistaCompleta;
+  const isAdminPresenca = user?.role === "admin";
+
   /**
    * ID em `rh_calendario_acoes.solicitante_funcionario_id`: a política RLS só permite INSERT quando este
    * funcionário coincide com o login (e-mail / e-mail Spin em `rh_funcionarios`). Sem esse vínculo o
@@ -1065,6 +1089,42 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, pontoMesTick]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") {
+      setPresencaGestaoPorChave(new Map());
+      return;
+    }
+    if (abaPrincipal !== "presenca") return;
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      setPresencaGestaoPorChave(new Map());
+      return;
+    }
+    let cancelled = false;
+    setLoadingPresencaGestao(true);
+    const refIso = refMesPrimeiroDiaISO(current);
+    void carregarPresencaGestaoMes(supabase, fid, refIso).then(({ mapa, error }) => {
+      if (cancelled) return;
+      setLoadingPresencaGestao(false);
+      if (!error) setPresencaGestaoPorChave(mapa);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") return;
+    let cancelled = false;
+    void carregarArvoreOrganograma().then(({ arvore, error }) => {
+      if (cancelled) return;
+      if (!error) setOrgArvorePresenca(arvore);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -1853,7 +1913,7 @@ export default function RhCalendarioPage() {
   ]);
 
   const kpisPresencaCarregando =
-    presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes);
+    presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes || loadingPresencaGestao);
 
   const kpiPresencaSkeletonStyle: CSSProperties = {
     height: 28,
@@ -1870,9 +1930,22 @@ export default function RhCalendarioPage() {
     return "Usuário";
   }, [user?.name, user?.email]);
 
+  const persistirPresencaGestao = useCallback(
+    async (funcionarioId: string, diaIso: string, gestao: PresencaDiaGestao) => {
+      const { ok } = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
+      if (!ok) {
+        console.error("Não foi possível salvar a gestão de presença.");
+        setPresencaGestaoTick((x) => x + 1);
+      }
+    },
+    [],
+  );
+
   const confirmarAprovacaoPresenca = useCallback(() => {
     if (!presencaAlvoModal) return;
-    const chave = chavePresencaGestao(presencaAlvoModal.funcionarioId, toISO(presencaAlvoModal.dia));
+    const diaIso = toISO(presencaAlvoModal.dia);
+    const fid = presencaAlvoModal.funcionarioId;
+    const chave = chavePresencaGestao(fid, diaIso);
     setPresencaGestaoPorChave((prev) => {
       const next = new Map(prev);
       const atual = next.get(chave);
@@ -1881,17 +1954,20 @@ export default function RhCalendarioPage() {
         em: new Date().toISOString(),
         por: nomeUsuarioPresencaGestao,
       });
-      next.set(chave, { ...comHistorico, statusGestao: "aprovado", correcao: atual?.correcao });
+      const novo: PresencaDiaGestao = { ...comHistorico, statusGestao: "aprovado", correcao: atual?.correcao };
+      next.set(chave, novo);
+      void persistirPresencaGestao(fid, diaIso, novo);
       return next;
     });
     setPresencaAlvoModal(null);
-  }, [presencaAlvoModal, nomeUsuarioPresencaGestao]);
+  }, [presencaAlvoModal, nomeUsuarioPresencaGestao, persistirPresencaGestao]);
 
   const salvarCorrecaoPresenca = useCallback(
     (payload: { entrada: string; saida: string; observacao: string }) => {
       if (!presencaAlvoModal) return;
       const diaIso = toISO(presencaAlvoModal.dia);
-      const chave = chavePresencaGestao(presencaAlvoModal.funcionarioId, diaIso);
+      const fid = presencaAlvoModal.funcionarioId;
+      const chave = chavePresencaGestao(fid, diaIso);
       const pt = mapaPontoPorDiaIso.get(diaIso);
       const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
       const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
@@ -1903,7 +1979,7 @@ export default function RhCalendarioPage() {
           em: new Date().toISOString(),
           por: nomeUsuarioPresencaGestao,
         });
-        next.set(chave, {
+        const novo: PresencaDiaGestao = {
           ...comHistorico,
           statusGestao: "em_analise",
           correcao: {
@@ -1914,13 +1990,63 @@ export default function RhCalendarioPage() {
             observacao: payload.observacao.trim() || null,
             corrigidoPorNome: nomeUsuarioPresencaGestao,
             corrigidoEm: new Date().toISOString(),
+            analiseStatus: "pendente",
           },
-        });
+        };
+        next.set(chave, novo);
+        void persistirPresencaGestao(fid, diaIso, novo);
         return next;
       });
       setPresencaAlvoModal(null);
     },
-    [presencaAlvoModal, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao],
+    [presencaAlvoModal, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao, persistirPresencaGestao],
+  );
+
+  const analisarCorrecaoPresenca = useCallback(
+    (funcionarioId: string, diaIso: string, decisao: "aprovada" | "recusada") => {
+      const chave = chavePresencaGestao(funcionarioId, diaIso);
+      const em = new Date().toISOString();
+      setPresencaGestaoPorChave((prev) => {
+        const next = new Map(prev);
+        const atual = next.get(chave);
+        if (!atual?.correcao) return prev;
+        if (presencaCorrecaoAnaliseStatusEfetivo(atual.correcao) !== "pendente") return prev;
+
+        let novo: PresencaDiaGestao;
+        if (decisao === "aprovada") {
+          const comHistorico = appendHistoricoPresenca(atual, {
+            tipo: "aprovacao",
+            em,
+            por: nomeUsuarioPresencaGestao,
+          });
+          novo = {
+            ...comHistorico,
+            statusGestao: "aprovado",
+            correcao: {
+              ...atual.correcao,
+              analiseStatus: "aprovada",
+              analisePorNome: nomeUsuarioPresencaGestao,
+              analiseEm: em,
+            },
+          };
+        } else {
+          novo = {
+            ...atual,
+            statusGestao: undefined,
+            correcao: {
+              ...atual.correcao,
+              analiseStatus: "recusada",
+              analisePorNome: nomeUsuarioPresencaGestao,
+              analiseEm: em,
+            },
+          };
+        }
+        next.set(chave, novo);
+        void persistirPresencaGestao(funcionarioId, diaIso, novo);
+        return next;
+      });
+    },
+    [nomeUsuarioPresencaGestao, persistirPresencaGestao],
   );
 
   if (perm.canView === "nao") {
@@ -2517,13 +2643,47 @@ export default function RhCalendarioPage() {
                       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
                       const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
                       const correcao = gestaoDia?.correcao;
-                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entReal);
-                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiReal);
-                      const horasRealDesvio = presencaDesvioHorasMaior5Min(
-                        entEsc,
-                        saiEsc,
-                        pt?.check_in_at ?? null,
-                        pt?.check_out_at ?? null,
+                      const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
+                      const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
+                      const correcaoAprovada =
+                        Boolean(correcao) && presencaCorrecaoAnaliseStatusEfetivo(correcao) === "aprovada";
+                      const entRealExib =
+                        correcaoAprovada && correcao && correcaoEntradaAlterada
+                          ? correcao.entradaCorrigida
+                          : entReal;
+                      const saiRealExib =
+                        correcaoAprovada && correcao && correcaoSaidaAlterada
+                          ? correcao.saidaCorrigida
+                          : saiReal;
+                      const horasRealExib =
+                        correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+                          ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
+                          : horasReal;
+                      const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
+                      const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
+                      const horasRealDesvio =
+                        correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+                          ? (() => {
+                              const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
+                              const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
+                              if (escMin == null || realMin == null) return false;
+                              return Math.abs(realMin - escMin) > 5;
+                            })()
+                          : presencaDesvioHorasMaior5Min(
+                              entEsc,
+                              saiEsc,
+                              pt?.check_in_at ?? null,
+                              pt?.check_out_at ?? null,
+                            );
+                      const cadeiaLider = cadeiaLideresPorPrestadorId.get(fid) ?? [];
+                      const podeAnalisarCorrecao = Boolean(
+                        correcao &&
+                          presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
+                          usuarioEhLiderNaCadeiaPresenca(
+                            meuFuncionarioIdOrganograma,
+                            cadeiaLider,
+                            isAdminPresenca,
+                          ),
                       );
                       const btnIconPresenca: CSSProperties = {
                         width: 32,
@@ -2597,21 +2757,16 @@ export default function RhCalendarioPage() {
                               ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {entReal}
-                            {correcao ? (
-                              <CelulaIndicadorAlteracaoEscala
+                            {entRealExib}
+                            {correcao && correcaoEntradaAlterada ? (
+                              <CelulaIndicadorCorrecaoPresencaCalendario
                                 t={t}
-                                tituloTooltip="Correção de Entrada"
-                                rotuloValorAnterior="Correção de Entrada:"
-                                rotuloDataHora="Data/Hora da Alteração:"
-                                corIcone="#f59e0b"
-                                valorAnteriorLabel={correcao.entradaCorrigida}
-                                meta={{
-                                  valorAnterior: correcao.entradaCorrigida,
-                                  alteradoPorNome: correcao.corrigidoPorNome,
-                                  alteradoEm: correcao.corrigidoEm,
-                                  observacao: correcao.observacao,
-                                }}
+                                campo="entrada"
+                                correcao={correcao}
+                                valorCorrecao={correcao.entradaCorrigida}
+                                podeAnalisar={podeAnalisarCorrecao}
+                                onAprovar={() => analisarCorrecaoPresenca(fid, iso, "aprovada")}
+                                onRejeitar={() => analisarCorrecaoPresenca(fid, iso, "recusada")}
                               />
                             ) : null}
                           </td>
@@ -2630,21 +2785,16 @@ export default function RhCalendarioPage() {
                               ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {saiReal}
-                            {correcao ? (
-                              <CelulaIndicadorAlteracaoEscala
+                            {saiRealExib}
+                            {correcao && correcaoSaidaAlterada ? (
+                              <CelulaIndicadorCorrecaoPresencaCalendario
                                 t={t}
-                                tituloTooltip="Correção de Saída"
-                                rotuloValorAnterior="Correção de Saída:"
-                                rotuloDataHora="Data/Hora da Alteração:"
-                                corIcone="#f59e0b"
-                                valorAnteriorLabel={correcao.saidaCorrigida}
-                                meta={{
-                                  valorAnterior: correcao.saidaCorrigida,
-                                  alteradoPorNome: correcao.corrigidoPorNome,
-                                  alteradoEm: correcao.corrigidoEm,
-                                  observacao: correcao.observacao,
-                                }}
+                                campo="saida"
+                                correcao={correcao}
+                                valorCorrecao={correcao.saidaCorrigida}
+                                podeAnalisar={podeAnalisarCorrecao}
+                                onAprovar={() => analisarCorrecaoPresenca(fid, iso, "aprovada")}
+                                onRejeitar={() => analisarCorrecaoPresenca(fid, iso, "recusada")}
                               />
                             ) : null}
                           </td>
@@ -2662,7 +2812,7 @@ export default function RhCalendarioPage() {
                               ...(horasRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
                           >
-                            {horasReal}
+                            {horasRealExib}
                           </td>
                           <td style={dataTable.tdCenter}>{st}</td>
                           <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>

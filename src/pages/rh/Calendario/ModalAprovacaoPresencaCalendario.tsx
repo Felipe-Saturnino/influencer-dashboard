@@ -169,7 +169,7 @@ export function ModalAprovacaoPresencaCalendario({
       correcaoPresencaIgualRealizado(ent, alvo.entRealOriginal) &&
       correcaoPresencaIgualRealizado(sai, alvo.saiRealOriginal)
     ) {
-      setErr("Horários de Correção são os mesmos realizados.");
+      setErr("Informe pelo menos um horário de correção diferente do realizado.");
       return;
     }
     setSalvando(true);
