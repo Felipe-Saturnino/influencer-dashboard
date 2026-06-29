@@ -346,7 +346,9 @@
 
     .col-gestor { display: table-cell; }
     body.perfil-proprios .col-gestor,
-    body.perfil-proprios .filtro-gestor { display: none !important; }
+    body.perfil-proprios .filtro-gestor,
+    body.perfil-proprios .filtro-criar { display: none !important; }
+    body.sem-criar .filtro-criar { display: none !important; }
 
     .panel { display: none; }
     .panel.active { display: block; }
@@ -663,13 +665,15 @@
   <label>
     Perfil simulado:
     <select id="selPerfil" onchange="setPerfil(this.value)">
-      <option value="gestor">Editar = Sim (gestor / avaliador)</option>
+      <option value="gestor">Editar = Sim · Criar = Sim</option>
+      <option value="gestor_sem_criar">Editar = Sim · Criar = Não</option>
       <option value="proprios">Editar = Próprios (prestador)</option>
     </select>
   </label>
   <span style="opacity:0.4">|</span>
   <button class="active" id="btnTabAval" onclick="setTab('avaliacoes')">Aba Avaliações</button>
   <button id="btnTabGer" onclick="setTab('gerenciamento')">Aba Gerenciamento</button>
+  <button id="btnTabCfg" onclick="setTab('configuracao')">Aba Configuração</button>
 </div>
 
 <div class="page-shell">
@@ -726,15 +730,22 @@
         Avaliações
       </button>
       <button class="tab-btn filtro-gestor" id="tabGerenciamento" role="tab" aria-selected="false" onclick="setTab('gerenciamento')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
         Gerenciamento
+      </button>
+      <button class="tab-btn filtro-criar" id="tabConfiguracao" role="tab" aria-selected="false" onclick="setTab('configuracao')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Configuração
       </button>
     </div>
   </div>
 
   <!-- Hint perfil próprios -->
   <div class="hint-box perfil-hint-proprios" style="display:none">
-    <strong>Visão Prestador (Editar = Próprios):</strong> filtros de Time/Staff ocultos; aba Gerenciamento oculta; colunas Avaliado e Avaliador ocultas; apenas avaliações finalizadas visíveis (somente leitura).
+    <strong>Visão Prestador (Editar = Próprios):</strong> filtros de Time/Staff ocultos; abas Gerenciamento e Configuração ocultas; colunas Avaliado e Avaliador ocultas; apenas avaliações finalizadas visíveis (somente leitura).
+  </div>
+  <div class="hint-box perfil-hint-sem-criar" style="display:none">
+    <strong>Sem permissão de Criar:</strong> aba Configuração oculta. Gerenciamento permanece visível para quem tem Editar = Sim.
   </div>
 
   <!-- ═══════════════════════════════════════════════════════ -->
@@ -1138,6 +1149,21 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PAINEL: ABA CONFIGURAÇÃO (só Criar = Sim)               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="panelConfiguracao" class="panel filtro-criar">
+    <div class="content-box">
+      <div class="section-title">
+        Configuração
+        <span class="sub">Parâmetros de avaliação, critérios e agenda por time</span>
+      </div>
+      <div class="hint-box" style="margin-bottom:0">
+        <strong>Mockup — em definição:</strong> fluxos de configuração (critérios por dimensão, periodicidade de avaliações programadas, times elegíveis, etc.) serão detalhados no handoff de produto. Acesso restrito à permissão de <strong>Criar</strong> na página.
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══ Modal Avaliar ═══ -->
@@ -1326,19 +1352,36 @@
   }
 
   function setTab(tab) {
+    if (tab === 'gerenciamento' && document.body.classList.contains('perfil-proprios')) tab = 'avaliacoes';
+    if (tab === 'configuracao' && (document.body.classList.contains('perfil-proprios') || document.body.classList.contains('sem-criar'))) tab = 'avaliacoes';
+
     document.getElementById('panelAvaliacoes').classList.toggle('active', tab === 'avaliacoes');
     document.getElementById('panelGerenciamento').classList.toggle('active', tab === 'gerenciamento');
+    document.getElementById('panelConfiguracao').classList.toggle('active', tab === 'configuracao');
     document.getElementById('tabAvaliacoes').classList.toggle('active', tab === 'avaliacoes');
     document.getElementById('tabGerenciamento').classList.toggle('active', tab === 'gerenciamento');
+    document.getElementById('tabConfiguracao').classList.toggle('active', tab === 'configuracao');
     document.getElementById('btnTabAval').classList.toggle('active', tab === 'avaliacoes');
     document.getElementById('btnTabGer').classList.toggle('active', tab === 'gerenciamento');
+    document.getElementById('btnTabCfg').classList.toggle('active', tab === 'configuracao');
   }
 
   function setPerfil(perfil) {
-    document.body.classList.toggle('perfil-gestor', perfil === 'gestor');
-    document.body.classList.toggle('perfil-proprios', perfil === 'proprios');
+    document.body.classList.remove('perfil-gestor', 'perfil-proprios', 'sem-criar');
+    if (perfil === 'proprios') {
+      document.body.classList.add('perfil-proprios');
+    } else if (perfil === 'gestor_sem_criar') {
+      document.body.classList.add('perfil-gestor', 'sem-criar');
+    } else {
+      document.body.classList.add('perfil-gestor');
+    }
     document.querySelector('.perfil-hint-proprios').style.display = perfil === 'proprios' ? 'block' : 'none';
-    if (perfil === 'proprios') setTab('avaliacoes');
+    document.querySelector('.perfil-hint-sem-criar').style.display = perfil === 'gestor_sem_criar' ? 'block' : 'none';
+    if (perfil === 'proprios' || perfil === 'gestor_sem_criar') {
+      const cfgAtiva = document.getElementById('panelConfiguracao').classList.contains('active');
+      const gerAtiva = document.getElementById('panelGerenciamento').classList.contains('active');
+      if (cfgAtiva || (gerAtiva && perfil === 'proprios')) setTab('avaliacoes');
+    }
   }
 
   function preencherStaff(time) {
