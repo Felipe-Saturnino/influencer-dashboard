@@ -373,6 +373,92 @@
     }
     .hint-box strong { color: var(--brand-primary); }
 
+    .config-dim-block { margin-bottom: 18px; }
+    .config-dim-block:last-child { margin-bottom: 0; }
+    .config-dim-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .config-dim-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--brand-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .config-peso-dim {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .config-peso-dim input {
+      width: 56px;
+      text-align: center;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .config-peso-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+    .config-peso-table th {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 8px 10px;
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-primary) 14%);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .config-peso-table th:first-child { text-align: left; }
+    .config-peso-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--card-border);
+      text-align: center;
+    }
+    .config-peso-table td:first-child { text-align: left; font-weight: 500; }
+    .config-peso-table input {
+      width: 64px;
+      text-align: center;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .config-aplica-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+    .config-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .criterio-peso-hint {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
     /* Barra de pesquisa (padrão BarraPesquisaPagina / Scout) */
     .barra-pesquisa {
       position: relative;
@@ -786,9 +872,9 @@
               </span>
               <span class="kpi-label">Nota Total</span>
             </div>
-            <div class="kpi-value">8,4</div>
+            <div class="kpi-value">8,40</div>
             <div class="kpi-vs">
-              <span class="up">▲ +3,7%</span> vs MTD mai/26 · 8,1
+              <span class="up">▲ +3,7%</span> vs MTD mai/26 · 8,10
             </div>
           </div>
         </div>
@@ -805,8 +891,8 @@
               </span>
               <span class="kpi-label">Imagem</span>
             </div>
-            <div class="kpi-value">8,6</div>
-            <div class="kpi-vs"><span class="up">▲ +2,4%</span> vs MTD mai/26 · 8,4</div>
+            <div class="kpi-value">8,60</div>
+            <div class="kpi-vs"><span class="up">▲ +2,4%</span> vs MTD mai/26 · 8,40</div>
           </div>
         </div>
         <div class="kpi-card">
@@ -818,8 +904,8 @@
               </span>
               <span class="kpi-label">Comunicação</span>
             </div>
-            <div class="kpi-value">8,2</div>
-            <div class="kpi-vs"><span class="down">▼ −1,2%</span> vs MTD mai/26 · 8,3</div>
+            <div class="kpi-value">8,20</div>
+            <div class="kpi-vs"><span class="down">▼ −1,2%</span> vs MTD mai/26 · 8,30</div>
           </div>
         </div>
         <div class="kpi-card">
@@ -831,8 +917,8 @@
               </span>
               <span class="kpi-label">Mesa</span>
             </div>
-            <div class="kpi-value">8,5</div>
-            <div class="kpi-vs"><span class="up">▲ +5,0%</span> vs MTD mai/26 · 8,1</div>
+            <div class="kpi-value">8,50</div>
+            <div class="kpi-vs"><span class="up">▲ +5,0%</span> vs MTD mai/26 · 8,10</div>
           </div>
         </div>
       </div>
@@ -1155,11 +1241,13 @@
   <div id="panelConfiguracao" class="panel filtro-criar">
     <div class="content-box">
       <div class="section-title">
-        Configuração
-        <span class="sub">Parâmetros de avaliação, critérios e agenda por time</span>
+        Pesos e critérios
+        <span class="sub">Escala 0–10 · alterações aplicam-se a novas avaliações</span>
       </div>
-      <div class="hint-box" style="margin-bottom:0">
-        <strong>Mockup — em definição:</strong> fluxos de configuração (critérios por dimensão, periodicidade de avaliações programadas, times elegíveis, etc.) serão detalhados no handoff de produto. Acesso restrito à permissão de <strong>Criar</strong> na página.
+      <div id="configPesosMount"></div>
+      <div class="config-toolbar">
+        <button type="button" class="btn-text primary" onclick="salvarConfigPesos()">Salvar configuração</button>
+        <span id="configSaveStatus" style="font-size:12px;color:var(--text-muted)"></span>
       </div>
     </div>
   </div>
@@ -1459,49 +1547,202 @@
     futebol_brasileiro: { label: 'Futebol Brasileiro', mesaTipo: 'cartas', cls: 'game-fb' },
   };
 
-  const CRITERIOS_COMUNICACAO = [
-    'Anúncio de estatísticas',
-    'Boas-vindas',
-    'Comentários sobre o jogo',
-    'Parabéns a vitórias',
-    'Sorriso',
-    'Volume da voz',
-  ];
+  /* ── Modelo de pontuação (escala 0–10) ── */
+  const ESCALA_NOTA_MAX = 10;
 
-  const CRITERIOS_IMAGEM = [
-    'Acessórios',
-    'Cabelo',
-    'Maquiagem',
-    'Postura',
-    'Tatuagens',
-    'Unhas',
-    'Uniforme',
-  ];
+  const PERFORMANCE_HUB_SCORING = {
+    comunicacao: {
+      label: 'Comunicação',
+      pesoDimensao: 2,
+      criterios: [
+        { slug: 'anuncio_estatisticas', label: 'Anúncio de estatísticas', peso: 1.5 },
+        { slug: 'boas_vindas', label: 'Boas-vindas a novos jogadores', peso: 1 },
+        { slug: 'comentarios_jogo', label: 'Comentários sobre o jogo', peso: 1.5 },
+        { slug: 'parabens_vitorias', label: 'Parabéns a vitórias', peso: 1 },
+        { slug: 'sorriso', label: 'Sorriso', peso: 1.5 },
+        { slug: 'volume_voz', label: 'Volume da voz', peso: 1 },
+      ],
+    },
+    mesa: {
+      label: 'Mesa',
+      pesoDimensao: 2,
+      criterios: [
+        { slug: 'abrir_fechar', label: 'Abrir e fechar o jogo', peso: 1, mesaTipo: null },
+        { slug: 'contato_camera', label: 'Contato com a câmera', peso: 1.5, mesaTipo: null },
+        { slug: 'distribuicao_cartas', label: 'Distribuição de cartas', peso: 1.5, mesaTipo: 'cartas' },
+        { slug: 'gestos_jogo', label: 'Gestos relacionados ao jogo', peso: 1.5, mesaTipo: null },
+        { slug: 'dealer_change', label: 'Pontualidade nas trocas (Dealer Change)', peso: 1, mesaTipo: null },
+        { slug: 'procedimentos_mesa', label: 'Procedimentos à mesa', peso: 1.5, mesaTipo: null },
+        { slug: 'recolhimento_cartas', label: 'Recolhimento de cartas', peso: 1, mesaTipo: 'cartas' },
+        { slug: 'regras_jogos', label: 'Regras dos jogos', peso: 1.5, mesaTipo: null },
+        { slug: 'tecnica_giro', label: 'Técnica de giro (roleta)', peso: 1.5, mesaTipo: 'roleta' },
+        { slug: 'uso_id', label: 'Uso de ID', peso: 1, mesaTipo: null },
+        { slug: 'velocidade', label: 'Velocidade', peso: 1, mesaTipo: null },
+      ],
+    },
+    imagem: {
+      label: 'Imagem',
+      pesoDimensao: 1,
+      criterios: [
+        { slug: 'acessorios', label: 'Acessórios', peso: 2 },
+        { slug: 'cabelo', label: 'Cabelo', peso: 1 },
+        { slug: 'maquiagem', label: 'Maquiagem', peso: 1 },
+        { slug: 'postura', label: 'Postura', peso: 1 },
+        { slug: 'tatuagens', label: 'Tatuagens', peso: 1 },
+        { slug: 'unhas', label: 'Unhas', peso: 2 },
+        { slug: 'uniforme', label: 'Uniforme', peso: 2 },
+      ],
+    },
+  };
 
-  const CRITERIOS_MESA_CARTAS = [
-    'Abrir e fechar o jogo',
-    'Contato com a câmera',
-    'Distribuição de cartas',
-    'Gestos relacionados ao jogo',
-    'Pontualidade nas trocas (Dealer Change)',
-    'Procedimentos à mesa',
-    'Recolhimento de cartas',
-    'Regras dos jogos',
-    'Uso de ID',
-    'Velocidade',
-  ];
+  function formatNotaPtBr(valor) {
+    if (valor == null || Number.isNaN(valor)) return '—';
+    return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-  const CRITERIOS_MESA_ROULETTE = [
-    'Abrir e fechar o jogo',
-    'Contato com a câmera',
-    'Gestos relacionados ao jogo',
-    'Pontualidade nas trocas (Dealer Change)',
-    'Procedimentos à mesa',
-    'Regras dos jogos',
-    'Técnica de giro',
-    'Uso de ID',
-    'Velocidade',
-  ];
+  function formatPesoPtBr(peso) {
+    return Number(peso).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  }
+
+  function calcularNotaDimensao(paresNotaPeso) {
+    let soma = 0;
+    let pesoTotal = 0;
+    paresNotaPeso.forEach(function (p) {
+      if (p.nota === '' || p.nota == null || Number.isNaN(Number(p.nota))) return;
+      soma += Number(p.nota) * p.peso;
+      pesoTotal += p.peso;
+    });
+    if (pesoTotal === 0) return null;
+    return soma / pesoTotal;
+  }
+
+  function calcularNotaTotal(notasDim, scoring) {
+    let soma = 0;
+    let pesoTotal = 0;
+    ['comunicacao', 'mesa', 'imagem'].forEach(function (key) {
+      const nota = notasDim[key];
+      if (nota == null || Number.isNaN(nota)) return;
+      const peso = scoring[key].pesoDimensao;
+      soma += nota * peso;
+      pesoTotal += peso;
+    });
+    if (pesoTotal === 0) return null;
+    return soma / pesoTotal;
+  }
+
+  function criteriosMesaPorTipo(mesaTipo) {
+    return PERFORMANCE_HUB_SCORING.mesa.criterios.filter(function (c) {
+      return c.mesaTipo == null || c.mesaTipo === mesaTipo;
+    });
+  }
+
+  function coletarNotasContainer(container, criteriosConfig) {
+    return criteriosConfig.map(function (c, idx) {
+      const sel = container.querySelector('[data-criterio-slug="' + c.slug + '"] select');
+      return { nota: sel ? sel.value : '', peso: c.peso };
+    });
+  }
+
+  function calcularNotasModalAvaliacao() {
+    const jogo = document.getElementById('modalJogo').value;
+    const meta = JOGOS_META[jogo];
+    const mesaTipo = meta ? meta.mesaTipo : 'cartas';
+
+    const com = calcularNotaDimensao(coletarNotasContainer(
+      document.getElementById('panelModalComunicacao'),
+      PERFORMANCE_HUB_SCORING.comunicacao.criterios
+    ));
+    const img = calcularNotaDimensao(coletarNotasContainer(
+      document.getElementById('panelModalImagem'),
+      PERFORMANCE_HUB_SCORING.imagem.criterios
+    ));
+    const mesaContainer = mesaTipo === 'roleta'
+      ? document.getElementById('panelMesaRoleta')
+      : document.getElementById('panelMesaCartas');
+    const mesa = calcularNotaDimensao(coletarNotasContainer(
+      mesaContainer,
+      criteriosMesaPorTipo(mesaTipo)
+    ));
+
+    const notasDim = { comunicacao: com, mesa: mesa, imagem: img };
+    const total = calcularNotaTotal(notasDim, PERFORMANCE_HUB_SCORING);
+    return { notasDim: notasDim, total: total };
+  }
+
+  function renderConfigPesos() {
+    const mount = document.getElementById('configPesosMount');
+    if (!mount) return;
+    mount.innerHTML = ['comunicacao', 'mesa', 'imagem'].map(function (key) {
+      const dim = PERFORMANCE_HUB_SCORING[key];
+      const rows = dim.criterios.map(function (c) {
+        const aplica = key !== 'mesa' ? '' : (
+          '<td><span class="config-aplica-tag">' +
+          (c.mesaTipo == null ? 'Ambos' : c.mesaTipo === 'cartas' ? 'Cartas' : 'Roleta') +
+          '</span></td>'
+        );
+        return (
+          '<tr>' +
+            '<td>' + c.label + '</td>' +
+            (key === 'mesa' ? aplica : '') +
+            '<td><input type="number" min="0.1" step="0.1" data-config="criterio" data-dim="' + key + '" data-slug="' + c.slug + '" value="' + c.peso + '" aria-label="Peso ' + c.label + '" /></td>' +
+          '</tr>'
+        );
+      }).join('');
+      return (
+        '<div class="config-dim-block">' +
+          '<div class="config-dim-header">' +
+            '<span class="config-dim-title">' + dim.label + '</span>' +
+            '<label class="config-peso-dim">Peso da dimensão' +
+              '<input type="number" min="0.1" step="0.1" data-config="dimensao" data-dim="' + key + '" value="' + dim.pesoDimensao + '" aria-label="Peso dimensão ' + dim.label + '" />' +
+            '</label>' +
+          '</div>' +
+          '<div class="table-wrap">' +
+            '<table class="config-peso-table">' +
+              '<thead><tr>' +
+                '<th scope="col">Critério</th>' +
+                (key === 'mesa' ? '<th scope="col">Aplica-se</th>' : '') +
+                '<th scope="col">Peso</th>' +
+              '</tr></thead>' +
+              '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function salvarConfigPesos() {
+    document.querySelectorAll('[data-config="dimensao"]').forEach(function (input) {
+      const key = input.getAttribute('data-dim');
+      PERFORMANCE_HUB_SCORING[key].pesoDimensao = Number(input.value) || PERFORMANCE_HUB_SCORING[key].pesoDimensao;
+    });
+    document.querySelectorAll('[data-config="criterio"]').forEach(function (input) {
+      const key = input.getAttribute('data-dim');
+      const slug = input.getAttribute('data-slug');
+      const crit = PERFORMANCE_HUB_SCORING[key].criterios.find(function (c) { return c.slug === slug; });
+      if (crit) crit.peso = Number(input.value) || crit.peso;
+    });
+    const status = document.getElementById('configSaveStatus');
+    if (status) {
+      status.textContent = 'Configuração salva (mockup — em produção: nova versão + snapshot por avaliação).';
+      status.style.color = 'var(--brand-success)';
+    }
+    document.getElementById('panelModalComunicacao').dataset.ready = '';
+    initModalCriterios();
+  }
+
+  renderConfigPesos();
+
+  const CRITERIOS_COMUNICACAO = PERFORMANCE_HUB_SCORING.comunicacao.criterios;
+  const CRITERIOS_IMAGEM = PERFORMANCE_HUB_SCORING.imagem.criterios;
+
+  function labelsCriteriosMesaCartas() {
+    return criteriosMesaPorTipo('cartas');
+  }
+
+  function labelsCriteriosMesaRoleta() {
+    return criteriosMesaPorTipo('roleta');
+  }
 
   let modalPrestadorAtual = null;
 
@@ -1515,24 +1756,28 @@
 
   function opcoesNotaSelect() {
     let html = '<option value="">Selecione...</option>';
-    for (let i = 0; i <= 5; i++) html += '<option value="' + i + '">' + i + '</option>';
+    for (let i = 0; i <= ESCALA_NOTA_MAX; i++) {
+      html += '<option value="' + i + '">' + i + '</option>';
+    }
     return html;
   }
 
-  function renderCriterios(container, prefix, titulos) {
-    container.innerHTML = titulos.map(function (titulo, idx) {
+  function renderCriterios(container, prefix, criterios) {
+    container.innerHTML = criterios.map(function (c, idx) {
       const id = prefix + '_' + idx;
       return (
-        '<div class="criterio-block">' +
-          '<div class="criterio-titulo">' + titulo + '</div>' +
+        '<div class="criterio-block" data-criterio-slug="' + c.slug + '">' +
+          '<div class="criterio-titulo">' + c.label +
+            '<span class="criterio-peso-hint">Peso ' + formatPesoPtBr(c.peso) + '</span>' +
+          '</div>' +
           '<div class="criterio-campos">' +
             '<div class="field" style="margin:0" data-campo-obrig="nota">' +
-              '<label for="' + id + '_nota">Nota<span class="campo-obrigatorio">*</span></label>' +
+              '<label for="' + id + '_nota">Nota (0–' + ESCALA_NOTA_MAX + ')<span class="campo-obrigatorio">*</span></label>' +
               '<select id="' + id + '_nota" required>' + opcoesNotaSelect() + '</select>' +
             '</div>' +
             '<div class="field" style="margin:0" data-campo-obrig="coment">' +
               '<label for="' + id + '_coment">Comentário<span class="campo-obrigatorio">*</span></label>' +
-              '<textarea id="' + id + '_coment" rows="2" required placeholder="Observações sobre ' + titulo.toLowerCase() + '..."></textarea>' +
+              '<textarea id="' + id + '_coment" rows="2" required placeholder="Observações sobre ' + c.label.toLowerCase() + '..."></textarea>' +
             '</div>' +
           '</div>' +
         '</div>'
@@ -1544,8 +1789,8 @@
     if (document.getElementById('panelModalComunicacao').dataset.ready) return;
     renderCriterios(document.getElementById('panelModalComunicacao'), 'com', CRITERIOS_COMUNICACAO);
     renderCriterios(document.getElementById('panelModalImagem'), 'img', CRITERIOS_IMAGEM);
-    renderCriterios(document.getElementById('panelMesaCartas'), 'mesa_c', CRITERIOS_MESA_CARTAS);
-    renderCriterios(document.getElementById('panelMesaRoleta'), 'mesa_r', CRITERIOS_MESA_ROULETTE);
+    renderCriterios(document.getElementById('panelMesaCartas'), 'mesa_c', labelsCriteriosMesaCartas());
+    renderCriterios(document.getElementById('panelMesaRoleta'), 'mesa_r', labelsCriteriosMesaRoleta());
     document.getElementById('panelModalComunicacao').dataset.ready = '1';
   }
 
@@ -1710,9 +1955,14 @@
       status.className = 'modal-footer-left error';
       return;
     }
-    status.textContent = 'Avaliação concluída e enviada para análise.';
+    const calc = calcularNotasModalAvaliacao();
+    status.textContent =
+      'Avaliação concluída — Total ' + formatNotaPtBr(calc.total) +
+      ' (Com. ' + formatNotaPtBr(calc.notasDim.comunicacao) +
+      ', Mesa ' + formatNotaPtBr(calc.notasDim.mesa) +
+      ', Img. ' + formatNotaPtBr(calc.notasDim.imagem) + '). Pesos gravados no snapshot.';
     status.className = 'modal-footer-left saved';
-    setTimeout(function () { fecharModalAvaliar(); }, 1200);
+    setTimeout(function () { fecharModalAvaliar(); }, 2200);
   }
 
   function limparCamposModal() {
