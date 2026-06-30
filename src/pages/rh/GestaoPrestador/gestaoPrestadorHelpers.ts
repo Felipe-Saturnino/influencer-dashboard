@@ -344,55 +344,97 @@ export const UFS_BR = [
   "RR", "SC", "SP", "SE", "TO",
 ] as const;
 
-/** Cadastro considerado incompleto para o card de resumo (campos mínimos alinhados à validação de gravação). */
-export function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): boolean {
-  if (!r.nome?.trim()) return true;
+function logradouroResidencialRow(r: RhFuncionario): string {
+  return (r.res_logradouro ?? "").trim() || (r.endereco_residencial ?? "").trim();
+}
+
+function logradouroEmpresaRow(r: RhFuncionario): string {
+  return (r.emp_logradouro ?? "").trim() || (r.endereco_empresa ?? "").trim();
+}
+
+function nomeEmergenciaRow(r: RhFuncionario): string {
+  return (r.emerg_nome ?? "").trim() || (r.contato_emergencia ?? "").trim();
+}
+
+/**
+ * Motivos pelos quais o prestador aparece no card «Cadastro incompleto».
+ * Alinhado a `formDeFuncionario` (fallback de campos legados) e à validação de gravação.
+ */
+export function motivosPrestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): string[] {
+  const p: string[] = [];
+
+  if (!r.nome?.trim()) p.push("Nome completo");
   const cpf = somenteDigitos(r.cpf ?? "");
-  if (cpf.length !== 11 || !validarCpfDigitos(cpf)) return true;
-  if (!r.email?.trim() || !validarEmail(r.email)) return true;
-  const tel = somenteDigitos(r.telefone);
-  if (tel.length < 10 || tel.length > 11) return true;
-  if (!r.rg?.trim()) return true;
-  if (!r.res_logradouro?.trim() || !r.res_numero?.trim() || !r.res_cidade?.trim()) return true;
+  if (cpf.length !== 11 || !validarCpfDigitos(cpf)) p.push("CPF válido");
+  if (!r.email?.trim() || !validarEmail(r.email)) p.push("E-mail pessoal válido");
+  const tel = somenteDigitos(r.telefone ?? "");
+  if (tel.length < 10 || tel.length > 11) p.push("Telefone");
+  if (!r.rg?.trim()) p.push("RG");
+
+  if (!logradouroResidencialRow(r)) p.push("Logradouro residencial");
+  if (!(r.res_numero ?? "").trim()) p.push("Número residencial");
+  if (!(r.res_cidade ?? "").trim()) p.push("Cidade residencial");
   const uf = (r.res_estado ?? "").trim().toUpperCase();
-  if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) return true;
+  if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) p.push("UF residencial");
   const cep = somenteDigitos(r.res_cep ?? "");
-  if (cep.length !== 8) return true;
-  const en = (r.emerg_nome ?? "").trim();
-  if (!en || en === "—") return true;
+  if (cep.length !== 8) p.push("CEP residencial");
+
+  const en = nomeEmergenciaRow(r);
+  if (!en || en === "—") p.push("Nome do contato de emergência");
   const telE = somenteDigitos(r.emerg_telefone ?? "");
-  if (telE.length < 10 || telE.length > 11) return true;
+  if (telE.length < 10 || telE.length > 11) p.push("Telefone de emergência");
+
   if (temOrganograma) {
-    if (!r.org_time_id && !r.org_gerencia_id && !r.org_diretoria_id && !r.setor?.trim()) return true;
-  } else if (!r.setor?.trim()) return true;
-  if (!r.cargo?.trim() || !r.nivel?.trim() || !r.escala?.trim()) return true;
-  if (!escalaEhPermitida(r.escala)) return true;
-  if (!r.data_inicio?.trim()) return true;
-  if (r.tipo_contrato === "PJ") {
-    const cnpj = somenteDigitos(r.cnpj);
-    if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj)) return true;
-    if (cnpj === CNPJ_CONTEXTO_NAO_PJ) return true;
-    const ne = (r.nome_empresa ?? "").trim();
-    if (!ne || ne.includes("completar")) return true;
-    if (!r.emp_logradouro?.trim() || !r.emp_numero?.trim() || !r.emp_cidade?.trim()) return true;
-    const ufe = (r.emp_estado ?? "").trim().toUpperCase();
-    if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) return true;
-    const cepE = somenteDigitos(r.emp_cep ?? "");
-    if (cepE.length !== 8) return true;
+    if (!r.org_time_id && !r.org_gerencia_id && !r.org_diretoria_id && !r.setor?.trim()) {
+      p.push("Organograma ou setor");
+    }
+  } else if (!r.setor?.trim()) {
+    p.push("Setor");
   }
+
+  if (!r.cargo?.trim()) p.push("Função");
+  if (!r.nivel?.trim()) p.push("Nível");
+  if (!r.escala?.trim()) p.push("Escala");
+  else if (!escalaEhPermitida(r.escala)) p.push("Escala (fora da lista 5x2, 3x3, 4x2 ou 5x1)");
+  if (!r.data_inicio?.trim()) p.push("Data de início");
+
+  if (r.tipo_contrato === "PJ") {
+    const cnpj = somenteDigitos(r.cnpj ?? "");
+    if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj) || cnpj === CNPJ_CONTEXTO_NAO_PJ) p.push("CNPJ válido (PJ)");
+    const ne = (r.nome_empresa ?? "").trim();
+    if (!ne || ne.includes("completar")) p.push("Nome da empresa (PJ)");
+    if (!logradouroEmpresaRow(r)) p.push("Logradouro da empresa (PJ)");
+    if (!(r.emp_numero ?? "").trim()) p.push("Número da empresa (PJ)");
+    if (!(r.emp_cidade ?? "").trim()) p.push("Cidade da empresa (PJ)");
+    const ufe = (r.emp_estado ?? "").trim().toUpperCase();
+    if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) p.push("UF da empresa (PJ)");
+    const cepE = somenteDigitos(r.emp_cep ?? "");
+    if (cepE.length !== 8) p.push("CEP da empresa (PJ)");
+  }
+
   const bancoT = (r.banco ?? "").trim();
-  if (!bancoT || bancoT === "—" || !r.agencia?.trim() || !r.conta_corrente?.trim() || r.conta_corrente.trim() === "0") return true;
-  if (!String(r.pix ?? "").trim()) return true;
+  if (!bancoT || bancoT === "—") p.push("Banco");
+  if (!(r.agencia ?? "").trim()) p.push("Agência");
+  const conta = (r.conta_corrente ?? "").trim();
+  if (!conta || conta === "0") p.push("Conta corrente");
+  if (!String(r.pix ?? "").trim()) p.push("PIX");
+
   const area: RhAreaAtuacao =
     r.area_atuacao === "estudio" || r.area_atuacao === "escritorio" ? r.area_atuacao : "escritorio";
   if (area === "estudio") {
     const hc = Number(r.remuneracao_hora_centavos ?? 0);
-    if (hc <= 0) return true;
-    if (!(r.staff_turno ?? "").trim()) return true;
+    if (hc <= 0) p.push("Remuneração por hora (estúdio)");
+    if (!(r.staff_turno ?? "").trim()) p.push("Turno (estúdio)");
   } else if (Number(r.salario) <= 0) {
-    return true;
+    p.push("Remuneração mensal (escritório)");
   }
-  return false;
+
+  return p;
+}
+
+/** Cadastro considerado incompleto para o card de resumo (campos mínimos alinhados à validação de gravação). */
+export function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): boolean {
+  return motivosPrestadorCadastroIncompleto(r, temOrganograma).length > 0;
 }
 
 export const blurSensivel: CSSProperties = {

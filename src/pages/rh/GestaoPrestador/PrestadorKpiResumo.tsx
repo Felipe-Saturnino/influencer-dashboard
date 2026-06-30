@@ -5,13 +5,14 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getPageContentBoxShellStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
-import { corStatusPrestador, type FiltroStatusPrestador } from "./gestaoPrestadorHelpers";
+import { corStatusPrestador, motivosPrestadorCadastroIncompleto, type FiltroStatusPrestador } from "./gestaoPrestadorHelpers";
 
 export interface ResumoPrestadoresCards {
   total: number;
   porStatus: { ativo: number; indisponivel: number; encerrado: number };
   incompletos: RhFuncionario[];
   revisaoPendente: RhFuncionario[];
+  temOrganograma: boolean;
 }
 
 export function PrestadorKpiResumo({
@@ -121,12 +122,16 @@ export function PrestadorKpiResumo({
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflow: "auto" }}>
-            {resumo.incompletos.map((row) =>
-              podeEditar ? (
+            {resumo.incompletos.map((row) => {
+              const motivos = motivosPrestadorCadastroIncompleto(row, resumo.temOrganograma);
+              const hint = motivos.length > 0 ? `Pendente: ${motivos.join(", ")}` : undefined;
+              return podeEditar ? (
                 <button
                   key={row.id}
                   type="button"
                   onClick={() => onEditarPrestador(row)}
+                  title={hint}
+                  aria-label={hint ? `${row.nome} — ${hint}` : row.nome}
                   style={{
                     background: "none",
                     border: "none",
@@ -143,11 +148,11 @@ export function PrestadorKpiResumo({
                   {row.nome}
                 </button>
               ) : (
-                <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                <span key={row.id} title={hint} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
                   {row.nome}
                 </span>
-              ),
-            )}
+              );
+            })}
           </div>
         )}
       </div>
