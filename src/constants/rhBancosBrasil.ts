@@ -16,6 +16,7 @@ const RH_BANCOS_BRASIL_BASE: { value: string; label: string }[] = [
   { value: "Banco Safra", label: "Banco Safra" },
   { value: "Banco Sofisa Direto", label: "Banco Sofisa Direto" },
   { value: "Banco Votorantim", label: "Banco Votorantim" },
+  { value: "Banco XP", label: "Banco XP" },
   { value: "Banestes", label: "Banestes" },
   { value: "Banpará", label: "Banpará" },
   { value: "Banrisul", label: "Banrisul" },
@@ -101,6 +102,8 @@ const RH_BANCO_ALIASES: Record<string, string> = {
   citibank: "Citibank",
   "abc brasil": "Banco ABC Brasil",
   "banco abc brasil": "Banco ABC Brasil",
+  xp: "Banco XP",
+  "banco xp": "Banco XP",
 };
 
 /**
