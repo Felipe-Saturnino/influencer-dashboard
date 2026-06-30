@@ -9,6 +9,8 @@ globs:
   - src/pages/rh/Organograma/**/*.ts
   - src/pages/rh/Vagas/**/*.tsx
   - src/pages/rh/Vagas/**/*.ts
+  - src/pages/rh/Solicitacoes/**/*.tsx
+  - src/pages/rh/Solicitacoes/**/*.ts
   - src/pages/rh/CentralDenunciasSpin/**/*.tsx
   - src/pages/rh/CentralDenunciasSpin/**/*.ts
 alwaysApply: false
@@ -32,6 +34,7 @@ alwaysApply: false
 | `rh_dados_cadastro` | Dados de Cadastro | `rh/DadosCadastro/` |
 | `rh_organograma` | Organograma | `rh/Organograma/` |
 | `rh_vagas` | Vagas | `rh/Vagas/` |
+| `rh_solicitacoes` | Solicitações | `rh/Solicitacoes/` |
 | `rh_central_denuncias` | Central de Denúncias | `rh/CentralDenunciasSpin/` |
 
 Canal público de denúncia (formulário externo): `geral.mdc` → `public/CanalDenunciasSpinPage.tsx`.
@@ -103,6 +106,18 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - **Candidaturas:** pesquisa + status + tipo (`ClipboardType`, **Todos Tipos**) + vagas (`ClipboardType`, **Todas Vagas**); estado dos filtros na página; opções de vaga vindas de `RhVagasCandidaturasPainel` via callback; kanban sem bloco de filtros duplicado.
 - Constantes: `lib/rhVagasFiltroConstants.ts`.
 - **Handoff:** estados, publicação, candidatos.
+
+---
+
+## Solicitações (`rh_solicitacoes`)
+
+- `PageHeader`; subtítulo: «Acompanhe e atenda solicitações de prestadores — atestados e vagas internas.»
+- **Barra de filtros** (`getFilterBarWrapperStyle`): carrossel de **status** (Em análise · Aprovado · Rejeitado; default **Em análise**) + pill **Todos Status** (`FiltroBarPillButton` + `FilterBarIcons.status`); à direita `FiltroBarCampoSelect` **Tipo de solicitação** (`ClipboardList`, agregadora **Todas Solicitações**, opções Atestado / Vagas).
+- **Bloco Solicitações:** `getPageContentBoxStyle` + `SectionTitle` + tabela canónica (`useDataTableBlock`, `SortTableTh`, coluna data default `desc`). Colunas: Data da Solicitação, Solicitante, Tipo de Solicitação, Status (badge semântico), Ações (ícone **Ver** / **Atender** com tooltip — `BtnIconeAcaoLinha` + `tooltipAcaoAbreModal`).
+- Modais: `ModalsVerAtender.tsx` — **Ver** (somente leitura) e **Atender** (abas Dados / Atendimento; status, observação RH, motivo se Rejeitado) — permissão **Editar**.
+- Dados: `rh_solicitacoes` (tipos `atestado` | `vagas`; status `em_analise` | `aprovado` | `rejeitado`). RLS: Ver **sim** = todas; **próprios** = solicitações do prestador logado.
+- Constantes: `lib/rhSolicitacoesConstants.ts`.
+- Vazio filtrado: «Nenhuma solicitação encontrada.»
 
 ---
 

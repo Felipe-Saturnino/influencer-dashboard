@@ -641,6 +641,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  rh_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        texto:
+          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado ou Vagas, ou exibe **Todas Solicitações**.",
+      },
+      {
+        subtitulo: "Tabela e ações",
+        texto:
+          "A tabela lista data, solicitante, tipo e status. Use os ícones **Ver** (detalhes em somente leitura) e **Atender** (disponível com permissão de Editar) — passe o mouse sobre o ícone para ver o tooltip.\n\nNo atendimento, defina status, observação do RH e motivo quando o status for Rejeitado.",
+      },
+    ],
+  },
   rh_portal: {
     titulo: "Portal de RH",
     blocos: [

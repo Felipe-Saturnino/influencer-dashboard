@@ -62,6 +62,7 @@ export type PageKey =
   | "rh_dados_cadastro"
   | "rh_organograma"
   | "rh_vagas"
+  | "rh_solicitacoes"
   | "rh_gestao_escala"
   | "rh_staff"
   | "rh_calendario"
