@@ -462,7 +462,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Bipar Código",
         texto:
-          "O botão Bipar código abre um leitor de câmera para escanear o código de barras impresso na etiqueta da peça. Também é possível digitar o código manualmente. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
+          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
       },
       {
         subtitulo: "Cadastrar Peça",

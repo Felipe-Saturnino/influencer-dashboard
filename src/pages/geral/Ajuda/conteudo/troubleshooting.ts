@@ -467,9 +467,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Figurinos",
     blocos: [
       {
-        subtitulo: "A câmera não abre ao clicar em Bipar código?",
+        subtitulo: "O leitor USB não preenche o campo ao bipear?",
         texto:
-          "O navegador precisa de permissão para acessar a câmera. Verifique se a permissão foi concedida — na barra do navegador deve aparecer um ícone de câmera. Se negado, recarregue a página e permita o acesso quando solicitado. Em dispositivos sem câmera, use o campo de texto manual abaixo do leitor para digitar o código.",
+          "Confirme que o modal **Bipar código** está aberto e que o cursor está no campo de leitura (ele recebe foco automaticamente). Leitores em modo teclado enviam os dígitos como se fossem digitados no teclado, seguidos de Enter — não precisam de driver de câmera. Se nada aparecer, teste o leitor em um editor de texto; se funcionar lá, recarregue a página e abra **Bipar código** de novo. Como alternativa, digite o código de barras ou o código da peça (ex.: CAL-000001) manualmente e clique em Buscar.",
+      },
+      {
+        subtitulo: "A câmera não abre ao clicar em Usar câmera (opcional)?",
+        texto:
+          "A câmera é opcional — leitores USB em modo teclado não dependem dela. Se expandir **Usar câmera (opcional)**, o navegador precisa de permissão para acessar a câmera. Verifique se a permissão foi concedida na barra do navegador. Se negada, use o leitor USB ou digite o código manualmente.",
       },
       {
         subtitulo: "O código bipado retornou 'não reconhecido'?",
