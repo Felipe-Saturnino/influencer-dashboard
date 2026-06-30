@@ -116,8 +116,16 @@ ON CONFLICT (role, page_key) DO UPDATE SET
   can_excluir = EXCLUDED.can_excluir;
 
 INSERT INTO public.gestor_tipo_pages (gestor_tipo_slug, page_key)
-VALUES ('recursos_humanos', 'rh_solicitacoes')
+SELECT DISTINCT gt.gestor_tipo_slug, 'rh_solicitacoes'
+FROM public.gestor_tipo_pages gt
+WHERE gt.page_key = 'rh_vagas'
 ON CONFLICT (gestor_tipo_slug, page_key) DO NOTHING;
+
+INSERT INTO public.prestador_tipo_pages (prestador_tipo_slug, page_key)
+SELECT DISTINCT pt.prestador_tipo_slug, 'rh_solicitacoes'
+FROM public.prestador_tipo_pages pt
+WHERE pt.page_key = 'rh_vagas'
+ON CONFLICT (prestador_tipo_slug, page_key) DO NOTHING;
 
 COMMENT ON TABLE public.rh_solicitacoes IS
   'RH — solicitações de prestadores (atestado médico, vagas internas). Gestão em rh_solicitacoes.';
