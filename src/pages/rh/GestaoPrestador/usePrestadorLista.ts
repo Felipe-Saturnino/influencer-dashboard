@@ -171,7 +171,7 @@ export function usePrestadorLista({
     }
     const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
     const revisaoPendente = filtrada.filter((r) => revisaoCadastralPendenteParaFuncionario(r));
-    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente };
+    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos, revisaoPendente, temOrganograma };
   }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
 
   const liderImediatoLinha = useCallback(
