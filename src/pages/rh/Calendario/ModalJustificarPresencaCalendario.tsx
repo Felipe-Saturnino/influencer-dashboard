@@ -117,9 +117,11 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
   const [err, setErr] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const arquivoInputId = useId();
+  const alvoDiaMs = alvo?.dia.getTime();
+  const alvoFuncionarioId = alvo?.funcionarioId;
 
   useEffect(() => {
-    if (!open || !alvo) return;
+    if (!open || alvoDiaMs == null || !alvoFuncionarioId) return;
     setMotivo("");
     setAtestadoInicio("");
     setAtestadoFim("");
@@ -129,7 +131,7 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
     setSaidaEsquecimento("");
     setErr(null);
     setSalvando(false);
-  }, [open, alvo?.dia, alvo?.funcionarioId]);
+  }, [open, alvoDiaMs, alvoFuncionarioId]);
 
   if (!open || !alvo) return null;
 
