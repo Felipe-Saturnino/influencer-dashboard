@@ -79,6 +79,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Gestão de Escala", "rh_gestao_escala", "GestaoDeEscala"),
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),
   page("Central de Denúncias", "rh_central_denuncias", "CentralDeDenuncias"),
+  page("Solicitações", "rh_solicitacoes", "RhSolicitacoes"),
   page("Links e Materiais", "links_materiais", "LinksEMateriais"),
   page("Spin na Rede", "spin_na_rede", "SpinNaRede"),
   page("Gestão de Operadoras", "gestao_operadoras", "GestaoDeOperadoras"),

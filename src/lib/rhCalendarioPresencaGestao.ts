@@ -14,6 +14,8 @@ export const PRESENCA_HISTORICO_LABEL: Record<PresencaHistoricoTipo, string> = {
   correcao: "Correção de presença",
 };
 
+export type PresencaCorrecaoAnaliseStatus = "pendente" | "aprovada" | "recusada";
+
 export type PresencaCorrecaoMeta = {
   entradaRealAnterior: string;
   saidaRealAnterior: string;
@@ -22,11 +24,85 @@ export type PresencaCorrecaoMeta = {
   observacao: string | null;
   corrigidoPorNome: string;
   corrigidoEm: string;
+  analiseStatus?: PresencaCorrecaoAnaliseStatus;
+  analisePorNome?: string;
+  analiseEm?: string;
+};
+
+export const PRESENCA_CORRECAO_COR_PENDENTE = "#f59e0b";
+export const PRESENCA_CORRECAO_COR_APROVADA = "#22c55e";
+export const PRESENCA_CORRECAO_COR_RECUSADA = "#e84025";
+
+export function presencaCorrecaoAnaliseStatusEfetivo(
+  correcao: PresencaCorrecaoMeta | undefined,
+): PresencaCorrecaoAnaliseStatus {
+  return correcao?.analiseStatus ?? "pendente";
+}
+
+export function presencaCorrecaoCorIndicador(correcao: PresencaCorrecaoMeta | undefined): string {
+  const st = presencaCorrecaoAnaliseStatusEfetivo(correcao);
+  if (st === "aprovada") return PRESENCA_CORRECAO_COR_APROVADA;
+  if (st === "recusada") return PRESENCA_CORRECAO_COR_RECUSADA;
+  return PRESENCA_CORRECAO_COR_PENDENTE;
+}
+
+export function presencaCorrecaoTituloTooltipCampo(
+  campo: "entrada" | "saida",
+  correcao: PresencaCorrecaoMeta | undefined,
+): string {
+  const base = campo === "entrada" ? "Correção de Entrada" : "Correção de Saída";
+  const st = presencaCorrecaoAnaliseStatusEfetivo(correcao);
+  if (st === "aprovada") return `${base} - Aprovada`;
+  if (st === "recusada") return `${base} - Recusada`;
+  return base;
+}
+
+export function presencaCorrecaoRotuloAnalisePor(st: PresencaCorrecaoAnaliseStatus): string {
+  return st === "recusada" ? "Rejeitado por:" : "Aprovado por:";
+}
+
+/** `true` se o campo foi efetivamente corrigido (horário corrigido ≠ realizado anterior). */
+export function presencaCorrecaoCampoAlterado(
+  campo: "entrada" | "saida",
+  correcao: PresencaCorrecaoMeta,
+): boolean {
+  const corrigida = campo === "entrada" ? correcao.entradaCorrigida : correcao.saidaCorrigida;
+  const anterior = campo === "entrada" ? correcao.entradaRealAnterior : correcao.saidaRealAnterior;
+  if (anterior === "—" || !anterior.trim()) return true;
+  if (!validarHorarioPresencaHHMM(corrigida)) return corrigida.trim() !== anterior.trim();
+  const c = normalizarHorarioPresencaHHMM(corrigida);
+  const a = normalizarHorarioPresencaHHMM(anterior);
+  if (!validarHorarioPresencaHHMM(a)) return c !== anterior.trim();
+  return c !== a;
+}
+
+export function presencaCorrecaoTemCampoAlterado(correcao: PresencaCorrecaoMeta): boolean {
+  return presencaCorrecaoCampoAlterado("entrada", correcao) || presencaCorrecaoCampoAlterado("saida", correcao);
+}
+
+export type PresencaJustificativaMotivo = "medico" | "esquecimento" | "outro";
+
+export type PresencaJustificativaMeta = {
+  motivo: PresencaJustificativaMotivo;
+  registradoPorNome: string;
+  registradoEm: string;
+  atestadoInicio?: string;
+  atestadoFim?: string;
+  atestadoStoragePath?: string;
+  atestadoFileName?: string;
+  observacao?: string | null;
+};
+
+export const PRESENCA_JUSTIFICATIVA_MOTIVO_LABEL: Record<PresencaJustificativaMotivo, string> = {
+  medico: "Médico",
+  esquecimento: "Esquecimento",
+  outro: "Outro",
 };
 
 export type PresencaDiaGestao = {
   statusGestao?: PresencaGestaoStatus;
   correcao?: PresencaCorrecaoMeta;
+  justificativa?: PresencaJustificativaMeta;
   historico?: PresencaHistoricoItem[];
 };
 
@@ -196,7 +272,14 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
   if (gestao?.statusGestao === "aprovado") return "Aprovado";
-  if (gestao?.statusGestao === "em_analise") return "Em análise";
+  if (
+    gestao?.statusGestao === "em_analise" &&
+    gestao.correcao &&
+    presencaCorrecaoAnaliseStatusEfetivo(gestao.correcao) === "pendente" &&
+    presencaCorrecaoTemCampoAlterado(gestao.correcao)
+  ) {
+    return "Em análise";
+  }
 
   if (situacao === "Escalado" && diaIsoEhAmanhaOuFuturo(diaIso, agora)) return "—";
 
@@ -209,6 +292,10 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
   }
 
   return statusBase;
+}
+
+function temJustificativaRegistrada(gestao?: PresencaDiaGestao): boolean {
+  return Boolean(gestao?.justificativa);
 }
 
 function historicoAcaoVisivel(gestao?: PresencaDiaGestao): boolean {
@@ -242,17 +329,23 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
 
   if (gestao?.statusGestao === "em_analise") {
     const temHist = (gestao.historico?.length ?? 0) > 0;
-    return {
-      acaoPrimaria: null,
-      mostrarHistorico: temHist,
-      mostrarTravessaoAcoes: !temHist,
-    };
+    const pendente =
+      Boolean(gestao.correcao) &&
+      presencaCorrecaoAnaliseStatusEfetivo(gestao.correcao) === "pendente" &&
+      presencaCorrecaoTemCampoAlterado(gestao.correcao!);
+    if (pendente) {
+      return {
+        acaoPrimaria: null,
+        mostrarHistorico: temHist,
+        mostrarTravessaoAcoes: !temHist,
+      };
+    }
   }
 
   const passouLimite =
     situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
-  if (passouLimite) {
+  if (passouLimite && !temJustificativaRegistrada(gestao)) {
     if (!temCheckIn && !temCheckOut) {
       return { acaoPrimaria: "justificar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
     }
@@ -285,6 +378,7 @@ export function appendHistoricoPresenca(
   return {
     statusGestao: gestao?.statusGestao,
     correcao: gestao?.correcao,
+    justificativa: gestao?.justificativa,
     historico: [...(gestao?.historico ?? []), item],
   };
 }

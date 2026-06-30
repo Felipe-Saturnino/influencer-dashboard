@@ -127,6 +127,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: Files },
       { key: "rh_organograma", label: "Organograma", icon: Network },
       { key: "rh_vagas", label: "Vagas", icon: Briefcase },
+      { key: "rh_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: Scale },
     ],
   },

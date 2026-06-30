@@ -22,10 +22,24 @@ export type PresencaTurnoAlvo = {
   entReal: string;
   saiReal: string;
   horasReal: string;
-  /** Horários originais do ponto — placeholders do modal de correção. */
+  /** Horários originais do ponto — valores iniciais do modal de correção. */
   entRealOriginal: string;
   saiRealOriginal: string;
 };
+
+function valorInicialCorrecaoPresenca(realizado: string): string {
+  if (realizado === "—" || !realizado.trim()) return "";
+  const n = normalizarHorarioPresencaHHMM(realizado);
+  return validarHorarioPresencaHHMM(n) ? n : "";
+}
+
+function correcaoPresencaIgualRealizado(correcao: string, realizado: string): boolean {
+  if (realizado === "—" || !realizado.trim()) return false;
+  if (!validarHorarioPresencaHHMM(correcao)) return false;
+  const r = normalizarHorarioPresencaHHMM(realizado);
+  if (!validarHorarioPresencaHHMM(r)) return false;
+  return normalizarHorarioPresencaHHMM(correcao) === r;
+}
 
 type Props = {
   open: boolean;
@@ -151,6 +165,13 @@ export function ModalAprovacaoPresencaCalendario({
       setErr("Informe a observação da correção.");
       return;
     }
+    if (
+      correcaoPresencaIgualRealizado(ent, alvo.entRealOriginal) &&
+      correcaoPresencaIgualRealizado(sai, alvo.saiRealOriginal)
+    ) {
+      setErr("Informe pelo menos um horário de correção diferente do realizado.");
+      return;
+    }
     setSalvando(true);
     onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() });
     setSalvando(false);
@@ -179,7 +200,7 @@ export function ModalAprovacaoPresencaCalendario({
             id="pres-correcao-entrada"
             type="text"
             inputMode="numeric"
-            placeholder={alvo.entRealOriginal !== "—" ? alvo.entRealOriginal : "HH:MM"}
+            placeholder="HH:MM"
             value={entradaCorrecao}
             onChange={(e) => setEntradaCorrecao(e.target.value)}
             style={inputField(t)}
@@ -195,7 +216,7 @@ export function ModalAprovacaoPresencaCalendario({
             id="pres-correcao-saida"
             type="text"
             inputMode="numeric"
-            placeholder={alvo.saiRealOriginal !== "—" ? alvo.saiRealOriginal : "HH:MM"}
+            placeholder="HH:MM"
             value={saidaCorrecao}
             onChange={(e) => setSaidaCorrecao(e.target.value)}
             style={inputField(t)}
@@ -281,7 +302,17 @@ export function ModalAprovacaoPresencaCalendario({
         </table>
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-        <button type="button" onClick={() => setModo("correcao")} style={btnSecundario}>
+        <button
+          type="button"
+          onClick={() => {
+            setEntradaCorrecao(valorInicialCorrecaoPresenca(alvo.entRealOriginal));
+            setSaidaCorrecao(valorInicialCorrecaoPresenca(alvo.saiRealOriginal));
+            setObservacao("");
+            setErr(null);
+            setModo("correcao");
+          }}
+          style={btnSecundario}
+        >
           Editar
         </button>
         <button type="button" onClick={onAprovar} style={btnPrimario}>

@@ -120,6 +120,7 @@ export const PAGES: {
   { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_solicitacoes", label: "Solicitações", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "rh_central_denuncias",
     label: "Central de Denúncias",

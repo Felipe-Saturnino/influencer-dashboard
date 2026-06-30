@@ -839,6 +839,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     accentColor: "#22c55e",
     termos: [
       {
+        termo: "Solicitações (RH)",
+        definicao:
+          "Fila de pedidos de prestadores ao RH — atestados e vagas internas — com status Em análise, Aprovado ou Rejeitado.",
+        nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
+        referencia: "Solicitações",
+      },
+      {
         termo: "Gestão de Prestadores",
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",

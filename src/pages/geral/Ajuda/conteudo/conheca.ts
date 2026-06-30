@@ -462,7 +462,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Bipar Código",
         texto:
-          "O botão Bipar código abre um leitor de câmera para escanear o código de barras impresso na etiqueta da peça. Também é possível digitar o código manualmente. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
+          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
       },
       {
         subtitulo: "Cadastrar Peça",
@@ -638,6 +638,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Permissões",
         texto:
           "Ver, criar, editar e excluir são configurados em Gestão de Usuários para a página Informativos. Sem permissão de visualização, a página não aparece no menu.",
+      },
+    ],
+  },
+  rh_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        texto:
+          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado ou Vagas, ou exibe **Todas Solicitações**.",
+      },
+      {
+        subtitulo: "Tabela e ações",
+        texto:
+          "A tabela lista data, solicitante, tipo e status. Use os ícones **Ver** (detalhes em somente leitura) e **Atender** (disponível com permissão de Editar) — passe o mouse sobre o ícone para ver o tooltip.\n\nNo atendimento, defina status, observação do RH e motivo quando o status for Rejeitado.",
       },
     ],
   },
