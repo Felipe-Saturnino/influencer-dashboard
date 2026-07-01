@@ -2,18 +2,23 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { FileText, Loader2, Pencil } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { urlAssinadaAtestadoPresencaCalendario } from "../../../lib/rhCalendarioPresencaAtestadoFiles";
 import { supabase } from "../../../lib/supabase";
-import type { RhSolicitacaoStatus } from "../../../types/rhSolicitacao";
+import type { RhSolicitacaoAbonoRemunerado, RhSolicitacaoStatus } from "../../../types/rhSolicitacao";
 import {
-  fmtDataCurta,
   fmtDataSolicitacao,
+  fmtDataCurta,
+  fmtPeriodoAtestadoSolicitacao,
+  labelAbonoRemunerado,
   labelStatusSolicitacao,
   labelTipoSolicitacao,
+  RH_SOLICITACAO_ABONO_OPCOES,
   RH_SOLICITACAO_STATUS_CORES,
   RH_SOLICITACAO_STATUS_OPTIONS,
 } from "../../../lib/rhSolicitacoesConstants";
@@ -42,6 +47,71 @@ function LinhaInfo({ label, valor, t }: { label: string; valor: string; t: Theme
         {label}
       </div>
       <div style={{ fontSize: 14, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{valor}</div>
+    </div>
+  );
+}
+
+function LinhaAnexo({
+  storagePath,
+  fileName,
+  t,
+}: {
+  storagePath: string | null | undefined;
+  fileName: string | null | undefined;
+  t: Theme;
+}) {
+  const [abrindo, setAbrindo] = useState(false);
+
+  const label = fileName?.trim() || "Anexo";
+  const temArquivo = Boolean(storagePath?.trim());
+
+  async function abrirAnexo() {
+    if (!storagePath?.trim() || abrindo) return;
+    setAbrindo(true);
+    const url = await urlAssinadaAtestadoPresencaCalendario(storagePath);
+    setAbrindo(false);
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: t.textMuted,
+          textTransform: "uppercase",
+          marginBottom: 4,
+          fontFamily: FONT.body,
+        }}
+      >
+        Anexo
+      </div>
+      {temArquivo ? (
+        <button
+          type="button"
+          onClick={() => void abrirAnexo()}
+          disabled={abrindo}
+          aria-label={`Abrir anexo ${label} em nova aba`}
+          title={`Abrir anexo ${label} em nova aba`}
+          style={{
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            color: "var(--brand-primary, #7c3aed)",
+            fontFamily: FONT.body,
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: "underline",
+            cursor: abrindo ? "wait" : "pointer",
+          }}
+        >
+          {abrindo ? "Carregando…" : label}
+        </button>
+      ) : (
+        <div style={{ fontSize: 14, color: t.text, fontFamily: FONT.body }}>—</div>
+      )}
     </div>
   );
 }
@@ -78,6 +148,12 @@ function tituloVaga(row: RhSolicitacaoRow): string {
   return v?.titulo?.trim() || "—";
 }
 
+function turnoReuniaoRh(row: RhSolicitacaoRow): string {
+  const acao = unwrapEmbed(row.calendario_acao);
+  const turno = acao?.payload?.turno?.trim();
+  return turno || "—";
+}
+
 function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
   return (
     <>
@@ -99,20 +175,30 @@ function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
         </div>
         {badgeStatus(row.status)}
       </div>
-      <LinhaInfo label="Descrição" valor={row.descricao.trim() || "—"} t={t} />
+      {row.tipo === "reuniao_rh" ? (
+        <>
+          <LinhaInfo label="Data da reunião" valor={fmtDataCurta(row.reuniao_dia_iso)} t={t} />
+          <LinhaInfo label="Turno" valor={turnoReuniaoRh(row)} t={t} />
+          <LinhaInfo label="Motivo da reunião" valor={row.descricao.trim() || "—"} t={t} />
+        </>
+      ) : (
+        <LinhaInfo label="Descrição" valor={row.descricao.trim() || "—"} t={t} />
+      )}
       {row.tipo === "atestado" ? (
         <>
           <LinhaInfo
             label="Período do atestado"
-            valor={`${fmtDataCurta(row.atestado_inicio)} — ${fmtDataCurta(row.atestado_fim)}`}
+            valor={fmtPeriodoAtestadoSolicitacao(row.atestado_inicio, row.atestado_fim)}
             t={t}
           />
-          <LinhaInfo label="Anexo" valor={row.atestado_file_name?.trim() || "—"} t={t} />
+          <LinhaAnexo storagePath={row.atestado_storage_path} fileName={row.atestado_file_name} t={t} />
         </>
       ) : null}
       {row.tipo === "vagas" ? <LinhaInfo label="Vaga" valor={tituloVaga(row)} t={t} /> : null}
       {row.observacao_rh?.trim() ? <LinhaInfo label="Observação do RH" valor={row.observacao_rh} t={t} /> : null}
-      {row.motivo_rejeicao?.trim() ? <LinhaInfo label="Motivo da rejeição" valor={row.motivo_rejeicao} t={t} /> : null}
+      {row.status === "aprovado" && row.tipo === "atestado" && row.abono_remunerado ? (
+        <LinhaInfo label="Abono remunerado?" valor={labelAbonoRemunerado(row.abono_remunerado)} t={t} />
+      ) : null}
       {row.atendido_em ? <LinhaInfo label="Atendida em" valor={fmtDataSolicitacao(row.atendido_em)} t={t} /> : null}
     </>
   );
@@ -168,7 +254,7 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
   const [aba, setAba] = useState<"dados" | "atendimento">("dados");
   const [statusDraft, setStatusDraft] = useState<RhSolicitacaoStatus>("em_analise");
   const [observacao, setObservacao] = useState("");
-  const [motivoRejeicao, setMotivoRejeicao] = useState("");
+  const [abonoRemunerado, setAbonoRemunerado] = useState<RhSolicitacaoAbonoRemunerado | "">("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -177,7 +263,7 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
       setAba("dados");
       setStatusDraft(row.status);
       setObservacao(row.observacao_rh ?? "");
-      setMotivoRejeicao(row.motivo_rejeicao ?? "");
+      setAbonoRemunerado(row.abono_remunerado ?? "");
       setErr(null);
     }
   }, [open, row]);
@@ -185,12 +271,18 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
   if (!open || !row) return null;
 
   const tabs = ["dados", "atendimento"] as const;
+  const statusAlterado = statusDraft !== row.status;
+  const statusAprovado = statusDraft === "aprovado";
 
   async function salvar() {
     if (!row) return;
     setErr(null);
-    if (statusDraft === "rejeitado" && !motivoRejeicao.trim()) {
-      setErr("Informe o motivo da rejeição.");
+    if (statusAlterado && !observacao.trim()) {
+      setErr("Informe a observação do RH ao alterar o status.");
+      return;
+    }
+    if (statusAprovado && row.tipo === "atestado" && !abonoRemunerado) {
+      setErr("Informe se há abono remunerado.");
       return;
     }
     setSaving(true);
@@ -201,7 +293,8 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
       .update({
         status: statusDraft,
         observacao_rh: observacao.trim() || null,
-        motivo_rejeicao: statusDraft === "rejeitado" ? motivoRejeicao.trim() : null,
+        motivo_rejeicao: null,
+        abono_remunerado: statusAprovado && row.tipo === "atestado" ? abonoRemunerado : null,
         atendido_em: new Date().toISOString(),
         atendido_por: uid,
       })
@@ -275,7 +368,11 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
             </span>
             <select
               value={statusDraft}
-              onChange={(e) => setStatusDraft(e.target.value as RhSolicitacaoStatus)}
+              onChange={(e) => {
+                const next = e.target.value as RhSolicitacaoStatus;
+                setStatusDraft(next);
+                if (next !== "aprovado") setAbonoRemunerado("");
+              }}
               aria-label="Status da solicitação"
               style={inputStyle}
             >
@@ -286,32 +383,42 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
               ))}
             </select>
           </label>
+          {statusAprovado && row.tipo === "atestado" ? (
+            <label style={{ display: "block", marginBottom: 14 }}>
+              <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
+                Abono remunerado?
+                <CampoObrigatorioMark />
+              </span>
+              <select
+                value={abonoRemunerado}
+                onChange={(e) => setAbonoRemunerado(e.target.value as RhSolicitacaoAbonoRemunerado | "")}
+                aria-label="Abono remunerado"
+                aria-required
+                style={inputStyle}
+              >
+                <option value="">Selecione…</option>
+                {RH_SOLICITACAO_ABONO_OPCOES.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label style={{ display: "block", marginBottom: 14 }}>
             <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
               Observação do RH
+              {statusAlterado ? <CampoObrigatorioMark /> : null}
             </span>
             <textarea
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
               rows={4}
               aria-label="Observação do RH"
+              aria-required={statusAlterado}
               style={{ ...inputStyle, resize: "vertical", minHeight: 88 }}
             />
           </label>
-          {statusDraft === "rejeitado" ? (
-            <label style={{ display: "block", marginBottom: 14 }}>
-              <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-                Motivo da rejeição
-              </span>
-              <textarea
-                value={motivoRejeicao}
-                onChange={(e) => setMotivoRejeicao(e.target.value)}
-                rows={3}
-                aria-label="Motivo da rejeição"
-                style={{ ...inputStyle, resize: "vertical", minHeight: 72 }}
-              />
-            </label>
-          ) : null}
         </div>
       </ModalTabPanel>
 

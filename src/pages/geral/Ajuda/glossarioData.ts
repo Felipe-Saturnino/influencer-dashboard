@@ -847,7 +847,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Solicitações (RH)",
         definicao:
-          "Fila de pedidos de prestadores ao RH — atestados e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário.",
+          "Fila de pedidos de prestadores ao RH — atestados, reuniões com RH e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário; reuniões com RH, ao agendar no Calendário (só visíveis no calendário após aprovação).",
         nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
         referencia: "Solicitações",
       },

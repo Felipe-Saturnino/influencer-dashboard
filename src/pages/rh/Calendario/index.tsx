@@ -99,6 +99,7 @@ import {
   type PresencaJustificarAlvo,
 } from "./ModalJustificarPresencaCalendario";
 import { CelulaIndicadorCorrecaoPresencaCalendario } from "./CelulaIndicadorCorrecaoPresencaCalendario";
+import { CelulaIndicadorJustificativaMedicoPresencaCalendario } from "./CelulaIndicadorJustificativaMedicoPresencaCalendario";
 import {
   appendHistoricoPresenca,
   chavePresencaGestao,
@@ -107,6 +108,9 @@ import {
   linhaPresencaDestaqueHoje,
   presencaCorrecaoAnaliseStatusEfetivo,
   presencaCorrecaoCampoAlterado,
+  construirIndiceJustificativaMedicoPorDia,
+  fundirGestaoPresencaComJustificativaMedico,
+  presencaJustificativaMedicoExibirIndicador,
   PRESENCA_DESTAQUE_VERDE_HEX,
   PRESENCA_KPIS_ZERO,
   resolverAcoesPresencaLinha,
@@ -1877,6 +1881,18 @@ export default function RhCalendarioPage() {
     return out;
   }, [current]);
 
+  const indiceJustificativaMedicoPresenca = useMemo(() => {
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) return new Map<string, PresencaJustificativaMeta>();
+    return construirIndiceJustificativaMedicoPorDia(
+      Array.from(presencaGestaoPorChave.entries())
+        .filter(([k]) => k.startsWith(`${fid}:`))
+        .map(([chave, gestao]) => ({ chave, gestao })),
+      fid,
+      (iso) => situacaoGestaoEscalaParaDia(primeiroValorGradeDia(rawGradeRows, fid, iso)),
+    );
+  }, [presencaFilterStaffIds, presencaGestaoPorChave, rawGradeRows]);
+
   const kpisPresencaConsolidados = useMemo(() => {
     const fid = presencaFilterStaffIds[0];
     if (!fid) return PRESENCA_KPIS_ZERO;
@@ -1894,7 +1910,12 @@ export default function RhCalendarioPage() {
       const temCheckIn = Boolean(pt?.check_in_at);
       const temCheckOut = Boolean(pt?.check_out_at);
       const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
-      const gestaoDia = presencaGestaoPorChave.get(chavePresencaGestao(fid, iso));
+      const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
+        presencaGestaoPorChave.get(chavePresencaGestao(fid, iso)),
+        iso,
+        situacao,
+        indiceJustificativaMedicoPresenca,
+      );
       const status = resolverStatusPresencaLinha({
         situacao,
         diaIso: iso,
@@ -1916,6 +1937,7 @@ export default function RhCalendarioPage() {
     presencaGestaoPorChave,
     prestadorPorId,
     mapOpTurnos,
+    indiceJustificativaMedicoPresenca,
   ]);
 
   const kpisPresencaCarregando =
@@ -2085,8 +2107,14 @@ export default function RhCalendarioPage() {
           atestadoStoragePath: up.storagePath,
           atestadoFileName: up.fileName,
           observacao: payload.observacao.trim() || null,
+          atestadoStatus: "em_analise",
+          atestadoDiaRegistro: diaIso,
         };
-        const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
+        const novo: PresencaDiaGestao = {
+          ...comHistorico,
+          statusGestao: "em_analise",
+          justificativa,
+        };
         const ok = await persistirPresencaGestao(fid, diaIso, novo);
         if (!ok) return false;
         setPresencaGestaoPorChave((prev) => {
@@ -2094,6 +2122,7 @@ export default function RhCalendarioPage() {
           next.set(chave, novo);
           return next;
         });
+        setPresencaGestaoTick((x) => x + 1);
         setPresencaJustificarAlvo(null);
         return true;
       }
@@ -2745,7 +2774,12 @@ export default function RhCalendarioPage() {
                       const temCheckIn = Boolean(pt?.check_in_at);
                       const temCheckOut = Boolean(pt?.check_out_at);
                       const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
-                      const gestaoDia = presencaGestaoPorChave.get(chavePresencaGestao(fid, iso));
+                      const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
+                        presencaGestaoPorChave.get(chavePresencaGestao(fid, iso)),
+                        iso,
+                        situacao,
+                        indiceJustificativaMedicoPresenca,
+                      );
                       const paramsPresencaLinha = {
                         situacao,
                         diaIso: iso,
@@ -2759,6 +2793,13 @@ export default function RhCalendarioPage() {
                       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
                       const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
                       const correcao = gestaoDia?.correcao;
+                      const exibirIndicadorMedico = presencaJustificativaMedicoExibirIndicador(
+                        gestaoDia,
+                        iso,
+                        situacao,
+                      );
+                      const justificativaMedico =
+                        gestaoDia?.justificativa?.motivo === "medico" ? gestaoDia.justificativa : null;
                       const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
                       const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
                       const correcaoAprovada =
@@ -2874,7 +2915,12 @@ export default function RhCalendarioPage() {
                             }}
                           >
                             {entRealExib}
-                            {correcao && correcaoEntradaAlterada ? (
+                            {exibirIndicadorMedico && justificativaMedico ? (
+                              <CelulaIndicadorJustificativaMedicoPresencaCalendario
+                                t={t}
+                                justificativa={justificativaMedico}
+                              />
+                            ) : correcao && correcaoEntradaAlterada ? (
                               <CelulaIndicadorCorrecaoPresencaCalendario
                                 t={t}
                                 campo="entrada"
@@ -2902,7 +2948,12 @@ export default function RhCalendarioPage() {
                             }}
                           >
                             {saiRealExib}
-                            {correcao && correcaoSaidaAlterada ? (
+                            {exibirIndicadorMedico && justificativaMedico ? (
+                              <CelulaIndicadorJustificativaMedicoPresencaCalendario
+                                t={t}
+                                justificativa={justificativaMedico}
+                              />
+                            ) : correcao && correcaoSaidaAlterada ? (
                               <CelulaIndicadorCorrecaoPresencaCalendario
                                 t={t}
                                 campo="saida"

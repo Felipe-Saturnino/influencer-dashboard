@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { agendarReuniaoRhCalendario } from "../../../lib/rhCalendarioAgendarReuniaoRh";
 import { supabase } from "../../../lib/supabase";
 import {
   RH_REUNIAO_COM_OPCOES,
@@ -93,23 +94,40 @@ export function ModalAgendarReuniaoCalendario({
     const hit = diasEscalados.find((d) => d.iso === diaIso)!;
     setGravando(true);
     setErro(null);
-    const { error } = await supabase.from("rh_calendario_acoes").insert({
-      solicitante_funcionario_id: solicitanteFuncionarioId,
-      tipo_acao: "agendamento_reuniao",
-      status: "Agendado",
-      ref_mes: refMesIso,
-      payload: {
-        dia_iso: diaIso,
+
+    if (reuniaoCom === "rh") {
+      const res = await agendarReuniaoRhCalendario({
+        solicitanteFuncionarioId,
+        refMesIso,
+        diaIso,
         turno: hit.turno,
-        reuniao_com: reuniaoCom,
-        reuniao_com_label: labelReuniaoCom(reuniaoCom as string),
         motivo: motivo.trim(),
-      },
-    });
-    setGravando(false);
-    if (error) {
-      setErro(error.message || "Não foi possível agendar a reunião.");
-      return;
+      });
+      setGravando(false);
+      if (!res.ok) {
+        setErro("Não foi possível agendar a reunião. Se o problema persistir, entre em contato com o suporte.");
+        return;
+      }
+    } else {
+      const { error } = await supabase.from("rh_calendario_acoes").insert({
+        solicitante_funcionario_id: solicitanteFuncionarioId,
+        tipo_acao: "agendamento_reuniao",
+        status: "Agendado",
+        ref_mes: refMesIso,
+        payload: {
+          dia_iso: diaIso,
+          turno: hit.turno,
+          reuniao_com: reuniaoCom,
+          reuniao_com_label: labelReuniaoCom(reuniaoCom as string),
+          motivo: motivo.trim(),
+        },
+      });
+      setGravando(false);
+      if (error) {
+        setErro("Não foi possível agendar a reunião. Se o problema persistir, entre em contato com o suporte.");
+        console.error("[ModalAgendarReuniaoCalendario]", error);
+        return;
+      }
     }
     onAgendado();
     onClose();

@@ -20,8 +20,8 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import {
+  descricaoColunaSolicitacao,
   fmtDataSolicitacao,
   labelStatusSolicitacao,
   labelTipoSolicitacao,
@@ -56,11 +56,15 @@ const RH_SOLICITACOES_SELECT = `
   atestado_file_name,
   rh_vaga_id,
   atendido_em,
+  abono_remunerado,
+  rh_calendario_acao_id,
+  reuniao_dia_iso,
+  calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
   solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
 
-type SortCol = "data" | "solicitante" | "tipo" | "status";
+type SortCol = "data" | "solicitante" | "tipo" | "status" | "descricao";
 
 function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -175,6 +179,8 @@ export default function RhSolicitacoesPage() {
           return compareLocaleTexto(labelTipoSolicitacao(a.tipo), labelTipoSolicitacao(b.tipo), dir);
         case "status":
           return compareLocaleTexto(labelStatusSolicitacao(a.status), labelStatusSolicitacao(b.status), dir);
+        case "descricao":
+          return compareLocaleTexto(descricaoColunaSolicitacao(a.tipo, a), descricaoColunaSolicitacao(b.tipo, b), dir);
         default:
           return 0;
       }
@@ -182,9 +188,20 @@ export default function RhSolicitacoesPage() {
     return rows;
   }, [lista, sort]);
 
+  const exibirColunaStatus = todosStatusAtivo;
+  const colunaQuartaSort: SortCol = exibirColunaStatus ? "status" : "descricao";
+
   function onSort(col: SortCol) {
     setSort((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
   }
+
+  useEffect(() => {
+    setSort((s) => {
+      if (exibirColunaStatus && s.col === "descricao") return { col: "status", dir: s.dir };
+      if (!exibirColunaStatus && s.col === "status") return { col: "descricao", dir: s.dir };
+      return s;
+    });
+  }, [exibirColunaStatus]);
 
   if (perm.loading) {
     return (
@@ -302,8 +319,8 @@ export default function RhSolicitacoesPage() {
                     align="center"
                   />
                   <SortTableTh
-                    label="Status"
-                    col="status"
+                    label={exibirColunaStatus ? "Status" : "Descrição"}
+                    col={colunaQuartaSort}
                     sortCol={sort.col}
                     sortDir={sort.dir}
                     onSort={onSort}
@@ -343,21 +360,21 @@ export default function RhSolicitacoesPage() {
                     </td>
                     <td style={dataTable.tdCenter}>{labelTipoSolicitacao(row.tipo)}</td>
                     <td style={dataTable.tdCenter}>
-                      <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+                      {exibirColunaStatus ? (
+                        <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+                      ) : (
+                        <span title={descricaoColunaSolicitacao(row.tipo, row)}>
+                          {descricaoColunaSolicitacao(row.tipo, row)}
+                        </span>
+                      )}
                     </td>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <BtnIconeAcaoLinha
-                          label={tooltipAcaoAbreModal("Ver solicitação", nomeSolicitante(row))}
-                          onClick={() => setModalVer(row)}
-                        >
+                        <BtnIconeAcaoLinha label="Ver solicitação" onClick={() => setModalVer(row)}>
                           <Eye size={14} aria-hidden />
                         </BtnIconeAcaoLinha>
                         {perm.canEditarOk ? (
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Atender solicitação", nomeSolicitante(row))}
-                            onClick={() => setModalAtender(row)}
-                          >
+                          <BtnIconeAcaoLinha label="Atender solicitação" onClick={() => setModalAtender(row)}>
                             <Pencil size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}

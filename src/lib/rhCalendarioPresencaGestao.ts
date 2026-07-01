@@ -82,6 +82,8 @@ export function presencaCorrecaoTemCampoAlterado(correcao: PresencaCorrecaoMeta)
 
 export type PresencaJustificativaMotivo = "medico" | "esquecimento" | "outro";
 
+export type PresencaJustificativaAtestadoStatus = "em_analise" | "aprovado" | "rejeitado";
+
 export type PresencaJustificativaMeta = {
   motivo: PresencaJustificativaMotivo;
   registradoPorNome: string;
@@ -91,7 +93,167 @@ export type PresencaJustificativaMeta = {
   atestadoStoragePath?: string;
   atestadoFileName?: string;
   observacao?: string | null;
+  /** Status da solicitação de atestado em Solicitações (RH). */
+  atestadoStatus?: PresencaJustificativaAtestadoStatus;
+  solicitacaoId?: string;
+  /** Dia em que a justificativa foi registrada (âncora da solicitação em Solicitações RH). */
+  atestadoDiaRegistro?: string;
 };
+
+/** Período do atestado abrange mais de um dia civil. */
+export function atestadoMedicoPeriodoMultiploDias(inicio?: string, fim?: string): boolean {
+  const a = (inicio ?? "").slice(0, 10);
+  const b = (fim ?? "").slice(0, 10);
+  if (!a || !b) return false;
+  return a !== b;
+}
+
+/** Lista dias ISO inclusivos entre início e fim (YYYY-MM-DD). */
+export function enumerarDiasIsoInclusive(inicio: string, fim: string): string[] {
+  const start = inicio.slice(0, 10);
+  const end = fim.slice(0, 10);
+  if (!start || !end || start > end) return [];
+  const out: string[] = [];
+  const cur = new Date(start + "T12:00:00");
+  const last = new Date(end + "T12:00:00");
+  while (cur.getTime() <= last.getTime()) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, "0");
+    const d = String(cur.getDate()).padStart(2, "0");
+    out.push(`${y}-${m}-${d}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+export function diaIsoNoIntervaloAtestado(diaIso: string, inicio?: string, fim?: string): boolean {
+  const a = (inicio ?? "").slice(0, 10);
+  const b = (fim ?? "").slice(0, 10);
+  if (!a || !b) return false;
+  return diaIso >= a && diaIso <= b;
+}
+
+export function presencaJustificativaMedicoAplicavelAoDia(
+  diaIso: string,
+  situacao: string,
+  justificativa: PresencaJustificativaMeta,
+): boolean {
+  if (justificativa.motivo !== "medico") return false;
+  if (situacao !== "Escalado") return false;
+  const ini = justificativa.atestadoInicio;
+  const fim = justificativa.atestadoFim;
+  if (!ini || !fim) return false;
+  if (!atestadoMedicoPeriodoMultiploDias(ini, fim)) {
+    const registro = (justificativa.atestadoDiaRegistro ?? ini).slice(0, 10);
+    return diaIso === registro;
+  }
+  return diaIsoNoIntervaloAtestado(diaIso, ini, fim);
+}
+
+export type PresencaGestaoChaveValor = {
+  chave: string;
+  gestao: PresencaDiaGestao;
+};
+
+/** Índice de justificativa médica propagada por dia (intervalo multi-dia + Escalado). */
+export function construirIndiceJustificativaMedicoPorDia(
+  entradas: PresencaGestaoChaveValor[],
+  funcionarioId: string,
+  situacaoPorDiaIso: (diaIso: string) => string,
+): Map<string, PresencaJustificativaMeta> {
+  const indice = new Map<string, PresencaJustificativaMeta>();
+  const prefixo = `${funcionarioId}:`;
+
+  for (const { chave, gestao } of entradas) {
+    if (!chave.startsWith(prefixo)) continue;
+    const just = gestao.justificativa;
+    if (!just || just.motivo !== "medico") continue;
+    if (!just.atestadoInicio || !just.atestadoFim) continue;
+
+    const dias =
+      atestadoMedicoPeriodoMultiploDias(just.atestadoInicio, just.atestadoFim)
+        ? enumerarDiasIsoInclusive(just.atestadoInicio, just.atestadoFim)
+        : [(just.atestadoDiaRegistro ?? chave.slice(prefixo.length)).slice(0, 10)];
+
+    for (const diaIso of dias) {
+      if (!presencaJustificativaMedicoAplicavelAoDia(diaIso, situacaoPorDiaIso(diaIso), just)) continue;
+      const existente = indice.get(diaIso);
+      if (!existente || (just.registradoEm ?? "") >= (existente.registradoEm ?? "")) {
+        indice.set(diaIso, just);
+      }
+    }
+  }
+
+  return indice;
+}
+
+/** Mescla gestão do dia com justificativa médica propagada (visualização). */
+export function fundirGestaoPresencaComJustificativaMedico(
+  gestao: PresencaDiaGestao | undefined,
+  diaIso: string,
+  situacao: string,
+  indice: Map<string, PresencaJustificativaMeta>,
+): PresencaDiaGestao | undefined {
+  if (gestao?.justificativa?.motivo === "medico") {
+    if (
+      !atestadoMedicoPeriodoMultiploDias(gestao.justificativa.atestadoInicio, gestao.justificativa.atestadoFim) ||
+      presencaJustificativaMedicoAplicavelAoDia(diaIso, situacao, gestao.justificativa)
+    ) {
+      return gestao;
+    }
+  }
+
+  const propagada = indice.get(diaIso);
+  if (!propagada || situacao !== "Escalado") return gestao;
+
+  const st = presencaJustificativaMedicoStatusEfetivo(propagada);
+  const statusGestao: PresencaGestaoStatus | undefined =
+    st === "aprovado" ? "aprovado" : st === "em_analise" ? "em_analise" : undefined;
+
+  return {
+    ...gestao,
+    statusGestao,
+    justificativa: propagada,
+  };
+}
+
+export const PRESENCA_JUSTIFICATIVA_MEDICO_COR: Record<PresencaJustificativaAtestadoStatus, string> = {
+  em_analise: "#f59e0b",
+  aprovado: "#22c55e",
+  rejeitado: "#e84025",
+};
+
+export const PRESENCA_JUSTIFICATIVA_MEDICO_STATUS_LABEL: Record<PresencaJustificativaAtestadoStatus, string> = {
+  em_analise: "Em análise",
+  aprovado: "Aprovado",
+  rejeitado: "Rejeitado",
+};
+
+export function presencaJustificativaMedicoStatusEfetivo(
+  justificativa: PresencaJustificativaMeta | undefined,
+): PresencaJustificativaAtestadoStatus {
+  if (!justificativa || justificativa.motivo !== "medico") return "em_analise";
+  return justificativa.atestadoStatus ?? "em_analise";
+}
+
+export function presencaJustificativaMedicoPendente(gestao?: PresencaDiaGestao): boolean {
+  return (
+    gestao?.justificativa?.motivo === "medico" &&
+    presencaJustificativaMedicoStatusEfetivo(gestao.justificativa) === "em_analise"
+  );
+}
+
+export function presencaJustificativaMedicoExibirIndicador(
+  gestao?: PresencaDiaGestao,
+  diaIso?: string,
+  situacao?: string,
+): boolean {
+  if (!gestao?.justificativa || gestao.justificativa.motivo !== "medico") return false;
+  if (diaIso != null && situacao != null) {
+    return presencaJustificativaMedicoAplicavelAoDia(diaIso, situacao, gestao.justificativa);
+  }
+  return true;
+}
 
 export const PRESENCA_JUSTIFICATIVA_MOTIVO_LABEL: Record<PresencaJustificativaMotivo, string> = {
   medico: "Médico",
@@ -272,6 +434,7 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
   if (gestao?.statusGestao === "aprovado") return "Aprovado";
+  if (presencaJustificativaMedicoPendente(gestao)) return "Em análise";
   if (
     gestao?.statusGestao === "em_analise" &&
     gestao.correcao &&
@@ -329,6 +492,13 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
 
   if (gestao?.statusGestao === "em_analise") {
     const temHist = (gestao.historico?.length ?? 0) > 0;
+    if (presencaJustificativaMedicoPendente(gestao)) {
+      return {
+        acaoPrimaria: null,
+        mostrarHistorico: temHist,
+        mostrarTravessaoAcoes: !temHist,
+      };
+    }
     const pendente =
       Boolean(gestao.correcao) &&
       presencaCorrecaoAnaliseStatusEfetivo(gestao.correcao) === "pendente" &&

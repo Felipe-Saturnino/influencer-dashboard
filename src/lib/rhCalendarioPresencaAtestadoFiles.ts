@@ -22,3 +22,11 @@ export async function uploadAtestadoPresencaCalendario(
   }
   return { ok: true, storagePath: path, fileName: file.name };
 }
+
+export async function urlAssinadaAtestadoPresencaCalendario(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(RH_CALENDARIO_PRESENCA_ATESTADO_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}

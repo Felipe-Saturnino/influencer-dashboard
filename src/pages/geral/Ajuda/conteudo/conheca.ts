@@ -714,17 +714,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.\n\nAo registrar uma justificativa **Médico** no **Calendário** (Controle de Presença), uma solicitação do tipo **Atestado** é criada automaticamente nesta fila, com status **Em análise**.",
+          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos, reuniões com RH e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.\n\nAo registrar uma justificativa **Médico** no **Calendário** (Controle de Presença), uma solicitação do tipo **Atestado** é criada automaticamente nesta fila, com status **Em análise**.\n\nAo **agendar reunião com RH** no **Calendário** (Compromissos), uma solicitação do tipo **Reunião com RH** entra nesta fila. A reunião só aparece nos calendários do solicitante e do RH que aprovar após o atendimento.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado ou Vagas, ou exibe **Todas Solicitações**.",
+          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado, **Reunião com RH** ou Vagas, ou exibe **Todas Solicitações**.",
       },
       {
         subtitulo: "Tabela e ações",
         texto:
-          "A tabela lista data, solicitante, tipo e status. Use os ícones **Ver** (detalhes em somente leitura) e **Atender** (disponível com permissão de Editar) — passe o mouse sobre o ícone para ver o tooltip.\n\nNo atendimento, defina status, observação do RH e motivo quando o status for Rejeitado.",
+          "A tabela lista data, solicitante, tipo e status (quando o carrossel está em **Todos Status**) ou descrição — período do atestado ou data da reunião com RH (quando um status específico está selecionado). Use os ícones **Ver** e **Atender** (disponível com permissão de Editar) — tooltips fixos «Ver solicitação» e «Atender solicitação».\n\nNo atendimento, defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em solicitação de **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**). O anexo do atestado abre em nova aba pelos modais Ver e Atender.",
       },
     ],
   },
