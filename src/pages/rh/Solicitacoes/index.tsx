@@ -56,8 +56,8 @@ const RH_SOLICITACOES_SELECT = `
   atestado_file_name,
   rh_vaga_id,
   atendido_em,
-  solicitante:rh_funcionarios ( id, nome ),
-  vaga:rh_vagas ( id, titulo )
+  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome ),
+  vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
 
 type SortCol = "data" | "solicitante" | "tipo" | "status";
