@@ -1937,12 +1937,13 @@ export default function RhCalendarioPage() {
   }, [user?.name, user?.email]);
 
   const persistirPresencaGestao = useCallback(
-    async (funcionarioId: string, diaIso: string, gestao: PresencaDiaGestao) => {
+    async (funcionarioId: string, diaIso: string, gestao: PresencaDiaGestao): Promise<boolean> => {
       const { ok } = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
       if (!ok) {
         console.error("Não foi possível salvar a gestão de presença.");
         setPresencaGestaoTick((x) => x + 1);
       }
+      return ok;
     },
     [],
   );
@@ -2065,31 +2066,30 @@ export default function RhCalendarioPage() {
       const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
       const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
       const em = new Date().toISOString();
-
-      let novo: PresencaDiaGestao;
+      const atual = presencaGestaoPorChave.get(chave);
 
       if (payload.motivo === "medico") {
         const up = await uploadAtestadoPresencaCalendario(fid, diaIso, payload.arquivo);
         if (!up.ok) return false;
+        const comHistorico = appendHistoricoPresenca(atual, {
+          tipo: "justificativa",
+          em,
+          por: nomeUsuarioPresencaGestao,
+        });
+        const justificativa: PresencaJustificativaMeta = {
+          motivo: "medico",
+          registradoPorNome: nomeUsuarioPresencaGestao,
+          registradoEm: em,
+          atestadoInicio: payload.atestadoInicio,
+          atestadoFim: payload.atestadoFim,
+          atestadoStoragePath: up.storagePath,
+          atestadoFileName: up.fileName,
+          observacao: payload.observacao.trim() || null,
+        };
+        const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
+        const ok = await persistirPresencaGestao(fid, diaIso, novo);
+        if (!ok) return false;
         setPresencaGestaoPorChave((prev) => {
-          const atual = prev.get(chave);
-          const comHistorico = appendHistoricoPresenca(atual, {
-            tipo: "justificativa",
-            em,
-            por: nomeUsuarioPresencaGestao,
-          });
-          const justificativa: PresencaJustificativaMeta = {
-            motivo: "medico",
-            registradoPorNome: nomeUsuarioPresencaGestao,
-            registradoEm: em,
-            atestadoInicio: payload.atestadoInicio,
-            atestadoFim: payload.atestadoFim,
-            atestadoStoragePath: up.storagePath,
-            atestadoFileName: up.fileName,
-            observacao: payload.observacao.trim() || null,
-          };
-          novo = { ...comHistorico, justificativa };
-          void persistirPresencaGestao(fid, diaIso, novo);
           const next = new Map(prev);
           next.set(chave, novo);
           return next;
@@ -2099,39 +2099,39 @@ export default function RhCalendarioPage() {
       }
 
       if (payload.motivo === "esquecimento") {
+        let base = appendHistoricoPresenca(atual, {
+          tipo: "justificativa",
+          em,
+          por: nomeUsuarioPresencaGestao,
+        });
+        base = appendHistoricoPresenca(base, {
+          tipo: "correcao",
+          em,
+          por: nomeUsuarioPresencaGestao,
+        });
+        const justificativa: PresencaJustificativaMeta = {
+          motivo: "esquecimento",
+          registradoPorNome: nomeUsuarioPresencaGestao,
+          registradoEm: em,
+        };
+        const novo: PresencaDiaGestao = {
+          ...base,
+          statusGestao: "em_analise",
+          justificativa,
+          correcao: {
+            entradaRealAnterior,
+            saidaRealAnterior,
+            entradaCorrigida: payload.entrada,
+            saidaCorrigida: payload.saida,
+            observacao: null,
+            corrigidoPorNome: nomeUsuarioPresencaGestao,
+            corrigidoEm: em,
+            analiseStatus: "pendente",
+          },
+        };
+        const ok = await persistirPresencaGestao(fid, diaIso, novo);
+        if (!ok) return false;
         setPresencaGestaoPorChave((prev) => {
-          const atual = prev.get(chave);
-          let base = appendHistoricoPresenca(atual, {
-            tipo: "justificativa",
-            em,
-            por: nomeUsuarioPresencaGestao,
-          });
-          base = appendHistoricoPresenca(base, {
-            tipo: "correcao",
-            em,
-            por: nomeUsuarioPresencaGestao,
-          });
-          const justificativa: PresencaJustificativaMeta = {
-            motivo: "esquecimento",
-            registradoPorNome: nomeUsuarioPresencaGestao,
-            registradoEm: em,
-          };
-          novo = {
-            ...base,
-            statusGestao: "em_analise",
-            justificativa,
-            correcao: {
-              entradaRealAnterior,
-              saidaRealAnterior,
-              entradaCorrigida: payload.entrada,
-              saidaCorrigida: payload.saida,
-              observacao: null,
-              corrigidoPorNome: nomeUsuarioPresencaGestao,
-              corrigidoEm: em,
-              analiseStatus: "pendente",
-            },
-          };
-          void persistirPresencaGestao(fid, diaIso, novo);
           const next = new Map(prev);
           next.set(chave, novo);
           return next;
@@ -2140,21 +2140,21 @@ export default function RhCalendarioPage() {
         return true;
       }
 
+      const comHistorico = appendHistoricoPresenca(atual, {
+        tipo: "justificativa",
+        em,
+        por: nomeUsuarioPresencaGestao,
+      });
+      const justificativa: PresencaJustificativaMeta = {
+        motivo: "outro",
+        registradoPorNome: nomeUsuarioPresencaGestao,
+        registradoEm: em,
+        observacao: payload.observacao,
+      };
+      const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
+      const ok = await persistirPresencaGestao(fid, diaIso, novo);
+      if (!ok) return false;
       setPresencaGestaoPorChave((prev) => {
-        const atual = prev.get(chave);
-        const comHistorico = appendHistoricoPresenca(atual, {
-          tipo: "justificativa",
-          em,
-          por: nomeUsuarioPresencaGestao,
-        });
-        const justificativa: PresencaJustificativaMeta = {
-          motivo: "outro",
-          registradoPorNome: nomeUsuarioPresencaGestao,
-          registradoEm: em,
-          observacao: payload.observacao,
-        };
-        novo = { ...comHistorico, justificativa };
-        void persistirPresencaGestao(fid, diaIso, novo);
         const next = new Map(prev);
         next.set(chave, novo);
         return next;
@@ -2162,7 +2162,7 @@ export default function RhCalendarioPage() {
       setPresencaJustificarAlvo(null);
       return true;
     },
-    [presencaJustificarAlvo, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao, persistirPresencaGestao],
+    [presencaJustificarAlvo, presencaGestaoPorChave, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao, persistirPresencaGestao],
   );
 
   if (perm.canView === "nao") {
