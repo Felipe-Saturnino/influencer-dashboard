@@ -8,6 +8,8 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   agenda: "Visualize, agende e acompanhe as lives dos influencers.",
   mesas_spin: "Resultados financeiros e operacionais das mesas ao vivo por operadora.",
   streamers: "Acompanhe performance, conversão e financeiro do canal de influencers.",
+  dash_overview_prestador:
+    "Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores.",
   ajuda: "Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.",
   rh_organograma:
     "Conheça a empresa, saiba mais sobre os times e pessoas que fazem a operação acontecer.",

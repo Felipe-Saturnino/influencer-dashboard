@@ -820,6 +820,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Calendário",
       },
       {
+        termo: "Overview Prestador",
+        definicao:
+          "Dashboard analítico de escala, presença, absenteísmo e movimentações de turno por prestador — KPIs MTD, gráficos de aproveitamento e detalhamento diário de ocorrências (troca, atestado, atraso, esquecimento, compra e venda).",
+        referencia: "Overview Prestador",
+      },
+      {
         termo: "Marketplace",
         definicao:
           "Área de ofertas de venda e troca de turnos entre colaboradores — publicações abertas e as do próprio usuário.",
@@ -841,7 +847,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Solicitações (RH)",
         definicao:
-          "Fila de pedidos de prestadores ao RH — atestados e vagas internas — com status Em análise, Aprovado ou Rejeitado.",
+          "Fila de pedidos de prestadores ao RH — atestados e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário.",
         nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
         referencia: "Solicitações",
       },
@@ -979,6 +985,31 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Parceira com status ativo em Gestão de Operadoras. Só operadoras ativas aparecem no filtro **Todas Operadoras** das listagens.",
         referencia: "Gestão de Operadoras · Gestão de Estúdios",
+      },
+    ],
+  },
+  {
+    key: "academy",
+    label: "Academy",
+    accentColor: "#4a2082",
+    termos: [
+      {
+        termo: "Performance Hub",
+        definicao:
+          "Portal de avaliação de desempenho dos prestadores dos times Game Presenter e Shuffler — status, scoring, agenda e configuração de pesos.",
+        referencia: "Performance Hub",
+      },
+      {
+        termo: "Nota Total (Performance Hub)",
+        definicao:
+          "Resultado final da avaliação na escala 0–10, calculado por média ponderada dos critérios dentro de cada dimensão e depois entre Comunicação, Mesa e Imagem.",
+        referencia: "Performance Hub",
+      },
+      {
+        termo: "Dimensão (Performance Hub)",
+        definicao:
+          "Eixo de avaliação — Comunicação, Mesa ou Imagem — agrupando critérios com pesos próprios. Mesa usa critérios distintos para mesas de cartas e de roleta.",
+        referencia: "Performance Hub · Configuração",
       },
     ],
   },

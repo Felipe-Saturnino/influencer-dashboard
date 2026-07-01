@@ -538,6 +538,31 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_performance_hub: {
+    titulo: "Performance Hub",
+    blocos: [
+      {
+        subtitulo: "Não vejo Performance Hub no menu?",
+        texto:
+          "Verifique em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Ver** diferente de **Não**. Administradores veem a página automaticamente; demais perfis começam bloqueados até liberação explícita.\n\nConfirme também se fez login novamente ou atualizou a sessão após alterar permissões.",
+      },
+      {
+        subtitulo: "Não aparecem as abas Gerenciamento ou Configuração?",
+        texto:
+          "**Gerenciamento** exige permissão de **Editar**; **Configuração** exige permissão de **Criar**. Com apenas **Ver**, só a aba Avaliações fica disponível — comportamento esperado.",
+      },
+      {
+        subtitulo: "Sou prestador e a lista está vazia?",
+        texto:
+          "Com **Ver = Próprios**, só entram avaliações com status **Concluída** vinculadas ao seu cadastro. Avaliações pendentes ou em análise não aparecem nesse escopo.",
+      },
+      {
+        subtitulo: "Não encontro o botão Analisar?",
+        texto:
+          "O botão **Analisar** só aparece para avaliações em status **Em Análise**. Avaliações **Concluída**, **Pendente** ou **Feedback** exibem apenas **Ver** e **Histórico** — isso é intencional.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [

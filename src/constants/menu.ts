@@ -11,6 +11,7 @@ import {
   Factory,
   Files,
   Images,
+  GraduationCap,
   LayoutGrid,
   LineChart,
   Link2,
@@ -60,6 +61,7 @@ export const MENU: MenuSection[] = [
       { key: "streamers", label: "Streamers", icon: Tv },
       { key: "dash_midias_sociais", label: "Mídias Sociais", icon: Share2 },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: Mic },
+      { key: "dash_overview_prestador", label: "Overview Prestador", icon: UserRound },
     ],
   },
   {
@@ -129,6 +131,12 @@ export const MENU: MenuSection[] = [
       { key: "rh_vagas", label: "Vagas", icon: Briefcase },
       { key: "rh_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: Scale },
+    ],
+  },
+  {
+    section: "Academy",
+    items: [
+      { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
     ],
   },
   {

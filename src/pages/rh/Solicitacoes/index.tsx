@@ -8,7 +8,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
-import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { FiltroBarPillButton } from "../../../components/dashboard";
@@ -208,19 +208,13 @@ export default function RhSolicitacoesPage() {
       <PageHeader
         icon={<PageMenuIcon pageKey="rh_solicitacoes" />}
         title={getPageMenuLabel("rh_solicitacoes")}
-        subtitle="Acompanhe e atenda solicitações de prestadores — atestados e vagas internas."
+        subtitle="Acompanhe e atenda solicitações de prestadores."
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-        <div
-          style={{
-            ...getFilterBarRowStyle(),
-            width: "100%",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 10 }}>
+        <div className="app-marketplace-filtro-minhas">
+          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+          <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Status da solicitação">
             <button type="button" aria-label="Status anterior" onClick={retrocederStatus} style={getCarouselBtnNavStyle(t, false)}>
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
@@ -246,23 +240,24 @@ export default function RhSolicitacoesPage() {
             ) : null}
           </div>
 
-          <FiltroBarCampoSelect
-            id="filtro-tipo-solicitacao"
-            value={filtroTipo}
-            onChange={(v) => setFiltroTipo(v as RhSolicitacaoFiltroTipo)}
-            options={RH_SOLICITACAO_TIPO_OPTIONS}
-            icon={<ClipboardList size={15} strokeWidth={2} aria-hidden="true" />}
-            ariaLabel="Tipo de solicitação"
-            todasValue={RH_SOLICITACAO_FILTRO_TODAS_VALUE}
-            todasLabel="Todas Solicitações"
-            minWidth={220}
-            style={{ flexShrink: 0 }}
-          />
+          <div className="app-marketplace-filtro-minhas__cta">
+            <FiltroBarCampoSelect
+              id="filtro-tipo-solicitacao"
+              value={filtroTipo}
+              onChange={(v) => setFiltroTipo(v as RhSolicitacaoFiltroTipo)}
+              options={RH_SOLICITACAO_TIPO_OPTIONS}
+              icon={<ClipboardList size={15} strokeWidth={2} aria-hidden="true" />}
+              ariaLabel="Tipo de solicitação"
+              todasValue={RH_SOLICITACAO_FILTRO_TODAS_VALUE}
+              todasLabel="Todas Solicitações"
+              minWidth={220}
+            />
+          </div>
         </div>
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="atestados e vagas internas">Solicitações</SectionTitle>
+        <SectionTitle>Solicitações</SectionTitle>
 
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>

@@ -18,6 +18,7 @@ alwaysApply: false
 |---|---|
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` — `index.tsx` (shell + aba overview layout), `useOverviewSpinDados.ts`, `useOverviewSpinTabelaRows.ts`, `useOverviewSpinComparativos.ts`, `useOverviewSpinKpiExibir.ts`, `OverviewSpinFiltroBar.tsx`, `OverviewSpinKpisConsolidados.tsx`, `OverviewSpinDetalhamentoInterativo.tsx`, `OverviewSpinComparativoJogoInterativo.tsx`, `OverviewSpinMesaDiaTabela.tsx`, `overviewSpinLogic.ts`, `overviewSpinTabs.ts` + `OverviewSpinAbaNav.tsx`, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
@@ -50,6 +51,7 @@ alwaysApply: false
 | Social Media | Gestor de Marketing | KPIs Consolidados (GGR, Registros, GGR por Jogador) |
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
+| Overview Prestador (`dash_overview_prestador`) | Prestador (próprios); Shift Leader / RH / Gestor (escopo time/staff) | KPIs Consolidados (Escala) |
 
 ---
 
@@ -79,6 +81,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
 | `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+| `dash_overview_prestador` | Overview Prestador | Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores. |
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
 
@@ -105,6 +108,34 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 ### Exceções — identidade de jogo (Overview Spin)
 
 Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados por mesa usam `gameIdentityColors.ts`.
+
+---
+
+## Overview Prestador — Padrões Específicos
+
+- **PageKey:** `dash_overview_prestador` — pasta `OverviewPrestador/`.
+- **Duas abas:** **Escala** (implementada) e **Performance** (placeholder «Conteúdo em desenvolvimento.»). Abas via `FiltroBarTabButton` + `useRouteTab` (`escala` | `performance`).
+- **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (abril/2026+) — mesma janela do Calendário RH / Gestão de Escala.
+- **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; MoM desligado nos KPIs.
+- **Filtros Time / Staff:** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`) — catálogo e ordem de `rhCalendarioStaffFiltroHelpers.ts`. Staff filtra por time quando time ≠ agregador.
+- **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.
+- **Staff obrigatório (gestores):** sem prestador selecionado → string **Selecione um prestador para visualizar os resultados.** (não a string global de período vazio).
+- **Dados:** RPCs `rh_calendario_grade_escala_mes`, `rh_calendario_ponto_registros_mes`, presença gestão (`carregarPresencaGestaoMes`); turnos via `fetchTurnosPorOperadoraSlugs`. Métricas em `lib/overviewPrestadorMetrics.ts` + helpers calendário em `lib/overviewPrestadorCalendarioHelpers.ts`.
+- **KPIs Consolidados (Escala):** 4× `KpiCard` — Dias Escalado, Dias Realizado, Horas Escaladas, Horas Realizadas — MoM via `getPeriodoComparativoMoM` (exceto Histórico).
+- **Absenteísmo:** cards locais (não `KpiCard`) — Pontualidade, Ponto não Registrado, Atestados — com sublinhas de detalhe.
+- **Gráficos:** Recharts — barras Aproveitamento (dias/horas); pizza Movimentações (Trocas / Vendidos / Comprados). Cores semânticas fixas no pie (`PIE_CORES`), barras com `--brand-action`.
+- **Detalhamento Diário:** tabela canónica `useDataTableBlock` — colunas Data, Ocorrência, Detalhe; sort default **desc** em Data.
+- **Detalhe Troca/Compra/Venda:** contraparte **"—"** até modelo backend expor parceiro da movimentação (grade só indica tipo).
+- **Migration:** `20260630180000_dash_overview_prestador_page.sql` — seeds permissão + extensão RPCs com `dash_overview_prestador`.
+
+### Strings de vazio (Overview Prestador)
+
+| Contexto | String |
+|----------|--------|
+| Sem prestador (gestor) | Selecione um prestador para visualizar os resultados. |
+| Prestador selecionado, sem dados | Sem dados para o período selecionado. |
+| Aba Performance | Conteúdo em desenvolvimento. |
+| Sem permissão | Você não tem permissão para visualizar este dashboard. |
 
 ---
 

@@ -145,6 +145,45 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_overview_prestador: {
+    titulo: "Overview Prestador",
+    blocos: [
+      {
+        texto:
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos prestadores do estúdio. A página tem duas abas — Escala (disponível) e Performance (em desenvolvimento) — e reutiliza os mesmos dados de grade e ponto do Calendário RH.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe o acumulado de todo o período — o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+      },
+      {
+        subtitulo: "Aba Escala — KPIs Consolidados",
+        texto:
+          "Quatro cards com comparativo MTD ao mesmo intervalo do mês anterior (subtítulo \"acumulado\" no Histórico, sem MoM):\n\n— Dias Escalado: dias em que o prestador constava na grade de escala.\n— Dias Realizado: dias com presença registrada conforme regras do Calendário.\n— Horas Escaladas e Horas Realizadas: totais de horas no período, no formato HH:MM.",
+      },
+      {
+        subtitulo: "Absenteísmo",
+        texto:
+          "Três cards complementares:\n\n— Pontualidade: soma de entradas atrasadas e saídas antecipadas em relação ao horário escalado, com detalhamento abaixo.\n— Ponto não Registrado: check-in e/ou check-out não registrados pelo prestador (com justificativa), com detalhamento por tipo.\n— Atestados: total de dias de atestado médico no período.",
+      },
+      {
+        subtitulo: "Aproveitamento e Movimentações",
+        texto:
+          "Dois gráficos de barras lado a lado comparam dias e horas escalados vs realizados.\n\nO gráfico de pizza **Movimentações de turno** agrupa trocas realizadas, turnos vendidos e turnos comprados no período.",
+      },
+      {
+        subtitulo: "Detalhamento Diário",
+        texto:
+          "Tabela com colunas Data, Ocorrência e Detalhe. Ocorrências possíveis: Troca, Atestado, Atraso, Esquecimento, Compra e Venda.\n\nO detalhe varia por tipo (contraparte em troca/compra/venda, dias de atestado, minutos de atraso, check-in/out esquecido). Estado vazio de dados: \"Sem dados para o período selecionado.\"",
+      },
+      {
+        subtitulo: "Aba Performance",
+        texto:
+          "Conteúdo em desenvolvimento — será liberado em versão futura.",
+      },
+    ],
+  },
   agenda: {
     titulo: "Agenda",
     blocos: [
@@ -515,6 +554,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_performance_hub: {
+    titulo: "Performance Hub",
+    blocos: [
+      {
+        texto:
+          "Portal de avaliação de desempenho dos prestadores dos times **Game Presenter** e **Shuffler**. Consolida status das avaliações, fila de análise, agenda e configuração de pesos do scoring.\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado; demais perfis precisam de permissão explícita de Ver, Criar ou Editar conforme a aba.",
+      },
+      {
+        subtitulo: "Abas e permissões",
+        texto:
+          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver avaliações concluídas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila «Analisar Avaliações» (pendentes, em análise, feedback).\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver **Todo o período**. Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+      },
+      {
+        subtitulo: "Status e ações",
+        texto:
+          "**Pendente** — Ver e Histórico (sem notas).\n\n**Em Análise** — Ver, **Analisar** (modal com critérios 0–10) e Histórico.\n\n**Feedback** e **Concluída** — Ver e Histórico; avaliações concluídas **não** exibem Analisar.\n\nPrestador (Próprios): **Ver minha avaliação** e Histórico nas concluídas.",
+      },
+      {
+        subtitulo: "Pontuação",
+        texto:
+          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD usam média simples das notas totais concluídas no período. Valores exibidos com duas casas decimais.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [
@@ -646,7 +714,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.",
+          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.\n\nAo registrar uma justificativa **Médico** no **Calendário** (Controle de Presença), uma solicitação do tipo **Atestado** é criada automaticamente nesta fila, com status **Em análise**.",
       },
       {
         subtitulo: "Filtros",

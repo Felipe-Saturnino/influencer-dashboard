@@ -37,7 +37,7 @@ import {
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
   "home",
-  "mesas_spin", "streamers", "dash_overview_influencer", "dash_midias_sociais",
+  "mesas_spin", "streamers", "dash_overview_influencer", "dash_overview_prestador", "dash_midias_sociais", "academy_performance_hub",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos", "comercial_overview", "comercial_pipeline_b2b", "gestao_dealers", "central_notificacoes",
   "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",
@@ -416,6 +416,11 @@ async function carregarPermissoes(
   }
   if (mapa.dash_overview_influencer === null && ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM.includes(role)) {
     mapa.dash_overview_influencer = "sim";
+  }
+
+  // Overview Prestador: padrão "proprios" para prestador (dashboard operacional de escala)
+  if (mapa.dash_overview_prestador === null && role === "prestador") {
+    mapa.dash_overview_prestador = "proprios";
   }
 
   // Operador: só vê páginas que estão em operadora_pages para suas operadoras

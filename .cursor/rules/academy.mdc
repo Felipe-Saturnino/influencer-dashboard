@@ -1,0 +1,119 @@
+---
+description: Regras para páginas da seção Academy. Pasta academy/. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/academy/**/*.tsx
+  - src/pages/academy/**/*.ts
+  - src/lib/academyPerformanceHub*.ts
+alwaysApply: false
+---
+
+# Seção Academy
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers / CTAs:** Brand MDC — não duplicar aqui.
+
+---
+
+## Cabeçalho — título e subtítulo
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `academy_performance_hub` | Performance Hub | Portal de avaliação de desempenho dos Prestadores. |
+
+---
+
+## Identificação
+
+| PageKey | Página | Caminho |
+|---------|--------|---------|
+| `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
+
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase).
+
+---
+
+## Performance Hub (`academy_performance_hub`)
+
+### Personas e escopo
+
+| Perfil | Escopo típico |
+|--------|----------------|
+| **Admin** | Irrestrito via código (`usePermission`) |
+| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários |
+| **Prestador** | Com **Ver = Próprios**: só avaliações **Concluída** — Ver minha avaliação + Histórico |
+
+Times avaliados: **Game Presenter** e **Shuffler**. Filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**.
+
+### Permissões iniciais
+
+Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (exceto admin) com Ver/Criar/Editar/Excluir = **Não** em `role_permissions`. Admin não aparece na matriz — acesso total no hook.
+
+| Ação | Superfície |
+|------|------------|
+| **Ver** | Página + aba Avaliações |
+| **Editar** | Aba **Gerenciamento** (agenda + fila para analisar) |
+| **Criar** | Aba **Configuração** (pesos de scoring) |
+| **Excluir** | Reservado (sem fluxo na v1 mock) |
+
+Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar` / `hasExcluir` = true.
+
+### Abas (`useRouteTab` + `FiltroBarTabButton`)
+
+| Tab | Ícone | Gate |
+|-----|-------|------|
+| Avaliações | `ClipboardList` | Ver (qualquer valor ≠ Não) |
+| Gerenciamento | `ClipboardList` | `canEditarOk` |
+| Configuração | `Settings` | `canCriarOk` |
+
+URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
+
+### Status × ações (aba Avaliações)
+
+| Status | Ações (gestor) | Ações (Próprios) |
+|--------|----------------|------------------|
+| Pendente | Ver, Histórico | — |
+| Em Análise | Ver, **Analisar**, Histórico | — |
+| Feedback | Ver, Histórico | — |
+| Concluída | Ver, Histórico | Ver minha avaliação, Histórico |
+
+**Concluída não exibe Analisar** — só **Em Análise** abre modal editável com scoring.
+
+Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (sem notas editáveis / vídeo na v1 mock).
+
+### Modelo de pontuação
+
+- Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
+- Dimensões: Comunicação (peso 2), Mesa (peso 2), Imagem (peso 1).
+- Critérios com pesos individuais dentro de cada dimensão.
+- **Mesa:** critérios distintos **cartas** vs **roleta** (`criteriosMesaPorTipo`).
+- **Nota Total** = média ponderada critérios → dimensões → total (÷ 5).
+- **MTD consolidado** = média simples das notas totais **Concluída** no período.
+- Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações».
+- Ao concluir avaliação: persistir snapshot de pesos (alvo Supabase; mock só atualiza estado local).
+
+### Filtros
+
+- Carrossel de mês + **Histórico** (`Todo o período`).
+- Time: select obrigatório GP / Shuffler.
+- Staff: multi quando escopo amplo; oculto ou fixo em **Próprios**.
+- Centralização de fileiras: Global § Alinhamento no bloco de filtros.
+
+### Dados (v1)
+
+Mock em `academyPerformanceHubMockData.ts` — substituir por tabelas Supabase (avaliações, agenda, config de pesos versionada).
+
+### Strings de vazio
+
+- KPIs / tabela analítica por período: **`Sem dados para o período selecionado.`** (Global).
+- Lista filtrada sem registros: mensagem específica da aba quando aplicável.
+
+---
+
+## Anti-patterns (Academy)
+
+- Abrir aba Gerenciamento/Configuração sem gate de permissão.
+- Botão **Analisar** em status **Concluída**.
+- Filtro de time com opção «Todos» ou default Shuffler.
+- Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_DEFAULT` / estado de Configuração.
+- Hex local para identidade de jogo na dimensão Mesa — usar `gameIdentityColors` se distinguir jogos na UI.

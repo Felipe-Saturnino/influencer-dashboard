@@ -31,6 +31,8 @@ export type PageKey =
   | "home"
   | "streamers"
   | "dash_overview_influencer"
+  | "dash_overview_prestador"
+  | "academy_performance_hub"
   | "mesas_spin"
   | "dash_midias_sociais"
   | "agenda"

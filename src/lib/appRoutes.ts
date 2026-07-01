@@ -31,7 +31,9 @@ export type AppRouteTabAccess =
   | "informativos_gerenciamento"
   | "vagas_gerenciamento"
   | "vagas_candidaturas"
-  | "galeria_upload";
+  | "galeria_upload"
+  | "academy_gerenciamento"
+  | "academy_configuracao";
 
 export type AppRouteTabDefFull = AppRouteTabDef & {
   access: AppRouteTabAccess;
@@ -52,6 +54,10 @@ function page(label: string, pageKey: PageKey, pageSlug: string, tabs?: AppRoute
 export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Home", "home", ROUTE_SLUG_HOME),
   page("Overview Influencer", "dash_overview_influencer", "OverviewInfluencer"),
+  page("Overview Prestador", "dash_overview_prestador", "OverviewPrestador", [
+    { tabId: "escala", slug: "Escala", label: "Escala", access: "always" },
+    { tabId: "performance", slug: "Performance", label: "Performance", access: "always" },
+  ]),
   page("Agenda", "agenda", "Agenda"),
   page("Resultados", "resultados", "Resultados"),
   page("Feedback", "feedback", "Feedback"),
@@ -177,6 +183,21 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
       slug: "GerenciamentoDePostagens",
       label: "Gerenciamento de Postagens",
       access: "portal_gerenciamento",
+    },
+  ]),
+  page("Performance Hub", "academy_performance_hub", "PerformanceHub", [
+    { tabId: "avaliacoes", slug: "Avaliacoes", label: "Avaliações", access: "always" },
+    {
+      tabId: "gerenciamento",
+      slug: "Gerenciamento",
+      label: "Gerenciamento",
+      access: "academy_gerenciamento",
+    },
+    {
+      tabId: "configuracao",
+      slug: "Configuracao",
+      label: "Configuração",
+      access: "academy_configuracao",
     },
   ]),
   page("Informativos", "informativos", "Informativos", [
@@ -363,6 +384,10 @@ export function isTabAllowedForUser(
       return podeExecutarPerm(acoes.rh_vagas?.criar ?? null);
     case "galeria_upload":
       return podeExecutarPerm(acoes.galeria_fotos?.criar ?? null);
+    case "academy_gerenciamento":
+      return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
+    case "academy_configuracao":
+      return podeExecutarPerm(acoes.academy_performance_hub?.criar ?? null);
     default:
       return true;
   }

@@ -49,6 +49,7 @@ const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configu
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const OverviewPrestador           = lazyWithRetry(() => import("./pages/dashboards/OverviewPrestador"));
 const OverviewSpin              = lazyWithRetry(() => import("./pages/dashboards/OverviewSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
@@ -89,6 +90,7 @@ const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitaco
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
+const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -96,6 +98,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   streamers:                 Streamers,
   dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_overview_prestador:   OverviewPrestador,
   mesas_spin:               OverviewSpin,
   dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,
@@ -136,6 +139,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   informativos:      Informativos,
+  academy_performance_hub: PerformanceHub,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
