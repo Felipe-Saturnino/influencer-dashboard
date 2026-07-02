@@ -1,3 +1,5 @@
+import type { PageKey } from "../../../types";
+
 export interface GlossarioTermo {
   termo: string;
   definicao: string;
@@ -1043,3 +1045,54 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
 ];
+
+const DASHBOARD_PAGE_KEYS: PageKey[] = [
+  "mesas_spin",
+  "streamers",
+  "dash_midias_sociais",
+  "dash_overview_influencer",
+  "dash_overview_prestador",
+  "comercial_overview",
+];
+
+/** Páginas que liberam cada categoria do glossário (Ver ou Próprios em Gestão de Usuários). */
+export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
+  operacao_lives: [
+    "agenda",
+    "resultados",
+    "feedback",
+    "streamers",
+    "dash_overview_influencer",
+    "influencers",
+    "playbook_influencers",
+    "links_materiais",
+  ],
+  cadastro_influencers: ["influencers"],
+  prospeccao_scout: ["scout"],
+  funil_conversao: ["streamers", "dash_overview_influencer"],
+  financeiro: ["streamers", "financeiro"],
+  indices: DASHBOARD_PAGE_KEYS,
+  mesas: ["mesas_spin"],
+  midias_sociais: ["dash_midias_sociais"],
+  afiliados: ["afiliados", "afiliados_network"],
+  financeiro_operacional: ["financeiro", "banca_jogo"],
+  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
+  marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
+  comercial: ["comercial_overview", "comercial_pipeline_b2b"],
+  rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
+  escala: [
+    "rh_gestao_escala",
+    "rh_staff",
+    "rh_calendario",
+    "escala_marketplace_turnos",
+    "escala_solicitacoes",
+    "dash_overview_prestador",
+  ],
+  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes"],
+  denuncias: ["rh_central_denuncias"],
+  permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
+  home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],
+  whitelabel: ["gestao_operadoras"],
+  academy: ["academy_performance_hub"],
+  periodos: DASHBOARD_PAGE_KEYS,
+};

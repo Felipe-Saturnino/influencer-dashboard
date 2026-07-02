@@ -452,6 +452,62 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  rh_funcionarios: {
+    titulo: "Gestão de Prestadores",
+    blocos: [
+      {
+        texto:
+          "Centraliza o cadastro de prestadores, head count por área, movimentações de RH e fluxos operacionais (contratação, desligamento, anotações). O acesso às abas e ações depende das permissões Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Abas e filtros",
+        texto:
+          "Navegue entre as abas de gestão (cadastro, head count, anotações e fluxos conforme liberado ao perfil). Use os filtros de operadora, time ou busca quando disponíveis para restringir a lista antes de editar ou exportar.",
+      },
+    ],
+  },
+  rh_organograma: {
+    titulo: "Organograma",
+    blocos: [
+      {
+        texto:
+          "Mapa da estrutura da Spin Gaming — diretorias, gerências e times — com modos de visualização e gerenciamento para quem tem permissão de editar. Use a barra de filtros para alternar entre visualização do organograma e cadastro de diretorias, gerências e times.",
+      },
+      {
+        subtitulo: "Visualização",
+        texto:
+          "No modo Visualização, explore a hierarquia com carrossel de diretoria e expansão de gerências e times. No modo Gerenciamento (com permissão de Editar), cadastre ou ajuste diretorias, gerências e times vinculados.",
+      },
+    ],
+  },
+  rh_vagas: {
+    titulo: "Vagas",
+    blocos: [
+      {
+        texto:
+          "Gerencia vagas abertas, candidaturas e etapas do processo seletivo interno. Publicação, triagem e movimentação de candidatos dependem das permissões de Criar e Editar na página.",
+      },
+      {
+        subtitulo: "Filtros e candidaturas",
+        texto:
+          "Use os filtros de status, tipo de vaga e busca para localizar processos. Cada vaga concentra candidatos, histórico de movimentação e ações de RH conforme o perfil logado.",
+      },
+    ],
+  },
+  rh_central_denuncias: {
+    titulo: "Central de Denúncias",
+    blocos: [
+      {
+        texto:
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
+      },
+      {
+        subtitulo: "Atendimento",
+        texto:
+          "Filtre por tipo de denúncia, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
+      },
+    ],
+  },
   rh_dados_cadastro: {
     titulo: "Dados de Cadastro",
     blocos: [
@@ -551,6 +607,76 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Permissões",
         texto:
           "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
+      },
+    ],
+  },
+  rh_gestao_escala: {
+    titulo: "Gestão de Escala",
+    blocos: [
+      {
+        texto:
+          "Monta e mantém a escala operacional por área (time), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar.",
+      },
+      {
+        subtitulo: "Fluxo da escala",
+        texto:
+          "Selecione time e mês no carrossel. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+      },
+    ],
+  },
+  rh_staff: {
+    titulo: "Gestão de Staff",
+    blocos: [
+      {
+        texto:
+          "Lista e edita prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa — turnos, siglas e dados operacionais usados na escala e no calendário.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Consulta exige permissão de Ver; alterações de turno ou cadastro operacional exigem Editar. Filtros de operadora e busca restringem a grade antes de salvar alterações em lote.",
+      },
+    ],
+  },
+  rh_calendario: {
+    titulo: "Calendário",
+    blocos: [
+      {
+        texto:
+          "Visão operacional da rotina: turnos publicados, trocas, compromissos, controle de presença e justificativas. Integra escala aprovada, marketplace de turnos e solicitações atendidas pelo RH.",
+      },
+      {
+        subtitulo: "Modos e filtros",
+        texto:
+          "Alterne entre visões de calendário conforme o perfil (próprio time, staff selecionado ou visão ampliada). Use filtros de time, staff e período; ações de presença e justificativa dependem de permissão de Editar.",
+      },
+    ],
+  },
+  escala_marketplace_turnos: {
+    titulo: "Marketplace",
+    blocos: [
+      {
+        texto:
+          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
+      },
+      {
+        subtitulo: "Ofertas e candidaturas",
+        texto:
+          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. Ofertas encerradas ou expiradas saem da lista ativa.",
+      },
+    ],
+  },
+  escala_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        texto:
+          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na secção RH.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Navegue por período, time e colaborador. Status em aberto aparecem na fila principal; arquivados ficam disponíveis no histórico conforme filtros de data e status.",
       },
     ],
   },

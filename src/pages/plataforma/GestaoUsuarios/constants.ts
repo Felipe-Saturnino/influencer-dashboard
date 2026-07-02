@@ -1,5 +1,6 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
 import { ROLES_SEM_RESTRICAO_ESCOPO } from "../../../lib/staffRoles";
+import { sortPagesLikeMenu } from "../../../lib/menuPagesOrder";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
@@ -57,8 +58,8 @@ export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
-/** Ordem alinhada ao menu lateral (`constants/menu.ts`); secção Geral por último. */
-export const PAGES: {
+/** Metadados por página — ordem de exportação via `sortPagesLikeMenu` (alinhado a `menu.ts`; Geral por último). */
+const PAGES_META: {
   key: PageKey;
   label: string;
   secao: string;
@@ -72,15 +73,6 @@ export const PAGES: {
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_prestador", label: "Overview Prestador", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  // Academy
-  {
-    key: "academy_performance_hub",
-    label: "Performance Hub",
-    secao: "Academy",
-    hasCriar: true,
-    hasEditar: true,
-    hasExcluir: true,
-  },
   // Lives
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
@@ -112,6 +104,15 @@ export const PAGES: {
   },
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Academy
+  {
+    key: "academy_performance_hub",
+    label: "Performance Hub",
+    secao: "Academy",
+    hasCriar: true,
+    hasEditar: true,
+    hasExcluir: true,
+  },
   // Escala
   { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
@@ -154,6 +155,8 @@ export const PAGES: {
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
+
+export const PAGES = sortPagesLikeMenu(PAGES_META);
 
 /** Secções na ordem de `PAGES` / menu lateral (primeira ocorrência de cada secao). */
 export function secoesMenuFromPages(pages: readonly { secao: string }[]): string[] {

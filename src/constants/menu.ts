@@ -52,7 +52,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Estúdio, Escala, RH, Conteúdo, Plataforma. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Estúdio, Academy, Escala, RH, Conteúdo, Plataforma. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -113,6 +113,12 @@ export const MENU: MenuSection[] = [
     ],
   },
   {
+    section: "Academy",
+    items: [
+      { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
+    ],
+  },
+  {
     section: "Escala",
     items: [
       { key: "rh_gestao_escala", label: "Gestão de Escala", icon: Calendar },
@@ -131,12 +137,6 @@ export const MENU: MenuSection[] = [
       { key: "rh_vagas", label: "Vagas", icon: Briefcase },
       { key: "rh_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_central_denuncias", label: "Central de Denúncias", icon: Scale },
-    ],
-  },
-  {
-    section: "Academy",
-    items: [
-      { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
     ],
   },
   {

@@ -143,6 +143,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_overview_prestador: {
+    titulo: "Overview Prestador",
+    blocos: [
+      {
+        subtitulo: "Não vejo Overview Prestador no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de **Ver** para Overview Prestador e se a página está liberada na aba correspondente ao seu perfil (Gestores, Prestadores ou Operadora). Administradores têm acesso total.",
+      },
+      {
+        subtitulo: "KPIs de presença ou absenteísmo vazios?",
+        texto:
+          "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
+      },
+    ],
+  },
   agenda: {
     titulo: "Agenda",
     blocos: [
@@ -1045,6 +1060,121 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo criar um novo usuário?",
         texto:
           "O botão Novo Usuário (pill com ícone +) só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
+      },
+    ],
+  },
+  rh_gestao_escala: {
+    titulo: "Gestão de Escala",
+    blocos: [
+      {
+        subtitulo: "Não vejo Gestão de Escala no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários e liberação da página nas abas Operadora, Gestores ou Prestadores, conforme seu perfil.",
+      },
+      {
+        subtitulo: "Não consigo salvar ou aprovar a escala?",
+        texto:
+          "Salvar e aprovar exigem permissão de **Editar** (e criar células exige **Criar**). Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+      },
+    ],
+  },
+  rh_staff: {
+    titulo: "Gestão de Staff",
+    blocos: [
+      {
+        subtitulo: "Não vejo Gestão de Staff no menu?",
+        texto:
+          "Confirme permissão de **Ver** e escopo de menu em Gestão de Usuários. A página lista prestadores operacionais — perfis sem escopo de estúdio/escala podem não ter a rota liberada.",
+      },
+    ],
+  },
+  rh_calendario: {
+    titulo: "Calendário",
+    blocos: [
+      {
+        subtitulo: "Turnos não aparecem no calendário?",
+        texto:
+          "Confirme se a escala do período foi publicada em Gestão de Escala e se filtros de time ou staff não estão restringindo a visão. Prestadores com **Ver = Próprios** veem apenas a própria grade.",
+      },
+      {
+        subtitulo: "Não consigo registrar presença ou justificativa?",
+        texto:
+          "Ações de presença e justificativa exigem permissão de **Editar** no Calendário. Se o botão não aparece, solicite liberação ao administrador.",
+      },
+    ],
+  },
+  escala_marketplace_turnos: {
+    titulo: "Marketplace",
+    blocos: [
+      {
+        subtitulo: "Não consigo publicar oferta de turno?",
+        texto:
+          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff).",
+      },
+    ],
+  },
+  escala_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        subtitulo: "Confundi com Solicitações do RH?",
+        texto:
+          "A secção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A secção **RH → Solicitações** trata atestados, reuniões com RH e vagas — são páginas distintas no menu.",
+      },
+    ],
+  },
+  rh_funcionarios: {
+    titulo: "Gestão de Prestadores",
+    blocos: [
+      {
+        subtitulo: "Não vejo Gestão de Prestadores no menu?",
+        texto:
+          "Confirme permissão de **Ver** e liberação da página nas abas de escopo (Gestores / Prestadores / Operadora). O rótulo no menu é **Gestão de Prestadores** (`rh_funcionarios`).",
+      },
+    ],
+  },
+  rh_organograma: {
+    titulo: "Organograma",
+    blocos: [
+      {
+        subtitulo: "Não consigo editar diretorias ou times?",
+        texto:
+          "O modo Gerenciamento e ações de cadastro exigem permissão de **Editar** (e **Criar** para novos registros). Com apenas **Ver**, a página abre em visualização.",
+      },
+    ],
+  },
+  rh_vagas: {
+    titulo: "Vagas",
+    blocos: [
+      {
+        subtitulo: "Não consigo publicar ou mover candidato?",
+        texto:
+          "Publicar vaga exige **Criar**; alterar etapa ou status do candidato exige **Editar**. Confirme a matriz em Gestão de Usuários → Permissões.",
+      },
+    ],
+  },
+  rh_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        subtitulo: "Atestado do Calendário não aparece aqui?",
+        texto:
+          "Justificativas **Médico** registradas no Calendário criam solicitação **Atestado** com status **Em análise**. Use o filtro **Tipo de solicitação** e o carrossel **Em análise**. Aguarde alguns segundos e recarregue se acabou de salvar no Calendário.",
+      },
+      {
+        subtitulo: "Não consigo atender solicitação?",
+        texto:
+          "O ícone **Atender** exige permissão de **Editar** nesta página (RH). Sem Editar, use apenas **Ver**.",
+      },
+    ],
+  },
+  rh_central_denuncias: {
+    titulo: "Central de Denúncias",
+    blocos: [
+      {
+        subtitulo: "Não vejo Central de Denúncias no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada.",
       },
     ],
   },
