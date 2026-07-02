@@ -193,6 +193,18 @@
 }
 
 /* Grids KPI / cards: colapsam para 1 coluna no estreito */
+.app-grid-kpi-2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 900px) {
+  .app-grid-kpi-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 .app-grid-kpi-3 {
   display: grid;
   gap: 12px;

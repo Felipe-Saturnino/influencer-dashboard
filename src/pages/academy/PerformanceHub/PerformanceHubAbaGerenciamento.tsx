@@ -12,7 +12,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { tituloModalPerformanceHub } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 
 type Props = {
@@ -119,7 +119,7 @@ export function PerformanceHubAbaGerenciamento({
                     <td style={dataTable.tdCenter}>{formatNotaPerformanceHub(row.notaTotal)}</td>
                     <td style={dataTable.tdCenter}>
                       <BtnIconeAcaoLinha
-                        label={tooltipAcaoAbreModal("Avaliar performance", row.avaliadoNome)}
+                        label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
                         onClick={() => onAvaliar(row)}
                       >
                         <ClipboardCheck size={14} aria-hidden />
@@ -174,7 +174,7 @@ export function PerformanceHubAbaGerenciamento({
                     <td style={dataTable.tdCenter}>{item.pendentes}</td>
                     <td style={dataTable.tdCenter}>
                       <BtnIconeAcaoLinha
-                        label={tooltipAcaoAbreModal("Avaliar performance", item.nome)}
+                        label={tituloModalPerformanceHub(item.nome, item.goLive)}
                         onClick={() => onAvaliarPorNome(item.nome)}
                       >
                         <ClipboardCheck size={14} aria-hidden />

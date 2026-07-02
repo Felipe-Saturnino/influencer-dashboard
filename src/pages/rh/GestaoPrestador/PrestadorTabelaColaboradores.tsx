@@ -9,7 +9,7 @@ import {
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../../constants/theme";
 import { FONT } from "../../../constants/theme";
@@ -340,20 +340,20 @@ export function PrestadorTabelaColaboradores({
                           }}
                         >
                           <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Detalhes do colaborador", row.nome)}
+                            label={tooltipModal("Detalhes do Prestador")}
                             onClick={() => onAbrirVer(row)}
                           >
                             <Eye size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                           <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Histórico", row.nome)}
+                            label={tooltipModal("Histórico")}
                             onClick={() => onAbrirHistorico(row)}
                           >
                             <History size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                           {preencherAcoesHeadcount && podeEditar ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Editar", row.nome)}
+                              label={tooltipModal("Editar Prestador")}
                               onClick={() => onAbrirEditar(row)}
                             >
                               <Pencil size={14} aria-hidden />
@@ -361,7 +361,7 @@ export function PrestadorTabelaColaboradores({
                           ) : null}
                           {tabelaAcoesRh && podeEditar ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Registrar Ação", row.nome)}
+                              label={tooltipModal("Registrar Ação")}
                               onClick={() => onRegistrarAcao(row)}
                               style={btnIconTabelaCta}
                             >
@@ -370,7 +370,7 @@ export function PrestadorTabelaColaboradores({
                           ) : null}
                           {tabelaAnotacoesRh && podeEditar ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Registrar Anotação", row.nome)}
+                              label={tooltipModal("Registrar Anotação")}
                               onClick={() => onRegistrarAnotacao(row)}
                               style={btnIconTabelaCta}
                             >

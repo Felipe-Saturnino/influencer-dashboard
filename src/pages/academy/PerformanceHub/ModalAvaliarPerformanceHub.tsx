@@ -29,13 +29,19 @@ import {
   formatPesoPerformanceHub,
 } from "../../../lib/academyPerformanceHubScoring";
 import {
-  PERFORMANCE_HUB_ESTUDIOS_ATIVOS,
   PERFORMANCE_HUB_JOGOS_META,
-  PERFORMANCE_HUB_PRESTADOR_DEFAULTS,
   PERFORMANCE_HUB_TURNOS,
-  jogosDoEstudio,
-  mesasDoEstudioJogo,
 } from "../../../lib/academyPerformanceHubDadosCatalog";
+import type {
+  PerformanceHubDadosPrefill,
+  PerformanceHubEstudioCadastro,
+  PerformanceHubMesaCadastro,
+} from "../../../lib/academyPerformanceHubCadastroPrefill";
+import {
+  avaliacaoTemDadosSalvos,
+  jogosDisponiveisModalPerformanceHub,
+  mesasDoEstudioJogoNoCatalogo,
+} from "../../../lib/academyPerformanceHubCadastroPrefill";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 
@@ -46,7 +52,7 @@ export type PerformanceHubAvaliacaoFormPayload = {
   turno: PerformanceHubTurno;
   estudioId: string;
   jogo: PerformanceHubJogoKey | null;
-  mesaId: number | null;
+  mesaId: string | null;
   pontosFortes: string;
   pontosDesenvolver: string;
   criterios: Record<string, PerformanceHubCriterioResposta>;
@@ -62,6 +68,9 @@ type Props = {
   avaliacao: PerformanceHubAvaliacao;
   config: PerformanceHubScoringConfig;
   modo: PerformanceHubModalModo;
+  estudios: PerformanceHubEstudioCadastro[];
+  mesas: PerformanceHubMesaCadastro[];
+  getPrefill: (staffId?: string | null, nome?: string | null) => PerformanceHubDadosPrefill | null;
   onClose: () => void;
   onSalvar: (payload: PerformanceHubAvaliacaoFormPayload) => void;
   onConcluir: (payload: PerformanceHubAvaliacaoFormPayload) => void;
@@ -98,6 +107,9 @@ export function ModalAvaliarPerformanceHub({
   avaliacao,
   config,
   modo,
+  estudios,
+  mesas,
+  getPrefill,
   onClose,
   onSalvar,
   onConcluir,
@@ -107,16 +119,20 @@ export function ModalAvaliarPerformanceHub({
   const somenteLeitura = modo === "ver";
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const defaults = PERFORMANCE_HUB_PRESTADOR_DEFAULTS[avaliacao.avaliadoNome];
+  const prefillAtual = getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome);
 
   const [aba, setAba] = useState<ModalTab>("dados");
   const [tipoAvaliacao, setTipoAvaliacao] = useState<PerformanceHubTipoAvaliacao | "">(
     avaliacao.tipoAvaliacao ?? "",
   );
-  const [turno, setTurno] = useState<PerformanceHubTurno>(avaliacao.turno ?? defaults?.turno ?? "Manhã");
-  const [estudioId, setEstudioId] = useState(avaliacao.estudioId ?? defaults?.estudioId ?? PERFORMANCE_HUB_ESTUDIOS_ATIVOS[0]?.id ?? "");
-  const [jogo, setJogo] = useState<PerformanceHubJogoKey | "">(avaliacao.jogo ?? "");
-  const [mesaId, setMesaId] = useState<number | "">(avaliacao.mesaId ?? "");
+  const [turno, setTurno] = useState<PerformanceHubTurno>(
+    avaliacao.turno ?? prefillAtual?.turno ?? "Manhã",
+  );
+  const [estudioId, setEstudioId] = useState(
+    avaliacao.estudioId ?? prefillAtual?.estudioId ?? estudios[0]?.slug ?? "",
+  );
+  const [jogo, setJogo] = useState<PerformanceHubJogoKey | "">(avaliacao.jogo ?? prefillAtual?.jogo ?? "");
+  const [mesaId, setMesaId] = useState<string>(avaliacao.mesaId ?? prefillAtual?.mesaId ?? "");
   const [videoNome, setVideoNome] = useState(avaliacao.videoNome ?? "");
   const [videoUrlLocal, setVideoUrlLocal] = useState(avaliacao.videoUrl ?? "");
   const [pontosFortes, setPontosFortes] = useState(avaliacao.pontosFortes ?? "");
@@ -137,9 +153,29 @@ export function ModalAvaliarPerformanceHub({
   const jogoMeta = jogo ? PERFORMANCE_HUB_JOGOS_META[jogo] : null;
   const mesaTipo = jogoMeta?.mesaTipo ?? "cartas";
   const mesaCriterios = useMemo(() => criteriosMesaPorTipo(config, mesaTipo), [config, mesaTipo]);
-  const jogosDisponiveis = useMemo(() => jogosDoEstudio(estudioId), [estudioId]);
-  const mesasDisponiveis = useMemo(() => mesasDoEstudioJogo(estudioId, jogo), [estudioId, jogo]);
+  const jogosStaff = useMemo(
+    () => getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome)?.jogosStaff ?? [],
+    [avaliacao.avaliadoStaffId, avaliacao.avaliadoNome, getPrefill],
+  );
+  const jogosDisponiveis = useMemo(
+    () => (estudioId ? jogosDisponiveisModalPerformanceHub(estudioId, mesas, jogosStaff) : []),
+    [estudioId, mesas, jogosStaff],
+  );
+  const mesasDisponiveis = useMemo(
+    () => mesasDoEstudioJogoNoCatalogo(estudioId, jogo, mesas),
+    [estudioId, jogo, mesas],
+  );
   const showMesaTab = Boolean(jogoMeta);
+
+  useEffect(() => {
+    if (avaliacaoTemDadosSalvos(avaliacao)) return;
+    const prefill = getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome);
+    if (!prefill) return;
+    if (prefill.turno) setTurno(prefill.turno);
+    if (prefill.estudioId) setEstudioId(prefill.estudioId);
+    if (prefill.jogo) setJogo(prefill.jogo);
+    if (prefill.mesaId) setMesaId(prefill.mesaId);
+  }, [avaliacao, getPrefill]);
 
   useEffect(() => {
     if (jogo && !jogosDisponiveis.includes(jogo)) {
@@ -149,15 +185,15 @@ export function ModalAvaliarPerformanceHub({
   }, [estudioId, jogosDisponiveis, jogo]);
 
   useEffect(() => {
-    if (jogo && mesasDisponiveis.length > 0 && (mesaId === "" || !mesasDisponiveis.includes(Number(mesaId)))) {
-      setMesaId(mesasDisponiveis[0]);
+    if (jogo && mesasDisponiveis.length > 0 && (mesaId === "" || !mesasDisponiveis.includes(mesaId))) {
+      setMesaId(mesasDisponiveis[0]!);
     }
     if (jogo && mesasDisponiveis.length === 0) setMesaId("");
   }, [jogo, mesasDisponiveis, mesaId]);
 
   useEffect(() => {
     if (!jogo && jogosDisponiveis.length > 0 && !avaliacao.jogo) {
-      setJogo(jogosDisponiveis[0]);
+      setJogo(jogosDisponiveis[0]!);
     }
   }, [jogosDisponiveis, jogo, avaliacao.jogo]);
 
@@ -195,7 +231,7 @@ export function ModalAvaliarPerformanceHub({
       turno,
       estudioId,
       jogo: jogo || null,
-      mesaId: mesaId === "" ? null : Number(mesaId),
+      mesaId: mesaId.trim() || null,
       pontosFortes: pontosFortes.trim(),
       pontosDesenvolver: pontosDesenvolver.trim(),
       criterios,
@@ -528,8 +564,8 @@ export function ModalAvaliarPerformanceHub({
                   }}
                   aria-label="Estúdio"
                 >
-                  {PERFORMANCE_HUB_ESTUDIOS_ATIVOS.map((est) => (
-                    <option key={est.id} value={est.id}>
+                  {estudios.map((est) => (
+                    <option key={est.slug} value={est.slug}>
                       {est.nome}
                     </option>
                   ))}
@@ -587,7 +623,7 @@ export function ModalAvaliarPerformanceHub({
                   id="modalMesa"
                   value={mesaId}
                   disabled={somenteLeitura || mesasDisponiveis.length === 0}
-                  onChange={(e) => setMesaId(Number(e.target.value))}
+                  onChange={(e) => setMesaId(e.target.value)}
                   style={{
                     ...fieldStyle(t),
                     borderColor: invalidFields.has("mesaId") ? "#e84025" : t.cardBorder,

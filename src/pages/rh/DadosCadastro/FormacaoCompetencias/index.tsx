@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2, Pencil } from "lucide-react";
 import { BtnExcluirLinha } from "../../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../../components/OperacoesModal";
 import { supabase } from "../../../../lib/supabase";
 import { useApp } from "../../../../context/AppContext";
@@ -45,7 +47,6 @@ import {
   type PortfolioPayload,
 } from "./Modals";
 import {
-  getFormacaoBtnIconTabela,
   getFormacaoSectionHeaderStyle,
   getFormacaoStatusBadgeStyle,
 } from "./sharedStyles";
@@ -123,8 +124,6 @@ export default function FormacaoCompetenciasPainel({
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const btnIcon = getFormacaoBtnIconTabela(t);
-
   const [loading, setLoading] = useState(true);
   const [formacoes, setFormacoes] = useState<RhFuncionarioFormacao[]>([]);
   const [idiomasRows, setIdiomasRows] = useState<RhFuncionarioIdioma[]>([]);
@@ -429,12 +428,17 @@ export default function FormacaoCompetenciasPainel({
     }
   };
 
-  const acoesLinha = (edit: () => void, del: () => void, labelEditar: string, descricaoExcluir: string) =>
+  const acoesLinha = (
+    edit: () => void,
+    del: () => void,
+    tituloModalEdit: string,
+    descricaoExcluir: string,
+  ) =>
     podeEditar ? (
       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-        <button type="button" style={btnIcon} onClick={edit} aria-label={`Editar ${labelEditar}`} title={`Editar ${labelEditar}`}>
+        <BtnIconeAcaoLinha label={tooltipModal(tituloModalEdit)} onClick={edit}>
           <Pencil size={13} aria-hidden />
-        </button>
+        </BtnIconeAcaoLinha>
         <BtnExcluirLinha descricaoItem={descricaoExcluir} onClick={del} />
       </div>
     ) : (
@@ -539,7 +543,7 @@ export default function FormacaoCompetenciasPainel({
                         {acoesLinha(
                           () => setModalFormacao(row),
                           () => setDeleteTarget({ kind: "formacao", row }),
-                          row.curso,
+                          "Editar formação acadêmica",
                           descricaoBotaoExcluir("formação", row.curso),
                         )}
                       </td>
@@ -590,7 +594,7 @@ export default function FormacaoCompetenciasPainel({
                     ? acoesLinha(
                         () => setModalIdioma(row),
                         () => setDeleteTarget({ kind: "idioma", row }),
-                        nome,
+                        "Editar idioma",
                         descricaoBotaoExcluir("idioma", nome),
                       )
                     : null}
@@ -674,7 +678,7 @@ export default function FormacaoCompetenciasPainel({
                         {acoesLinha(
                           () => setModalCurso(row),
                           () => setDeleteTarget({ kind: "curso", row }),
-                          row.nome,
+                          "Editar curso",
                           descricaoBotaoExcluir("curso", row.nome),
                         )}
                       </td>
@@ -742,7 +746,7 @@ export default function FormacaoCompetenciasPainel({
                     ? acoesLinha(
                         () => setModalPortfolio(row),
                         () => setDeleteTarget({ kind: "portfolio", row }),
-                        row.titulo,
+                        "Editar item do portfólio",
                         descricaoBotaoExcluir("item de portfólio", row.titulo),
                       )
                     : null}

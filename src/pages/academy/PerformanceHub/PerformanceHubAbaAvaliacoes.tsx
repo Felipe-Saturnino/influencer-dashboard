@@ -19,7 +19,7 @@ import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { tituloModalPerformanceHub, tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
 
 type Props = {
@@ -286,11 +286,7 @@ export function PerformanceHubAbaAvaliacoes({
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
-                            label={
-                              isProprios
-                                ? tooltipAcaoAbreModal("Ver minha avaliação", row.avaliadoNome)
-                                : tooltipAcaoAbreModal("Ver avaliação", row.avaliadoNome)
-                            }
+                            label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
                             onClick={() => onVer(row)}
                           >
                             <Eye size={14} aria-hidden />
@@ -298,7 +294,7 @@ export function PerformanceHubAbaAvaliacoes({
 
                           {!isProprios && row.status === "em_analise" ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Analisar avaliação", row.avaliadoNome)}
+                              label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
                               onClick={() => onAnalisar(row)}
                             >
                               <FileSearch size={14} aria-hidden />
@@ -306,7 +302,7 @@ export function PerformanceHubAbaAvaliacoes({
                           ) : null}
 
                           <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Histórico da avaliação", row.avaliadoNome)}
+                            label={tooltipModal("Histórico da avaliação")}
                             onClick={() => undefined}
                           >
                             <History size={14} aria-hidden />

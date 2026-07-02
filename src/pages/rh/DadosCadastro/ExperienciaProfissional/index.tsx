@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 import { BtnExcluirLinha } from "../../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../../components/OperacoesModal";
 import { supabase } from "../../../../lib/supabase";
 import { useApp } from "../../../../context/AppContext";
@@ -23,7 +25,6 @@ import {
 import type { RhExperienciaPayload, RhFuncionarioExperiencia } from "../../../../types/rhExperienciaProfissional";
 import { ModalExperienciaProfissional } from "./ModalExperiencia";
 import {
-  getExperienciaBtnIconTabela,
   getExperienciaSectionHeaderStyle,
 } from "./sharedStyles";
 
@@ -71,8 +72,6 @@ export default function ExperienciaProfissionalPainel({
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const btnIcon = getExperienciaBtnIconTabela(t);
-
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RhFuncionarioExperiencia[]>([]);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "periodo", dir: "desc" });
@@ -237,15 +236,9 @@ export default function ExperienciaProfissionalPainel({
                   {podeEditar ? (
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <button
-                          type="button"
-                          style={btnIcon}
-                          onClick={() => setModal(row)}
-                          aria-label={`Editar ${row.cargo}`}
-                          title={`Editar ${row.cargo}`}
-                        >
+                        <BtnIconeAcaoLinha label={tooltipModal("Editar experiência")} onClick={() => setModal(row)}>
                           <Pencil size={13} aria-hidden />
-                        </button>
+                        </BtnIconeAcaoLinha>
                         <BtnExcluirLinha
                           descricaoItem={descricaoBotaoExcluir("experiência", `${row.cargo} na ${row.empresa}`)}
                           onClick={() => setDeleteRow(row)}

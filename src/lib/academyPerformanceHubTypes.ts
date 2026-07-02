@@ -57,7 +57,7 @@ export interface PerformanceHubAvaliacao {
   turno?: PerformanceHubTurno | null;
   estudioId?: string | null;
   jogo?: PerformanceHubJogoKey | null;
-  mesaId?: number | null;
+  mesaId?: string | null;
   pontosFortes?: string | null;
   pontosDesenvolver?: string | null;
   criterios?: Record<string, PerformanceHubCriterioResposta>;

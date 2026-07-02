@@ -14,6 +14,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { FiltroBarPillButton } from "../../../components/dashboard";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -370,11 +371,11 @@ export default function RhSolicitacoesPage() {
                     </td>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <BtnIconeAcaoLinha label="Ver solicitação" onClick={() => setModalVer(row)}>
+                        <BtnIconeAcaoLinha label={tooltipModal("Ver solicitação")} onClick={() => setModalVer(row)}>
                           <Eye size={14} aria-hidden />
                         </BtnIconeAcaoLinha>
                         {perm.canEditarOk ? (
-                          <BtnIconeAcaoLinha label="Atender solicitação" onClick={() => setModalAtender(row)}>
+                          <BtnIconeAcaoLinha label={tooltipModal("Atender solicitação")} onClick={() => setModalAtender(row)}>
                             <Pencil size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}

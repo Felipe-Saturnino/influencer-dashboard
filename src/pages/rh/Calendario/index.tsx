@@ -67,6 +67,8 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -2842,21 +2844,6 @@ export default function RhCalendarioPage() {
                             isAdminPresenca,
                           ),
                       );
-                      const btnIconPresenca: CSSProperties = {
-                        width: 32,
-                        height: 32,
-                        padding: 0,
-                        borderRadius: 8,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        color: t.text,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontFamily: FONT.body,
-                        flexShrink: 0,
-                      };
                       const acoesCellInner: CSSProperties = {
                         display: "flex",
                         alignItems: "center",
@@ -2865,12 +2852,6 @@ export default function RhCalendarioPage() {
                         minHeight: 32,
                         flexWrap: "nowrap",
                       };
-                      const labelDiaAria = dia.toLocaleDateString("pt-BR", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      });
                       const isDestaqueHojePresenca = linhaPresencaDestaqueHoje({
                         diaIso: iso,
                         entEsc,
@@ -2991,11 +2972,8 @@ export default function RhCalendarioPage() {
                               ) : (
                                 <>
                                   {acoesLinha.acaoPrimaria === "aprovar" ? (
-                                    <button
-                                      type="button"
-                                      style={btnIconPresenca}
-                                      aria-label={`Aprovar presença — ${labelDiaAria}`}
-                                      title="Aprovar"
+                                    <BtnIconeAcaoLinha
+                                      label={tooltipModal("APROVAÇÃO DE TURNO")}
                                       onClick={() => {
                                         setPresencaAlvoModal({
                                           funcionarioId: fid,
@@ -3012,14 +2990,11 @@ export default function RhCalendarioPage() {
                                       }}
                                     >
                                       <Check size={14} aria-hidden="true" />
-                                    </button>
+                                    </BtnIconeAcaoLinha>
                                   ) : null}
                                   {acoesLinha.acaoPrimaria === "justificar" ? (
-                                    <button
-                                      type="button"
-                                      style={btnIconPresenca}
-                                      aria-label={`Justificar presença — ${labelDiaAria}`}
-                                      title="Justificar"
+                                    <BtnIconeAcaoLinha
+                                      label={tooltipModal("Justificar")}
                                       onClick={() =>
                                         setPresencaJustificarAlvo({
                                           funcionarioId: fid,
@@ -3030,20 +3005,17 @@ export default function RhCalendarioPage() {
                                       }
                                     >
                                       <ClipboardPen size={14} aria-hidden="true" />
-                                    </button>
+                                    </BtnIconeAcaoLinha>
                                   ) : null}
                                   {acoesLinha.mostrarHistorico ? (
-                                    <button
-                                      type="button"
-                                      style={btnIconPresenca}
-                                      aria-label={`Histórico de presença — ${labelDiaAria}`}
-                                      title={`Histórico de presença — ${labelDiaAria}`}
+                                    <BtnIconeAcaoLinha
+                                      label={tooltipModal("Histórico de presença")}
                                       onClick={() =>
                                         setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
                                       }
                                     >
                                       <Clock size={14} aria-hidden="true" />
-                                    </button>
+                                    </BtnIconeAcaoLinha>
                                   ) : null}
                                 </>
                               )}

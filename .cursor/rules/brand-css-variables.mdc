@@ -424,6 +424,21 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../lib/caro
 | Botões seta | 32×32, `Chevron` 14px, opacidade **0.35** quando `disabled` |
 | Rótulo central | 18px / peso 800 / `FONT.body` / `minWidth` 180 (ajustar só se ellipsis necessário) |
 
+### Ordem da lista e semântica das setas (obrigatório)
+
+| Regra | Valor |
+|-------|--------|
+| **Ordem do array** | **Cronológica crescente** — índice **0** = período mais **antigo** do domínio; último índice = mês corrente (ou default `getIdxMesCarrosselPadrao` / equivalente da página) |
+| **Seta esquerda** (`ChevronLeft`, `aria-label` *Mês anterior*) | `idx - 1` — navega para o mês **anterior** no tempo; **desabilitada** em `idx === 0` |
+| **Seta direita** (`ChevronRight`, `aria-label` *Próximo mês*) | `idx + 1` — navega para o mês **posterior** no tempo; **desabilitada** em `idx === length - 1` |
+| **Helpers canónicos (mês)** | `getMesesDisponiveis`, `getMesesDisponiveisEscalaCarrossel`, `MesCarrosselPeriodo` — reutilizar ou espelhar a mesma ordem |
+| **Índice inicial** | Preferir `getIdxMesCarrosselPadrao(meses)` (dashboards D-1) ou regra documentada na secção |
+| **Sair do Histórico** | Restaurar índice inicial do carrossel (ex.: Overview Influencer, Central de Denúncias) |
+
+**Proibido em código novo:** montar meses do **corrente para trás** (índice 0 = hoje) — inverte setas e quebra `aria-label` (*anterior* à esquerda, *próximo* à direita).
+
+Outros granularidades (semana, dia, turno, diretoria): mesma lógica — lista **antigo → recente**; seta esquerda = passo para trás no tempo; seta direita = passo para frente.
+
 | Contexto | `aria-label` setas | Rótulo central (exemplos) |
 |----------|-------------------|---------------------------|
 | Mês | `Mês anterior` / `Próximo mês` | Label do mês; modo Histórico → **`Todo o período`** |
@@ -459,28 +474,31 @@ Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sug
 Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
 
 - **`aria-label` descritivo** obrigatório.
-- **`title` obrigatório** — tooltip nativo no hover; **mesmo texto** que `aria-label` (ou título canónico do modal alvo).
-- Ação que **abre modal**: preferir **`tooltipAcaoAbreModal(tituloModal, identificador)`** (`lib/iconOnlyButtonA11y.ts`) — ex.: `Editar postagem — Black Friday` alinhado ao `ModalHeader`.
-- Helpers: **`propsBotaoIcone(label)`** (`aria-label` + `title`); **`propsBotaoFecharModal()`** no X do header (`TOOLTIP_FECHAR_MODAL` = «Fechar modal»).
-- Componente preferido em linha: **`BtnIconeAcaoLinha`** (`components/BtnIconeAcaoLinha.tsx`) — ícone 13–14px, ~30×30, `borderRadius` 8, `label` = tooltip.
+- **`title` obrigatório** — tooltip nativo no hover; **mesmo texto** que `aria-label`.
+- Ação que **abre modal**: tooltip = **somente o título do modal** (texto do `ModalHeader` / `<h2>` canónico). **Sem** sufixo de registro (nome, protocolo, assunto) salvo quando o **próprio título do modal** já inclui o identificador (ex.: `` `Histórico — ${assunto}` ``, `` `Prestador — ${nome}` ``, `{protocolo}` na Central de Denúncias).
+- Helpers (`lib/iconOnlyButtonA11y.ts`): **`tooltipModal(tituloModal)`**; **`tituloModalPerformanceHub(avaliado, data)`**; **`tituloModalDocumentoPortalRh(codigo, titulo, versao)`**; **`propsBotaoIcone(label)`** (`aria-label` + `title`); **`propsBotaoFecharModal()`** no X (`TOOLTIP_FECHAR_MODAL` = «Fechar modal»). **`tooltipAcaoAbreModal`** — legado; usar `tooltipModal`.
+- Componente preferido em linha: **`BtnIconeAcaoLinha`** — ícone 13–14px, ~30×30, `borderRadius` 8, prop **`label`** = tooltip (= título do modal quando abre modal).
 - Tamanho do ícone na célula: **13px** (tabelas densas) ou **14px** para ações neutras (Editar).
-- Estilo base (Editar e demais): quadrado ~28–32px, `borderRadius` 8–10, borda `t.cardBorder`, fundo `t.inputBg` — referência `btnAcao` em `GerenciamentoPostagens`, `BtnIconeAcaoLinha` / `btnIconTabela` legado em RH.
+- Estilo base: quadrado ~28–32px, `borderRadius` 8–10, borda `t.cardBorder`, fundo `t.inputBg` — `BtnIconeAcaoLinha` / `btnIconeAcaoLinhaStyles.ts`.
 
 ```tsx
 import { BtnIconeAcaoLinha } from "../components/BtnIconeAcaoLinha";
-import { propsBotaoIcone, tooltipAcaoAbreModal } from "../lib/iconOnlyButtonA11y";
+import { tooltipModal, tituloModalPerformanceHub } from "../lib/iconOnlyButtonA11y";
 
-<BtnIconeAcaoLinha
-  label={tooltipAcaoAbreModal("Editar postagem", row.assunto)}
-  onClick={() => abrirModalEditar(row)}
->
+<BtnIconeAcaoLinha label={tooltipModal("Editar postagem")} onClick={() => abrirModalEditar(row)}>
   <Pencil size={13} aria-hidden />
 </BtnIconeAcaoLinha>
 
-<button type="button" {...propsBotaoIcone("Ações da oferta")} style={…}>
-  <MoreHorizontal size={16} aria-hidden />
-</button>
+<BtnIconeAcaoLinha label={tooltipModal(`Histórico — ${row.assunto || "Postagem"}`)} onClick={() => abrirHistorico(row)}>
+  <Clock size={13} aria-hidden />
+</BtnIconeAcaoLinha>
+
+<BtnIconeAcaoLinha label={tituloModalPerformanceHub(row.avaliadoNome, row.data)} onClick={() => onVer(row)}>
+  <Eye size={14} aria-hidden />
+</BtnIconeAcaoLinha>
 ```
+
+**Proibido em código novo:** `` tooltipModal(`Editar — ${nome}`) `` quando o modal fixo é «Editar Prestador»; `` `Ver ${registro}` ``; `` `Editar postagem — ${assunto}` ``.
 
 ### Exclusão — só ícone (lista / card / tabela)
 
@@ -579,8 +597,10 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Controlo novo na barra de filtros com pill retangular (`borderRadius` 10/20) sem exceção documentada — **exceto** chips semânticos Status/Plataforma (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, Global § Filtros semânticos).
 - Chips status/plataforma na barra com pill **999**, `padding: 5px 12px` ou ativo em cor de marca em vez dos componentes semânticos.
 - Botão Histórico na barra sem `FiltroHistoricoButton` ou com estilo inativo legado (`transparent`, `textMuted`).
+- Carrossel de período com array **corrente → passado** — inverte setas e `aria-label` (§7 Ordem da lista).
 - Ação de **linha** só com texto, sem ícone (código novo).
 - Botão **só ícone** sem `title` / sem `propsBotaoIcone` / fora de `BtnIconeAcaoLinha`, `BtnExcluirLinha`, `BtnArquivarLinha`.
+- Tooltip de ação que abre modal com identificador do registro (`Editar — João`, `Ver ${nome}`) em vez do título do `ModalHeader` — usar `tooltipModal` (§8).
 - **Excluir** sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** ou com confirmação em 2 cliques no botão.
 - **Arquivar** (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - Ação de **toolbar** só com ícone, sem texto (fluxo da página).
@@ -599,7 +619,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - [ ] Filtro de operadora: `FiltroOperadoraSelect` + opção agregadora **Todas Operadoras** + lista **só ativas** (Global § Filtro de operadora)
 - [ ] Filtro de influencer(s): `FiltroInfluencerSelect` + agregadora **Todos Influencers** + pill 999
 - [ ] Modo Mês/Semana/Dia (se aplicável): `FiltroModoVisualizacaoSelect` + `CalendarRange` 15px
-- [ ] Carrossel de período (se aplicável) com `aria-label` nas setas
+- [ ] Carrossel de período (se aplicável) com `aria-label` nas setas + lista **antigo → recente** (§7)
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`

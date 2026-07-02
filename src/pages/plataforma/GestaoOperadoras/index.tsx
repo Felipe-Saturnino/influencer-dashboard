@@ -15,6 +15,8 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -334,26 +336,15 @@ export default function GestaoOperadoras() {
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center" }}>
                         {perm.canEditarOk ? (
-                          <button
-                            type="button"
-                            aria-label={`Editar operadora ${op.nome ?? op.slug}`}
-                            title={`Editar operadora ${op.nome ?? op.slug}`}
-                            onClick={() => { setEditando(op); setModalOpen(true); }}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: 32,
-                              height: 32,
-                              background: "transparent",
-                              border: `1px solid ${t.cardBorder}`,
-                              borderRadius: 10,
-                              cursor: "pointer",
-                              color: t.text,
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal("Editar Operadora")}
+                            onClick={() => {
+                              setEditando(op);
+                              setModalOpen(true);
                             }}
                           >
                             <Pencil size={14} aria-hidden="true" />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {perm.canExcluirOk ? (
                           <BtnExcluirLinha

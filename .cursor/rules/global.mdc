@@ -385,6 +385,20 @@ import { FiltroHistoricoButton } from "../components/dashboard";
 
 **Proibido em código novo:** botão Histórico com fundo `transparent` inativo, `t.textMuted` inativo, ou `brand.accent` fixo sem `getFiltroBarPillStateStyle`; markup pill duplicado inline; `GiCalendar` / `History` montado à mão na barra.
 
+### Carrossel de período — ordem da lista e setas (obrigatório)
+
+Visual e `carouselNavStyles`: **Brand MDC §7**. Comportamento de dados:
+
+| Regra | Valor |
+|-------|--------|
+| **Ordem do array** | **Cronológica crescente** — índice **0** = período mais **antigo**; último = mês corrente (ou default da página) |
+| **Seta esquerda** (`Mês anterior`) | `idx - 1`; **desabilitada** em `idx === 0` |
+| **Seta direita** (`Próximo mês`) | `idx + 1`; **desabilitada** em `idx === length - 1` |
+| **Índice inicial (mês)** | Preferir `getIdxMesCarrosselPadrao` (`dashboardHelpers`) ou regra documentada na secção |
+| **Sair do Histórico** | Restaurar índice inicial do carrossel |
+
+**Proibido:** montar meses do **corrente para trás** (índice 0 = hoje) — inverte setas e quebra `aria-label`. Helpers canónicos: `getMesesDisponiveis`, `MesCarrosselPeriodo`.
+
 ### Filtro de influencer (lista na barra) — obrigatório
 
 Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, usar **`FiltroInfluencerSelect`** — referência visual: **Overview Influencer** / operadora na mesma barra (ícone `User` 15px, pill 999, cor inativa `t.text` via `getFiltroCampoInativoStyle`).
@@ -776,7 +790,7 @@ KPIs e siglas (GGR, ROI, FTD, UAP, MoM, MTD, …); nomes de página/menu (Overvi
 ```
 
 - Ícones **decorativos** em células/badges: `aria-hidden="true"`.
-- Botões só ícone (linha de tabela): `aria-label` + **`title` obrigatório** (tooltip) — `propsBotaoIcone` / `BtnIconeAcaoLinha` em Brand sec. 8; ações que abrem modal: `tooltipAcaoAbreModal(tituloModal, id)`.
+- Botões só ícone (linha de tabela): `aria-label` + **`title` obrigatório** (tooltip) — `propsBotaoIcone` / `BtnIconeAcaoLinha` em Brand sec. 8; ação que abre modal: **`tooltipModal(tituloModalHeader)`** (somente título do `ModalHeader`, sem nome do registro).
 - Preferir **Lucide** em UI de página e no **menu lateral** (`menu.ts` — `LucideIcon` por item). Cabeçalho de página: `PageMenuIcon` alinhado ao mesmo ícone do menu.
 
 Lista estendida (modais, tabelas clicáveis, abas):
@@ -1174,6 +1188,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Modo **Mês/Semana/Dia** na barra sem `FiltroModoVisualizacaoSelect` ou com ícone `Calendar` no lugar de `CalendarRange`.
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
+- Carrossel de período com lista do **corrente para trás** — seta esquerda deixa de ser “anterior” no tempo (Brand §7 / Global § Carrossel de período).
 - Lista >5 opções sem busca no painel do filtro.
 - Busca textual client-side com `toLowerCase().includes` ou `normalize("NFD")` duplicado em vez de `lib/searchText.ts` (`textoContemBusca`, `textoContemBuscaEmAlgum`, `normalizarTextoBusca`).
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
@@ -1197,6 +1212,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.
 - Botão só ícone (linha/modal) sem `title` ou sem `propsBotaoIcone` / componente canónico (`BtnIconeAcaoLinha`, `BtnExcluirLinha`, `BtnArquivarLinha`).
+- Tooltip de ação que abre modal com nome/protocolo/assunto do registro em vez do **título do modal** — usar `tooltipModal` (Brand §8).
 - Query de lista UGC sem `.limit()`.
 - CPF ou dado sensível sem máscara em tabela pública.
 - Expor infraestrutura (tabela, RPC, stack) na UI.

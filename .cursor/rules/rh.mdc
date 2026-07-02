@@ -124,9 +124,9 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 ## Central de Denúncias (`rh_central_denuncias`)
 
 - Gestão interna de protocolos (distinto do canal público).
-- Barra de filtros (`getFilterBarWrapperStyle`): **Linha 1** — carrossel de mês (`carouselNavStyles`, maio/2026 → atual; rótulo **Todo o período** em Histórico) + `FiltroHistoricoButton` + tipo (`FiltroEntidadeBarSelect`, `TriangleAlert`, agregadora **Todos Tipos**, multi `overlaps`) + status (`FiltroBarCampoSelect`, `FilterBarIcons.status`, **Todos Status**); **Linha 2** — `BarraPesquisaPagina` no relato.
+- Barra de filtros (`getFilterBarWrapperStyle`): **Linha 1** — carrossel de mês (`carouselNavStyles`, lista **maio/2026 → mês corrente** — ordem cronológica crescente; seta esquerda = mês anterior, direita = próximo mês; índice inicial `getIdxMesCarrosselPadrao`; rótulo **Todo o período** em Histórico) + `FiltroHistoricoButton` + tipo (`FiltroEntidadeBarSelect`, `TriangleAlert`, agregadora **Todos Tipos**, multi `overlaps`) + status (`FiltroBarCampoSelect`, `FilterBarIcons.status`, **Todos Status**); **Linha 2** — `BarraPesquisaPagina` no relato.
 - **KPIs** (Relatado, Em avaliação, Procedente, Não procedente): formato Financeiro — `app-grid-kpi-4`, `getPageKpiSectionGapStyle`, rótulo caixa alta, `borderLeft` 3px semântico, `brand.blockBg`, valor em `FONT_TITLE` (sem caixa pai).
-- Modais: `ModalsVerHist`, `ModalsAtender` — a11y Global.
+- Modais: `ModalsVerHist`, `ModalsAtender` — título do `<h2>` = **protocolo**; ações só ícone na lista = **`BtnIconeAcaoLinha`** + **`tooltipModal(row.protocolo)`** (Ver / Atender / Histórico compartilham o título do modal). a11y Global + Brand §8.
 - **Handoff:** SLA, status, atendimento, histórico.
 
 ---
@@ -136,3 +136,4 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - Documentar Gestão de Escala/Staff/Calendario neste ficheiro — usar `escala.mdc`.
 - Ações de linha só com texto (sem ícone + `aria-label` + `title`).
 - Confundir Central interna com página pública do Canal.
+- Carrossel de mês com lista do corrente para trás — quebra setas (Brand §7 Ordem da lista).

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Clock, Loader2, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
+import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
-import { propsBotaoIcone, tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -152,7 +155,6 @@ export function GerenciamentoInformativos({
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
   const [alvoArquivar, setAlvoArquivar] = useState<InformativoGerenciamentoRow | null>(null);
   const [erroArquivar, setErroArquivar] = useState<string | null>(null);
-  const [confirmandoExcluirId, setConfirmandoExcluirId] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -487,29 +489,25 @@ export function GerenciamentoInformativos({
                         }}
                       >
                         {acoes.includes("editar") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(tooltipAcaoAbreModal("Editar informativo", row.assunto))}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal("Editar informativo")}
                             disabled={busy}
                             onClick={() => {
                               setEditId(row.id);
                               setModalCriar(true);
                             }}
-                            style={btnAcao(t)}
                           >
                             <Pencil size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("aprovar") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(`Aprovar ${row.assunto}`)}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal("Aprovar")}
                             disabled={busy}
                             onClick={() => void aprovar(row)}
-                            style={btnAcao(t)}
                           >
                             <Check size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("arquivar") ? (
                           <BtnArquivarLinha
@@ -522,43 +520,20 @@ export function GerenciamentoInformativos({
                           />
                         ) : null}
                         {acoes.includes("historico") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(tooltipAcaoAbreModal("Histórico", row.assunto))}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal(`Histórico — ${row.assunto}`)}
                             disabled={busy}
                             onClick={() => setHistRef({ id: row.id, assunto: row.assunto })}
-                            style={btnAcao(t)}
                           >
                             <Clock size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("excluir") ? (
-                          <button
-                            type="button"
-                            aria-label={`${confirmandoExcluirId === row.id ? "Confirmar exclusão:" : "Excluir:"} ${row.assunto}`}
-                            title={`${confirmandoExcluirId === row.id ? "Confirmar exclusão" : "Excluir"} ${row.assunto}`}
+                          <BtnExcluirLinha
+                            descricaoItem={descricaoBotaoExcluir("informativo", row.assunto)}
                             disabled={busy}
-                            onClick={() => {
-                              if (confirmandoExcluirId !== row.id) {
-                                setConfirmandoExcluirId(row.id);
-                                return;
-                              }
-                              void excluir(row);
-                              setConfirmandoExcluirId(null);
-                            }}
-                            onBlur={() => setConfirmandoExcluirId(null)}
-                            style={{
-                              ...btnAcao(t),
-                              ...(confirmandoExcluirId === row.id
-                                ? { border: "1px solid rgba(232,64,37,0.6)", background: "rgba(232,64,37,0.15)", color: "#e84025" }
-                                : {}),
-                            }}
-                          >
-                            <Trash2 size={13} aria-hidden />
-                            {confirmandoExcluirId === row.id ? (
-                              <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
-                            ) : null}
-                          </button>
+                            onClick={() => void excluir(row)}
+                          />
                         ) : null}
                       </div>
                     </td>
@@ -607,19 +582,4 @@ export function GerenciamentoInformativos({
       ) : null}
     </div>
   );
-}
-
-function btnAcao(t: { cardBorder: string; inputBg?: string; textMuted: string }) {
-  return {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.textMuted,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
 }

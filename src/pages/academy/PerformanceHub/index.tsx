@@ -18,10 +18,10 @@ import type {
 import {
   PERFORMANCE_HUB_SCORING_DEFAULT,
 } from "../../../lib/academyPerformanceHubScoring";
+import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import {
   PERFORMANCE_HUB_AGENDA_MOCK,
   PERFORMANCE_HUB_AVALIACOES_MOCK,
-  PERFORMANCE_HUB_STAFF_POR_TIME,
 } from "../../../lib/academyPerformanceHubMockData";
 import { PERFORMANCE_HUB_TIME_DEFAULT } from "../../../lib/academyPerformanceHubConstants";
 import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
@@ -92,6 +92,7 @@ export default function PerformanceHubPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("academy_performance_hub");
+  const cadastro = usePerformanceHubCadastro();
   const [aba, setAba] = useRouteTab(
     "academy_performance_hub",
     "avaliacoes",
@@ -123,18 +124,19 @@ export default function PerformanceHubPage() {
   }, [mesesCarrossel]);
 
   useEffect(() => {
-    const staffList = PERFORMANCE_HUB_STAFF_POR_TIME[timeSelecionado];
+    const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
     if (staffSelecionado.length === 0) return;
     const selected = staffSelecionado[0];
     if (!staffList.some((item) => item.value === selected)) setStaffSelecionado([]);
-  }, [timeSelecionado, staffSelecionado]);
+  }, [timeSelecionado, staffSelecionado, cadastro]);
 
   const mesSelecionado = mesesCarrossel[idxMes];
 
   const avaliacoesFiltradas = useMemo(() => {
+    const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
     const selectedStaff = staffSelecionado[0];
     const selectedStaffName = selectedStaff
-      ? PERFORMANCE_HUB_STAFF_POR_TIME[timeSelecionado].find((s) => s.value === selectedStaff)?.label ?? ""
+      ? staffList.find((s) => s.value === selectedStaff)?.label ?? ""
       : "";
     return avaliacoes.filter((row) => {
       if (row.time !== timeSelecionado) return false;
@@ -142,27 +144,28 @@ export default function PerformanceHubPage() {
       if (selectedStaffName && row.avaliadoNome !== selectedStaffName) return false;
       return true;
     });
-  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado]);
+  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro]);
 
   const agendaFiltrada = useMemo(() => {
+    const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
     const selectedStaff = staffSelecionado[0];
     const selectedStaffName = selectedStaff
-      ? PERFORMANCE_HUB_STAFF_POR_TIME[timeSelecionado].find((s) => s.value === selectedStaff)?.label ?? ""
+      ? staffList.find((s) => s.value === selectedStaff)?.label ?? ""
       : "";
     return PERFORMANCE_HUB_AGENDA_MOCK.filter((row) => {
       if (row.time !== timeSelecionado) return false;
       if (selectedStaffName && row.nome !== selectedStaffName) return false;
       return true;
     });
-  }, [timeSelecionado, staffSelecionado]);
+  }, [timeSelecionado, staffSelecionado, cadastro]);
 
   const staffOptions = useMemo(
     () =>
-      PERFORMANCE_HUB_STAFF_POR_TIME[timeSelecionado].map((item) => ({
+      cadastro.staffOptionsPorTime(timeSelecionado).map((item) => ({
         id: item.value,
         name: `${item.label} (${item.turno})`,
       })),
-    [timeSelecionado],
+    [cadastro, timeSelecionado],
   );
 
   function aplicarPayload(row: PerformanceHubAvaliacao, payload: PerformanceHubAvaliacaoFormPayload): PerformanceHubAvaliacao {
@@ -205,11 +208,13 @@ export default function PerformanceHubPage() {
       handleAnalisarAvaliacao(existente);
       return;
     }
+    const staffId = cadastro.resolveStaffId(nome);
     const nova: PerformanceHubAvaliacao = {
       id: `novo-${Date.now()}`,
       data: new Date().toLocaleDateString("pt-BR"),
       time: timeSelecionado,
       avaliadoNome: nome,
+      avaliadoStaffId: staffId,
       avaliadorNome: user?.name ?? "Performance Coach",
       status: "em_analise",
       notaTotal: null,
@@ -316,6 +321,9 @@ export default function PerformanceHubPage() {
           avaliacao={avaliacaoEmEdicao}
           config={scoringConfig}
           modo={modalModo}
+          estudios={cadastro.estudios}
+          mesas={cadastro.mesas}
+          getPrefill={cadastro.getPrefill}
           onClose={() => setAvaliacaoEmEdicao(null)}
           onSalvar={(payload) => {
             const atualizado = aplicarPayload(avaliacaoEmEdicao, payload);

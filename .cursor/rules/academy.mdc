@@ -81,6 +81,8 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 
 Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (campos desabilitados; link **Assistir** no vídeo quando houver URL).
 
+**Ações só ícone (aba Avaliações / Gerenciamento):** `BtnIconeAcaoLinha` + **`tituloModalPerformanceHub(avaliadoNome, data)`** — tooltip = título do `ModalHeader` (`{nome} · {data}`). Histórico (placeholder v1): **`tooltipModal("Histórico da avaliação")`**. Proibido sufixar nome do avaliado no tooltip quando o modal já usa título composto.
+
 ### Modal Avaliar — estrutura (alinhado ao mockup)
 
 | Bloco | Conteúdo |
@@ -107,7 +109,7 @@ Aba **Mesa** visível conforme jogo (cartas vs roleta via `criteriosMesaPorTipo`
 
 ### Filtros
 
-- Carrossel de mês + **Histórico** (`Todo o período`).
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista **maio/2026 → corrente** (antigo → recente); seta esquerda = mês anterior; índice inicial `getIdxMesCarrosselPadrao`.
 - Time: select obrigatório GP / Shuffler.
 - Staff: multi quando escopo amplo; oculto ou fixo em **Próprios**.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.

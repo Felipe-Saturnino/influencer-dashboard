@@ -6,7 +6,8 @@ import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
 import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
-import { propsBotaoIcone, tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -661,29 +662,25 @@ export function GerenciamentoPostagens({
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                         {acoes.includes("editar") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(tooltipAcaoAbreModal("Editar postagem", row.assunto))}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal("Editar postagem")}
                             disabled={busy}
                             onClick={() => {
                               setEditRef({ contentType: row.contentType, id: row.id });
                               setModalCriar(true);
                             }}
-                            style={btnAcao(t)}
                           >
                             <Pencil size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("aprovar") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(`Aprovar ${row.assunto}`)}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal("Aprovar")}
                             disabled={busy}
                             onClick={() => void aprovarPostagem(row)}
-                            style={btnAcao(t)}
                           >
                             <Check size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("arquivar") ? (
                           <BtnArquivarLinha
@@ -696,17 +693,15 @@ export function GerenciamentoPostagens({
                           />
                         ) : null}
                         {acoes.includes("historico") ? (
-                          <button
-                            type="button"
-                            {...propsBotaoIcone(tooltipAcaoAbreModal("Histórico", row.assunto))}
+                          <BtnIconeAcaoLinha
+                            label={tooltipModal(`Histórico — ${row.assunto || "Postagem"}`)}
                             disabled={busy}
                             onClick={() =>
                               setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
                             }
-                            style={btnAcao(t)}
                           >
                             <Clock size={13} aria-hidden />
-                          </button>
+                          </BtnIconeAcaoLinha>
                         ) : null}
                       </div>
                     </td>
@@ -758,19 +753,4 @@ export function GerenciamentoPostagens({
       ) : null}
     </div>
   );
-}
-
-function btnAcao(t: { cardBorder: string; inputBg?: string; textMuted: string }) {
-  return {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.textMuted,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
 }

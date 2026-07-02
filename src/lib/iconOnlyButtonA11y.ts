@@ -16,11 +16,29 @@ export function propsBotaoFecharModal(): { "aria-label": string; title: string }
 }
 
 /**
- * Tooltip para ação de linha que abre modal com título fixo.
- * Ex.: `tooltipAcaoAbreModal("Editar postagem", row.assunto)` → «Editar postagem — {assunto}».
+ * Tooltip/`aria-label` de ação que abre modal — **somente** o título do modal
+ * (mesmo texto do `ModalHeader` / `<h2>` canónico). Sem nome do registro, protocolo ou assunto.
  */
-export function tooltipAcaoAbreModal(modalTitulo: string, identificador?: string): string {
-  const titulo = modalTitulo.trim();
-  const id = identificador?.trim();
-  return id ? `${titulo} — ${id}` : titulo;
+export function tooltipModal(tituloModal: string): string {
+  return tituloModal.trim();
+}
+
+/** Título do `ModalAvaliarPerformanceHub` (`ModalHeader`). */
+export function tituloModalPerformanceHub(avaliadoNome: string, data: string): string {
+  return tooltipModal(`${avaliadoNome.trim()} · ${data.trim()}`);
+}
+
+/** Título do `ModalVisualizarDocumento` (`ModalHeader`). */
+export function tituloModalDocumentoPortalRh(
+  codigo: string | null | undefined,
+  titulo: string,
+  versao: string | null | undefined,
+): string {
+  const parts = [codigo?.trim(), titulo.trim(), versao?.trim()].filter(Boolean);
+  return tooltipModal(parts.length > 0 ? parts.join(" - ") : titulo);
+}
+
+/** @deprecated Use `tooltipModal` — identificador do registro não entra no tooltip. */
+export function tooltipAcaoAbreModal(modalTitulo: string, _identificador?: string): string {
+  return tooltipModal(modalTitulo);
 }
