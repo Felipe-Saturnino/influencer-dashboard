@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Eye, FileSearch, History } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Eye, FileSearch, History, Image, MessageSquare, Star, TableProperties, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -15,20 +15,22 @@ import {
 import { formatNotaPerformanceHub } from "../../../lib/academyPerformanceHubScoring";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
-import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { textoContemBusca } from "../../../lib/searchText";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
   canEditar: PermissaoValor;
   roleUsuario: Role;
+  onVer: (row: PerformanceHubAvaliacao) => void;
   onAnalisar: (row: PerformanceHubAvaliacao) => void;
 };
 
-type SortCol = "data" | "avaliado" | "avaliador" | "status" | "nota";
+type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "mesa";
 
 function scoreStatus(status: PerformanceHubStatus): number {
   const order: PerformanceHubStatus[] = ["pendente", "em_analise", "feedback", "concluida"];
@@ -41,19 +43,67 @@ function dateNumber(value: string): number {
   return new Date(ano, mes - 1, dia).getTime();
 }
 
-function cardStyle(border: string) {
-  return {
-    borderRadius: 14,
-    border: `1px solid ${border}`,
-    padding: "14px 16px",
-    minHeight: 92,
-  };
+function mediaNotas(rows: PerformanceHubAvaliacao[], pick: (row: PerformanceHubAvaliacao) => number | null): number | null {
+  const vals = rows.map(pick).filter((v): v is number => v != null);
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function corNotaCelula(nota: number | null): string {
+  if (nota == null) return "#6b7280";
+  if (nota >= 8) return "#22c55e";
+  if (nota >= 6) return "#f59e0b";
+  return "#e84025";
+}
+
+function KpiCard({
+  label,
+  value,
+  icon,
+  accent,
+  border,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  accent: string;
+  border: string;
+}) {
+  return (
+    <div style={{ borderRadius: 14, border: `1px solid ${border}`, overflow: "hidden", minHeight: 92 }}>
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, transparent)` }} />
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${accent} 28%, transparent)`,
+              color: accent,
+            }}
+          >
+            {icon}
+          </span>
+          <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "#6b7280", fontWeight: 700 }}>
+            {label}
+          </span>
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      </div>
+    </div>
+  );
 }
 
 export function PerformanceHubAbaAvaliacoes({
   avaliacoes,
   canEditar,
   roleUsuario,
+  onVer,
   onAnalisar,
 }: Props) {
   const { theme: t } = useApp();
@@ -63,16 +113,12 @@ export function PerformanceHubAbaAvaliacoes({
   const isProprios = canEditar === "proprios";
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [busca, setBusca] = useState("");
-  const showBusca = roleUsuario === "gestor";
+  const showBusca = roleUsuario === "gestor" || roleUsuario === "admin";
 
   const rowsVisiveis = useMemo(() => {
     const filtradas = avaliacoes
       .filter((row) => (isProprios ? row.status === "concluida" : true))
-      .filter((row) =>
-        showBusca
-          ? textoContemBuscaEmAlgum(busca, row.avaliadoNome, row.avaliadorNome, PERFORMANCE_HUB_STATUS_LABEL[row.status])
-          : true,
-      );
+      .filter((row) => (showBusca ? textoContemBusca(row.avaliadoNome, busca) : true));
 
     const sorted = [...filtradas].sort((a, b) => {
       let cmp = 0;
@@ -80,68 +126,88 @@ export function PerformanceHubAbaAvaliacoes({
       if (sort.col === "avaliado") cmp = a.avaliadoNome.localeCompare(b.avaliadoNome, "pt-BR");
       if (sort.col === "avaliador") cmp = a.avaliadorNome.localeCompare(b.avaliadorNome, "pt-BR");
       if (sort.col === "status") cmp = scoreStatus(a.status) - scoreStatus(b.status);
-      if (sort.col === "nota") cmp = (a.notaTotal ?? -1) - (b.notaTotal ?? -1);
+      if (sort.col === "total") cmp = (a.notaTotal ?? -1) - (b.notaTotal ?? -1);
+      if (sort.col === "imagem") cmp = (a.notaImagem ?? -1) - (b.notaImagem ?? -1);
+      if (sort.col === "comunicacao") cmp = (a.notaComunicacao ?? -1) - (b.notaComunicacao ?? -1);
+      if (sort.col === "mesa") cmp = (a.notaMesa ?? -1) - (b.notaMesa ?? -1);
       return sort.dir === "asc" ? cmp : -cmp;
     });
     return sorted;
   }, [avaliacoes, isProprios, showBusca, busca, sort]);
 
-  const kpiPendentes = rowsVisiveis.filter((row) => row.status === "pendente").length;
-  const kpiEmAnalise = rowsVisiveis.filter((row) => row.status === "em_analise").length;
-  const kpiConcluidas = rowsVisiveis.filter((row) => row.status === "concluida").length;
-  const notasValidas = rowsVisiveis.filter((row) => row.notaTotal != null);
-  const kpiNotaMedia = notasValidas.length
-    ? notasValidas.reduce((acc, row) => acc + (row.notaTotal ?? 0), 0) / notasValidas.length
-    : 0;
+  const kpiAvaliacoes = rowsVisiveis.length;
+  const kpiNotaTotal = mediaNotas(rowsVisiveis, (r) => r.notaTotal);
+  const kpiImagem = mediaNotas(rowsVisiveis, (r) => r.notaImagem);
+  const kpiComunicacao = mediaNotas(rowsVisiveis, (r) => r.notaComunicacao);
+  const kpiMesa = mediaNotas(rowsVisiveis, (r) => r.notaMesa);
 
   function handleSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }));
   }
 
+  function renderNotaCell(nota: number | null) {
+    return (
+      <span style={{ color: corNotaCelula(nota), fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+        {formatNotaPerformanceHub(nota)}
+      </span>
+    );
+  }
+
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub={PERFORMANCE_HUB_KPI_SUB}>KPIs Consolidados</SectionTitle>
-        <div className="app-grid-kpi-4" style={{ gap: 12 }}>
-          <div style={cardStyle(t.cardBorder)}>
-            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: t.textMuted, fontWeight: 700 }}>
-              Pendentes
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginTop: 8 }}>{kpiPendentes}</div>
-          </div>
-          <div style={cardStyle(t.cardBorder)}>
-            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: t.textMuted, fontWeight: 700 }}>
-              Em Análise
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginTop: 8 }}>{kpiEmAnalise}</div>
-          </div>
-          <div style={cardStyle(t.cardBorder)}>
-            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: t.textMuted, fontWeight: 700 }}>
-              Concluídas
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginTop: 8 }}>{kpiConcluidas}</div>
-          </div>
-          <div style={cardStyle(t.cardBorder)}>
-            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: t.textMuted, fontWeight: 700 }}>
-              Nota Média
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginTop: 8 }}>{formatNotaPerformanceHub(kpiNotaMedia)}</div>
-          </div>
+        <SectionTitle sub={PERFORMANCE_HUB_KPI_SUB}>Consolidados</SectionTitle>
+        <div className="app-grid-kpi-2" style={{ gap: 12, marginBottom: 12 }}>
+          <KpiCard
+            label="Avaliações"
+            value={String(kpiAvaliacoes)}
+            accent="#7c3aed"
+            border={t.cardBorder}
+            icon={<Users size={14} aria-hidden />}
+          />
+          <KpiCard
+            label="Nota Total"
+            value={formatNotaPerformanceHub(kpiNotaTotal)}
+            accent="#1e36f8"
+            border={t.cardBorder}
+            icon={<Star size={14} aria-hidden />}
+          />
+        </div>
+        <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+          <KpiCard
+            label="Imagem"
+            value={formatNotaPerformanceHub(kpiImagem)}
+            accent="#a78bfa"
+            border={t.cardBorder}
+            icon={<Image size={14} aria-hidden />}
+          />
+          <KpiCard
+            label="Comunicação"
+            value={formatNotaPerformanceHub(kpiComunicacao)}
+            accent="#22c55e"
+            border={t.cardBorder}
+            icon={<MessageSquare size={14} aria-hidden />}
+          />
+          <KpiCard
+            label="Mesa"
+            value={formatNotaPerformanceHub(kpiMesa)}
+            accent="#eab308"
+            border={t.cardBorder}
+            icon={<TableProperties size={14} aria-hidden />}
+          />
         </div>
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub={isProprios ? "somente avaliações concluídas do perfil logado" : "acompanhamento do ciclo por status"}>
-          Lista de Avaliações
-        </SectionTitle>
+        <SectionTitle sub="histórico de avaliações no período">Avaliações</SectionTitle>
 
         {showBusca ? (
           <div style={{ marginBottom: 12 }}>
             <BarraPesquisaPagina
               value={busca}
               onChange={setBusca}
-              placeholder="Buscar por avaliado, avaliador ou status..."
-              aria-label="Buscar avaliações"
+              placeholder={`Buscar por Nome${SEARCH_PLACEHOLDER_ELLIPSIS}`}
+              aria-label="Buscar avaliado por nome"
               wrapperStyle={{ width: "100%", maxWidth: 380 }}
             />
           </div>
@@ -153,35 +219,23 @@ export function PerformanceHubAbaAvaliacoes({
           </div>
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: isProprios ? 620 : 860 })}>
-              <caption style={{ display: "none" }}>Tabela de avaliações de performance</caption>
+            <table style={getDataTableStyle({ minWidth: isProprios ? 720 : 980 })}>
+              <caption style={{ display: "none" }}>Avaliações de desempenho no período</caption>
               <thead>
                 <tr>
-                  <SortTableTh label="Data" col="data" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Data" col="data" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeaderSticky} align="center" />
                   {!isProprios ? (
-                    <SortTableTh
-                      label="Avaliado"
-                      col="avaliado"
-                      sortCol={sort.col}
-                      sortDir={sort.dir}
-                      onSort={handleSort}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
+                    <SortTableTh label="Avaliado" col="avaliado" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   ) : null}
+                  <SortTableTh label="Total" col="total" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Imagem" col="imagem" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Comunicação" col="comunicacao" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Mesa" col="mesa" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   {!isProprios ? (
-                    <SortTableTh
-                      label="Avaliador"
-                      col="avaliador"
-                      sortCol={sort.col}
-                      sortDir={sort.dir}
-                      onSort={handleSort}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
+                    <SortTableTh label="Avaliador" col="avaliador" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   ) : null}
                   <SortTableTh label="Status" col="status" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Nota" col="nota" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <th scope="col" style={dataTable.thHeader}>Vídeo</th>
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -192,6 +246,10 @@ export function PerformanceHubAbaAvaliacoes({
                     <tr key={row.id} style={{ background: dataTable.zebraRow(idx) }}>
                       <td style={dataTable.tdCenter}>{row.data}</td>
                       {!isProprios ? <td style={dataTable.tdCenter}>{row.avaliadoNome}</td> : null}
+                      <td style={dataTable.tdCenter}>{renderNotaCell(row.notaTotal)}</td>
+                      <td style={dataTable.tdCenter}>{renderNotaCell(row.notaImagem)}</td>
+                      <td style={dataTable.tdCenter}>{renderNotaCell(row.notaComunicacao)}</td>
+                      <td style={dataTable.tdCenter}>{renderNotaCell(row.notaMesa)}</td>
                       {!isProprios ? <td style={dataTable.tdCenter}>{row.avaliadorNome}</td> : null}
                       <td style={dataTable.tdCenter}>
                         <span
@@ -211,7 +269,20 @@ export function PerformanceHubAbaAvaliacoes({
                           {PERFORMANCE_HUB_STATUS_LABEL[row.status]}
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{formatNotaPerformanceHub(row.notaTotal)}</td>
+                      <td style={dataTable.tdCenter}>
+                        {row.videoUrl ? (
+                          <a
+                            href={row.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: brand.primary, fontSize: 13, fontWeight: 600, fontFamily: FONT.body }}
+                          >
+                            Assistir
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
@@ -220,7 +291,7 @@ export function PerformanceHubAbaAvaliacoes({
                                 ? tooltipAcaoAbreModal("Ver minha avaliação", row.avaliadoNome)
                                 : tooltipAcaoAbreModal("Ver avaliação", row.avaliadoNome)
                             }
-                            onClick={() => onAnalisar(row)}
+                            onClick={() => onVer(row)}
                           >
                             <Eye size={14} aria-hidden />
                           </BtnIconeAcaoLinha>

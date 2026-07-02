@@ -50,6 +50,10 @@ export const PERFORMANCE_HUB_SCORING_DEFAULT: PerformanceHubScoringConfig = {
   },
 };
 
+export function formatPesoPerformanceHub(peso: number): string {
+  return peso.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 export function formatNotaPerformanceHub(valor: number | null | undefined): string {
   if (valor == null || Number.isNaN(valor)) return "—";
   return Number(valor).toLocaleString("pt-BR", {

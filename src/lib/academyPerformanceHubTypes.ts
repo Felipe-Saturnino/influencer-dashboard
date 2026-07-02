@@ -10,6 +10,19 @@ export type PerformanceHubTab = "avaliacoes" | "gerenciamento" | "configuracao";
 
 export type PerformanceHubMesaTipo = "cartas" | "roleta";
 
+export type PerformanceHubJogoKey = "baccarat" | "roleta" | "blackjack" | "futebol_brasileiro";
+
+export type PerformanceHubTurno = "Manhã" | "Tarde" | "Noite";
+
+export type PerformanceHubTipoAvaliacao = "performance_coach" | "extra";
+
+export type PerformanceHubModalModo = "ver" | "analisar";
+
+export interface PerformanceHubCriterioResposta {
+  nota: number | null;
+  comentario: string;
+}
+
 export interface PerformanceHubCriterioConfig {
   slug: string;
   label: string;
@@ -40,7 +53,16 @@ export interface PerformanceHubAvaliacao {
   notaImagem: number | null;
   notaComunicacao: number | null;
   notaMesa: number | null;
+  tipoAvaliacao?: PerformanceHubTipoAvaliacao | null;
+  turno?: PerformanceHubTurno | null;
+  estudioId?: string | null;
+  jogo?: PerformanceHubJogoKey | null;
+  mesaId?: number | null;
+  pontosFortes?: string | null;
+  pontosDesenvolver?: string | null;
+  criterios?: Record<string, PerformanceHubCriterioResposta>;
   videoUrl?: string | null;
+  videoNome?: string | null;
 }
 
 export interface PerformanceHubAgendaItem {

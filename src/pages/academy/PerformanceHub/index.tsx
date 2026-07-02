@@ -10,6 +10,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import type {
   PerformanceHubAvaliacao,
+  PerformanceHubModalModo,
   PerformanceHubScoringConfig,
   PerformanceHubTab,
   PerformanceHubTimeSlug,
@@ -27,7 +28,7 @@ import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
 import { PerformanceHubAbaAvaliacoes } from "./PerformanceHubAbaAvaliacoes";
 import { PerformanceHubAbaGerenciamento } from "./PerformanceHubAbaGerenciamento";
 import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
-import { ModalAvaliarPerformanceHub } from "./ModalAvaliarPerformanceHub";
+import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
 
 type MesCarrossel = {
   ano: number;
@@ -104,6 +105,7 @@ export default function PerformanceHubPage() {
   const [scoringConfig, setScoringConfig] = useState<PerformanceHubScoringConfig>(() => cloneScoringDefault());
   const [avaliacoes, setAvaliacoes] = useState<PerformanceHubAvaliacao[]>(PERFORMANCE_HUB_AVALIACOES_MOCK);
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
+  const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
 
   useEffect(() => {
     if (perm.loading) return;
@@ -163,14 +165,44 @@ export default function PerformanceHubPage() {
     [timeSelecionado],
   );
 
-  function handleAbrirAvaliacao(row: PerformanceHubAvaliacao) {
+  function aplicarPayload(row: PerformanceHubAvaliacao, payload: PerformanceHubAvaliacaoFormPayload): PerformanceHubAvaliacao {
+    return {
+      ...row,
+      tipoAvaliacao: payload.tipoAvaliacao,
+      turno: payload.turno,
+      estudioId: payload.estudioId,
+      jogo: payload.jogo,
+      mesaId: payload.mesaId,
+      pontosFortes: payload.pontosFortes,
+      pontosDesenvolver: payload.pontosDesenvolver,
+      criterios: payload.criterios,
+      notaTotal: payload.notaTotal,
+      notaImagem: payload.notaImagem,
+      notaComunicacao: payload.notaComunicacao,
+      notaMesa: payload.notaMesa,
+      videoUrl: payload.videoUrl,
+      videoNome: payload.videoNome,
+    };
+  }
+
+  function handleVerAvaliacao(row: PerformanceHubAvaliacao) {
+    setModalModo("ver");
     setAvaliacaoEmEdicao(row);
+  }
+
+  function handleAnalisarAvaliacao(row: PerformanceHubAvaliacao) {
+    setModalModo("analisar");
+    setAvaliacaoEmEdicao(row);
+  }
+
+  function handleAbrirAvaliacao(row: PerformanceHubAvaliacao) {
+    handleAnalisarAvaliacao(row);
   }
 
   function handleSolicitarAvaliacaoPorNome(nome: string) {
     const existente = avaliacoes.find((row) => row.time === timeSelecionado && row.avaliadoNome === nome);
     if (existente) {
-      setAvaliacaoEmEdicao(existente);
+      handleAnalisarAvaliacao(existente);
       return;
     }
     const nova: PerformanceHubAvaliacao = {
@@ -184,10 +216,19 @@ export default function PerformanceHubPage() {
       notaImagem: null,
       notaComunicacao: null,
       notaMesa: null,
+      tipoAvaliacao: null,
+      turno: null,
+      estudioId: null,
+      jogo: null,
+      mesaId: null,
+      pontosFortes: null,
+      pontosDesenvolver: null,
+      criterios: undefined,
       videoUrl: null,
+      videoNome: null,
     };
     setAvaliacoes((prev) => [nova, ...prev]);
-    setAvaliacaoEmEdicao(nova);
+    handleAnalisarAvaliacao(nova);
   }
 
   if (perm.loading) {
@@ -247,7 +288,8 @@ export default function PerformanceHubPage() {
             avaliacoes={avaliacoesFiltradas}
             canEditar={perm.canEditar}
             roleUsuario={user?.role ?? "prestador"}
-            onAnalisar={handleAbrirAvaliacao}
+            onVer={handleVerAvaliacao}
+            onAnalisar={handleAnalisarAvaliacao}
           />
         ) : null}
 
@@ -273,16 +315,18 @@ export default function PerformanceHubPage() {
         <ModalAvaliarPerformanceHub
           avaliacao={avaliacaoEmEdicao}
           config={scoringConfig}
+          modo={modalModo}
           onClose={() => setAvaliacaoEmEdicao(null)}
           onSalvar={(payload) => {
-            setAvaliacoes((prev) =>
-              prev.map((row) => (row.id === avaliacaoEmEdicao.id ? { ...row, ...payload, status: "feedback" } : row)),
-            );
-            setAvaliacaoEmEdicao(null);
+            const atualizado = aplicarPayload(avaliacaoEmEdicao, payload);
+            setAvaliacoes((prev) => prev.map((row) => (row.id === avaliacaoEmEdicao.id ? atualizado : row)));
+            setAvaliacaoEmEdicao(atualizado);
           }}
           onConcluir={(payload) => {
             setAvaliacoes((prev) =>
-              prev.map((row) => (row.id === avaliacaoEmEdicao.id ? { ...row, ...payload, status: "concluida" } : row)),
+              prev.map((row) =>
+                row.id === avaliacaoEmEdicao.id ? { ...aplicarPayload(row, payload), status: "concluida" } : row,
+              ),
             );
             setAvaliacaoEmEdicao(null);
           }}

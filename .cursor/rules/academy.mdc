@@ -79,7 +79,20 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 
 **Concluída não exibe Analisar** — só **Em Análise** abre modal editável com scoring.
 
-Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (sem notas editáveis / vídeo na v1 mock).
+Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (campos desabilitados; link **Assistir** no vídeo quando houver URL).
+
+### Modal Avaliar — estrutura (alinhado ao mockup)
+
+| Bloco | Conteúdo |
+|-------|----------|
+| Cabeçalho | `{Avaliado} · {data}` + linha «Avaliador {nome}» |
+| Tipo | Select **Avaliação de Performance Coach** / **Avaliação Extra** (extra = placeholder handoff) |
+| **Dados da Avaliação** | Turno, Estúdio, Jogo (tag identidade jogo), Mesa (ID Spin), upload **Vídeo da avaliação** |
+| **Comunicação / Imagem / Mesa** | Por critério: **Nota** (select 0–10) + **Comentário** (textarea obrigatório) + hint de peso |
+| **Considerações** | **Pontos Fortes** + **Pontos a Desenvolver** (obrigatórios ao concluir) |
+| Rodapé | Cancelar · **Salvar** (rascunho, mantém modal aberto) · **Concluir** (validação completa) |
+
+Aba **Mesa** visível conforme jogo (cartas vs roleta via `criteriosMesaPorTipo`). Catálogo mock: `academyPerformanceHubDadosCatalog.ts`.
 
 ### Modelo de pontuação
 
