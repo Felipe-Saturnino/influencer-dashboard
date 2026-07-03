@@ -70,6 +70,14 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
+import {
+  ehReuniaoComRh,
+  exibirObservacaoRhModalReuniao,
+  subtituloChipReuniaoRhCalendario,
+  tituloChipReuniaoRhCalendario,
+  tituloModalReuniaoRhCalendario,
+} from "../../../lib/rhCalendarioReuniaoRhUi";
+import type { RhSolicitacaoStatus } from "../../../types/rhSolicitacao";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
@@ -116,6 +124,7 @@ import {
   fundoLinhaPresencaDiaHoje,
   linhaPresencaDestaqueHoje,
   mesCalendarioPresencaFechado,
+  mesCalendarioPresencaFuturo,
   presencaCorrecaoAnaliseStatusEfetivo,
   presencaCorrecaoCampoAlterado,
   construirIndiceJustificativaMedicoPorDia,
@@ -248,6 +257,9 @@ type RpcReuniaoMesRow = {
   turno: string | null;
   status: string;
   created_at: string;
+  solicitacao_status: RhSolicitacaoStatus | null;
+  observacao_rh: string | null;
+  atendente_nome: string | null;
 };
 
 function isoChaveDiaReuniaoRpc(raw: string | Date | undefined): string {
@@ -279,11 +291,16 @@ type CompromissoEscalaCal = {
 type CompromissoAgendaExtra = {
   id: string;
   titulo: string;
+  /** Segunda linha no chip da grelha (reunião com RH). */
+  subtituloChip?: string;
   reuniaoDetalhe?: {
     solicitanteNome: string;
     comQuemLabel: string;
     turno: string;
     motivo: string;
+    isReuniaoRh?: boolean;
+    solicitacaoStatus?: RhSolicitacaoStatus | null;
+    observacaoRh?: string | null;
   };
 };
 
@@ -1321,16 +1338,33 @@ export default function RhCalendarioPage() {
       const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
       if (!iso) continue;
       const comQuem = ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() || "—";
-      const item: CompromissoAgendaExtra = {
-        id: row.id,
-        titulo: tituloReuniaoNoCalendario(row, solicitanteAgendarId),
-        reuniaoDetalhe: {
-          solicitanteNome: (row.solicitante_nome ?? "").trim() || "—",
-          comQuemLabel: comQuem,
-          turno: (row.turno ?? "").trim() || "—",
-          motivo: (row.motivo ?? "").trim() || "—",
-        },
-      };
+      const solicitanteNome = (row.solicitante_nome ?? "").trim() || "—";
+      const isReuniaoRh = ehReuniaoComRh(row.reuniao_com) && row.solicitacao_status;
+      const item: CompromissoAgendaExtra = isReuniaoRh
+        ? {
+            id: row.id,
+            titulo: tituloChipReuniaoRhCalendario(row.solicitacao_status),
+            subtituloChip: subtituloChipReuniaoRhCalendario(solicitanteNome),
+            reuniaoDetalhe: {
+              solicitanteNome,
+              comQuemLabel: "RH",
+              turno: (row.turno ?? "").trim() || "—",
+              motivo: (row.motivo ?? "").trim() || "—",
+              isReuniaoRh: true,
+              solicitacaoStatus: row.solicitacao_status,
+              observacaoRh: row.observacao_rh,
+            },
+          }
+        : {
+            id: row.id,
+            titulo: tituloReuniaoNoCalendario(row, solicitanteAgendarId),
+            reuniaoDetalhe: {
+              solicitanteNome,
+              comQuemLabel: comQuem,
+              turno: (row.turno ?? "").trim() || "—",
+              motivo: (row.motivo ?? "").trim() || "—",
+            },
+          };
       const arr = map.get(iso) ?? [];
       arr.push(item);
       map.set(iso, arr);
@@ -1498,6 +1532,32 @@ export default function RhCalendarioPage() {
         </div>
       );
     }
+    if (det.isReuniaoRh && det.solicitacaoStatus) {
+      const mostrarObs = exibirObservacaoRhModalReuniao(det.solicitacaoStatus);
+      return (
+        <div role="listitem" style={cardStyle}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ fontSize: 13, color: t.text, lineHeight: 1.4, minWidth: 0, fontWeight: 700 }}>
+              {tituloModalReuniaoRhCalendario(det.solicitacaoStatus)}
+            </div>
+          </div>
+          {mostrarObs ? (
+            <div
+              style={{
+                fontSize: 12,
+                color: t.text,
+                paddingLeft: 22,
+                lineHeight: 1.45,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {det.observacaoRh?.trim() || "—"}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <div role="listitem" style={cardStyle}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -1569,6 +1629,7 @@ export default function RhCalendarioPage() {
     >;
   }) {
     const { tipo, item } = linha;
+    const temSubtitulo = Boolean(item.subtituloChip?.trim());
     const etiqueta =
       tipo === "evento"
         ? "Evento"
@@ -1586,8 +1647,9 @@ export default function RhCalendarioPage() {
         role="listitem"
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 6,
+          flexDirection: temSubtitulo ? "column" : "row",
+          alignItems: temSubtitulo ? "stretch" : "center",
+          gap: temSubtitulo ? 4 : 6,
           padding: "5px 8px",
           borderRadius: 8,
           marginBottom: 4,
@@ -1598,23 +1660,42 @@ export default function RhCalendarioPage() {
           lineHeight: 1.2,
         }}
       >
-        <Icon size={11} color={cor} aria-hidden="true" />
-        <span style={{ fontSize: 11, fontWeight: 700, color: cor, fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: t.text,
-            fontFamily: FONT.body,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            minWidth: 0,
-          }}
-          title={`${etiqueta} — ${item.titulo}`}
-        >
-          {item.titulo}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          <Icon size={11} color={cor} aria-hidden="true" />
+          <span style={{ fontSize: 11, fontWeight: 700, color: cor, fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: t.text,
+              fontFamily: FONT.body,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              minWidth: 0,
+            }}
+            title={temSubtitulo ? `${item.titulo}\n${item.subtituloChip}` : `${etiqueta} — ${item.titulo}`}
+          >
+            {item.titulo}
+          </span>
+        </div>
+        {temSubtitulo ? (
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              paddingLeft: 17,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={item.subtituloChip}
+          >
+            {item.subtituloChip}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -1977,6 +2058,7 @@ export default function RhCalendarioPage() {
   }, [presencaFilterStaffIds, presencaGestaoPorChave, rawGradeRows]);
 
   const mesPresencaFechado = mesCalendarioPresencaFechado(current);
+  const mesPresencaFuturo = mesCalendarioPresencaFuturo(current);
 
   const escUltimoDiaMesCarousel = useMemo(() => {
     if (!mesPresencaFechado || diasDoMesPresenca.length === 0) return null;
@@ -2012,7 +2094,9 @@ export default function RhCalendarioPage() {
   ]);
 
   const mostrarBotaoCheckInPresenca =
-    mostrarBotaoPontoCalendario && (!mesPresencaFechado || exibirCheckInMesFechadoExcecao);
+    mostrarBotaoPontoCalendario &&
+    !mesPresencaFuturo &&
+    (!mesPresencaFechado || exibirCheckInMesFechadoExcecao);
 
   const podeAprovarPresencaMes = useMemo(() => {
     const fid = presencaFilterStaffIds[0];
@@ -3361,6 +3445,48 @@ export default function RhCalendarioPage() {
                             return (
                               <div key={x.id} style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }} role="listitem">
                                 {x.titulo}
+                              </div>
+                            );
+                          }
+                          if (det.isReuniaoRh && det.solicitacaoStatus) {
+                            const mostrarObs = exibirObservacaoRhModalReuniao(det.solicitacaoStatus);
+                            return (
+                              <div
+                                key={x.id}
+                                role="listitem"
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 6,
+                                  padding: "10px 12px",
+                                  borderRadius: 10,
+                                  border: "1px solid rgba(245,158,11,0.35)",
+                                  background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
+                                  fontFamily: FONT.body,
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                  <Users size={14} color="#f59e0b" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+                                  <div style={{ fontSize: 13, color: t.text, lineHeight: 1.4, minWidth: 0, fontWeight: 700 }}>
+                                    {tituloModalReuniaoRhCalendario(det.solicitacaoStatus)}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, paddingLeft: 22 }}>
+                                  {det.solicitanteNome}
+                                </div>
+                                {mostrarObs ? (
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: t.text,
+                                      paddingLeft: 22,
+                                      lineHeight: 1.45,
+                                      whiteSpace: "pre-wrap",
+                                    }}
+                                  >
+                                    {det.observacaoRh?.trim() || "—"}
+                                  </div>
+                                ) : null}
                               </div>
                             );
                           }

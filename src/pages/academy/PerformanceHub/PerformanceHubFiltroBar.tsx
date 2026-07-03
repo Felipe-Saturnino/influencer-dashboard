@@ -35,6 +35,8 @@ type Props = {
   onSelecionarStaff: (ids: string[]) => void;
   canEditarOk: boolean;
   canCriarOk: boolean;
+  /** Oculto na aba Configuração */
+  showStaffFilter: boolean;
 };
 
 function tabsVisiveis(canEditarOk: boolean, canCriarOk: boolean): PerformanceHubTab[] {
@@ -63,6 +65,7 @@ export function PerformanceHubFiltroBar({
   onSelecionarStaff,
   canEditarOk,
   canCriarOk,
+  showStaffFilter,
 }: Props) {
   const tabs = tabsVisiveis(canEditarOk, canCriarOk);
 
@@ -100,7 +103,7 @@ export function PerformanceHubFiltroBar({
           items={PERFORMANCE_HUB_TIME_OPTIONS.map((item) => ({ id: item.value, name: item.label }))}
         />
 
-        {canEditarOk ? (
+        {canEditarOk && showStaffFilter ? (
           <FiltroCalendarioStaffSelect
             mode="single"
             selected={staffSelecionado}

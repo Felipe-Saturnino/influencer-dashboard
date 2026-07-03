@@ -709,6 +709,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_portal: {
+    titulo: "Portal da Academy",
+    blocos: [
+      {
+        texto:
+          "Central de **comunicados**, **dicas** e **manuais** de treinamento para a operação. As abas de leitura exibem apenas conteúdo **Publicado**; arquivados ficam na aba **Gerenciamento** (permissão de **Editar**).\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado.",
+      },
+      {
+        subtitulo: "Abas e filtros",
+        texto:
+          "**Comunicados** — sub-abas Todos, Treinamentos e Geral.\n\n**Dicas** e **Manuais** — sub-abas Todos, Jogos, Imagem, Comunicação e Geral.\n\nUse o carrossel de mês ou **Histórico** para ver **Todo o período**. A busca ignora acentos e maiúsculas.",
+      },
+      {
+        subtitulo: "Nova postagem",
+        texto:
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — lista alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [

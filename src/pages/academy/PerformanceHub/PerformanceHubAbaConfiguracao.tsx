@@ -3,13 +3,13 @@ import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import type { PerformanceHubScoringConfig } from "../../../lib/academyPerformanceHubTypes";
+import type { PerformanceHubDimensaoConfig } from "../../../lib/academyPerformanceHubTypes";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { CtaCriarButton, SectionTitle } from "../../../components/dashboard";
 
 type Props = {
-  config: PerformanceHubScoringConfig;
-  onChange: (next: PerformanceHubScoringConfig) => void;
+  config: Record<string, PerformanceHubDimensaoConfig>;
+  onChange: (next: Record<string, PerformanceHubDimensaoConfig>) => void;
   onSalvar: () => void;
 };
 
@@ -19,30 +19,27 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
   const pageBox = getPageContentBoxStyle(brand, t);
   const [salvando, setSalvando] = useState(false);
 
-  function updatePesoDimensao(key: keyof PerformanceHubScoringConfig, value: string) {
+  function updatePesoDimensao(key: string, value: string) {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) return;
     onChange({
       ...config,
       [key]: {
-        ...config[key],
+        ...config[key]!,
         pesoDimensao: parsed,
       },
     });
   }
 
-  function updatePesoCriterio(
-    key: keyof PerformanceHubScoringConfig,
-    criterioSlug: string,
-    value: string,
-  ) {
+  function updatePesoCriterio(dimKey: string, criterioSlug: string, value: string) {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) return;
+    const dim = config[dimKey]!;
     onChange({
       ...config,
-      [key]: {
-        ...config[key],
-        criterios: config[key].criterios.map((c) => (c.slug === criterioSlug ? { ...c, peso: parsed } : c)),
+      [dimKey]: {
+        ...dim,
+        criterios: dim.criterios.map((c) => (c.slug === criterioSlug ? { ...c, peso: parsed } : c)),
       },
     });
   }
@@ -60,8 +57,8 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
       </SectionTitle>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {(Object.keys(config) as (keyof PerformanceHubScoringConfig)[]).map((dimKey) => {
-          const dim = config[dimKey];
+        {Object.keys(config).map((dimKey) => {
+          const dim = config[dimKey]!;
           return (
             <section
               key={dimKey}

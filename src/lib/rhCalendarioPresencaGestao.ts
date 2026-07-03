@@ -762,6 +762,13 @@ export function mesCalendarioPresencaFechado(refMes: Date, hoje = new Date()): b
   return ref.getTime() < atual.getTime();
 }
 
+/** Mês civil estritamente posterior ao mês atual (fuso local). */
+export function mesCalendarioPresencaFuturo(refMes: Date, hoje = new Date()): boolean {
+  const ref = new Date(refMes.getFullYear(), refMes.getMonth(), 1);
+  const atual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  return ref.getTime() > atual.getTime();
+}
+
 /** Subtítulo do modal de aprovação mensal — ex.: «Junho de 2026». */
 export function subtituloMesAnoPresencaPt(refMes: Date): string {
   const mes = MESES_PT_TITULO[refMes.getMonth()] ?? "";

@@ -36,14 +36,28 @@ export interface PerformanceHubDimensaoConfig {
   criterios: PerformanceHubCriterioConfig[];
 }
 
-export type PerformanceHubScoringConfig = Record<
+export type PerformanceHubScoringConfigGamePresenter = Record<
   "comunicacao" | "mesa" | "imagem",
   PerformanceHubDimensaoConfig
 >;
 
+export type PerformanceHubScoringConfigShuffler = Record<
+  "comunicacao" | "procedimentos" | "imagem",
+  PerformanceHubDimensaoConfig
+>;
+
+export type PerformanceHubScoringPorTime = {
+  game_presenter: PerformanceHubScoringConfigGamePresenter;
+  shuffler: PerformanceHubScoringConfigShuffler;
+};
+
+/** @deprecated Prefer PerformanceHubScoringConfigGamePresenter ou config por time */
+export type PerformanceHubScoringConfig = PerformanceHubScoringConfigGamePresenter;
+
 export interface PerformanceHubAvaliacao {
   id: string;
   data: string;
+  /** Time/cargo no momento da avaliação — define formato histórico (GP vs Shuffler). */
   time: PerformanceHubTimeSlug;
   avaliadoNome: string;
   avaliadoStaffId?: string;
@@ -52,7 +66,10 @@ export interface PerformanceHubAvaliacao {
   notaTotal: number | null;
   notaImagem: number | null;
   notaComunicacao: number | null;
+  /** Game Presenter — dimensão Mesa */
   notaMesa: number | null;
+  /** Shuffler — dimensão Procedimentos */
+  notaProcedimentos: number | null;
   tipoAvaliacao?: PerformanceHubTipoAvaliacao | null;
   turno?: PerformanceHubTurno | null;
   estudioId?: string | null;

@@ -1,18 +1,22 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Eye, FileSearch, History, Image, MessageSquare, Star, TableProperties, Users } from "lucide-react";
+import { Eye, FileSearch, History, Image, ListChecks, MessageSquare, Star, TableProperties, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import type { Role } from "../../../types";
 import type { PermissaoValor } from "../../../types";
-import type { PerformanceHubAvaliacao, PerformanceHubStatus } from "../../../lib/academyPerformanceHubTypes";
+import type { PerformanceHubAvaliacao, PerformanceHubStatus, PerformanceHubTimeSlug } from "../../../lib/academyPerformanceHubTypes";
 import {
   PERFORMANCE_HUB_KPI_SUB,
   PERFORMANCE_HUB_STATUS_COLOR,
   PERFORMANCE_HUB_STATUS_LABEL,
 } from "../../../lib/academyPerformanceHubConstants";
-import { formatNotaPerformanceHub } from "../../../lib/academyPerformanceHubScoring";
+import {
+  formatNotaPerformanceHub,
+  labelTerceiraDimensaoTime,
+  notaTerceiraDimensaoAvaliacao,
+} from "../../../lib/academyPerformanceHubScoring";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
@@ -24,13 +28,14 @@ import { textoContemBusca } from "../../../lib/searchText";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
-  canEditar: PermissaoValor;
+  timeSelecionado: PerformanceHubTimeSlug;
+  canView: PermissaoValor;
   roleUsuario: Role;
   onVer: (row: PerformanceHubAvaliacao) => void;
   onAnalisar: (row: PerformanceHubAvaliacao) => void;
 };
 
-type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "mesa";
+type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "terceira";
 
 function scoreStatus(status: PerformanceHubStatus): number {
   const order: PerformanceHubStatus[] = ["pendente", "em_analise", "feedback", "concluida"];
@@ -101,7 +106,8 @@ function KpiCard({
 
 export function PerformanceHubAbaAvaliacoes({
   avaliacoes,
-  canEditar,
+  timeSelecionado,
+  canView,
   roleUsuario,
   onVer,
   onAnalisar,
@@ -110,7 +116,9 @@ export function PerformanceHubAbaAvaliacoes({
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const isProprios = canEditar === "proprios";
+  const isProprios = canView === "proprios";
+  const isShuffler = timeSelecionado === "shuffler";
+  const labelTerceiraDim = labelTerceiraDimensaoTime(timeSelecionado);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [busca, setBusca] = useState("");
   const showBusca = roleUsuario === "gestor" || roleUsuario === "admin";
@@ -129,7 +137,9 @@ export function PerformanceHubAbaAvaliacoes({
       if (sort.col === "total") cmp = (a.notaTotal ?? -1) - (b.notaTotal ?? -1);
       if (sort.col === "imagem") cmp = (a.notaImagem ?? -1) - (b.notaImagem ?? -1);
       if (sort.col === "comunicacao") cmp = (a.notaComunicacao ?? -1) - (b.notaComunicacao ?? -1);
-      if (sort.col === "mesa") cmp = (a.notaMesa ?? -1) - (b.notaMesa ?? -1);
+      if (sort.col === "terceira") {
+        cmp = (notaTerceiraDimensaoAvaliacao(a) ?? -1) - (notaTerceiraDimensaoAvaliacao(b) ?? -1);
+      }
       return sort.dir === "asc" ? cmp : -cmp;
     });
     return sorted;
@@ -139,7 +149,7 @@ export function PerformanceHubAbaAvaliacoes({
   const kpiNotaTotal = mediaNotas(rowsVisiveis, (r) => r.notaTotal);
   const kpiImagem = mediaNotas(rowsVisiveis, (r) => r.notaImagem);
   const kpiComunicacao = mediaNotas(rowsVisiveis, (r) => r.notaComunicacao);
-  const kpiMesa = mediaNotas(rowsVisiveis, (r) => r.notaMesa);
+  const kpiTerceira = mediaNotas(rowsVisiveis, (r) => notaTerceiraDimensaoAvaliacao(r));
 
   function handleSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }));
@@ -189,11 +199,11 @@ export function PerformanceHubAbaAvaliacoes({
             icon={<MessageSquare size={14} aria-hidden />}
           />
           <KpiCard
-            label="Mesa"
-            value={formatNotaPerformanceHub(kpiMesa)}
-            accent="#eab308"
+            label={labelTerceiraDim}
+            value={formatNotaPerformanceHub(kpiTerceira)}
+            accent={isShuffler ? "#1e36f8" : "#eab308"}
             border={t.cardBorder}
-            icon={<TableProperties size={14} aria-hidden />}
+            icon={isShuffler ? <ListChecks size={14} aria-hidden /> : <TableProperties size={14} aria-hidden />}
           />
         </div>
       </div>
@@ -230,7 +240,7 @@ export function PerformanceHubAbaAvaliacoes({
                   <SortTableTh label="Total" col="total" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Imagem" col="imagem" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Comunicação" col="comunicacao" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Mesa" col="mesa" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label={labelTerceiraDim} col="terceira" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   {!isProprios ? (
                     <SortTableTh label="Avaliador" col="avaliador" sortCol={sort.col} sortDir={sort.dir} onSort={handleSort} thStyle={dataTable.thHeader} align="center" />
                   ) : null}
@@ -249,7 +259,7 @@ export function PerformanceHubAbaAvaliacoes({
                       <td style={dataTable.tdCenter}>{renderNotaCell(row.notaTotal)}</td>
                       <td style={dataTable.tdCenter}>{renderNotaCell(row.notaImagem)}</td>
                       <td style={dataTable.tdCenter}>{renderNotaCell(row.notaComunicacao)}</td>
-                      <td style={dataTable.tdCenter}>{renderNotaCell(row.notaMesa)}</td>
+                      <td style={dataTable.tdCenter}>{renderNotaCell(notaTerceiraDimensaoAvaliacao(row))}</td>
                       {!isProprios ? <td style={dataTable.tdCenter}>{row.avaliadorNome}</td> : null}
                       <td style={dataTable.tdCenter}>
                         <span

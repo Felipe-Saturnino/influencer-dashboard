@@ -11,13 +11,15 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import type {
   PerformanceHubAvaliacao,
   PerformanceHubModalModo,
-  PerformanceHubScoringConfig,
+  PerformanceHubScoringPorTime,
   PerformanceHubTab,
   PerformanceHubTimeSlug,
 } from "../../../lib/academyPerformanceHubTypes";
 import {
-  PERFORMANCE_HUB_SCORING_DEFAULT,
+  cloneScoringPorTime,
+  scoringConfigParaTime,
 } from "../../../lib/academyPerformanceHubScoring";
+import { normalizarTextoBusca } from "../../../lib/searchText";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import {
   PERFORMANCE_HUB_AGENDA_MOCK,
@@ -67,8 +69,12 @@ function buildMesesCarrossel(rows: PerformanceHubAvaliacao[], time: PerformanceH
   return [{ ano: now.getFullYear(), mes: now.getMonth(), label: raw.charAt(0).toUpperCase() + raw.slice(1) }];
 }
 
-function cloneScoringDefault(): PerformanceHubScoringConfig {
-  return JSON.parse(JSON.stringify(PERFORMANCE_HUB_SCORING_DEFAULT)) as PerformanceHubScoringConfig;
+function cloneScoringDefault(): PerformanceHubScoringPorTime {
+  return cloneScoringPorTime();
+}
+
+function nomeCoincideUsuario(nomeAvaliado: string, nomeUsuario: string): boolean {
+  return normalizarTextoBusca(nomeAvaliado) === normalizarTextoBusca(nomeUsuario);
 }
 
 function isAvaliacaoNoMes(row: PerformanceHubAvaliacao, mes: MesCarrossel | undefined): boolean {
@@ -103,7 +109,7 @@ export default function PerformanceHubPage() {
   const [timeSelecionado, setTimeSelecionado] = useState<PerformanceHubTimeSlug>(PERFORMANCE_HUB_TIME_DEFAULT);
   const [staffSelecionado, setStaffSelecionado] = useState<string[]>([]);
   const [idxMes, setIdxMes] = useState(0);
-  const [scoringConfig, setScoringConfig] = useState<PerformanceHubScoringConfig>(() => cloneScoringDefault());
+  const [scoringPorTime, setScoringPorTime] = useState<PerformanceHubScoringPorTime>(() => cloneScoringDefault());
   const [avaliacoes, setAvaliacoes] = useState<PerformanceHubAvaliacao[]>(PERFORMANCE_HUB_AVALIACOES_MOCK);
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
   const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
@@ -140,11 +146,14 @@ export default function PerformanceHubPage() {
       : "";
     return avaliacoes.filter((row) => {
       if (row.time !== timeSelecionado) return false;
+      if (perm.canView === "proprios" && user?.name && !nomeCoincideUsuario(row.avaliadoNome, user.name)) {
+        return false;
+      }
       if (!historico && !isAvaliacaoNoMes(row, mesSelecionado)) return false;
       if (selectedStaffName && row.avaliadoNome !== selectedStaffName) return false;
       return true;
     });
-  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro]);
+  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro, perm.canView, user?.name]);
 
   const agendaFiltrada = useMemo(() => {
     const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
@@ -183,6 +192,7 @@ export default function PerformanceHubPage() {
       notaImagem: payload.notaImagem,
       notaComunicacao: payload.notaComunicacao,
       notaMesa: payload.notaMesa,
+      notaProcedimentos: payload.notaProcedimentos,
       videoUrl: payload.videoUrl,
       videoNome: payload.videoNome,
     };
@@ -221,6 +231,7 @@ export default function PerformanceHubPage() {
       notaImagem: null,
       notaComunicacao: null,
       notaMesa: null,
+      notaProcedimentos: null,
       tipoAvaliacao: null,
       turno: null,
       estudioId: null,
@@ -285,13 +296,15 @@ export default function PerformanceHubPage() {
         onSelecionarStaff={setStaffSelecionado}
         canEditarOk={perm.canEditarOk}
         canCriarOk={perm.canCriarOk}
+        showStaffFilter={aba !== "configuracao"}
       />
 
       <div role="tabpanel" id={`panel-performance-hub-${aba}`} aria-labelledby={`tab-performance-hub-${aba}`}>
         {aba === "avaliacoes" ? (
           <PerformanceHubAbaAvaliacoes
             avaliacoes={avaliacoesFiltradas}
-            canEditar={perm.canEditar}
+            timeSelecionado={timeSelecionado}
+            canView={perm.canView}
             roleUsuario={user?.role ?? "prestador"}
             onVer={handleVerAvaliacao}
             onAnalisar={handleAnalisarAvaliacao}
@@ -309,8 +322,13 @@ export default function PerformanceHubPage() {
 
         {aba === "configuracao" && perm.canCriarOk ? (
           <PerformanceHubAbaConfiguracao
-            config={scoringConfig}
-            onChange={setScoringConfig}
+            config={scoringPorTime[timeSelecionado]}
+            onChange={(next) =>
+              setScoringPorTime((prev) => ({
+                ...prev,
+                [timeSelecionado]: next as PerformanceHubScoringPorTime[typeof timeSelecionado],
+              }))
+            }
             onSalvar={() => undefined}
           />
         ) : null}
@@ -319,7 +337,8 @@ export default function PerformanceHubPage() {
       {avaliacaoEmEdicao ? (
         <ModalAvaliarPerformanceHub
           avaliacao={avaliacaoEmEdicao}
-          config={scoringConfig}
+          variantTime={avaliacaoEmEdicao.time}
+          config={scoringConfigParaTime(scoringPorTime, avaliacaoEmEdicao.time)}
           modo={modalModo}
           estudios={cadastro.estudios}
           mesas={cadastro.mesas}

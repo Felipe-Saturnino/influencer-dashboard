@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, ClipboardList, Image, MessageSquare, NotebookPen, TableProperties } from "lucide-react";
+import { BarChart3, ClipboardList, Image, ListChecks, MessageSquare, NotebookPen, TableProperties } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -16,17 +16,21 @@ import type {
   PerformanceHubCriterioResposta,
   PerformanceHubJogoKey,
   PerformanceHubModalModo,
-  PerformanceHubScoringConfig,
+  PerformanceHubScoringConfigGamePresenter,
+  PerformanceHubScoringConfigShuffler,
   PerformanceHubTipoAvaliacao,
+  PerformanceHubTimeSlug,
   PerformanceHubTurno,
 } from "../../../lib/academyPerformanceHubTypes";
 import {
   ESCALA_NOTA_MAX,
   calcularNotaDimensao,
-  calcularNotaTotal,
+  calcularNotaTotalGamePresenter,
+  calcularNotaTotalShuffler,
   criteriosMesaPorTipo,
   formatNotaPerformanceHub,
   formatPesoPerformanceHub,
+  labelTerceiraDimensaoTime,
 } from "../../../lib/academyPerformanceHubScoring";
 import {
   PERFORMANCE_HUB_JOGOS_META,
@@ -45,7 +49,7 @@ import {
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 
-type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "consideracoes";
+type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "procedimentos" | "consideracoes";
 
 export type PerformanceHubAvaliacaoFormPayload = {
   tipoAvaliacao: PerformanceHubTipoAvaliacao;
@@ -59,6 +63,7 @@ export type PerformanceHubAvaliacaoFormPayload = {
   notaComunicacao: number | null;
   notaImagem: number | null;
   notaMesa: number | null;
+  notaProcedimentos: number | null;
   notaTotal: number | null;
   videoUrl: string | null;
   videoNome: string | null;
@@ -66,7 +71,8 @@ export type PerformanceHubAvaliacaoFormPayload = {
 
 type Props = {
   avaliacao: PerformanceHubAvaliacao;
-  config: PerformanceHubScoringConfig;
+  variantTime: PerformanceHubTimeSlug;
+  config: PerformanceHubScoringConfigGamePresenter | PerformanceHubScoringConfigShuffler;
   modo: PerformanceHubModalModo;
   estudios: PerformanceHubEstudioCadastro[];
   mesas: PerformanceHubMesaCadastro[];
@@ -78,11 +84,19 @@ type Props = {
 
 type RespostasPorSlug = Record<string, PerformanceHubCriterioResposta>;
 
-const TABS: { key: ModalTab; label: string; icon: typeof BarChart3 }[] = [
+const TABS_GP: { key: ModalTab; label: string; icon: typeof BarChart3 }[] = [
   { key: "dados", label: "Dados da Avaliação", icon: ClipboardList },
   { key: "comunicacao", label: "Comunicação", icon: MessageSquare },
   { key: "imagem", label: "Imagem", icon: Image },
   { key: "mesa", label: "Mesa", icon: TableProperties },
+  { key: "consideracoes", label: "Considerações", icon: NotebookPen },
+];
+
+const TABS_SHUFFLER: { key: ModalTab; label: string; icon: typeof BarChart3 }[] = [
+  { key: "dados", label: "Dados da Avaliação", icon: ClipboardList },
+  { key: "comunicacao", label: "Comunicação", icon: MessageSquare },
+  { key: "imagem", label: "Imagem", icon: Image },
+  { key: "procedimentos", label: "Procedimentos", icon: ListChecks },
   { key: "consideracoes", label: "Considerações", icon: NotebookPen },
 ];
 
@@ -105,6 +119,7 @@ function horaFormatada(): string {
 
 export function ModalAvaliarPerformanceHub({
   avaliacao,
+  variantTime,
   config,
   modo,
   estudios,
@@ -118,6 +133,10 @@ export function ModalAvaliarPerformanceHub({
   const brand = useDashboardBrand();
   const somenteLeitura = modo === "ver";
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const isShuffler = variantTime === "shuffler";
+  const configGp = isShuffler ? null : (config as PerformanceHubScoringConfigGamePresenter);
+  const configSh = isShuffler ? (config as PerformanceHubScoringConfigShuffler) : null;
+  const tabsBase = isShuffler ? TABS_SHUFFLER : TABS_GP;
 
   const prefillAtual = getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome);
 
@@ -144,15 +163,21 @@ export function ModalAvaliarPerformanceHub({
     mapRespostas(config.imagem.criterios, avaliacao.criterios),
   );
   const [respostasMesa, setRespostasMesa] = useState<RespostasPorSlug>(() =>
-    mapRespostas(config.mesa.criterios, avaliacao.criterios),
+    mapRespostas(configGp?.mesa.criterios ?? [], avaliacao.criterios),
+  );
+  const [respostasProcedimentos, setRespostasProcedimentos] = useState<RespostasPorSlug>(() =>
+    mapRespostas(configSh?.procedimentos.criterios ?? [], avaliacao.criterios),
   );
   const [erros, setErros] = useState<string[]>([]);
   const [statusRascunho, setStatusRascunho] = useState("");
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
-  const jogoMeta = jogo ? PERFORMANCE_HUB_JOGOS_META[jogo] : null;
+  const jogoMeta = !isShuffler && jogo ? PERFORMANCE_HUB_JOGOS_META[jogo] : null;
   const mesaTipo = jogoMeta?.mesaTipo ?? "cartas";
-  const mesaCriterios = useMemo(() => criteriosMesaPorTipo(config, mesaTipo), [config, mesaTipo]);
+  const mesaCriterios = useMemo(
+    () => (configGp ? criteriosMesaPorTipo(configGp, mesaTipo) : []),
+    [configGp, mesaTipo],
+  );
   const jogosStaff = useMemo(
     () => getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome)?.jogosStaff ?? [],
     [avaliacao.avaliadoStaffId, avaliacao.avaliadoNome, getPrefill],
@@ -165,7 +190,8 @@ export function ModalAvaliarPerformanceHub({
     () => mesasDoEstudioJogoNoCatalogo(estudioId, jogo, mesas),
     [estudioId, jogo, mesas],
   );
-  const showMesaTab = Boolean(jogoMeta);
+  const showMesaTab = Boolean(!isShuffler && jogoMeta);
+  const showProcedimentosTab = isShuffler;
 
   useEffect(() => {
     if (avaliacaoTemDadosSalvos(avaliacao)) return;
@@ -178,24 +204,27 @@ export function ModalAvaliarPerformanceHub({
   }, [avaliacao, getPrefill]);
 
   useEffect(() => {
+    if (isShuffler) return;
     if (jogo && !jogosDisponiveis.includes(jogo)) {
       setJogo("");
       setMesaId("");
     }
-  }, [estudioId, jogosDisponiveis, jogo]);
+  }, [isShuffler, estudioId, jogosDisponiveis, jogo]);
 
   useEffect(() => {
+    if (isShuffler) return;
     if (jogo && mesasDisponiveis.length > 0 && (mesaId === "" || !mesasDisponiveis.includes(mesaId))) {
       setMesaId(mesasDisponiveis[0]!);
     }
     if (jogo && mesasDisponiveis.length === 0) setMesaId("");
-  }, [jogo, mesasDisponiveis, mesaId]);
+  }, [isShuffler, jogo, mesasDisponiveis, mesaId]);
 
   useEffect(() => {
+    if (isShuffler) return;
     if (!jogo && jogosDisponiveis.length > 0 && !avaliacao.jogo) {
       setJogo(jogosDisponiveis[0]!);
     }
-  }, [jogosDisponiveis, jogo, avaliacao.jogo]);
+  }, [isShuffler, jogosDisponiveis, jogo, avaliacao.jogo]);
 
   const resultado = useMemo(() => {
     const notaComunicacao = calcularNotaDimensao(
@@ -210,28 +239,70 @@ export function ModalAvaliarPerformanceHub({
         peso: c.peso,
       })),
     );
+
+    if (isShuffler && configSh) {
+      const notaProcedimentos = calcularNotaDimensao(
+        configSh.procedimentos.criterios.map((c) => ({
+          nota: respostasProcedimentos[c.slug]?.nota ?? Number.NaN,
+          peso: c.peso,
+        })),
+      );
+      const notaTotal = calcularNotaTotalShuffler(
+        { comunicacao: notaComunicacao, imagem: notaImagem, procedimentos: notaProcedimentos },
+        configSh,
+      );
+      return {
+        notaComunicacao,
+        notaImagem,
+        notaMesa: null as number | null,
+        notaProcedimentos,
+        notaTotal,
+      };
+    }
+
     const notaMesa = calcularNotaDimensao(
       mesaCriterios.map((c) => ({
         nota: respostasMesa[c.slug]?.nota ?? Number.NaN,
         peso: c.peso,
       })),
     );
-    const notaTotal = calcularNotaTotal({ comunicacao: notaComunicacao, imagem: notaImagem, mesa: notaMesa }, config);
-    return { notaComunicacao, notaImagem, notaMesa, notaTotal };
-  }, [config, respostasComunicacao, respostasImagem, respostasMesa, mesaCriterios]);
+    const notaTotal = configGp
+      ? calcularNotaTotalGamePresenter(
+          { comunicacao: notaComunicacao, imagem: notaImagem, mesa: notaMesa },
+          configGp,
+        )
+      : null;
+    return {
+      notaComunicacao,
+      notaImagem,
+      notaMesa,
+      notaProcedimentos: null as number | null,
+      notaTotal,
+    };
+  }, [
+    config,
+    configGp,
+    configSh,
+    isShuffler,
+    mesaCriterios,
+    respostasComunicacao,
+    respostasImagem,
+    respostasMesa,
+    respostasProcedimentos,
+  ]);
 
   function montarPayload(): PerformanceHubAvaliacaoFormPayload {
     const criterios: Record<string, PerformanceHubCriterioResposta> = {
       ...respostasComunicacao,
       ...respostasImagem,
-      ...respostasMesa,
+      ...(isShuffler ? respostasProcedimentos : respostasMesa),
     };
     return {
       tipoAvaliacao: (tipoAvaliacao || "performance_coach") as PerformanceHubTipoAvaliacao,
       turno,
       estudioId,
-      jogo: jogo || null,
-      mesaId: mesaId.trim() || null,
+      jogo: isShuffler ? null : jogo || null,
+      mesaId: isShuffler ? null : mesaId.trim() || null,
       pontosFortes: pontosFortes.trim(),
       pontosDesenvolver: pontosDesenvolver.trim(),
       criterios,
@@ -260,13 +331,15 @@ export function ModalAvaliarPerformanceHub({
       lista.push("Preencha todos os campos em Dados da Avaliação.");
       invalid.add("estudioId");
     }
-    if (!jogo) {
-      lista.push("Preencha todos os campos em Dados da Avaliação.");
-      invalid.add("jogo");
-    }
-    if (mesaId === "") {
-      lista.push("Preencha todos os campos em Dados da Avaliação.");
-      invalid.add("mesaId");
+    if (!isShuffler) {
+      if (!jogo) {
+        lista.push("Preencha todos os campos em Dados da Avaliação.");
+        invalid.add("jogo");
+      }
+      if (mesaId === "") {
+        lista.push("Preencha todos os campos em Dados da Avaliação.");
+        invalid.add("mesaId");
+      }
     }
     if (!videoNome && !videoUrlLocal) {
       lista.push("Envie o vídeo da avaliação.");
@@ -290,6 +363,9 @@ export function ModalAvaliarPerformanceHub({
     validarCriterios("com", config.comunicacao.criterios, respostasComunicacao);
     validarCriterios("img", config.imagem.criterios, respostasImagem);
     if (showMesaTab) validarCriterios("mesa", mesaCriterios, respostasMesa);
+    if (showProcedimentosTab && configSh) {
+      validarCriterios("proc", configSh.procedimentos.criterios, respostasProcedimentos);
+    }
 
     if (!pontosFortes.trim()) {
       lista.push("Preencha Pontos Fortes e Pontos a Desenvolver.");
@@ -428,7 +504,11 @@ export function ModalAvaliarPerformanceHub({
     );
   }
 
-  const tabsVisiveis = TABS.filter((tab) => tab.key !== "mesa" || showMesaTab);
+  const tabsVisiveis = tabsBase.filter((tab) => {
+    if (tab.key === "mesa") return showMesaTab;
+    if (tab.key === "procedimentos") return showProcedimentosTab;
+    return true;
+  });
 
   return (
     <ModalBase maxWidth={920} onClose={onClose}>
@@ -571,76 +651,80 @@ export function ModalAvaliarPerformanceHub({
                   ))}
                 </select>
               </div>
-              <div>
-                <label htmlFor="modalJogo" style={{ ...labelStyle(t), display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>
-                    Jogo
-                    {!somenteLeitura ? <CampoObrigatorioMark /> : null}
-                  </span>
-                  {jogoMeta ? (
-                    <span
+              {!isShuffler ? (
+                <>
+                  <div>
+                    <label htmlFor="modalJogo" style={{ ...labelStyle(t), display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>
+                        Jogo
+                        {!somenteLeitura ? <CampoObrigatorioMark /> : null}
+                      </span>
+                      {jogoMeta ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 20,
+                            ...chipFromGame(jogoMeta.gameKey, isDark ?? false),
+                          }}
+                        >
+                          {GAME_IDENTITY_ICONS[jogoMeta.gameKey]}
+                          {jogoMeta.label}
+                        </span>
+                      ) : null}
+                    </label>
+                    <select
+                      id="modalJogo"
+                      value={jogo}
+                      disabled={somenteLeitura}
+                      onChange={(e) => setJogo(e.target.value as PerformanceHubJogoKey)}
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: 20,
-                        ...chipFromGame(jogoMeta.gameKey, isDark ?? false),
+                        ...fieldStyle(t),
+                        borderColor: invalidFields.has("jogo") ? "#e84025" : t.cardBorder,
                       }}
+                      aria-label="Jogo"
                     >
-                      {GAME_IDENTITY_ICONS[jogoMeta.gameKey]}
-                      {jogoMeta.label}
-                    </span>
-                  ) : null}
-                </label>
-                <select
-                  id="modalJogo"
-                  value={jogo}
-                  disabled={somenteLeitura}
-                  onChange={(e) => setJogo(e.target.value as PerformanceHubJogoKey)}
-                  style={{
-                    ...fieldStyle(t),
-                    borderColor: invalidFields.has("jogo") ? "#e84025" : t.cardBorder,
-                  }}
-                  aria-label="Jogo"
-                >
-                  <option value="">Selecione...</option>
-                  {jogosDisponiveis.map((key) => (
-                    <option key={key} value={key}>
-                      {PERFORMANCE_HUB_JOGOS_META[key].label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="modalMesa" style={labelStyle(t)}>
-                  Mesa
-                  {!somenteLeitura ? <CampoObrigatorioMark /> : null}
-                </label>
-                <select
-                  id="modalMesa"
-                  value={mesaId}
-                  disabled={somenteLeitura || mesasDisponiveis.length === 0}
-                  onChange={(e) => setMesaId(e.target.value)}
-                  style={{
-                    ...fieldStyle(t),
-                    borderColor: invalidFields.has("mesaId") ? "#e84025" : t.cardBorder,
-                  }}
-                  aria-label="Mesa"
-                >
-                  <option value="">Selecione...</option>
-                  {mesasDisponiveis.map((id) => (
-                    <option key={id} value={id}>
-                      {id}
-                    </option>
-                  ))}
-                </select>
-                <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                  Número da mesa (ID Spin) — cadastro em Gestão de Estúdios → Mesas.
-                </p>
-              </div>
+                      <option value="">Selecione...</option>
+                      {jogosDisponiveis.map((key) => (
+                        <option key={key} value={key}>
+                          {PERFORMANCE_HUB_JOGOS_META[key].label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="modalMesa" style={labelStyle(t)}>
+                      Mesa
+                      {!somenteLeitura ? <CampoObrigatorioMark /> : null}
+                    </label>
+                    <select
+                      id="modalMesa"
+                      value={mesaId}
+                      disabled={somenteLeitura || mesasDisponiveis.length === 0}
+                      onChange={(e) => setMesaId(e.target.value)}
+                      style={{
+                        ...fieldStyle(t),
+                        borderColor: invalidFields.has("mesaId") ? "#e84025" : t.cardBorder,
+                      }}
+                      aria-label="Mesa"
+                    >
+                      <option value="">Selecione...</option>
+                      {mesasDisponiveis.map((id) => (
+                        <option key={id} value={id}>
+                          {id}
+                        </option>
+                      ))}
+                    </select>
+                    <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                      Número da mesa (ID Spin) — cadastro em Gestão de Estúdios → Mesas.
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             <div style={{ marginTop: 14 }}>
@@ -705,6 +789,18 @@ export function ModalAvaliarPerformanceHub({
             <ModalTabPanel active={aba === "mesa"} id="panel-modal-performance-mesa" labelledBy="tab-modal-performance-mesa">
               {renderCriterios("mesa", mesaCriterios, respostasMesa, (slug, patch) =>
                 setRespostasMesa((prev) => ({ ...prev, [slug]: { ...prev[slug], ...patch } })),
+              )}
+            </ModalTabPanel>
+          ) : null}
+
+          {showProcedimentosTab && configSh ? (
+            <ModalTabPanel
+              active={aba === "procedimentos"}
+              id="panel-modal-performance-procedimentos"
+              labelledBy="tab-modal-performance-procedimentos"
+            >
+              {renderCriterios("proc", configSh.procedimentos.criterios, respostasProcedimentos, (slug, patch) =>
+                setRespostasProcedimentos((prev) => ({ ...prev, [slug]: { ...prev[slug], ...patch } })),
               )}
             </ModalTabPanel>
           ) : null}
@@ -784,7 +880,12 @@ export function ModalAvaliarPerformanceHub({
               <>
                 <span style={{ color: t.textMuted }}>Comunicação: {formatNotaPerformanceHub(resultado.notaComunicacao)}</span>
                 <span style={{ color: t.textMuted }}>Imagem: {formatNotaPerformanceHub(resultado.notaImagem)}</span>
-                <span style={{ color: t.textMuted }}>Mesa: {formatNotaPerformanceHub(resultado.notaMesa)}</span>
+                <span style={{ color: t.textMuted }}>
+                  {labelTerceiraDimensaoTime(variantTime)}:{" "}
+                  {formatNotaPerformanceHub(
+                    isShuffler ? resultado.notaProcedimentos : resultado.notaMesa,
+                  )}
+                </span>
                 <strong style={{ color: t.text }}>Nota Final: {formatNotaPerformanceHub(resultado.notaTotal)}</strong>
               </>
             ) : null}

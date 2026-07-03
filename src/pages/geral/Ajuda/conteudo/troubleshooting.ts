@@ -578,6 +578,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  academy_portal: {
+    titulo: "Portal da Academy",
+    blocos: [
+      {
+        subtitulo: "Não vejo Portal da Academy no menu?",
+        texto:
+          "Verifique em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Ver** diferente de **Não**. Administradores veem a página automaticamente; demais perfis começam bloqueados até liberação explícita.",
+      },
+      {
+        subtitulo: "Não aparece a aba Gerenciamento?",
+        texto:
+          "A aba **Gerenciamento** exige permissão de **Editar** na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
+      },
+      {
+        subtitulo: "Qual Jogo? está vazio no modal?",
+        texto:
+          "A lista vem de **Gestão de Estúdios → Mesas** (coluna Jogo). Cadastre ou edite mesas com tipo de jogo preenchido; novos valores passam a aparecer automaticamente no Portal da Academy.",
+      },
+    ],
+  },
   playbook_influencers: {
     titulo: "Playbook Influencers",
     blocos: [

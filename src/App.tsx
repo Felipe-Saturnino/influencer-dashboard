@@ -91,6 +91,7 @@ const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunci
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
 const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
+const PortalAcademy = lazyWithRetry(() => import("./pages/academy/PortalAcademy"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_portal:         RhPortal,
   informativos:      Informativos,
   academy_performance_hub: PerformanceHub,
+  academy_portal: PortalAcademy,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };

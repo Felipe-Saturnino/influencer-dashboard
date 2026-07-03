@@ -33,7 +33,8 @@ export type AppRouteTabAccess =
   | "vagas_candidaturas"
   | "galeria_upload"
   | "academy_gerenciamento"
-  | "academy_configuracao";
+  | "academy_configuracao"
+  | "academy_portal_gerenciamento";
 
 export type AppRouteTabDefFull = AppRouteTabDef & {
   access: AppRouteTabAccess;
@@ -198,6 +199,17 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
       slug: "Configuracao",
       label: "Configuração",
       access: "academy_configuracao",
+    },
+  ]),
+  page("Portal da Academy", "academy_portal", "PortalDaAcademy", [
+    { tabId: "comunicados", slug: "Comunicados", label: "Comunicados", access: "always" },
+    { tabId: "dicas", slug: "Dicas", label: "Dicas", access: "always" },
+    { tabId: "manuais", slug: "Manuais", label: "Manuais", access: "always" },
+    {
+      tabId: "gerenciamento",
+      slug: "GerenciamentoDePostagens",
+      label: "Gerenciamento de Postagens",
+      access: "academy_portal_gerenciamento",
     },
   ]),
   page("Informativos", "informativos", "Informativos", [
@@ -388,6 +400,8 @@ export function isTabAllowedForUser(
       return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
     case "academy_configuracao":
       return podeExecutarPerm(acoes.academy_performance_hub?.criar ?? null);
+    case "academy_portal_gerenciamento":
+      return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
     default:
       return true;
   }
