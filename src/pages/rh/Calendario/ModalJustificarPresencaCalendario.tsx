@@ -7,6 +7,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
+  aplicarMascaraHorarioPresencaHHMM,
   normalizarHorarioPresencaHHMM,
   validarHorarioPresencaHHMM,
   type PresencaJustificativaMotivo,
@@ -364,9 +365,11 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
               id="pres-just-entrada"
               type="text"
               inputMode="numeric"
-              placeholder="HH:MM"
+              autoComplete="off"
+              placeholder="00:00"
+              maxLength={5}
               value={entradaEsquecimento}
-              onChange={(e) => setEntradaEsquecimento(e.target.value)}
+              onChange={(e) => setEntradaEsquecimento(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
               style={inputField(t)}
               aria-required="true"
             />
@@ -380,9 +383,11 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
               id="pres-just-saida"
               type="text"
               inputMode="numeric"
-              placeholder="HH:MM"
+              autoComplete="off"
+              placeholder="00:00"
+              maxLength={5}
               value={saidaEsquecimento}
-              onChange={(e) => setSaidaEsquecimento(e.target.value)}
+              onChange={(e) => setSaidaEsquecimento(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
               style={inputField(t)}
               aria-required="true"
             />

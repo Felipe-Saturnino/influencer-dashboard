@@ -4,8 +4,8 @@ import { MessageSquare } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
 import {
-  PRESENCA_JUSTIFICATIVA_MEDICO_STATUS_LABEL,
   presencaJustificativaMedicoStatusEfetivo,
+  presencaJustificativaMedicoStatusExibicao,
   PRESENCA_JUSTIFICATIVA_MEDICO_COR,
   type PresencaJustificativaMeta,
 } from "../../../lib/rhCalendarioPresencaGestao";
@@ -53,7 +53,7 @@ export function CelulaIndicadorJustificativaMedicoPresencaCalendario({ t, justif
 
   const atestadoStatus = presencaJustificativaMedicoStatusEfetivo(justificativa);
   const corIcone = PRESENCA_JUSTIFICATIVA_MEDICO_COR[atestadoStatus];
-  const statusLabel = PRESENCA_JUSTIFICATIVA_MEDICO_STATUS_LABEL[atestadoStatus];
+  const statusLabel = presencaJustificativaMedicoStatusExibicao(justificativa);
 
   const tooltipBg =
     atestadoStatus === "aprovado"

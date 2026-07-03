@@ -101,6 +101,8 @@ export type PresencaJustificativaMeta = {
   /** Atendimento em Solicitações (RH) — preenchido ao aprovar/rejeitar. */
   atestadoAtendidoPorNome?: string;
   atestadoAtendidoEm?: string;
+  /** Abono remunerado definido em Solicitações (RH) ao aprovar atestado. */
+  abonoRemunerado?: "sim" | "nao" | null;
 };
 
 export type PresencaHistoricoLinhaExibicao = {
@@ -319,6 +321,31 @@ export function presencaJustificativaMedicoAprovada(gestao?: PresencaDiaGestao):
   );
 }
 
+/** Rótulo de status no Calendário e tooltip — considera abono remunerado ao aprovar. */
+export function presencaJustificativaMedicoStatusExibicao(
+  justificativa: PresencaJustificativaMeta,
+): string {
+  const st = presencaJustificativaMedicoStatusEfetivo(justificativa);
+  if (st === "em_analise") return "Em análise";
+  if (st === "rejeitado") return "Rejeitado";
+  if (st === "aprovado") {
+    return justificativa.abonoRemunerado === "sim" ? "Abonado" : "Atestado";
+  }
+  return "Em análise";
+}
+
+/** Status da coluna Status quando há justificativa médica aplicável ao dia. */
+export function resolverStatusPresencaMedicoLinha(gestao?: PresencaDiaGestao): string | null {
+  if (gestao?.justificativa?.motivo !== "medico") return null;
+  const st = presencaJustificativaMedicoStatusEfetivo(gestao.justificativa);
+  if (st === "em_analise") return "Em análise";
+  if (st === "rejeitado") return "Falta";
+  if (st === "aprovado") {
+    return gestao.justificativa.abonoRemunerado === "sim" ? "Abonado" : "Atestado";
+  }
+  return null;
+}
+
 export function presencaJustificativaMedicoExibirIndicador(
   gestao?: PresencaDiaGestao,
   diaIso?: string,
@@ -373,9 +400,21 @@ export function validarHorarioPresencaHHMM(valor: string): boolean {
 }
 
 export function normalizarHorarioPresencaHHMM(valor: string): string {
+  const digits = valor.replace(/\D/g, "");
+  if (digits.length === 4) {
+    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+  }
   const m = /^(\d{1,2}):(\d{2})$/.exec(valor.trim());
   if (!m) return valor.trim();
   return `${String(parseInt(m[1]!, 10)).padStart(2, "0")}:${m[2]}`;
+}
+
+/** Máscara HH:MM — até 4 dígitos; «:» fixo após as horas (ex.: 0800 → 08:00). */
+export function aplicarMascaraHorarioPresencaHHMM(input: string): string {
+  const digits = input.replace(/\D/g, "").slice(0, 4);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 
 function minutosRelogioHHmm(s: string): number | null {
@@ -509,9 +548,10 @@ export function linhaPresencaDestaqueHoje(params: LinhaPresencaDestaqueParams): 
 export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams): string {
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
-  if (presencaJustificativaMedicoAprovada(gestao)) return "Atestado";
+  const statusMedico = resolverStatusPresencaMedicoLinha(gestao);
+  if (statusMedico != null) return statusMedico;
+
   if (gestao?.statusGestao === "aprovado") return "Aprovado";
-  if (presencaJustificativaMedicoPendente(gestao)) return "Em análise";
   if (
     gestao?.statusGestao === "em_analise" &&
     gestao.correcao &&
