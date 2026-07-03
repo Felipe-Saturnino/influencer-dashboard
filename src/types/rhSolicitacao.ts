@@ -20,6 +20,7 @@ export interface RhSolicitacaoRow {
   atestado_file_name: string | null;
   rh_vaga_id: string | null;
   atendido_em: string | null;
+  atendido_por: string | null;
   abono_remunerado: RhSolicitacaoAbonoRemunerado | null;
   rh_calendario_acao_id: string | null;
   reuniao_dia_iso: string | null;
@@ -28,5 +29,6 @@ export interface RhSolicitacaoRow {
     | { payload: { turno?: string; dia_iso?: string; motivo?: string } | null }[]
     | null;
   solicitante: { id: string; nome: string } | { id: string; nome: string }[] | null;
+  atendente: { id: string; name: string } | { id: string; name: string }[] | null;
   vaga: { id: string; titulo: string } | { id: string; titulo: string }[] | null;
 }

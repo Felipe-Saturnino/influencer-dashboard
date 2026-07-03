@@ -850,7 +850,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e ações",
         texto:
-          "A tabela lista data, solicitante, tipo e status (quando o carrossel está em **Todos Status**) ou descrição — período do atestado ou data da reunião com RH (quando um status específico está selecionado). Use os ícones **Ver** e **Atender** (disponível com permissão de Editar) — tooltips fixos «Ver solicitação» e «Atender solicitação».\n\nNo atendimento, defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em solicitação de **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**). O anexo do atestado abre em nova aba pelos modais Ver e Atender.",
+          "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).",
       },
     ],
   },

@@ -57,15 +57,17 @@ const RH_SOLICITACOES_SELECT = `
   atestado_file_name,
   rh_vaga_id,
   atendido_em,
+  atendido_por,
   abono_remunerado,
   rh_calendario_acao_id,
   reuniao_dia_iso,
   calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
   solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome ),
+  atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
 
-type SortCol = "data" | "solicitante" | "tipo" | "status" | "descricao";
+type SortCol = "data" | "solicitante" | "tipo" | "status" | "descricao" | "atendido" | "atendimento";
 
 function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -74,6 +76,10 @@ function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
 
 function nomeSolicitante(row: RhSolicitacaoRow): string {
   return unwrapEmbed(row.solicitante)?.nome?.trim() || "—";
+}
+
+function nomeAtendente(row: RhSolicitacaoRow): string {
+  return unwrapEmbed(row.atendente)?.name?.trim() || "—";
 }
 
 function badgeStatus(status: RhSolicitacaoStatus) {
@@ -182,6 +188,13 @@ export default function RhSolicitacoesPage() {
           return compareLocaleTexto(labelStatusSolicitacao(a.status), labelStatusSolicitacao(b.status), dir);
         case "descricao":
           return compareLocaleTexto(descricaoColunaSolicitacao(a.tipo, a), descricaoColunaSolicitacao(b.tipo, b), dir);
+        case "atendido":
+          return compareLocaleTexto(nomeAtendente(a), nomeAtendente(b), dir);
+        case "atendimento":
+          return (
+            ((a.atendido_em ?? "") < (b.atendido_em ?? "") ? -1 : (a.atendido_em ?? "") > (b.atendido_em ?? "") ? 1 : 0) *
+            (dir === "asc" ? 1 : -1)
+          );
         default:
           return 0;
       }
@@ -190,7 +203,8 @@ export default function RhSolicitacoesPage() {
   }, [lista, sort]);
 
   const exibirColunaStatus = todosStatusAtivo;
-  const colunaQuartaSort: SortCol = exibirColunaStatus ? "status" : "descricao";
+  const exibirColunasAtendimento = filtroStatus === "aprovado" || filtroStatus === "rejeitado";
+  const colunaQuartaSort: SortCol = exibirColunasAtendimento ? "atendido" : exibirColunaStatus ? "status" : "descricao";
 
   function onSort(col: SortCol) {
     setSort((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
@@ -198,11 +212,18 @@ export default function RhSolicitacoesPage() {
 
   useEffect(() => {
     setSort((s) => {
-      if (exibirColunaStatus && s.col === "descricao") return { col: "status", dir: s.dir };
-      if (!exibirColunaStatus && s.col === "status") return { col: "descricao", dir: s.dir };
+      if (exibirColunasAtendimento && (s.col === "status" || s.col === "descricao")) {
+        return { col: "atendido", dir: s.dir };
+      }
+      if (exibirColunaStatus && (s.col === "descricao" || s.col === "atendido" || s.col === "atendimento")) {
+        return { col: "status", dir: s.dir };
+      }
+      if (!exibirColunaStatus && !exibirColunasAtendimento && (s.col === "status" || s.col === "atendido" || s.col === "atendimento")) {
+        return { col: "descricao", dir: s.dir };
+      }
       return s;
     });
-  }, [exibirColunaStatus]);
+  }, [exibirColunaStatus, exibirColunasAtendimento]);
 
   if (perm.loading) {
     return (
@@ -319,15 +340,38 @@ export default function RhSolicitacoesPage() {
                     thStyle={dataTable.thHeader}
                     align="center"
                   />
-                  <SortTableTh
-                    label={exibirColunaStatus ? "Status" : "Descrição"}
-                    col={colunaQuartaSort}
-                    sortCol={sort.col}
-                    sortDir={sort.dir}
-                    onSort={onSort}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                  />
+                  {exibirColunasAtendimento ? (
+                    <>
+                      <SortTableTh
+                        label="Atendido"
+                        col="atendido"
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        onSort={onSort}
+                        thStyle={dataTable.thHeader}
+                        align="center"
+                      />
+                      <SortTableTh
+                        label="Data do Atendimento"
+                        col="atendimento"
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        onSort={onSort}
+                        thStyle={dataTable.thHeader}
+                        align="center"
+                      />
+                    </>
+                  ) : (
+                    <SortTableTh
+                      label={exibirColunaStatus ? "Status" : "Descrição"}
+                      col={colunaQuartaSort}
+                      sortCol={sort.col}
+                      sortDir={sort.dir}
+                      onSort={onSort}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                  )}
                   <th scope="col" style={dataTable.thHeader}>
                     Ações
                   </th>
@@ -360,21 +404,42 @@ export default function RhSolicitacoesPage() {
                       </span>
                     </td>
                     <td style={dataTable.tdCenter}>{labelTipoSolicitacao(row.tipo)}</td>
-                    <td style={dataTable.tdCenter}>
-                      {exibirColunaStatus ? (
-                        <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
-                      ) : (
-                        <span title={descricaoColunaSolicitacao(row.tipo, row)}>
-                          {descricaoColunaSolicitacao(row.tipo, row)}
-                        </span>
-                      )}
-                    </td>
+                    {exibirColunasAtendimento ? (
+                      <>
+                        <td style={dataTable.tdCenter} title={nomeAtendente(row)}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              maxWidth: 160,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {nomeAtendente(row)}
+                          </span>
+                        </td>
+                        <td style={dataTable.tdCenter}>
+                          {row.atendido_em ? fmtDataSolicitacao(row.atendido_em) : "—"}
+                        </td>
+                      </>
+                    ) : (
+                      <td style={dataTable.tdCenter}>
+                        {exibirColunaStatus ? (
+                          <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+                        ) : (
+                          <span title={descricaoColunaSolicitacao(row.tipo, row)}>
+                            {descricaoColunaSolicitacao(row.tipo, row)}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                         <BtnIconeAcaoLinha label={tooltipModal("Ver solicitação")} onClick={() => setModalVer(row)}>
                           <Eye size={14} aria-hidden />
                         </BtnIconeAcaoLinha>
-                        {perm.canEditarOk ? (
+                        {!exibirColunasAtendimento && row.status === "em_analise" && perm.canEditarOk ? (
                           <BtnIconeAcaoLinha label={tooltipModal("Atender solicitação")} onClick={() => setModalAtender(row)}>
                             <Pencil size={14} aria-hidden />
                           </BtnIconeAcaoLinha>

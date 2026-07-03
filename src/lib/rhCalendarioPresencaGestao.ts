@@ -98,7 +98,76 @@ export type PresencaJustificativaMeta = {
   solicitacaoId?: string;
   /** Dia em que a justificativa foi registrada (âncora da solicitação em Solicitações RH). */
   atestadoDiaRegistro?: string;
+  /** Atendimento em Solicitações (RH) — preenchido ao aprovar/rejeitar. */
+  atestadoAtendidoPorNome?: string;
+  atestadoAtendidoEm?: string;
 };
+
+export type PresencaHistoricoLinhaExibicao = {
+  acao: string;
+  em: string;
+  por: string;
+};
+
+/** Subtítulo do modal de histórico — ex.: «Quinta, 18 de Junho». */
+export function subtituloDiaOcorrenciaPresencaPt(d: Date): string {
+  const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const MONTHS = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+  const dow = WEEKDAYS[d.getDay()] ?? "";
+  const mes = MONTHS[d.getMonth()] ?? "";
+  return `${dow}, ${d.getDate()} de ${mes}`;
+}
+
+export function fmtPresencaHistoricoDataHora(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return parsed.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+/** Duas linhas fixas: Justificativa + Aprovação/Rejeição (atestado médico). */
+export function historicoLinhasJustificativaMedico(
+  justificativa: PresencaJustificativaMeta | undefined,
+): PresencaHistoricoLinhaExibicao[] {
+  if (!justificativa || justificativa.motivo !== "medico") return [];
+
+  const linhas: PresencaHistoricoLinhaExibicao[] = [];
+
+  if (justificativa.registradoEm && justificativa.registradoPorNome) {
+    linhas.push({
+      acao: "Justificativa",
+      em: justificativa.registradoEm,
+      por: justificativa.registradoPorNome,
+    });
+  }
+
+  const st = presencaJustificativaMedicoStatusEfetivo(justificativa);
+  if (st === "aprovado" || st === "rejeitado") {
+    const em = justificativa.atestadoAtendidoEm;
+    const por = justificativa.atestadoAtendidoPorNome;
+    if (em && por) {
+      linhas.push({
+        acao: st === "aprovado" ? "Aprovação" : "Rejeição",
+        em,
+        por,
+      });
+    }
+  }
+
+  return linhas;
+}
 
 /** Período do atestado abrange mais de um dia civil. */
 export function atestadoMedicoPeriodoMultiploDias(inicio?: string, fim?: string): boolean {
@@ -225,7 +294,7 @@ export const PRESENCA_JUSTIFICATIVA_MEDICO_COR: Record<PresencaJustificativaAtes
 
 export const PRESENCA_JUSTIFICATIVA_MEDICO_STATUS_LABEL: Record<PresencaJustificativaAtestadoStatus, string> = {
   em_analise: "Em análise",
-  aprovado: "Aprovado",
+  aprovado: "Atestado",
   rejeitado: "Rejeitado",
 };
 
@@ -240,6 +309,13 @@ export function presencaJustificativaMedicoPendente(gestao?: PresencaDiaGestao):
   return (
     gestao?.justificativa?.motivo === "medico" &&
     presencaJustificativaMedicoStatusEfetivo(gestao.justificativa) === "em_analise"
+  );
+}
+
+export function presencaJustificativaMedicoAprovada(gestao?: PresencaDiaGestao): boolean {
+  return (
+    gestao?.justificativa?.motivo === "medico" &&
+    presencaJustificativaMedicoStatusEfetivo(gestao.justificativa) === "aprovado"
   );
 }
 
@@ -433,6 +509,7 @@ export function linhaPresencaDestaqueHoje(params: LinhaPresencaDestaqueParams): 
 export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams): string {
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
+  if (presencaJustificativaMedicoAprovada(gestao)) return "Atestado";
   if (gestao?.statusGestao === "aprovado") return "Aprovado";
   if (presencaJustificativaMedicoPendente(gestao)) return "Em análise";
   if (
@@ -479,6 +556,14 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
       acaoPrimaria: null,
       mostrarHistorico: temHistorico,
       mostrarTravessaoAcoes: !temHistorico,
+    };
+  }
+
+  if (presencaJustificativaMedicoAprovada(gestao)) {
+    return {
+      acaoPrimaria: null,
+      mostrarHistorico: true,
+      mostrarTravessaoAcoes: false,
     };
   }
 
@@ -598,4 +683,40 @@ export function computePresencaKpisConsolidados(dias: PresencaKpiDiaInput[]): Pr
   }
 
   return { escalados, trabalhados, faltas, trocas, venda, compra };
+}
+
+const MESES_PT_UPPER = [
+  "JANEIRO",
+  "FEVEREIRO",
+  "MARÇO",
+  "ABRIL",
+  "MAIO",
+  "JUNHO",
+  "JULHO",
+  "AGOSTO",
+  "SETEMBRO",
+  "OUTUBRO",
+  "NOVEMBRO",
+  "DEZEMBRO",
+] as const;
+
+/** Primeiro dia do mês civil anterior a `ref`. */
+export function refPrimeiroDiaMesAnterior(ref: Date): Date {
+  return new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+}
+
+/** Comparativo KPI presença — total do mês anterior fechado: «12 em JUNHO». */
+export function fmtPresencaKpiComparativoMesAnterior(valor: number, mesAnteriorRef: Date): string {
+  const mes = MESES_PT_UPPER[mesAnteriorRef.getMonth()] ?? "";
+  return `${valor.toLocaleString("pt-BR")} em ${mes}`;
+}
+
+/** Todos os dias de um mês de referência (civil local). */
+export function diasReferenciaMesPresenca(refMes: Date): Date[] {
+  const y = refMes.getFullYear();
+  const m = refMes.getMonth();
+  const last = new Date(y, m + 1, 0).getDate();
+  const out: Date[] = [];
+  for (let d = 1; d <= last; d++) out.push(new Date(y, m, d));
+  return out;
 }

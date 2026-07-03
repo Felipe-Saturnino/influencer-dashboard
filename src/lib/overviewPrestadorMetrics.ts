@@ -245,7 +245,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
         if (escMin != null) horasEscaladasMin += escMin;
 
-        if (temCheckIn || status === "Aprovado") {
+        if (temCheckIn || status === "Aprovado" || status === "Atestado") {
           diasRealizado += 1;
         }
 

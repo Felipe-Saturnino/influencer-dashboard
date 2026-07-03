@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { FileText, Loader2, Pencil } from "lucide-react";
+import { ClipboardCheck, FileText, Loader2, Pencil } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -154,6 +154,53 @@ function turnoReuniaoRh(row: RhSolicitacaoRow): string {
   return turno || "—";
 }
 
+function nomeAtendente(row: RhSolicitacaoRow): string {
+  const a = unwrapEmbed(row.atendente);
+  return a?.name?.trim() || "—";
+}
+
+function textoDescricaoSolicitacao(row: RhSolicitacaoRow): string {
+  return row.descricao.trim() || "—";
+}
+
+function corpoAbaSolicitacaoVer(row: RhSolicitacaoRow, t: Theme) {
+  return (
+    <>
+      <LinhaInfo label="Data da solicitação" valor={fmtDataSolicitacao(row.created_at)} t={t} />
+      <LinhaInfo label="Solicitante" valor={nomeSolicitante(row)} t={t} />
+      <LinhaInfo label="Tipo de solicitação" valor={labelTipoSolicitacao(row.tipo)} t={t} />
+      <LinhaInfo label="Descrição" valor={textoDescricaoSolicitacao(row)} t={t} />
+      {row.tipo === "atestado" ? (
+        <>
+          <LinhaInfo
+            label="Período do atestado"
+            valor={fmtPeriodoAtestadoSolicitacao(row.atestado_inicio, row.atestado_fim)}
+            t={t}
+          />
+          <LinhaAnexo storagePath={row.atestado_storage_path} fileName={row.atestado_file_name} t={t} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function corpoAbaAtendimentoVer(row: RhSolicitacaoRow, t: Theme) {
+  return (
+    <>
+      <LinhaInfo
+        label="Data de Atendimento"
+        valor={row.atendido_em ? fmtDataSolicitacao(row.atendido_em) : "—"}
+        t={t}
+      />
+      <LinhaInfo label="Atendido" valor={nomeAtendente(row)} t={t} />
+      <LinhaInfo label="Observação do RH" valor={row.observacao_rh?.trim() || "—"} t={t} />
+      {row.tipo === "atestado" ? (
+        <LinhaInfo label="Abono remunerado?" valor={labelAbonoRemunerado(row.abono_remunerado)} t={t} />
+      ) : null}
+    </>
+  );
+}
+
 function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
   return (
     <>
@@ -212,12 +259,57 @@ export interface ModalVerSolicitacaoProps {
 }
 
 export function ModalVerSolicitacao({ open, onClose, row, t }: ModalVerSolicitacaoProps) {
+  const [aba, setAba] = useState<"solicitacao" | "atendimento">("solicitacao");
+
+  useEffect(() => {
+    if (open) setAba("solicitacao");
+  }, [open, row?.id]);
+
   if (!open || !row) return null;
+
+  const comAbas = row.status === "aprovado" || row.status === "rejeitado";
+  const tabs = ["solicitacao", "atendimento"] as const;
 
   return (
     <ModalBase onClose={onClose} maxWidth={560}>
       <ModalHeader title="Ver solicitação" onClose={onClose} />
-      <div style={{ padding: "0 20px 20px" }}>{corpoDetalhes(row, t)}</div>
+      {comAbas ? (
+        <>
+          <div
+            role="tablist"
+            aria-label="Seções da solicitação"
+            style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, padding: "0 20px 12px" }}
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, [...tabs], setAba, (k) => `tab-ver-sol-${k}`)}
+          >
+            <FiltroBarTabButton
+              id="tab-ver-sol-solicitacao"
+              active={aba === "solicitacao"}
+              aria-controls="panel-ver-sol-solicitacao"
+              onClick={() => setAba("solicitacao")}
+              icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Solicitação
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-ver-sol-atendimento"
+              active={aba === "atendimento"}
+              aria-controls="panel-ver-sol-atendimento"
+              onClick={() => setAba("atendimento")}
+              icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Atendimento
+            </FiltroBarTabButton>
+          </div>
+          <ModalTabPanel active={aba === "solicitacao"} id="panel-ver-sol-solicitacao" labelledBy="tab-ver-sol-solicitacao">
+            <div style={{ padding: "0 20px 20px" }}>{corpoAbaSolicitacaoVer(row, t)}</div>
+          </ModalTabPanel>
+          <ModalTabPanel active={aba === "atendimento"} id="panel-ver-sol-atendimento" labelledBy="tab-ver-sol-atendimento">
+            <div style={{ padding: "0 20px 20px" }}>{corpoAbaAtendimentoVer(row, t)}</div>
+          </ModalTabPanel>
+        </>
+      ) : (
+        <div style={{ padding: "0 20px 20px" }}>{corpoDetalhes(row, t)}</div>
+      )}
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 20px 20px" }}>
         <button
           type="button"

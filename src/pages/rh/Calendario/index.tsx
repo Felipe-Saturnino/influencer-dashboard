@@ -106,12 +106,17 @@ import {
   appendHistoricoPresenca,
   chavePresencaGestao,
   computePresencaKpisConsolidados,
+  diasReferenciaMesPresenca,
+  fmtPresencaKpiComparativoMesAnterior,
+  refPrimeiroDiaMesAnterior,
   fundoLinhaPresencaDiaHoje,
   linhaPresencaDestaqueHoje,
   presencaCorrecaoAnaliseStatusEfetivo,
   presencaCorrecaoCampoAlterado,
   construirIndiceJustificativaMedicoPorDia,
   fundirGestaoPresencaComJustificativaMedico,
+  historicoLinhasJustificativaMedico,
+  presencaJustificativaMedicoAprovada,
   presencaJustificativaMedicoExibirIndicador,
   PRESENCA_DESTAQUE_VERDE_HEX,
   PRESENCA_KPIS_ZERO,
@@ -649,9 +654,11 @@ export default function RhCalendarioPage() {
   const [loadingPresencaGestao, setLoadingPresencaGestao] = useState(false);
   const [presencaGestaoTick, setPresencaGestaoTick] = useState(0);
   const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
-  const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{ dia: Date; funcionarioId: string } | null>(
-    null,
-  );
+  const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{
+    dia: Date;
+    funcionarioId: string;
+    justificativaMedico?: PresencaJustificativaMeta;
+  } | null>(null);
   const [presencaJustificarAlvo, setPresencaJustificarAlvo] = useState<PresencaJustificarAlvo | null>(null);
 
   const carregarTimes = useCallback(async () => {
@@ -922,7 +929,15 @@ export default function RhCalendarioPage() {
     });
   }, [staffPresencaMultiselectItems]);
 
-  const mesesRefISOConsulta = useMemo(() => [refMesPrimeiroDiaISO(current)], [current]);
+  const mesAnteriorPresencaRef = useMemo(
+    () => refPrimeiroDiaMesAnterior(current),
+    [current],
+  );
+
+  const mesesRefISOConsulta = useMemo(
+    () => [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)],
+    [current, mesAnteriorPresencaRef],
+  );
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -1080,27 +1095,37 @@ export default function RhCalendarioPage() {
     }
     let cancelled = false;
     setLoadingPontoMes(true);
-    const refIso = refMesPrimeiroDiaISO(current);
-    void supabase.rpc("rh_calendario_ponto_registros_mes", { p_funcionario_id: fid, p_ref_mes: refIso }).then(({ data, error }) => {
+    const refIsos = [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)];
+    void (async () => {
+      const merged: RpcPontoMesRow[] = [];
+      let hadError = false;
+      for (const refIso of refIsos) {
+        const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
+          p_funcionario_id: fid,
+          p_ref_mes: refIso,
+        });
+        if (cancelled) return;
+        if (error) {
+          hadError = true;
+          continue;
+        }
+        const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
+        merged.push(
+          ...rows.map((r) => {
+            const raw = r.dia_sp as string | Date;
+            const diaStr = typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw));
+            return { dia_sp: diaStr, check_in_at: r.check_in_at, check_out_at: r.check_out_at };
+          }),
+        );
+      }
       if (cancelled) return;
       setLoadingPontoMes(false);
-      if (error) {
-        setPontoMesLinhas([]);
-        return;
-      }
-      const rows = (data ?? []) as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
-      setPontoMesLinhas(
-        rows.map((r) => {
-          const raw = r.dia_sp as string | Date;
-          const diaStr = typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw));
-          return { dia_sp: diaStr, check_in_at: r.check_in_at, check_out_at: r.check_out_at };
-        }),
-      );
-    });
+      setPontoMesLinhas(hadError && merged.length === 0 ? [] : merged);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, pontoMesTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, pontoMesTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
@@ -1115,16 +1140,27 @@ export default function RhCalendarioPage() {
     }
     let cancelled = false;
     setLoadingPresencaGestao(true);
-    const refIso = refMesPrimeiroDiaISO(current);
-    void carregarPresencaGestaoMes(supabase, fid, refIso).then(({ mapa, error }) => {
+    const refIsos = [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)];
+    void (async () => {
+      const merged = new Map<string, PresencaDiaGestao>();
+      let hadError = false;
+      for (const refIso of refIsos) {
+        const { mapa, error } = await carregarPresencaGestaoMes(supabase, fid, refIso);
+        if (cancelled) return;
+        if (error) {
+          hadError = true;
+          continue;
+        }
+        for (const [k, v] of mapa) merged.set(k, v);
+      }
       if (cancelled) return;
       setLoadingPresencaGestao(false);
-      if (!error) setPresencaGestaoPorChave(mapa);
-    });
+      if (!hadError || merged.size > 0) setPresencaGestaoPorChave(merged);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, presencaGestaoTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") return;
@@ -1895,52 +1931,64 @@ export default function RhCalendarioPage() {
     );
   }, [presencaFilterStaffIds, presencaGestaoPorChave, rawGradeRows]);
 
-  const kpisPresencaConsolidados = useMemo(() => {
-    const fid = presencaFilterStaffIds[0];
-    if (!fid) return PRESENCA_KPIS_ZERO;
-    const pRow = prestadorPorId.get(fid);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-    const diasInput = diasDoMesPresenca.map((dia) => {
-      const iso = toISO(dia);
-      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
-      const situacao = situacaoGestaoEscalaParaDia(valorG);
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
-      const pt = mapaPontoPorDiaIso.get(iso);
-      const entEsc = esc ? esc.entrada : "—";
-      const saiEsc = esc ? esc.saida : "—";
-      const temCheckIn = Boolean(pt?.check_in_at);
-      const temCheckOut = Boolean(pt?.check_out_at);
-      const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
-      const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
-        presencaGestaoPorChave.get(chavePresencaGestao(fid, iso)),
-        iso,
-        situacao,
-        indiceJustificativaMedicoPresenca,
-      );
-      const status = resolverStatusPresencaLinha({
-        situacao,
-        diaIso: iso,
-        entEsc,
-        saiEsc,
-        temCheckIn,
-        temCheckOut,
-        statusBase: stBase,
-        gestao: gestaoDia,
+  const calcularKpisPresencaReferenciaMes = useCallback(
+    (refMes: Date) => {
+      const fid = presencaFilterStaffIds[0];
+      if (!fid) return PRESENCA_KPIS_ZERO;
+      const pRow = prestadorPorId.get(fid);
+      const slug = (pRow?.staff_operadora_slug ?? "").trim();
+      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      const diasInput = diasReferenciaMesPresenca(refMes).map((dia) => {
+        const iso = toISO(dia);
+        const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+        const situacao = situacaoGestaoEscalaParaDia(valorG);
+        const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+        const pt = mapaPontoPorDiaIso.get(iso);
+        const entEsc = esc ? esc.entrada : "—";
+        const saiEsc = esc ? esc.saida : "—";
+        const temCheckIn = Boolean(pt?.check_in_at);
+        const temCheckOut = Boolean(pt?.check_out_at);
+        const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+        const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
+          presencaGestaoPorChave.get(chavePresencaGestao(fid, iso)),
+          iso,
+          situacao,
+          indiceJustificativaMedicoPresenca,
+        );
+        const status = resolverStatusPresencaLinha({
+          situacao,
+          diaIso: iso,
+          entEsc,
+          saiEsc,
+          temCheckIn,
+          temCheckOut,
+          statusBase: stBase,
+          gestao: gestaoDia,
+        });
+        return { situacao, status, temCheckIn };
       });
-      return { situacao, status, temCheckIn };
-    });
-    return computePresencaKpisConsolidados(diasInput);
-  }, [
-    presencaFilterStaffIds,
-    diasDoMesPresenca,
-    rawGradeRows,
-    mapaPontoPorDiaIso,
-    presencaGestaoPorChave,
-    prestadorPorId,
-    mapOpTurnos,
-    indiceJustificativaMedicoPresenca,
-  ]);
+      return computePresencaKpisConsolidados(diasInput);
+    },
+    [
+      presencaFilterStaffIds,
+      rawGradeRows,
+      mapaPontoPorDiaIso,
+      presencaGestaoPorChave,
+      prestadorPorId,
+      mapOpTurnos,
+      indiceJustificativaMedicoPresenca,
+    ],
+  );
+
+  const kpisPresencaConsolidados = useMemo(
+    () => calcularKpisPresencaReferenciaMes(current),
+    [calcularKpisPresencaReferenciaMes, current],
+  );
+
+  const kpisPresencaMesAnterior = useMemo(
+    () => calcularKpisPresencaReferenciaMes(mesAnteriorPresencaRef),
+    [calcularKpisPresencaReferenciaMes, mesAnteriorPresencaRef],
+  );
 
   const kpisPresencaCarregando =
     presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes || loadingPresencaGestao);
@@ -2515,34 +2563,25 @@ export default function RhCalendarioPage() {
                 {
                   label: "ESCALADOS",
                   value: kpisPresencaConsolidados.escalados,
+                  comparativo: kpisPresencaMesAnterior.escalados,
                   cor: "var(--brand-primary, #7c3aed)",
-                  detalhe: (
-                    <>
-                      <span style={{ color: "#22c55e", fontWeight: 700 }}>
-                        {kpisPresencaConsolidados.trabalhados.toLocaleString("pt-BR")}
-                      </span>{" "}
-                      Trabalhados
-                      <span style={{ margin: "0 6px", color: t.textMuted }}>·</span>
-                      <span style={{ color: "#e84025", fontWeight: 700 }}>
-                        {kpisPresencaConsolidados.faltas.toLocaleString("pt-BR")}
-                      </span>{" "}
-                      Faltas
-                    </>
-                  ),
                 },
                 {
                   label: "TROCAS",
                   value: kpisPresencaConsolidados.trocas,
+                  comparativo: kpisPresencaMesAnterior.trocas,
                   cor: "#a78bfa",
                 },
                 {
                   label: "VENDA",
                   value: kpisPresencaConsolidados.venda,
+                  comparativo: kpisPresencaMesAnterior.venda,
                   cor: "#22c55e",
                 },
                 {
                   label: "COMPRA",
                   value: kpisPresencaConsolidados.compra,
+                  comparativo: kpisPresencaMesAnterior.compra,
                   cor: "#f59e0b",
                 },
               ] as const
@@ -2594,23 +2633,22 @@ export default function RhCalendarioPage() {
                     k.value.toLocaleString("pt-BR")
                   )}
                 </div>
-                {"detalhe" in k && k.detalhe ? (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 11,
-                      fontFamily: FONT.body,
-                      lineHeight: 1.5,
-                      color: t.textMuted,
-                    }}
-                  >
-                    {kpisPresencaCarregando ? (
-                      <div style={{ ...kpiPresencaSkeletonStyle, width: "85%", height: 14, marginTop: 0 }} aria-hidden />
-                    ) : (
-                      k.detalhe
-                    )}
-                  </div>
-                ) : null}
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 11,
+                    fontFamily: FONT.body,
+                    lineHeight: 1.5,
+                    color: t.textMuted,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {kpisPresencaCarregando ? (
+                    <div style={{ ...kpiPresencaSkeletonStyle, width: "85%", height: 14, marginTop: 0 }} aria-hidden />
+                  ) : (
+                    fmtPresencaKpiComparativoMesAnterior(k.comparativo, mesAnteriorPresencaRef)
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -3009,9 +3047,17 @@ export default function RhCalendarioPage() {
                                   ) : null}
                                   {acoesLinha.mostrarHistorico ? (
                                     <BtnIconeAcaoLinha
-                                      label={tooltipModal("Histórico de presença")}
+                                      label={tooltipModal(
+                                        presencaJustificativaMedicoAprovada(gestaoDia) ? "Histórico" : "Histórico de presença",
+                                      )}
                                       onClick={() =>
-                                        setPresencaHistoricoAlvo({ dia, funcionarioId: fid })
+                                        setPresencaHistoricoAlvo({
+                                          dia,
+                                          funcionarioId: fid,
+                                          justificativaMedico: presencaJustificativaMedicoAprovada(gestaoDia)
+                                            ? gestaoDia?.justificativa
+                                            : undefined,
+                                        })
                                       }
                                     >
                                       <Clock size={14} aria-hidden="true" />
@@ -3248,10 +3294,18 @@ export default function RhCalendarioPage() {
         <ModalHistoricoPresencaCalendario
           open
           dia={presencaHistoricoAlvo.dia}
+          titulo={presencaHistoricoAlvo.justificativaMedico ? "Histórico" : "Histórico de presença"}
+          linhas={
+            presencaHistoricoAlvo.justificativaMedico
+              ? historicoLinhasJustificativaMedico(presencaHistoricoAlvo.justificativaMedico)
+              : undefined
+          }
           historico={
-            presencaGestaoPorChave.get(
-              chavePresencaGestao(presencaHistoricoAlvo.funcionarioId, toISO(presencaHistoricoAlvo.dia)),
-            )?.historico ?? []
+            presencaHistoricoAlvo.justificativaMedico
+              ? undefined
+              : presencaGestaoPorChave.get(
+                  chavePresencaGestao(presencaHistoricoAlvo.funcionarioId, toISO(presencaHistoricoAlvo.dia)),
+                )?.historico ?? []
           }
           onClose={() => setPresencaHistoricoAlvo(null)}
           t={t}
