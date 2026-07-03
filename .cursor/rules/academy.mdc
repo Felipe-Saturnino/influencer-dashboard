@@ -174,14 +174,23 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 ### Filtros
 
-- Carrossel de mês + **Histórico** (`Todo o período`) — lista **maio/2026 → corrente** (antigo → recente); seta esquerda = mês anterior; índice inicial `getIdxMesCarrosselPadrao`.
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco; sem registros, default = mês corrente.
 - Time: select obrigatório GP / Shuffler.
-- Staff: multi quando escopo amplo; oculto ou fixo em **Próprios**.
+- Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
 
-### Dados (v1)
+### Dados (Supabase)
 
-Mock em `academyPerformanceHubMockData.ts` — substituir por tabelas Supabase (avaliações, agenda, config de pesos versionada).
+| Fonte | Tabela / RPC | Uso |
+|-------|----------------|-----|
+| Prestadores por time | `rh_funcionarios` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações** |
+| Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
+| Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
+| Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
+
+**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **Concluída** no mês; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
+
+Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `academyPerformanceHubAvaliacoesFetch.ts`; agenda: `academyPerformanceHubAgenda.ts`.
 
 ### Strings de vazio
 

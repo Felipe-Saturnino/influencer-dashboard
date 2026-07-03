@@ -7,7 +7,6 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
-  fmtPresencaHistoricoDataHora,
   subtituloMesAnoPresencaPt,
   type PresencaMesAprovacaoLinha,
 } from "../../../lib/rhCalendarioPresencaGestao";
@@ -134,8 +133,4 @@ export function ModalAprovarPresencaMesCalendario({
       </div>
     </ModalBase>
   );
-}
-
-export function mensagemAprovacaoPresencaMesPt(aprovadoEm: string): string {
-  return `Aprovado em ${fmtPresencaHistoricoDataHora(aprovadoEm)}`;
 }

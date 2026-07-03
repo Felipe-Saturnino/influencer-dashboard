@@ -21,10 +21,8 @@ import {
 } from "../../../lib/academyPerformanceHubScoring";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
-import {
-  PERFORMANCE_HUB_AGENDA_MOCK,
-  PERFORMANCE_HUB_AVALIACOES_MOCK,
-} from "../../../lib/academyPerformanceHubMockData";
+import { usePerformanceHubAvaliacoes } from "../../../hooks/usePerformanceHubAvaliacoes";
+import { buildPerformanceHubAgenda } from "../../../lib/academyPerformanceHubAgenda";
 import { PERFORMANCE_HUB_TIME_DEFAULT } from "../../../lib/academyPerformanceHubConstants";
 import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
 import { PerformanceHubAbaAvaliacoes } from "./PerformanceHubAbaAvaliacoes";
@@ -99,6 +97,7 @@ export default function PerformanceHubPage() {
   const brand = useDashboardBrand();
   const perm = usePermission("academy_performance_hub");
   const cadastro = usePerformanceHubCadastro();
+  const avaliacoesDb = usePerformanceHubAvaliacoes();
   const [aba, setAba] = useRouteTab(
     "academy_performance_hub",
     "avaliacoes",
@@ -110,7 +109,7 @@ export default function PerformanceHubPage() {
   const [staffSelecionado, setStaffSelecionado] = useState<string[]>([]);
   const [idxMes, setIdxMes] = useState(0);
   const [scoringPorTime, setScoringPorTime] = useState<PerformanceHubScoringPorTime>(() => cloneScoringDefault());
-  const [avaliacoes, setAvaliacoes] = useState<PerformanceHubAvaliacao[]>(PERFORMANCE_HUB_AVALIACOES_MOCK);
+  const { avaliacoes, setAvaliacoes, persistirAvaliacao } = avaliacoesDb;
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
   const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
 
@@ -138,6 +137,24 @@ export default function PerformanceHubPage() {
 
   const mesSelecionado = mesesCarrossel[idxMes];
 
+  const mesAgenda = useMemo(() => {
+    if (historico) {
+      const now = new Date();
+      return { ano: now.getFullYear(), mes: now.getMonth() };
+    }
+    return mesSelecionado;
+  }, [historico, mesSelecionado]);
+
+  const agendaFiltrada = useMemo(() => {
+    const staffList = cadastro.staffAgendaPorTimeFn(timeSelecionado);
+    const selectedStaff = staffSelecionado[0];
+    const agenda = buildPerformanceHubAgenda(staffList, avaliacoes, mesAgenda, timeSelecionado);
+    if (!selectedStaff) return agenda;
+    const selectedName = cadastro.staffOptionsPorTime(timeSelecionado).find((s) => s.value === selectedStaff)?.label;
+    if (!selectedName) return agenda;
+    return agenda.filter((row) => row.nome === selectedName);
+  }, [avaliacoes, cadastro, mesAgenda, staffSelecionado, timeSelecionado]);
+
   const avaliacoesFiltradas = useMemo(() => {
     const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
     const selectedStaff = staffSelecionado[0];
@@ -154,19 +171,6 @@ export default function PerformanceHubPage() {
       return true;
     });
   }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro, perm.canView, user?.name]);
-
-  const agendaFiltrada = useMemo(() => {
-    const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
-    const selectedStaff = staffSelecionado[0];
-    const selectedStaffName = selectedStaff
-      ? staffList.find((s) => s.value === selectedStaff)?.label ?? ""
-      : "";
-    return PERFORMANCE_HUB_AGENDA_MOCK.filter((row) => {
-      if (row.time !== timeSelecionado) return false;
-      if (selectedStaffName && row.nome !== selectedStaffName) return false;
-      return true;
-    });
-  }, [timeSelecionado, staffSelecionado, cadastro]);
 
   const staffOptions = useMemo(
     () =>
@@ -245,9 +249,12 @@ export default function PerformanceHubPage() {
     };
     setAvaliacoes((prev) => [nova, ...prev]);
     handleAnalisarAvaliacao(nova);
+    void persistirAvaliacao(nova).then((salvo) => {
+      if (salvo) setAvaliacaoEmEdicao(salvo);
+    });
   }
 
-  if (perm.loading) {
+  if (perm.loading || cadastro.loading || avaliacoesDb.loading) {
     return (
       <div
         className="app-page-shell"
@@ -345,17 +352,21 @@ export default function PerformanceHubPage() {
           getPrefill={cadastro.getPrefill}
           onClose={() => setAvaliacaoEmEdicao(null)}
           onSalvar={(payload) => {
-            const atualizado = aplicarPayload(avaliacaoEmEdicao, payload);
-            setAvaliacoes((prev) => prev.map((row) => (row.id === avaliacaoEmEdicao.id ? atualizado : row)));
-            setAvaliacaoEmEdicao(atualizado);
+            void (async () => {
+              const atualizado = aplicarPayload(avaliacaoEmEdicao, payload);
+              const salvo = await persistirAvaliacao(atualizado);
+              setAvaliacaoEmEdicao(salvo);
+            })();
           }}
           onConcluir={(payload) => {
-            setAvaliacoes((prev) =>
-              prev.map((row) =>
-                row.id === avaliacaoEmEdicao.id ? { ...aplicarPayload(row, payload), status: "concluida" } : row,
-              ),
-            );
-            setAvaliacaoEmEdicao(null);
+            void (async () => {
+              const concluida = {
+                ...aplicarPayload(avaliacaoEmEdicao, payload),
+                status: "concluida" as const,
+              };
+              await persistirAvaliacao(concluida);
+              setAvaliacaoEmEdicao(null);
+            })();
           }}
         />
       ) : null}

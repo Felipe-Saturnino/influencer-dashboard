@@ -34,6 +34,7 @@ import {
   documentoExigeCienciaDoUsuario,
   documentoUsaModeloNormativo,
   itemNoFiltroDocumento,
+  perfilPortalRhParticipaCiencia,
   setoresAplicavelDoUsuario,
   tagTipoDocumentoCor,
   type RhDocumentoClassificacao,
@@ -820,12 +821,14 @@ export default function PortalRhPage() {
   const cienciaExigidaDocIds = useMemo(() => {
     const set = new Set<string>();
     for (const d of documentosFiltrados) {
-      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel)) {
+      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel, user?.role)) {
         set.add(d.id);
       }
     }
     return set;
-  }, [documentosFiltrados, setoresUsuarioAplicavel]);
+  }, [documentosFiltrados, setoresUsuarioAplicavel, user?.role]);
+
+  const usuarioVeColunaCiencia = perfilPortalRhParticipaCiencia(user?.role);
 
   const cienciaPendenteDocIds = useMemo(() => {
     const set = new Set<string>();
@@ -1055,6 +1058,7 @@ export default function PortalRhPage() {
                     cienciaPendenteIds={cienciaPendenteDocIds}
                     cienciaExigidaIds={cienciaExigidaDocIds}
                     cienciaRegistradaEm={cienciaRegistradaEm}
+                    mostrarColunaCiencia={usuarioVeColunaCiencia}
                     onAbrir={(id) => void abrirDocumento(id)}
                     sort={sortDoc}
                     onSort={handleSortDoc}
@@ -1108,7 +1112,7 @@ export default function PortalRhPage() {
             classificacao={modalDoc.classificacao ?? null}
             pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
             pdfNome={modalDoc.anexo_nome ?? null}
-            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, setoresUsuarioAplicavel)}
+            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, setoresUsuarioAplicavel, user?.role)}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
@@ -1126,6 +1130,7 @@ export default function PortalRhPage() {
             aprovadorInfo={metaAutor(modalDoc.approved_by)}
             dataAprovacao={modalDoc.approved_at}
             temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
+            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, setoresUsuarioAplicavel, user?.role)}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}

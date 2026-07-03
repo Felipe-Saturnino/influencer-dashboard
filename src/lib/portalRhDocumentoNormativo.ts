@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos, vinculoParaSelectValue } from "./rhOrganogramaTree";
+import type { Role } from "../types";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao } from "../types/rhOrganograma";
 import type { ValidacaoPublicar } from "./portalRhWorkflow";
 
@@ -9,6 +10,28 @@ export type RhDocumentoClassificacao = "uso_interno" | "uso_publico" | "confiden
 
 /** Valor agregador canónico no campo aplicável a. */
 export const PORTAL_RH_APLICAVEL_TODOS = "Todos os prestadores";
+
+/**
+ * Perfis que participam do fluxo de ciência no Portal RH — alinhado a Gestão de Usuários
+ * (`FILTROS_PERFIL_LINHAS`: Perfis Gerenciais + Perfis Internos).
+ */
+export const PORTAL_RH_ROLES_CIENCIA: readonly Role[] = [
+  "admin",
+  "executivo",
+  "gestor",
+  "rh",
+  "figurino",
+  "comunicacao",
+  "performance_coach",
+  "service_manager",
+  "shift_leader",
+  "prestador",
+];
+
+export function perfilPortalRhParticipaCiencia(role: Role | undefined | null): boolean {
+  if (!role) return false;
+  return (PORTAL_RH_ROLES_CIENCIA as readonly string[]).includes(role);
+}
 
 export const RH_DOCUMENTO_TIPOS: { value: RhDocumentoTipo; label: string; prefixo: string }[] = [
   { value: "politica_rh", label: "Política RH", prefixo: "POL-RH-" },
@@ -260,7 +283,7 @@ export function documentoAplicavelAoUsuario(
   return aplicavel.some((a) => normUser.has(normalizarSetorAplicavel(a)));
 }
 
-/** Ciência exigida só quando o documento pede aceite e o público inclui o usuário. */
+/** Ciência exigida só para perfis internos/gerenciais, quando o documento pede aceite e o público inclui o usuário. */
 export function documentoExigeCienciaDoUsuario(
   doc: {
     requires_acknowledgment: boolean;
@@ -269,7 +292,9 @@ export function documentoExigeCienciaDoUsuario(
     tipo_documento?: RhDocumentoTipo | null;
   },
   setoresUsuario: readonly string[],
+  role: Role | undefined | null,
 ): boolean {
+  if (!perfilPortalRhParticipaCiencia(role)) return false;
   if (!doc.requires_acknowledgment) return false;
   if (!documentoUsaModeloNormativo(doc)) return true;
   if (!doc.aplicavel_a?.length) return true;

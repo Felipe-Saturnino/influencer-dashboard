@@ -139,6 +139,10 @@ export function fmtPresencaHistoricoDataHora(iso: string): string {
   return parsed.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+export function mensagemAprovacaoPresencaMesPt(aprovadoEm: string): string {
+  return `Aprovado em ${fmtPresencaHistoricoDataHora(aprovadoEm)}`;
+}
+
 /** Duas linhas fixas: Justificativa + Aprovação/Rejeição (atestado médico). */
 export function historicoLinhasJustificativaMedico(
   justificativa: PresencaJustificativaMeta | undefined,

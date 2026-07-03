@@ -9,6 +9,8 @@ import type {
   PerformanceHubMesaCadastro,
 } from "../lib/academyPerformanceHubCadastroPrefill";
 import type { PerformanceHubStaffOption, PerformanceHubTimeSlug } from "../lib/academyPerformanceHubTypes";
+import type { PerformanceHubStaffAgendaFonte } from "../lib/academyPerformanceHubAgenda";
+import { mapStaffRhParaAgendaFonte } from "../lib/academyPerformanceHubAgenda";
 import {
   mapRhFuncionarioParaPerformanceHubDados,
   mapTurnoRhParaPerformanceHub,
@@ -40,6 +42,12 @@ export function usePerformanceHubCadastro() {
   const [prefillPorStaffId, setPrefillPorStaffId] = useState<Record<string, PerformanceHubDadosPrefill>>({});
   const [prefillPorNome, setPrefillPorNome] = useState<Record<string, PerformanceHubDadosPrefill>>({});
   const [staffIdPorNome, setStaffIdPorNome] = useState<Record<string, string>>({});
+  const [staffAgendaPorTime, setStaffAgendaPorTime] = useState<
+    Record<PerformanceHubTimeSlug, PerformanceHubStaffAgendaFonte[]>
+  >({
+    game_presenter: [],
+    shuffler: [],
+  });
 
   useEffect(() => {
     let cancelado = false;
@@ -92,7 +100,7 @@ export function usePerformanceHubCadastro() {
         const { data, error } = await supabase
           .from("rh_funcionarios")
           .select(
-            "id, nome, status, escala, staff_turno, staff_estudio_slug, staff_estudio_slugs, staff_operadora_slug, staff_skills, org_time_id",
+            "id, nome, status, escala, staff_turno, staff_estudio_slug, staff_estudio_slugs, staff_operadora_slug, staff_skills, org_time_id, staff_live_no_estudio, data_inicio",
           )
           .in("org_time_id", timeIds)
           .in("status", ["ativo", "indisponivel"]);
@@ -107,6 +115,10 @@ export function usePerformanceHubCadastro() {
       if (cancelado) return;
 
       const nextStaff: Record<PerformanceHubTimeSlug, PerformanceHubStaffOption[]> = {
+        game_presenter: [],
+        shuffler: [],
+      };
+      const nextStaffAgenda: Record<PerformanceHubTimeSlug, PerformanceHubStaffAgendaFonte[]> = {
         game_presenter: [],
         shuffler: [],
       };
@@ -125,6 +137,9 @@ export function usePerformanceHubCadastro() {
           label: row.nome,
           turno,
         });
+        nextStaffAgenda[timeSlug].push(
+          mapStaffRhParaAgendaFonte({ ...row, turno }, timeSlug),
+        );
 
         const prefill = mapRhFuncionarioParaPerformanceHubDados(row, opParaEstudio, mesasCatalogo);
         nextPrefillId[row.id] = prefill;
@@ -134,11 +149,13 @@ export function usePerformanceHubCadastro() {
 
       for (const slug of Object.keys(nextStaff) as PerformanceHubTimeSlug[]) {
         nextStaff[slug].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+        nextStaffAgenda[slug].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
       }
 
       setEstudios(estudiosAtivos);
       setMesas(mesasCatalogo);
       setStaffPorTime(nextStaff);
+      setStaffAgendaPorTime(nextStaffAgenda);
       setPrefillPorStaffId(nextPrefillId);
       setPrefillPorNome(nextPrefillNome);
       setStaffIdPorNome(nextStaffIdNome);
@@ -173,16 +190,33 @@ export function usePerformanceHubCadastro() {
     [staffPorTime],
   );
 
+  const staffAgendaPorTimeFn = useCallback(
+    (time: PerformanceHubTimeSlug) => staffAgendaPorTime[time] ?? [],
+    [staffAgendaPorTime],
+  );
+
   return useMemo(
     () => ({
       loading,
       estudios,
       mesas,
       staffPorTime,
+      staffAgendaPorTime,
       getPrefill,
       resolveStaffId,
       staffOptionsPorTime,
+      staffAgendaPorTimeFn,
     }),
-    [estudios, getPrefill, loading, mesas, resolveStaffId, staffOptionsPorTime, staffPorTime],
+    [
+      estudios,
+      getPrefill,
+      loading,
+      mesas,
+      resolveStaffId,
+      staffAgendaPorTime,
+      staffAgendaPorTimeFn,
+      staffOptionsPorTime,
+      staffPorTime,
+    ],
   );
 }

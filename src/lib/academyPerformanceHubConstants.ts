@@ -10,6 +10,9 @@ export const PERFORMANCE_HUB_TIME_OPTIONS: {
 
 export const PERFORMANCE_HUB_TIME_DEFAULT: PerformanceHubTimeSlug = "game_presenter";
 
+/** Mínimo de avaliações concluídas por prestador e mês (GP e Shuffler). */
+export const PERFORMANCE_HUB_MIN_AVALIACOES_MES = 3;
+
 export const PERFORMANCE_HUB_STATUS_LABEL: Record<PerformanceHubStatus, string> = {
   pendente: "Pendente",
   em_analise: "Em Análise",

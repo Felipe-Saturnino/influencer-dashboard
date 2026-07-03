@@ -58,6 +58,7 @@ export function PortalRhDocumentosTabela({
   cienciaPendenteIds,
   cienciaExigidaIds,
   cienciaRegistradaEm,
+  mostrarColunaCiencia,
   onAbrir,
   sort,
   onSort,
@@ -66,6 +67,7 @@ export function PortalRhDocumentosTabela({
   cienciaPendenteIds: Set<string>;
   cienciaExigidaIds: Set<string>;
   cienciaRegistradaEm: Map<string, string>;
+  mostrarColunaCiencia: boolean;
   onAbrir: (id: string) => void;
   sort: { col: SortCol; dir: SortDir };
   onSort: (col: SortCol) => void;
@@ -102,7 +104,7 @@ export function PortalRhDocumentosTabela({
   };
 
   const sorted = [...rows].sort((a, b) => {
-    if (sort.col === "ciencia") {
+    if (mostrarColunaCiencia && sort.col === "ciencia") {
       const pendA = cienciaPendenteIds.has(a.id) ? 0 : 1;
       const pendB = cienciaPendenteIds.has(b.id) ? 0 : 1;
       if (pendA !== pendB) return sort.dir === "asc" ? pendA - pendB : pendB - pendA;
@@ -148,15 +150,17 @@ export function PortalRhDocumentosTabela({
               <th scope="col" style={dataTable.thHeader}>
                 Aplicável a
               </th>
-              <SortTableTh
-                label="Sua Ciência"
-                col="ciencia"
-                sortCol={sort.col}
-                sortDir={sort.dir}
-                onSort={(c) => onSort(c as SortCol)}
-                thStyle={dataTable.thHeader}
-                align="center"
-              />
+              {mostrarColunaCiencia ? (
+                <SortTableTh
+                  label="Sua Ciência"
+                  col="ciencia"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={(c) => onSort(c as SortCol)}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+              ) : null}
               <th scope="col" style={{ ...dataTable.thHeader, minWidth: 72 }}>
                 Ação
               </th>
@@ -229,17 +233,19 @@ export function PortalRhDocumentosTabela({
                     </div>
                   </td>
                   <td style={{ ...tdWrap, fontSize: 12 }}>{fmtAplicavelDocumento(row.aplicavel_a)}</td>
-                  <td style={tdWrap}>
-                    {!exigeCiencia ? (
-                      <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
-                    ) : pendente ? (
-                      <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
-                    ) : (
-                      <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, lineHeight: 1.35 }}>
-                        Ciente{cienteEm ? ` · ${fmtDataPt(cienteEm)}` : ""}
-                      </span>
-                    )}
-                  </td>
+                  {mostrarColunaCiencia ? (
+                    <td style={tdWrap}>
+                      {!exigeCiencia ? (
+                        <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
+                      ) : pendente ? (
+                        <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 12 }}>Pendente</span>
+                      ) : (
+                        <span style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, lineHeight: 1.35 }}>
+                          Ciente{cienteEm ? ` · ${fmtDataPt(cienteEm)}` : ""}
+                        </span>
+                      )}
+                    </td>
+                  ) : null}
                   <td style={tdCell}>
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <BtnIconeAcaoLinha

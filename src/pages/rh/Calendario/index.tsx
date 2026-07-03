@@ -97,10 +97,7 @@ import {
   usuarioEhLiderNaCadeiaPresenca,
 } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos } from "../../../types/rhOrganograma";
-import {
-  ModalAprovarPresencaMesCalendario,
-  mensagemAprovacaoPresencaMesPt,
-} from "./ModalAprovarPresencaMesCalendario";
+import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 import {
   ModalAprovacaoPresencaCalendario,
@@ -125,6 +122,7 @@ import {
   linhaPresencaDestaqueHoje,
   mesCalendarioPresencaFechado,
   mesCalendarioPresencaFuturo,
+  mensagemAprovacaoPresencaMesPt,
   presencaCorrecaoAnaliseStatusEfetivo,
   presencaCorrecaoCampoAlterado,
   construirIndiceJustificativaMedicoPorDia,
@@ -684,7 +682,6 @@ export default function RhCalendarioPage() {
   const [aprovacaoPresencaMes, setAprovacaoPresencaMes] = useState<PresencaAprovacaoMes | null>(null);
   const [loadingAprovacaoPresencaMes, setLoadingAprovacaoPresencaMes] = useState(false);
   const [modalAprovarPresencaMesAberto, setModalAprovarPresencaMesAberto] = useState(false);
-  const [aprovacaoPresencaMesTick, setAprovacaoPresencaMesTick] = useState(0);
   const [presencaAlvoModal, setPresencaAlvoModal] = useState<PresencaTurnoAlvo | null>(null);
   const [presencaHistoricoAlvo, setPresencaHistoricoAlvo] = useState<{
     dia: Date;
@@ -1221,7 +1218,6 @@ export default function RhCalendarioPage() {
     abaPrincipal,
     presencaFilterStaffIds,
     current,
-    aprovacaoPresencaMesTick,
   ]);
 
   useEffect(() => {
