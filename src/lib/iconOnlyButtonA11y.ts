@@ -16,29 +16,34 @@ export function propsBotaoFecharModal(): { "aria-label": string; title: string }
 }
 
 /**
- * Tooltip/`aria-label` de ação que abre modal — **somente** o título do modal
- * (mesmo texto do `ModalHeader` / `<h2>` canónico). Sem nome do registro, protocolo ou assunto.
+ * Tooltip/`aria-label` de botão só ícone que abre modal ou fluxo —
+ * **somente o rótulo canónico da ação** (ex.: «Editar Prestador», «Histórico do Prestador»).
+ * Sem nome do registro, protocolo, assunto ou data.
  */
-export function tooltipModal(tituloModal: string): string {
-  return tituloModal.trim();
+export function tooltipAcao(rotuloAcao: string): string {
+  return rotuloAcao.trim();
 }
 
-/** Título do `ModalAvaliarPerformanceHub` (`ModalHeader`). */
-export function tituloModalPerformanceHub(avaliadoNome: string, data: string): string {
-  return tooltipModal(`${avaliadoNome.trim()} · ${data.trim()}`);
+/** @deprecated Alias de `tooltipAcao`. */
+export function tooltipModal(rotuloAcao: string): string {
+  return tooltipAcao(rotuloAcao);
 }
 
-/** Título do `ModalVisualizarDocumento` (`ModalHeader`). */
+/** @deprecated Use `tooltipAcao` com rótulo fixo — ex.: «Ver avaliação». */
+export function tituloModalPerformanceHub(_avaliadoNome: string, _data: string): string {
+  return tooltipAcao("Ver avaliação");
+}
+
+/** @deprecated Use `tooltipAcao("Visualizar documento")`. */
 export function tituloModalDocumentoPortalRh(
-  codigo: string | null | undefined,
-  titulo: string,
-  versao: string | null | undefined,
+  _codigo: string | null | undefined,
+  _titulo: string,
+  _versao: string | null | undefined,
 ): string {
-  const parts = [codigo?.trim(), titulo.trim(), versao?.trim()].filter(Boolean);
-  return tooltipModal(parts.length > 0 ? parts.join(" - ") : titulo);
+  return tooltipAcao("Visualizar documento");
 }
 
-/** @deprecated Use `tooltipModal` — identificador do registro não entra no tooltip. */
-export function tooltipAcaoAbreModal(modalTitulo: string, _identificador?: string): string {
-  return tooltipModal(modalTitulo);
+/** @deprecated Use `tooltipAcao`. */
+export function tooltipAcaoAbreModal(rotuloAcao: string, _identificador?: string): string {
+  return tooltipAcao(rotuloAcao);
 }

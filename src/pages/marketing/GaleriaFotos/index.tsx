@@ -32,7 +32,8 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem, MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, MODAL_EXCLUIR_TITULO, textoModalExcluir, tooltipExcluir} from "../../../lib/excluirItemUi";
+import { propsBotaoIcone, tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
@@ -689,8 +690,7 @@ export default function GaleriaFotos() {
             <button
               type="button"
               onClick={() => setLightbox(f)}
-              aria-label={`Visualizar ${rotuloFoto}`}
-              title={`Visualizar ${rotuloFoto}`}
+              {...propsBotaoIcone(tooltipAcao("Visualizar foto"))}
               style={{
                 display: "block",
                 width: "100%",
@@ -741,8 +741,7 @@ export default function GaleriaFotos() {
                 <button
                   type="button"
                   onClick={() => void baixarFoto(f)}
-                  aria-label={`Baixar ${rotuloFoto}`}
-                  title={`Baixar ${rotuloFoto}`}
+                  {...propsBotaoIcone(tooltipAcao("Baixar foto"))}
                   style={{
                     width: 28,
                     height: 28,
@@ -760,7 +759,7 @@ export default function GaleriaFotos() {
                 </button>
                 {perm.canExcluirOk ? (
                   <BtnExcluirLinha
-                    descricaoItem={descricaoBotaoExcluir("foto", rotuloFoto)}
+                    labelAcao={tooltipExcluir("foto")}
                     onClick={() => setFotoExcluir(f)}
                   />
                 ) : null}
@@ -1435,7 +1434,7 @@ export default function GaleriaFotos() {
             <div>
               {perm.canExcluirOk && editEventoId ? (
                 <BtnExcluirComTexto
-                  descricaoItem={descricaoBotaoExcluir("evento", editEventoNome.trim() || "evento")}
+                  labelAcao={tooltipExcluir("evento")}
                   onClick={solicitarExcluirEvento}
                   disabled={salvandoEditEvento || excluindoEvento}
                 />

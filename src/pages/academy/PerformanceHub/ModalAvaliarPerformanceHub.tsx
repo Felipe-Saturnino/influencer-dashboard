@@ -566,13 +566,6 @@ export function ModalAvaliarPerformanceHub({
 
       {tipoAvaliacao === "performance_coach" ? (
         <>
-          {!somenteLeitura ? (
-            <p style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
-              Os campos preenchidos permanecem salvos ao trocar de aba. <strong>Salvar</strong> grava rascunho;{" "}
-              <strong>Concluir</strong> exige todos os campos obrigatórios (<CampoObrigatorioMark />).
-            </p>
-          ) : null}
-
           <div
             role="tablist"
             aria-label="Abas da avaliação de performance"
@@ -719,9 +712,6 @@ export function ModalAvaliarPerformanceHub({
                         </option>
                       ))}
                     </select>
-                    <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                      Número da mesa (ID Spin) — cadastro em Gestão de Estúdios → Mesas.
-                    </p>
                   </div>
                 </>
               ) : null}
@@ -761,9 +751,6 @@ export function ModalAvaliarPerformanceHub({
                   {videoNome ? (
                     <p style={{ fontSize: 12, color: t.text, marginTop: 6, fontFamily: FONT.body }}>{videoNome}</p>
                   ) : null}
-                  <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                    Envie a gravação da sessão avaliada (formatos de vídeo comuns).
-                  </p>
                 </>
               )}
             </div>

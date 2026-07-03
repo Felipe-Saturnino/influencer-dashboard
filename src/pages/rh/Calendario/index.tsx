@@ -68,7 +68,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
   ehReuniaoComRh,
@@ -3313,7 +3313,7 @@ export default function RhCalendarioPage() {
                                 <>
                                   {acoesLinha.acaoPrimaria === "aprovar" ? (
                                     <BtnIconeAcaoLinha
-                                      label={tooltipModal("APROVAÇÃO DE TURNO")}
+                                      label={tooltipAcao("APROVAÇÃO DE TURNO")}
                                       onClick={() => {
                                         setPresencaAlvoModal({
                                           funcionarioId: fid,
@@ -3334,7 +3334,7 @@ export default function RhCalendarioPage() {
                                   ) : null}
                                   {acoesLinha.acaoPrimaria === "justificar" ? (
                                     <BtnIconeAcaoLinha
-                                      label={tooltipModal("Justificar")}
+                                      label={tooltipAcao("Justificar")}
                                       onClick={() =>
                                         setPresencaJustificarAlvo({
                                           funcionarioId: fid,
@@ -3349,9 +3349,7 @@ export default function RhCalendarioPage() {
                                   ) : null}
                                   {acoesLinha.mostrarHistorico ? (
                                     <BtnIconeAcaoLinha
-                                      label={tooltipModal(
-                                        presencaJustificativaMedicoAprovada(gestaoDia) ? "Histórico" : "Histórico de presença",
-                                      )}
+                                      label={tooltipAcao("Histórico de presença")}
                                       onClick={() =>
                                         setPresencaHistoricoAlvo({
                                           dia,

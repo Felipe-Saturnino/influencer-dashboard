@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2, Pencil } from "lucide-react";
 import { BtnExcluirLinha } from "../../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../../components/OperacoesModal";
 import { supabase } from "../../../../lib/supabase";
 import { useApp } from "../../../../context/AppContext";
@@ -11,7 +10,8 @@ import { FONT } from "../../../../constants/theme";
 import { CtaCriarButton } from "../../../../components/CtaCriarButton";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SortTableTh } from "../../../../components/dashboard/SortTableTh";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../../lib/excluirItemUi";
+import { descricaoModalExcluirItem } from "../../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../../lib/iconOnlyButtonA11y";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -432,14 +432,14 @@ export default function FormacaoCompetenciasPainel({
     edit: () => void,
     del: () => void,
     tituloModalEdit: string,
-    descricaoExcluir: string,
+    labelAcaoExcluir: string,
   ) =>
     podeEditar ? (
       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-        <BtnIconeAcaoLinha label={tooltipModal(tituloModalEdit)} onClick={edit}>
+        <BtnIconeAcaoLinha label={tooltipAcao(tituloModalEdit)} onClick={edit}>
           <Pencil size={13} aria-hidden />
         </BtnIconeAcaoLinha>
-        <BtnExcluirLinha descricaoItem={descricaoExcluir} onClick={del} />
+        <BtnExcluirLinha labelAcao={labelAcaoExcluir} onClick={del} />
       </div>
     ) : (
       "—"
@@ -544,7 +544,7 @@ export default function FormacaoCompetenciasPainel({
                           () => setModalFormacao(row),
                           () => setDeleteTarget({ kind: "formacao", row }),
                           "Editar formação acadêmica",
-                          descricaoBotaoExcluir("formação", row.curso),
+                          tooltipAcao("Excluir formação acadêmica"),
                         )}
                       </td>
                     ) : null}
@@ -595,7 +595,7 @@ export default function FormacaoCompetenciasPainel({
                         () => setModalIdioma(row),
                         () => setDeleteTarget({ kind: "idioma", row }),
                         "Editar idioma",
-                        descricaoBotaoExcluir("idioma", nome),
+                        tooltipAcao("Excluir idioma"),
                       )
                     : null}
                 </li>
@@ -679,7 +679,7 @@ export default function FormacaoCompetenciasPainel({
                           () => setModalCurso(row),
                           () => setDeleteTarget({ kind: "curso", row }),
                           "Editar curso",
-                          descricaoBotaoExcluir("curso", row.nome),
+                          tooltipAcao("Excluir curso"),
                         )}
                       </td>
                     ) : null}
@@ -747,7 +747,7 @@ export default function FormacaoCompetenciasPainel({
                         () => setModalPortfolio(row),
                         () => setDeleteTarget({ kind: "portfolio", row }),
                         "Editar item do portfólio",
-                        descricaoBotaoExcluir("item de portfólio", row.titulo),
+                        tooltipAcao("Excluir item do portfólio"),
                       )
                     : null}
                 </li>

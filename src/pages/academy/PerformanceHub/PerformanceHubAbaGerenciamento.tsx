@@ -4,19 +4,25 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
-import type { PerformanceHubAgendaItem, PerformanceHubAvaliacao } from "../../../lib/academyPerformanceHubTypes";
+import type {
+  PerformanceHubAgendaItem,
+  PerformanceHubAvaliacao,
+  PerformanceHubTimeSlug,
+} from "../../../lib/academyPerformanceHubTypes";
 import { PERFORMANCE_HUB_STATUS_LABEL } from "../../../lib/academyPerformanceHubConstants";
+import { avaliacaoVisivelGerenciamentoAnalisar } from "../../../lib/academyPerformanceHubWorkflow";
 import { formatNotaPerformanceHub } from "../../../lib/academyPerformanceHubScoring";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tituloModalPerformanceHub } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
+  timeSelecionado: PerformanceHubTimeSlug;
   agenda: PerformanceHubAgendaItem[];
   onAvaliar: (row: PerformanceHubAvaliacao) => void;
   onAvaliarPorNome: (nome: string) => void;
@@ -27,6 +33,7 @@ type SortAgendaCol = "nome" | "turno" | "realizadas" | "pendentes";
 
 export function PerformanceHubAbaGerenciamento({
   avaliacoes,
+  timeSelecionado,
   agenda,
   onAvaliar,
   onAvaliarPorNome,
@@ -47,7 +54,7 @@ export function PerformanceHubAbaGerenciamento({
 
   const avaliacoesPendentes = useMemo(() => {
     return avaliacoes
-      .filter((row) => row.status === "pendente" || row.status === "em_analise" || row.status === "feedback")
+      .filter((row) => avaliacaoVisivelGerenciamentoAnalisar(row, timeSelecionado))
       .sort((a, b) => {
         let cmp = 0;
         if (sortAvaliacao.col === "data") cmp = toDateNumber(a.data) - toDateNumber(b.data);
@@ -56,7 +63,7 @@ export function PerformanceHubAbaGerenciamento({
         if (sortAvaliacao.col === "nota") cmp = (a.notaTotal ?? -1) - (b.notaTotal ?? -1);
         return sortAvaliacao.dir === "asc" ? cmp : -cmp;
       });
-  }, [avaliacoes, sortAvaliacao]);
+  }, [avaliacoes, sortAvaliacao, timeSelecionado]);
 
   const agendaFiltrada = useMemo(() => {
     const filtrada = agenda.filter((item) =>
@@ -91,7 +98,15 @@ export function PerformanceHubAbaGerenciamento({
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub="pendentes, em análise e em feedback">Analisar Avaliações</SectionTitle>
+        <SectionTitle
+          sub={
+            timeSelecionado === "game_presenter"
+              ? "rascunhos aguardando conclusão pelo avaliador"
+              : "pendentes, em análise e em feedback"
+          }
+        >
+          Analisar Avaliações
+        </SectionTitle>
 
         {avaliacoesPendentes.length === 0 ? (
           <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -119,7 +134,7 @@ export function PerformanceHubAbaGerenciamento({
                     <td style={dataTable.tdCenter}>{formatNotaPerformanceHub(row.notaTotal)}</td>
                     <td style={dataTable.tdCenter}>
                       <BtnIconeAcaoLinha
-                        label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
+                        label={tooltipAcao("Avaliar performance")}
                         onClick={() => onAvaliar(row)}
                       >
                         <ClipboardCheck size={14} aria-hidden />
@@ -174,7 +189,7 @@ export function PerformanceHubAbaGerenciamento({
                     <td style={dataTable.tdCenter}>{item.pendentes}</td>
                     <td style={dataTable.tdCenter}>
                       <BtnIconeAcaoLinha
-                        label={tituloModalPerformanceHub(item.nome, item.goLive)}
+                        label={tooltipAcao("Avaliar performance")}
                         onClick={() => onAvaliarPorNome(item.nome)}
                       >
                         <ClipboardCheck size={14} aria-hidden />

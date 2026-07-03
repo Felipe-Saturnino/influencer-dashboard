@@ -14,7 +14,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { FiltroBarPillButton } from "../../../components/dashboard";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
@@ -436,11 +436,11 @@ export default function RhSolicitacoesPage() {
                     )}
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <BtnIconeAcaoLinha label={tooltipModal("Ver solicitação")} onClick={() => setModalVer(row)}>
+                        <BtnIconeAcaoLinha label={tooltipAcao("Ver solicitação")} onClick={() => setModalVer(row)}>
                           <Eye size={14} aria-hidden />
                         </BtnIconeAcaoLinha>
                         {!exibirColunasAtendimento && row.status === "em_analise" && perm.canEditarOk ? (
-                          <BtnIconeAcaoLinha label={tooltipModal("Atender solicitação")} onClick={() => setModalAtender(row)}>
+                          <BtnIconeAcaoLinha label={tooltipAcao("Atender solicitação")} onClick={() => setModalAtender(row)}>
                             <Pencil size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}

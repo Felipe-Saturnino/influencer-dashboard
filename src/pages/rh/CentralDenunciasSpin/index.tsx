@@ -26,9 +26,9 @@ import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
 import { ModalAtenderDenuncia } from "./ModalsAtender";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -454,7 +454,7 @@ export default function CentralDenunciasSpin() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
                   {perm.canEditarOk ? (
                     <BtnIconeAcaoLinha
-                      label={tooltipModal(row.protocolo)}
+                      label={tooltipAcao("Atender denúncia")}
                       onClick={() => setModalAtender(row)}
                       style={{
                         background: ctaGradient(brand),
@@ -465,15 +465,15 @@ export default function CentralDenunciasSpin() {
                       <Pencil size={16} aria-hidden />
                     </BtnIconeAcaoLinha>
                   ) : null}
-                  <BtnIconeAcaoLinha label={tooltipModal(row.protocolo)} onClick={() => setModalVer(row)}>
+                  <BtnIconeAcaoLinha label={tooltipAcao("Ver denúncia")} onClick={() => setModalVer(row)}>
                     <Eye size={16} aria-hidden />
                   </BtnIconeAcaoLinha>
-                  <BtnIconeAcaoLinha label={tooltipModal(row.protocolo)} onClick={() => setModalHist(row)}>
+                  <BtnIconeAcaoLinha label={tooltipAcao("Histórico da denúncia")} onClick={() => setModalHist(row)}>
                     <History size={16} aria-hidden />
                   </BtnIconeAcaoLinha>
                   {perm.canExcluirOk ? (
                     <BtnExcluirComTexto
-                      descricaoItem={descricaoBotaoExcluir("denúncia", row.protocolo)}
+                      labelAcao={tooltipExcluir("denúncia")}
                       onClick={() => setDelRow(row)}
                     />
                   ) : null}

@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import { Eye, Plus, ScrollText } from "lucide-react";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { propsBotaoIcone, tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FONT } from "../../../constants/theme";
 import {
   SortTableTh,
@@ -246,8 +246,7 @@ export function PipelineTable({
                         {canEditar ? (
                           <button
                             type="button"
-                            aria-label={`Adicionar contato em ${row.nome}`}
-                            title={`Adicionar contato em ${row.nome}`}
+                            {...propsBotaoIcone(tooltipAcao("Adicionar contato"))}
                             onClick={() => onAddContato(row)}
                             style={{
                               width: 32,
@@ -365,12 +364,12 @@ export function PipelineTable({
                   {cfg.cols.includes("acao") ? (
                     <td style={dataTable.tdCenter}>
                       <BtnIconeAcaoLinha
-                        label={tooltipModal(`Registro — ${row.nome}`)}
+                        label={tooltipAcao("Registro da marca")}
                         onClick={() => onRegistro(row)}
                       >
                         <ScrollText size={13} aria-hidden />
                       </BtnIconeAcaoLinha>
-                      <BtnIconeAcaoLinha label={tooltipModal(row.nome)} onClick={() => onVer(row)}>
+                      <BtnIconeAcaoLinha label={tooltipAcao("Ver marca")} onClick={() => onVer(row)}>
                         <Eye size={13} aria-hidden />
                       </BtnIconeAcaoLinha>
                     </td>

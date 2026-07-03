@@ -790,7 +790,7 @@ KPIs e siglas (GGR, ROI, FTD, UAP, MoM, MTD, …); nomes de página/menu (Overvi
 ```
 
 - Ícones **decorativos** em células/badges: `aria-hidden="true"`.
-- Botões só ícone (linha de tabela): `aria-label` + **`title` obrigatório** (tooltip) — `propsBotaoIcone` / `BtnIconeAcaoLinha` em Brand sec. 8; ação que abre modal: **`tooltipModal(tituloModalHeader)`** (somente título do `ModalHeader`, sem nome do registro).
+- Botões só ícone (linha de tabela): `aria-label` + **`title` obrigatório** — `tooltipAcao` / `BtnIconeAcaoLinha` em Brand sec. 8; **somente rótulo da ação**, sem nome do registro.
 - Preferir **Lucide** em UI de página e no **menu lateral** (`menu.ts` — `LucideIcon` por item). Cabeçalho de página: `PageMenuIcon` alinhado ao mesmo ícone do menu.
 
 Lista estendida (modais, tabelas clicáveis, abas):
@@ -1212,7 +1212,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - `▶` para expandir linha — usar `ChevronRight`.
 - Tabela sem hover; `<th>` sem `scope`; `<tr>` com `tabIndex` sem teclado.
 - Botão só ícone (linha/modal) sem `title` ou sem `propsBotaoIcone` / componente canónico (`BtnIconeAcaoLinha`, `BtnExcluirLinha`, `BtnArquivarLinha`).
-- Tooltip de ação que abre modal com nome/protocolo/assunto do registro em vez do **título do modal** — usar `tooltipModal` (Brand §8).
+- Tooltip de ação com nome/protocolo/assunto do registro — usar `tooltipAcao` / `tooltipExcluir` (Brand §8).
 - Query de lista UGC sem `.limit()`.
 - CPF ou dado sensível sem máscara em tabela pública.
 - Expor infraestrutura (tabela, RPC, stack) na UI.

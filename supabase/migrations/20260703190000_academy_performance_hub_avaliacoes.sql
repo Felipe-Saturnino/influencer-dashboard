@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.academy_performance_hub_avaliacao (
   avaliado_staff_id   uuid        REFERENCES public.rh_funcionarios (id) ON DELETE SET NULL,
   avaliado_nome       text        NOT NULL,
   avaliador_nome      text        NOT NULL,
-  status              text        NOT NULL CHECK (status IN ('pendente', 'em_analise', 'feedback', 'concluida')),
+  status              text        NOT NULL CHECK (status IN ('pendente', 'rascunho', 'em_analise', 'feedback', 'concluida')),
   nota_total          numeric(5, 2),
   nota_imagem         numeric(5, 2),
   nota_comunicacao    numeric(5, 2),
@@ -89,17 +89,21 @@ CREATE TRIGGER trg_academy_performance_hub_avaliacao_updated
 
 ALTER TABLE public.academy_performance_hub_avaliacao ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS academy_performance_hub_avaliacao_select ON public.academy_performance_hub_avaliacao;
 CREATE POLICY academy_performance_hub_avaliacao_select ON public.academy_performance_hub_avaliacao
   FOR SELECT TO authenticated USING (public._academy_performance_hub_perm('view'));
 
+DROP POLICY IF EXISTS academy_performance_hub_avaliacao_insert ON public.academy_performance_hub_avaliacao;
 CREATE POLICY academy_performance_hub_avaliacao_insert ON public.academy_performance_hub_avaliacao
   FOR INSERT TO authenticated WITH CHECK (public._academy_performance_hub_perm('edit'));
 
+DROP POLICY IF EXISTS academy_performance_hub_avaliacao_update ON public.academy_performance_hub_avaliacao;
 CREATE POLICY academy_performance_hub_avaliacao_update ON public.academy_performance_hub_avaliacao
   FOR UPDATE TO authenticated
   USING (public._academy_performance_hub_perm('edit'))
   WITH CHECK (public._academy_performance_hub_perm('edit'));
 
+DROP POLICY IF EXISTS academy_performance_hub_avaliacao_delete ON public.academy_performance_hub_avaliacao;
 CREATE POLICY academy_performance_hub_avaliacao_delete ON public.academy_performance_hub_avaliacao
   FOR DELETE TO authenticated USING (public._academy_performance_hub_perm('delete'));
 

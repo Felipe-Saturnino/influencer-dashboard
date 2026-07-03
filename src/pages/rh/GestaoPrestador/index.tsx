@@ -18,6 +18,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
@@ -3303,7 +3304,8 @@ export default function RhPrestadoresPage() {
                           color: t.textMuted,
                           lineHeight: 1,
                         }}
-                        aria-label={`Remover ${p.nome} dos participantes`}
+                        aria-label={tooltipAcao("Remover participante")}
+                        title={tooltipAcao("Remover participante")}
                       >
                         <X size={14} aria-hidden />
                       </button>

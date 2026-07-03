@@ -15,7 +15,8 @@ import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaG
 import { roleParidadeInfluencer } from "../../../lib/staffRoles"
 import { ModalConfirmDelete, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal"
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha"
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi"
+import { descricaoModalExcluirItem } from "../../../lib/excluirItemUi"
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y"
 import { type BancaPerfilMapRow, type BancaRowDb } from "./bancaJogoTypes"
 import { STATUS_BANCA } from "./bancaJogoTypes"
 import { fmtMoeda, formatarCPFVisivel, mascaraCPF, periodoDoMes, rowNoMesSolicitacao } from "./bancaJogoHelpers"
@@ -455,10 +456,7 @@ export function BlocoSolicitacoes({
                         ) : null}
                         {showExcluir ? (
                           <BtnExcluirLinha
-                            descricaoItem={descricaoBotaoExcluir(
-                              "solicitação de",
-                              perfilMap[r.influencer_id]?.nome ?? "influencer",
-                            )}
+                            labelAcao={tooltipAcao("Excluir solicitação")}
                             disabled={excluindoId === r.id}
                             onClick={() => setConfirmExcluir(r)}
                           />

@@ -2,6 +2,7 @@ export type PerformanceHubTimeSlug = "game_presenter" | "shuffler";
 
 export type PerformanceHubStatus =
   | "pendente"
+  | "rascunho"
   | "em_analise"
   | "feedback"
   | "concluida";

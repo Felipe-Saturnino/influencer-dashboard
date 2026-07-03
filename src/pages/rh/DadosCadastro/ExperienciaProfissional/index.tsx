@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 import { BtnExcluirLinha } from "../../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../../components/OperacoesModal";
 import { supabase } from "../../../../lib/supabase";
 import { useApp } from "../../../../context/AppContext";
@@ -11,7 +11,7 @@ import { FONT } from "../../../../constants/theme";
 import { CtaCriarButton } from "../../../../components/CtaCriarButton";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SortTableTh, SkeletonTableRow } from "../../../../components/dashboard";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../../lib/excluirItemUi";
+import { descricaoModalExcluirItem, tooltipExcluir } from "../../../../lib/excluirItemUi";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
@@ -236,11 +236,11 @@ export default function ExperienciaProfissionalPainel({
                   {podeEditar ? (
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <BtnIconeAcaoLinha label={tooltipModal("Editar experiência")} onClick={() => setModal(row)}>
+                        <BtnIconeAcaoLinha label={tooltipAcao("Editar experiência")} onClick={() => setModal(row)}>
                           <Pencil size={13} aria-hidden />
                         </BtnIconeAcaoLinha>
                         <BtnExcluirLinha
-                          descricaoItem={descricaoBotaoExcluir("experiência", `${row.cargo} na ${row.empresa}`)}
+                          labelAcao={tooltipExcluir("experiência")}
                           onClick={() => setDeleteRow(row)}
                         />
                       </div>

@@ -7,10 +7,10 @@ import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
-import { descricaoBotaoExcluir } from "../../../lib/excluirItemUi";
+import { descricaoModalArquivarItem, tooltipArquivar } from "../../../lib/arquivarItemUi";
+import {tooltipExcluir} from "../../../lib/excluirItemUi";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -490,7 +490,7 @@ export function GerenciamentoInformativos({
                       >
                         {acoes.includes("editar") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Editar informativo")}
+                            label={tooltipAcao("Editar informativo")}
                             disabled={busy}
                             onClick={() => {
                               setEditId(row.id);
@@ -502,7 +502,7 @@ export function GerenciamentoInformativos({
                         ) : null}
                         {acoes.includes("aprovar") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Aprovar")}
+                            label={tooltipAcao("Aprovar")}
                             disabled={busy}
                             onClick={() => void aprovar(row)}
                           >
@@ -511,7 +511,7 @@ export function GerenciamentoInformativos({
                         ) : null}
                         {acoes.includes("arquivar") ? (
                           <BtnArquivarLinha
-                            descricaoItem={descricaoBotaoArquivar("informativo", row.assunto)}
+                            labelAcao={tooltipArquivar("informativo")}
                             disabled={busy}
                             onClick={() => {
                               setErroArquivar(null);
@@ -521,7 +521,7 @@ export function GerenciamentoInformativos({
                         ) : null}
                         {acoes.includes("historico") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal(`Histórico — ${row.assunto}`)}
+                            label={tooltipAcao("Histórico do informativo")}
                             disabled={busy}
                             onClick={() => setHistRef({ id: row.id, assunto: row.assunto })}
                           >
@@ -530,7 +530,7 @@ export function GerenciamentoInformativos({
                         ) : null}
                         {acoes.includes("excluir") ? (
                           <BtnExcluirLinha
-                            descricaoItem={descricaoBotaoExcluir("informativo", row.assunto)}
+                            labelAcao={tooltipExcluir("informativo")}
                             disabled={busy}
                             onClick={() => void excluir(row)}
                           />

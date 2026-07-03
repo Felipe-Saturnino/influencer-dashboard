@@ -12,6 +12,7 @@ import {
   type AcademyPortalAutorInfo,
 } from "../../../lib/academyPortalAutorMeta";
 import { PortalAcademyAssetLink } from "./PortalAcademyAssetLink";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalAcademy } from "../../../lib/academyPortalUi";
@@ -154,8 +155,8 @@ export function PostagemAcademyCard({
           <button
             type="button"
             onClick={() => setMediaAmpliada(true)}
-            aria-label={`Ampliar mídia de ${titulo}`}
-            title={`Ampliar mídia de ${titulo}`}
+            aria-label={tooltipAcao("Ampliar mídia")}
+            title={tooltipAcao("Ampliar mídia")}
             style={{
               padding: 0,
               border: `1px solid ${t.cardBorder}`,

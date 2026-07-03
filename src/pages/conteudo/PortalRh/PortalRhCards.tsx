@@ -10,6 +10,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 
 const PREVIEW_LEN = 200;
 
@@ -164,8 +165,8 @@ export function ComunicadoCard({
           <button
             type="button"
             onClick={() => setImagemAmpliada(true)}
-            aria-label={`Ampliar imagem do comunicado ${titulo}`}
-            title={`Ampliar imagem do comunicado ${titulo}`}
+            aria-label={tooltipAcao("Ampliar imagem")}
+            title={tooltipAcao("Ampliar imagem")}
             style={{
               padding: 0,
               border: `1px solid ${t.cardBorder}`,

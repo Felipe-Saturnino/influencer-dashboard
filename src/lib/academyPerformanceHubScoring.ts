@@ -34,7 +34,7 @@ export const PERFORMANCE_HUB_SCORING_GAME_PRESENTER: PerformanceHubScoringConfig
       { slug: "procedimentos_mesa", label: "Procedimentos à mesa", peso: 1.5, mesaTipo: null },
       { slug: "recolhimento_cartas", label: "Recolhimento de cartas", peso: 1, mesaTipo: "cartas" },
       { slug: "regras_jogos", label: "Regras dos jogos", peso: 1.5, mesaTipo: null },
-      { slug: "tecnica_giro", label: "Técnica de giro (roleta)", peso: 1.5, mesaTipo: "roleta" },
+      { slug: "tecnica_giro", label: "Técnica de giro", peso: 1.5, mesaTipo: "roleta" },
       { slug: "uso_id", label: "Uso de ID", peso: 1, mesaTipo: null },
       { slug: "velocidade", label: "Velocidade", peso: 1, mesaTipo: null },
     ],

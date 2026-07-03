@@ -42,7 +42,7 @@ import { ProspectoRegistroMeta } from "../../../components/ProspectoRegistroMeta
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 
 type ScoutModalTab = "contato" | "canais" | "anotacoes";
 
@@ -1440,7 +1440,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (
             <BtnExcluirComTexto
-              descricaoItem={descricaoBotaoExcluir("scout", scout.nome_artistico)}
+              labelAcao={tooltipExcluir("scout")}
               disabled={saving}
               onClick={() => setModalExcluirAberto(true)}
             />

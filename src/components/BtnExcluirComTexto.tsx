@@ -8,13 +8,12 @@ import {
   BTN_EXCLUIR_LINHA_BORDER_RADIUS,
   BTN_EXCLUIR_LINHA_COLOR,
   BTN_EXCLUIR_LINHA_ICON_SIZE,
-  labelTooltipExcluir,
 } from "../lib/excluirItemUi";
 import { propsBotaoIcone } from "../lib/iconOnlyButtonA11y";
 
 export interface BtnExcluirComTextoProps {
-  /** Fragmento após «Excluir» no tooltip — ex.: «vaga Analista», «denúncia PROTO-123». */
-  descricaoItem: string;
+  /** Rótulo da ação no tooltip — ex.: «Excluir Denúncia» (`tooltipExcluir`). */
+  labelAcao: string;
   onClick: () => void;
   disabled?: boolean;
   iconSize?: number;
@@ -22,17 +21,15 @@ export interface BtnExcluirComTextoProps {
 
 /** Botão Trash2 + texto «Excluir» — mesmo visual/função de `BtnExcluirLinha`, com rótulo visível. */
 export function BtnExcluirComTexto({
-  descricaoItem,
+  labelAcao,
   onClick,
   disabled = false,
   iconSize = BTN_EXCLUIR_LINHA_ICON_SIZE,
 }: BtnExcluirComTextoProps) {
-  const label = labelTooltipExcluir(descricaoItem);
-
   return (
     <button
       type="button"
-      {...propsBotaoIcone(label)}
+      {...propsBotaoIcone(labelAcao)}
       disabled={disabled}
       onClick={onClick}
       style={{

@@ -14,7 +14,7 @@ import {
 import { PlatLogo } from "../../../components/PlatLogo";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
@@ -248,7 +248,7 @@ function LiveCard({
             )}
             {podeExcluir && (
               <BtnExcluirLinha
-                descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
+                labelAcao={tooltipExcluir("live")}
                 disabled={isExcluindo}
                 onClick={() => setModalExcluirAberto(true)}
               />

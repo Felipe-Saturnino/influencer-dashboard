@@ -121,11 +121,22 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 | Status | Ações (gestor) | Ações (Próprios) |
 |--------|----------------|------------------|
 | Pendente | Ver, Histórico | — |
+| Rascunho | — (só Gerenciamento) | — |
 | Em Análise | Ver, **Analisar**, Histórico | — |
 | Feedback | Ver, Histórico | — |
 | Concluída | Ver, Histórico | Ver minha avaliação, Histórico |
 
-**Concluída não exibe Analisar** — só **Em Análise** abre modal editável com scoring.
+**Game Presenter — fluxo de status**
+
+| Etapa | Onde aparece | Status |
+|-------|--------------|--------|
+| Iniciar / Salvar no modal | Gerenciamento → Analisar Avaliações | **Rascunho** |
+| Concluir no modal | Avaliações | **Feedback** |
+| (futuro) fechamento | Avaliações | Concluída |
+
+Rascunho **não** entra na aba Avaliações. **Concluir** no modal GP grava **Feedback** (não Concluída). Shuffler mantém fluxo legado: nova avaliação **Em Análise**; **Concluir** → **Concluída**.
+
+**Concluída não exibe Analisar** — só **Em Análise** (Shuffler) abre modal editável com scoring a partir da aba Avaliações.
 
 Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (campos desabilitados; link **Assistir** no vídeo quando houver URL).
 

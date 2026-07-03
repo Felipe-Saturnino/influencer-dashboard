@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Eye } from "lucide-react";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tituloModalDocumentoPortalRh } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { SectionTitle } from "../../../components/dashboard";
 import { SortTableTh } from "../../../components/dashboard/SortTableTh";
@@ -249,7 +249,7 @@ export function PortalRhDocumentosTabela({
                   <td style={tdCell}>
                     <div style={{ display: "flex", justifyContent: "center" }}>
                       <BtnIconeAcaoLinha
-                        label={tituloModalDocumentoPortalRh(row.codigo, row.titulo, row.versao)}
+                        label={tooltipAcao("Visualizar documento")}
                         onClick={() => onAbrir(row.id)}
                       >
                         <Eye size={14} aria-hidden />

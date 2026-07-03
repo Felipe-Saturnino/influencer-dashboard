@@ -16,8 +16,8 @@ import { textoContemBusca } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -337,7 +337,7 @@ export default function GestaoOperadoras() {
                       <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "center" }}>
                         {perm.canEditarOk ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Editar Operadora")}
+                            label={tooltipAcao("Editar Operadora")}
                             onClick={() => {
                               setEditando(op);
                               setModalOpen(true);
@@ -348,7 +348,7 @@ export default function GestaoOperadoras() {
                         ) : null}
                         {perm.canExcluirOk ? (
                           <BtnExcluirLinha
-                            descricaoItem={descricaoBotaoExcluir("operadora", op.nome ?? op.slug)}
+                            labelAcao={tooltipExcluir("operadora")}
                             onClick={() => {
                               setErroExcluirOperadora(null);
                               setOperadoraParaExcluir(op);

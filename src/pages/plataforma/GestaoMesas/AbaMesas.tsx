@@ -15,8 +15,8 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import { supabase } from "../../../lib/supabase";
@@ -364,7 +364,7 @@ export function AbaMesas({
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                             {perm.canEditarOk && (
                               <BtnIconeAcaoLinha
-                                label={tooltipModal("Editar mesa")}
+                                label={tooltipAcao("Editar mesa")}
                                 onClick={() => {
                                   setEditando(r);
                                   setModalOpen(true);
@@ -375,7 +375,7 @@ export function AbaMesas({
                             )}
                             {perm.canExcluirOk && (
                               <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("mesa", r.nome_mesa)}
+                                labelAcao={tooltipExcluir("mesa")}
                                 onClick={() => {
                                   setDeleteError(null);
                                   setDeleteTarget(r);

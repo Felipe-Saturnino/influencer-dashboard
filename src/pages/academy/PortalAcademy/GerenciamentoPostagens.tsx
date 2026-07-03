@@ -5,9 +5,9 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
+import { descricaoModalArquivarItem, tooltipArquivar } from "../../../lib/arquivarItemUi";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -451,7 +451,7 @@ export function GerenciamentoPostagens({
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                         {acoes.includes("editar") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Editar postagem")}
+                            label={tooltipAcao("Editar postagem")}
                             onClick={() => {
                               setEditRef({ contentType: row.contentType, id: row.id });
                               setModalCriar(true);
@@ -462,14 +462,14 @@ export function GerenciamentoPostagens({
                         ) : null}
                         {acoes.includes("arquivar") ? (
                           <BtnArquivarLinha
-                            descricaoItem={descricaoBotaoArquivar("postagem", row.assunto)}
+                            labelAcao={tooltipArquivar("postagem")}
                             onClick={() => setAlvoArquivar(row)}
                             disabled={acaoLoading === row.id}
                           />
                         ) : null}
                         {acoes.includes("historico") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal(`Histórico — ${row.assunto}`)}
+                            label={tooltipAcao("Histórico da postagem")}
                             onClick={() =>
                               setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
                             }

@@ -2,7 +2,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { Download, Eye, Loader2, Upload } from "lucide-react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -163,8 +164,8 @@ export function PrestadorDocumentosGestaoPanel({
                                     href={url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    aria-label={`Visualizar ${m.file_name}`}
-                                    title={`Visualizar ${m.file_name}`}
+                                    aria-label={tooltipAcao("Visualizar documento")}
+                                    title={tooltipAcao("Visualizar documento")}
                                     style={{
                                       display: "inline-flex",
                                       alignItems: "center",
@@ -179,8 +180,8 @@ export function PrestadorDocumentosGestaoPanel({
                                   <a
                                     href={url}
                                     download={m.file_name}
-                                    aria-label={`Baixar ${m.file_name}`}
-                                    title={`Baixar ${m.file_name}`}
+                                    aria-label={tooltipAcao("Baixar documento")}
+                                    title={tooltipAcao("Baixar documento")}
                                     style={{ display: "inline-flex", alignItems: "center", gap: 4, color: t.textMuted }}
                                   >
                                     <Download size={14} aria-hidden />
@@ -190,7 +191,7 @@ export function PrestadorDocumentosGestaoPanel({
                               ) : null}
                               {podeEditar ? (
                                 <BtnExcluirLinha
-                                  descricaoItem={descricaoBotaoExcluir("documento", m.file_name)}
+                                  labelAcao={tooltipExcluir("documento")}
                                   onClick={() => setAlvoExcluir(m)}
                                 />
                               ) : null}

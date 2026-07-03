@@ -23,7 +23,7 @@ import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { tituloModalPerformanceHub, tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
 
 type Props = {
@@ -38,7 +38,7 @@ type Props = {
 type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "terceira";
 
 function scoreStatus(status: PerformanceHubStatus): number {
-  const order: PerformanceHubStatus[] = ["pendente", "em_analise", "feedback", "concluida"];
+  const order: PerformanceHubStatus[] = ["pendente", "rascunho", "em_analise", "feedback", "concluida"];
   return order.indexOf(status);
 }
 
@@ -296,7 +296,7 @@ export function PerformanceHubAbaAvaliacoes({
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
-                            label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
+                            label={tooltipAcao("Ver avaliação")}
                             onClick={() => onVer(row)}
                           >
                             <Eye size={14} aria-hidden />
@@ -304,7 +304,7 @@ export function PerformanceHubAbaAvaliacoes({
 
                           {!isProprios && row.status === "em_analise" ? (
                             <BtnIconeAcaoLinha
-                              label={tituloModalPerformanceHub(row.avaliadoNome, row.data)}
+                              label={tooltipAcao("Analisar avaliação")}
                               onClick={() => onAnalisar(row)}
                             >
                               <FileSearch size={14} aria-hidden />
@@ -312,7 +312,7 @@ export function PerformanceHubAbaAvaliacoes({
                           ) : null}
 
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Histórico da avaliação")}
+                            label={tooltipAcao("Histórico da avaliação")}
                             onClick={() => undefined}
                           >
                             <History size={14} aria-hidden />

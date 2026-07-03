@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import type { PerformanceHubDimensaoConfig } from "../../../lib/academyPerformanceHubTypes";
+import { orderedPerformanceHubConfigKeys } from "../../../lib/academyPerformanceHubConstants";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { CtaCriarButton, SectionTitle } from "../../../components/dashboard";
 
@@ -13,11 +14,22 @@ type Props = {
   onSalvar: () => void;
 };
 
+const COL_CRITERIO_WIDTH = "76%";
+const COL_PESO_WIDTH = "24%";
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "separate" as const,
+  borderSpacing: 0,
+  tableLayout: "fixed" as const,
+};
+
 export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [salvando, setSalvando] = useState(false);
+  const dimKeys = orderedPerformanceHubConfigKeys(config);
 
   function updatePesoDimensao(key: string, value: string) {
     const parsed = Number(value);
@@ -57,7 +69,7 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
       </SectionTitle>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {Object.keys(config).map((dimKey) => {
+        {dimKeys.map((dimKey) => {
           const dim = config[dimKey]!;
           return (
             <section
@@ -89,34 +101,40 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
               </div>
 
               <div className="app-table-wrap" style={{ borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
-                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+                <table style={tableStyle}>
+                  <colgroup>
+                    <col style={{ width: COL_CRITERIO_WIDTH }} />
+                    <col style={{ width: COL_PESO_WIDTH }} />
+                  </colgroup>
                   <caption style={{ display: "none" }}>Pesos de critérios da dimensão {dim.label}</caption>
                   <thead>
                     <tr>
-                      <th scope="col" style={thStyle(t)}>Critério</th>
-                      <th scope="col" style={thStyle(t)}>Peso</th>
+                      <th scope="col" style={thStyle(t, "left")}>Critério</th>
+                      <th scope="col" style={thStyle(t, "center")}>Peso</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dim.criterios.map((criterio, idx) => (
                       <tr key={criterio.slug} style={{ background: idx % 2 ? "color-mix(in srgb, var(--brand-secondary, #1e36f8) 8%, transparent)" : t.cardBg }}>
-                        <td style={tdStyle(t)}>
+                        <td style={tdStyle(t, "left")}>
                           {criterio.label}
                           {criterio.mesaTipo ? (
                             <span style={{ marginLeft: 8, color: t.textMuted, fontSize: 11 }}>({criterio.mesaTipo})</span>
                           ) : null}
                         </td>
-                        <td style={{ ...tdStyle(t), textAlign: "center" }}>
-                          <input
-                            type="number"
-                            min={0}
-                            max={10}
-                            step={0.5}
-                            value={criterio.peso}
-                            onChange={(e) => updatePesoCriterio(dimKey, criterio.slug, e.target.value)}
-                            style={inputStyle(t)}
-                            aria-label={`Peso do critério ${criterio.label}`}
-                          />
+                        <td style={tdStyle(t, "center")}>
+                          <div style={{ display: "flex", justifyContent: "center" }}>
+                            <input
+                              type="number"
+                              min={0}
+                              max={10}
+                              step={0.5}
+                              value={criterio.peso}
+                              onChange={(e) => updatePesoCriterio(dimKey, criterio.slug, e.target.value)}
+                              style={inputStyle(t)}
+                              aria-label={`Peso do critério ${criterio.label}`}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -158,12 +176,13 @@ function inputStyle(t: ReturnType<typeof useApp>["theme"]) {
     fontSize: 12,
     fontFamily: FONT.body,
     textAlign: "center" as const,
+    boxSizing: "border-box" as const,
   };
 }
 
-function thStyle(t: ReturnType<typeof useApp>["theme"]) {
+function thStyle(t: ReturnType<typeof useApp>["theme"], align: "left" | "center") {
   return {
-    textAlign: "center" as const,
+    textAlign: align,
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: "0.08em",
@@ -172,15 +191,21 @@ function thStyle(t: ReturnType<typeof useApp>["theme"]) {
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
     background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)",
+    overflow: "hidden" as const,
+    textOverflow: "ellipsis" as const,
   };
 }
 
-function tdStyle(t: ReturnType<typeof useApp>["theme"]) {
+function tdStyle(t: ReturnType<typeof useApp>["theme"], align: "left" | "center") {
   return {
+    textAlign: align,
     fontSize: 13,
     color: t.text,
     fontFamily: FONT.body,
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
+    verticalAlign: "middle" as const,
+    overflow: "hidden" as const,
+    wordBreak: "break-word" as const,
   };
 }

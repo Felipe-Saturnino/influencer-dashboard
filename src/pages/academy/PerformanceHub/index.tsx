@@ -22,6 +22,13 @@ import {
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import { usePerformanceHubAvaliacoes } from "../../../hooks/usePerformanceHubAvaliacoes";
+import {
+  avaliacaoEmAndamentoPorNome,
+  avaliacaoVisivelAbaAvaliacoes,
+  statusAposConcluirModal,
+  statusAposSalvarRascunho,
+  statusInicialNovaAvaliacao,
+} from "../../../lib/academyPerformanceHubWorkflow";
 import { buildPerformanceHubAgenda } from "../../../lib/academyPerformanceHubAgenda";
 import { PERFORMANCE_HUB_TIME_DEFAULT } from "../../../lib/academyPerformanceHubConstants";
 import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
@@ -155,7 +162,7 @@ export default function PerformanceHubPage() {
     return agenda.filter((row) => row.nome === selectedName);
   }, [avaliacoes, cadastro, mesAgenda, staffSelecionado, timeSelecionado]);
 
-  const avaliacoesFiltradas = useMemo(() => {
+  const avaliacoesFiltradasBase = useMemo(() => {
     const staffList = cadastro.staffOptionsPorTime(timeSelecionado);
     const selectedStaff = staffSelecionado[0];
     const selectedStaffName = selectedStaff
@@ -171,6 +178,11 @@ export default function PerformanceHubPage() {
       return true;
     });
   }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro, perm.canView, user?.name]);
+
+  const avaliacoesAbaAvaliacoes = useMemo(
+    () => avaliacoesFiltradasBase.filter(avaliacaoVisivelAbaAvaliacoes),
+    [avaliacoesFiltradasBase],
+  );
 
   const staffOptions = useMemo(
     () =>
@@ -217,7 +229,7 @@ export default function PerformanceHubPage() {
   }
 
   function handleSolicitarAvaliacaoPorNome(nome: string) {
-    const existente = avaliacoes.find((row) => row.time === timeSelecionado && row.avaliadoNome === nome);
+    const existente = avaliacaoEmAndamentoPorNome(avaliacoes, timeSelecionado, nome);
     if (existente) {
       handleAnalisarAvaliacao(existente);
       return;
@@ -230,7 +242,7 @@ export default function PerformanceHubPage() {
       avaliadoNome: nome,
       avaliadoStaffId: staffId,
       avaliadorNome: user?.name ?? "Performance Coach",
-      status: "em_analise",
+      status: statusInicialNovaAvaliacao(timeSelecionado),
       notaTotal: null,
       notaImagem: null,
       notaComunicacao: null,
@@ -309,7 +321,7 @@ export default function PerformanceHubPage() {
       <div role="tabpanel" id={`panel-performance-hub-${aba}`} aria-labelledby={`tab-performance-hub-${aba}`}>
         {aba === "avaliacoes" ? (
           <PerformanceHubAbaAvaliacoes
-            avaliacoes={avaliacoesFiltradas}
+            avaliacoes={avaliacoesAbaAvaliacoes}
             timeSelecionado={timeSelecionado}
             canView={perm.canView}
             roleUsuario={user?.role ?? "prestador"}
@@ -320,7 +332,8 @@ export default function PerformanceHubPage() {
 
         {aba === "gerenciamento" && perm.canEditarOk ? (
           <PerformanceHubAbaGerenciamento
-            avaliacoes={avaliacoesFiltradas}
+            avaliacoes={avaliacoesFiltradasBase}
+            timeSelecionado={timeSelecionado}
             agenda={agendaFiltrada}
             onAvaliar={handleAbrirAvaliacao}
             onAvaliarPorNome={handleSolicitarAvaliacaoPorNome}
@@ -353,7 +366,10 @@ export default function PerformanceHubPage() {
           onClose={() => setAvaliacaoEmEdicao(null)}
           onSalvar={(payload) => {
             void (async () => {
-              const atualizado = aplicarPayload(avaliacaoEmEdicao, payload);
+              const atualizado = {
+                ...aplicarPayload(avaliacaoEmEdicao, payload),
+                status: statusAposSalvarRascunho(avaliacaoEmEdicao),
+              };
               const salvo = await persistirAvaliacao(atualizado);
               setAvaliacaoEmEdicao(salvo);
             })();
@@ -362,7 +378,7 @@ export default function PerformanceHubPage() {
             void (async () => {
               const concluida = {
                 ...aplicarPayload(avaliacaoEmEdicao, payload),
-                status: "concluida" as const,
+                status: statusAposConcluirModal(avaliacaoEmEdicao.time),
               };
               await persistirAvaliacao(concluida);
               setAvaliacaoEmEdicao(null);

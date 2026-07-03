@@ -5,9 +5,9 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { BtnArquivarLinha } from "../../../components/BtnArquivarLinha";
 import { ModalConfirmArquivarPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoArquivar, descricaoModalArquivarItem } from "../../../lib/arquivarItemUi";
+import { descricaoModalArquivarItem, tooltipArquivar } from "../../../lib/arquivarItemUi";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -663,7 +663,7 @@ export function GerenciamentoPostagens({
                       <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                         {acoes.includes("editar") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Editar postagem")}
+                            label={tooltipAcao("Editar postagem")}
                             disabled={busy}
                             onClick={() => {
                               setEditRef({ contentType: row.contentType, id: row.id });
@@ -675,7 +675,7 @@ export function GerenciamentoPostagens({
                         ) : null}
                         {acoes.includes("aprovar") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal("Aprovar")}
+                            label={tooltipAcao("Aprovar")}
                             disabled={busy}
                             onClick={() => void aprovarPostagem(row)}
                           >
@@ -684,7 +684,7 @@ export function GerenciamentoPostagens({
                         ) : null}
                         {acoes.includes("arquivar") ? (
                           <BtnArquivarLinha
-                            descricaoItem={descricaoBotaoArquivar("postagem", row.assunto)}
+                            labelAcao={tooltipArquivar("postagem")}
                             disabled={busy}
                             onClick={() => {
                               setErroArquivar(null);
@@ -694,7 +694,7 @@ export function GerenciamentoPostagens({
                         ) : null}
                         {acoes.includes("historico") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipModal(`Histórico — ${row.assunto || "Postagem"}`)}
+                            label={tooltipAcao("Histórico da postagem")}
                             disabled={busy}
                             onClick={() =>
                               setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
