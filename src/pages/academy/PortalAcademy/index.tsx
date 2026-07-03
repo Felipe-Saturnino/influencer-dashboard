@@ -13,12 +13,20 @@ import {
 } from "lucide-react";
 import { stripHtmlText, type AcademyPostagemStatus } from "../../../lib/academyPortalWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
 import { PortalAcademyBlocoFiltros } from "./PortalAcademyBlocoFiltros";
 import { PostagemAcademyCard } from "./PortalAcademyCards";
+import { AcademyPortalManuaisTabela } from "./AcademyPortalManuaisTabela";
 import { ModalLerConteudo } from "./ModalLerConteudo";
+import {
+  academyManualReceiptKey,
+  manualExigeCiencia,
+  perfilAcademyPortalParticipaCiencia,
+  type AcademyPortalReadReceiptRow,
+} from "../../../lib/academyPortalCiencia";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -65,7 +73,14 @@ type PostagemBase = {
   categoria?: AcademyPortalCategoria | null;
 };
 
-type ManualRow = PostagemBase & { introducao: string };
+type ManualRow = PostagemBase & {
+  introducao: string;
+  codigo?: string | null;
+  versao?: string | null;
+  requires_acknowledgment?: boolean;
+  updated_at: string;
+  jogo_mesa?: string[] | null;
+};
 
 type SubtabCategoriaConfig = {
   key: string;
@@ -213,12 +228,52 @@ function filtrarListaPortal<T extends PostagemBase>(
         hitBuscaTexto(c.titulo) ||
         hitBuscaCorpo(c.corpo) ||
         hitBuscaTexto(c.categoria?.label) ||
-        hitBuscaTexto((c as { jogo_mesa?: string }).jogo_mesa),
+        normalizarJogosMesa((c as { jogo_mesa?: string | string[] | null }).jogo_mesa).some((j) =>
+          hitBuscaTexto(j),
+        ),
     );
   }
   return [...out].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
   );
+}
+
+function filtrarManuaisPortal(
+  list: ManualRow[],
+  filtroCat: string,
+  configs: SubtabCategoriaConfig[],
+  meses: MesCarrosselEntry[],
+  idxMes: number,
+  modoHistorico: boolean,
+  buscaDeb: string,
+  hitBuscaTexto: (s: string | null | undefined) => boolean,
+  hitBuscaCorpo: (html: string | null | undefined) => boolean,
+): ManualRow[] {
+  let out = list.filter((c) => isPostagemPublica(c.status));
+  if (!modoHistorico) {
+    const mesSel = meses[idxMes];
+    out = out.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+  }
+  if (filtroCat !== "todos") {
+    const cfg = configs.find((x) => x.key === filtroCat);
+    if (cfg) out = out.filter((c) => itemNaSubtabCategoria(c.categoria, cfg));
+  }
+  if (buscaDeb) {
+    out = out.filter(
+      (c) =>
+        hitBuscaTexto(c.titulo) ||
+        hitBuscaTexto(c.codigo) ||
+        hitBuscaCorpo(c.corpo) ||
+        hitBuscaTexto(c.introducao) ||
+        hitBuscaTexto(c.categoria?.label) ||
+        normalizarJogosMesa(c.jogo_mesa).some((j) => hitBuscaTexto(j)),
+    );
+  }
+  return [...out].sort((a, b) => {
+    const codA = a.codigo ?? a.titulo;
+    const codB = b.codigo ?? b.titulo;
+    return codA.localeCompare(codB, "pt-BR", { numeric: true });
+  });
 }
 
 export default function PortalAcademyPage() {
@@ -240,9 +295,10 @@ export default function PortalAcademyPage() {
   const [categoriasDica, setCategoriasDica] = useState<AcademyPortalCategoria[]>([]);
   const [categoriasManual, setCategoriasManual] = useState<AcademyPortalCategoria[]>([]);
   const [comunicados, setComunicados] = useState<PostagemBase[]>([]);
-  const [dicas, setDicas] = useState<(PostagemBase & { jogo_mesa?: string | null })[]>([]);
-  const [manuais, setManuais] = useState<(ManualRow & { jogo_mesa?: string | null })[]>([]);
+  const [dicas, setDicas] = useState<(PostagemBase & { jogo_mesa?: string[] | null })[]>([]);
+  const [manuais, setManuais] = useState<ManualRow[]>([]);
   const [metaAutores, setMetaAutores] = useState<Record<string, AcademyPortalAutorInfo>>({});
+  const [receipts, setReceipts] = useState<Map<string, AcademyPortalReadReceiptRow>>(new Map());
 
   const [filtroCatCom, setFiltroCatCom] = useState("todos");
   const [filtroCatDica, setFiltroCatDica] = useState("todos");
@@ -258,6 +314,10 @@ export default function PortalAcademyPage() {
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
+  const [sortManual, setSortManual] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
+    col: "codigo",
+    dir: "asc",
+  });
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -294,16 +354,26 @@ export default function PortalAcademyPage() {
     const visivel = (status: AcademyPostagemStatus | null | undefined) => isPostagemPublica(status);
 
     const comRows = ((comRes.data ?? []) as PostagemBase[]).filter((c) => visivel(c.status));
-    const dicaRows = ((dicaRes.data ?? []) as (PostagemBase & { jogo_mesa?: string | null })[]).filter((d) =>
+    const dicaRows = ((dicaRes.data ?? []) as (PostagemBase & { jogo_mesa?: string[] | null })[]).filter((d) =>
       visivel(d.status),
     );
-    const manualRows = ((manualRes.data ?? []) as (ManualRow & { jogo_mesa?: string | null })[]).filter((m) =>
-      visivel(m.status),
-    );
+    const manualRows = ((manualRes.data ?? []) as ManualRow[]).filter((m) => visivel(m.status));
 
     setComunicados(comRows);
     setDicas(dicaRows);
     setManuais(manualRows);
+
+    const { data: recData } = await supabase
+      .from("academy_portal_read_receipt")
+      .select("content_id, read_at, acknowledged_at")
+      .eq("user_id", user.id);
+
+    const recMap = new Map<string, AcademyPortalReadReceiptRow>();
+    for (const r of recData ?? []) {
+      const row = r as AcademyPortalReadReceiptRow;
+      recMap.set(academyManualReceiptKey(row.content_id), row);
+    }
+    setReceipts(recMap);
 
     const userIds = new Set<string>();
     for (const row of [...comRows, ...dicaRows, ...manualRows]) {
@@ -389,10 +459,100 @@ export default function PortalAcademyPage() {
     [dicas, filtroCatDica, modoHistorico, mesesDica, idxMesDica, buscaDeb, hitBuscaTexto, hitBuscaCorpo],
   );
 
-  const manuaisLista = useMemo(
-    () => filtrarListaPortal(manuais, filtroCatManual, SUBTABS_DICA_MANUAL, mesesManual, idxMesManual, modoHistorico, buscaDeb, hitBuscaTexto, hitBuscaCorpo),
+  const manuaisFiltrados = useMemo(
+    () =>
+      filtrarManuaisPortal(
+        manuais,
+        filtroCatManual,
+        SUBTABS_DICA_MANUAL,
+        mesesManual,
+        idxMesManual,
+        modoHistorico,
+        buscaDeb,
+        hitBuscaTexto,
+        hitBuscaCorpo,
+      ),
     [manuais, filtroCatManual, modoHistorico, mesesManual, idxMesManual, buscaDeb, hitBuscaTexto, hitBuscaCorpo],
   );
+
+  const usuarioVeColunaCiencia = perfilAcademyPortalParticipaCiencia(perm.canView !== "nao");
+
+  const cienciaExigidaManualIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of manuaisFiltrados) {
+      if (manualExigeCiencia(m)) set.add(m.id);
+    }
+    return set;
+  }, [manuaisFiltrados]);
+
+  const cienciaPendenteManualIds = useMemo(() => {
+    const set = new Set<string>();
+    if (!user?.id) return set;
+    for (const id of cienciaExigidaManualIds) {
+      if (!receipts.get(academyManualReceiptKey(id))?.acknowledged_at) {
+        set.add(id);
+      }
+    }
+    return set;
+  }, [cienciaExigidaManualIds, receipts, user?.id]);
+
+  const cienciaRegistradaEm = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of manuaisFiltrados) {
+      const rec = receipts.get(academyManualReceiptKey(m.id));
+      if (rec?.acknowledged_at) map.set(m.id, rec.acknowledged_at);
+    }
+    return map;
+  }, [manuaisFiltrados, receipts]);
+
+  async function marcarLidoECienteManual(contentId: string) {
+    if (!user?.id) return;
+    const key = academyManualReceiptKey(contentId);
+    const now = new Date().toISOString();
+    const existing = receipts.get(key);
+    if (existing?.acknowledged_at) return;
+    if (existing) {
+      const { error } = await supabase
+        .from("academy_portal_read_receipt")
+        .update({ read_at: existing.read_at ?? now, acknowledged_at: now })
+        .eq("content_id", contentId)
+        .eq("user_id", user.id);
+      if (!error) {
+        setReceipts((prev) => {
+          const n = new Map(prev);
+          n.set(key, { ...existing, read_at: existing.read_at ?? now, acknowledged_at: now });
+          return n;
+        });
+      }
+    } else {
+      const { error } = await supabase.from("academy_portal_read_receipt").insert({
+        content_id: contentId,
+        user_id: user.id,
+        read_at: now,
+        acknowledged_at: now,
+      });
+      if (!error) {
+        setReceipts((prev) => {
+          const n = new Map(prev);
+          n.set(key, { content_id: contentId, read_at: now, acknowledged_at: now });
+          return n;
+        });
+      }
+    }
+  }
+
+  function abrirManual(id: string) {
+    const manual = manuais.find((m) => m.id === id);
+    if (!manual) return;
+    setModalManual(manual);
+  }
+
+  function handleSortManual(col: "codigo" | "titulo" | "versao" | "ciencia") {
+    setSortManual((prev) => ({
+      col,
+      dir: prev.col === col && prev.dir === "asc" ? "desc" : "asc",
+    }));
+  }
 
   const linhaAbas = (
     <div
@@ -531,8 +691,12 @@ export default function PortalAcademyPage() {
         onModoHistoricoChange={setModoHistorico}
         busca={busca}
         onBuscaChange={setBusca}
-        buscaPlaceholder={PAGE_SEARCH.portalAcademy}
-        buscaAriaLabel="Pesquisar postagens por palavras-chave"
+        buscaPlaceholder={aba === "manuais" ? PAGE_SEARCH.portalAcademy : PAGE_SEARCH.portalAcademy}
+        buscaAriaLabel={
+          aba === "manuais"
+            ? "Pesquisar manuais por código, título ou palavra-chave"
+            : "Pesquisar postagens por palavras-chave"
+        }
         linhaAbas={linhaAbas}
         linhaSubabas={linhaSubabas}
       />
@@ -591,7 +755,7 @@ export default function PortalAcademyPage() {
                   titulo={d.titulo}
                   corpo={d.corpo}
                   categoria={d.categoria}
-                  jogoMesa={d.jogo_mesa}
+                  jogosMesa={d.jogo_mesa}
                   imagemStoragePath={d.imagem_storage_path}
                   anexoStoragePath={d.anexo_storage_path}
                   anexoNome={d.anexo_nome}
@@ -605,29 +769,30 @@ export default function PortalAcademyPage() {
         ) : null}
 
         {!loading && aba === "manuais" ? (
-          manuaisLista.length === 0 ? (
+          manuaisFiltrados.length === 0 ? (
             renderListaVazia()
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {manuaisLista.map((m) => (
-                <PostagemAcademyCard
-                  key={m.id}
-                  titulo={m.titulo}
-                  corpo={m.corpo}
-                  introducao={m.introducao}
-                  categoria={m.categoria}
-                  jogoMesa={m.jogo_mesa}
-                  imagemStoragePath={m.imagem_storage_path}
-                  anexoStoragePath={m.anexo_storage_path}
-                  anexoNome={m.anexo_nome}
-                  autorInfo={metaAutores[autorIdPostagem(m) ?? ""]}
-                  dataPublicacao={m.published_at}
-                  cardShadow={cardShadow}
-                  mostrarBotaoVer
-                  onVerCompleto={() => setModalManual(m)}
-                />
-              ))}
-            </div>
+            <AcademyPortalManuaisTabela
+              rows={manuaisFiltrados.map((m) => ({
+                id: m.id,
+                codigo: m.codigo ?? null,
+                versao: m.versao ?? null,
+                titulo: m.titulo,
+                categoriaLabel: m.categoria?.label ?? null,
+                categoriaAccent: m.categoria?.accent_hex ?? null,
+                jogosMesa: m.jogo_mesa ?? null,
+                published_at: m.published_at ?? null,
+                updated_at: m.updated_at,
+                requires_acknowledgment: m.requires_acknowledgment !== false,
+              }))}
+              cienciaPendenteIds={cienciaPendenteManualIds}
+              cienciaExigidaIds={cienciaExigidaManualIds}
+              cienciaRegistradaEm={cienciaRegistradaEm}
+              mostrarColunaCiencia={usuarioVeColunaCiencia}
+              onAbrir={abrirManual}
+              sort={sortManual}
+              onSort={handleSortManual}
+            />
           )
         ) : null}
 
@@ -659,7 +824,10 @@ export default function PortalAcademyPage() {
           corpo={modalManual.corpo}
           anexoStoragePath={modalManual.anexo_storage_path}
           anexoNome={modalManual.anexo_nome}
+          exigeCiencia={manualExigeCiencia(modalManual)}
+          jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
           onClose={() => setModalManual(null)}
+          onLidoECiente={() => void marcarLidoECienteManual(modalManual.id)}
         />
       ) : null}
     </div>

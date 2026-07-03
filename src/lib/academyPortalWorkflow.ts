@@ -85,7 +85,10 @@ export type SnapshotPostagemEdicaoAcademy = {
   titulo: string;
   introducao: string;
   descricao: string;
-  jogoMesa: string;
+  jogoMesa: string[];
+  codigo: string;
+  versao: string;
+  exigeCiencia: string;
   imagemPath: string | null;
   anexoPath: string | null;
   anexoNome: string | null;
@@ -107,11 +110,11 @@ export function validarPublicarDica(fields: {
   tipoDica: string;
   titulo: string;
   descricao: string;
-  jogoMesa: string;
+  jogoMesa: string[];
 }): Record<string, string> {
   const errs: Record<string, string> = {};
   if (!fields.tipoDica.trim()) errs.tipoDica = "Selecione o tipo de dica.";
-  if (fields.tipoDica === "Jogos" && !fields.jogoMesa.trim()) errs.jogoMesa = "Selecione o jogo.";
+  if (fields.tipoDica === "Jogos" && fields.jogoMesa.length === 0) errs.jogoMesa = "Selecione ao menos um jogo.";
   if (!fields.titulo.trim()) errs.titulo = "Informe o título.";
   if (!stripHtmlText(fields.descricao)) errs.descricao = "Informe a descrição.";
   return errs;
@@ -122,14 +125,16 @@ export function validarPublicarManual(fields: {
   titulo: string;
   introducao: string;
   descricao: string;
-  jogoMesa: string;
+  jogoMesa: string[];
+  exigeCiencia: string;
 }): Record<string, string> {
   const errs: Record<string, string> = {};
   if (!fields.tipoManual.trim()) errs.tipoManual = "Selecione o tipo de manual.";
-  if (fields.tipoManual === "Jogos" && !fields.jogoMesa.trim()) errs.jogoMesa = "Selecione o jogo.";
+  if (fields.tipoManual === "Jogos" && fields.jogoMesa.length === 0) errs.jogoMesa = "Selecione ao menos um jogo.";
   if (!fields.titulo.trim()) errs.titulo = "Informe o título.";
   if (!fields.introducao.trim()) errs.introducao = "Informe a introdução.";
   if (!stripHtmlText(fields.descricao)) errs.descricao = "Informe a descrição.";
+  if (!fields.exigeCiencia.trim()) errs.exigeCiencia = "Informe se exige ciência.";
   return errs;
 }
 
@@ -184,7 +189,12 @@ export function diffEdicaoRascunho(
   if (antes.titulo.trim() !== depois.titulo.trim()) alteracoes.push("Título alterado");
   if (antes.introducao.trim() !== depois.introducao.trim()) alteracoes.push("Introdução alterada");
   if (stripHtmlText(antes.descricao) !== stripHtmlText(depois.descricao)) alteracoes.push("Descrição alterada");
-  if (antes.jogoMesa !== depois.jogoMesa) alteracoes.push("Jogo alterado");
+  if (antes.jogoMesa.length !== depois.jogoMesa.length || antes.jogoMesa.some((j, i) => j !== depois.jogoMesa[i])) {
+    alteracoes.push("Jogos alterados");
+  }
+  if (antes.codigo.trim() !== depois.codigo.trim()) alteracoes.push("Código alterado");
+  if (antes.versao.trim() !== depois.versao.trim()) alteracoes.push("Versão alterada");
+  if (antes.exigeCiencia !== depois.exigeCiencia) alteracoes.push("Exige ciência alterado");
   if (antes.imagemPath !== depois.imagemPath) alteracoes.push(depois.imagemPath ? "Imagem/vídeo alterado" : "Imagem/vídeo removido");
   if (antes.anexoPath !== depois.anexoPath || antes.anexoNome !== depois.anexoNome) {
     alteracoes.push(depois.anexoPath ? "Anexo alterado" : "Anexo removido");

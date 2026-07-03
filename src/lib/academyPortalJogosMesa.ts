@@ -20,3 +20,15 @@ export async function carregarJogosMesasEstudio(): Promise<string[]> {
   }
   return [...set].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 }
+
+/** Normaliza coluna legada (text) ou array do Postgres para lista de jogos. */
+export function normalizarJogosMesa(valor: string | string[] | null | undefined): string[] {
+  if (valor == null) return [];
+  if (Array.isArray(valor)) {
+    return [...new Set(valor.map((j) => j.trim()).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b, "pt-BR", { sensitivity: "base" }),
+    );
+  }
+  const t = valor.trim();
+  return t ? [t] : [];
+}

@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalUi.ts`**.
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalUi.ts`**.
 
 ---
 
@@ -61,10 +61,14 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 ### Modal Nova Postagem — tipos
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo, Anexo
-- **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, Qual Jogo? (se Jogos — lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo, Anexo
-- **Manuais:** Tipo*, Qual Jogo? (se Jogos), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo
+- **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo, Anexo
+- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Código** (opcional), **Versão*** (default 1.0), **Exige ciência do colaborador?***, Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo
 
-Jogos do select **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente.
+### Aba Manuais (leitura)
+
+Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** com botão **Lido e Ciente** quando `requires_acknowledgment = true`. Registro em `academy_portal_read_receipt`.
+
+Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
 
 ### Workflow Gerenciamento
 

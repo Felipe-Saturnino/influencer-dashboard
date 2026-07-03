@@ -52,12 +52,14 @@ export type AcademyPortalCategoriaCard = {
   accent_hex: string;
 };
 
+import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
+
 export function PostagemAcademyCard({
   titulo,
   corpo,
   introducao,
   categoria,
-  jogoMesa,
+  jogosMesa,
   imagemStoragePath,
   anexoStoragePath,
   anexoNome,
@@ -71,7 +73,7 @@ export function PostagemAcademyCard({
   corpo: string;
   introducao?: string | null;
   categoria: AcademyPortalCategoriaCard | null | undefined;
-  jogoMesa?: string | null;
+  jogosMesa?: string[] | string | null;
   imagemStoragePath: string | null | undefined;
   anexoStoragePath: string | null | undefined;
   anexoNome: string | null | undefined;
@@ -86,6 +88,7 @@ export function PostagemAcademyCard({
   const accent = categoria?.accent_hex ?? "#7c3aed";
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaAmpliada, setMediaAmpliada] = useState(false);
+  const jogosTags = normalizarJogosMesa(jogosMesa);
   const isVideo = isVideoPath(imagemStoragePath);
 
   useEffect(() => {
@@ -121,7 +124,11 @@ export function PostagemAcademyCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
             {categoria ? <span style={tagStyle(accent)}>{categoria.label}</span> : null}
-            {jogoMesa?.trim() ? <span style={tagStyle("#22c55e")}>{jogoMesa.trim()}</span> : null}
+            {jogosTags.map((jogo) => (
+              <span key={jogo} style={tagStyle("#22c55e")}>
+                {jogo}
+              </span>
+            ))}
           </div>
           <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
           <div style={{ fontSize: 13, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>

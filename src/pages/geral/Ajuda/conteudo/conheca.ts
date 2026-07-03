@@ -724,7 +724,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova postagem",
         texto:
-          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — lista alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.",
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Manuais** incluem **Código** (opcional), **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição**.",
+      },
+      {
+        subtitulo: "Manuais — tabela e ciência",
+        texto:
+          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
       },
     ],
   },

@@ -9,7 +9,8 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadAcademyPortalAsset } from "../../../lib/academyPortalPostagemFiles";
-import { carregarJogosMesasEstudio } from "../../../lib/academyPortalJogosMesa";
+import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
+import { AcademyPortalJogosMultiSelect } from "./AcademyPortalJogosMultiSelect";
 import {
   contentTypeFromTipoUi,
   diffEdicaoRascunho,
@@ -71,7 +72,10 @@ export function ModalCriarPostagem({
   const [titulo, setTitulo] = useState("");
   const [introducao, setIntroducao] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [jogoMesa, setJogoMesa] = useState("");
+  const [jogosMesa, setJogosMesa] = useState<string[]>([]);
+  const [codigoManual, setCodigoManual] = useState("");
+  const [versaoManual, setVersaoManual] = useState("1.0");
+  const [exigeCiencia, setExigeCiencia] = useState("sim");
   const [jogosOpcoes, setJogosOpcoes] = useState<string[]>([]);
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [anexoFile, setAnexoFile] = useState<File | null>(null);
@@ -94,13 +98,16 @@ export function ModalCriarPostagem({
         titulo,
         introducao,
         descricao,
-        jogoMesa,
+        jogoMesa: jogosMesa,
+        codigo: codigoManual,
+        versao: versaoManual,
+        exigeCiencia,
         imagemPath: paths.imagem,
         anexoPath: paths.anexo,
         anexoNome: paths.anexoNome,
       };
     },
-    [tipoPostagem, tipoSubcategoria, titulo, introducao, descricao, jogoMesa],
+    [tipoPostagem, tipoSubcategoria, titulo, introducao, descricao, jogosMesa, codigoManual, versaoManual, exigeCiencia],
   );
 
   const resetForm = useCallback(() => {
@@ -109,7 +116,10 @@ export function ModalCriarPostagem({
     setTitulo("");
     setIntroducao("");
     setDescricao("");
-    setJogoMesa("");
+    setJogosMesa([]);
+    setCodigoManual("");
+    setVersaoManual("1.0");
+    setExigeCiencia("sim");
     setImagemFile(null);
     setAnexoFile(null);
     setImagemPath(null);
@@ -167,7 +177,10 @@ export function ModalCriarPostagem({
         imagem_storage_path: string | null;
         anexo_storage_path: string | null;
         anexo_nome: string | null;
-        jogo_mesa?: string | null;
+        jogo_mesa?: string | string[] | null;
+        codigo?: string | null;
+        versao?: string | null;
+        requires_acknowledgment?: boolean | null;
         categoria?: { slug: string; scope: string } | { slug: string; scope: string }[] | null;
       };
 
@@ -182,7 +195,10 @@ export function ModalCriarPostagem({
       setTitulo(row.titulo);
       setIntroducao(row.introducao ?? "");
       setDescricao(row.corpo);
-      setJogoMesa(row.jogo_mesa ?? "");
+      setJogosMesa(normalizarJogosMesa(row.jogo_mesa));
+      setCodigoManual(row.codigo?.trim() ?? "");
+      setVersaoManual(row.versao?.trim() || "1.0");
+      setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
@@ -196,7 +212,10 @@ export function ModalCriarPostagem({
         titulo: row.titulo,
         introducao: row.introducao ?? "",
         descricao: row.corpo,
-        jogoMesa: row.jogo_mesa ?? "",
+        jogoMesa: normalizarJogosMesa(row.jogo_mesa),
+        codigo: row.codigo?.trim() ?? "",
+        versao: row.versao?.trim() || "1.0",
+        exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
         imagemPath: row.imagem_storage_path,
         anexoPath: row.anexo_storage_path,
         anexoNome: row.anexo_nome,
@@ -240,9 +259,16 @@ export function ModalCriarPostagem({
       if (tipoPostagem === "comunicado") {
         errs = validarPublicarComunicado({ tipoComunicado: tipoSubcategoria, titulo, descricao });
       } else if (tipoPostagem === "dica") {
-        errs = validarPublicarDica({ tipoDica: tipoSubcategoria, titulo, descricao, jogoMesa });
+        errs = validarPublicarDica({ tipoDica: tipoSubcategoria, titulo, descricao, jogoMesa: jogosMesa });
       } else {
-        errs = validarPublicarManual({ tipoManual: tipoSubcategoria, titulo, introducao, descricao, jogoMesa });
+        errs = validarPublicarManual({
+          tipoManual: tipoSubcategoria,
+          titulo,
+          introducao,
+          descricao,
+          jogoMesa: jogosMesa,
+          exigeCiencia,
+        });
       }
       setFieldErr(errs);
       if (Object.keys(errs).length > 0) return;
@@ -320,7 +346,7 @@ export function ModalCriarPostagem({
       } else if (tipoPostagem === "dica") {
         const payload = {
           ...basePayload,
-          jogo_mesa: tipoSubcategoria === "Jogos" ? jogoMesa.trim() || null : null,
+          jogo_mesa: tipoSubcategoria === "Jogos" && jogosMesa.length > 0 ? jogosMesa : null,
         };
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("academy_portal_dica").update(payload).eq("id", editRef.id);
@@ -337,7 +363,10 @@ export function ModalCriarPostagem({
         const payload = {
           ...basePayload,
           introducao: introducao.trim() || "—",
-          jogo_mesa: tipoSubcategoria === "Jogos" ? jogoMesa.trim() || null : null,
+          jogo_mesa: tipoSubcategoria === "Jogos" && jogosMesa.length > 0 ? jogosMesa : null,
+          codigo: codigoManual.trim() || null,
+          versao: versaoManual.trim() || "1.0",
+          requires_acknowledgment: exigeCiencia === "sim",
         };
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("academy_portal_manual").update(payload).eq("id", editRef.id);
@@ -420,7 +449,7 @@ export function ModalCriarPostagem({
                 const v = e.target.value as AcademyPostagemTipoUi | "";
                 setTipoPostagem(v);
                 setTipoSubcategoria("");
-                setJogoMesa("");
+                setJogosMesa([]);
               }}
               style={selectStyle}
               aria-label="Tipo de postagem"
@@ -449,7 +478,7 @@ export function ModalCriarPostagem({
                   value={tipoSubcategoria}
                   onChange={(e) => {
                     setTipoSubcategoria(e.target.value);
-                    if (e.target.value !== "Jogos") setJogoMesa("");
+                    if (e.target.value !== "Jogos") setJogosMesa([]);
                   }}
                   style={{ ...selectStyle, borderColor: fieldErr.tipoComunicado || fieldErr.tipoDica || fieldErr.tipoManual ? "#e84025" : t.cardBorder }}
                   aria-label="Subcategoria"
@@ -465,21 +494,14 @@ export function ModalCriarPostagem({
 
               {mostraJogo ? (
                 <div>
-                  {lbl("ap-jogo", "Qual Jogo?", true)}
-                  <select
-                    id="ap-jogo"
-                    value={jogoMesa}
-                    onChange={(e) => setJogoMesa(e.target.value)}
-                    style={{ ...selectStyle, borderColor: fieldErr.jogoMesa ? "#e84025" : t.cardBorder }}
-                    aria-label="Qual jogo"
-                  >
-                    <option value="">Selecione…</option>
-                    {jogosOpcoes.map((j) => (
-                      <option key={j} value={j}>
-                        {j}
-                      </option>
-                    ))}
-                  </select>
+                  {lbl("ap-jogo-label", "Qual Jogo?", true)}
+                  <AcademyPortalJogosMultiSelect
+                    opcoes={jogosOpcoes}
+                    selected={jogosMesa}
+                    onChange={setJogosMesa}
+                    t={t}
+                    hasError={!!fieldErr.jogoMesa}
+                  />
                 </div>
               ) : null}
 
@@ -493,6 +515,46 @@ export function ModalCriarPostagem({
                   aria-label="Título"
                 />
               </div>
+
+              {tipoPostagem === "manual" ? (
+                <>
+                  <div>
+                    {lbl("ap-codigo", "Código")}
+                    <input
+                      id="ap-codigo"
+                      value={codigoManual}
+                      onChange={(e) => setCodigoManual(e.target.value)}
+                      style={inputStyle}
+                      aria-label="Código do manual"
+                      placeholder="Ex.: MAN-JOG-001"
+                    />
+                  </div>
+                  <div>
+                    {lbl("ap-versao", "Versão", true)}
+                    <input
+                      id="ap-versao"
+                      value={versaoManual}
+                      onChange={(e) => setVersaoManual(e.target.value)}
+                      style={{ ...inputStyle, borderColor: fieldErr.versao ? "#e84025" : t.cardBorder }}
+                      aria-label="Versão"
+                    />
+                  </div>
+                  <div>
+                    {lbl("ap-exige-ciencia", "Exige ciência do colaborador?", true)}
+                    <select
+                      id="ap-exige-ciencia"
+                      value={exigeCiencia}
+                      onChange={(e) => setExigeCiencia(e.target.value)}
+                      style={{ ...selectStyle, borderColor: fieldErr.exigeCiencia ? "#e84025" : t.cardBorder }}
+                      aria-label="Exige ciência do colaborador"
+                    >
+                      <option value="">Selecione…</option>
+                      <option value="sim">Sim</option>
+                      <option value="nao">Não</option>
+                    </select>
+                  </div>
+                </>
+              ) : null}
 
               {tipoPostagem === "manual" ? (
                 <div>
