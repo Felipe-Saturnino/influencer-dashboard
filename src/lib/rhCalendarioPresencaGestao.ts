@@ -740,6 +740,61 @@ const MESES_PT_UPPER = [
   "DEZEMBRO",
 ] as const;
 
+const MESES_PT_TITULO = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+] as const;
+
+/** Mês civil estritamente anterior ao mês atual (fuso local). */
+export function mesCalendarioPresencaFechado(refMes: Date, hoje = new Date()): boolean {
+  const ref = new Date(refMes.getFullYear(), refMes.getMonth(), 1);
+  const atual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  return ref.getTime() < atual.getTime();
+}
+
+/** Subtítulo do modal de aprovação mensal — ex.: «Junho de 2026». */
+export function subtituloMesAnoPresencaPt(refMes: Date): string {
+  const mes = MESES_PT_TITULO[refMes.getMonth()] ?? "";
+  return `${mes} de ${refMes.getFullYear()}`;
+}
+
+export type PresencaMesAprovacaoLinha = {
+  diaIso: string;
+  dataLabel: string;
+  entRealExib: string;
+  saiRealExib: string;
+  status: string;
+};
+
+/**
+ * Exceção no mês fechado: exibir check-out no 1.º dia do mês seguinte
+ * quando o último dia do mês exibido tem turno que cruza meia-noite.
+ */
+export function deveExibirCheckInMesFechadoPresenca(params: {
+  refMes: Date;
+  ultimoDiaMesEntEsc: string;
+  ultimoDiaMesSaiEsc: string;
+  proximoTipo?: "check_in" | "check_out" | null;
+  agora?: Date;
+}): boolean {
+  const agora = params.agora ?? new Date();
+  const proximoMes = new Date(params.refMes.getFullYear(), params.refMes.getMonth() + 1, 1);
+  if (toIsoLocal(agora) !== toIsoLocal(proximoMes)) return false;
+  if (params.proximoTipo !== "check_out") return false;
+  if (params.ultimoDiaMesEntEsc === "—" || params.ultimoDiaMesSaiEsc === "—") return false;
+  return turnoEscaladoCruzaMeiaNoite(params.ultimoDiaMesEntEsc, params.ultimoDiaMesSaiEsc);
+}
+
 /** Primeiro dia do mês civil anterior a `ref`. */
 export function refPrimeiroDiaMesAnterior(ref: Date): Date {
   return new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
