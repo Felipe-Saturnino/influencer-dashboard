@@ -17,7 +17,7 @@ export type PerformanceHubTurno = "Manhã" | "Tarde" | "Noite";
 
 export type PerformanceHubTipoAvaliacao = "performance_coach" | "extra";
 
-export type PerformanceHubModalModo = "ver" | "analisar";
+export type PerformanceHubModalModo = "ver" | "analisar" | "analisar_feedback";
 
 export interface PerformanceHubCriterioResposta {
   nota: number | null;
@@ -81,6 +81,8 @@ export interface PerformanceHubAvaliacao {
   criterios?: Record<string, PerformanceHubCriterioResposta>;
   videoUrl?: string | null;
   videoNome?: string | null;
+  /** Texto do avaliado ao solicitar esclarecimento (Feedback → Em Análise). */
+  solicitacaoFeedbackTexto?: string | null;
 }
 
 export interface PerformanceHubAgendaItem {

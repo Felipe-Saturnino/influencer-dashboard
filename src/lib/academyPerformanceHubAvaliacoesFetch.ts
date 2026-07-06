@@ -32,6 +32,7 @@ type AvaliacaoRow = {
   criterios: Record<string, PerformanceHubCriterioResposta> | null;
   video_url: string | null;
   video_nome: string | null;
+  solicitacao_feedback_texto: string | null;
 };
 
 function formatDataBrFromIso(iso: string): string {
@@ -70,6 +71,7 @@ export function mapRowParaAvaliacao(row: AvaliacaoRow): PerformanceHubAvaliacao 
     criterios: row.criterios ?? undefined,
     videoUrl: row.video_url,
     videoNome: row.video_nome,
+    solicitacaoFeedbackTexto: row.solicitacao_feedback_texto,
   };
 }
 
@@ -100,6 +102,7 @@ function mapAvaliacaoParaRow(
     criterios: row.criterios ?? null,
     video_url: row.videoUrl ?? null,
     video_nome: row.videoNome ?? null,
+    solicitacao_feedback_texto: row.solicitacaoFeedbackTexto ?? null,
   };
 }
 
@@ -125,7 +128,8 @@ const SELECT_AVALIACAO = `
   pontos_desenvolver,
   criterios,
   video_url,
-  video_nome
+  video_nome,
+  solicitacao_feedback_texto
 `;
 
 export async function fetchPerformanceHubAvaliacoes(): Promise<PerformanceHubAvaliacao[]> {

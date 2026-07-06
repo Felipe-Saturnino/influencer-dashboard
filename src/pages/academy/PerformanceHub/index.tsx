@@ -36,6 +36,7 @@ import { PerformanceHubAbaAvaliacoes } from "./PerformanceHubAbaAvaliacoes";
 import { PerformanceHubAbaGerenciamento } from "./PerformanceHubAbaGerenciamento";
 import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
 import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
+import { ModalAnalisarFeedbackPerformanceHub } from "./ModalAnalisarFeedbackPerformanceHub";
 
 type MesCarrossel = {
   ano: number;
@@ -220,7 +221,7 @@ export default function PerformanceHubPage() {
   }
 
   function handleAnalisarAvaliacao(row: PerformanceHubAvaliacao) {
-    setModalModo("analisar");
+    setModalModo(row.status === "feedback" ? "analisar_feedback" : "analisar");
     setAvaliacaoEmEdicao(row);
   }
 
@@ -354,7 +355,27 @@ export default function PerformanceHubPage() {
         ) : null}
       </div>
 
-      {avaliacaoEmEdicao ? (
+      {avaliacaoEmEdicao && modalModo === "analisar_feedback" ? (
+        <ModalAnalisarFeedbackPerformanceHub
+          avaliacao={avaliacaoEmEdicao}
+          variantTime={avaliacaoEmEdicao.time}
+          config={scoringConfigParaTime(scoringPorTime, avaliacaoEmEdicao.time)}
+          estudios={cadastro.estudios}
+          onClose={() => setAvaliacaoEmEdicao(null)}
+          onAprovar={async () => {
+            await persistirAvaliacao({ ...avaliacaoEmEdicao, status: "concluida" });
+            setAvaliacaoEmEdicao(null);
+          }}
+          onSolicitarFeedback={async (texto) => {
+            await persistirAvaliacao({
+              ...avaliacaoEmEdicao,
+              status: "em_analise",
+              solicitacaoFeedbackTexto: texto,
+            });
+            setAvaliacaoEmEdicao(null);
+          }}
+        />
+      ) : avaliacaoEmEdicao ? (
         <ModalAvaliarPerformanceHub
           avaliacao={avaliacaoEmEdicao}
           variantTime={avaliacaoEmEdicao.time}

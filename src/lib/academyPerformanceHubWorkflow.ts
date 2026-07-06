@@ -29,7 +29,7 @@ export function avaliacaoVisivelGerenciamentoAnalisar(
   time: PerformanceHubTimeSlug,
 ): boolean {
   if (row.time !== time) return false;
-  if (time === "game_presenter") return row.status === "rascunho";
+  if (time === "game_presenter") return row.status === "rascunho" || row.status === "em_analise";
   return row.status === "pendente" || row.status === "em_analise" || row.status === "feedback";
 }
 

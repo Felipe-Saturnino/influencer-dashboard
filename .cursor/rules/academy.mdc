@@ -129,7 +129,7 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 | Pendente | Ver, Histórico | — |
 | Rascunho | — (só Gerenciamento) | — |
 | Em Análise | Ver, **Analisar**, Histórico | — |
-| Feedback | Ver, Histórico | — |
+| Feedback | Ver, **Analisar** (resposta do avaliado), Histórico | **Analisar** (aprovar ou solicitar esclarecimento), Histórico |
 | Concluída | Ver, Histórico | Ver minha avaliação, Histórico |
 
 **Game Presenter — fluxo de status**
@@ -138,7 +138,11 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 |-------|--------------|--------|
 | Iniciar / Salvar no modal | Gerenciamento → Analisar Avaliações | **Rascunho** |
 | Concluir no modal | Avaliações | **Feedback** |
+| Analisar (Feedback) → Aprovar | Avaliações | **Concluída** |
+| Analisar (Feedback) → Solicitar | Gerenciamento → Analisar | **Em Análise** |
 | (futuro) fechamento | Avaliações | Concluída |
+
+Modal **Analisar** em status **Feedback**: abas somente leitura (Dados, Comunicação, Imagem, Mesa/Procedimentos) + CTAs **Aprovar** / **Solicitar Feedback** com confirmação. Solicitar exige texto longo (`solicitacao_feedback_texto` no banco).
 
 Rascunho **não** entra na aba Avaliações. **Concluir** no modal GP grava **Feedback** (não Concluída). Shuffler mantém fluxo legado: nova avaliação **Em Análise**; **Concluir** → **Concluída**.
 

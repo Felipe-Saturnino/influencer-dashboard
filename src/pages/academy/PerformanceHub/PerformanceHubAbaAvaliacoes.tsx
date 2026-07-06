@@ -125,7 +125,7 @@ export function PerformanceHubAbaAvaliacoes({
 
   const rowsVisiveis = useMemo(() => {
     const filtradas = avaliacoes
-      .filter((row) => (isProprios ? row.status === "concluida" : true))
+      .filter((row) => (isProprios ? row.status === "concluida" || row.status === "feedback" : true))
       .filter((row) => (showBusca ? textoContemBusca(row.avaliadoNome, busca) : true));
 
     const sorted = [...filtradas].sort((a, b) => {
@@ -303,6 +303,15 @@ export function PerformanceHubAbaAvaliacoes({
                           </BtnIconeAcaoLinha>
 
                           {!isProprios && row.status === "em_analise" ? (
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Analisar avaliação")}
+                              onClick={() => onAnalisar(row)}
+                            >
+                              <FileSearch size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
+
+                          {row.status === "feedback" ? (
                             <BtnIconeAcaoLinha
                               label={tooltipAcao("Analisar avaliação")}
                               onClick={() => onAnalisar(row)}

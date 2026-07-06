@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.academy_performance_hub_avaliacao (
   criterios           jsonb,
   video_url           text,
   video_nome          text,
+  solicitacao_feedback_texto text,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
