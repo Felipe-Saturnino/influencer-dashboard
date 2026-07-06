@@ -40,7 +40,7 @@ function passwordStrength(pwd: string) {
 }
 
 export default function Configuracoes() {
-  const { theme: t, user, effectiveRole, isDark, setIsDark } = useApp();
+  const { theme: t, effectiveRole, isDark, setIsDark } = useApp();
   const isOperador = effectiveRole === "operador";
   const perm = usePermission("configuracoes");
 
