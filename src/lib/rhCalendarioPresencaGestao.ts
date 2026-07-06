@@ -552,6 +552,8 @@ export function linhaPresencaDestaqueHoje(params: LinhaPresencaDestaqueParams): 
 export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams): string {
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
 
+  if (situacao === "—") return "—";
+
   const statusMedico = resolverStatusPresencaMedicoLinha(gestao);
   if (statusMedico != null) return statusMedico;
 
@@ -590,6 +592,10 @@ function historicoAcaoVisivel(gestao?: PresencaDiaGestao): boolean {
 export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams): PresencaAcoesLinha {
   const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
   const temHistorico = historicoAcaoVisivel(gestao);
+
+  if (situacao === "—") {
+    return { acaoPrimaria: null, mostrarHistorico: false, mostrarTravessaoAcoes: true };
+  }
 
   if (situacao === "Escalado" && diaIsoEhAmanhaOuFuturo(diaIso, agora)) {
     return { acaoPrimaria: null, mostrarHistorico: false, mostrarTravessaoAcoes: true };

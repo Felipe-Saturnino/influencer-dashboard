@@ -620,7 +620,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Customer Service, Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
     ],
   },

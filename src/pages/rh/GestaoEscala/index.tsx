@@ -743,9 +743,15 @@ export default function RhGestaoEscalaPage() {
     }
   }, [filtroEstudioEscala, estudiosAtivosEscala]);
 
+  const filtroEstudioEscalaEfetivo = useMemo(
+    () =>
+      filtroArea === "game_presenter" ? filtroEstudioEscala : FILTRO_STAFF_ESTUDIO_TODOS,
+    [filtroArea, filtroEstudioEscala],
+  );
+
   const prestadoresFiltradosEstudio = useMemo(
-    () => filtrarPrestadoresPorEstudio(prestadoresRaw, filtroEstudioEscala, opParaEstudio),
-    [prestadoresRaw, filtroEstudioEscala, opParaEstudio],
+    () => filtrarPrestadoresPorEstudio(prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio),
+    [prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio],
   );
 
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
@@ -1581,12 +1587,13 @@ export default function RhGestaoEscalaPage() {
               </div>
               <FiltroEstudioSelect
                 id="rh-gestao-escala-filtro-estudio"
-                value={filtroEstudioEscala}
+                value={filtroEstudioEscalaEfetivo}
                 onChange={setFiltroEstudioEscala}
                 estudios={estudiosAtivosEscala}
                 todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
                 extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
                 minWidth={200}
+                disabled={filtroArea !== "game_presenter"}
               />
             </div>
             <button
