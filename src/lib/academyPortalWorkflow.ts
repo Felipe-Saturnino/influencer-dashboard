@@ -89,6 +89,7 @@ export type SnapshotPostagemEdicaoAcademy = {
   codigo: string;
   versao: string;
   exigeCiencia: string;
+  aplicavelA: string[];
   imagemPath: string | null;
   anexoPath: string | null;
   anexoNome: string | null;
@@ -127,6 +128,7 @@ export function validarPublicarManual(fields: {
   descricao: string;
   jogoMesa: string[];
   exigeCiencia: string;
+  aplicavelA: string[];
 }): Record<string, string> {
   const errs: Record<string, string> = {};
   if (!fields.tipoManual.trim()) errs.tipoManual = "Selecione o tipo de manual.";
@@ -135,6 +137,9 @@ export function validarPublicarManual(fields: {
   if (!fields.introducao.trim()) errs.introducao = "Informe a introdução.";
   if (!stripHtmlText(fields.descricao)) errs.descricao = "Informe a descrição.";
   if (!fields.exigeCiencia.trim()) errs.exigeCiencia = "Informe se exige ciência.";
+  if (fields.exigeCiencia === "sim" && fields.aplicavelA.length === 0) {
+    errs.aplicavelA = "Selecione ao menos um time aplicável.";
+  }
   return errs;
 }
 
@@ -195,6 +200,12 @@ export function diffEdicaoRascunho(
   if (antes.codigo.trim() !== depois.codigo.trim()) alteracoes.push("Código alterado");
   if (antes.versao.trim() !== depois.versao.trim()) alteracoes.push("Versão alterada");
   if (antes.exigeCiencia !== depois.exigeCiencia) alteracoes.push("Exige ciência alterado");
+  if (
+    antes.aplicavelA.length !== depois.aplicavelA.length ||
+    antes.aplicavelA.some((a, i) => a !== depois.aplicavelA[i])
+  ) {
+    alteracoes.push("Aplicável a alterado");
+  }
   if (antes.imagemPath !== depois.imagemPath) alteracoes.push(depois.imagemPath ? "Imagem/vídeo alterado" : "Imagem/vídeo removido");
   if (antes.anexoPath !== depois.anexoPath || antes.anexoNome !== depois.anexoNome) {
     alteracoes.push(depois.anexoPath ? "Anexo alterado" : "Anexo removido");

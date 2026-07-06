@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -8,9 +8,13 @@ import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { SelectOrganogramaMultiForm } from "../../../components/rh/SelectOrganogramaMultiForm";
 import { uploadAcademyPortalAsset } from "../../../lib/academyPortalPostagemFiles";
+import { opcoesTimesAplicavelAcademyManuais } from "../../../lib/academyPortalAplicavel";
 import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import { AcademyPortalJogosMultiSelect } from "./AcademyPortalJogosMultiSelect";
 import {
   contentTypeFromTipoUi,
@@ -77,6 +81,8 @@ export function ModalCriarPostagem({
   const [codigoManual, setCodigoManual] = useState("");
   const [versaoManual, setVersaoManual] = useState("1.0");
   const [exigeCiencia, setExigeCiencia] = useState("sim");
+  const [aplicavelA, setAplicavelA] = useState<string[]>([]);
+  const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [jogosOpcoes, setJogosOpcoes] = useState<string[]>([]);
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [anexoFile, setAnexoFile] = useState<File | null>(null);
@@ -103,12 +109,18 @@ export function ModalCriarPostagem({
         codigo: codigoManual,
         versao: versaoManual,
         exigeCiencia,
+        aplicavelA,
         imagemPath: paths.imagem,
         anexoPath: paths.anexo,
         anexoNome: paths.anexoNome,
       };
     },
-    [tipoPostagem, tipoSubcategoria, titulo, introducao, descricao, jogosMesa, codigoManual, versaoManual, exigeCiencia],
+    [tipoPostagem, tipoSubcategoria, titulo, introducao, descricao, jogosMesa, codigoManual, versaoManual, exigeCiencia, aplicavelA],
+  );
+
+  const opcoesAplicavel = useMemo(
+    () => opcoesTimesAplicavelAcademyManuais(organogramaGrupos),
+    [organogramaGrupos],
   );
 
   const resetForm = useCallback(() => {
@@ -121,6 +133,7 @@ export function ModalCriarPostagem({
     setCodigoManual("");
     setVersaoManual("1.0");
     setExigeCiencia("sim");
+    setAplicavelA([]);
     setImagemFile(null);
     setAnexoFile(null);
     setImagemPath(null);
@@ -135,6 +148,7 @@ export function ModalCriarPostagem({
   useEffect(() => {
     if (!open) return;
     void carregarJogosMesasEstudio().then(setJogosOpcoes);
+    void carregarOpcoesTimesOrganograma().then(({ grupos }) => setOrganogramaGrupos(grupos));
   }, [open]);
 
   useEffect(() => {
@@ -182,6 +196,7 @@ export function ModalCriarPostagem({
         codigo?: string | null;
         versao?: string | null;
         requires_acknowledgment?: boolean | null;
+        aplicavel_a?: string[] | null;
         categoria?: { slug: string; scope: string } | { slug: string; scope: string }[] | null;
       };
 
@@ -200,6 +215,7 @@ export function ModalCriarPostagem({
       setCodigoManual(row.codigo?.trim() ?? "");
       setVersaoManual(row.versao?.trim() || "1.0");
       setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
+      setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
@@ -217,6 +233,7 @@ export function ModalCriarPostagem({
         codigo: row.codigo?.trim() ?? "",
         versao: row.versao?.trim() || "1.0",
         exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
+        aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
         imagemPath: row.imagem_storage_path,
         anexoPath: row.anexo_storage_path,
         anexoNome: row.anexo_nome,
@@ -269,6 +286,7 @@ export function ModalCriarPostagem({
           descricao,
           jogoMesa: jogosMesa,
           exigeCiencia,
+          aplicavelA,
         });
       }
       setFieldErr(errs);
@@ -379,6 +397,7 @@ export function ModalCriarPostagem({
           codigo: codigoFinal,
           versao: versaoManual.trim() || "1.0",
           requires_acknowledgment: exigeCiencia === "sim",
+          aplicavel_a: exigeCiencia === "sim" && aplicavelA.length > 0 ? aplicavelA : null,
         };
         if (modo === "editar" && editRef) {
           const { error } = await supabase.from("academy_portal_manual").update(payload).eq("id", editRef.id);
@@ -545,7 +564,11 @@ export function ModalCriarPostagem({
                     <select
                       id="ap-exige-ciencia"
                       value={exigeCiencia}
-                      onChange={(e) => setExigeCiencia(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setExigeCiencia(v);
+                        if (v === "nao") setAplicavelA([]);
+                      }}
                       style={{ ...selectStyle, borderColor: fieldErr.exigeCiencia ? "#e84025" : t.cardBorder }}
                       aria-label="Exige ciência do colaborador"
                     >
@@ -554,6 +577,20 @@ export function ModalCriarPostagem({
                       <option value="nao">Não</option>
                     </select>
                   </div>
+                  {exigeCiencia === "sim" ? (
+                    <div>
+                      {lbl("ap-aplicavel", "Aplicável a", true)}
+                      <SelectOrganogramaMultiForm
+                        id="ap-aplicavel"
+                        value={aplicavelA}
+                        onChange={setAplicavelA}
+                        options={opcoesAplicavel}
+                        hasError={Boolean(fieldErr.aplicavelA)}
+                        ariaLabel="Aplicável a"
+                        incluirTodosPrestadores={false}
+                      />
+                    </div>
+                  ) : null}
                 </>
               ) : null}
 

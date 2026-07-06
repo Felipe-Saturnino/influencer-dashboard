@@ -1,3 +1,5 @@
+import { manualAplicavelAoUsuario } from "./academyPortalAplicavel";
+
 export type AcademyPortalReadReceiptRow = {
   content_id: string;
   read_at: string;
@@ -10,6 +12,19 @@ export function academyManualReceiptKey(contentId: string): string {
 
 export function manualExigeCiencia(manual: { requires_acknowledgment?: boolean | null }): boolean {
   return manual.requires_acknowledgment === true;
+}
+
+/** Ciência exigida para o usuário logado (público aplicável + flag de aceite). */
+export function manualExigeCienciaDoUsuario(
+  manual: {
+    requires_acknowledgment?: boolean | null;
+    aplicavel_a?: string[] | null;
+  },
+  setoresUsuario: readonly string[],
+): boolean {
+  if (!manualExigeCiencia(manual)) return false;
+  if (!manual.aplicavel_a?.length) return true;
+  return manualAplicavelAoUsuario(manual.aplicavel_a, setoresUsuario);
 }
 
 /** Usuários logados com permissão de Ver participam do fluxo de ciência na aba Manuais. */

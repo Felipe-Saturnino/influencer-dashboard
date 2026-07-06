@@ -23,10 +23,14 @@ import { AcademyPortalManuaisTabela } from "./AcademyPortalManuaisTabela";
 import { ModalLerConteudo } from "./ModalLerConteudo";
 import {
   academyManualReceiptKey,
-  manualExigeCiencia,
+  manualExigeCienciaDoUsuario,
   perfilAcademyPortalParticipaCiencia,
   type AcademyPortalReadReceiptRow,
 } from "../../../lib/academyPortalCiencia";
+import { setoresAplicavelDoUsuario } from "../../../lib/portalRhDocumentoNormativo";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -78,6 +82,7 @@ type ManualRow = PostagemBase & {
   codigo?: string | null;
   versao?: string | null;
   requires_acknowledgment?: boolean;
+  aplicavel_a?: string[] | null;
   updated_at: string;
   jogo_mesa?: string[] | null;
 };
@@ -314,6 +319,7 @@ export default function PortalAcademyPage() {
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
+  const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
   const [sortManual, setSortManual] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
     col: "codigo",
     dir: "asc",
@@ -326,6 +332,26 @@ export default function PortalAcademyPage() {
     const id = window.setTimeout(() => setBuscaDeb(normalizarTextoBusca(busca)), 300);
     return () => window.clearTimeout(id);
   }, [busca]);
+
+  useEffect(() => {
+    if (!user?.email?.trim()) {
+      setSetoresUsuarioAplicavel([]);
+      return;
+    }
+    let cancel = false;
+    void (async () => {
+      const [funcionario, org] = await Promise.all([
+        buscarRhFuncionarioAtivoPorEmailLogin(user.email!),
+        carregarOpcoesTimesOrganograma(),
+      ]);
+      if (cancel) return;
+      const vinculos = flattenVinculosDeGrupos(org.grupos);
+      setSetoresUsuarioAplicavel(setoresAplicavelDoUsuario(funcionario, vinculos));
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user?.email]);
 
   const carregar = useCallback(async () => {
     if (!user?.id) return;
@@ -480,10 +506,10 @@ export default function PortalAcademyPage() {
   const cienciaExigidaManualIds = useMemo(() => {
     const set = new Set<string>();
     for (const m of manuaisFiltrados) {
-      if (manualExigeCiencia(m)) set.add(m.id);
+      if (manualExigeCienciaDoUsuario(m, setoresUsuarioAplicavel)) set.add(m.id);
     }
     return set;
-  }, [manuaisFiltrados]);
+  }, [manuaisFiltrados, setoresUsuarioAplicavel]);
 
   const cienciaPendenteManualIds = useMemo(() => {
     const set = new Set<string>();
@@ -824,7 +850,7 @@ export default function PortalAcademyPage() {
           corpo={modalManual.corpo}
           anexoStoragePath={modalManual.anexo_storage_path}
           anexoNome={modalManual.anexo_nome}
-          exigeCiencia={manualExigeCiencia(modalManual)}
+          exigeCiencia={manualExigeCienciaDoUsuario(modalManual, setoresUsuarioAplicavel)}
           jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
           onClose={() => setModalManual(null)}
           onLidoECiente={() => void marcarLidoECienteManual(modalManual.id)}
