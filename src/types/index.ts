@@ -6,6 +6,7 @@ export type Role =
   | "executivo"
   | "shift_leader"
   | "service_manager"
+  | "tech_ops"
   | "figurino"
   | "comunicacao"
   | "performance_coach"
@@ -75,6 +76,7 @@ export type PageKey =
   | "rh_portal"
   | "informativos"
   | "configuracoes"
+  | "simulador_login"
   | "ajuda";
 
 // ─── PLATAFORMA / LIVE STATUS ────────────────────────────────────────────────

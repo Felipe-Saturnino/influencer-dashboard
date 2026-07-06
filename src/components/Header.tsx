@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, HelpCircle, LogOut, Menu } from "lucide-react";
+import { Settings, HelpCircle, LogOut, Menu, Eye } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
 import { FONT } from "../constants/theme";
@@ -15,6 +15,7 @@ interface Props {
 /** Páginas fora do MENU lateral (acesso pelo dropdown). */
 const HEADER_EXTRA_LABELS: Record<string, string> = {
   configuracoes: "CONFIGURAÇÕES",
+  simulador_login: "SIMULADOR DE LOGIN",
   ajuda: "AJUDA",
 };
 
@@ -36,7 +37,7 @@ const AVATAR_GRADIENT =
   "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-primary, #7c3aed))";
 
 export default function Header({ activePage, onNavigate, onLogout, showMenuButton = false, onMenuClick }: Props) {
-  const { theme: t, user, operadoraBrand } = useApp();
+  const { theme: t, user, operadoraBrand, effectiveRole, podeAcessarSimuladorLogin } = useApp();
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -105,7 +106,7 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
   };
 
   const headerBg =
-    user?.role === "operador" && operadoraBrand?.brand_bg && t.isDark ? operadoraBrand.brand_bg : t.headerBg;
+    effectiveRole === "operador" && operadoraBrand?.brand_bg && t.isDark ? operadoraBrand.brand_bg : t.headerBg;
 
   const triggerHot = open || hover;
 
@@ -260,6 +261,23 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
               <Settings size={14} color={t.textMuted} aria-hidden />
               Configurações
             </button>
+
+            {podeAcessarSimuladorLogin ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onNavigate("simulador_login");
+                  setOpen(false);
+                }}
+                style={dropdownItem}
+                onMouseEnter={(e) => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <Eye size={14} color={t.textMuted} aria-hidden />
+                Simulador de Login
+              </button>
+            ) : null}
 
             <button
               type="button"

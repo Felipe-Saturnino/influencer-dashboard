@@ -33,6 +33,19 @@ import {
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
   roleParidadeInfluencer,
 } from "../lib/staffRoles";
+import {
+  type IniciarSimulacaoInput,
+  type SimulacaoLoginState,
+  aplicarOverridesPermissoesSimulacao,
+  aplicarSomenteLeituraAcoes,
+  buildEscoposSimulacao,
+  montarLabelSimulacao,
+  readSimulacaoSession,
+  resolverOperadoraNome,
+  toSimulacaoState,
+  validarInputSimulacao,
+  writeSimulacaoSession,
+} from "../lib/simuladorLogin";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
@@ -59,11 +72,11 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_central_denuncias",
   "rh_portal",
   "informativos",
-  "configuracoes", "ajuda",
+  "configuracoes", "simulador_login", "ajuda",
 ];
 
 /** Home e páginas gerais: só `role_permissions`; sem interseção com `gestor_tipo_pages` nem `prestador_tipo_pages`. */
-const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "ajuda"]);
+const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "simulador_login", "ajuda"]);
 
 // Tipo do mapa de permissões de visualização
 export type PermissoesMapa = Record<PageKey, PermissaoValor>;
@@ -98,6 +111,17 @@ interface AppContextValue {
   // Auth
   user:        User | null;
   setUser:     (u: User | null) => void;
+  /** Perfil efetivo na UI (simulado ou real). */
+  effectiveRole: Role | undefined;
+  /** Modo visualização de outro perfil — somente leitura. */
+  simulacaoLogin: SimulacaoLoginState | null;
+  simulacaoSomenteLeitura: boolean;
+  podeAcessarSimuladorLogin: boolean;
+  iniciarSimulacaoLogin: (input: IniciarSimulacaoInput) => Promise<string | null>;
+  encerrarSimulacaoLogin: () => Promise<void>;
+  /** Permissões do usuário real (não simuladas). */
+  permissionsReais: PermissoesMapa;
+  permissionsAcoesReais: PermissoesAcoesMapa;
   checking:    boolean;
   routeReady:  boolean;
   // Navegação (página ativa no layout)
@@ -497,6 +521,37 @@ async function carregarPermissoes(
   return mapa;
 }
 
+async function carregarContextoSimulado(
+  state: SimulacaoLoginState,
+  permsReais: PermissoesMapa,
+): Promise<{
+  escopos: EscoposVisiveis;
+  permissions: PermissoesMapa;
+  permissionsAcoes: PermissoesAcoesMapa;
+}> {
+  const escopos = buildEscoposSimulacao(state);
+  const [perms, acoes] = await Promise.all([
+    carregarPermissoes(state.role, {
+      operadorasVisiveis: state.role === "operador" ? escopos.operadorasVisiveis : undefined,
+      gestorTiposVisiveis: state.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
+      prestadorTiposVisiveis: state.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
+    }),
+    carregarPermissoesAcoes(state.role),
+  ]);
+  return {
+    escopos,
+    permissions: aplicarOverridesPermissoesSimulacao(perms, permsReais),
+    permissionsAcoes: aplicarSomenteLeituraAcoes(acoes),
+  };
+}
+
+function podeVerSimuladorLoginMapa(role: Role | undefined, perms: PermissoesMapa): boolean {
+  if (!role) return false;
+  if (role === "admin") return true;
+  const cv = perms.simulador_login;
+  return cv === "sim" || cv === "proprios";
+}
+
 function syncHistory(path: string, replace: boolean) {
   if (replace) window.history.replaceState({}, "", path);
   else window.history.pushState({}, "", path);
@@ -546,6 +601,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
   );
   const [permissionsAcoes, setPermissionsAcoes] = useState<PermissoesAcoesMapa>(emptyAcoesMapa);
+  const [permissionsReais, setPermissionsReais] = useState<PermissoesMapa>(
+    Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa,
+  );
+  const [permissionsAcoesReais, setPermissionsAcoesReais] = useState<PermissoesAcoesMapa>(emptyAcoesMapa);
+  const [escoposReais, setEscoposReais] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
+  const [simulacaoLogin, setSimulacaoLogin] = useState<SimulacaoLoginState | null>(null);
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
 
   /** Refs síncronos — evitam checar permissões stale logo após `setPermissions` (antes do re-render). */
@@ -555,12 +616,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activePageRef = useRef(activePage);
   const activeTabSlugRef = useRef(activeTabSlug);
   const layoutViewRef = useRef(layoutView);
+  const simulacaoLoginRef = useRef(simulacaoLogin);
+  const effectiveRoleRef = useRef<Role | undefined>(undefined);
   userRef.current = user;
   permissionsRef.current = permissions;
   permissionsAcoesRef.current = permissionsAcoes;
   activePageRef.current = activePage;
   activeTabSlugRef.current = activeTabSlug;
   layoutViewRef.current = layoutView;
+  simulacaoLoginRef.current = simulacaoLogin;
+  effectiveRoleRef.current = simulacaoLogin?.role ?? user?.role;
 
   function syncAuthRefs(
     u: User | null,
@@ -582,10 +647,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (pageKey: PageKey, tabSlug?: string | null, options?: { replace?: boolean }) => {
       const u = userRef.current;
       if (!u) return;
+      const roleEfetivo = simulacaoLoginRef.current?.role ?? u.role;
       const parsed = buildParsedAppTarget(pageKey, tabSlug);
       const access = resolveRouteAccess(
         parsed,
-        u.role,
+        roleEfetivo,
         permissionsRef.current,
         permissionsAcoesRef.current,
       );
@@ -647,9 +713,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (!u) return;
 
+      const roleEfetivo = simulacaoLoginRef.current?.role ?? u.role;
       const access = resolveRouteAccess(
         parsed,
-        u.role,
+        roleEfetivo,
         permissionsRef.current,
         permissionsAcoesRef.current,
       );
@@ -691,14 +758,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
   useEffect(() => {
-    if (user?.role !== "operador") return;
+    const roleEfetivo = simulacaoLogin?.role ?? user?.role;
+    if (roleEfetivo !== "operador") return;
     const onFocus = () => setBrandRefreshKey((k) => k + 1);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [user?.role]);
+  }, [user?.role, simulacaoLogin?.role]);
+
+  const effectiveRole = simulacaoLogin?.role ?? user?.role;
 
   // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
-  const effectiveIsDark = user?.role === "operador" ? true : isDark;
+  const effectiveIsDark = effectiveRole === "operador" ? true : isDark;
   const theme = effectiveIsDark ? DARK_THEME : LIGHT_THEME;
 
   // data-theme no html para background full-viewport e scrollbar (evita linhas brancas)
@@ -708,7 +778,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Brandguide + template de Home: operador vê identidade da operadora do escopo
   useEffect(() => {
-    if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
+    if (!user || effectiveRole !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
       aplicarBrandguideReset();
       setOperadoraBrand(null);
       setOperadoraHomeReady(true);
@@ -716,7 +786,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const slug = escoposVisiveis.operadorasVisiveis[0];
     void syncOperadoraBrandState(slug, setOperadoraBrand, setOperadoraHomeReady, { awaitNetwork: false });
-  }, [user, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
+  }, [user, effectiveRole, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
   // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
   useEffect(() => {
@@ -742,6 +812,121 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [operadoraBrand?.font_url]);
 
+  const simulacaoSomenteLeitura = simulacaoLogin != null;
+  const podeAcessarSimuladorLogin = podeVerSimuladorLoginMapa(user?.role, permissionsReais);
+
+  const restaurarContextoReal = useCallback(async (u: User) => {
+    const escopos = escoposReais;
+    setEscoposVisiveis(escopos);
+    setPermissions(permissionsReais);
+    setPermissionsAcoes(permissionsAcoesReais);
+    syncAuthRefs(u, permissionsReais, permissionsAcoesReais);
+    if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+      await syncOperadoraBrandState(escopos.operadorasVisiveis[0], setOperadoraBrand, setOperadoraHomeReady);
+    } else {
+      aplicarBrandguideReset();
+      setOperadoraBrand(null);
+      setOperadoraHomeReady(true);
+    }
+  }, [escoposReais, permissionsReais, permissionsAcoesReais]);
+
+  const aplicarSimulacaoAtiva = useCallback(
+    async (state: SimulacaoLoginState, u: User) => {
+      const ctx = await carregarContextoSimulado(state, permissionsReais);
+      setSimulacaoLogin(state);
+      simulacaoLoginRef.current = state;
+      effectiveRoleRef.current = state.role;
+      setEscoposVisiveis(ctx.escopos);
+      setPermissions(ctx.permissions);
+      setPermissionsAcoes(ctx.permissionsAcoes);
+      syncAuthRefs(u, ctx.permissions, ctx.permissionsAcoes);
+      writeSimulacaoSession(state);
+      if (state.role === "operador" && state.operadoraSlug) {
+        await syncOperadoraBrandState(state.operadoraSlug, setOperadoraBrand, setOperadoraHomeReady);
+      } else {
+        aplicarBrandguideReset();
+        setOperadoraBrand(null);
+        setOperadoraHomeReady(true);
+      }
+    },
+    [permissionsReais],
+  );
+
+  const iniciarSimulacaoLogin = useCallback(
+    async (input: IniciarSimulacaoInput): Promise<string | null> => {
+      const u = userRef.current;
+      if (!u) return "Sessão inválida.";
+      if (!podeVerSimuladorLoginMapa(u.role, permissionsReais)) {
+        return "Você não tem permissão para usar o Simulador de Login.";
+      }
+      const validationErr = validarInputSimulacao(input);
+      if (validationErr) return validationErr;
+
+      let operadoraNome: string | undefined;
+      if (input.operadoraSlug) {
+        operadoraNome = (await resolverOperadoraNome(input.operadoraSlug)) ?? input.operadoraSlug;
+      }
+      const labelExibicao = montarLabelSimulacao(input, operadoraNome);
+      const state = toSimulacaoState(
+        { ...input, operadoraSlug: input.operadoraSlug },
+        labelExibicao,
+      );
+      if (operadoraNome) state.operadoraNome = operadoraNome;
+
+      try {
+        await aplicarSimulacaoAtiva(state, u);
+        return null;
+      } catch (err) {
+        console.error("Erro ao iniciar simulação de login:", err);
+        return "Não foi possível iniciar a visualização. Se o problema persistir, entre em contato com o suporte.";
+      }
+    },
+    [aplicarSimulacaoAtiva, permissionsReais],
+  );
+
+  const encerrarSimulacaoLogin = useCallback(async () => {
+    const u = userRef.current;
+    if (!u || !simulacaoLoginRef.current) return;
+    setSimulacaoLogin(null);
+    simulacaoLoginRef.current = null;
+    effectiveRoleRef.current = u.role;
+    writeSimulacaoSession(null);
+    try {
+      await restaurarContextoReal(u);
+      navigateTo("simulador_login");
+    } catch (err) {
+      console.error("Erro ao encerrar simulação de login:", err);
+    }
+  }, [navigateTo, restaurarContextoReal]);
+
+  const tentarRestaurarSimulacaoSessao = useCallback(
+    async (u: User, permsReais: PermissoesMapa) => {
+      if (!podeVerSimuladorLoginMapa(u.role, permsReais)) {
+        writeSimulacaoSession(null);
+        return;
+      }
+      const saved = readSimulacaoSession();
+      if (!saved) return;
+      const validationErr = validarInputSimulacao({
+        role: saved.role,
+        operadoraSlug: saved.operadoraSlug,
+        gestorTipoSlug: saved.gestorTipoSlug,
+        prestadorTipoSlug: saved.prestadorTipoSlug,
+      });
+      if (validationErr) {
+        writeSimulacaoSession(null);
+        return;
+      }
+      try {
+        await aplicarSimulacaoAtiva(saved, u);
+      } catch (err) {
+        console.error("Erro ao restaurar simulação de login:", err);
+        writeSimulacaoSession(null);
+      }
+    },
+    [aplicarSimulacaoAtiva],
+  );
+
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     if (u) {
@@ -753,14 +938,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (u) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
-        setEscoposVisiveis(escopos);
-        if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-          await syncOperadoraBrandState(
-            escopos.operadorasVisiveis[0],
-            setOperadoraBrand,
-            setOperadoraHomeReady,
-          );
-        }
         const [perms, acoes] = await Promise.all([
           carregarPermissoes(u.role, {
             operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
@@ -769,9 +946,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }),
           carregarPermissoesAcoes(u.role),
         ]);
-        setPermissions(perms);
-        setPermissionsAcoes(acoes);
-        syncAuthRefs(u, perms, acoes);
+        setPermissionsReais(perms);
+        setPermissionsAcoesReais(acoes);
+        setEscoposReais(escopos);
+        const savedSim = readSimulacaoSession();
+        if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
+          await tentarRestaurarSimulacaoSessao(u, perms);
+        } else {
+          writeSimulacaoSession(null);
+          setSimulacaoLogin(null);
+          simulacaoLoginRef.current = null;
+          effectiveRoleRef.current = u.role;
+          setEscoposVisiveis(escopos);
+          if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+            await syncOperadoraBrandState(
+              escopos.operadorasVisiveis[0],
+              setOperadoraBrand,
+              setOperadoraHomeReady,
+            );
+          }
+          setPermissions(perms);
+          setPermissionsAcoes(acoes);
+          syncAuthRefs(u, perms, acoes);
+        }
 
         const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
         if (pendingReturn) {
@@ -807,7 +1004,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const emptyAcoes = emptyAcoesMapa();
       setPermissions(emptyPerms);
       setPermissionsAcoes(emptyAcoes);
+      setPermissionsReais(emptyPerms);
+      setPermissionsAcoesReais(emptyAcoes);
+      setEscoposReais(ESCOPOS_VAZIOS);
       setEscoposVisiveis(ESCOPOS_VAZIOS);
+      setSimulacaoLogin(null);
+      simulacaoLoginRef.current = null;
+      writeSimulacaoSession(null);
       syncAuthRefs(null, emptyPerms, emptyAcoes);
       setLayoutView("app");
       setRouteReady(true);
@@ -843,14 +1046,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             userRef.current = u;
             try {
               const escopos = await carregarEscoposVisiveis(u.id, u.role);
-              setEscoposVisiveis(escopos);
-              if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-                await syncOperadoraBrandState(
-                  escopos.operadorasVisiveis[0],
-                  setOperadoraBrand,
-                  setOperadoraHomeReady,
-                );
-              }
               const [perms, acoes] = await Promise.all([
                 carregarPermissoes(u.role, {
                   operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
@@ -859,9 +1054,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 }),
                 carregarPermissoesAcoes(u.role),
               ]);
-              setPermissions(perms);
-              setPermissionsAcoes(acoes);
-              syncAuthRefs(u, perms, acoes);
+              setPermissionsReais(perms);
+              setPermissionsAcoesReais(acoes);
+              setEscoposReais(escopos);
+              const savedSim = readSimulacaoSession();
+              if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
+                await tentarRestaurarSimulacaoSessao(u, perms);
+              } else {
+                writeSimulacaoSession(null);
+                setSimulacaoLogin(null);
+                simulacaoLoginRef.current = null;
+                effectiveRoleRef.current = u.role;
+                setEscoposVisiveis(escopos);
+                if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+                  await syncOperadoraBrandState(
+                    escopos.operadorasVisiveis[0],
+                    setOperadoraBrand,
+                    setOperadoraHomeReady,
+                  );
+                }
+                setPermissions(perms);
+                setPermissionsAcoes(acoes);
+                syncAuthRefs(u, perms, acoes);
+              }
             } catch (err) {
               console.error("Erro ao carregar permissões/escopos:", err);
               const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
@@ -895,6 +1110,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (event !== "SIGNED_OUT") return;
       setUserState(null);
       setEscoposVisiveis(ESCOPOS_VAZIOS);
+      setEscoposReais(ESCOPOS_VAZIOS);
+      setSimulacaoLogin(null);
+      simulacaoLoginRef.current = null;
+      writeSimulacaoSession(null);
       setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
       setOperadoraBrand(null);
       setOperadoraHomeReady(true);
@@ -923,19 +1142,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const podeVerOperadora = useCallback(
     (slug: string) =>
       escoposVisiveis.semRestricaoEscopo === true ||
-      user?.role === "gestor" ||
+      effectiveRole === "gestor" ||
       escoposVisiveis.operadorasVisiveis.includes(slug),
-    [escoposVisiveis, user?.role],
+    [escoposVisiveis, effectiveRole],
   );
 
   const setTheme = (v: boolean) => {
-    if (user?.role === "operador") return; // Operador travado em Dark
+    if (effectiveRole === "operador") return; // Operador travado em Dark
     setIsDark(v);
   };
 
   return (
     <AppContext.Provider value={{
       user, setUser, checking, routeReady,
+      effectiveRole,
+      simulacaoLogin,
+      simulacaoSomenteLeitura,
+      podeAcessarSimuladorLogin,
+      iniciarSimulacaoLogin,
+      encerrarSimulacaoLogin,
+      permissionsReais,
+      permissionsAcoesReais,
       activePage, activeTabSlug, layoutView, setActivePage, navigateTo, applyPathFromLocation, goToSemAcesso,
       permissions, permissionsAcoes, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,

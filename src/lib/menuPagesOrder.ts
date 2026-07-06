@@ -5,7 +5,7 @@ import type { PageKey } from "../types";
 export const MENU_ORDERED_PAGE_KEYS: PageKey[] = MENU.flatMap((sec) => sec.items.map((item) => item.key));
 
 /** Utilitários fora do menu lateral — sempre após as secções de produto. */
-export const GERAL_PAGE_KEYS_AFTER_MENU: PageKey[] = ["configuracoes", "ajuda"];
+export const GERAL_PAGE_KEYS_AFTER_MENU: PageKey[] = ["configuracoes", "simulador_login", "ajuda"];
 
 /** Reordena entradas de permissões/escopos para seguir `MENU` + Geral. */
 export function sortPagesLikeMenu<T extends { key: PageKey }>(entries: readonly T[]): T[] {

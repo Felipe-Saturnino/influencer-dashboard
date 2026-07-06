@@ -9,32 +9,33 @@ import { ROLES_VISAO_OPERACAO_SPIN, roleParidadeInfluencer } from "../lib/staffR
  * - Operador com uma operadora: filtro operadora FORÇADO pelo escopo
  */
 export function useDashboardFiltros() {
-  const { user, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const { user, effectiveRole, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const role = effectiveRole ?? user?.role;
 
   const showFiltroInfluencer = useMemo(() => {
-    if (!user) return false;
-    if (ROLES_VISAO_OPERACAO_SPIN.includes(user.role)) return true;
-    if (["operador", "agencia"].includes(user.role))
+    if (!user || !role) return false;
+    if (ROLES_VISAO_OPERACAO_SPIN.includes(role)) return true;
+    if (["operador", "agencia"].includes(role))
       return escoposVisiveis.influencersVisiveis.length >= 2;
     return false;
-  }, [user, escoposVisiveis.influencersVisiveis.length]);
+  }, [user, role, escoposVisiveis.influencersVisiveis.length]);
 
   const showFiltroOperadora = useMemo(() => {
-    if (!user) return false;
-    if (user.role === "operador" && escoposVisiveis.operadorasVisiveis.length > 0) return false;
-    if (ROLES_VISAO_OPERACAO_SPIN.includes(user.role)) return true;
-    if (roleParidadeInfluencer(user.role) || user.role === "agencia")
+    if (!user || !role) return false;
+    if (role === "operador" && escoposVisiveis.operadorasVisiveis.length > 0) return false;
+    if (ROLES_VISAO_OPERACAO_SPIN.includes(role)) return true;
+    if (roleParidadeInfluencer(role) || role === "agencia")
       return escoposVisiveis.operadorasVisiveis.length >= 2;
     return false;
-  }, [user, escoposVisiveis.operadorasVisiveis.length]);
+  }, [user, role, escoposVisiveis.operadorasVisiveis.length]);
 
   /** Operador com operadora(s) no escopo: slugs forçados nos filtros. */
   const operadoraSlugsForcado = useMemo(() => {
-    if (!user) return null;
+    if (!user || !role) return null;
     const slugs = escoposVisiveis.operadorasVisiveis;
-    if (user.role === "operador" && slugs.length > 0) return slugs;
+    if (role === "operador" && slugs.length > 0) return slugs;
     return null;
-  }, [user, escoposVisiveis.operadorasVisiveis]);
+  }, [user, role, escoposVisiveis.operadorasVisiveis]);
 
   return {
     showFiltroInfluencer,

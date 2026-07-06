@@ -1,6 +1,6 @@
 -- Auditoria: prestadores em organograma staff interno com profiles.role divergente.
 -- Rodar no Supabase → SQL Editor (service role / postgres).
--- Matriz: Gerência Figurino/Comunicação/RH; Times Performance Coach, Shift Leader, Service Manager.
+-- Matriz: Gerência Figurino/Comunicação/RH/Tech Ops; Times Performance Coach, Shift Leader, Service Manager, Tech Ops.
 
 WITH base AS (
   SELECT
@@ -10,12 +10,13 @@ WITH base AS (
     f.setor,
     lower(trim(coalesce(f.email_spin, ''))) AS email_spin,
     lower(trim(coalesce(f.email, ''))) AS email_pessoal,
-    g.nome AS gerencia_nome,
+    coalesce(g_direto.nome, g_time.nome) AS gerencia_nome,
     t.nome AS time_nome,
     d.nome AS diretoria_nome
   FROM public.rh_funcionarios f
   LEFT JOIN public.rh_org_times t ON t.id = f.org_time_id
-  LEFT JOIN public.rh_org_gerencias g ON g.id = f.org_gerencia_id
+  LEFT JOIN public.rh_org_gerencias g_direto ON g_direto.id = f.org_gerencia_id
+  LEFT JOIN public.rh_org_gerencias g_time ON g_time.id = t.gerencia_id
   LEFT JOIN public.rh_org_diretorias d ON d.id = f.org_diretoria_id
   WHERE f.status IS DISTINCT FROM 'encerrado'
 ),
@@ -56,6 +57,8 @@ esperado AS (
       WHEN n.gerencia_norm = 'figurino' THEN 'figurino'
       WHEN n.gerencia_norm = 'comunicacao' THEN 'comunicacao'
       WHEN n.gerencia_norm IN ('rh', 'recursos humanos') THEN 'rh'
+      WHEN n.gerencia_norm = 'tech ops' THEN 'tech_ops'
+      WHEN n.time_norm = 'tech ops' THEN 'tech_ops'
       WHEN n.time_norm = 'performance coach' THEN 'performance_coach'
       WHEN n.time_norm = 'shift leader' THEN 'shift_leader'
       WHEN n.time_norm = 'service manager' THEN 'service_manager'

@@ -10,7 +10,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -42,6 +42,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "comunicacao", label: "Comunicação" },
   { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
+  { value: "tech_ops", label: "Tech Ops" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
   { value: "operador", label: "Operador" },
@@ -54,7 +55,7 @@ export const ROLES: { value: Role; label: string }[] = [
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "shift_leader", "prestador"] },
+  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "tech_ops", "shift_leader", "prestador"] },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
@@ -161,6 +162,14 @@ const PAGES_META: {
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Geral (sempre por último)
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
+  {
+    key: "simulador_login",
+    label: "Simulador de Login",
+    secao: "Geral",
+    hasCriar: false,
+    hasEditar: false,
+    hasExcluir: false,
+  },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
@@ -190,6 +199,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "comunicacao",
   "performance_coach",
   "service_manager",
+  "tech_ops",
   "shift_leader",
   "prestador",
   "operador",
@@ -234,6 +244,7 @@ export function roleBadgeColor(role: Role): string {
     executivo: BRAND.ciano,
     shift_leader: BRAND.amarelo,
     service_manager: BRAND.azul,
+    tech_ops: BRAND.ciano,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,
     performance_coach: BRAND.verde,

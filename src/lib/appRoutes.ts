@@ -93,6 +93,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Gestão de Estúdios", "gestao_mesas", "GestaoDeMesas"),
   page("Status Técnico", "status_tecnico", "StatusTecnico"),
   page("Configurações", "configuracoes", "Configuracoes"),
+  page("Simulador de Login", "simulador_login", "SimuladorDeLogin"),
   page("Overview Spin", "mesas_spin", "OverviewSpin", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "posicionamento", slug: "Posicionamento", label: "Posicionamento", access: "always" },

@@ -1,15 +1,77 @@
-import type { PrestadorTipoSlug } from "../types";
+import type { PrestadorTipoSlug, Role } from "../types";
 import type { RhAreaAtuacao } from "../types/rhFuncionario";
 import { callSupabaseEdgeFunction } from "./supabaseEdgeFetch";
 
-/** Mesma normalização de nome de time usada em rhGamePresenterDealerSync (Game Presenter). */
-export function normRhOrgTimeNomeParaUsuarioSync(nome: string | null | undefined): string {
+/** Espelha `normTimeNome` / `normRhOrgRotulo` da Edge `sync-rh-prestador-auth-user`. */
+export function normRhOrgRotuloOrganograma(nome: string | null | undefined): string {
   return (nome ?? "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .replace(/\s+/g, " ");
+}
+
+export function gerenciaOrganogramaIndicaTechOps(gerenciaNome: string | null | undefined): boolean {
+  return normRhOrgRotuloOrganograma(gerenciaNome) === "tech ops";
+}
+
+export type PerfilRhOrganogramaSync = Extract<
+  Role,
+  | "figurino"
+  | "comunicacao"
+  | "rh"
+  | "performance_coach"
+  | "shift_leader"
+  | "service_manager"
+  | "tech_ops"
+  | "gestor"
+  | "prestador"
+>;
+
+/**
+ * Espelha `resolvePerfilEscopo` da Edge — perfil atribuído após salvar/revisar prestador.
+ * `gerenciaNome` deve incluir a gerência pai quando o vínculo for por time (`rh_org_times.gerencia_id`).
+ */
+export function resolvePerfilRhDeOrganograma(
+  gerenciaNome: string | null | undefined,
+  timeNome: string | null | undefined,
+  areaAtuacaoRh: RhAreaAtuacao | "" | null | undefined,
+): {
+  role: PerfilRhOrganogramaSync;
+  prestadorTipo: PrestadorTipoSlug | null;
+  gestorTipo: string | null;
+} {
+  const g = normRhOrgRotuloOrganograma(gerenciaNome);
+  if (g === "figurino") return { role: "figurino", prestadorTipo: null, gestorTipo: null };
+  if (g === "comunicacao") return { role: "comunicacao", prestadorTipo: null, gestorTipo: null };
+  if (g === "rh" || g === "recursos humanos") return { role: "rh", prestadorTipo: null, gestorTipo: null };
+  if (gerenciaOrganogramaIndicaTechOps(gerenciaNome)) {
+    return { role: "tech_ops", prestadorTipo: null, gestorTipo: null };
+  }
+  if (g === "facilities") return { role: "prestador", prestadorTipo: "facilities", gestorTipo: null };
+  if (g === "financeiro") return { role: "prestador", prestadorTipo: "financeiro", gestorTipo: null };
+  if (g === "ti") return { role: "prestador", prestadorTipo: "ti", gestorTipo: null };
+  if (g === "treinamento") return { role: "gestor", prestadorTipo: null, gestorTipo: "treinamento" };
+
+  const t = normRhOrgRotuloOrganograma(timeNome);
+  if (t === "tech ops") return { role: "tech_ops", prestadorTipo: null, gestorTipo: null };
+  if (t === "performance coach") return { role: "performance_coach", prestadorTipo: null, gestorTipo: null };
+  if (t === "shift leader") return { role: "shift_leader", prestadorTipo: null, gestorTipo: null };
+  if (t === "service manager") return { role: "service_manager", prestadorTipo: null, gestorTipo: null };
+  if (t === "game presenter") return { role: "prestador", prestadorTipo: "game_presenter", gestorTipo: null };
+  if (t === "customer service") return { role: "prestador", prestadorTipo: "customer_service", gestorTipo: null };
+  if (t === "shuffler") return { role: "prestador", prestadorTipo: "shuffler", gestorTipo: null };
+
+  const a = normRhOrgRotuloOrganograma(areaAtuacaoRh);
+  if (a === "escritorio") return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
+  if (a === "estudio") return { role: "prestador", prestadorTipo: "estudio", gestorTipo: null };
+  return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
+}
+
+/** Mesma normalização de nome de time usada em rhGamePresenterDealerSync (Game Presenter). */
+export function normRhOrgTimeNomeParaUsuarioSync(nome: string | null | undefined): string {
+  return normRhOrgRotuloOrganograma(nome);
 }
 
 /**
@@ -89,7 +151,8 @@ export function mensagemSucessoDesativacaoPrestadorEncerrado(
 }
 
 /**
- * Chama a Edge Function após gravar prestador.
+ * Chama a Edge Function após gravar prestador (Novo, Editar, Revisão de Contrato, Reativação).
+ * Gerência **Tech Ops** (vínculo direto ou time filho) → `profiles.role = tech_ops` via `resolvePerfilEscopo` na Edge.
  * Login na plataforma: E-mail Spin se preenchido; senão e-mail pessoal. Envie os dois no body quando possível (reforço pós-save).
  */
 export async function syncUsuarioPrestadorAposSalvarRh(
