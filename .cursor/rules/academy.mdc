@@ -62,9 +62,9 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo, Anexo
 - **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo, Anexo
-- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Código** (automático: 3 letras da categoria + sequencial, ex. Jogos → `JOG-000001`), **Versão*** (default 1.0), **Exige ciência do colaborador?***, Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo
+- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Versão*** (default 1.0), **Exige ciência do colaborador?***, Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo — **sem** campo Código no modal (gerado no primeiro salvamento).
 
-Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de **6 dígitos** por prefixo — contador em `academy_portal_manual_code_counters`; pré-visualização via `academy_portal_manual_preview_proximo_codigo(p_categoria)`; reserva atômica no primeiro salvamento via `academy_portal_manual_reservar_codigo`. **Não** editável; ao editar manual existente o código permanece (mesmo se a categoria mudar).
+Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de **6 dígitos** por prefixo — contador em `academy_portal_manual_code_counters`; reserva atômica no **primeiro salvamento** via `academy_portal_manual_reservar_codigo` (ex.: Jogos → `JOG-000001`). Visível na aba **Manuais** (tabela) e no **Gerenciamento**; **não** editável no modal.
 
 ### Aba Manuais (leitura)
 

@@ -293,11 +293,15 @@ export function documentoExigeCienciaDoUsuario(
   },
   setoresUsuario: readonly string[],
   role: Role | undefined | null,
+  cadastroGestaoPrestadores: boolean,
 ): boolean {
   if (!perfilPortalRhParticipaCiencia(role)) return false;
   if (!doc.requires_acknowledgment) return false;
   if (!documentoUsaModeloNormativo(doc)) return true;
   if (!doc.aplicavel_a?.length) return true;
+  if (doc.aplicavel_a.includes(PORTAL_RH_APLICAVEL_TODOS)) {
+    return cadastroGestaoPrestadores;
+  }
   return documentoAplicavelAoUsuario(doc.aplicavel_a, setoresUsuario);
 }
 
