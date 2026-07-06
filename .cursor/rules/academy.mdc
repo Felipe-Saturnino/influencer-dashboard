@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalUi.ts`**.
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
 
 ---
 
@@ -62,7 +62,9 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo, Anexo
 - **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo, Anexo
-- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Código** (opcional), **Versão*** (default 1.0), **Exige ciência do colaborador?***, Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo
+- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Código** (automático: 3 letras da categoria + sequencial, ex. Jogos → `JOG-000001`), **Versão*** (default 1.0), **Exige ciência do colaborador?***, Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo
+
+Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de **6 dígitos** por prefixo — contador em `academy_portal_manual_code_counters`; pré-visualização via `academy_portal_manual_preview_proximo_codigo(p_categoria)`; reserva atômica no primeiro salvamento via `academy_portal_manual_reservar_codigo`. **Não** editável; ao editar manual existente o código permanece (mesmo se a categoria mudar).
 
 ### Aba Manuais (leitura)
 
@@ -72,7 +74,7 @@ Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valo
 
 ### Workflow Gerenciamento
 
-Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar (publicado), histórico. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
+Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
 
 ### Filtros
 

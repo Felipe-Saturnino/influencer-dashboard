@@ -38,14 +38,15 @@ export type PostagemGerenciamentoRow = {
   tipoUi: AcademyPostagemTipoUi;
   assunto: string;
   autorNome: string;
-  tipoPostagemLabel: string;
+  postagemTipoLabel: string;
+  categoriaLabel: string;
   createdAt: string;
   status: AcademyPostagemStatus;
   publishedAt: string | null;
   textoBusca: string;
 };
 
-type PostagemSortCol = "assunto" | "autor" | "tipo" | "createdAt" | "status" | "publishedAt";
+type PostagemSortCol = "assunto" | "autor" | "tipo" | "categoria" | "createdAt" | "status" | "publishedAt";
 
 const STATUS_ORDEM: Record<AcademyPostagemStatus, number> = {
   rascunho: 0,
@@ -249,7 +250,8 @@ export function GerenciamentoPostagens({
         tipoUi,
         assunto: row.titulo,
         autorNome: "",
-        tipoPostagemLabel: labelFn(catSlug ?? ""),
+        postagemTipoLabel: ACADEMY_POSTAGEM_TIPO_UI_LABEL[tipoUi],
+        categoriaLabel: labelFn(catSlug ?? ""),
         createdAt: row.created_at,
         status: row.status ?? "rascunho",
         publishedAt: row.published_at,
@@ -302,7 +304,9 @@ export function GerenciamentoPostagens({
         case "autor":
           return compareTexto(a.autorNome, b.autorNome, dir);
         case "tipo":
-          return compareTexto(a.tipoPostagemLabel, b.tipoPostagemLabel, dir);
+          return compareTexto(a.postagemTipoLabel, b.postagemTipoLabel, dir);
+        case "categoria":
+          return compareTexto(a.categoriaLabel, b.categoriaLabel, dir);
         case "status":
           return dir * (STATUS_ORDEM[a.status] - STATUS_ORDEM[b.status]);
         case "publishedAt":
@@ -396,6 +400,15 @@ export function GerenciamentoPostagens({
                   align="center"
                 />
                 <SortTableTh
+                  label="Categoria"
+                  col="categoria"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
                   label="Criado em"
                   col="createdAt"
                   sortCol={sortCol}
@@ -443,7 +456,8 @@ export function GerenciamentoPostagens({
                   >
                     <td style={dataTable.tdCenter}>{row.assunto}</td>
                     <td style={dataTable.tdCenter}>{row.autorNome}</td>
-                    <td style={dataTable.tdCenter}>{row.tipoPostagemLabel}</td>
+                    <td style={dataTable.tdCenter}>{row.postagemTipoLabel}</td>
+                    <td style={dataTable.tdCenter}>{row.categoriaLabel}</td>
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
                     <td style={dataTable.tdCenter}>{ACADEMY_POSTAGEM_STATUS_LABEL[row.status]}</td>
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>

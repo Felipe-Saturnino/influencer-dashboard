@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Controle de Estoque · Data Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #f9fafb;
+      --green: #22c55e;
+      --red: #e84025;
+      --yellow: #f59e0b;
+      --purple: #a78bfa;
+      --blue: #0ea5e9;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+      --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: #141414;
+      color: #e4e4e4;
+      padding: 20px 0;
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: rgba(228,228,228,0.75);
+      cursor: default;
+    }
+    .sidebar-item svg { opacity: 0.7; flex-shrink: 0; }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18);
+      color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .sidebar-item.active svg { opacity: 1; }
+
+    /* Main */
+    .main {
+      flex: 1;
+      padding: 24px 28px 48px;
+      overflow-x: auto;
+    }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--brand-primary) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      border-radius: var(--radius-box);
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .mockup-banner strong { color: var(--brand-primary); }
+
+    /* Page header — Brand §4 */
+    .page-header {
+      margin-bottom: 18px;
+    }
+    .page-header-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--brand-primary);
+      letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .profile-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .profile-bar span { font-size: 12px; color: var(--text-muted); }
+
+    /* KPIs — Figurinos / Financeiro */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      border-left: 3px solid var(--kpi-color, var(--brand-primary));
+    }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .kpi-value {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--kpi-color, var(--brand-primary));
+      margin-top: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Filter box — nível 2 */
+    .filter-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 12px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    /* Tabs — FiltroBarTabButton */
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      font-weight: 700;
+      color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+    .tab-btn.hidden-by-role { display: none; }
+
+    /* Pills — filtros 999 */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .pill svg { opacity: 0.65; }
+    .pill.active-filter {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 12%, #fff);
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+    .pill-profile {
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .pill-profile.active {
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      color: var(--brand-primary);
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      font-weight: 700;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 12px 8px 38px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      font-family: var(--font-body);
+      color: var(--text-muted);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 12px center;
+    }
+
+    /* CTA — CtaCriarButton */
+    .cta-criar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: var(--radius-tab);
+      border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cta-criar:hover { filter: brightness(1.05); }
+
+    .btn-secondary {
+      padding: 10px 18px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    /* Content box — nível 3 */
+    .content-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      margin-bottom: 14px;
+    }
+    .section-title h2 {
+      font-family: var(--font-title);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand-primary);
+    }
+    .section-title .sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .section-title .sub::before {
+      content: "— ";
+      margin-right: 6px;
+      font-size: 12px;
+    }
+
+    /* Table — useDataTableBlock */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    thead th {
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+      color: var(--text-muted);
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-action) 14%);
+      border-bottom: 1px solid var(--card-border);
+    }
+    thead th:first-child { border-radius: var(--radius-box) 0 0 0; }
+    thead th:last-child { border-radius: 0 var(--radius-box) 0 0; }
+    tbody td {
+      padding: 11px 14px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-secondary) 8%); }
+    tbody tr:hover td { background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-primary) 12%); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-flex;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-ok { background: #22c55e22; color: var(--green); border: 1px solid #22c55e44; }
+    .badge-warn { background: #f59e0b22; color: var(--yellow); border: 1px solid #f59e0b44; }
+    .badge-info { background: #0ea5e922; color: var(--blue); border: 1px solid #0ea5e944; }
+    .badge-neutral { background: #6b728022; color: var(--text-muted); border: 1px solid #6b728044; }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .icon-btn:hover { color: var(--text); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Tech Ops grid */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    .card-inner {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .card-inner-header {
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--brand-primary);
+      border-bottom: 1px solid var(--card-border);
+      background: color-mix(in srgb, var(--card-bg) 90%, var(--brand-action) 10%);
+    }
+    .card-inner-body { padding: 14px 16px; }
+
+    .recado { padding: 10px 0; border-bottom: 1px solid var(--card-border); }
+    .recado:last-child { border-bottom: none; }
+    .recado-author { font-size: 12px; font-weight: 700; }
+    .recado-text { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .tarefa-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 12px;
+    }
+    .tarefa-row:last-child { border-bottom: none; }
+
+    .callout-warn {
+      background: #f59e0b14;
+      border: 1px solid #f59e0b44;
+      border-radius: var(--radius-tab);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .callout-warn strong { color: #b45309; display: block; margin-bottom: 4px; font-size: 13px; }
+
+    /* Modal overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg);
+      border-radius: var(--radius-box);
+      max-width: 560px;
+      width: 100%;
+      max-height: 90dvh;
+      overflow: auto;
+      box-shadow: var(--shadow-dark);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--card-border);
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .modal-body { padding: 20px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+    .field .value {
+      padding: 10px 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      font-size: 13px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 8px;
+    }
+    .btn-ghost {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .chip-row .pill-chip {
+      padding: 8px 16px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .chip-row .pill-chip.active {
+      font-weight: 700;
+      color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu lateral">
+      <div class="sidebar-brand">DATA INTELLIGENCE</div>
+      <div class="sidebar-section">Estúdio</div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Gestão de Dealers
+      </div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        Central de Notificações
+      </div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+        Figurinos
+      </div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        Roteiro de Mesa
+      </div>
+      <div class="sidebar-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Controle de Estoque
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="mockup-banner">
+        <strong>Mockup estático</strong> — proposta visual para integrar a ferramenta do Tech Ops na plataforma Data Intelligence (seção Estúdio). Interaja com abas, perfil e modal abaixo.
+      </div>
+
+      <header class="page-header">
+        <div class="page-header-row">
+          <div class="page-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <h1>Controle de Estoque</h1>
+        </div>
+        <p class="subtitle">Saldo, movimentação e compliance de materiais e equipamentos do live cassino por estúdio.</p>
+      </header>
+
+      <div class="profile-bar">
+        <span>Simular perfil:</span>
+        <button type="button" class="pill-profile active" data-perfil="tech_ops">Tech Ops</button>
+        <button type="button" class="pill-profile" data-perfil="admin">Admin</button>
+        <button type="button" class="pill-profile" data-perfil="service_manager">Service Manager</button>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid"></div>
+
+      <div class="filter-box">
+        <div class="filter-row" role="tablist" aria-label="Módulos do estoque">
+          <button type="button" class="tab-btn active" role="tab" data-tab="estoque" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+            Estoque
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="troca">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+            Troca de Carta
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="retirada" data-roles="admin,tech_ops">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+            Retirada
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="descarte">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            Descarte
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="equipamentos" data-roles="admin,tech_ops">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Equipamentos
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="tech_ops" data-roles="admin,tech_ops">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Tech Ops
+          </button>
+          <button type="button" class="tab-btn hidden-by-role" role="tab" data-tab="logs" data-roles="admin">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+            Logs
+          </button>
+        </div>
+        <div class="filter-row" id="filter-actions"></div>
+      </div>
+
+      <!-- ESTOQUE -->
+      <section class="content-box panel active" id="panel-estoque" role="tabpanel">
+        <div class="section-title">
+          <h2>Saldo por lote</h2>
+          <p class="sub">sets de cartas = 8 baralhos (416 cartas) · unidades avulsas conforme tipo cadastrado</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Saldo de estoque por lote e estúdio</caption>
+            <thead>
+              <tr>
+                <th scope="col">Estúdio</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Lote</th>
+                <th scope="col">Unidade</th>
+                <th scope="col">Entrada</th>
+                <th scope="col">Saldo</th>
+                <th scope="col">Box troca</th>
+                <th scope="col">Status</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sports Club</td>
+                <td style="text-align:left">Cartas — Set BJ Blaze</td>
+                <td>LOT-2026-0142</td>
+                <td>Set (416 cartas)</td>
+                <td>24</td>
+                <td><strong>18</strong></td>
+                <td>6</td>
+                <td><span class="badge badge-ok">Disponível</span></td>
+                <td><button class="icon-btn" title="Detalhes do lote" aria-label="Detalhes do lote">···</button></td>
+              </tr>
+              <tr>
+                <td>Sports Club</td>
+                <td style="text-align:left">Cartas — Set Roleta</td>
+                <td>LOT-2026-0098</td>
+                <td>Set (416 cartas)</td>
+                <td>12</td>
+                <td><strong>10</strong></td>
+                <td>2</td>
+                <td><span class="badge badge-ok">Disponível</span></td>
+                <td><button class="icon-btn" title="Detalhes do lote" aria-label="Detalhes do lote">···</button></td>
+              </tr>
+              <tr>
+                <td>Blaze Dedicado</td>
+                <td style="text-align:left">Bolinhas Roleta</td>
+                <td>LOT-2026-0031</td>
+                <td>Unidade</td>
+                <td>480</td>
+                <td><strong>412</strong></td>
+                <td>68</td>
+                <td><span class="badge badge-ok">Disponível</span></td>
+                <td><button class="icon-btn" title="Detalhes do lote" aria-label="Detalhes do lote">···</button></td>
+              </tr>
+              <tr>
+                <td>Blaze Dedicado</td>
+                <td style="text-align:left">Lacres mesa</td>
+                <td>LOT-2026-0015</td>
+                <td>Unidade</td>
+                <td>200</td>
+                <td><strong>195</strong></td>
+                <td>5</td>
+                <td><span class="badge badge-warn">Baixo</span></td>
+                <td><button class="icon-btn" title="Detalhes do lote" aria-label="Detalhes do lote">···</button></td>
+              </tr>
+              <tr>
+                <td>CDA Dedicado</td>
+                <td style="text-align:left">Cartas — Set Baccarat</td>
+                <td>LOT-2026-0110</td>
+                <td>Set (416 cartas)</td>
+                <td>8</td>
+                <td><strong>0</strong></td>
+                <td>8</td>
+                <td><span class="badge badge-info">Box troca</span></td>
+                <td><button class="icon-btn" title="Detalhes do lote" aria-label="Detalhes do lote">···</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TROCA -->
+      <section class="content-box panel" id="panel-troca" role="tabpanel">
+        <div class="section-title">
+          <h2>Trocas de carta</h2>
+          <p class="sub">substituição unitária box do estúdio → mesa · confirmação com reautenticação do usuário</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Data/Hora</th>
+                <th scope="col">Estúdio</th>
+                <th scope="col">Mesa</th>
+                <th scope="col">Deck</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Naipe</th>
+                <th scope="col">Lote</th>
+                <th scope="col">Responsável</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>06/07/2026 14:22</td><td>Sports Club</td><td>Blackjack 3</td><td>Deck 4</td><td>Rei</td><td>Espadas</td><td>LOT-2026-0142</td><td>Ana Tech</td></tr>
+              <tr><td>06/07/2026 11:05</td><td>Sports Club</td><td>VIP BJ 1</td><td>Deck 2</td><td>7</td><td>Copas</td><td>LOT-2026-0142</td><td>Carlos SM</td></tr>
+              <tr><td>05/07/2026 22:18</td><td>Blaze Dedicado</td><td>Roleta 2</td><td>—</td><td>—</td><td>—</td><td>LOT-2026-0098</td><td>Pedro Ops</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RETIRADA -->
+      <section class="content-box panel" id="panel-retirada" role="tabpanel">
+        <div class="section-title">
+          <h2>Retiradas documentadas</h2>
+          <p class="sub">somente perfis com permissão de Criar · exige confirmação de identidade</p>
+        </div>
+        <div class="callout-warn">
+          <strong>Migração de autenticação</strong>
+          O sistema legado usa PIN + header X-User-Id. Na plataforma: sessão Supabase + modal de confirmação para ações sensíveis.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Data</th><th scope="col">Estúdio</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Motivo</th><th scope="col">Responsável</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>06/07/2026</td><td>Sports Club</td><td>Lacres</td><td>50 un</td><td>Reposição mesas</td><td>Ana Tech</td></tr>
+              <tr><td>04/07/2026</td><td>Blaze Dedicado</td><td>Bolinhas</td><td>120 un</td><td>Turno noturno</td><td>Pedro Ops</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DESCARTE -->
+      <section class="content-box panel" id="panel-descarte" role="tabpanel">
+        <div class="section-title">
+          <h2>Descarte e destruição</h2>
+          <p class="sub">fluxo compliance: descarte → remessa → termo → certificado PDF</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Código</th><th scope="col">Estúdio</th><th scope="col">Descrição</th><th scope="col">Qtd</th><th scope="col">Status</th><th scope="col">Remessa</th><th scope="col">Ações</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>DESC-2026-0088</td><td>Sports Club</td><td style="text-align:left">Cartas BJ — lote parcial</td><td>3 sets</td>
+                <td><span class="badge badge-warn">Pendente remessa</span></td><td>—</td>
+                <td><button class="icon-btn" title="Termo de retirada" aria-label="Termo de retirada">T</button></td>
+              </tr>
+              <tr>
+                <td>DESC-2026-0085</td><td>Blaze Dedicado</td><td style="text-align:left">Cartas Roleta — desgaste</td><td>2 sets</td>
+                <td><span class="badge badge-neutral">Na remessa REM-0041</span></td><td>REM-0041</td>
+                <td><button class="icon-btn" title="Termo de retirada" aria-label="Termo de retirada">T</button></td>
+              </tr>
+              <tr>
+                <td>DESC-2026-0079</td><td>CDA Dedicado</td><td style="text-align:left">Cartas Baccarat — lote inteiro</td><td>5 sets</td>
+                <td><span class="badge badge-info">Certificado anexado</span></td><td>REM-0038</td>
+                <td><button class="icon-btn" title="Ver certificado" aria-label="Ver certificado">C</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EQUIPAMENTOS -->
+      <section class="content-box panel" id="panel-equipamentos" role="tabpanel">
+        <div class="section-title">
+          <h2>Equipamentos</h2>
+          <p class="sub">roletas, máquinas de shuffling e mesas · logs de limpeza e manutenção auditáveis</p>
+        </div>
+        <div class="filter-row chip-row" style="justify-content:flex-start;margin-bottom:14px">
+          <button type="button" class="pill-chip active">Todos</button>
+          <button type="button" class="pill-chip">Roletas</button>
+          <button type="button" class="pill-chip">Máquinas</button>
+          <button type="button" class="pill-chip">Mesas</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Categoria</th><th scope="col">Identificação</th><th scope="col">Estúdio</th><th scope="col">Status</th><th scope="col">Último registro</th><th scope="col">Data</th><th scope="col">Obs.</th><th scope="col">Ações</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Roleta</td><td>Roleta Blaze 01</td><td>Blaze Dedicado</td><td><span class="badge badge-info">Ativo</span></td><td>Limpeza</td><td>02/07/2026</td><td>OK</td><td><button class="icon-btn" title="Histórico do equipamento" aria-label="Histórico do equipamento">H</button></td></tr>
+              <tr><td>Roleta</td><td>Roleta SC 03</td><td>Sports Club</td><td><span class="badge badge-info">Ativo</span></td><td>Manutenção</td><td>28/06/2026</td><td>Rolamento</td><td><button class="icon-btn" title="Histórico do equipamento" aria-label="Histórico do equipamento">H</button></td></tr>
+              <tr><td>Máquina</td><td>ShuffleTech ST-12</td><td>Sports Club — SHUFFLING</td><td><span class="badge badge-info">Ativo</span></td><td>Limpeza</td><td>05/07/2026</td><td>OK</td><td><button class="icon-btn" title="Histórico do equipamento" aria-label="Histórico do equipamento">H</button></td></tr>
+              <tr><td>Mesa</td><td>Blackjack 3</td><td>Sports Club</td><td><span class="badge badge-info">Ativo</span></td><td>Manutenção</td><td>01/07/2026</td><td>Feltro</td><td><button class="icon-btn" title="Histórico do equipamento" aria-label="Histórico do equipamento">H</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TECH OPS -->
+      <section class="panel" id="panel-tech_ops" role="tabpanel">
+        <div class="two-col">
+          <div class="card-inner">
+            <div class="card-inner-header">Recados</div>
+            <div class="card-inner-body">
+              <div class="recado">
+                <span class="badge badge-info" style="margin-bottom:6px">Novo</span>
+                <div class="recado-author">Admin</div>
+                <div class="recado-text">Inventário geral na sexta — confirmar presença.</div>
+              </div>
+              <div class="recado">
+                <div class="recado-author">Ana Tech</div>
+                <div class="recado-text">Roleta SC 03 aguardando peça do fornecedor.</div>
+              </div>
+              <button type="button" class="btn-secondary" style="margin-top:10px">Novo recado</button>
+            </div>
+          </div>
+          <div class="card-inner">
+            <div class="card-inner-header">Tarefas</div>
+            <div class="card-inner-body">
+              <div class="tarefa-row"><span>Calibrar shuffle ST-12</span><span class="badge badge-warn">Aberta</span></div>
+              <div class="tarefa-row"><span>Revisar lacres mesa BJ 3</span><span class="badge badge-neutral">Em andamento</span></div>
+              <div class="tarefa-row"><span>Backup manual estoque.db</span><span class="badge badge-info">Concluída</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card-inner" style="margin-top:14px">
+          <div class="card-inner-header">Horas extras</div>
+          <div class="card-inner-body">
+            <div class="table-wrap" style="border:none">
+              <table style="min-width:600px">
+                <thead>
+                  <tr><th scope="col">Data</th><th scope="col">Funcionário</th><th scope="col">Entrada</th><th scope="col">Saída</th><th scope="col">Total</th><th scope="col">Descrição</th><th scope="col">Status</th><th scope="col" id="he-acoes-col">Ações</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>06/07/2026</td><td>Ana Tech</td><td>07:30</td><td>19:45</td><td>12h 15m</td><td>Manutenção roleta SC</td><td><span class="badge badge-warn">Pendente</span></td><td class="he-admin-only"><button class="btn-secondary" style="padding:6px 10px;font-size:11px">Aprovar</button></td></tr>
+                  <tr><td>05/07/2026</td><td>Carlos SM</td><td>08:00</td><td>17:10</td><td>9h 10m</td><td>Inventário semanal</td><td><span class="badge badge-info">Aprovada</span></td><td>—</td></tr>
+                  <tr><td>04/07/2026</td><td>Pedro Ops</td><td>06:45</td><td>22:00</td><td>15h 15m</td><td>Evento especial</td><td><span class="badge badge-neutral">Rejeitada</span></td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section class="content-box panel" id="panel-logs" role="tabpanel">
+        <div class="section-title">
+          <h2>Logs de compliance</h2>
+          <p class="sub">relatórios por categoria e período · impressão/PDF e exportação CSV</p>
+        </div>
+        <div class="filter-row" style="justify-content:flex-start;margin-bottom:14px">
+          <span class="pill active-filter">Categoria: Todas</span>
+          <span class="pill">01/06/2026 — 06/07/2026</span>
+          <button type="button" class="cta-criar">Gerar relatório</button>
+          <button type="button" class="btn-secondary">Exportar CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Data/Hora</th><th scope="col">Categoria</th><th scope="col">Usuário</th><th scope="col">Estúdio</th><th scope="col">Detalhe</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>06/07/2026 14:22</td><td>Troca</td><td>Ana Tech</td><td>Sports Club</td><td style="text-align:left">BJ 3 — Rei Espadas</td></tr>
+              <tr><td>06/07/2026 09:10</td><td>Descarte</td><td>Carlos SM</td><td>Blaze Dedicado</td><td style="text-align:left">2 sets Roleta</td></tr>
+              <tr><td>05/07/2026 18:44</td><td>Manutenção</td><td>Pedro Ops</td><td>Sports Club</td><td style="text-align:left">Roleta SC 03</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal-remessa" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="modal-title">Fechar remessa de destruição</span>
+        <button type="button" class="btn-ghost" id="modal-close" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Passo 3 do fluxo compliance — após seleção de descartes pendentes.</p>
+        <div class="field"><label>Descartes selecionados</label><div class="value">DESC-0088, DESC-0085 (5 sets total)</div></div>
+        <div class="field"><label>Peso total (kg) *</label><div class="value">12,4</div></div>
+        <div class="field"><label>Fornecedor de destruição *</label><div class="value">EcoDestroy Ltda</div></div>
+        <div class="field"><label>Código da remessa (gerado)</label><div class="value">REM-2026-0042</div></div>
+        <div class="callout-warn" style="margin-top:8px">
+          <strong>Após fechar</strong>
+          Sistema gera termo de retirada para impressão e habilita upload do certificado PDF.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" id="modal-cancel">Cancelar</button>
+          <button type="button" class="cta-criar">Confirmar e imprimir termo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KPIS = {
+      estoque: [
+        { label: "SALDO TOTAL (SETS)", value: "156", color: "var(--brand-primary)" },
+        { label: "BOX TROCA", value: "14", color: "var(--yellow)" },
+        { label: "DESCARTES PENDENTES", value: "7", color: "var(--yellow)" },
+        { label: "REMESSAS ABERTAS", value: "2", color: "var(--blue)" },
+        { label: "EM MANUTENÇÃO", value: "5", color: "var(--purple)" },
+      ],
+      troca: [],
+      retirada: [],
+      descarte: [
+        { label: "DESCARTES NO PERÍODO", value: "23", color: "var(--brand-primary)" },
+        { label: "PENDENTES REMESSA", value: "7", color: "var(--yellow)" },
+        { label: "REMESSAS FECHADAS", value: "4", color: "var(--blue)" },
+        { label: "CERTIFICADOS PENDENTES", value: "1", color: "var(--yellow)" },
+      ],
+      equipamentos: [
+        { label: "ROLETAS ATIVAS", value: "18", color: "var(--brand-primary)" },
+        { label: "MÁQUINAS SHUFFLING", value: "6", color: "var(--brand-primary)" },
+        { label: "MESAS CADASTRADAS", value: "42", color: "var(--brand-primary)" },
+        { label: "MANUTENÇÃO ABERTA", value: "3", color: "var(--yellow)" },
+      ],
+      tech_ops: [
+        { label: "TAREFAS ABERTAS", value: "8", color: "var(--brand-primary)" },
+        { label: "RECADOS NÃO LIDOS", value: "2", color: "var(--blue)" },
+        { label: "HE PENDENTES", value: "1", color: "var(--yellow)" },
+        { label: "HE APROVADAS (MÊS)", value: "12", color: "var(--green)" },
+      ],
+      logs: [],
+    };
+
+    const FILTER_ACTIONS = {
+      estoque: `
+        <span class="pill active-filter"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/></svg> Todos Estúdios</span>
+        <span class="pill">Todos Tipos</span>
+        <input class="search-input" type="search" placeholder="Pesquisar lote, código ou mesa..." aria-label="Buscar lote" readonly />
+        <button type="button" class="cta-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nova Entrada</button>
+      `,
+      troca: `
+        <span class="pill active-filter">Todos Estúdios</span>
+        <input class="search-input" type="search" placeholder="Pesquisar mesa ou lote..." aria-label="Buscar troca" readonly />
+        <button type="button" class="cta-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Registrar Troca</button>
+      `,
+      retirada: `
+        <span class="pill active-filter">Todos Estúdios</span>
+        <button type="button" class="cta-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nova Retirada</button>
+      `,
+      descarte: `
+        <span class="pill active-filter">Todos Estúdios</span>
+        <span class="pill">Todos Tipos</span>
+        <button type="button" class="cta-criar" id="btn-remessa"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Fechar Remessa</button>
+      `,
+      equipamentos: `
+        <span class="pill active-filter">Todos Estúdios</span>
+        <span class="pill">Todos Equipamentos</span>
+        <button type="button" class="cta-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Registrar Manutenção</button>
+      `,
+      tech_ops: `
+        <button type="button" class="cta-criar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nova Tarefa</button>
+      `,
+      logs: `
+        <span class="pill active-filter">Categoria: Todas</span>
+        <span class="pill">01/06/2026 — 06/07/2026</span>
+        <button type="button" class="cta-criar">Gerar relatório</button>
+        <button type="button" class="btn-secondary">Exportar CSV</button>
+      `,
+    };
+
+    let currentTab = "estoque";
+    let currentPerfil = "tech_ops";
+
+    function renderKpis(tab) {
+      const grid = document.getElementById("kpi-grid");
+      const items = KPIS[tab] || [];
+      if (!items.length) {
+        grid.style.display = "none";
+        return;
+      }
+      grid.style.display = "grid";
+      grid.innerHTML = items.map(k => `
+        <div class="kpi-card" style="--kpi-color:${k.color}">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-value">${k.value}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderFilterActions(tab) {
+      document.getElementById("filter-actions").innerHTML = FILTER_ACTIONS[tab] || "";
+      const btn = document.getElementById("btn-remessa");
+      if (btn) btn.addEventListener("click", openModal);
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      const panel = document.getElementById("panel-" + tab);
+      if (panel) panel.classList.add("active");
+      renderKpis(tab);
+      renderFilterActions(tab);
+    }
+
+    function applyPerfil(perfil) {
+      currentPerfil = perfil;
+      document.querySelectorAll(".pill-profile").forEach(p => {
+        p.classList.toggle("active", p.dataset.perfil === perfil);
+      });
+      document.querySelectorAll(".tab-btn[data-roles]").forEach(btn => {
+        const roles = btn.dataset.roles.split(",");
+        const visible = roles.includes(perfil);
+        btn.classList.toggle("hidden-by-role", !visible);
+      });
+      document.querySelectorAll(".he-admin-only").forEach(el => {
+        el.style.display = perfil === "admin" ? "" : "none";
+      });
+      const logsTab = document.querySelector('[data-tab="logs"]');
+      if (currentTab === "retirada" && perfil === "service_manager") switchTab("estoque");
+      if (currentTab === "equipamentos" && perfil === "service_manager") switchTab("estoque");
+      if (currentTab === "tech_ops" && perfil === "service_manager") switchTab("estoque");
+      if (currentTab === "logs" && perfil !== "admin") switchTab("estoque");
+    }
+
+    function openModal() {
+      document.getElementById("modal-remessa").classList.add("open");
+    }
+    function closeModal() {
+      document.getElementById("modal-remessa").classList.remove("open");
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!btn.classList.contains("hidden-by-role")) switchTab(btn.dataset.tab);
+      });
+    });
+
+    document.querySelectorAll(".pill-profile").forEach(p => {
+      p.addEventListener("click", () => applyPerfil(p.dataset.perfil));
+    });
+
+    document.querySelectorAll(".pill-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        chip.parentElement.querySelectorAll(".pill-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+      });
+    });
+
+    document.getElementById("modal-close").addEventListener("click", closeModal);
+    document.getElementById("modal-cancel").addEventListener("click", closeModal);
+    document.getElementById("modal-remessa").addEventListener("click", e => {
+      if (e.target.id === "modal-remessa") closeModal();
+    });
+
+    renderKpis("estoque");
+    renderFilterActions("estoque");
+    applyPerfil("tech_ops");
+  </script>
+</body>
+</html>

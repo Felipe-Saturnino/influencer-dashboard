@@ -10,6 +10,7 @@ import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFo
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadAcademyPortalAsset } from "../../../lib/academyPortalPostagemFiles";
 import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
+import { previewProximoCodigoManual, reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
 import { AcademyPortalJogosMultiSelect } from "./AcademyPortalJogosMultiSelect";
 import {
   contentTypeFromTipoUi,
@@ -74,6 +75,7 @@ export function ModalCriarPostagem({
   const [descricao, setDescricao] = useState("");
   const [jogosMesa, setJogosMesa] = useState<string[]>([]);
   const [codigoManual, setCodigoManual] = useState("");
+  const [previewCodigo, setPreviewCodigo] = useState("");
   const [versaoManual, setVersaoManual] = useState("1.0");
   const [exigeCiencia, setExigeCiencia] = useState("sim");
   const [jogosOpcoes, setJogosOpcoes] = useState<string[]>([]);
@@ -118,6 +120,7 @@ export function ModalCriarPostagem({
     setDescricao("");
     setJogosMesa([]);
     setCodigoManual("");
+    setPreviewCodigo("");
     setVersaoManual("1.0");
     setExigeCiencia("sim");
     setImagemFile(null);
@@ -135,6 +138,23 @@ export function ModalCriarPostagem({
     if (!open) return;
     void carregarJogosMesasEstudio().then(setJogosOpcoes);
   }, [open]);
+
+  useEffect(() => {
+    if (!open || tipoPostagem !== "manual" || !tipoSubcategoria.trim()) {
+      setPreviewCodigo("");
+      return;
+    }
+    if (modo === "editar" && codigoManual.trim()) return;
+
+    let cancel = false;
+    setPreviewCodigo("…");
+    void previewProximoCodigoManual(supabase, tipoSubcategoria).then((codigo) => {
+      if (!cancel) setPreviewCodigo(codigo ?? "—");
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [open, tipoPostagem, tipoSubcategoria, modo, codigoManual]);
 
   useEffect(() => {
     if (!open) {
@@ -360,11 +380,22 @@ export function ModalCriarPostagem({
           if (error) throw error;
         }
       } else {
+        let codigoFinal = codigoManual.trim();
+        if (!codigoFinal) {
+          const reserva = await reservarCodigoManual(supabase, tipoSubcategoria);
+          if (reserva.error || !reserva.codigo) {
+            setErro(reserva.error ?? ERRO_SALVAR);
+            setSalvando(false);
+            return;
+          }
+          codigoFinal = reserva.codigo;
+        }
+
         const payload = {
           ...basePayload,
           introducao: introducao.trim() || "—",
           jogo_mesa: tipoSubcategoria === "Jogos" && jogosMesa.length > 0 ? jogosMesa : null,
-          codigo: codigoManual.trim() || null,
+          codigo: codigoFinal,
           versao: versaoManual.trim() || "1.0",
           requires_acknowledgment: exigeCiencia === "sim",
         };
@@ -516,19 +547,29 @@ export function ModalCriarPostagem({
                 />
               </div>
 
+              {tipoPostagem === "manual" && tipoSubcategoria.trim() ? (
+                <div>
+                  {lbl("ap-codigo", "Código")}
+                  <div
+                    id="ap-codigo"
+                    style={{
+                      ...inputStyle,
+                      fontFamily: "ui-monospace, monospace",
+                      fontWeight: 700,
+                      color: t.text,
+                    }}
+                    aria-label="Código do manual"
+                  >
+                    {modo === "editar" && codigoManual.trim() ? codigoManual.trim() : previewCodigo || "—"}
+                  </div>
+                  <p style={{ fontSize: 11, color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body }}>
+                    Gerado automaticamente pelas 3 primeiras letras da categoria (ex.: Jogos → JOG-000001).
+                  </p>
+                </div>
+              ) : null}
+
               {tipoPostagem === "manual" ? (
                 <>
-                  <div>
-                    {lbl("ap-codigo", "Código")}
-                    <input
-                      id="ap-codigo"
-                      value={codigoManual}
-                      onChange={(e) => setCodigoManual(e.target.value)}
-                      style={inputStyle}
-                      aria-label="Código do manual"
-                      placeholder="Ex.: MAN-JOG-001"
-                    />
-                  </div>
                   <div>
                     {lbl("ap-versao", "Versão", true)}
                     <input
