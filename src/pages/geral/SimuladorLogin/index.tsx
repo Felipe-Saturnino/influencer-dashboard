@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ArrowLeft, Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { PageHeader } from "../../../components/PageHeader";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -14,6 +15,7 @@ import {
   roleLabel,
 } from "../../../pages/plataforma/GestaoUsuarios/constants";
 import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../../../types";
+import type { Theme } from "../../../constants/theme";
 import {
   ROLES_SIMULAVEIS,
   roleExigeGestorTipoNaSimulacao,
@@ -23,14 +25,14 @@ import {
 
 type OperadoraOpt = { slug: string; nome: string };
 
-type Etapa = "perfis" | "operadora" | "gestor_tipo" | "prestador_tipo";
+type ModalOpcaoPerfil = "operadora" | "gestor_tipo" | "prestador_tipo";
 
 export default function SimuladorLogin() {
   const { theme: t, simulacaoLogin, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("simulador_login");
 
-  const [etapa, setEtapa] = useState<Etapa>("perfis");
+  const [modalOpcao, setModalOpcao] = useState<ModalOpcaoPerfil | null>(null);
   const [rolePendente, setRolePendente] = useState<Role | null>(null);
   const [operadoras, setOperadoras] = useState<OperadoraOpt[]>([]);
   const [carregandoOperadoras, setCarregandoOperadoras] = useState(false);
@@ -63,13 +65,13 @@ export default function SimuladorLogin() {
   }, []);
 
   useEffect(() => {
-    if (etapa === "operadora" && operadoras.length === 0) {
+    if (modalOpcao === "operadora" && operadoras.length === 0) {
       void carregarOperadoras();
     }
-  }, [etapa, operadoras.length, carregarOperadoras]);
+  }, [modalOpcao, operadoras.length, carregarOperadoras]);
 
-  function voltarPerfis() {
-    setEtapa("perfis");
+  function fecharModal() {
+    setModalOpcao(null);
     setRolePendente(null);
     setOperadoraSlug("");
     setGestorTipo("");
@@ -77,19 +79,27 @@ export default function SimuladorLogin() {
     setErr("");
   }
 
-  function selecionarPerfil(role: Role) {
+  function abrirModalOpcao(role: Role, tipo: ModalOpcaoPerfil) {
     setErr("");
     setRolePendente(role);
+    setOperadoraSlug("");
+    setGestorTipo("");
+    setPrestadorTipo("");
+    setModalOpcao(tipo);
+  }
+
+  function selecionarPerfil(role: Role) {
+    setErr("");
     if (roleExigeOperadoraNaSimulacao(role)) {
-      setEtapa("operadora");
+      abrirModalOpcao(role, "operadora");
       return;
     }
     if (roleExigeGestorTipoNaSimulacao(role)) {
-      setEtapa("gestor_tipo");
+      abrirModalOpcao(role, "gestor_tipo");
       return;
     }
     if (roleExigePrestadorTipoNaSimulacao(role)) {
-      setEtapa("prestador_tipo");
+      abrirModalOpcao(role, "prestador_tipo");
       return;
     }
     void confirmarInicio(role);
@@ -112,8 +122,39 @@ export default function SimuladorLogin() {
       setErr(erro);
       return;
     }
+    fecharModal();
     navigateTo("home");
   }
+
+  function confirmarModal() {
+    if (!rolePendente || !modalOpcao) return;
+    if (modalOpcao === "operadora") {
+      void confirmarInicio(rolePendente, { operadoraSlug });
+      return;
+    }
+    if (modalOpcao === "gestor_tipo" && gestorTipo) {
+      void confirmarInicio(rolePendente, { gestorTipoSlug: gestorTipo });
+      return;
+    }
+    if (modalOpcao === "prestador_tipo" && prestadorTipo) {
+      void confirmarInicio(rolePendente, { prestadorTipoSlug: prestadorTipo });
+    }
+  }
+
+  const modalTitulo =
+    modalOpcao === "operadora"
+      ? "Selecione a operadora"
+      : modalOpcao === "gestor_tipo"
+        ? "Selecione o tipo de gestor"
+        : modalOpcao === "prestador_tipo"
+          ? "Selecione a área de prestador"
+          : "";
+
+  const modalConfirmDisabled =
+    iniciando ||
+    (modalOpcao === "operadora" && (!operadoraSlug || carregandoOperadoras)) ||
+    (modalOpcao === "gestor_tipo" && !gestorTipo) ||
+    (modalOpcao === "prestador_tipo" && !prestadorTipo);
 
   if (perm.canView === "nao") {
     return (
@@ -147,234 +188,198 @@ export default function SimuladorLogin() {
           <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, fontFamily: FONT.body }}>
             Visualização ativa: <strong>{simulacaoLogin.labelExibicao}</strong> (somente leitura).
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            <button type="button" onClick={voltarPerfis} style={btnSecundario(t)}>
-              Alterar perfil
-            </button>
-            <button type="button" onClick={() => void encerrarSimulacaoLogin()} style={btnSecundario(t)}>
-              Encerrar visualização
-            </button>
-          </div>
+          <button type="button" onClick={() => void encerrarSimulacaoLogin()} style={btnSecundario(t)}>
+            Encerrar visualização
+          </button>
         </div>
       ) : null}
 
-      {etapa !== "perfis" ? (
-        <button
-          type="button"
-          onClick={voltarPerfis}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 14,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: t.textMuted,
-            fontSize: 13,
-            fontFamily: FONT.body,
-            padding: 0,
-          }}
-        >
-          <ArrowLeft size={14} aria-hidden />
-          Voltar aos perfis
-        </button>
-      ) : null}
-
-      {err ? (
+      {!modalOpcao && err ? (
         <div role="alert" aria-live="polite" style={{ ...alertErro, marginBottom: 14 }}>
           {err}
         </div>
       ) : null}
 
-      {etapa === "perfis" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {linhasPerfis.map((linha) => (
-            <div key={linha.titulo} style={pageBox}>
-              <h2
-                style={{
-                  margin: "0 0 12px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                }}
-              >
-                {linha.titulo}
-              </h2>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", width: "100%" }}>
-                {linha.roles.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    disabled={iniciando}
-                    onClick={() => selecionarPerfil(role)}
-                    style={btnPerfil(t, brand)}
-                  >
-                    {roleLabel(role)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {etapa === "operadora" && rolePendente === "operador" ? (
-        <div style={pageBox}>
-          <h2 style={tituloEtapa(t)}>Selecione a operadora</h2>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-            Perfil: {roleLabel("operador")}
-          </p>
-          {carregandoOperadoras ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.textMuted, fontSize: 13 }}>
-              <Loader2 className="app-lucide-spin" size={14} aria-hidden />
-              Carregando…
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 360 }}>
-              {operadoras.map((op) => (
-                <label
-                  key={op.slug}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: `1px solid ${operadoraSlug === op.slug ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-                    background:
-                      operadoraSlug === op.slug
-                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"
-                        : t.inputBg,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    color: t.text,
-                  }}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {linhasPerfis.map((linha) => (
+          <div key={linha.titulo} style={pageBox}>
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: t.textMuted,
+                fontFamily: FONT.body,
+              }}
+            >
+              {linha.titulo}
+            </h2>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", width: "100%" }}>
+              {linha.roles.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  disabled={iniciando}
+                  onClick={() => selecionarPerfil(role)}
+                  style={btnPerfil(t, brand)}
                 >
-                  <input
-                    type="radio"
-                    name="simulador-operadora"
-                    value={op.slug}
-                    checked={operadoraSlug === op.slug}
-                    onChange={() => setOperadoraSlug(op.slug)}
-                  />
-                  {op.nome}
-                </label>
+                  {roleLabel(role)}
+                </button>
               ))}
             </div>
-          )}
-          <button
-            type="button"
-            disabled={!operadoraSlug || iniciando || carregandoOperadoras}
-            onClick={() => void confirmarInicio("operador", { operadoraSlug })}
-            style={{ ...btnPrimario, marginTop: 20, opacity: !operadoraSlug || iniciando ? 0.6 : 1 }}
-          >
-            {iniciando ? "Iniciando…" : "Iniciar visualização"}
-          </button>
-        </div>
-      ) : null}
-
-      {etapa === "gestor_tipo" && rolePendente === "gestor" ? (
-        <div style={pageBox}>
-          <h2 style={tituloEtapa(t)}>Selecione o tipo de gestor</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 360 }}>
-            {GESTOR_TIPOS.map((tipo) => (
-              <label
-                key={tipo.slug}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${gestorTipo === tipo.slug ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-                  background:
-                    gestorTipo === tipo.slug
-                      ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"
-                      : t.inputBg,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  color: t.text,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="simulador-gestor-tipo"
-                  value={tipo.slug}
-                  checked={gestorTipo === tipo.slug}
-                  onChange={() => setGestorTipo(tipo.slug)}
-                />
-                {tipo.label}
-              </label>
-            ))}
           </div>
-          <button
-            type="button"
-            disabled={!gestorTipo || iniciando}
-            onClick={() => void confirmarInicio("gestor", { gestorTipoSlug: gestorTipo as GestorTipoSlug })}
-            style={{ ...btnPrimario, marginTop: 20, opacity: !gestorTipo || iniciando ? 0.6 : 1 }}
-          >
-            {iniciando ? "Iniciando…" : "Iniciar visualização"}
-          </button>
-        </div>
-      ) : null}
+        ))}
+      </div>
 
-      {etapa === "prestador_tipo" && rolePendente === "prestador" ? (
-        <div style={pageBox}>
-          <h2 style={tituloEtapa(t)}>Selecione a área de prestador</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 360 }}>
-            {PRESTADOR_TIPOS.map((tipo) => (
-              <label
-                key={tipo.slug}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${prestadorTipo === tipo.slug ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-                  background:
-                    prestadorTipo === tipo.slug
-                      ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"
-                      : t.inputBg,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  color: t.text,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="simulador-prestador-tipo"
-                  value={tipo.slug}
-                  checked={prestadorTipo === tipo.slug}
-                  onChange={() => setPrestadorTipo(tipo.slug)}
-                />
-                {tipo.label}
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            disabled={!prestadorTipo || iniciando}
-            onClick={() =>
-              void confirmarInicio("prestador", {
-                prestadorTipoSlug: prestadorTipo as PrestadorTipoSlug,
-              })
-            }
-            style={{ ...btnPrimario, marginTop: 20, opacity: !prestadorTipo || iniciando ? 0.6 : 1 }}
+      {modalOpcao && rolePendente ? (
+        <ModalBase maxWidth={480} onClose={fecharModal}>
+          <ModalHeader title={modalTitulo} onClose={fecharModal} />
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+            Perfil: <strong style={{ color: t.text }}>{roleLabel(rolePendente)}</strong>
+          </p>
+
+          {err ? (
+            <div role="alert" aria-live="polite" style={{ ...alertErro, marginBottom: 14 }}>
+              {err}
+            </div>
+          ) : null}
+
+          {modalOpcao === "operadora" ? (
+            carregandoOperadoras ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.textMuted, fontSize: 13 }}>
+                <Loader2 className="app-lucide-spin" size={14} aria-hidden />
+                Carregando…
+              </div>
+            ) : operadoras.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                Nenhuma operadora ativa encontrada.
+              </p>
+            ) : (
+              <ListaOpcoesRadio
+                t={t}
+                name="simulador-operadora"
+                opcoes={operadoras.map((op) => ({ value: op.slug, label: op.nome }))}
+                value={operadoraSlug}
+                onChange={setOperadoraSlug}
+              />
+            )
+          ) : null}
+
+          {modalOpcao === "gestor_tipo" ? (
+            <ListaOpcoesRadio
+              t={t}
+              name="simulador-gestor-tipo"
+              opcoes={GESTOR_TIPOS.map((tipo) => ({ value: tipo.slug, label: tipo.label }))}
+              value={gestorTipo}
+              onChange={(v) => setGestorTipo(v as GestorTipoSlug)}
+            />
+          ) : null}
+
+          {modalOpcao === "prestador_tipo" ? (
+            <ListaOpcoesRadio
+              t={t}
+              name="simulador-prestador-tipo"
+              opcoes={PRESTADOR_TIPOS.map((tipo) => ({ value: tipo.slug, label: tipo.label }))}
+              value={prestadorTipo}
+              onChange={(v) => setPrestadorTipo(v as PrestadorTipoSlug)}
+            />
+          ) : null}
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              justifyContent: "flex-end",
+              marginTop: 24,
+            }}
           >
-            {iniciando ? "Iniciando…" : "Iniciar visualização"}
-          </button>
-        </div>
+            <button type="button" onClick={fecharModal} disabled={iniciando} style={btnSecundario(t)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={modalConfirmDisabled}
+              onClick={confirmarModal}
+              aria-busy={iniciando}
+              style={{
+                ...btnPrimario,
+                opacity: modalConfirmDisabled ? 0.6 : 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              {iniciando ? (
+                <>
+                  <Loader2 className="app-lucide-spin" size={14} color="#fff" aria-hidden />
+                  Iniciando…
+                </>
+              ) : (
+                "Iniciar visualização"
+              )}
+            </button>
+          </div>
+        </ModalBase>
       ) : null}
     </div>
   );
+}
+
+function ListaOpcoesRadio({
+  t,
+  name,
+  opcoes,
+  value,
+  onChange,
+}: {
+  t: Theme;
+  name: string;
+  opcoes: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Opções"
+      style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "min(52dvh, 360px)", overflowY: "auto" }}
+    >
+      {opcoes.map((op) => (
+        <label
+          key={op.value}
+          style={opcaoRadioStyle(t, value === op.value)}
+        >
+          <input
+            type="radio"
+            name={name}
+            value={op.value}
+            checked={value === op.value}
+            onChange={() => onChange(op.value)}
+          />
+          {op.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function opcaoRadioStyle(t: Theme, ativo: boolean): CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 14px",
+    borderRadius: 10,
+    border: `1px solid ${ativo ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
+    background: ativo ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)" : t.inputBg,
+    cursor: "pointer",
+    fontFamily: FONT.body,
+    fontSize: 13,
+    color: t.text,
+  };
 }
 
 const btnPrimario: CSSProperties = {
@@ -397,16 +402,6 @@ const alertErro: CSSProperties = {
   background: "rgba(232,64,37,0.12)",
   border: "1px solid rgba(232,64,37,0.35)",
 };
-
-function tituloEtapa(t: { text: string }) {
-  return {
-    margin: "0 0 8px",
-    fontSize: 14,
-    fontWeight: 800,
-    color: t.text,
-    fontFamily: FONT.body,
-  } as const;
-}
 
 function btnPerfil(
   t: { text: string; cardBorder: string; inputBg?: string },
