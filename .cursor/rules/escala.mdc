@@ -68,8 +68,8 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Linha superior de filtros:** carrossel de time (`carouselNavStyles` — setas 32×32, rótulo `getCarouselPeriodLabelStyle`) + **`FiltroTodosTimesButton`** (pill igual **Histórico** via `FiltroBarPillButton`; rótulo **Todos os Times**; ícone **`UsersRound`** 15px; `aria-label` alternado conforme estado). Textos e toggle `todosTimes` / `idxTime` **inalterados**.
 - Segunda linha: turno, estúdio, pesquisa — **`FiltroEstudioSelect`** (Todos Estúdios / Nenhum), **`FiltroTurnoSelect`**.
 - **Cadastro Staff (modal):** estúdio multi-seleção — **Todos Estúdios** (exclusivo) ou **N** slugs específicos (`staff_estudio_slugs`); lista de estúdios via `estudios_spin` (RLS `_estudios_spin_leitura_perm` — exige `rh_staff` Ver, não `gestao_mesas`).
-- **Modal Ver (`ModalStaffVer`):** abas Dados pessoais / Função / Skills; aba **Histórico** somente com permissão de **Editar** (`canEditarOk`). Demais campos conforme time (estúdio, bio/fotos).
-- **Modal Editar (`ModalStaffEditar`):** abas Função / Skills / Dealer (Dealer só Game Presenter). Pré-save entre abas (Global § Modais — pré-save); **Salvar** grava função, skills e dealer num único patch; histórico inclui alterações de todas as abas.
+- **Modal Ver (`ModalStaffVer`):** abas Dados pessoais / Função / Skills; aba **Histórico** somente com permissão de **Editar** (`canEditarOk`). **Estúdio** oculto em times de serviço, **Shuffler** e equivalentes (`staffUiTimeOcultarEstudio`); bio/fotos do dealer só em **Game Presenter**.
+- **Modal Editar (`ModalStaffEditar`):** abas Função / Skills / Dealer (Dealer só Game Presenter). Pré-save entre abas (Global § Modais — pré-save); **Salvar** grava função, skills e dealer num único patch; histórico inclui alterações de todas as abas. Campo **Estúdio** oculto nos mesmos times que `staffUiTimeOcultarEstudio` (serviço + Shuffler). **Escala 3x3:** turnos **Manhã** e **Noite**; horários editáveis em `rhStaffHorarioTurno.ts` — Manhã `08h às 20h`; Noite `18h às 06h` ou `20h às 08h`.
 - **Handoff:** CRUD staff, organograma operacional.
 
 ---

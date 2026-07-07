@@ -34,6 +34,11 @@ export function staffUiTimeShufflerOcultarBioFotosVer(nomeTime: string): boolean
   return normStaffNomeTimeUi(nomeTime) === "shuffler";
 }
 
+/** Oculta coluna/campo Estúdio na Gestão de Staff (modais e tabela time a time). */
+export function staffUiTimeOcultarEstudio(nomeTime: string): boolean {
+  return staffUiTimeSemOperadoraHorarioModaisRestritos(nomeTime) || staffUiTimeShufflerOcultarBioFotosVer(nomeTime);
+}
+
 function staffCadastraisBioFotosAplicaveis(nomeTime: string): { bio: boolean; fotos: boolean } {
   if (staffUiTimeShufflerOcultarBioFotosVer(nomeTime)) return { bio: false, fotos: false };
   if (staffUiTimeSemOperadoraHorarioModaisRestritos(nomeTime)) return { bio: false, fotos: false };

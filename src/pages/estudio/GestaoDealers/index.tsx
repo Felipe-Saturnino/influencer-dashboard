@@ -44,6 +44,7 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
+import { buildOperadoraBySlugMap, labelOperadoraFromSlug, type OperadoraLabelRow } from "../../../lib/operadoraLabels";
 import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
 /** Jogos no cadastro e filtros. `mesa_vip` pode existir no banco por legado; usar flag `vip` no cadastro. */
@@ -225,7 +226,7 @@ export default function GestaoDealers() {
     }
     dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
     const [operadorasRes] = await Promise.all([
-      supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
+      supabase.from("operadoras").select("slug, nome, brand_action").order("nome"),
     ]);
     setDealers(dealersLista);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
@@ -351,6 +352,8 @@ export default function GestaoDealers() {
     }
     return operadoraSlugsForcado[0] ?? null;
   }, [user?.role, operadoraSlugsForcado, filtroEstudio, opParaEstudio]);
+
+  const operadoraBySlug = useMemo(() => buildOperadoraBySlugMap(operadoras), [operadoras]);
 
   if (perm.canView === "nao") {
     return (
@@ -568,6 +571,7 @@ export default function GestaoDealers() {
               key={d.id}
               dealer={d}
               estudioLabel={dealerEstudioLabelFromRow(d, estudiosNome, opParaEstudio)}
+              operadoraBySlug={operadoraBySlug}
               onVer={() => setModalVer(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               onHistoricoSolicitacoes={
@@ -587,13 +591,14 @@ export default function GestaoDealers() {
         <ModalVer
           dealer={modalVer}
           estudioLabel={dealerEstudioLabelFromRow(modalVer, estudiosNome, opParaEstudio)}
+          operadoraBySlug={operadoraBySlug}
           onClose={() => setModalVer(null)}
         />
       )}
       {modalHistoricoDealer && (
         <ModalHistoricoSolicitacoesDealer
           dealer={modalHistoricoDealer}
-          operadoras={operadoras}
+          operadoraBySlug={operadoraBySlug}
           slugSolicitacaoFiltro={user?.role === "operador" ? operadoraSlugAtiva : null}
           onClose={() => setModalHistoricoDealer(null)}
           onAbrirThread={(id) => {
@@ -728,12 +733,14 @@ function DealerFotoCarrossel({
 function DealerCard({
   dealer,
   estudioLabel,
+  operadoraBySlug,
   onVer,
   onSolicitar,
   onHistoricoSolicitacoes,
 }: {
   dealer: Dealer;
   estudioLabel: string;
+  operadoraBySlug: Record<string, OperadoraLabelRow>;
   onVer: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
@@ -743,6 +750,8 @@ function DealerCard({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
+  const operadoraSlug = (dealer.operadora_slug ?? "").trim();
+  const operadoraRow = operadoraSlug ? operadoraBySlug[operadoraSlug] : undefined;
 
   return (
     <article
@@ -869,6 +878,12 @@ function DealerCard({
               {estudioLabel}
             </span>
           ) : null}
+          {operadoraSlug ? (
+            <OperadoraTag
+              label={labelOperadoraFromSlug(operadoraSlug, operadoraBySlug)}
+              corPrimaria={operadoraRow?.brand_action}
+            />
+          ) : null}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
@@ -909,17 +924,27 @@ interface SolicResumo {
   created_at: string;
   aguarda_resposta_de: string | null;
   operadora_slug: string;
+  operadoras: { nome: string; brand_action: string | null } | { nome: string; brand_action: string | null }[] | null;
+}
+
+function operadoraEmbFromSolicitacao(
+  emb: SolicResumo["operadoras"],
+): { nome: string; brand_action: string | null } | null {
+  if (emb == null) return null;
+  const row = Array.isArray(emb) ? emb[0] : emb;
+  if (!row?.nome?.trim()) return null;
+  return row;
 }
 
 function ModalHistoricoSolicitacoesDealer({
   dealer,
-  operadoras,
+  operadoraBySlug,
   slugSolicitacaoFiltro,
   onClose,
   onAbrirThread,
 }: {
   dealer: Dealer;
-  operadoras: Operadora[];
+  operadoraBySlug: Record<string, OperadoraLabelRow>;
   /** Operador: restringe à operadora; gestor/admin: null = todas as solicitações do dealer. */
   slugSolicitacaoFiltro: string | null;
   onClose: () => void;
@@ -935,7 +960,7 @@ function ModalHistoricoSolicitacoesDealer({
     void (async () => {
       let q = supabase
         .from("dealer_solicitacoes")
-        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug")
+        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, operadoras(nome, brand_action)")
         .eq("dealer_id", dealer.id)
         .order("created_at", { ascending: false })
         .limit(150);
@@ -978,7 +1003,10 @@ function ModalHistoricoSolicitacoesDealer({
         >
           {solicitacoes.map((s) => {
             const cor = corStatusSolicitacao(s.status);
-            const opRow = operadoras.find((o) => o.slug === s.operadora_slug);
+            const opJoin = operadoraEmbFromSolicitacao(s.operadoras);
+            const opRow = operadoraBySlug[s.operadora_slug];
+            const opLabel = opJoin?.nome?.trim() || labelOperadoraFromSlug(s.operadora_slug, operadoraBySlug);
+            const opCor = opJoin?.brand_action ?? opRow?.brand_action;
             return (
               <li key={s.id}>
                 <button
@@ -1015,7 +1043,7 @@ function ModalHistoricoSolicitacoesDealer({
                     </span>
                     {!slugSolicitacaoFiltro ? (
                       <span style={{ fontSize: 11, color: t.textMuted }}>
-                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.brand_action} />
+                        <OperadoraTag label={opLabel} corPrimaria={opCor} />
                       </span>
                     ) : null}
                   </div>
@@ -1053,14 +1081,18 @@ function ModalHistoricoSolicitacoesDealer({
 function ModalVer({
   dealer,
   estudioLabel,
+  operadoraBySlug,
   onClose,
 }: {
   dealer: Dealer;
   estudioLabel: string;
+  operadoraBySlug: Record<string, OperadoraLabelRow>;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
+  const operadoraSlug = (dealer.operadora_slug ?? "").trim();
+  const operadoraRow = operadoraSlug ? operadoraBySlug[operadoraSlug] : undefined;
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
@@ -1102,6 +1134,16 @@ function ModalVer({
           <br />
           <span style={{ fontSize: 14, color: t.text }}>{estudioLabel}</span>
         </div>
+        {operadoraSlug ? (
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
+            <br />
+            <OperadoraTag
+              label={labelOperadoraFromSlug(operadoraSlug, operadoraBySlug)}
+              corPrimaria={operadoraRow?.brand_action}
+            />
+          </div>
+        ) : null}
         {dealer.perfil_influencer && (
           <div>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span>

@@ -69,7 +69,7 @@ alwaysApply: false
 - Label **“Bio do Dealer”** — nunca “Perfil do Influencer”.
 - Query `dealer_observacoes`: sempre `.limit(20)`.
 - Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); **`FiltroEstudioSelect`** (**Todos Estúdios**, opção **Nenhum estúdio**); gênero/jogo com `aria-pressed`.
-- Coluna/badge de vínculo: **Estúdio** (`dealerEstudioLabelFromRow` com fallback operadora→estúdio). `operadora_slug` mantido para **solicitações** (Central / `dealer_solicitacoes`).
+- Coluna/badge de vínculo: **Estúdio** (`dealerEstudioLabelFromRow` com fallback operadora→estúdio). **`OperadoraTag`** nos cards e modais usa `operadoras.nome` + `brand_action` (cadastro de Gestão de Operadoras — helper `lib/operadoraLabels.ts`), nunca o slug bruto. `operadora_slug` mantido para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
 
