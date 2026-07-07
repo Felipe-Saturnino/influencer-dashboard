@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { SectionTitle } from "../../../components/dashboard";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -147,7 +147,7 @@ export function PrestadorDocumentosCadastroBlocos({
                             Substituir
                           </label>
                           <BtnExcluirLinha
-                            descricaoItem={descricaoBotaoExcluir("documento", m.file_name)}
+                            labelAcao={tooltipExcluir("documento")}
                             onClick={() => setAlvoExcluir(m)}
                           />
                         </>

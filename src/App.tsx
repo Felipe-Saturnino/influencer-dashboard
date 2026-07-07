@@ -10,6 +10,7 @@ import { useIdleSessionTimeout } from "./hooks/useIdleSessionTimeout";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
+import SimuladorLoginBanner from "./components/SimuladorLoginBanner";
 import { RevisaoCadastralGateModal } from "./components/RevisaoCadastralGateModal";
 // Páginas de fluxo inicial (eager — Login e TrocarSenha bloqueiam antes do layout)
 import Login                  from "./pages/geral/Login";
@@ -46,9 +47,11 @@ function lazyWithRetry<T extends ComponentType>(
 // Páginas do layout — lazy loading (carregadas sob demanda para reduzir bundle inicial)
 const Home                   = lazyWithRetry(() => import("./pages/geral/Home"));
 const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configuracoes"));
+const SimuladorLogin         = lazyWithRetry(() => import("./pages/geral/SimuladorLogin"));
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const OverviewPrestador           = lazyWithRetry(() => import("./pages/dashboards/OverviewPrestador"));
 const OverviewSpin              = lazyWithRetry(() => import("./pages/dashboards/OverviewSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
@@ -89,6 +92,8 @@ const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitaco
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
+const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
+const PortalAcademy = lazyWithRetry(() => import("./pages/academy/PortalAcademy"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -96,6 +101,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   streamers:                 Streamers,
   dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_overview_prestador:   OverviewPrestador,
   mesas_spin:               OverviewSpin,
   dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,
@@ -136,7 +142,10 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   informativos:      Informativos,
+  academy_performance_hub: PerformanceHub,
+  academy_portal: PortalAcademy,
   configuracoes:    Configuracoes,
+  simulador_login:  SimuladorLogin,
   ajuda:            Ajuda,
 };
 
@@ -167,7 +176,7 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
-  const { user, theme: t, activePage, layoutView, navigateTo } = useApp();
+  const { user, theme: t, activePage, layoutView, navigateTo, simulacaoLogin } = useApp();
   const [retryKey, setRetryKey] = useState(0);
   const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -247,6 +256,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
           showMenuButton={navDrawer}
           onMenuClick={() => setMenuOpen((o) => !o)}
         />
+        {simulacaoLogin ? <SimuladorLoginBanner /> : null}
         <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", background: t.bg }}>
           {revisaoGateAtivo && activePage === "rh_dados_cadastro" ? (
             <div
@@ -283,6 +293,7 @@ function Root() {
     layoutView,
     operadoraHomeReady,
     operadoraBrand,
+    effectiveRole,
     applyPathFromLocation,
     theme: t,
   } = useApp();
@@ -319,9 +330,9 @@ function Root() {
 
   useIdleSessionTimeout(!!user && routeReady && !checking, handleLogout);
 
-  const aguardandoBrandOperador = user?.role === "operador" && !operadoraHomeReady;
+  const aguardandoBrandOperador = effectiveRole === "operador" && !operadoraHomeReady;
   const bootBackground =
-    user?.role === "operador"
+    effectiveRole === "operador"
       ? operadoraBrand?.brand_bg ?? "#0f0f1a"
       : "#0a0a0f";
 
@@ -345,7 +356,7 @@ function Root() {
             aria-hidden
             style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
           />
-          <span style={{ fontSize: 14, color: user?.role === "operador" ? "var(--brand-text, #e5dce1)" : "#e5dce1" }}>
+          <span style={{ fontSize: 14, color: effectiveRole === "operador" ? "var(--brand-text, #e5dce1)" : "#e5dce1" }}>
             Carregando…
           </span>
         </div>

@@ -8,20 +8,21 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
-import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
+import { getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { FiltroBarPillButton } from "../../../components/dashboard";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
 import {
+  descricaoColunaSolicitacao,
   fmtDataSolicitacao,
   labelStatusSolicitacao,
   labelTipoSolicitacao,
@@ -56,11 +57,17 @@ const RH_SOLICITACOES_SELECT = `
   atestado_file_name,
   rh_vaga_id,
   atendido_em,
-  solicitante:rh_funcionarios ( id, nome ),
-  vaga:rh_vagas ( id, titulo )
+  atendido_por,
+  abono_remunerado,
+  rh_calendario_acao_id,
+  reuniao_dia_iso,
+  calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
+  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome ),
+  atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
+  vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
 
-type SortCol = "data" | "solicitante" | "tipo" | "status";
+type SortCol = "data" | "solicitante" | "tipo" | "status" | "descricao" | "atendido" | "atendimento";
 
 function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -69,6 +76,10 @@ function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
 
 function nomeSolicitante(row: RhSolicitacaoRow): string {
   return unwrapEmbed(row.solicitante)?.nome?.trim() || "—";
+}
+
+function nomeAtendente(row: RhSolicitacaoRow): string {
+  return unwrapEmbed(row.atendente)?.name?.trim() || "—";
 }
 
 function badgeStatus(status: RhSolicitacaoStatus) {
@@ -175,6 +186,15 @@ export default function RhSolicitacoesPage() {
           return compareLocaleTexto(labelTipoSolicitacao(a.tipo), labelTipoSolicitacao(b.tipo), dir);
         case "status":
           return compareLocaleTexto(labelStatusSolicitacao(a.status), labelStatusSolicitacao(b.status), dir);
+        case "descricao":
+          return compareLocaleTexto(descricaoColunaSolicitacao(a.tipo, a), descricaoColunaSolicitacao(b.tipo, b), dir);
+        case "atendido":
+          return compareLocaleTexto(nomeAtendente(a), nomeAtendente(b), dir);
+        case "atendimento":
+          return (
+            ((a.atendido_em ?? "") < (b.atendido_em ?? "") ? -1 : (a.atendido_em ?? "") > (b.atendido_em ?? "") ? 1 : 0) *
+            (dir === "asc" ? 1 : -1)
+          );
         default:
           return 0;
       }
@@ -182,9 +202,28 @@ export default function RhSolicitacoesPage() {
     return rows;
   }, [lista, sort]);
 
+  const exibirColunaStatus = todosStatusAtivo;
+  const exibirColunasAtendimento = filtroStatus === "aprovado" || filtroStatus === "rejeitado";
+  const colunaQuartaSort: SortCol = exibirColunasAtendimento ? "atendido" : exibirColunaStatus ? "status" : "descricao";
+
   function onSort(col: SortCol) {
     setSort((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
   }
+
+  useEffect(() => {
+    setSort((s) => {
+      if (exibirColunasAtendimento && (s.col === "status" || s.col === "descricao")) {
+        return { col: "atendido", dir: s.dir };
+      }
+      if (exibirColunaStatus && (s.col === "descricao" || s.col === "atendido" || s.col === "atendimento")) {
+        return { col: "status", dir: s.dir };
+      }
+      if (!exibirColunaStatus && !exibirColunasAtendimento && (s.col === "status" || s.col === "atendido" || s.col === "atendimento")) {
+        return { col: "descricao", dir: s.dir };
+      }
+      return s;
+    });
+  }, [exibirColunaStatus, exibirColunasAtendimento]);
 
   if (perm.loading) {
     return (
@@ -208,19 +247,13 @@ export default function RhSolicitacoesPage() {
       <PageHeader
         icon={<PageMenuIcon pageKey="rh_solicitacoes" />}
         title={getPageMenuLabel("rh_solicitacoes")}
-        subtitle="Acompanhe e atenda solicitações de prestadores — atestados e vagas internas."
+        subtitle="Acompanhe e atenda solicitações de prestadores."
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-        <div
-          style={{
-            ...getFilterBarRowStyle(),
-            width: "100%",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 10 }}>
+        <div className="app-marketplace-filtro-minhas">
+          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+          <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Status da solicitação">
             <button type="button" aria-label="Status anterior" onClick={retrocederStatus} style={getCarouselBtnNavStyle(t, false)}>
               <ChevronLeft size={14} aria-hidden="true" />
             </button>
@@ -246,23 +279,24 @@ export default function RhSolicitacoesPage() {
             ) : null}
           </div>
 
-          <FiltroBarCampoSelect
-            id="filtro-tipo-solicitacao"
-            value={filtroTipo}
-            onChange={(v) => setFiltroTipo(v as RhSolicitacaoFiltroTipo)}
-            options={RH_SOLICITACAO_TIPO_OPTIONS}
-            icon={<ClipboardList size={15} strokeWidth={2} aria-hidden="true" />}
-            ariaLabel="Tipo de solicitação"
-            todasValue={RH_SOLICITACAO_FILTRO_TODAS_VALUE}
-            todasLabel="Todas Solicitações"
-            minWidth={220}
-            style={{ flexShrink: 0 }}
-          />
+          <div className="app-marketplace-filtro-minhas__cta">
+            <FiltroBarCampoSelect
+              id="filtro-tipo-solicitacao"
+              value={filtroTipo}
+              onChange={(v) => setFiltroTipo(v as RhSolicitacaoFiltroTipo)}
+              options={RH_SOLICITACAO_TIPO_OPTIONS}
+              icon={<ClipboardList size={15} strokeWidth={2} aria-hidden="true" />}
+              ariaLabel="Tipo de solicitação"
+              todasValue={RH_SOLICITACAO_FILTRO_TODAS_VALUE}
+              todasLabel="Todas Solicitações"
+              minWidth={220}
+            />
+          </div>
         </div>
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="atestados e vagas internas">Solicitações</SectionTitle>
+        <SectionTitle>Solicitações</SectionTitle>
 
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -306,15 +340,38 @@ export default function RhSolicitacoesPage() {
                     thStyle={dataTable.thHeader}
                     align="center"
                   />
-                  <SortTableTh
-                    label="Status"
-                    col="status"
-                    sortCol={sort.col}
-                    sortDir={sort.dir}
-                    onSort={onSort}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                  />
+                  {exibirColunasAtendimento ? (
+                    <>
+                      <SortTableTh
+                        label="Atendido"
+                        col="atendido"
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        onSort={onSort}
+                        thStyle={dataTable.thHeader}
+                        align="center"
+                      />
+                      <SortTableTh
+                        label="Data do Atendimento"
+                        col="atendimento"
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        onSort={onSort}
+                        thStyle={dataTable.thHeader}
+                        align="center"
+                      />
+                    </>
+                  ) : (
+                    <SortTableTh
+                      label={exibirColunaStatus ? "Status" : "Descrição"}
+                      col={colunaQuartaSort}
+                      sortCol={sort.col}
+                      sortDir={sort.dir}
+                      onSort={onSort}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                  )}
                   <th scope="col" style={dataTable.thHeader}>
                     Ações
                   </th>
@@ -347,22 +404,43 @@ export default function RhSolicitacoesPage() {
                       </span>
                     </td>
                     <td style={dataTable.tdCenter}>{labelTipoSolicitacao(row.tipo)}</td>
-                    <td style={dataTable.tdCenter}>
-                      <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
-                    </td>
+                    {exibirColunasAtendimento ? (
+                      <>
+                        <td style={dataTable.tdCenter} title={nomeAtendente(row)}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              maxWidth: 160,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {nomeAtendente(row)}
+                          </span>
+                        </td>
+                        <td style={dataTable.tdCenter}>
+                          {row.atendido_em ? fmtDataSolicitacao(row.atendido_em) : "—"}
+                        </td>
+                      </>
+                    ) : (
+                      <td style={dataTable.tdCenter}>
+                        {exibirColunaStatus ? (
+                          <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+                        ) : (
+                          <span title={descricaoColunaSolicitacao(row.tipo, row)}>
+                            {descricaoColunaSolicitacao(row.tipo, row)}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                        <BtnIconeAcaoLinha
-                          label={tooltipAcaoAbreModal("Ver solicitação", nomeSolicitante(row))}
-                          onClick={() => setModalVer(row)}
-                        >
+                        <BtnIconeAcaoLinha label={tooltipAcao("Ver solicitação")} onClick={() => setModalVer(row)}>
                           <Eye size={14} aria-hidden />
                         </BtnIconeAcaoLinha>
-                        {perm.canEditarOk ? (
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Atender solicitação", nomeSolicitante(row))}
-                            onClick={() => setModalAtender(row)}
-                          >
+                        {!exibirColunasAtendimento && row.status === "em_analise" && perm.canEditarOk ? (
+                          <BtnIconeAcaoLinha label={tooltipAcao("Atender solicitação")} onClick={() => setModalAtender(row)}>
                             <Pencil size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}

@@ -43,8 +43,10 @@ function perfilEsperadoStaff(gerenciaNome, timeNome) {
   if (g === "figurino") return "figurino";
   if (g === "comunicacao") return "comunicacao";
   if (g === "rh" || g === "recursos humanos") return "rh";
+  if (g === "tech ops") return "tech_ops";
 
   const t = normNome(timeNome);
+  if (t === "tech ops") return "tech_ops";
   if (t === "performance coach") return "performance_coach";
   if (t === "shift leader") return "shift_leader";
   if (t === "service manager") return "service_manager";
@@ -88,7 +90,7 @@ const { data: rows, error } = await supabase
     org_time_id,
     org_gerencia_id,
     org_diretoria_id,
-    rh_org_times:org_time_id ( nome ),
+    rh_org_times:org_time_id ( nome, rh_org_gerencias:gerencia_id ( nome ) ),
     rh_org_gerencias:org_gerencia_id ( nome ),
     rh_org_diretorias:org_diretoria_id ( nome )
   `,
@@ -134,8 +136,9 @@ const semLogin = [];
 const ok = [];
 
 for (const r of rows ?? []) {
-  const timeNome = r.rh_org_times?.nome ?? null;
-  const gerenciaNome = r.rh_org_gerencias?.nome ?? null;
+  const timeRow = r.rh_org_times;
+  const timeNome = timeRow?.nome ?? null;
+  const gerenciaNome = r.rh_org_gerencias?.nome ?? timeRow?.rh_org_gerencias?.nome ?? null;
   const diretoriaNome = r.rh_org_diretorias?.nome ?? null;
 
   const esperado = perfilEsperadoStaff(gerenciaNome, timeNome);

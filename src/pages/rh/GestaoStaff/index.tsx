@@ -67,7 +67,7 @@ import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { tooltipAcaoAbreModal } from "../../../lib/iconOnlyButtonA11y";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
@@ -1109,14 +1109,14 @@ export default function RhGestaoStaffPage() {
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
-                            label={tooltipAcaoAbreModal("Prestador", row.nome)}
+                            label={tooltipAcao("Detalhes do Prestador")}
                             onClick={() => setModalVer(row)}
                           >
                             <Eye size={14} aria-hidden />
                           </BtnIconeAcaoLinha>
                           {perm.canEditarOk ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Editar", row.nome)}
+                              label={tooltipAcao("Editar Prestador")}
                               onClick={() => setModalEditar(row)}
                             >
                               <Pencil size={14} aria-hidden />
@@ -1124,7 +1124,7 @@ export default function RhGestaoStaffPage() {
                           ) : null}
                           {perm.canEditarOk ? (
                             <BtnIconeAcaoLinha
-                              label={tooltipAcaoAbreModal("Anotações", row.nome)}
+                              label={tooltipAcao("Anotações do Prestador")}
                               onClick={() => setModalAnotacoes(row)}
                             >
                               <StickyNote size={14} aria-hidden />

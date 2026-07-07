@@ -35,13 +35,13 @@ function storageKey(userId: string) {
 }
 
 export default function Sidebar({ activePage, onNavigate, isDrawer = false, drawerOpen = false }: Props) {
-  const { theme: t, permissions, operadoraBrand, user } = useApp();
+  const { theme: t, permissions, operadoraBrand, user, effectiveRole } = useApp();
   const pendGestor = usePendenciasCount("gestor");
   const pendOperadora = usePendenciasCount("operadora");
   const badgeCentral =
-    user?.role === "operador"
+    effectiveRole === "operador"
       ? pendOperadora
-      : user?.role && ROLES_VISAO_OPERACAO_SPIN.includes(user.role as Role)
+      : effectiveRole && ROLES_VISAO_OPERACAO_SPIN.includes(effectiveRole as Role)
         ? pendGestor
         : 0;
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;

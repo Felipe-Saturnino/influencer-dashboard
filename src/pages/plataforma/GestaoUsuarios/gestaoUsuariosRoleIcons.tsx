@@ -15,6 +15,7 @@ import {
   UserCog,
   Users,
   Flag,
+  Wrench,
 } from "lucide-react";
 import type { Role } from "../../../types";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
@@ -29,6 +30,7 @@ export const ROLE_PERM_TAB_ICONS: Partial<Record<Role, ReactNode>> = {
   comunicacao: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
   performance_coach: <Target {...FILTRO_BAR_TAB_ICON_PROPS} />,
   service_manager: <Headphones {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  tech_ops: <Wrench {...FILTRO_BAR_TAB_ICON_PROPS} />,
   shift_leader: <Flag {...FILTRO_BAR_TAB_ICON_PROPS} />,
   prestador: <IdCard {...FILTRO_BAR_TAB_ICON_PROPS} />,
   operador: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,

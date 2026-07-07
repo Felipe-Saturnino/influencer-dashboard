@@ -40,8 +40,8 @@ function passwordStrength(pwd: string) {
 }
 
 export default function Configuracoes() {
-  const { theme: t, user, isDark, setIsDark } = useApp();
-  const isOperador = user?.role === "operador";
+  const { theme: t, effectiveRole, isDark, setIsDark } = useApp();
+  const isOperador = effectiveRole === "operador";
   const perm = usePermission("configuracoes");
 
   const [curPass, setCurPass] = useState("");

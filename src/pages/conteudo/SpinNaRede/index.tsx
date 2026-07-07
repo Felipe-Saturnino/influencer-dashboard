@@ -10,7 +10,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { getPageContentBoxShellStyle } from "../../../lib/pageContentBoxStyles";
 import { usePermission } from "../../../hooks/usePermission";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 
 type SpinNaRedeMencaoRow = {
@@ -359,7 +359,7 @@ export default function SpinNaRede() {
                   </a>
                   {perm.canExcluirOk ? (
                     <BtnExcluirLinha
-                      descricaoItem={descricaoBotaoExcluir("menção", row.titulo)}
+                      labelAcao={tooltipExcluir("menção")}
                       disabled={excluindo}
                       onClick={() => setAlvoExcluir(row)}
                     />

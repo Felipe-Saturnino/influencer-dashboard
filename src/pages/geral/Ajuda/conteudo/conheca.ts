@@ -145,6 +145,45 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_overview_prestador: {
+    titulo: "Overview Prestador",
+    blocos: [
+      {
+        texto:
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos prestadores do estúdio. A página tem duas abas — Escala (disponível) e Performance (em desenvolvimento) — e reutiliza os mesmos dados de grade e ponto do Calendário RH.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe o acumulado de todo o período — o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+      },
+      {
+        subtitulo: "Aba Escala — KPIs Consolidados",
+        texto:
+          "Quatro cards com comparativo MTD ao mesmo intervalo do mês anterior (subtítulo \"acumulado\" no Histórico, sem MoM):\n\n— Dias Escalado: dias em que o prestador constava na grade de escala.\n— Dias Realizado: dias com presença registrada conforme regras do Calendário.\n— Horas Escaladas e Horas Realizadas: totais de horas no período, no formato HH:MM.",
+      },
+      {
+        subtitulo: "Absenteísmo",
+        texto:
+          "Três cards complementares:\n\n— Pontualidade: soma de entradas atrasadas e saídas antecipadas em relação ao horário escalado, com detalhamento abaixo.\n— Ponto não Registrado: check-in e/ou check-out não registrados pelo prestador (com justificativa), com detalhamento por tipo.\n— Atestados: total de dias de atestado médico no período.",
+      },
+      {
+        subtitulo: "Aproveitamento e Movimentações",
+        texto:
+          "Dois gráficos de barras lado a lado comparam dias e horas escalados vs realizados.\n\nO gráfico de pizza **Movimentações de turno** agrupa trocas realizadas, turnos vendidos e turnos comprados no período.",
+      },
+      {
+        subtitulo: "Detalhamento Diário",
+        texto:
+          "Tabela com colunas Data, Ocorrência e Detalhe. Ocorrências possíveis: Troca, Atestado, Atraso, Esquecimento, Compra e Venda.\n\nO detalhe varia por tipo (contraparte em troca/compra/venda, dias de atestado, minutos de atraso, check-in/out esquecido). Estado vazio de dados: \"Sem dados para o período selecionado.\"",
+      },
+      {
+        subtitulo: "Aba Performance",
+        texto:
+          "Conteúdo em desenvolvimento — será liberado em versão futura.",
+      },
+    ],
+  },
   agenda: {
     titulo: "Agenda",
     blocos: [
@@ -413,6 +452,62 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  rh_funcionarios: {
+    titulo: "Gestão de Prestadores",
+    blocos: [
+      {
+        texto:
+          "Centraliza o cadastro de prestadores, head count por área, movimentações de RH e fluxos operacionais (contratação, desligamento, anotações). O acesso às abas e ações depende das permissões Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Abas e filtros",
+        texto:
+          "Navegue entre as abas de gestão (cadastro, head count, anotações e fluxos conforme liberado ao perfil). Use os filtros de operadora, time ou busca quando disponíveis para restringir a lista antes de editar ou exportar.",
+      },
+    ],
+  },
+  rh_organograma: {
+    titulo: "Organograma",
+    blocos: [
+      {
+        texto:
+          "Mapa da estrutura da Spin Gaming — diretorias, gerências e times — com modos de visualização e gerenciamento para quem tem permissão de editar. Use a barra de filtros para alternar entre visualização do organograma e cadastro de diretorias, gerências e times.",
+      },
+      {
+        subtitulo: "Visualização",
+        texto:
+          "No modo Visualização, explore a hierarquia com carrossel de diretoria e expansão de gerências e times. No modo Gerenciamento (com permissão de Editar), cadastre ou ajuste diretorias, gerências e times vinculados.",
+      },
+    ],
+  },
+  rh_vagas: {
+    titulo: "Vagas",
+    blocos: [
+      {
+        texto:
+          "Gerencia vagas abertas, candidaturas e etapas do processo seletivo interno. Publicação, triagem e movimentação de candidatos dependem das permissões de Criar e Editar na página.",
+      },
+      {
+        subtitulo: "Filtros e candidaturas",
+        texto:
+          "Use os filtros de status, tipo de vaga e busca para localizar processos. Cada vaga concentra candidatos, histórico de movimentação e ações de RH conforme o perfil logado.",
+      },
+    ],
+  },
+  rh_central_denuncias: {
+    titulo: "Central de Denúncias",
+    blocos: [
+      {
+        texto:
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
+      },
+      {
+        subtitulo: "Atendimento",
+        texto:
+          "Filtre por tipo de denúncia, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
+      },
+    ],
+  },
   rh_dados_cadastro: {
     titulo: "Dados de Cadastro",
     blocos: [
@@ -512,6 +607,129 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Permissões",
         texto:
           "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
+      },
+    ],
+  },
+  rh_gestao_escala: {
+    titulo: "Gestão de Escala",
+    blocos: [
+      {
+        texto:
+          "Monta e mantém a escala operacional por área (time), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar.",
+      },
+      {
+        subtitulo: "Fluxo da escala",
+        texto:
+          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Customer Service, Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+      },
+    ],
+  },
+  rh_staff: {
+    titulo: "Gestão de Staff",
+    blocos: [
+      {
+        texto:
+          "Lista e edita prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa — turnos, siglas e dados operacionais usados na escala e no calendário.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Consulta exige permissão de Ver; alterações de turno ou cadastro operacional exigem Editar. Filtros de operadora e busca restringem a grade antes de salvar alterações em lote.",
+      },
+    ],
+  },
+  rh_calendario: {
+    titulo: "Calendário",
+    blocos: [
+      {
+        texto:
+          "Visão operacional da rotina: turnos publicados, trocas, compromissos, controle de presença e justificativas. Integra escala aprovada, marketplace de turnos e solicitações atendidas pelo RH.",
+      },
+      {
+        subtitulo: "Modos e filtros",
+        texto:
+          "Alterne entre visões de calendário conforme o perfil (próprio time, staff selecionado ou visão ampliada). Use filtros de time, staff e período; ações de presença e justificativa dependem de permissão de Editar.",
+      },
+    ],
+  },
+  escala_marketplace_turnos: {
+    titulo: "Marketplace",
+    blocos: [
+      {
+        texto:
+          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
+      },
+      {
+        subtitulo: "Ofertas e candidaturas",
+        texto:
+          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. Ofertas encerradas ou expiradas saem da lista ativa.",
+      },
+    ],
+  },
+  escala_solicitacoes: {
+    titulo: "Solicitações",
+    blocos: [
+      {
+        texto:
+          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na secção RH.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Navegue por período, time e colaborador. Status em aberto aparecem na fila principal; arquivados ficam disponíveis no histórico conforme filtros de data e status.",
+      },
+    ],
+  },
+  academy_performance_hub: {
+    titulo: "Performance Hub",
+    blocos: [
+      {
+        texto:
+          "Portal de avaliação de desempenho dos prestadores dos times **Game Presenter** e **Shuffler**. Consolida status das avaliações, fila de análise, agenda e configuração de pesos do scoring.\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado; demais perfis precisam de permissão explícita de Ver, Criar ou Editar conforme a aba.",
+      },
+      {
+        subtitulo: "Abas e permissões",
+        texto:
+          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver avaliações concluídas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila «Analisar Avaliações» (pendentes, em análise, feedback).\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver **Todo o período**. Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+      },
+      {
+        subtitulo: "Status e ações",
+        texto:
+          "**Pendente** — Ver e Histórico (sem notas).\n\n**Em Análise** — Ver, **Analisar** (modal com critérios 0–10) e Histórico.\n\n**Feedback** e **Concluída** — Ver e Histórico; avaliações concluídas **não** exibem Analisar.\n\nPrestador (Próprios): **Ver minha avaliação** e Histórico nas concluídas.",
+      },
+      {
+        subtitulo: "Pontuação",
+        texto:
+          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD usam média simples das notas totais concluídas no período. Valores exibidos com duas casas decimais.",
+      },
+    ],
+  },
+  academy_portal: {
+    titulo: "Portal da Academy",
+    blocos: [
+      {
+        texto:
+          "Central de **comunicados**, **dicas** e **manuais** de treinamento para a operação. As abas de leitura exibem apenas conteúdo **Publicado**; arquivados ficam na aba **Gerenciamento** (permissão de **Editar**).\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado.",
+      },
+      {
+        subtitulo: "Abas e filtros",
+        texto:
+          "**Comunicados** — sub-abas Todos, Treinamentos e Geral.\n\n**Dicas** e **Manuais** — sub-abas Todos, Jogos, Imagem, Comunicação e Geral.\n\nUse o carrossel de mês ou **Histórico** para ver **Todo o período**. A busca ignora acentos e maiúsculas.",
+      },
+      {
+        subtitulo: "Nova postagem",
+        texto:
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
+      },
+      {
+        subtitulo: "Manuais — tabela e ciência",
+        texto:
+          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
       },
     ],
   },
@@ -646,17 +864,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.",
+          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos, reuniões com RH e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.\n\nAo registrar uma justificativa **Médico** no **Calendário** (Controle de Presença), uma solicitação do tipo **Atestado** é criada automaticamente nesta fila, com status **Em análise**.\n\nAo **agendar reunião com RH** no **Calendário** (Compromissos), uma solicitação do tipo **Reunião com RH** entra nesta fila. A reunião só aparece nos calendários do solicitante e do RH que aprovar após o atendimento.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado ou Vagas, ou exibe **Todas Solicitações**.",
+          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado, **Reunião com RH** ou Vagas, ou exibe **Todas Solicitações**.",
       },
       {
         subtitulo: "Tabela e ações",
         texto:
-          "A tabela lista data, solicitante, tipo e status. Use os ícones **Ver** (detalhes em somente leitura) e **Atender** (disponível com permissão de Editar) — passe o mouse sobre o ícone para ver o tooltip.\n\nNo atendimento, defina status, observação do RH e motivo quando o status for Rejeitado.",
+          "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).",
       },
     ],
   },

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import type { PermissoesAcoesMapa } from "../lib/appRoutes";
-import type { PermissaoValor, PageKey, User } from "../types";
+import type { PermissaoValor, PageKey, Role, User } from "../types";
 import type { PermissoesMapa } from "../context/AppContext";
 
 export interface Permissoes {
@@ -76,6 +76,18 @@ function canViewEfetivo(cv: PermissaoValor | null | undefined): PermissaoValor {
   return "nao";
 }
 
+function bloquearEscritaSimulacao(perms: Permissoes): Permissoes {
+  return {
+    ...perms,
+    canCriar: "nao",
+    canEditar: "nao",
+    canExcluir: "nao",
+    canCriarOk: false,
+    canEditarOk: false,
+    canExcluirOk: false,
+  };
+}
+
 /** Deriva permissões da página a partir do boot do AppContext (sem Supabase por navegação). */
 export function permissoesFromContext(
   pageKey: PageKey,
@@ -83,6 +95,7 @@ export function permissoesFromContext(
   permissions: PermissoesMapa,
   permissionsAcoes: PermissoesAcoesMapa,
   routeReady: boolean,
+  roleParaPermissao?: Role,
 ): Permissoes {
   if (!user) return SEM_PERMISSAO;
   if (!routeReady) {
@@ -98,12 +111,14 @@ export function permissoesFromContext(
     };
   }
 
-  if (user.role === "admin") return ADMIN_PERMISSAO;
+  const role = roleParaPermissao ?? user.role;
+
+  if (role === "admin") return ADMIN_PERMISSAO;
 
   const acoes = permissionsAcoes[pageKey] ?? { criar: null, editar: null, excluir: null };
   const cvFromContext = permissions[pageKey];
 
-  if (user.role === "operador" || user.role === "gestor" || user.role === "prestador") {
+  if (role === "operador" || role === "gestor" || role === "prestador") {
     const canView = canViewEfetivo(cvFromContext);
     return {
       canView,
@@ -121,10 +136,52 @@ export function permissoesFromContext(
 }
 
 export function usePermission(pageKey: PageKey): Permissoes {
-  const { user, permissions, permissionsAcoes, routeReady } = useApp();
+  const {
+    user,
+    permissions,
+    permissionsAcoes,
+    permissionsReais,
+    permissionsAcoesReais,
+    routeReady,
+    simulacaoSomenteLeitura,
+    effectiveRole,
+  } = useApp();
 
-  return useMemo(
-    () => permissoesFromContext(pageKey, user, permissions, permissionsAcoes, routeReady),
-    [pageKey, user, permissions, permissionsAcoes, routeReady],
-  );
+  return useMemo(() => {
+    if (pageKey === "simulador_login") {
+      return permissoesFromContext(
+        pageKey,
+        user,
+        permissionsReais,
+        permissionsAcoesReais,
+        routeReady,
+        user?.role,
+      );
+    }
+
+    const base = permissoesFromContext(
+      pageKey,
+      user,
+      permissions,
+      permissionsAcoes,
+      routeReady,
+      effectiveRole,
+    );
+
+    if (simulacaoSomenteLeitura) {
+      return bloquearEscritaSimulacao(base);
+    }
+
+    return base;
+  }, [
+    pageKey,
+    user,
+    permissions,
+    permissionsAcoes,
+    permissionsReais,
+    permissionsAcoesReais,
+    routeReady,
+    simulacaoSomenteLeitura,
+    effectiveRole,
+  ]);
 }

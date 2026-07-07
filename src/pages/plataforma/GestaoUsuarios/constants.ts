@@ -1,5 +1,6 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
 import { ROLES_SEM_RESTRICAO_ESCOPO } from "../../../lib/staffRoles";
+import { sortPagesLikeMenu } from "../../../lib/menuPagesOrder";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
@@ -9,7 +10,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -41,6 +42,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "comunicacao", label: "Comunicação" },
   { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
+  { value: "tech_ops", label: "Tech Ops" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
   { value: "operador", label: "Operador" },
@@ -53,12 +55,12 @@ export const ROLES: { value: Role; label: string }[] = [
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "shift_leader", "prestador"] },
+  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "tech_ops", "shift_leader", "prestador"] },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
-/** Ordem alinhada ao menu lateral (`constants/menu.ts`); secção Geral por último. */
-export const PAGES: {
+/** Metadados por página — ordem de exportação via `sortPagesLikeMenu` (alinhado a `menu.ts`; Geral por último). */
+const PAGES_META: {
   key: PageKey;
   label: string;
   secao: string;
@@ -71,6 +73,7 @@ export const PAGES: {
   { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_overview_prestador", label: "Overview Prestador", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   // Lives
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
@@ -102,6 +105,23 @@ export const PAGES: {
   },
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Academy
+  {
+    key: "academy_performance_hub",
+    label: "Performance Hub",
+    secao: "Academy",
+    hasCriar: true,
+    hasEditar: true,
+    hasExcluir: true,
+  },
+  {
+    key: "academy_portal",
+    label: "Portal da Academy",
+    secao: "Academy",
+    hasCriar: false,
+    hasEditar: true,
+    hasExcluir: false,
+  },
   // Escala
   { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
@@ -142,8 +162,18 @@ export const PAGES: {
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Geral (sempre por último)
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
+  {
+    key: "simulador_login",
+    label: "Simulador de Login",
+    secao: "Geral",
+    hasCriar: false,
+    hasEditar: false,
+    hasExcluir: false,
+  },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
+
+export const PAGES = sortPagesLikeMenu(PAGES_META);
 
 /** Secções na ordem de `PAGES` / menu lateral (primeira ocorrência de cada secao). */
 export function secoesMenuFromPages(pages: readonly { secao: string }[]): string[] {
@@ -169,6 +199,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "comunicacao",
   "performance_coach",
   "service_manager",
+  "tech_ops",
   "shift_leader",
   "prestador",
   "operador",
@@ -213,6 +244,7 @@ export function roleBadgeColor(role: Role): string {
     executivo: BRAND.ciano,
     shift_leader: BRAND.amarelo,
     service_manager: BRAND.azul,
+    tech_ops: BRAND.ciano,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,
     performance_coach: BRAND.verde,

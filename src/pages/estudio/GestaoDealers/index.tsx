@@ -10,6 +10,7 @@ import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/page
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import {
   Eye,
@@ -886,7 +887,8 @@ function DealerCard({
             <button
               type="button"
               onClick={onHistoricoSolicitacoes}
-              aria-label={`Histórico de solicitações de ${dealer.nickname}`}
+              aria-label={tooltipAcao("Histórico de solicitações")}
+              title={tooltipAcao("Histórico de solicitações")}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
             >
               <History size={13} aria-hidden /> Histórico

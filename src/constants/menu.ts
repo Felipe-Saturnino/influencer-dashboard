@@ -11,6 +11,7 @@ import {
   Factory,
   Files,
   Images,
+  GraduationCap,
   LayoutGrid,
   LineChart,
   Link2,
@@ -51,7 +52,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Estúdio, Escala, RH, Conteúdo, Plataforma. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Estúdio, Academy, Escala, RH, Conteúdo, Plataforma. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -60,6 +61,7 @@ export const MENU: MenuSection[] = [
       { key: "streamers", label: "Streamers", icon: Tv },
       { key: "dash_midias_sociais", label: "Mídias Sociais", icon: Share2 },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: Mic },
+      { key: "dash_overview_prestador", label: "Overview Prestador", icon: UserRound },
     ],
   },
   {
@@ -108,6 +110,13 @@ export const MENU: MenuSection[] = [
       { key: "central_notificacoes", label: "Central de Notificações", icon: Bell },
       { key: "rh_figurinos", label: "Figurinos", icon: Shirt },
       { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: Notebook },
+    ],
+  },
+  {
+    section: "Academy",
+    items: [
+      { key: "academy_performance_hub", label: "Performance Hub", icon: GraduationCap },
+      { key: "academy_portal", label: "Portal da Academy", icon: BookOpen },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, TriangleAlert } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -6,6 +6,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
@@ -24,8 +25,10 @@ import type { DenunciaListRow, AnexoRow } from "./types";
 import { ModalVerDenuncia, ModalHistoricoDenuncia } from "./ModalsVerHist";
 import { ModalAtenderDenuncia } from "./ModalsAtender";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -40,19 +43,24 @@ function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
 
 type MesDenunciaEntry = { value: string; label: string };
 
-/** Primeiro mês do canal: maio/2026 — carrossel do mês atual para trás. */
+/** Primeiro mês do canal: maio/2026 — lista cronológica (antigo → recente), padrão carrossel Global/Brand. */
 function buildMesesDenuncias(): MesDenunciaEntry[] {
-  const minStart = new Date(2026, 4, 1);
-  const now = new Date();
+  const minAno = 2026;
+  const minMes = 4;
+  const hoje = new Date();
   const out: MesDenunciaEntry[] = [];
-  let d = new Date(now.getFullYear(), now.getMonth(), 1);
-  while (d >= minStart) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const value = `${y}-${m}`;
-    const raw = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  let ano = minAno;
+  let mes = minMes;
+  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
+    const m = String(mes + 1).padStart(2, "0");
+    const value = `${ano}-${m}`;
+    const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
     out.push({ value, label: raw.charAt(0).toUpperCase() + raw.slice(1) });
-    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    mes++;
+    if (mes > 11) {
+      mes = 0;
+      ano++;
+    }
   }
   return out;
 }
@@ -89,7 +97,18 @@ export default function CentralDenunciasSpin() {
   const perm = usePermission("rh_central_denuncias");
 
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [idxMes, setIdxMes] = useState(0);
+  const meses = useMemo(() => buildMesesDenuncias(), []);
+  const idxMesInicial = useMemo(
+    () =>
+      getIdxMesCarrosselPadrao(
+        meses.map((m) => {
+          const [y, mo] = m.value.split("-").map(Number);
+          return { ano: y, mes: mo - 1 };
+        }),
+      ),
+    [meses],
+  );
+  const [idxMes, setIdxMes] = useState(idxMesInicial);
   const [modoHistorico, setModoHistorico] = useState(false);
   const [filtroTipos, setFiltroTipos] = useState<TipoDenunciaKey[]>([]);
   const [busca, setBusca] = useState("");
@@ -109,11 +128,17 @@ export default function CentralDenunciasSpin() {
   const [delRow, setDelRow] = useState<DenunciaListRow | null>(null);
   const [delLoading, setDelLoading] = useState(false);
 
-  const meses = useMemo(() => buildMesesDenuncias(), []);
   const filtroPeriodoLista = modoHistorico ? "historico" : (meses[idxMes]?.value ?? meses[0]?.value ?? "historico");
   const carouselPrimeiro = idxMes <= 0;
   const carouselUltimo = idxMes >= meses.length - 1;
   const labelCarrossel = modoHistorico ? "Todo o período" : (meses[idxMes]?.label ?? "—");
+
+  const toggleModoHistorico = () => {
+    setModoHistorico((h) => {
+      if (h) setIdxMes(idxMesInicial);
+      return !h;
+    });
+  };
 
   const fetchKpis = useCallback(async () => {
     const stats: DenunciaStatusDb[] = ["relatado", "em_avaliacao", "procedente", "nao_procedente"];
@@ -284,7 +309,7 @@ export default function CentralDenunciasSpin() {
               </button>
             </div>
 
-            <FiltroHistoricoButton active={modoHistorico} onClick={() => setModoHistorico((h) => !h)} />
+            <FiltroHistoricoButton active={modoHistorico} onClick={toggleModoHistorico} />
 
             <FiltroEntidadeBarSelect
               selected={filtroTipos}
@@ -428,13 +453,27 @@ export default function CentralDenunciasSpin() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
                   {perm.canEditarOk ? (
-                    <Btn icone={<Pencil size={16} aria-hidden />} label="Atender" onClick={() => setModalAtender(row)} t={t} grad={ctaGradient(brand)} />
+                    <BtnIconeAcaoLinha
+                      label={tooltipAcao("Atender denúncia")}
+                      onClick={() => setModalAtender(row)}
+                      style={{
+                        background: ctaGradient(brand),
+                        border: "transparent",
+                        color: "#fff",
+                      }}
+                    >
+                      <Pencil size={16} aria-hidden />
+                    </BtnIconeAcaoLinha>
                   ) : null}
-                  <Btn icone={<Eye size={16} aria-hidden />} label="Ver" onClick={() => setModalVer(row)} t={t} />
-                  <Btn icone={<History size={16} aria-hidden />} label="Histórico" onClick={() => setModalHist(row)} t={t} />
+                  <BtnIconeAcaoLinha label={tooltipAcao("Ver denúncia")} onClick={() => setModalVer(row)}>
+                    <Eye size={16} aria-hidden />
+                  </BtnIconeAcaoLinha>
+                  <BtnIconeAcaoLinha label={tooltipAcao("Histórico da denúncia")} onClick={() => setModalHist(row)}>
+                    <History size={16} aria-hidden />
+                  </BtnIconeAcaoLinha>
                   {perm.canExcluirOk ? (
                     <BtnExcluirComTexto
-                      descricaoItem={descricaoBotaoExcluir("denúncia", row.protocolo)}
+                      labelAcao={tooltipExcluir("denúncia")}
                       onClick={() => setDelRow(row)}
                     />
                   ) : null}
@@ -494,47 +533,4 @@ function fmtDt(iso: string) {
   } catch {
     return "—";
   }
-}
-
-function Btn({
-  label,
-  onClick,
-  icone,
-  t,
-  grad,
-  danger,
-}: {
-  label: string;
-  onClick: () => void;
-  icone: ReactNode;
-  t: ReturnType<typeof useApp>["theme"];
-  grad?: string;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        padding: "8px 12px",
-        borderRadius: 10,
-        border: `1px solid ${danger ? "rgba(232,64,37,0.5)" : grad ? "transparent" : t.cardBorder}`,
-        background: danger ? "rgba(232,64,37,0.12)" : grad ?? t.inputBg,
-        backgroundImage: grad ? grad : undefined,
-        color: grad ? "#fff" : danger ? "#e84025" : t.text,
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer",
-        fontFamily: FONT.body,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {icone}
-      {label}
-    </button>
-  );
 }

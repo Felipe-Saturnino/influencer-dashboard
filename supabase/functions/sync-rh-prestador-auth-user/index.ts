@@ -9,7 +9,7 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
  * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, Comunicação, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento → Gestor) >
+ * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops → perfil próprio; Facilities, Financeiro, TI, Treinamento → Gestor/Prestador) >
  *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
@@ -36,6 +36,7 @@ type PerfilRhSync =
   | 'performance_coach'
   | 'shift_leader'
   | 'service_manager'
+  | 'tech_ops'
   | 'prestador'
   | 'gestor'
 
@@ -297,6 +298,48 @@ function normTimeNome(s: string | null | undefined): string {
     .replace(/\s+/g, ' ')
 }
 
+function gerenciaIndicaTechOps(gerenciaNome: string | null | undefined): boolean {
+  return normTimeNome(gerenciaNome) === 'tech ops'
+}
+
+async function carregarContextoOrganogramaRh(
+  supabase: SupabaseSvc,
+  row: { org_time_id?: string | null; org_gerencia_id?: string | null },
+): Promise<{ timeNome: string | null; gerenciaNome: string | null }> {
+  let timeNome: string | null = null
+  let gerenciaNome: string | null = null
+
+  if (row.org_time_id) {
+    const { data: tr } = await supabase
+      .from('rh_org_times')
+      .select('nome, gerencia_id')
+      .eq('id', row.org_time_id)
+      .maybeSingle()
+    timeNome = (tr as { nome?: string } | null)?.nome ?? null
+    const gerIdFromTime = (tr as { gerencia_id?: string | null } | null)?.gerencia_id
+    if (gerIdFromTime) {
+      const { data: gr } = await supabase
+        .from('rh_org_gerencias')
+        .select('nome')
+        .eq('id', gerIdFromTime)
+        .maybeSingle()
+      gerenciaNome = (gr as { nome?: string } | null)?.nome ?? null
+    }
+  }
+
+  const gerIdDireto = row.org_gerencia_id
+  if (gerIdDireto) {
+    const { data: gr } = await supabase
+      .from('rh_org_gerencias')
+      .select('nome')
+      .eq('id', gerIdDireto)
+      .maybeSingle()
+    gerenciaNome = (gr as { nome?: string } | null)?.nome ?? gerenciaNome
+  }
+
+  return { timeNome, gerenciaNome }
+}
+
 /**
  * Prioridade: gerências específicas → perfil staff, Gestor (Treinamento) ou Prestador + `prestador_tipo`;
  * depois times; por fim `rh_funcionarios.area_atuacao` (escritorio | estudio); default Escritório.
@@ -316,14 +359,14 @@ function resolvePerfilEscopo(
   if (g === 'rh' || g === 'recursos humanos') {
     return { role: 'rh', prestadorTipo: null, gestorTipo: null }
   }
+  if (gerenciaIndicaTechOps(gerenciaNome)) {
+    return { role: 'tech_ops', prestadorTipo: null, gestorTipo: null }
+  }
   if (g === 'facilities') {
     return { role: 'prestador', prestadorTipo: 'facilities', gestorTipo: null }
   }
   if (g === 'financeiro') {
     return { role: 'prestador', prestadorTipo: 'financeiro', gestorTipo: null }
-  }
-  if (g === 'tech ops') {
-    return { role: 'prestador', prestadorTipo: 'tech_ops', gestorTipo: null }
   }
   if (g === 'ti') {
     return { role: 'prestador', prestadorTipo: 'ti', gestorTipo: null }
@@ -333,6 +376,9 @@ function resolvePerfilEscopo(
   }
 
   const t = normTimeNome(timeNome)
+  if (t === 'tech ops') {
+    return { role: 'tech_ops', prestadorTipo: null, gestorTipo: null }
+  }
   if (t === 'performance coach') {
     return { role: 'performance_coach', prestadorTipo: null, gestorTipo: null }
   }
@@ -559,18 +605,7 @@ serve(async (req) => {
     })
   }
 
-  let timeNome: string | null = null
-  if (row.org_time_id) {
-    const { data: tr } = await supabase.from('rh_org_times').select('nome').eq('id', row.org_time_id).maybeSingle()
-    timeNome = (tr as { nome?: string } | null)?.nome ?? null
-  }
-
-  let gerenciaNome: string | null = null
-  const gerId = (row as { org_gerencia_id?: string | null }).org_gerencia_id
-  if (gerId) {
-    const { data: gr } = await supabase.from('rh_org_gerencias').select('nome').eq('id', gerId).maybeSingle()
-    gerenciaNome = (gr as { nome?: string } | null)?.nome ?? null
-  }
+  const { timeNome, gerenciaNome } = await carregarContextoOrganogramaRh(supabase, row)
 
   const nomePlataforma = String(row.nome ?? '').trim() || loginEmail.split('@')[0] || 'Prestador'
   const { role: perfilRole, prestadorTipo: tipoSlug, gestorTipo: gestorSlug } = resolvePerfilEscopo(

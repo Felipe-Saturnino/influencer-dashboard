@@ -24,7 +24,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { tabAtivaPrincipalStyle } from "../GestaoUsuarios/gestaoUsuariosHelpers";
 import {
@@ -2586,7 +2586,7 @@ export default function StatusTecnico() {
                 </div>
                 {perm.canEditarOk && (
                   <BtnExcluirLinha
-                    descricaoItem={descricaoBotaoExcluir("prefixo", String(row.cidr))}
+                    labelAcao={tooltipExcluir("prefixo")}
                     onClick={() => {
                       setCidrErroExcluir(null);
                       setCidrExcluir(row);

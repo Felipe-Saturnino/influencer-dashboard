@@ -37,6 +37,7 @@ import HomeFigurino from "./HomeFigurino";
 import HomeComunicacao from "./HomeComunicacao";
 import HomePerformanceCoach from "./HomePerformanceCoach";
 import HomeServiceManager from "./HomeServiceManager";
+import HomeTechOps from "./HomeTechOps";
 import HomeShiftLeader from "./HomeShiftLeader";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import { AppPageLink } from "../../../components/AppPageLink";
@@ -126,6 +127,7 @@ const ROLE_LABELS: Record<Role, string> = {
   executivo: "Executivo",
   shift_leader: "Shift Leader",
   service_manager: "Service Manager",
+  tech_ops: "Tech Ops",
   figurino: "Figurino",
   comunicacao: "Comunicação",
   performance_coach: "Performance Coach",
@@ -168,6 +170,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Service Manager",
     subtitle:
       "Gerencie fluxos de serviço e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  tech_ops: {
+    title: "Tech Ops",
+    subtitle:
+      "Operação técnica do estúdio e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
   },
   figurino: {
     title: "Figurino",
@@ -248,7 +255,7 @@ type PerfilRow = {
 };
 
 export default function Home() {
-  const { theme: t, user, permissions, permissionsAcoes, operadoraBrand, isDark } = useApp();
+  const { theme: t, user, effectiveRole, permissions, permissionsAcoes, operadoraBrand, isDark } = useApp();
   const { propsFor } = useAppPageNav();
 
   const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
@@ -370,43 +377,49 @@ export default function Home() {
 
   if (!user) return null;
 
-  if (user.role === "investidor") {
+  const roleHome = effectiveRole ?? user.role;
+
+  if (roleHome === "investidor") {
     return <HomeInvestidor />;
   }
 
-  if (user.role === "executivo") {
+  if (roleHome === "executivo") {
     return <HomeExecutivo />;
   }
 
-  if (user.role === "prestador") {
+  if (roleHome === "prestador") {
     return <HomePrestador />;
   }
 
-  if (user.role === "figurino") {
+  if (roleHome === "figurino") {
     return <HomeFigurino />;
   }
 
-  if (user.role === "comunicacao") {
+  if (roleHome === "comunicacao") {
     return <HomeComunicacao />;
   }
 
-  if (user.role === "performance_coach") {
+  if (roleHome === "performance_coach") {
     return <HomePerformanceCoach />;
   }
 
-  if (user.role === "service_manager") {
+  if (roleHome === "service_manager") {
     return <HomeServiceManager />;
   }
 
-  if (user.role === "shift_leader") {
+  if (roleHome === "tech_ops") {
+    return <HomeTechOps />;
+  }
+
+  if (roleHome === "shift_leader") {
     return <HomeShiftLeader />;
   }
 
-  if (user.role === "operador") {
+  if (roleHome === "operador") {
     return <HomeOperadorRouter />;
   }
 
-  const role = user.role;
+  const role = roleHome;
   const welcome = ROLE_WELCOME[role];
   const useBrand = false;
 

@@ -16,11 +16,34 @@ export function propsBotaoFecharModal(): { "aria-label": string; title: string }
 }
 
 /**
- * Tooltip para ação de linha que abre modal com título fixo.
- * Ex.: `tooltipAcaoAbreModal("Editar postagem", row.assunto)` → «Editar postagem — {assunto}».
+ * Tooltip/`aria-label` de botão só ícone que abre modal ou fluxo —
+ * **somente o rótulo canónico da ação** (ex.: «Editar Prestador», «Histórico do Prestador»).
+ * Sem nome do registro, protocolo, assunto ou data.
  */
-export function tooltipAcaoAbreModal(modalTitulo: string, identificador?: string): string {
-  const titulo = modalTitulo.trim();
-  const id = identificador?.trim();
-  return id ? `${titulo} — ${id}` : titulo;
+export function tooltipAcao(rotuloAcao: string): string {
+  return rotuloAcao.trim();
+}
+
+/** @deprecated Alias de `tooltipAcao`. */
+export function tooltipModal(rotuloAcao: string): string {
+  return tooltipAcao(rotuloAcao);
+}
+
+/** @deprecated Use `tooltipAcao` com rótulo fixo — ex.: «Ver avaliação». */
+export function tituloModalPerformanceHub(_avaliadoNome: string, _data: string): string {
+  return tooltipAcao("Ver avaliação");
+}
+
+/** @deprecated Use `tooltipAcao("Visualizar documento")`. */
+export function tituloModalDocumentoPortalRh(
+  _codigo: string | null | undefined,
+  _titulo: string,
+  _versao: string | null | undefined,
+): string {
+  return tooltipAcao("Visualizar documento");
+}
+
+/** @deprecated Use `tooltipAcao`. */
+export function tooltipAcaoAbreModal(rotuloAcao: string, _identificador?: string): string {
+  return tooltipAcao(rotuloAcao);
 }

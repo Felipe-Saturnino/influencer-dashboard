@@ -13,7 +13,7 @@ import ModalLiveSomenteVer from "./ModalLiveSomenteVer";
 import { X, Lock, Video, Loader2 } from "lucide-react";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -445,7 +445,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           {podeExcluir && live && (
             <BtnExcluirComTexto
-              descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
+              labelAcao={tooltipExcluir("live")}
               disabled={saving}
               onClick={() => setModalExcluirAberto(true)}
             />

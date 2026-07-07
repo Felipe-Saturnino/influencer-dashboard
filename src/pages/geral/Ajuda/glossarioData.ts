@@ -1,3 +1,5 @@
+import type { PageKey } from "../../../types";
+
 export interface GlossarioTermo {
   termo: string;
   definicao: string;
@@ -820,6 +822,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Calendário",
       },
       {
+        termo: "Overview Prestador",
+        definicao:
+          "Dashboard analítico de escala, presença, absenteísmo e movimentações de turno por prestador — KPIs MTD, gráficos de aproveitamento e detalhamento diário de ocorrências (troca, atestado, atraso, esquecimento, compra e venda).",
+        referencia: "Overview Prestador",
+      },
+      {
         termo: "Marketplace",
         definicao:
           "Área de ofertas de venda e troca de turnos entre colaboradores — publicações abertas e as do próprio usuário.",
@@ -841,7 +849,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Solicitações (RH)",
         definicao:
-          "Fila de pedidos de prestadores ao RH — atestados e vagas internas — com status Em análise, Aprovado ou Rejeitado.",
+          "Fila de pedidos de prestadores ao RH — atestados, reuniões com RH e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário; reuniões com RH, ao agendar no Calendário (só visíveis no calendário após aprovação).",
         nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
         referencia: "Solicitações",
       },
@@ -983,6 +991,31 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "academy",
+    label: "Academy",
+    accentColor: "#4a2082",
+    termos: [
+      {
+        termo: "Performance Hub",
+        definicao:
+          "Portal de avaliação de desempenho dos prestadores dos times Game Presenter e Shuffler — status, scoring, agenda e configuração de pesos.",
+        referencia: "Performance Hub",
+      },
+      {
+        termo: "Nota Total (Performance Hub)",
+        definicao:
+          "Resultado final da avaliação na escala 0–10, calculado por média ponderada dos critérios dentro de cada dimensão e depois entre Comunicação, Mesa e Imagem.",
+        referencia: "Performance Hub",
+      },
+      {
+        termo: "Dimensão (Performance Hub)",
+        definicao:
+          "Eixo de avaliação — Comunicação, Mesa ou Imagem — agrupando critérios com pesos próprios. Mesa usa critérios distintos para mesas de cartas e de roleta.",
+        referencia: "Performance Hub · Configuração",
+      },
+    ],
+  },
+  {
     key: "periodos",
     label: "Conceitos de Período",
     accentColor: "#6b7280",
@@ -1012,3 +1045,54 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
 ];
+
+const DASHBOARD_PAGE_KEYS: PageKey[] = [
+  "mesas_spin",
+  "streamers",
+  "dash_midias_sociais",
+  "dash_overview_influencer",
+  "dash_overview_prestador",
+  "comercial_overview",
+];
+
+/** Páginas que liberam cada categoria do glossário (Ver ou Próprios em Gestão de Usuários). */
+export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
+  operacao_lives: [
+    "agenda",
+    "resultados",
+    "feedback",
+    "streamers",
+    "dash_overview_influencer",
+    "influencers",
+    "playbook_influencers",
+    "links_materiais",
+  ],
+  cadastro_influencers: ["influencers"],
+  prospeccao_scout: ["scout"],
+  funil_conversao: ["streamers", "dash_overview_influencer"],
+  financeiro: ["streamers", "financeiro"],
+  indices: DASHBOARD_PAGE_KEYS,
+  mesas: ["mesas_spin"],
+  midias_sociais: ["dash_midias_sociais"],
+  afiliados: ["afiliados", "afiliados_network"],
+  financeiro_operacional: ["financeiro", "banca_jogo"],
+  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
+  marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
+  comercial: ["comercial_overview", "comercial_pipeline_b2b"],
+  rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
+  escala: [
+    "rh_gestao_escala",
+    "rh_staff",
+    "rh_calendario",
+    "escala_marketplace_turnos",
+    "escala_solicitacoes",
+    "dash_overview_prestador",
+  ],
+  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes"],
+  denuncias: ["rh_central_denuncias"],
+  permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
+  home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],
+  whitelabel: ["gestao_operadoras"],
+  academy: ["academy_performance_hub", "academy_portal"],
+  periodos: DASHBOARD_PAGE_KEYS,
+};

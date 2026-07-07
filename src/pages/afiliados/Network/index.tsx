@@ -32,7 +32,7 @@ import {
 import { X, Eye, Pencil, Loader2, Contact, Briefcase, StickyNote } from "lucide-react";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 
 type NetworkModalTab = "contato" | "operacao" | "anotacoes";
 
@@ -1095,7 +1095,7 @@ function ModalEditar({
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
           {row && perm.canExcluirOk && (perm.canExcluir !== "proprios" || row.created_by === user?.id) && (
             <BtnExcluirComTexto
-              descricaoItem={descricaoBotaoExcluir("cadastro", row.nome)}
+              labelAcao={tooltipExcluir("cadastro")}
               disabled={saving}
               onClick={() => setModalExcluirAberto(true)}
             />

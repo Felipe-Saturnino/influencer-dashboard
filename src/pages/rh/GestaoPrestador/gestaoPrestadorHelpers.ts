@@ -503,6 +503,7 @@ export type AbaFuncModal =
   | "empresa"
   | "bancarios"
   | "documentos"
+  | "carreira"
   | "acesso_plataforma";
 
 /** Aba do modal onde o campo aparece (para saltar à primeira com erro). */

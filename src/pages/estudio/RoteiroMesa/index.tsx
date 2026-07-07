@@ -31,7 +31,7 @@ import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 function podeEscolherEstudioNoRoteiro(role: string | undefined): boolean {
@@ -752,7 +752,7 @@ function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, estudioNome
       </div>
       {podeExcluir && (
         <BtnExcluirLinha
-          descricaoItem={descricaoBotaoExcluir("sugestão", truncarTextoRoteiro(sugestao.texto, 50))}
+          labelAcao={tooltipExcluir("sugestão")}
           onClick={() => onPedirExcluir(sugestao)}
         />
       )}
@@ -817,7 +817,7 @@ function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, estudioNome
       <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
         {podeExcluir && (
           <BtnExcluirLinha
-            descricaoItem={descricaoBotaoExcluir("campanha", campanha.titulo)}
+            labelAcao={tooltipExcluir("campanha")}
             onClick={() => onPedirExcluir(campanha)}
           />
         )}

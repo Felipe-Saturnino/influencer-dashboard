@@ -1,0 +1,231 @@
+---
+description: Regras para páginas da seção Academy. Pasta academy/. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/academy/**/*.tsx
+  - src/pages/academy/**/*.ts
+  - src/lib/academyPerformanceHub*.ts
+  - src/lib/academyPortal*.ts
+alwaysApply: false
+---
+
+# Seção Academy
+
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**Marca / filtros / headers / CTAs:** Brand MDC — não duplicar aqui.
+
+---
+
+## Cabeçalho — título e subtítulo
+
+| PageKey | h1 | Subtítulo |
+|---|---|---|
+| `academy_performance_hub` | Performance Hub | Portal de avaliação de desempenho dos Prestadores. |
+| `academy_portal` | Portal da Academy | Comunicados, dicas e manuais de treinamento para a operação. |
+
+---
+
+## Identificação
+
+| PageKey | Página | Caminho |
+|---------|--------|---------|
+| `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
+| `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
+
+Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
+
+---
+
+## Portal da Academy (`academy_portal`)
+
+### Personas
+
+| Perfil | Escopo |
+|--------|--------|
+| **Admin** | Irrestrito |
+| **Demais** | Ver abas de leitura; **Gerenciamento** com permissão de Editar |
+
+Permissões iniciais: migração `20260703180000_academy_portal.sql` — todos os roles (exceto admin) com Ver/Criar/Editar/Excluir = **Não**.
+
+### Abas principais
+
+| Tab | Sub-abas |
+|-----|----------|
+| Comunicados | Todos · Treinamentos · Geral |
+| Dicas | Todos · Jogos · Imagem · Comunicação · Geral |
+| Manuais | Todos · Jogos · Imagem · Comunicação · Geral |
+| Gerenciamento | Filtros tipo/status + **Nova Postagem** (`canEditarOk`) |
+
+URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `GerenciamentoDePostagens`.
+
+### Modal Nova Postagem — tipos
+
+- **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo, Anexo
+- **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo, Anexo
+- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Versão*** (default 1.0), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo, Anexo — **sem** campo Código no modal (gerado no primeiro salvamento).
+
+Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de **6 dígitos** por prefixo — contador em `academy_portal_manual_code_counters`; reserva atômica no **primeiro salvamento** via `academy_portal_manual_reservar_codigo` (ex.: Jogos → `JOG-000001`). Visível na aba **Manuais** (tabela) e no **Gerenciamento**; **não** editável no modal.
+
+### Aba Manuais (leitura)
+
+Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** com botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`.
+
+Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
+
+### Workflow Gerenciamento
+
+Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
+
+### Filtros
+
+Carrossel mês + Histórico (`Todo o período`) por `published_at`; abas leitura só `status === publicado`.
+
+### Strings de vazio
+
+- Período sem dados: **`Sem dados para o período selecionado.`**
+- Busca/filtro sem match: **Nenhuma postagem encontrada.**
+
+---
+
+## Performance Hub (`academy_performance_hub`)
+
+### Personas e escopo
+
+| Perfil | Escopo típico |
+|--------|----------------|
+| **Admin** | Irrestrito via código (`usePermission`) |
+| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários |
+| **Prestador** | Com **Ver = Próprios**: só avaliações **Concluída** — Ver minha avaliação + Histórico |
+
+Times avaliados: **Game Presenter** e **Shuffler**. Filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**.
+
+### Permissões iniciais
+
+Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (exceto admin) com Ver/Criar/Editar/Excluir = **Não** em `role_permissions`. Admin não aparece na matriz — acesso total no hook.
+
+| Ação | Superfície |
+|------|------------|
+| **Ver** | Página + aba Avaliações |
+| **Editar** | Aba **Gerenciamento** (agenda + fila para analisar) |
+| **Criar** | Aba **Configuração** (pesos de scoring) |
+| **Excluir** | Reservado (sem fluxo na v1 mock) |
+
+Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar` / `hasExcluir` = true.
+
+### Abas (`useRouteTab` + `FiltroBarTabButton`)
+
+| Tab | Ícone | Gate |
+|-----|-------|------|
+| Avaliações | `ClipboardList` | Ver (qualquer valor ≠ Não) |
+| Gerenciamento | `ClipboardList` | `canEditarOk` |
+| Configuração | `Settings` | `canCriarOk` |
+
+URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
+
+### Status × ações (aba Avaliações)
+
+| Status | Ações (gestor) | Ações (Próprios) |
+|--------|----------------|------------------|
+| Pendente | Ver, Histórico | — |
+| Rascunho | — (só Gerenciamento) | — |
+| Em Análise | Ver, **Analisar**, Histórico | — |
+| Feedback | Ver, **Analisar** (resposta do avaliado), Histórico | **Analisar** (aprovar ou solicitar esclarecimento), Histórico |
+| Concluída | Ver, Histórico | Ver minha avaliação, Histórico |
+
+**Game Presenter — fluxo de status**
+
+| Etapa | Onde aparece | Status |
+|-------|--------------|--------|
+| Iniciar / Salvar no modal | Gerenciamento → Analisar Avaliações | **Rascunho** |
+| Concluir no modal | Avaliações | **Feedback** |
+| Analisar (Feedback) → Aprovar | Avaliações | **Concluída** |
+| Analisar (Feedback) → Solicitar | Gerenciamento → Analisar | **Em Análise** |
+| (futuro) fechamento | Avaliações | Concluída |
+
+Modal **Analisar** em status **Feedback**: abas somente leitura (Dados, Comunicação, Imagem, Mesa/Procedimentos) + CTAs **Aprovar** / **Solicitar Feedback** com confirmação. Solicitar exige texto longo (`solicitacao_feedback_texto` no banco).
+
+Rascunho **não** entra na aba Avaliações. **Concluir** no modal GP grava **Feedback** (não Concluída). Shuffler mantém fluxo legado: nova avaliação **Em Análise**; **Concluir** → **Concluída**.
+
+**Concluída não exibe Analisar** — só **Em Análise** (Shuffler) abre modal editável com scoring a partir da aba Avaliações.
+
+Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (campos desabilitados; link **Assistir** no vídeo quando houver URL).
+
+**Ações só ícone (aba Avaliações / Gerenciamento):** `BtnIconeAcaoLinha` + **`tituloModalPerformanceHub(avaliadoNome, data)`** — tooltip = título do `ModalHeader` (`{nome} · {data}`). Histórico (placeholder v1): **`tooltipModal("Histórico da avaliação")`**. Proibido sufixar nome do avaliado no tooltip quando o modal já usa título composto.
+
+### Formato por time (Game Presenter vs Shuffler)
+
+O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabela filtram **somente** avaliações daquele time (`row.time`).
+
+| Superfície | Game Presenter | Shuffler |
+|------------|----------------|----------|
+| KPI linha 2 | Imagem · Comunicação · **Mesa** | Imagem · Comunicação · **Procedimentos** |
+| Coluna tabela | Mesa | Procedimentos |
+| Modal aba técnica | **Mesa** (critérios cartas/roleta) | **Procedimentos** (sem Jogo/Mesa em Dados) |
+| Configuração | Pesos GP (`PERFORMANCE_HUB_SCORING_GAME_PRESENTER`) | Pesos Shuffler (`PERFORMANCE_HUB_SCORING_SHUFFLER`) |
+
+**Configuração:** sem filtro de Staff na barra (só carrossel, Histórico e Time).
+
+**Promoção de cargo (virada do mês):** cada avaliação grava `time` no momento da criação. Meses anteriores mantêm formato do cargo antigo; a partir do mês da promoção, novas avaliações usam o time atual. **Gerenciamento** ao avaliar usa sempre o time selecionado na barra (cargo atual). Modal **Ver/Analisar** usa `avaliacao.time` (não o filtro da barra).
+
+**Ver = Próprios:** só avaliações do próprio nome (`canView === "proprios"`), independente do cargo; alternar filtro de time para ver histórico GP vs Shuffler.
+
+### Modal Avaliar — estrutura (alinhado ao mockup)
+
+| Bloco | Game Presenter | Shuffler |
+|-------|----------------|----------|
+| **Dados da Avaliação** | Turno, Estúdio, Jogo, Mesa, Vídeo | Turno, Estúdio, Vídeo (sem Jogo/Mesa) |
+| **Comunicação / Imagem** | Critérios da Config GP | Critérios da Config Shuffler |
+| Aba técnica | **Mesa** | **Procedimentos** |
+| **Considerações** | Pontos Fortes + Pontos a Desenvolver | Idem |
+
+Demais blocos comuns: cabeçalho, tipo de avaliação, rodapé Salvar/Concluir.
+
+### Modelo de pontuação
+
+Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
+
+**Game Presenter:** Comunicação (peso dimensão 2), Mesa (2), Imagem (1). Critérios Mesa distintos **cartas** vs **roleta** (`criteriosMesaPorTipo`).
+
+**Shuffler:** Comunicação (1) — Contato com a Câmera, Comunicação com Game Presenter; Imagem (1) — Cabelo, Maquiagem, Unhas, Tatuagens, Acessórios, Uniforme, Postura; Procedimentos (2) — Mostra das Mãos, Torres de Embaralhamento, Riffles e Strips, Procedimento de Corte, Velocidade de Embaralhamento, Shoe e Box, Procedimentos e Incidentes, Organização.
+
+- Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
+- **Nota Total** = média ponderada dimensões (`calcularNotaTotalGamePresenter` / `calcularNotaTotalShuffler`).
+- **MTD consolidado** = média simples das notas totais **Concluída** no período **do time filtrado**.
+- Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações»; pesos editáveis por time conforme filtro de Time ativo.
+
+### Filtros
+
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco; sem registros, default = mês corrente.
+- Time: select obrigatório GP / Shuffler.
+- Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
+- Centralização de fileiras: Global § Alinhamento no bloco de filtros.
+
+### Dados (Supabase)
+
+| Fonte | Tabela / RPC | Uso |
+|-------|----------------|-----|
+| Prestadores por time | `rh_funcionarios` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações** |
+| Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
+| Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
+| Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
+
+**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **Concluída** no mês; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
+
+Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `academyPerformanceHubAvaliacoesFetch.ts`; agenda: `academyPerformanceHubAgenda.ts`.
+
+### Strings de vazio
+
+- KPIs / tabela analítica por período: **`Sem dados para o período selecionado.`** (Global).
+- Lista filtrada sem registros: mensagem específica da aba quando aplicável.
+
+---
+
+## Anti-patterns (Academy)
+
+- Abrir aba Gerenciamento/Configuração sem gate de permissão.
+- Botão **Analisar** em status **Concluída**.
+- Filtro de time com opção «Todos» ou default Shuffler.
+- Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_POR_TIME` / estado de Configuração por time.
+- Exibir filtro Staff na aba **Configuração**.
+- Misturar consolidados GP e Shuffler no mesmo bloco (sempre filtrar por `time` selecionado).
+- Hex local para identidade de jogo na dimensão Mesa — usar `gameIdentityColors` se distinguir jogos na UI.

@@ -60,6 +60,7 @@ export function ModalLerPolitica({
   aprovadorInfo,
   dataAprovacao,
   temAprovador,
+  exigeCiencia,
   jaCiente,
   onClose,
   onLidoECiente,
@@ -75,6 +76,7 @@ export function ModalLerPolitica({
   aprovadorInfo: PortalRhAutorInfo | undefined;
   dataAprovacao: string | null | undefined;
   temAprovador: boolean;
+  exigeCiencia: boolean;
   jaCiente: boolean;
   onClose: () => void;
   onLidoECiente: () => void;
@@ -118,7 +120,7 @@ export function ModalLerPolitica({
           </p>
         </ModalLinha>
       ) : null}
-      {!jaCiente ? (
+      {!exigeCiencia || jaCiente ? null : (
         <button
           type="button"
           onClick={onLidoECiente}
@@ -138,7 +140,7 @@ export function ModalLerPolitica({
         >
           Lido e Ciente
         </button>
-      ) : null}
+      )}
     </ModalBase>
   );
 }

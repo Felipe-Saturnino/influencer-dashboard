@@ -4,7 +4,9 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
-import { GLOSSARIO_CATEGORIAS, type GlossarioCategoria } from "./glossarioData";
+import type { PermissoesMapa } from "../../../context/AppContext";
+import { glossarioCategoriaVisivel } from "../../../lib/ajudaVisibilidade";
+import { GLOSSARIO_CATEGORIAS, GLOSSARIO_CATEGORIA_PAGE_KEYS, type GlossarioCategoria } from "./glossarioData";
 
 function GlossarioCategCard({
   cat,
@@ -191,15 +193,21 @@ function GlossarioCategCard({
 export function AbaGlossario({
   dark,
   t,
+  permissions,
 }: {
   dark: boolean;
   t: Theme;
+  permissions: PermissoesMapa;
 }) {
   const [busca, setBusca] = useState("");
   const q = busca.trim();
 
+  const categoriasBase = GLOSSARIO_CATEGORIAS.filter((cat) =>
+    glossarioCategoriaVisivel(cat.key, permissions, GLOSSARIO_CATEGORIA_PAGE_KEYS),
+  );
+
   const categoriasFiltradas = q
-    ? GLOSSARIO_CATEGORIAS.map((cat) => ({
+    ? categoriasBase.map((cat) => ({
         ...cat,
         termos: cat.termos.filter(
           (termo) =>
@@ -209,7 +217,7 @@ export function AbaGlossario({
             textoContemBusca(termo.formula, q),
         ),
       })).filter((cat) => cat.termos.length > 0)
-    : GLOSSARIO_CATEGORIAS;
+    : categoriasBase;
 
   const resultadosCount = categoriasFiltradas.reduce((sum, cat) => sum + cat.termos.length, 0);
 
@@ -262,7 +270,9 @@ export function AbaGlossario({
             fontFamily: FONT.body,
           }}
         >
-          Nenhum termo encontrado para &quot;{busca.trim()}&quot;.
+          {busca.trim()
+            ? `Nenhum termo encontrado para "${busca.trim()}".`
+            : "Nenhuma categoria do glossário disponível para as páginas que você pode acessar."}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

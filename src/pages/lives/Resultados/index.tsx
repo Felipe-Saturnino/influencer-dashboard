@@ -9,7 +9,7 @@ import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
@@ -185,7 +185,7 @@ function LiveCard({
           )}
           {podeExcluir && (
             <BtnExcluirLinha
-              descricaoItem={descricaoBotaoExcluir("live de", live.influencer_name)}
+              labelAcao={tooltipExcluir("live")}
               disabled={isExcluindo}
               onClick={() => setModalExcluirAberto(true)}
             />

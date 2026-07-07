@@ -14,7 +14,9 @@ import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
 import { supabase } from "../../../lib/supabase";
 import { OPERADORA_FILTRO_TODAS_VALUE } from "../../../components/FiltroOperadoraSelect";
@@ -306,33 +308,19 @@ export function AbaEstudios({
                         <td style={dataTable.tdCenter}>
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                             {perm.canEditarOk && (
-                              <button
-                                type="button"
-                                aria-label={`Editar estúdio ${r.nome}`}
-                                title={`Editar estúdio ${r.nome}`}
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Editar estúdio")}
                                 onClick={() => {
                                   setEditando(r);
                                   setModalOpen(true);
                                 }}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: 32,
-                                  height: 32,
-                                  background: "transparent",
-                                  border: `1px solid ${t.cardBorder}`,
-                                  borderRadius: 10,
-                                  cursor: "pointer",
-                                  color: t.text,
-                                }}
                               >
                                 <Pencil size={14} aria-hidden="true" />
-                              </button>
+                              </BtnIconeAcaoLinha>
                             )}
                             {perm.canExcluirOk && (
                               <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("estúdio", r.nome)}
+                                labelAcao={tooltipExcluir("estúdio")}
                                 onClick={() => {
                                   setDeleteError(null);
                                   setDeleteTarget(r);

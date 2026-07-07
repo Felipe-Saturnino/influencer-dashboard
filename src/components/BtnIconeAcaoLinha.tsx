@@ -4,7 +4,7 @@ import { getBtnIconeAcaoLinhaStyle } from "../lib/btnIconeAcaoLinhaStyles";
 import { propsBotaoIcone } from "../lib/iconOnlyButtonA11y";
 
 export interface BtnIconeAcaoLinhaProps {
-  /** Rótulo do tooltip e `aria-label` — preferir título do modal alvo (`tooltipAcaoAbreModal`). */
+  /** Rótulo do tooltip e `aria-label` — rótulo canónico da ação (`tooltipAcao`). */
   label: string;
   onClick: () => void;
   disabled?: boolean;

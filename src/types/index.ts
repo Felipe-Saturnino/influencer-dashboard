@@ -6,6 +6,7 @@ export type Role =
   | "executivo"
   | "shift_leader"
   | "service_manager"
+  | "tech_ops"
   | "figurino"
   | "comunicacao"
   | "performance_coach"
@@ -31,6 +32,9 @@ export type PageKey =
   | "home"
   | "streamers"
   | "dash_overview_influencer"
+  | "dash_overview_prestador"
+  | "academy_performance_hub"
+  | "academy_portal"
   | "mesas_spin"
   | "dash_midias_sociais"
   | "agenda"
@@ -72,6 +76,7 @@ export type PageKey =
   | "rh_portal"
   | "informativos"
   | "configuracoes"
+  | "simulador_login"
   | "ajuda";
 
 // ─── PLATAFORMA / LIVE STATUS ────────────────────────────────────────────────

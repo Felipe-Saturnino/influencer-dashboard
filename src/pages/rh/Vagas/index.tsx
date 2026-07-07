@@ -32,7 +32,7 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { getPageContentBoxShellStyle, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
@@ -485,7 +485,7 @@ export default function RhVagasPage() {
                         {perm.canExcluirOk ? (
                           <div style={{ marginTop: 12 }}>
                             <BtnExcluirComTexto
-                              descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                              labelAcao={tooltipExcluir("vaga")}
                               onClick={() => setVagaExcluirConfirm(v)}
                             />
                           </div>
@@ -513,7 +513,7 @@ export default function RhVagasPage() {
                         {perm.canExcluirOk ? (
                           <div style={{ marginTop: 12 }}>
                             <BtnExcluirComTexto
-                              descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                              labelAcao={tooltipExcluir("vaga")}
                               onClick={() => setVagaExcluirConfirm(v)}
                             />
                           </div>
@@ -529,7 +529,7 @@ export default function RhVagasPage() {
                     {perm.canExcluirOk ? (
                       <div style={{ marginTop: 12 }}>
                         <BtnExcluirComTexto
-                          descricaoItem={descricaoBotaoExcluir("vaga", v.titulo)}
+                          labelAcao={tooltipExcluir("vaga")}
                           onClick={() => setVagaExcluirConfirm(v)}
                         />
                       </div>

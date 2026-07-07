@@ -7,7 +7,7 @@ import { supabase } from "../../../lib/supabase";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import type { ComercialContato, PipelineMarcaRow, TelefoneContato } from "./types";
 
@@ -314,7 +314,7 @@ export function ModalContato({
         >
           {mode === "edit" && contato && canEditar ? (
             <BtnExcluirComTexto
-              descricaoItem={descricaoBotaoExcluir("contato", contato.nome)}
+              labelAcao={tooltipExcluir("contato")}
               onClick={() => setAlvoExcluir(true)}
             />
           ) : null}

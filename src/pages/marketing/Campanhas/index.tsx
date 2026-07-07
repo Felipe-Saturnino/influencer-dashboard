@@ -15,7 +15,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
@@ -363,7 +363,7 @@ export default function Campanhas() {
                               ) : null}
                               {perm.canExcluirOk ? (
                                 <BtnExcluirLinha
-                                  descricaoItem={descricaoBotaoExcluir("campanha", c.nome)}
+                                  labelAcao={tooltipExcluir("campanha")}
                                   onClick={() => {
                                     setErroExcluirCampanha(null);
                                     setCampanhaParaExcluir(c);

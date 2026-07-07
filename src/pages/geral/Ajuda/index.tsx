@@ -4,7 +4,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
-import { MENU } from "../../../constants/menu";
+import { buildMenuAjudaVisivel } from "../../../lib/ajudaVisibilidade";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
 import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
@@ -14,15 +14,10 @@ import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
-
-type Aba = "conheca" | "troubleshooting" | "glossario";
-
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
 
-function podeVerPaginaNoMenu(cv: string | null | undefined): boolean {
-  return cv === "sim" || cv === "proprios";
-}
+type Aba = "conheca" | "troubleshooting" | "glossario";
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 // Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
@@ -51,11 +46,7 @@ export default function Ajuda() {
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
 
   const menuAjudaVisivel = useMemo(
-    () =>
-      MENU.map((sec) => ({
-        ...sec,
-        items: sec.items.filter((item) => podeVerPaginaNoMenu(permissions[item.key])),
-      })).filter((sec) => sec.items.length > 0),
+    () => buildMenuAjudaVisivel(permissions),
     [permissions],
   );
 
@@ -195,7 +186,7 @@ export default function Ajuda() {
               boxShadow: cardShadow,
             }}
           >
-            <AbaGlossario dark={isDark} t={t} />
+            <AbaGlossario dark={isDark} t={t} permissions={permissions} />
           </div>
         </div>
       ) : menuAjudaVisivel.length === 0 ? (

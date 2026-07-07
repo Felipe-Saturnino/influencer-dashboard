@@ -14,7 +14,9 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
-import { descricaoBotaoExcluir, descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { GAME_IDENTITY_HEX, GAME_IDENTITY_LABEL } from "../../../lib/gameIdentityColors";
 import { supabase } from "../../../lib/supabase";
@@ -361,33 +363,19 @@ export function AbaMesas({
                         <td style={dataTable.tdCenter}>
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                             {perm.canEditarOk && (
-                              <button
-                                type="button"
-                                aria-label={`Editar mesa ${r.nome_mesa}`}
-                                title={`Editar mesa ${r.nome_mesa}`}
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Editar mesa")}
                                 onClick={() => {
                                   setEditando(r);
                                   setModalOpen(true);
                                 }}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: 32,
-                                  height: 32,
-                                  background: "transparent",
-                                  border: `1px solid ${t.cardBorder}`,
-                                  borderRadius: 10,
-                                  cursor: "pointer",
-                                  color: t.text,
-                                }}
                               >
                                 <Pencil size={14} aria-hidden="true" />
-                              </button>
+                              </BtnIconeAcaoLinha>
                             )}
                             {perm.canExcluirOk && (
                               <BtnExcluirLinha
-                                descricaoItem={descricaoBotaoExcluir("mesa", r.nome_mesa)}
+                                labelAcao={tooltipExcluir("mesa")}
                                 onClick={() => {
                                   setDeleteError(null);
                                   setDeleteTarget(r);

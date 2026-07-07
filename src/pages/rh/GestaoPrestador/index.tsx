@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   FileSignature,
   FolderOpen,
+  GraduationCap,
   KeyRound,
   Landmark,
   Loader2,
@@ -17,6 +18,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
@@ -68,6 +70,7 @@ import {
   type RhPrestadorAcessoPlataforma,
 } from "../../../lib/rhPrestadorAcessoPlataforma";
 import { PrestadorAcessoPlataformaPanel } from "./PrestadorAcessoPlataformaPanel";
+import { PrestadorCarreiraVerPanel } from "./PrestadorCarreiraVerPanel";
 import { PrestadorDocumentosGestaoPanel } from "./PrestadorDocumentosGestaoPanel";
 import { podeEnviarDocumentosGestaoPrestador } from "../../../lib/rhPrestadorDocumentosCadastro";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
@@ -346,6 +349,11 @@ export default function RhPrestadoresPage() {
     tabs.push({ key: "bancarios", label: "Dados bancários" });
     if (modalForm === "editar" || modalForm === "ver") {
       tabs.push({ key: "documentos", label: "Documentos" });
+    }
+    if (modalForm === "ver") {
+      tabs.push({ key: "carreira", label: "Carreira" });
+    }
+    if (modalForm === "editar" || modalForm === "ver") {
       tabs.push({ key: "acesso_plataforma", label: "Acesso a Plataforma" });
     }
     return tabs;
@@ -364,6 +372,7 @@ export default function RhPrestadoresPage() {
       empresa: 0,
       bancarios: 0,
       documentos: 0,
+      carreira: 0,
       acesso_plataforma: 0,
     };
     for (const k of Object.keys(fieldErr)) {
@@ -1371,6 +1380,7 @@ export default function RhPrestadoresPage() {
     if (k === "contratacao") return <FileSignature {...p} />;
     if (k === "empresa") return <Building2 {...p} />;
     if (k === "bancarios") return <Landmark {...p} />;
+    if (k === "carreira") return <GraduationCap {...p} />;
     if (k === "acesso_plataforma") return <KeyRound {...p} />;
     return <FolderOpen {...p} />;
   };
@@ -2523,6 +2533,10 @@ export default function RhPrestadoresPage() {
               />
             ) : null}
 
+            {abaModal === "carreira" && modalForm === "ver" ? (
+              <PrestadorCarreiraVerPanel funcionarioId={editId} />
+            ) : null}
+
             {abaModal === "acesso_plataforma" ? (
               <PrestadorAcessoPlataformaPanel
                 loading={acessoPlataformaLoading}
@@ -3290,7 +3304,8 @@ export default function RhPrestadoresPage() {
                           color: t.textMuted,
                           lineHeight: 1,
                         }}
-                        aria-label={`Remover ${p.nome} dos participantes`}
+                        aria-label={tooltipAcao("Remover participante")}
+                        title={tooltipAcao("Remover participante")}
                       >
                         <X size={14} aria-hidden />
                       </button>

@@ -22,6 +22,7 @@ alwaysApply: false
 | Home | `geral/Home/` | Hub pós-login |
 | Login | `geral/Login/` | Auth; brandguide no contexto |
 | Configurações | `geral/Configurações/` | Conta, tema, perfil |
+| Simulador de Login | `geral/SimuladorLogin/` | Visualização somente leitura de outro perfil |
 | Ajuda | `geral/Ajuda/` | Textos por página + glossário |
 | Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
 | Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
@@ -45,7 +46,8 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 |------|--------|
 | `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` | Campo **`titulo`** = mesmo texto que `label` no menu (ex.: `Resultados`, `Feedback`, `Agenda`) |
 | Troubleshooting transversal | `TROUBLESHOOTING_TRANSVERSAL` em `conteudo/troubleshooting.ts` — blocos de plataforma (ex.: busca sem acentos) no topo da aba Troubleshooting, antes do conteúdo da página selecionada |
-| Navegação interna (Conheça / Troubleshooting) | Derivada de `MENU` em `menu.ts` — mesma ordem de secções e páginas; filtro `can_view` igual à Sidebar; glossário sem filtro por página |
+| Navegação interna (Conheça / Troubleshooting) | Derivada de `MENU` em `menu.ts` — mesma ordem de secções e páginas; filtro `can_view` igual à Sidebar (`buildMenuAjudaVisivel` em `lib/ajudaVisibilidade.ts`) |
+| Glossário | Categorias filtradas por `GLOSSARIO_CATEGORIA_PAGE_KEYS` — exibir se o usuário tiver **Ver** ou **Próprios** em ao menos uma página mapeada |
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
 
@@ -66,14 +68,15 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 ### Ao adicionar página no menu
 
-1. Entrada em `glossarioData.ts` (e bloco em `index.tsx` se houver tour textual).
-2. Termos novos de domínio no glossário.
+1. Entrada em `CONTEUDO_CONHECA` e `CONTEUDO_TROUBLE` (validar com `node scripts/check-ajuda-coverage.mjs`).
+2. Termos novos de domínio no glossário + mapeamento em `GLOSSARIO_CATEGORIA_PAGE_KEYS` quando aplicável.
 3. `titulo` e `label` na Ajuda = `label` de `menu.ts`.
-4. Handoff pode completar corpo dos blocos — estrutura e nomenclatura ficam neste MDC + Brand §4.
+4. Linha em `PAGES` (`GestaoUsuarios/constants.ts`) — ordem via `sortPagesLikeMenu` alinhada a `menu.ts`.
+5. Handoff pode completar corpo dos blocos — estrutura e nomenclatura ficam neste MDC + Brand §4.
 
 ### Handoff pendente
 
-- Revisão contínua de cobertura: todas as `PageKey` do `menu.ts` com texto de ajuda adequado.
+- Revisão contínua de **qualidade** do texto (cobertura mínima garantida pelo script `check-ajuda-coverage.mjs`).
 
 ---
 
@@ -87,6 +90,7 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 - **`comunicacao`:** layout dedicado em `HomeComunicacao.tsx` — subtítulo comunicação; aniversários (cadastro RH); **Informações** só informativos `comunicacao` (`includeGaleriaNovidades={false}` — sem cards de álbum); atalhos Ajuda + Organograma + Galeria de Fotos; Spin na Rede MTD. RLS: `20260529200000_home_comunicacao_feed_rls.sql`.
 - **`performance_coach`:** layout dedicado em `HomePerformanceCoach.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `performance_coach`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
 - **`service_manager`:** layout dedicado em `HomeServiceManager.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `service_manager`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
+- **`tech_ops`:** layout dedicado em `HomeTechOps.tsx` — paridade Service Manager (mesma estrutura de Home staff interno); informativos com perfil `tech_ops` no array `perfis`; atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** layout dedicado em `HomeShiftLeader.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `shift_leader`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
 - **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
@@ -108,6 +112,14 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 - Preferências de conta/tema; CTAs de marca quando aplicável.
 - **Handoff:** abas e campos por perfil.
+
+## Simulador de Login (`geral/SimuladorLogin/`)
+
+- **PageKey:** `simulador_login` — menu superior (avatar), entre Configurações e Ajuda; **não** no menu lateral.
+- **Permissão:** Gestão de Usuários → Ver; admin acesso implícito; demais perfis seed `Não`.
+- **Perfis simuláveis:** todos exceto Administrador e Executivo; Operador exige operadora; Gestor exige tipo; Prestadores exige área.
+- **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner`; sessão em `sessionStorage`.
+- **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado).
 
 ---
 

@@ -34,6 +34,7 @@ import {
   documentoExigeCienciaDoUsuario,
   documentoUsaModeloNormativo,
   itemNoFiltroDocumento,
+  perfilPortalRhParticipaCiencia,
   setoresAplicavelDoUsuario,
   tagTipoDocumentoCor,
   type RhDocumentoClassificacao,
@@ -367,6 +368,7 @@ export default function PortalRhPage() {
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
+  const [usuarioCadastradoGestaoPrestadores, setUsuarioCadastradoGestaoPrestadores] = useState(false);
   const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
     col: "codigo",
     dir: "asc",
@@ -382,6 +384,7 @@ export default function PortalRhPage() {
   useEffect(() => {
     if (!user?.email?.trim()) {
       setSetoresUsuarioAplicavel([]);
+      setUsuarioCadastradoGestaoPrestadores(false);
       return;
     }
     let cancel = false;
@@ -393,6 +396,7 @@ export default function PortalRhPage() {
       if (cancel) return;
       const vinculos = flattenVinculosDeGrupos(org.grupos);
       setSetoresUsuarioAplicavel(setoresAplicavelDoUsuario(funcionario, vinculos));
+      setUsuarioCadastradoGestaoPrestadores(Boolean(funcionario));
     })();
     return () => {
       cancel = true;
@@ -820,12 +824,14 @@ export default function PortalRhPage() {
   const cienciaExigidaDocIds = useMemo(() => {
     const set = new Set<string>();
     for (const d of documentosFiltrados) {
-      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel)) {
+      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel, user?.role, usuarioCadastradoGestaoPrestadores)) {
         set.add(d.id);
       }
     }
     return set;
-  }, [documentosFiltrados, setoresUsuarioAplicavel]);
+  }, [documentosFiltrados, setoresUsuarioAplicavel, user?.role, usuarioCadastradoGestaoPrestadores]);
+
+  const usuarioVeColunaCiencia = perfilPortalRhParticipaCiencia(user?.role);
 
   const cienciaPendenteDocIds = useMemo(() => {
     const set = new Set<string>();
@@ -1055,6 +1061,7 @@ export default function PortalRhPage() {
                     cienciaPendenteIds={cienciaPendenteDocIds}
                     cienciaExigidaIds={cienciaExigidaDocIds}
                     cienciaRegistradaEm={cienciaRegistradaEm}
+                    mostrarColunaCiencia={usuarioVeColunaCiencia}
                     onAbrir={(id) => void abrirDocumento(id)}
                     sort={sortDoc}
                     onSort={handleSortDoc}
@@ -1108,7 +1115,12 @@ export default function PortalRhPage() {
             classificacao={modalDoc.classificacao ?? null}
             pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
             pdfNome={modalDoc.anexo_nome ?? null}
-            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, setoresUsuarioAplicavel)}
+            exigeCiencia={documentoExigeCienciaDoUsuario(
+              modalDoc,
+              setoresUsuarioAplicavel,
+              user?.role,
+              usuarioCadastradoGestaoPrestadores,
+            )}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
@@ -1126,6 +1138,12 @@ export default function PortalRhPage() {
             aprovadorInfo={metaAutor(modalDoc.approved_by)}
             dataAprovacao={modalDoc.approved_at}
             temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
+            exigeCiencia={documentoExigeCienciaDoUsuario(
+              modalDoc,
+              setoresUsuarioAplicavel,
+              user?.role,
+              usuarioCadastradoGestaoPrestadores,
+            )}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}

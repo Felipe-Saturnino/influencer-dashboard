@@ -1,5 +1,7 @@
 import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import { Eye, Plus, ScrollText } from "lucide-react";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { propsBotaoIcone, tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FONT } from "../../../constants/theme";
 import {
   SortTableTh,
@@ -38,21 +40,6 @@ import {
 import { CellSelectPopover } from "./CellSelectPopover";
 
 type PopoverKind = "comercial" | "status" | "dedicada" | "network";
-
-const btnAcaoBase = (t: { cardBorder: string; inputBg: string }): CSSProperties => ({
-  width: 32,
-  height: 32,
-  borderRadius: 10,
-  border: `1px solid ${t.cardBorder}`,
-  background: t.inputBg,
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#6b7280",
-  padding: 0,
-  margin: "0 2px",
-});
 
 const cellEditable: CSSProperties = {
   cursor: "pointer",
@@ -259,8 +246,7 @@ export function PipelineTable({
                         {canEditar ? (
                           <button
                             type="button"
-                            aria-label={`Adicionar contato em ${row.nome}`}
-                            title={`Adicionar contato em ${row.nome}`}
+                            {...propsBotaoIcone(tooltipAcao("Adicionar contato"))}
                             onClick={() => onAddContato(row)}
                             style={{
                               width: 32,
@@ -377,24 +363,15 @@ export function PipelineTable({
 
                   {cfg.cols.includes("acao") ? (
                     <td style={dataTable.tdCenter}>
-                      <button
-                        type="button"
-                        aria-label={`Registro ${row.nome}`}
-                        title={`Registro ${row.nome}`}
-                        style={btnAcaoBase(t)}
+                      <BtnIconeAcaoLinha
+                        label={tooltipAcao("Registro da marca")}
                         onClick={() => onRegistro(row)}
                       >
                         <ScrollText size={13} aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Ver ${row.nome}`}
-                        title={`Ver ${row.nome}`}
-                        style={btnAcaoBase(t)}
-                        onClick={() => onVer(row)}
-                      >
+                      </BtnIconeAcaoLinha>
+                      <BtnIconeAcaoLinha label={tooltipAcao("Ver marca")} onClick={() => onVer(row)}>
                         <Eye size={13} aria-hidden />
-                      </button>
+                      </BtnIconeAcaoLinha>
                     </td>
                   ) : null}
                 </tr>
