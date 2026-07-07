@@ -46,6 +46,7 @@ export interface PipelineMarcaRow {
   status_folha: StatusFolha;
   comercial_user_id: string | null;
   comercial_nome: string | null;
+  ultimo_contato: string | null;
   ultima_comunicacao: string | null;
   empresa: ComercialEmpresa;
   contatos: ComercialContato[];

@@ -29,6 +29,7 @@ import {
 import {
   buildRazaoMerge,
   buildPipelineComercialPopoverOptions,
+  fmtDataNascimento,
   fmtDataPipeline,
   pipelineComercialDisplayNome,
   pipelineComercialExibeSiteOffline,
@@ -36,6 +37,7 @@ import {
   pipelineComercialPopoverLabel,
   pipelineComercialPopoverUserId,
   produtoStatus,
+  toDateInputValue,
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
 
@@ -69,6 +71,7 @@ export function PipelineTable({
   onUpdateComercial,
   onUpdateStatus,
   onUpdateProduto,
+  onUpdateUltimoContato,
   t,
 }: {
   tab: import("./constants").PipelineTab;
@@ -84,6 +87,7 @@ export function PipelineTable({
   onUpdateComercial: (row: PipelineMarcaRow, userId: string | null) => void;
   onUpdateStatus: (row: PipelineMarcaRow, status: StatusPipeline) => void;
   onUpdateProduto: (row: PipelineMarcaRow, tipo: "mesa_dedicada" | "mesa_network", status: StatusProduto) => void;
+  onUpdateUltimoContato: (row: PipelineMarcaRow, date: string | null) => void;
   t: {
     text: string;
     textMuted: string;
@@ -102,6 +106,8 @@ export function PipelineTable({
     rect: DOMRect;
     produto?: "mesa_dedicada" | "mesa_network";
   } | null>(null);
+
+  const [editingUltimoContatoId, setEditingUltimoContatoId] = useState<string | null>(null);
 
   function openPopover(e: MouseEvent<HTMLElement>, kind: PopoverKind, row: PipelineMarcaRow, produto?: "mesa_dedicada" | "mesa_network") {
     if (!canEditar) return;
@@ -354,6 +360,53 @@ export function PipelineTable({
                           );
                         })()}
                       </div>
+                    </td>
+                  ) : null}
+
+                  {cfg.cols.includes("ultimo_contato") ? (
+                    <td style={dataTable.tdCenter}>
+                      {canEditar && editingUltimoContatoId === row.id ? (
+                        <input
+                          type="date"
+                          autoFocus
+                          value={toDateInputValue(row.ultimo_contato)}
+                          aria-label={`Último contato — ${row.nome}`}
+                          style={{
+                            fontSize: 13,
+                            fontFamily: FONT.body,
+                            border: `1px solid ${t.cardBorder}`,
+                            borderRadius: 8,
+                            background: t.inputBg,
+                            color: t.text,
+                            padding: "4px 8px",
+                            maxWidth: "100%",
+                          }}
+                          onChange={(e) => {
+                            const v = e.target.value || null;
+                            onUpdateUltimoContato(row, v);
+                            setEditingUltimoContatoId(null);
+                          }}
+                          onBlur={() => setEditingUltimoContatoId(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setEditingUltimoContatoId(null);
+                          }}
+                        />
+                      ) : (
+                        <div
+                          role={canEditar ? "button" : undefined}
+                          tabIndex={canEditar ? 0 : undefined}
+                          style={canEditar ? cellEditable : undefined}
+                          onClick={() => canEditar && setEditingUltimoContatoId(row.id)}
+                          onKeyDown={(e) => {
+                            if (canEditar && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              setEditingUltimoContatoId(row.id);
+                            }
+                          }}
+                        >
+                          {fmtDataNascimento(row.ultimo_contato)}
+                        </div>
+                      )}
                     </td>
                   ) : null}
 

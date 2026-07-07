@@ -36,6 +36,7 @@ export type TableCol =
   | "status"
   | "dedicada"
   | "network"
+  | "ultimo_contato"
   | "ultima"
   | "acao";
 
@@ -170,27 +171,27 @@ export const TAB_TABLE_CONFIG: Record<
   todos: {
     title: "Todas as Marcas",
     pipelines: null,
-    cols: ["razao", "marca", "contato", "comercial", "status", "dedicada", "network", "ultima", "acao"],
+    cols: ["razao", "marca", "contato", "comercial", "status", "dedicada", "network", "ultimo_contato", "ultima", "acao"],
   },
   disponiveis: {
     title: "Marcas Disponíveis",
     pipelines: ["disponiveis"],
-    cols: ["razao", "marca", "contato", "comercial", "ultima", "acao"],
+    cols: ["razao", "marca", "contato", "comercial", "ultimo_contato", "ultima", "acao"],
   },
   conexao: {
     title: "Marcas em Conexão",
     pipelines: ["conexao"],
-    cols: ["razao", "marca", "contato", "comercial", "ultima", "acao"],
+    cols: ["razao", "marca", "contato", "comercial", "ultimo_contato", "ultima", "acao"],
   },
   negociacao: {
     title: "Marcas em Negociação",
     pipelines: ["negociacao"],
-    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultima", "acao"],
+    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultimo_contato", "ultima", "acao"],
   },
   fechado: {
     title: "Marcas com Contrato",
     pipelines: ["fechado"],
-    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultima", "acao"],
+    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultimo_contato", "ultima", "acao"],
   },
 };
 
@@ -202,11 +203,12 @@ export const COL_LABEL: Record<TableCol, string> = {
   status: "Status",
   dedicada: "Dedicada",
   network: "Network",
-  ultima: "Última Comunicação",
+  ultimo_contato: "Último Contato",
+  ultima: "Envio de Material",
   acao: "Ação",
 };
 
-export const SORTABLE_COLS: TableCol[] = ["razao", "dedicada", "network", "ultima"];
+export const SORTABLE_COLS: TableCol[] = ["razao", "dedicada", "network", "ultimo_contato", "ultima"];
 
 export const COMERCIAL_FILTRO_TODOS = "todos";
 export const COMERCIAL_FILTRO_NENHUM = "nenhum";
@@ -268,5 +270,7 @@ export const HISTORICO_CAMPO_LABEL: Record<string, string> = {
   status_dominio: "Status do Domínio",
   mesa_dedicada: "Dedicada",
   mesa_network: "Network",
+  ultimo_contato: "Último Contato",
+  ultima_comunicacao: "Envio de Material",
   status_folha: "Detalhe",
 };

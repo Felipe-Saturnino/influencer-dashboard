@@ -502,6 +502,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
       },
       {
+        subtitulo: "Período",
+        texto:
+          "A página abre com **Histórico** ativo (**Todo o período** — todas as denúncias desde maio/2026). Desligue Histórico para navegar mês a mês pelas setas do carrossel.",
+      },
+      {
         subtitulo: "Atendimento",
         texto:
           "Filtre por tipo de denúncia, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
@@ -1125,12 +1130,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nA coluna **Envio de Material** exibe a data do último envio de material (somente leitura na tabela).",
       },
       {
         subtitulo: "Comunicar",
         texto:
-          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Última Comunicação** — fluxo em implementação posterior.",
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Envio de Material** — fluxo em implementação posterior.",
       },
     ],
   },

@@ -109,7 +109,7 @@ export default function CentralDenunciasSpin() {
     [meses],
   );
   const [idxMes, setIdxMes] = useState(idxMesInicial);
-  const [modoHistorico, setModoHistorico] = useState(false);
+  const [modoHistorico, setModoHistorico] = useState(true);
   const [filtroTipos, setFiltroTipos] = useState<TipoDenunciaKey[]>([]);
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<DenunciaListRow[]>([]);

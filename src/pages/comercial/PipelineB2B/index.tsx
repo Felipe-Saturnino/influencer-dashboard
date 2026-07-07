@@ -94,6 +94,7 @@ function mapRow(
     status_folha: raw.status_folha as PipelineMarcaRow["status_folha"],
     comercial_user_id: comercialId,
     comercial_nome: comercialNomeCanonico,
+    ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
     ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
     empresa: {
       id: String(empresaRaw.id),
@@ -166,7 +167,7 @@ export default function PipelineB2B() {
         .from("comercial_marcas")
         .select(
           `
-          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, ultima_comunicacao,
+          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, ultimo_contato, ultima_comunicacao,
           empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano),
           contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
           produtos:comercial_marca_produtos(produto, status_produto)
@@ -249,6 +250,23 @@ export default function PipelineB2B() {
       comercial_user_id: userId,
       comercial_nome: userId ? pipelineComercialNomePorId(userId, comerciais) : null,
     }));
+  }
+
+  async function updateUltimoContato(row: PipelineMarcaRow, date: string | null) {
+    if (!perm.canEditarOk) return;
+    const anterior = row.ultimo_contato;
+    const valorNovo = date || null;
+    if ((anterior ?? null) === valorNovo) return;
+    const { error } = await supabase
+      .from("comercial_marcas")
+      .update({ ultimo_contato: valorNovo })
+      .eq("id", row.id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    await insertHistorico(row.id, "ultimo_contato", anterior, valorNovo);
+    patchMarcaRow(row.id, (r) => ({ ...r, ultimo_contato: valorNovo }));
   }
 
   async function updateDominio(marcaId: string, novoDominio: string | null): Promise<boolean> {
@@ -496,6 +514,7 @@ export default function PipelineB2B() {
             onUpdateComercial={updateComercial}
             onUpdateStatus={updateStatus}
             onUpdateProduto={updateProduto}
+            onUpdateUltimoContato={updateUltimoContato}
             t={t}
           />
         )}
