@@ -438,6 +438,8 @@ export function sortMarcas(
         return compareLocaleTexto(produtoDisplay(a, "mesa_dedicada"), produtoDisplay(b, "mesa_dedicada"), dir);
       case "network":
         return compareLocaleTexto(produtoDisplay(a, "mesa_network"), produtoDisplay(b, "mesa_network"), dir);
+      case "agregadora":
+        return compareLocaleTexto(a.agregadora ?? "", b.agregadora ?? "", dir);
       case "ultimo_contato":
       case "ultima": {
         const field = col === "ultimo_contato" ? "ultimo_contato" : "ultima_comunicacao";

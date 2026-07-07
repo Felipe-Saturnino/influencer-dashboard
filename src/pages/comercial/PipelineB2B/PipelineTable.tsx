@@ -11,6 +11,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import type { ComercialOpcao, ComercialContato, PipelineMarcaRow } from "./types";
 import {
+  AGREGADORA_POPOVER_OPTS,
   COL_LABEL,
   PIPELINE_COLOR,
   PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR,
@@ -22,6 +23,8 @@ import {
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
+  type Agregadora,
+  type AgregadoraPopoverValue,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
@@ -41,7 +44,7 @@ import {
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
 
-type PopoverKind = "comercial" | "status" | "dedicada" | "network";
+type PopoverKind = "comercial" | "status" | "dedicada" | "network" | "agregadora";
 
 const cellEditable: CSSProperties = {
   cursor: "pointer",
@@ -72,6 +75,7 @@ export function PipelineTable({
   onUpdateStatus,
   onUpdateProduto,
   onUpdateUltimoContato,
+  onUpdateAgregadora,
   t,
 }: {
   tab: import("./constants").PipelineTab;
@@ -88,6 +92,7 @@ export function PipelineTable({
   onUpdateStatus: (row: PipelineMarcaRow, status: StatusPipeline) => void;
   onUpdateProduto: (row: PipelineMarcaRow, tipo: "mesa_dedicada" | "mesa_network", status: StatusProduto) => void;
   onUpdateUltimoContato: (row: PipelineMarcaRow, date: string | null) => void;
+  onUpdateAgregadora: (row: PipelineMarcaRow, agregadora: Agregadora | null) => void;
   t: {
     text: string;
     textMuted: string;
@@ -363,6 +368,24 @@ export function PipelineTable({
                     </td>
                   ) : null}
 
+                  {cfg.cols.includes("agregadora") ? (
+                    <td style={dataTable.tdCenter}>
+                      <div
+                        role={canEditar ? "button" : undefined}
+                        tabIndex={canEditar ? 0 : undefined}
+                        style={canEditar ? cellEditable : undefined}
+                        onClick={(e) => openPopover(e, "agregadora", row)}
+                        onKeyDown={(e) => {
+                          if (canEditar && (e.key === "Enter" || e.key === " ")) {
+                            openPopover(e as unknown as MouseEvent<HTMLElement>, "agregadora", row);
+                          }
+                        }}
+                      >
+                        {row.agregadora ?? "—"}
+                      </div>
+                    </td>
+                  ) : null}
+
                   {cfg.cols.includes("ultimo_contato") ? (
                     <td style={dataTable.tdCenter}>
                       {canEditar && editingUltimoContatoId === row.id ? (
@@ -479,6 +502,19 @@ export function PipelineTable({
           }
           onClose={() => setPopover(null)}
           labelOption={(v) => STATUS_PRODUTO_LABEL[v]}
+          t={t}
+        />
+      ) : null}
+
+      {popover?.kind === "agregadora" ? (
+        <CellSelectPopover
+          open
+          anchorRect={popover.rect}
+          options={AGREGADORA_POPOVER_OPTS}
+          value={(popover.row.agregadora ?? "") as AgregadoraPopoverValue}
+          onSelect={(v) => onUpdateAgregadora(popover.row, v ? (v as Agregadora) : null)}
+          onClose={() => setPopover(null)}
+          labelOption={(v) => (v ? v : "—")}
           t={t}
         />
       ) : null}
