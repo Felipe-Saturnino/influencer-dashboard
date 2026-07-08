@@ -46,7 +46,7 @@ globs:
 
 ## Filtros
 
-**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): **Todos**, **Nenhum**, prestadores do time **Customer Service** via RPC `cs_atendimento_atendentes_listar`.
+**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): ordem **Todos** → **Nenhum** (`extraOptions`) → prestadores do time **Customer Service** (A–Z, via RPC `cs_atendimento_atendentes_listar`).
 
 **Linha 2:** aba única **Site Spin** (`FiltroBarTabButton`, ícone `Globe` 16px).
 

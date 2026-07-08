@@ -142,12 +142,8 @@ export default function CsAtendimentoPage() {
     ? CS_ATENDIMENTO_TODOS_STATUS_LABEL
     : CS_ATENDIMENTO_STATUS_CARROSSEL.find((s) => s.key === filtroStatus)?.label ?? CS_ATENDIMENTO_TODOS_STATUS_LABEL;
 
-  const opcoesAtendente = useMemo(
-    () => [
-      { value: CS_ATENDIMENTO_FILTRO_TODOS_VALUE, label: CS_ATENDIMENTO_FILTRO_TODOS_LABEL },
-      { value: CS_ATENDIMENTO_FILTRO_NENHUM_VALUE, label: CS_ATENDIMENTO_FILTRO_NENHUM_LABEL },
-      ...atendentes.map((a) => ({ value: a.profileId, label: a.nome })),
-    ],
+  const opcoesStaffPrestadores = useMemo(
+    () => atendentes.map((a) => ({ value: a.profileId, label: a.nome })),
     [atendentes],
   );
 
@@ -334,7 +330,8 @@ export default function CsAtendimentoPage() {
               id="filtro-staff-cs"
               value={filtroAtendente}
               onChange={(v) => setFiltroAtendente(v as CsChamadoFiltroAtendente)}
-              options={opcoesAtendente}
+              options={opcoesStaffPrestadores}
+              extraOptions={[{ value: CS_ATENDIMENTO_FILTRO_NENHUM_VALUE, label: CS_ATENDIMENTO_FILTRO_NENHUM_LABEL }]}
               icon={FilterBarIcons.staff}
               ariaLabel="Staff"
               todasValue={CS_ATENDIMENTO_FILTRO_TODOS_VALUE}
