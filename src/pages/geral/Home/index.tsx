@@ -38,6 +38,8 @@ import HomeComunicacao from "./HomeComunicacao";
 import HomePerformanceCoach from "./HomePerformanceCoach";
 import HomeServiceManager from "./HomeServiceManager";
 import HomeCustomerService from "./HomeCustomerService";
+import HomeGamePresenter from "./HomeGamePresenter";
+import HomeShuffler from "./HomeShuffler";
 import HomeTechOps from "./HomeTechOps";
 import HomeShiftLeader from "./HomeShiftLeader";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
@@ -129,6 +131,8 @@ const ROLE_LABELS: Record<Role, string> = {
   shift_leader: "Shift Leader",
   service_manager: "Service Manager",
   customer_service: "Customer Service",
+  game_presenter: "Game Presenter",
+  shuffler: "Shuffler",
   tech_ops: "Tech Ops",
   figurino: "Figurino",
   comunicacao: "Comunicação",
@@ -177,6 +181,16 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Customer Service",
     subtitle:
       "Atendimento ao jogador e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  game_presenter: {
+    title: "Game Presenter",
+    subtitle:
+      "Operação de mesa ao vivo e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  shuffler: {
+    title: "Shuffler",
+    subtitle:
+      "Procedimentos de mesa e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
   },
   tech_ops: {
     title: "Tech Ops",
@@ -416,6 +430,14 @@ export default function Home() {
 
   if (roleHome === "customer_service") {
     return <HomeCustomerService />;
+  }
+
+  if (roleHome === "game_presenter") {
+    return <HomeGamePresenter />;
+  }
+
+  if (roleHome === "shuffler") {
+    return <HomeShuffler />;
   }
 
   if (roleHome === "tech_ops") {

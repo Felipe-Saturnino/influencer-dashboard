@@ -6,13 +6,10 @@ import {
   staffEstudioSlugsFromRow,
 } from "../pages/rh/GestaoStaff/gestaoStaffEstudioHelpers";
 
+import { timeOrganogramaIndicaGamePresenter } from "./rhPrestadorUsuarioSync";
+
 export function isGamePresenterTimeNome(nome: string | null | undefined): boolean {
-  const n = (nome ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "");
-  return n.replace(/\s+/g, " ") === "game presenter";
+  return timeOrganogramaIndicaGamePresenter(nome);
 }
 
 /** Prestador ativo/indisponível no time Game Presenter (mesma função que «dealer» no catálogo). */

@@ -10,7 +10,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Customer Service, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Customer Service, Game Presenter, Shuffler, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -43,6 +43,8 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
   { value: "customer_service", label: "Customer Service" },
+  { value: "game_presenter", label: "Game Presenter" },
+  { value: "shuffler", label: "Shuffler" },
   { value: "tech_ops", label: "Tech Ops" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
@@ -53,10 +55,24 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "investidor", label: "Investidor" },
 ];
 
+/** Perfis internos — operação de estúdio (filtros Usuários, Permissões, Simulador). */
+export const ROLES_PERFIS_ESTUDIO: Role[] = [
+  "performance_coach",
+  "service_manager",
+  "customer_service",
+  "shift_leader",
+  "shuffler",
+  "game_presenter",
+];
+
+/** Perfis internos — escritório e suporte (filtros Usuários, Permissões, Simulador). */
+export const ROLES_PERFIS_ESCRITORIO: Role[] = ["rh", "figurino", "comunicacao", "tech_ops", "prestador"];
+
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
-  { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "customer_service", "tech_ops", "shift_leader", "prestador"] },
+  { titulo: "Perfis Gerenciais", roles: ["admin", "executivo", "gestor"] },
+  { titulo: "Estúdio", roles: ROLES_PERFIS_ESTUDIO },
+  { titulo: "Escritório", roles: ROLES_PERFIS_ESCRITORIO },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
@@ -203,6 +219,8 @@ export const ROLES_PERMISSOES: Role[] = [
   "performance_coach",
   "service_manager",
   "customer_service",
+  "game_presenter",
+  "shuffler",
   "tech_ops",
   "shift_leader",
   "prestador",
@@ -271,6 +289,8 @@ export function roleBadgeColor(role: Role): string {
     shift_leader: BRAND.amarelo,
     service_manager: BRAND.azul,
     customer_service: BRAND.verde,
+    game_presenter: BRAND.roxoVivo,
+    shuffler: BRAND.amarelo,
     tech_ops: BRAND.ciano,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,

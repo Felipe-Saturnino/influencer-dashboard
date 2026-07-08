@@ -1021,15 +1021,15 @@
       {
         id: "dm1",
         subtipo: "dm",
-        protocolo: "INSTA-2026/0015",
+        protocolo: "DM-2026/0015",
         status: "aberto",
         handle: "@maria.livecasino",
-        ultimaMsg: "Olá! Vocês atendem operadoras que estão começando no Live Cassino?",
         abertura: "08/07/2026 09:14",
         inicio: null,
         atendente: null,
         staffKey: null,
-        janela: { ativa: true, label: "Janela ativa · 21h restantes" },
+        tempoResposta: null,
+        sla: null,
         thread: [
           { tipo: "in", texto: "Olá! Vocês atendem operadoras que estão começando no Live Cassino?", hora: "09:14", autor: "@maria.livecasino" },
         ],
@@ -1038,15 +1038,15 @@
       {
         id: "dm2",
         subtipo: "dm",
-        protocolo: "INSTA-2026/0012",
+        protocolo: "DM-2026/0012",
         status: "em_andamento",
         handle: "@blaze_parceiros",
-        ultimaMsg: "Perfeito, aguardo o material técnico então.",
         abertura: "07/07/2026 16:40",
         inicio: "07/07/2026 17:05",
         atendente: "Ana Paula Ribeiro",
         staffKey: "ana",
-        janela: { ativa: true, label: "Janela ativa · 6h restantes" },
+        tempoResposta: "25 min",
+        sla: null,
         thread: [
           { tipo: "in", texto: "Boa tarde! Queremos entender mesas dedicadas de Roleta para Q3.", hora: "16:40", autor: "@blaze_parceiros" },
           { tipo: "out", texto: "Olá! Claro — vou encaminhar o deck comercial e o checklist técnico ainda hoje.", hora: "17:05", autor: "Ana Paula Ribeiro" },
@@ -1054,22 +1054,21 @@
         ],
         historico: [
           { acao: "Abertura do chamado", data: "07/07/2026 16:40", usuario: "@blaze_parceiros", nota: null },
-          { acao: "Início do atendimento", data: "07/07/2026 17:05", usuario: "Ana Paula Ribeiro", nota: "Respondido via plataforma (mock Fase 2)." },
+          { acao: "Início do atendimento", data: "07/07/2026 17:05", usuario: "Ana Paula Ribeiro", nota: "Primeira resposta enviada (mock Fase 2)." },
         ],
       },
       {
         id: "dm3",
         subtipo: "dm",
-        protocolo: "INSTA-2026/0008",
+        protocolo: "DM-2026/0008",
         status: "arquivado",
         handle: "@jogador_curioso",
-        ultimaMsg: "Encerramos este atendimento por inatividade…",
         abertura: "05/07/2026 11:02",
         inicio: "05/07/2026 11:18",
         atendente: "Carlos Mendes",
         staffKey: "carlos",
+        tempoResposta: "16 min",
         sla: "1d 4h",
-        janela: { ativa: false, label: "Sessão encerrada" },
         thread: [
           { tipo: "in", texto: "Como faço para assistir as mesas ao vivo pela operadora?", hora: "11:02", autor: "@jogador_curioso" },
           { tipo: "out", texto: "Oi! O acesso é pelo lobby da casa parceira — qual operadora você usa?", hora: "11:18", autor: "Carlos Mendes" },
@@ -1077,7 +1076,7 @@
         ],
         historico: [
           { acao: "Abertura do chamado", data: "05/07/2026 11:02", usuario: "@jogador_curioso", nota: null },
-          { acao: "Início do atendimento", data: "05/07/2026 11:18", usuario: "Carlos Mendes", nota: "Dúvida de jogador — orientação geral." },
+          { acao: "Início do atendimento", data: "05/07/2026 11:18", usuario: "Carlos Mendes", nota: null },
           { acao: "Arquivamento", data: "06/07/2026 11:20", usuario: "Sistema", nota: "Encerramento automático — 24h sem resposta do usuário." },
         ],
       },
@@ -1087,22 +1086,23 @@
       {
         id: "c1",
         subtipo: "comentario",
-        protocolo: "INSTA-2026/0014",
+        protocolo: "COMENT-2026/0014",
         status: "aberto",
         handle: "@operadora_nova",
         postTipo: "Reel",
-        postCaption: "Novidade no estúdio: mesas de Baccarat com dealers brasileiros 🇧🇷",
+        postCaption: "Novidade no estúdio: mesas de Baccarat com dealers brasileiros",
         comentario: "Como funciona parceria para exibir essas mesas no nosso lobby?",
         abertura: "08/07/2026 08:55",
         inicio: null,
         atendente: null,
         staffKey: null,
+        sla: null,
         historico: [{ acao: "Abertura do chamado", data: "08/07/2026 08:55", usuario: "@operadora_nova", nota: null }],
       },
       {
         id: "c2",
         subtipo: "comentario",
-        protocolo: "INSTA-2026/0009",
+        protocolo: "COMENT-2026/0009",
         status: "em_andamento",
         handle: "@tech_supply",
         postTipo: "Carrossel",
@@ -1112,6 +1112,7 @@
         inicio: "06/07/2026 15:01",
         atendente: "Ana Paula Ribeiro",
         staffKey: "ana",
+        sla: null,
         historico: [
           { acao: "Abertura do chamado", data: "06/07/2026 14:20", usuario: "@tech_supply", nota: null },
           { acao: "Início do atendimento", data: "06/07/2026 15:01", usuario: "Ana Paula Ribeiro", nota: "Responder com link comercial (Fase 2)." },
@@ -1120,7 +1121,7 @@
       {
         id: "c3",
         subtipo: "comentario",
-        protocolo: "INSTA-2026/0005",
+        protocolo: "COMENT-2026/0005",
         status: "arquivado",
         handle: "@fan_spin",
         postTipo: "Feed",
@@ -1141,60 +1142,67 @@
     let filtroStatus = "aberto";
     let todosStatus = false;
     let filtroStaff = "todos";
-    let subtipo = "dm";
     let podeEditar = true;
     let chamadoAtual = null;
+
+    const COL_LABEL = {
+      chamado: "Chamado",
+      data: "Data de Abertura",
+      solicitante: "Solicitante",
+      inicio: "Início do Atendimento",
+      atendente: "Atendente",
+      tempo_resposta: "Tempo de Resposta",
+      sla: "SLA",
+      status: "Status",
+      acoes: "Ações",
+    };
 
     function badgeStatus(s) {
       const cls = s === "aberto" ? "badge-aberto" : s === "em_andamento" ? "badge-andamento" : "badge-arquivado";
       return `<span class="badge ${cls}">${STATUS_LABEL[s]}</span>`;
     }
 
-    function badgeJanela(j) {
-      if (!j) return "—";
-      const cls = j.ativa ? "badge-janela-ok" : "badge-janela-off";
-      return `<span class="badge ${cls}">${j.label}</span>`;
+    function fmtMetrica(val) {
+      if (!val) return "—";
+      return `<span class="badge badge-sla-ok">${val}</span>`;
     }
 
-    function badgeSla(sla) {
-      if (!sla) return "—";
-      return `<span class="badge badge-sla-ok">${sla}</span>`;
-    }
-
-    function dataset() {
-      return subtipo === "dm" ? CHAMADOS_DM : CHAMADOS_COM;
-    }
-
-    function getColunas() {
-      if (subtipo === "dm") {
-        if (todosStatus) return ["chamado", "data", "instagram", "ultima", "janela", "inicio", "atendente", "sla", "status", "acoes"];
-        if (filtroStatus === "aberto") return ["chamado", "data", "instagram", "ultima", "janela", "acoes"];
-        if (filtroStatus === "em_andamento") return ["chamado", "data", "instagram", "ultima", "janela", "inicio", "atendente", "acoes"];
-        return ["chamado", "data", "instagram", "atendente", "sla", "acoes"];
+    function getColunasMensagens() {
+      if (todosStatus) {
+        return ["chamado", "data", "solicitante", "inicio", "atendente", "status", "sla", "acoes"];
       }
-      if (todosStatus) return ["chamado", "data", "instagram", "post", "comentario", "inicio", "atendente", "sla", "status", "acoes"];
-      if (filtroStatus === "aberto") return ["chamado", "data", "instagram", "post", "comentario", "acoes"];
-      if (filtroStatus === "em_andamento") return ["chamado", "data", "instagram", "comentario", "inicio", "atendente", "acoes"];
-      return ["chamado", "data", "instagram", "comentario", "atendente", "sla", "acoes"];
+      if (filtroStatus === "aberto") {
+        return ["chamado", "data", "solicitante", "acoes"];
+      }
+      if (filtroStatus === "em_andamento") {
+        return ["chamado", "data", "solicitante", "inicio", "atendente", "tempo_resposta", "acoes"];
+      }
+      return ["chamado", "data", "solicitante", "atendente", "sla", "acoes"];
     }
 
-    const COL_LABEL = {
-      chamado: "Chamado",
-      data: "Data de Abertura",
-      instagram: "Instagram",
-      ultima: "Última mensagem",
-      janela: "Janela 24h",
-      post: "Publicação",
-      comentario: "Comentário",
-      inicio: "Início do Atendimento",
-      atendente: "Atendente",
-      sla: "SLA",
-      status: "Status",
-      acoes: "Ações",
-    };
+    function getColunasComentarios() {
+      if (todosStatus) {
+        return ["chamado", "data", "solicitante", "inicio", "atendente", "status", "sla", "acoes"];
+      }
+      if (filtroStatus === "arquivado") {
+        return ["chamado", "data", "solicitante", "atendente", "sla", "acoes"];
+      }
+      return ["chamado", "data", "solicitante", "acoes"];
+    }
 
-    function filtrar() {
-      return dataset().filter((c) => {
+    function slaMensagensCell(c) {
+      if (c.status === "em_andamento") return fmtMetrica(c.tempoResposta);
+      if (c.status === "aberto") return "—";
+      return fmtMetrica(c.sla);
+    }
+
+    function slaComentariosCell(c) {
+      if (c.status === "arquivado") return fmtMetrica(c.sla);
+      return "—";
+    }
+
+    function filtrarLista(lista) {
+      return lista.filter((c) => {
         if (!todosStatus && c.status !== filtroStatus) return false;
         if (filtroStaff === "nenhum" && c.staffKey) return false;
         if (filtroStaff !== "todos" && filtroStaff !== "nenhum" && c.staffKey !== filtroStaff) return false;
@@ -1202,12 +1210,18 @@
       });
     }
 
-    function renderTabela() {
-      const cols = getColunas();
-      const rows = filtrar();
-      document.getElementById("table-head").innerHTML = cols.map((c) => `<th scope="col">${COL_LABEL[c]}</th>`).join("");
-      const tbody = document.getElementById("table-body");
-      const empty = document.getElementById("empty-state");
+    function acoesCell(c) {
+      const atender = podeEditar && c.status !== "arquivado"
+        ? `<button class="icon-btn btn-atender" data-id="${c.id}" title="Atender chamado" aria-label="Atender chamado">✎</button>`
+        : "";
+      return `<td><div class="actions-cell"><button class="icon-btn btn-ver" data-id="${c.id}" title="Ver chamado" aria-label="Ver chamado">👁</button>${atender}</div></td>`;
+    }
+
+    function renderBloco(config) {
+      const { headId, bodyId, emptyId, cols, rows, renderCell } = config;
+      document.getElementById(headId).innerHTML = cols.map((c) => `<th scope="col">${COL_LABEL[c]}</th>`).join("");
+      const tbody = document.getElementById(bodyId);
+      const empty = document.getElementById(emptyId);
       if (!rows.length) {
         tbody.innerHTML = "";
         empty.style.display = "block";
@@ -1215,28 +1229,54 @@
       }
       empty.style.display = "none";
       tbody.innerHTML = rows.map((c) => {
-        const cells = cols.map((col) => {
-          if (col === "chamado") return `<td><strong>${c.protocolo}</strong></td>`;
-          if (col === "data") return `<td>${c.abertura}</td>`;
-          if (col === "instagram") return `<td><span class="ig-handle">${c.handle}</span></td>`;
-          if (col === "ultima") return `<td><div class="msg-preview" title="${c.ultimaMsg}">${c.ultimaMsg}</div></td>`;
-          if (col === "janela") return `<td>${badgeJanela(c.janela)}</td>`;
-          if (col === "post") return `<td><div class="post-preview" title="${c.postCaption}">${c.postTipo} · ${c.postCaption}</div></td>`;
-          if (col === "comentario") return `<td><div class="msg-preview" title="${c.comentario}">${c.comentario}</div></td>`;
-          if (col === "inicio") return `<td>${c.inicio || "—"}</td>`;
-          if (col === "atendente") return `<td>${c.atendente || "—"}</td>`;
-          if (col === "sla") return `<td>${badgeSla(c.sla)}</td>`;
-          if (col === "status") return `<td>${badgeStatus(c.status)}</td>`;
-          if (col === "acoes") {
-            const atender = podeEditar && c.status !== "arquivado"
-              ? `<button class="icon-btn btn-atender" data-id="${c.id}" title="Atender chamado" aria-label="Atender chamado">✎</button>`
-              : "";
-            return `<td><div class="actions-cell"><button class="icon-btn btn-ver" data-id="${c.id}" title="Ver chamado" aria-label="Ver chamado">👁</button>${atender}</div></td>`;
-          }
-          return "<td>—</td>";
-        }).join("");
+        const cells = cols.map((col) => renderCell(col, c)).join("");
         return `<tr>${cells}</tr>`;
       }).join("");
+    }
+
+    function renderTabelas() {
+      const rowsDm = filtrarLista(CHAMADOS_DM);
+      const colsDm = getColunasMensagens();
+      renderBloco({
+        headId: "table-head-dm",
+        bodyId: "table-body-dm",
+        emptyId: "empty-state-dm",
+        cols: colsDm,
+        rows: rowsDm,
+        renderCell(col, c) {
+          if (col === "chamado") return `<td><strong>${c.protocolo}</strong></td>`;
+          if (col === "data") return `<td>${c.abertura}</td>`;
+          if (col === "solicitante") return `<td><span class="ig-handle">${c.handle}</span></td>`;
+          if (col === "inicio") return `<td>${c.inicio || "—"}</td>`;
+          if (col === "atendente") return `<td>${c.atendente || "—"}</td>`;
+          if (col === "tempo_resposta") return `<td>${fmtMetrica(c.tempoResposta)}</td>`;
+          if (col === "sla") return `<td>${slaMensagensCell(c)}</td>`;
+          if (col === "status") return `<td>${badgeStatus(c.status)}</td>`;
+          if (col === "acoes") return acoesCell(c);
+          return "<td>—</td>";
+        },
+      });
+
+      const rowsCom = filtrarLista(CHAMADOS_COM);
+      const colsCom = getColunasComentarios();
+      renderBloco({
+        headId: "table-head-com",
+        bodyId: "table-body-com",
+        emptyId: "empty-state-com",
+        cols: colsCom,
+        rows: rowsCom,
+        renderCell(col, c) {
+          if (col === "chamado") return `<td><strong>${c.protocolo}</strong></td>`;
+          if (col === "data") return `<td>${c.abertura}</td>`;
+          if (col === "solicitante") return `<td><span class="ig-handle">${c.handle}</span></td>`;
+          if (col === "inicio") return `<td>${c.inicio || "—"}</td>`;
+          if (col === "atendente") return `<td>${c.atendente || "—"}</td>`;
+          if (col === "sla") return `<td>${slaComentariosCell(c)}</td>`;
+          if (col === "status") return `<td>${badgeStatus(c.status)}</td>`;
+          if (col === "acoes") return acoesCell(c);
+          return "<td>—</td>";
+        },
+      });
 
       document.querySelectorAll(".btn-ver").forEach((b) => b.addEventListener("click", () => abrirVer(b.dataset.id)));
       document.querySelectorAll(".btn-atender").forEach((b) => b.addEventListener("click", () => abrirAtender(b.dataset.id)));
@@ -1270,7 +1310,7 @@
 
       if (c.subtipo === "dm") {
         document.getElementById("ver-dm-title").textContent = `${c.protocolo} — ${c.handle}`;
-        document.getElementById("ver-dm-meta").innerHTML = `${badgeStatus(c.status)} ${badgeJanela(c.janela)}`;
+        document.getElementById("ver-dm-meta").innerHTML = badgeStatus(c.status);
         document.getElementById("ver-dm-handle").innerHTML = `<span class="ig-handle">${c.handle}</span>`;
         document.getElementById("ver-dm-abertura").textContent = c.abertura;
         document.getElementById("ver-dm-atendente").textContent = c.atendente || "—";
@@ -1321,6 +1361,7 @@
     function updateStatusLabel() {
       document.getElementById("status-label").textContent = todosStatus ? STATUS_LABEL.todos : STATUS_LABEL[filtroStatus];
       document.getElementById("btn-todos-status").classList.toggle("active-filter", todosStatus);
+      document.getElementById("btn-todos-status").setAttribute("aria-pressed", String(todosStatus));
     }
 
     document.getElementById("btn-status-prev").addEventListener("click", () => {
@@ -1328,37 +1369,23 @@
       const idx = STATUS_ORDER.indexOf(filtroStatus);
       filtroStatus = STATUS_ORDER[(idx - 1 + STATUS_ORDER.length) % STATUS_ORDER.length];
       updateStatusLabel();
-      renderTabela();
+      renderTabelas();
     });
     document.getElementById("btn-status-next").addEventListener("click", () => {
       todosStatus = false;
       const idx = STATUS_ORDER.indexOf(filtroStatus);
       filtroStatus = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
       updateStatusLabel();
-      renderTabela();
+      renderTabelas();
     });
     document.getElementById("btn-todos-status").addEventListener("click", () => {
       todosStatus = !todosStatus;
       updateStatusLabel();
-      renderTabela();
+      renderTabelas();
     });
     document.getElementById("filtro-staff").addEventListener("change", (e) => {
       filtroStaff = e.target.value;
-      renderTabela();
-    });
-
-    document.querySelectorAll(".subtipo-pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".subtipo-pill").forEach((b) => {
-          b.classList.remove("active");
-          b.setAttribute("aria-selected", "false");
-        });
-        btn.classList.add("active");
-        btn.setAttribute("aria-selected", "true");
-        subtipo = btn.dataset.subtipo;
-        document.getElementById("subtipo-label").textContent = subtipo === "dm" ? "Mensagens" : "Comentários";
-        renderTabela();
-      });
+      renderTabelas();
     });
 
     document.querySelectorAll(".pill-profile").forEach((btn) => {
@@ -1366,7 +1393,7 @@
         document.querySelectorAll(".pill-profile").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         podeEditar = btn.dataset.perm === "editar";
-        renderTabela();
+        renderTabelas();
       });
     });
 
@@ -1404,12 +1431,12 @@
         alert("Informe uma anotação ao alterar o status do chamado.");
         return;
       }
-      alert("Mockup: alterações simuladas. Na implementação, status + atendente seguem a RPC cs_chamado_atender.");
+      alert("Mockup: alterações simuladas.");
       fecharModais();
     });
 
     updateStatusLabel();
-    renderTabela();
+    renderTabelas();
   </script>
 </body>
 </html>

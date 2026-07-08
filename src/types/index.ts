@@ -7,6 +7,8 @@ export type Role =
   | "shift_leader"
   | "service_manager"
   | "customer_service"
+  | "game_presenter"
+  | "shuffler"
   | "tech_ops"
   | "figurino"
   | "comunicacao"

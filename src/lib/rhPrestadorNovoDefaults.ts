@@ -51,6 +51,7 @@ const REMUNERACAO_HORA_CENTAVOS_POR_TIME: Readonly<Record<string, number>> = {
   shuffler: 1375,
   "contador de cartas": 1375,
   "game presenter": 1775,
+  "game presenters": 1775,
   "shift leader": 2222,
   "performance coach": 2111,
   "service manager": 2222,

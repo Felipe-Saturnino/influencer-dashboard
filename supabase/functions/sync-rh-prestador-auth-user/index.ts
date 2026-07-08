@@ -37,6 +37,8 @@ type PerfilRhSync =
   | 'shift_leader'
   | 'service_manager'
   | 'customer_service'
+  | 'game_presenter'
+  | 'shuffler'
   | 'tech_ops'
   | 'prestador'
   | 'gestor'
@@ -307,6 +309,16 @@ function gerenciaIndicaCustomerService(gerenciaNome: string | null | undefined):
   return normTimeNome(gerenciaNome) === 'customer service'
 }
 
+function timeIndicaGamePresenter(timeNome: string | null | undefined): boolean {
+  const t = normTimeNome(timeNome)
+  return t === 'game presenter' || t === 'game presenters'
+}
+
+function timeIndicaShuffler(timeNome: string | null | undefined): boolean {
+  const t = normTimeNome(timeNome)
+  return t === 'shuffler' || t === 'shufflers'
+}
+
 async function carregarContextoOrganogramaRh(
   supabase: SupabaseSvc,
   row: { org_time_id?: string | null; org_gerencia_id?: string | null },
@@ -399,11 +411,11 @@ function resolvePerfilEscopo(
   if (t === 'customer service') {
     return { role: 'customer_service', prestadorTipo: null, gestorTipo: null }
   }
-  if (t === 'game presenter') {
-    return { role: 'prestador', prestadorTipo: 'game_presenter', gestorTipo: null }
+  if (timeIndicaGamePresenter(timeNome)) {
+    return { role: 'game_presenter', prestadorTipo: null, gestorTipo: null }
   }
-  if (t === 'shuffler') {
-    return { role: 'prestador', prestadorTipo: 'shuffler', gestorTipo: null }
+  if (timeIndicaShuffler(timeNome)) {
+    return { role: 'shuffler', prestadorTipo: null, gestorTipo: null }
   }
 
   const a = normTimeNome(areaAtuacaoRh)
