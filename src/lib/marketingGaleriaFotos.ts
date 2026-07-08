@@ -58,6 +58,68 @@ export function fotoPrestadorEmbed(f: MarketingFotoComEvento): MarketingPrestado
   return unwrapEmbed(f.rh_funcionarios);
 }
 
+export type GaleriaEventoResolvido = {
+  id: string;
+  nome: string;
+  data_evento: string;
+  descricao: string | null;
+};
+
+export type GaleriaPrestadorResolvido = {
+  id: string;
+  nome: string;
+};
+
+export type GaleriaMetadadosContexto = {
+  eventosPorId?: ReadonlyMap<string, Pick<MarketingEvento, "id" | "nome" | "data_evento" | "descricao">>;
+  prestadoresPorId?: ReadonlyMap<string, GaleriaPrestadorResolvido>;
+};
+
+/** Evento da foto — embed PostgREST ou mapa local (evita descartar foto quando RLS bloqueia o join). */
+export function resolverEventoGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): GaleriaEventoResolvido | null {
+  if (f.tipo !== "geral" || !f.evento_id) return null;
+  const embed = fotoEventoEmbed(f);
+  if (embed) {
+    return {
+      id: embed.id,
+      nome: embed.nome,
+      data_evento: embed.data_evento,
+      descricao: embed.descricao?.trim() || null,
+    };
+  }
+  const fromList = ctx?.eventosPorId?.get(f.evento_id);
+  if (fromList) {
+    return {
+      id: fromList.id,
+      nome: fromList.nome,
+      data_evento: fromList.data_evento,
+      descricao: fromList.descricao?.trim() || null,
+    };
+  }
+  return {
+    id: f.evento_id,
+    nome: "Evento",
+    data_evento: "",
+    descricao: null,
+  };
+}
+
+/** Colaborador da foto — embed ou mapa local. */
+export function resolverPrestadorGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): GaleriaPrestadorResolvido | null {
+  if (f.tipo !== "prestador" || !f.rh_funcionario_id) return null;
+  const embed = fotoPrestadorEmbed(f);
+  if (embed) return embed;
+  const fromList = ctx?.prestadoresPorId?.get(f.rh_funcionario_id);
+  if (fromList) return fromList;
+  return { id: f.rh_funcionario_id, nome: "Colaborador" };
+}
+
 function sanitizeStorageFileName(name: string): string {
   return name.replace(/[^\w.\-() ]/g, "_").slice(0, 120);
 }
@@ -140,15 +202,21 @@ export function chaveGrupoFotoGaleria(f: MarketingFotoComEvento): string | null 
   return null;
 }
 
-export function nomeBaseGrupoFotoGaleria(f: MarketingFotoComEvento): string {
-  if (f.tipo === "geral") return fotoEventoEmbed(f)?.nome?.trim() || "Evento";
-  return fotoPrestadorEmbed(f)?.nome?.trim() || "Colaborador";
+export function nomeBaseGrupoFotoGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): string {
+  if (f.tipo === "geral") return resolverEventoGaleria(f, ctx)?.nome.trim() || "Evento";
+  return resolverPrestadorGaleria(f, ctx)?.nome.trim() || "Colaborador";
 }
 
 /**
  * Rótulos «Evento 1», «Colaborador 2»… por grupo, ordenados por data de upload (mais antigo = 1).
  */
-export function buildRotulosFotoGaleria(fotos: MarketingFotoComEvento[]): Map<string, string> {
+export function buildRotulosFotoGaleria(
+  fotos: MarketingFotoComEvento[],
+  ctx?: GaleriaMetadadosContexto,
+): Map<string, string> {
   const map = new Map<string, string>();
   const grupos = new Map<string, MarketingFotoComEvento[]>();
   for (const f of fotos) {
@@ -161,7 +229,7 @@ export function buildRotulosFotoGaleria(fotos: MarketingFotoComEvento[]): Map<st
   for (const list of grupos.values()) {
     const sorted = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
     sorted.forEach((f, i) => {
-      map.set(f.id, `${nomeBaseGrupoFotoGaleria(f)} ${i + 1}`);
+      map.set(f.id, `${nomeBaseGrupoFotoGaleria(f, ctx)} ${i + 1}`);
     });
   }
   return map;
@@ -205,6 +273,26 @@ export async function excluirMarketingEventoGaleria(
   const { error } = await supabase.from("marketing_eventos").delete().eq("id", eventoId);
   if (error) return { ok: false };
   return { ok: true };
+}
+
+/**
+ * Remove fotos individuais da Galeria (Minhas Fotos) ao encerrar o prestador.
+ * Usa RPC SECURITY DEFINER (RH com edição em Prestadores, sem precisar Excluir na Galeria).
+ */
+export async function excluirMarketingFotosDoPrestador(
+  rhFuncionarioId: string,
+): Promise<{ ok: true; removidas: number } | { ok: false }> {
+  const id = rhFuncionarioId.trim();
+  if (!id) return { ok: false };
+
+  const { data, error } = await supabase.rpc("marketing_galeria_excluir_fotos_prestador", {
+    p_rh_funcionario_id: id,
+  });
+  if (error) {
+    console.error("marketing_galeria_excluir_fotos_prestador:", error);
+    return { ok: false };
+  }
+  return { ok: true, removidas: typeof data === "number" ? data : 0 };
 }
 
 export function fmtDataEvento(iso: string | null | undefined): string {

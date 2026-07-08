@@ -60,6 +60,9 @@ import {
   fmtDataEvento,
   fotoEventoEmbed,
   fotoPrestadorEmbed,
+  resolverEventoGaleria,
+  resolverPrestadorGaleria,
+  type GaleriaMetadadosContexto,
   removerMarketingFotoStorage,
   uploadMarketingFotoArquivo,
   urlAssinadaFotoPrestador,
@@ -230,6 +233,13 @@ export default function GaleriaFotos() {
   }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
   const rotulosFotoGaleria = useMemo(() => buildRotulosFotoGaleria(fotos), [fotos]);
+  const metadadosGaleria = useMemo(
+    (): GaleriaMetadadosContexto => ({
+      eventosPorId: new Map(eventos.map((e) => [e.id, e])),
+      prestadoresPorId: new Map(prestadores.map((p) => [p.id, p])),
+    }),
+    [eventos, prestadores],
+  );
   const forcarExpandirEventos = buscaGaleria.trim().length > 0;
 
   const toggleEventoExpandido = (eventoId: string) => {
@@ -251,7 +261,7 @@ export default function GaleriaFotos() {
     setEventos((data ?? []) as MarketingEvento[]);
   }, []);
 
-  const carregarFotos = useCallback(async () => {
+  const carregarFotos = useCallback(async (): Promise<MarketingFotoComEvento[]> => {
     const { data, error } = await supabase
       .from("marketing_fotos")
       .select(
@@ -259,7 +269,61 @@ export default function GaleriaFotos() {
       )
       .order("created_at", { ascending: false });
     if (error) throw error;
-    setFotos((data ?? []) as MarketingFotoComEvento[]);
+    const list = (data ?? []) as MarketingFotoComEvento[];
+    setFotos(list);
+    return list;
+  }, []);
+
+  const enrichMetadadosGaleria = useCallback(async (fotosList: MarketingFotoComEvento[]) => {
+    const eventoIds = [
+      ...new Set(
+        fotosList.filter((f) => f.tipo === "geral" && f.evento_id).map((f) => f.evento_id as string),
+      ),
+    ];
+    const prestadorIds = [
+      ...new Set(
+        fotosList
+          .filter((f) => f.tipo === "prestador" && f.rh_funcionario_id)
+          .map((f) => f.rh_funcionario_id as string),
+      ),
+    ];
+
+    const tarefas: Promise<void>[] = [];
+    if (eventoIds.length) {
+      tarefas.push(
+        (async () => {
+          const { data, error } = await supabase
+            .from("marketing_eventos")
+            .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
+            .in("id", eventoIds);
+          if (error || !data?.length) return;
+          setEventos((prev) => {
+            const byId = new Map(prev.map((e) => [e.id, e]));
+            for (const row of data) byId.set(row.id, row as MarketingEvento);
+            return [...byId.values()].sort((a, b) => b.data_evento.localeCompare(a.data_evento));
+          });
+        })(),
+      );
+    }
+    if (prestadorIds.length) {
+      tarefas.push(
+        (async () => {
+          const { data, error } = await supabase
+            .from("rh_funcionarios")
+            .select("id, nome")
+            .in("id", prestadorIds);
+          if (error || !data?.length) return;
+          setPrestadores((prev) => {
+            const byId = new Map(prev.map((p) => [p.id, p]));
+            for (const row of data) {
+              if (row.id && row.nome) byId.set(row.id, { id: row.id, nome: row.nome });
+            }
+            return [...byId.values()].sort((a, b) => compareLocaleTexto(a.nome, b.nome, "asc"));
+          });
+        })(),
+      );
+    }
+    await Promise.all(tarefas);
   }, []);
 
   const carregarPrestadores = useCallback(async () => {
@@ -276,15 +340,23 @@ export default function GaleriaFotos() {
     setLoading(true);
     setErro(null);
     try {
-      const tarefas: Promise<void>[] = [carregarEventos(), carregarFotos()];
-      if (podeUpload || podeFiltrarPrestador) tarefas.push(carregarPrestadores());
-      await Promise.all(tarefas);
+      await carregarEventos();
+      const fotosCarregadas = await carregarFotos();
+      if (podeUpload || podeFiltrarPrestador) await carregarPrestadores();
+      await enrichMetadadosGaleria(fotosCarregadas);
     } catch {
       setErro(MSG_ERRO_CARREGAR);
     } finally {
       setLoading(false);
     }
-  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload, podeFiltrarPrestador]);
+  }, [
+    carregarEventos,
+    carregarFotos,
+    carregarPrestadores,
+    enrichMetadadosGaleria,
+    podeUpload,
+    podeFiltrarPrestador,
+  ]);
 
   useEffect(() => {
     if (perm.canView !== "nao") void recarregar();
@@ -364,8 +436,8 @@ export default function GaleriaFotos() {
 
     if (buscaGaleria.trim()) {
       list = list.filter((f) => {
-        const ev = fotoEventoEmbed(f);
-        const prest = fotoPrestadorEmbed(f);
+        const ev = resolverEventoGaleria(f, metadadosGaleria);
+        const prest = resolverPrestadorGaleria(f, metadadosGaleria);
         return textoContemBuscaEmAlgum(
           buscaGaleria,
           ev?.nome,
@@ -384,6 +456,7 @@ export default function GaleriaFotos() {
     podeFiltrarPrestador,
     meuRhFuncionarioId,
     buscaGaleria,
+    metadadosGaleria,
   ]);
 
   const galeriaBlocos = useMemo((): GaleriaBloco[] => {
@@ -392,7 +465,7 @@ export default function GaleriaFotos() {
 
     for (const f of fotosFiltradas) {
       if (f.tipo === "geral") {
-        const ev = fotoEventoEmbed(f);
+        const ev = resolverEventoGaleria(f, metadadosGaleria);
         if (!ev) continue;
         if (!eventoMap.has(ev.id)) {
           eventoMap.set(ev.id, {
@@ -400,7 +473,7 @@ export default function GaleriaFotos() {
             id: ev.id,
             titulo: ev.nome,
             sub: fmtDataEvento(ev.data_evento),
-            descricao: ev.descricao?.trim() || null,
+            descricao: ev.descricao,
             fotos: [],
           });
         }
@@ -408,7 +481,7 @@ export default function GaleriaFotos() {
         continue;
       }
 
-      const prest = fotoPrestadorEmbed(f);
+      const prest = resolverPrestadorGaleria(f, metadadosGaleria);
       if (!prest) continue;
       if (!prestadorMap.has(prest.id)) {
         prestadorMap.set(prest.id, {
@@ -423,15 +496,15 @@ export default function GaleriaFotos() {
     }
 
     const eventoBlocos = [...eventoMap.values()].sort((a, b) => {
-      const da = fotoEventoEmbed(a.fotos[0])?.data_evento ?? "";
-      const db = fotoEventoEmbed(b.fotos[0])?.data_evento ?? "";
+      const da = resolverEventoGaleria(a.fotos[0], metadadosGaleria)?.data_evento ?? "";
+      const db = resolverEventoGaleria(b.fotos[0], metadadosGaleria)?.data_evento ?? "";
       return db.localeCompare(da);
     });
     const prestadorBlocos = [...prestadorMap.values()].sort((a, b) =>
-      compareLocaleTexto(a.titulo, b.titulo, "asc"),
+      compareLocaleTexto(a.titulo.trim(), b.titulo.trim(), "asc"),
     );
     return galeriaSubAba === "gerais" ? eventoBlocos : prestadorBlocos;
-  }, [fotosFiltradas, galeriaSubAba]);
+  }, [fotosFiltradas, galeriaSubAba, metadadosGaleria]);
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
     if (f.tipo === "geral") return urlPublicaFotoGeral(f.storage_path);

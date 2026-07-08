@@ -89,6 +89,7 @@ import { textoContemBusca } from "../../../lib/searchText";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoModalExcluirItem } from "../../../lib/excluirItemUi";
+import { excluirMarketingFotosDoPrestador } from "../../../lib/marketingGaleriaFotos";
 import {
   FiltroBarTabButton,
   SkeletonTableRow,
@@ -1111,6 +1112,14 @@ export default function RhPrestadoresPage() {
             setErroGlobal("Informe a observação.");
             setAcaoSalvando(false);
             return;
+          }
+          try {
+            const limpeza = await excluirMarketingFotosDoPrestador(fid);
+            if (!limpeza.ok) {
+              console.error("Não foi possível remover as fotos da Galeria ao encerrar o prestador.");
+            }
+          } catch (e) {
+            console.error("Falha ao limpar fotos da Galeria ao encerrar o prestador", e);
           }
           const { error: eUp } = await supabase
             .from("rh_funcionarios")
