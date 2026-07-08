@@ -2,29 +2,17 @@ import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../types";
 import type { EscoposVisiveis, PermissoesMapa } from "../context/AppContext";
 import type { PermissoesAcoesMapa } from "./appRoutes";
 import { ROLES_SEM_RESTRICAO_ESCOPO, roleParidadeInfluencer } from "./staffRoles";
-import { GESTOR_TIPOS, PRESTADOR_TIPOS, roleLabel } from "../pages/plataforma/GestaoUsuarios/constants";
+import {
+  GESTOR_TIPOS,
+  PRESTADOR_TIPOS,
+  ROLES_SIMULAVEIS,
+  roleLabel,
+} from "../pages/plataforma/GestaoUsuarios/constants";
 import { supabase } from "./supabase";
 
 export const SIMULADOR_LOGIN_SESSION_KEY = "simulador_login_ativo";
 
-/** Perfis disponíveis na simulação (exceto Administrador e Executivo). */
-export const ROLES_SIMULAVEIS: Role[] = [
-  "gestor",
-  "rh",
-  "figurino",
-  "comunicacao",
-  "performance_coach",
-  "service_manager",
-  "customer_service",
-  "tech_ops",
-  "shift_leader",
-  "prestador",
-  "operador",
-  "agencia",
-  "influencer",
-  "afiliado",
-  "investidor",
-];
+export { ROLES_SIMULAVEIS };
 
 export const SIMULADOR_LOGIN_PAGE_KEY = "simulador_login" as const;
 

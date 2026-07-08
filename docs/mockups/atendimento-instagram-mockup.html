@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Atendimento · Aba Instagram · Data Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --ig-accent: #e1306c;
+      --ig-gradient: linear-gradient(135deg, #833ab4, #e1306c, #f77737);
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #f9fafb;
+      --green: #22c55e;
+      --red: #e84025;
+      --yellow: #f59e0b;
+      --blue: #1e36f8;
+      --gray: #6b7280;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+      --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .app-shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      background: #141414;
+      color: #e4e4e4;
+      padding: 20px 0;
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: rgba(228,228,228,0.75);
+    }
+    .sidebar-item svg { opacity: 0.7; flex-shrink: 0; }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18);
+      color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .sidebar-item.active svg { opacity: 1; }
+
+    .main {
+      flex: 1;
+      padding: 24px 28px 48px;
+      overflow-x: auto;
+    }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--ig-accent) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--ig-accent) 22%, transparent);
+      border-radius: var(--radius-box);
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .mockup-banner strong { color: var(--ig-accent); }
+
+    .page-header { margin-bottom: 18px; }
+    .page-header-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--brand-primary);
+      letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .profile-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .profile-bar span { font-size: 12px; color: var(--text-muted); }
+    .pill-profile {
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-family: var(--font-body);
+    }
+    .pill-profile.active {
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      color: var(--brand-primary);
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      font-weight: 700;
+    }
+
+    .filter-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 12px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    .status-carousel {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .carousel-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .carousel-label {
+      font-size: 18px;
+      font-weight: 800;
+      min-width: 160px;
+      text-align: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .pill.active-filter {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 12%, #fff);
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+
+    .select-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      min-width: 200px;
+    }
+    .select-pill select {
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: inherit;
+      flex: 1;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      font-weight: 700;
+      color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+    .tab-btn.active-ig {
+      color: var(--ig-accent);
+      border-color: color-mix(in srgb, var(--ig-accent) 40%, transparent);
+      background: color-mix(in srgb, var(--ig-accent) 10%, #fff);
+    }
+
+    .subtipo-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .subtipo-pill.active {
+      font-weight: 700;
+      color: var(--ig-accent);
+      border-color: color-mix(in srgb, var(--ig-accent) 35%, transparent);
+      background: color-mix(in srgb, var(--ig-accent) 12%, #fff);
+    }
+
+    .conta-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .conta-strip strong {
+      background: var(--ig-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 800;
+    }
+
+    .content-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .section-title { margin-bottom: 14px; }
+    .section-title h2 {
+      font-family: var(--font-title);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand-primary);
+    }
+    .section-title .sub {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    thead th {
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+      color: var(--text-muted);
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-action) 14%);
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody td {
+      padding: 11px 14px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      border-bottom: 1px solid var(--card-border);
+      vertical-align: middle;
+    }
+    tbody tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-secondary) 8%);
+    }
+    tbody tr:hover td {
+      background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-primary) 12%);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .ig-handle {
+      font-weight: 700;
+      color: var(--ig-accent);
+      white-space: nowrap;
+    }
+    .msg-preview {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+      margin: 0 auto;
+    }
+    .post-preview {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-aberto { background: #f59e0b22; color: var(--yellow); border: 1px solid #f59e0b44; }
+    .badge-andamento { background: #1e36f822; color: var(--blue); border: 1px solid #1e36f844; }
+    .badge-arquivado { background: #6b728022; color: var(--gray); border: 1px solid #6b728044; }
+    .badge-sla-ok { background: #22c55e22; color: var(--green); border: 1px solid #22c55e44; }
+    .badge-janela-ok { background: #22c55e18; color: var(--green); border: 1px solid #22c55e40; }
+    .badge-janela-off { background: #6b728018; color: var(--gray); border: 1px solid #6b728040; }
+
+    .actions-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      display: none;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg);
+      border-radius: var(--radius-box);
+      max-width: 680px;
+      width: 100%;
+      max-height: 90dvh;
+      overflow: auto;
+      box-shadow: var(--shadow-dark);
+    }
+    .modal.modal-wide { max-width: 720px; }
+    .modal-header {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .modal-title {
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+    .modal-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+    .modal-body { padding: 20px; }
+
+    .modal-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-item .label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .info-item .value { font-size: 13px; color: var(--text); }
+
+    /* Chat thread */
+    .chat-thread {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      padding: 14px;
+      max-height: 320px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .chat-date {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin: 4px 0;
+    }
+    .bubble {
+      max-width: 85%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+    .bubble-in {
+      align-self: flex-start;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble-out {
+      align-self: flex-end;
+      background: color-mix(in srgb, var(--brand-secondary) 14%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-secondary) 30%, transparent);
+      border-bottom-right-radius: 4px;
+    }
+    .bubble-sys {
+      align-self: center;
+      background: color-mix(in srgb, var(--gray) 10%, #fff);
+      border: 1px dashed var(--card-border);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-style: italic;
+      max-width: 92%;
+      text-align: center;
+    }
+    .bubble-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .bubble-wrap { display: flex; flex-direction: column; }
+    .bubble-wrap.out { align-items: flex-end; }
+    .bubble-wrap.in { align-items: flex-start; }
+
+    /* Post card (comentários) */
+    .post-card {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .post-thumb {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1e36f833, #7c3aed33);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .post-body { flex: 1; min-width: 0; }
+    .post-body .post-type {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--ig-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .post-body .post-caption {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .post-body .post-link {
+      font-size: 11px;
+      color: var(--brand-secondary);
+      margin-top: 6px;
+    }
+
+    .comment-thread {
+      border-left: 3px solid color-mix(in srgb, var(--ig-accent) 35%, transparent);
+      padding-left: 12px;
+      margin-bottom: 14px;
+    }
+    .comment-root {
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .comment-reply {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 8px 10px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .composer-block {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      background: color-mix(in srgb, var(--card-bg) 92%, var(--gray) 8%);
+    }
+    .composer-block.disabled { opacity: 0.72; }
+    .composer-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .composer-fase2 {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--ig-accent);
+      background: color-mix(in srgb, var(--ig-accent) 12%, #fff);
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--ig-accent) 30%, transparent);
+    }
+    .composer-block textarea {
+      width: 100%;
+      min-height: 72px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      resize: vertical;
+    }
+    .composer-block textarea:disabled {
+      background: var(--input-bg);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+    .composer-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .field-edit { margin-bottom: 16px; }
+    .field-edit label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .field-edit select,
+    .field-edit textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-family: var(--font-body);
+      font-size: 13px;
+    }
+
+    .hist-block {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .hist-block:last-child { border-bottom: none; }
+    .hist-line1 { font-size: 13px; font-weight: 700; }
+    .hist-line2 { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .hist-line3 {
+      font-size: 13px;
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .btn-ghost {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .btn-primary {
+      padding: 10px 20px;
+      border-radius: var(--radius-tab);
+      border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .panel-tab { display: none; }
+    .panel-tab.active { display: block; }
+
+    .legend-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px dashed var(--card-border);
+      background: color-mix(in srgb, var(--card-bg) 96%, var(--brand-primary) 4%);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .legend-box strong { color: var(--text); }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu lateral">
+      <div class="sidebar-brand">DATA INTELLIGENCE</div>
+      <div class="sidebar-section">Customer Success</div>
+      <div class="sidebar-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Atendimento
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="mockup-banner">
+        <strong>Mockup — aba Instagram</strong> · Proposta para <strong>@spingamingbrasil</strong>.
+        Inclui sub-abas <strong>Mensagens</strong> (DM) e <strong>Comentários</strong>, thread no modal Ver,
+        composer desabilitado (Fase 2) e indicador de janela de 24h. Interativo: carrossel de status, subtipo, Ver e Atender.
+      </div>
+
+      <header class="page-header">
+        <div class="page-header-row">
+          <div class="page-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h1>Atendimento</h1>
+        </div>
+        <p class="subtitle">Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe.</p>
+      </header>
+
+      <div class="profile-bar">
+        <span>Simular permissão:</span>
+        <button type="button" class="pill-profile active" data-perm="editar">Com Editar</button>
+        <button type="button" class="pill-profile" data-perm="ver">Somente Ver</button>
+      </div>
+
+      <div class="filter-box">
+        <div class="filter-row">
+          <div class="status-carousel">
+            <button type="button" class="carousel-btn" id="btn-status-prev" aria-label="Status anterior">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span class="carousel-label" id="status-label">Aberto</span>
+            <button type="button" class="carousel-btn" id="btn-status-next" aria-label="Próximo status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <button type="button" class="pill" id="btn-todos-status" aria-pressed="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+              Todos Status
+            </button>
+          </div>
+          <label class="select-pill" aria-label="Staff">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M7 9h4"/><path d="M7 13h6"/></svg>
+            <select id="filtro-staff">
+              <option value="todos">Todos</option>
+              <option value="nenhum">Nenhum</option>
+              <option value="ana">Ana Paula Ribeiro</option>
+              <option value="carlos">Carlos Mendes</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filter-row" role="tablist" aria-label="Origem do chamado">
+          <button type="button" class="tab-btn" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            Site Spin
+          </button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            E-mail
+          </button>
+          <button type="button" class="tab-btn active-ig active" role="tab" aria-selected="true" aria-controls="panel-instagram">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+            Instagram
+          </button>
+        </div>
+
+        <div class="filter-row" id="row-subtipo">
+          <span class="conta-strip" aria-label="Conta monitorada">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg>
+            Conta: <strong>@spingamingbrasil</strong>
+          </span>
+          <button type="button" class="subtipo-pill active" data-subtipo="dm" role="tab" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Mensagens
+          </button>
+          <button type="button" class="subtipo-pill" data-subtipo="comentario" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+            Comentários
+          </button>
+        </div>
+      </div>
+
+      <section class="content-box" id="panel-instagram" role="tabpanel">
+        <div class="section-title">
+          <h2>Atendimentos<span class="sub">— Instagram · <span id="subtipo-label">Mensagens</span></span></h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Chamados Instagram</caption>
+            <thead><tr id="table-head"></tr></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empty-state">Nenhum chamado encontrado.</div>
+
+        <div class="legend-box">
+          <strong>Regras deste mockup (produto):</strong>
+          Novos chamados chegam <strong>sem atendente</strong>.
+          Cada sessão de 24h desde a última mensagem do usuário = um chamado (<code>INSTA-ANO/NNNN</code>).
+          Após 24h sem resposta do usuário → mensagem automática de encerramento + Arquivado; nova DM = novo chamado.
+          Resposta pelo Instagram na plataforma = <strong>Fase 2</strong> (composer já reservado nos modais).
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Ver DM -->
+  <div class="modal-overlay" id="modal-ver-dm" role="dialog" aria-modal="true">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div>
+            <div class="modal-title" id="ver-dm-title"></div>
+            <div class="modal-meta" id="ver-dm-meta"></div>
+          </div>
+          <button type="button" class="modal-close" data-close="modal-ver-dm" aria-label="Fechar modal" title="Fechar modal">×</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="tab-btn active" data-ver-dm-tab="conversa">Conversa</button>
+          <button type="button" class="tab-btn" data-ver-dm-tab="historico">Histórico interno</button>
+        </div>
+        <div class="panel-tab active" id="ver-dm-conversa">
+          <div class="info-grid">
+            <div class="info-item"><div class="label">Instagram</div><div class="value" id="ver-dm-handle"></div></div>
+            <div class="info-item"><div class="label">Data de abertura</div><div class="value" id="ver-dm-abertura"></div></div>
+            <div class="info-item"><div class="label">Atendente</div><div class="value" id="ver-dm-atendente"></div></div>
+            <div class="info-item"><div class="label">Última mensagem do usuário</div><div class="value" id="ver-dm-ultima"></div></div>
+          </div>
+          <div class="chat-thread" id="ver-dm-thread"></div>
+          <div class="composer-block disabled">
+            <div class="composer-label">
+              Responder no Instagram
+              <span class="composer-fase2">Fase 2</span>
+            </div>
+            <textarea disabled placeholder="Resposta enviada diretamente para a DM do usuário…"></textarea>
+            <p class="composer-hint">Na Fase 2, a resposta aparecerá na conversa acima e no app Instagram. Fora da janela de 24h, o envio fica bloqueado até nova mensagem do usuário.</p>
+          </div>
+        </div>
+        <div class="panel-tab" id="ver-dm-historico"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ver Comentário -->
+  <div class="modal-overlay" id="modal-ver-com" role="dialog" aria-modal="true">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div>
+            <div class="modal-title" id="ver-com-title"></div>
+            <div class="modal-meta" id="ver-com-meta"></div>
+          </div>
+          <button type="button" class="modal-close" data-close="modal-ver-com" aria-label="Fechar modal" title="Fechar modal">×</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="tab-btn active" data-ver-com-tab="comentario">Comentário</button>
+          <button type="button" class="tab-btn" data-ver-com-tab="historico">Histórico interno</button>
+        </div>
+        <div class="panel-tab active" id="ver-com-dados">
+          <div class="post-card" id="ver-com-post"></div>
+          <div class="comment-thread" id="ver-com-thread"></div>
+          <div class="composer-block disabled">
+            <div class="composer-label">
+              Responder no Instagram
+              <span class="composer-fase2">Fase 2</span>
+            </div>
+            <textarea disabled placeholder="Resposta pública ao comentário…"></textarea>
+            <p class="composer-hint">Comentários usam fluxo distinto de DM: resposta pública no post, sem janela de 24h da mensagem privada.</p>
+          </div>
+        </div>
+        <div class="panel-tab" id="ver-com-historico"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Atender -->
+  <div class="modal-overlay" id="modal-atender" role="dialog" aria-modal="true">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div>
+            <div class="modal-title" id="atender-title"></div>
+            <div class="modal-meta" id="atender-meta"></div>
+          </div>
+          <button type="button" class="modal-close" data-close="modal-atender" aria-label="Fechar modal" title="Fechar modal">×</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field-edit">
+          <label for="status-novo">Status</label>
+          <select id="status-novo"></select>
+        </div>
+        <div class="composer-block disabled" style="margin-bottom:16px">
+          <div class="composer-label">
+            Resposta no Instagram
+            <span class="composer-fase2">Fase 2</span>
+          </div>
+          <textarea disabled placeholder="Opcional na Fase 2 — enviar resposta junto com a alteração de status…"></textarea>
+        </div>
+        <div class="field-edit">
+          <label for="nova-anotacao">Anotação interna</label>
+          <textarea id="nova-anotacao" placeholder="Registro visível só na equipe CS (obrigatória ao alterar status)…"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-close="modal-atender">Cancelar</button>
+          <button type="button" class="btn-primary" id="save-atender">Salvar alterações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_ORDER = ["aberto", "em_andamento", "arquivado"];
+    const STATUS_LABEL = {
+      aberto: "Aberto",
+      em_andamento: "Em Andamento",
+      arquivado: "Arquivado",
+      todos: "Todos Status",
+    };
+
+    const CHAMADOS_DM = [
+      {
+        id: "dm1",
+        subtipo: "dm",
+        protocolo: "INSTA-2026/0015",
+        status: "aberto",
+        handle: "@maria.livecasino",
+        ultimaMsg: "Olá! Vocês atendem operadoras que estão começando no Live Cassino?",
+        abertura: "08/07/2026 09:14",
+        inicio: null,
+        atendente: null,
+        staffKey: null,
+        janela: { ativa: true, label: "Janela ativa · 21h restantes" },
+        thread: [
+          { tipo: "in", texto: "Olá! Vocês atendem operadoras que estão começando no Live Cassino?", hora: "09:14", autor: "@maria.livecasino" },
+        ],
+        historico: [{ acao: "Abertura do chamado", data: "08/07/2026 09:14", usuario: "@maria.livecasino", nota: null }],
+      },
+      {
+        id: "dm2",
+        subtipo: "dm",
+        protocolo: "INSTA-2026/0012",
+        status: "em_andamento",
+        handle: "@blaze_parceiros",
+        ultimaMsg: "Perfeito, aguardo o material técnico então.",
+        abertura: "07/07/2026 16:40",
+        inicio: "07/07/2026 17:05",
+        atendente: "Ana Paula Ribeiro",
+        staffKey: "ana",
+        janela: { ativa: true, label: "Janela ativa · 6h restantes" },
+        thread: [
+          { tipo: "in", texto: "Boa tarde! Queremos entender mesas dedicadas de Roleta para Q3.", hora: "16:40", autor: "@blaze_parceiros" },
+          { tipo: "out", texto: "Olá! Claro — vou encaminhar o deck comercial e o checklist técnico ainda hoje.", hora: "17:05", autor: "Ana Paula Ribeiro" },
+          { tipo: "in", texto: "Perfeito, aguardo o material técnico então.", hora: "17:22", autor: "@blaze_parceiros" },
+        ],
+        historico: [
+          { acao: "Abertura do chamado", data: "07/07/2026 16:40", usuario: "@blaze_parceiros", nota: null },
+          { acao: "Início do atendimento", data: "07/07/2026 17:05", usuario: "Ana Paula Ribeiro", nota: "Respondido via plataforma (mock Fase 2)." },
+        ],
+      },
+      {
+        id: "dm3",
+        subtipo: "dm",
+        protocolo: "INSTA-2026/0008",
+        status: "arquivado",
+        handle: "@jogador_curioso",
+        ultimaMsg: "Encerramos este atendimento por inatividade…",
+        abertura: "05/07/2026 11:02",
+        inicio: "05/07/2026 11:18",
+        atendente: "Carlos Mendes",
+        staffKey: "carlos",
+        sla: "1d 4h",
+        janela: { ativa: false, label: "Sessão encerrada" },
+        thread: [
+          { tipo: "in", texto: "Como faço para assistir as mesas ao vivo pela operadora?", hora: "11:02", autor: "@jogador_curioso" },
+          { tipo: "out", texto: "Oi! O acesso é pelo lobby da casa parceira — qual operadora você usa?", hora: "11:18", autor: "Carlos Mendes" },
+          { tipo: "sys", texto: "Encerramos este atendimento por inatividade. Se ainda precisar de ajuda, envie uma nova mensagem que abriremos um novo chamado.", hora: "06/07/2026 11:18", autor: "Sistema" },
+        ],
+        historico: [
+          { acao: "Abertura do chamado", data: "05/07/2026 11:02", usuario: "@jogador_curioso", nota: null },
+          { acao: "Início do atendimento", data: "05/07/2026 11:18", usuario: "Carlos Mendes", nota: "Dúvida de jogador — orientação geral." },
+          { acao: "Arquivamento", data: "06/07/2026 11:20", usuario: "Sistema", nota: "Encerramento automático — 24h sem resposta do usuário." },
+        ],
+      },
+    ];
+
+    const CHAMADOS_COM = [
+      {
+        id: "c1",
+        subtipo: "comentario",
+        protocolo: "INSTA-2026/0014",
+        status: "aberto",
+        handle: "@operadora_nova",
+        postTipo: "Reel",
+        postCaption: "Novidade no estúdio: mesas de Baccarat com dealers brasileiros 🇧🇷",
+        comentario: "Como funciona parceria para exibir essas mesas no nosso lobby?",
+        abertura: "08/07/2026 08:55",
+        inicio: null,
+        atendente: null,
+        staffKey: null,
+        historico: [{ acao: "Abertura do chamado", data: "08/07/2026 08:55", usuario: "@operadora_nova", nota: null }],
+      },
+      {
+        id: "c2",
+        subtipo: "comentario",
+        protocolo: "INSTA-2026/0009",
+        status: "em_andamento",
+        handle: "@tech_supply",
+        postTipo: "Carrossel",
+        postCaption: "Bastidores do Sports Club — network ao vivo para múltiplas operadoras",
+        comentario: "Vocês integram sinal com agregadores também?",
+        abertura: "06/07/2026 14:20",
+        inicio: "06/07/2026 15:01",
+        atendente: "Ana Paula Ribeiro",
+        staffKey: "ana",
+        historico: [
+          { acao: "Abertura do chamado", data: "06/07/2026 14:20", usuario: "@tech_supply", nota: null },
+          { acao: "Início do atendimento", data: "06/07/2026 15:01", usuario: "Ana Paula Ribeiro", nota: "Responder com link comercial (Fase 2)." },
+        ],
+      },
+      {
+        id: "c3",
+        subtipo: "comentario",
+        protocolo: "INSTA-2026/0005",
+        status: "arquivado",
+        handle: "@fan_spin",
+        postTipo: "Feed",
+        postCaption: "Ao vivo agora: Blackjack VIP no estúdio Spin",
+        comentario: "Qual operadora transmite essa mesa?",
+        abertura: "02/07/2026 20:10",
+        inicio: "02/07/2026 20:35",
+        atendente: "Carlos Mendes",
+        staffKey: "carlos",
+        sla: "3h 25m",
+        historico: [
+          { acao: "Abertura do chamado", data: "02/07/2026 20:10", usuario: "@fan_spin", nota: null },
+          { acao: "Arquivamento", data: "02/07/2026 23:35", usuario: "Carlos Mendes", nota: "Respondido no Instagram — lista de operadoras parceiras." },
+        ],
+      },
+    ];
+
+    let filtroStatus = "aberto";
+    let todosStatus = false;
+    let filtroStaff = "todos";
+    let subtipo = "dm";
+    let podeEditar = true;
+    let chamadoAtual = null;
+
+    function badgeStatus(s) {
+      const cls = s === "aberto" ? "badge-aberto" : s === "em_andamento" ? "badge-andamento" : "badge-arquivado";
+      return `<span class="badge ${cls}">${STATUS_LABEL[s]}</span>`;
+    }
+
+    function badgeJanela(j) {
+      if (!j) return "—";
+      const cls = j.ativa ? "badge-janela-ok" : "badge-janela-off";
+      return `<span class="badge ${cls}">${j.label}</span>`;
+    }
+
+    function badgeSla(sla) {
+      if (!sla) return "—";
+      return `<span class="badge badge-sla-ok">${sla}</span>`;
+    }
+
+    function dataset() {
+      return subtipo === "dm" ? CHAMADOS_DM : CHAMADOS_COM;
+    }
+
+    function getColunas() {
+      if (subtipo === "dm") {
+        if (todosStatus) return ["chamado", "data", "instagram", "ultima", "janela", "inicio", "atendente", "sla", "status", "acoes"];
+        if (filtroStatus === "aberto") return ["chamado", "data", "instagram", "ultima", "janela", "acoes"];
+        if (filtroStatus === "em_andamento") return ["chamado", "data", "instagram", "ultima", "janela", "inicio", "atendente", "acoes"];
+        return ["chamado", "data", "instagram", "atendente", "sla", "acoes"];
+      }
+      if (todosStatus) return ["chamado", "data", "instagram", "post", "comentario", "inicio", "atendente", "sla", "status", "acoes"];
+      if (filtroStatus === "aberto") return ["chamado", "data", "instagram", "post", "comentario", "acoes"];
+      if (filtroStatus === "em_andamento") return ["chamado", "data", "instagram", "comentario", "inicio", "atendente", "acoes"];
+      return ["chamado", "data", "instagram", "comentario", "atendente", "sla", "acoes"];
+    }
+
+    const COL_LABEL = {
+      chamado: "Chamado",
+      data: "Data de Abertura",
+      instagram: "Instagram",
+      ultima: "Última mensagem",
+      janela: "Janela 24h",
+      post: "Publicação",
+      comentario: "Comentário",
+      inicio: "Início do Atendimento",
+      atendente: "Atendente",
+      sla: "SLA",
+      status: "Status",
+      acoes: "Ações",
+    };
+
+    function filtrar() {
+      return dataset().filter((c) => {
+        if (!todosStatus && c.status !== filtroStatus) return false;
+        if (filtroStaff === "nenhum" && c.staffKey) return false;
+        if (filtroStaff !== "todos" && filtroStaff !== "nenhum" && c.staffKey !== filtroStaff) return false;
+        return true;
+      });
+    }
+
+    function renderTabela() {
+      const cols = getColunas();
+      const rows = filtrar();
+      document.getElementById("table-head").innerHTML = cols.map((c) => `<th scope="col">${COL_LABEL[c]}</th>`).join("");
+      const tbody = document.getElementById("table-body");
+      const empty = document.getElementById("empty-state");
+      if (!rows.length) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+      tbody.innerHTML = rows.map((c) => {
+        const cells = cols.map((col) => {
+          if (col === "chamado") return `<td><strong>${c.protocolo}</strong></td>`;
+          if (col === "data") return `<td>${c.abertura}</td>`;
+          if (col === "instagram") return `<td><span class="ig-handle">${c.handle}</span></td>`;
+          if (col === "ultima") return `<td><div class="msg-preview" title="${c.ultimaMsg}">${c.ultimaMsg}</div></td>`;
+          if (col === "janela") return `<td>${badgeJanela(c.janela)}</td>`;
+          if (col === "post") return `<td><div class="post-preview" title="${c.postCaption}">${c.postTipo} · ${c.postCaption}</div></td>`;
+          if (col === "comentario") return `<td><div class="msg-preview" title="${c.comentario}">${c.comentario}</div></td>`;
+          if (col === "inicio") return `<td>${c.inicio || "—"}</td>`;
+          if (col === "atendente") return `<td>${c.atendente || "—"}</td>`;
+          if (col === "sla") return `<td>${badgeSla(c.sla)}</td>`;
+          if (col === "status") return `<td>${badgeStatus(c.status)}</td>`;
+          if (col === "acoes") {
+            const atender = podeEditar && c.status !== "arquivado"
+              ? `<button class="icon-btn btn-atender" data-id="${c.id}" title="Atender chamado" aria-label="Atender chamado">✎</button>`
+              : "";
+            return `<td><div class="actions-cell"><button class="icon-btn btn-ver" data-id="${c.id}" title="Ver chamado" aria-label="Ver chamado">👁</button>${atender}</div></td>`;
+          }
+          return "<td>—</td>";
+        }).join("");
+        return `<tr>${cells}</tr>`;
+      }).join("");
+
+      document.querySelectorAll(".btn-ver").forEach((b) => b.addEventListener("click", () => abrirVer(b.dataset.id)));
+      document.querySelectorAll(".btn-atender").forEach((b) => b.addEventListener("click", () => abrirAtender(b.dataset.id)));
+    }
+
+    function renderThreadHtml(thread) {
+      return thread.map((m) => {
+        if (m.tipo === "sys") {
+          return `<div class="bubble-wrap"><div class="bubble bubble-sys">${m.texto}<div class="bubble-meta">${m.hora} · ${m.autor}</div></div></div>`;
+        }
+        const wrapCls = m.tipo === "out" ? "out" : "in";
+        const bubbleCls = m.tipo === "out" ? "bubble-out" : "bubble-in";
+        return `<div class="bubble-wrap ${wrapCls}"><div class="bubble ${bubbleCls}">${m.texto}<div class="bubble-meta">${m.hora} · ${m.autor}</div></div></div>`;
+      }).join("");
+    }
+
+    function renderHistoricoHtml(list) {
+      return list.map((h) => `
+        <div class="hist-block">
+          <div class="hist-line1">${h.acao} — ${h.data}</div>
+          <div class="hist-line2">${h.usuario}</div>
+          ${h.nota ? `<div class="hist-line3">${h.nota}</div>` : ""}
+        </div>
+      `).join("");
+    }
+
+    function abrirVer(id) {
+      const c = [...CHAMADOS_DM, ...CHAMADOS_COM].find((x) => x.id === id);
+      if (!c) return;
+      chamadoAtual = c;
+
+      if (c.subtipo === "dm") {
+        document.getElementById("ver-dm-title").textContent = `${c.protocolo} — ${c.handle}`;
+        document.getElementById("ver-dm-meta").innerHTML = `${badgeStatus(c.status)} ${badgeJanela(c.janela)}`;
+        document.getElementById("ver-dm-handle").innerHTML = `<span class="ig-handle">${c.handle}</span>`;
+        document.getElementById("ver-dm-abertura").textContent = c.abertura;
+        document.getElementById("ver-dm-atendente").textContent = c.atendente || "—";
+        document.getElementById("ver-dm-ultima").textContent = c.abertura;
+        document.getElementById("ver-dm-thread").innerHTML = renderThreadHtml(c.thread);
+        document.getElementById("ver-dm-historico").innerHTML = renderHistoricoHtml(c.historico);
+        document.getElementById("modal-ver-dm").classList.add("open");
+      } else {
+        document.getElementById("ver-com-title").textContent = `${c.protocolo} — ${c.handle}`;
+        document.getElementById("ver-com-meta").innerHTML = badgeStatus(c.status);
+        document.getElementById("ver-com-post").innerHTML = `
+          <div class="post-thumb">${c.postTipo}</div>
+          <div class="post-body">
+            <div class="post-type">${c.postTipo} · @spingamingbrasil</div>
+            <div class="post-caption">${c.postCaption}</div>
+            <div class="post-link">Abrir publicação no Instagram ↗</div>
+          </div>`;
+        document.getElementById("ver-com-thread").innerHTML = `
+          <div class="comment-root"><span class="ig-handle">${c.handle}</span> ${c.comentario}</div>
+          <div class="comment-reply">Respostas públicas aparecerão aqui na Fase 2.</div>`;
+        document.getElementById("ver-com-historico").innerHTML = renderHistoricoHtml(c.historico);
+        document.getElementById("modal-ver-com").classList.add("open");
+      }
+    }
+
+    function abrirAtender(id) {
+      const c = [...CHAMADOS_DM, ...CHAMADOS_COM].find((x) => x.id === id);
+      if (!c || !podeEditar) return;
+      chamadoAtual = c;
+      document.getElementById("atender-title").textContent = `${c.protocolo} — ${c.handle}`;
+      document.getElementById("atender-meta").innerHTML = badgeStatus(c.status);
+      document.getElementById("nova-anotacao").value = "";
+      const select = document.getElementById("status-novo");
+      if (c.status === "aberto") {
+        select.innerHTML = `<option value="em_andamento">Em Andamento</option><option value="arquivado">Arquivado</option>`;
+        select.value = "em_andamento";
+      } else {
+        select.innerHTML = `<option value="arquivado">Arquivado</option>`;
+      }
+      document.getElementById("modal-atender").classList.add("open");
+    }
+
+    function fecharModais() {
+      document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("open"));
+      chamadoAtual = null;
+    }
+
+    function updateStatusLabel() {
+      document.getElementById("status-label").textContent = todosStatus ? STATUS_LABEL.todos : STATUS_LABEL[filtroStatus];
+      document.getElementById("btn-todos-status").classList.toggle("active-filter", todosStatus);
+    }
+
+    document.getElementById("btn-status-prev").addEventListener("click", () => {
+      todosStatus = false;
+      const idx = STATUS_ORDER.indexOf(filtroStatus);
+      filtroStatus = STATUS_ORDER[(idx - 1 + STATUS_ORDER.length) % STATUS_ORDER.length];
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("btn-status-next").addEventListener("click", () => {
+      todosStatus = false;
+      const idx = STATUS_ORDER.indexOf(filtroStatus);
+      filtroStatus = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("btn-todos-status").addEventListener("click", () => {
+      todosStatus = !todosStatus;
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("filtro-staff").addEventListener("change", (e) => {
+      filtroStaff = e.target.value;
+      renderTabela();
+    });
+
+    document.querySelectorAll(".subtipo-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".subtipo-pill").forEach((b) => {
+          b.classList.remove("active");
+          b.setAttribute("aria-selected", "false");
+        });
+        btn.classList.add("active");
+        btn.setAttribute("aria-selected", "true");
+        subtipo = btn.dataset.subtipo;
+        document.getElementById("subtipo-label").textContent = subtipo === "dm" ? "Mensagens" : "Comentários";
+        renderTabela();
+      });
+    });
+
+    document.querySelectorAll(".pill-profile").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".pill-profile").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        podeEditar = btn.dataset.perm === "editar";
+        renderTabela();
+      });
+    });
+
+    document.querySelectorAll("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => fecharModais());
+    });
+    document.querySelectorAll(".modal-overlay").forEach((ov) => {
+      ov.addEventListener("click", (e) => { if (e.target === ov) fecharModais(); });
+    });
+
+    document.querySelectorAll("[data-ver-dm-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-ver-dm-tab]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.verDmTab;
+        document.getElementById("ver-dm-conversa").classList.toggle("active", tab === "conversa");
+        document.getElementById("ver-dm-historico").classList.toggle("active", tab === "historico");
+      });
+    });
+    document.querySelectorAll("[data-ver-com-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-ver-com-tab]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.verComTab;
+        document.getElementById("ver-com-dados").classList.toggle("active", tab === "comentario");
+        document.getElementById("ver-com-historico").classList.toggle("active", tab === "historico");
+      });
+    });
+
+    document.getElementById("save-atender").addEventListener("click", () => {
+      if (!chamadoAtual) return;
+      const anot = document.getElementById("nova-anotacao").value.trim();
+      const novo = document.getElementById("status-novo").value;
+      if (novo !== chamadoAtual.status && !anot) {
+        alert("Informe uma anotação ao alterar o status do chamado.");
+        return;
+      }
+      alert("Mockup: alterações simuladas. Na implementação, status + atendente seguem a RPC cs_chamado_atender.");
+      fecharModais();
+    });
+
+    updateStatusLabel();
+    renderTabela();
+  </script>
+</body>
+</html>

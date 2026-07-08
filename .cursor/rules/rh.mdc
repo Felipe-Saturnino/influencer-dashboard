@@ -104,7 +104,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - `PageHeader` + `RhVagasFiltroBar` (`getFilterBarWrapperStyle`): **Linha 1** abas (sem título/subtítulo por aba no painel); **Linha 2** `BarraPesquisaPagina` + filtros contextuais.
 - **Abertas / Em andamento:** só pesquisa na linha 2.
 - **Gerenciamento:** pesquisa + `FiltroBarCampoSelect` status (`ShieldEllipsis`, agregadora **Todos Status**) + `CtaCriarButton` **Nova Vaga** à direita.
-- Modal **Nova Vaga** / **Atualizar vaga:** campos obrigatórios de título, organograma, datas, descrição e responsabilidades; **Tags** opcionais (`text[]` — Enter para adicionar chip, até 20 tags). **Sem** Requisitos nem Escala de trabalho (colunas removidas).
+- Modal **Nova Vaga** / **Atualizar vaga:** campos obrigatórios de título, organograma, datas, **repasse inicial** (R$, centavos em `repasse_inicial_centavos`), descrição e responsabilidades. **Tags** (`text[]`, ao menos uma tag; Enter para adicionar chip, até 20 tags) — **somente vagas Externas**; vagas Internas não exibem o campo nem exigem tags. **Sem** Requisitos nem Escala de trabalho (colunas removidas).
 - **Candidaturas:** pesquisa + status + tipo (`ClipboardType`, **Todos Tipos**) + vagas (`ClipboardType`, **Todas Vagas**); estado dos filtros na página; opções de vaga vindas de `RhVagasCandidaturasPainel` via callback; kanban sem bloco de filtros duplicado.
 - Constantes: `lib/rhVagasFiltroConstants.ts`.
 - **Handoff:** estados, publicação, candidatos.

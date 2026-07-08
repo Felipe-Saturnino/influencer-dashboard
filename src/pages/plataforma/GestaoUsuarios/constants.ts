@@ -221,6 +221,25 @@ export const FILTROS_PERFIL_LINHAS_PERMISSOES: { titulo: string; roles: Role[] }
   }),
 ).filter((linha) => linha.roles.length > 0);
 
+/** Perfis excluídos do Simulador de Login (admin irrestrito; executivo não entra na lista). */
+export const ROLES_EXCLUIDOS_SIMULADOR_LOGIN: Role[] = ["admin", "executivo"];
+
+/**
+ * Perfis disponíveis na simulação — deriva de `ROLES` (todo perfil novo no select «Perfil» entra aqui,
+ * exceto `ROLES_EXCLUIDOS_SIMULADOR_LOGIN`).
+ */
+export const ROLES_SIMULAVEIS: Role[] = ROLES.filter(
+  (r) => !ROLES_EXCLUIDOS_SIMULADOR_LOGIN.includes(r.value),
+).map((r) => r.value);
+
+/** Agrupamento na página Simulador de Login (mesmas linhas da aba Usuários, sem admin/executivo). */
+export const FILTROS_PERFIL_LINHAS_SIMULADOR: { titulo: string; roles: Role[] }[] = FILTROS_PERFIL_LINHAS.map(
+  ({ titulo, roles }) => ({
+    titulo,
+    roles: roles.filter((r) => !ROLES_EXCLUIDOS_SIMULADOR_LOGIN.includes(r)),
+  }),
+).filter((linha) => linha.roles.length > 0);
+
 export type FiltroStatusUsuarios = "todos" | "ativo" | "desativado";
 
 export const STATUS_USUARIO_CARROSSEL: { key: Exclude<FiltroStatusUsuarios, "todos">; label: string }[] = [

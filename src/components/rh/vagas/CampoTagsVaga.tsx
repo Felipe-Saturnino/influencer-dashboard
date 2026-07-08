@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 import { FONT } from "../../../constants/theme";
+import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import {
   adicionarTagVaga,
   mensagemErroAdicionarTagVaga,
@@ -23,6 +24,7 @@ export function CampoTagsVaga({
   t,
   inputStyle,
   erro,
+  obrigatorio = false,
 }: {
   id: string;
   label?: string;
@@ -31,6 +33,7 @@ export function CampoTagsVaga({
   t: Theme;
   inputStyle: CSSProperties;
   erro?: string;
+  obrigatorio?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [erroLocal, setErroLocal] = useState<string | null>(null);
@@ -60,6 +63,7 @@ export function CampoTagsVaga({
     <div style={{ marginBottom: 18 }}>
       <label htmlFor={id} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
         {label}
+        {obrigatorio ? <CampoObrigatorioMark /> : null}
       </label>
       <input
         id={id}
@@ -76,12 +80,8 @@ export function CampoTagsVaga({
         placeholder="Digite uma tag e pressione Enter..."
         maxLength={RH_VAGA_TAG_MAX_LEN}
         autoComplete="off"
-        aria-describedby={`${id}-hint`}
         style={inputStyle}
       />
-      <div id={`${id}-hint`} style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-        Pressione Enter para adicionar. Use as tags para classificar esta vaga.
-      </div>
       {value.length > 0 ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
           {value.map((tag, i) => (

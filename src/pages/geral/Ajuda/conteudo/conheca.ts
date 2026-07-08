@@ -495,7 +495,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova vaga",
         texto:
-          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, descrição e responsabilidades. Use o campo **Tags** para criar rótulos da vaga (digite e pressione Enter). Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
+          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, **repasse inicial** (valor em reais), descrição e responsabilidades. Em vagas **Externas**, o campo **Tags** é obrigatório — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
       },
     ],
   },

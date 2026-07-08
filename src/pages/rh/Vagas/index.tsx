@@ -8,6 +8,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { fmtBRL } from "../../../lib/dashboardHelpers";
 import {
   fmtDataBR,
   labelStatusVaga,
@@ -257,9 +258,14 @@ export default function RhVagasPage() {
       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
       <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
+      <CampoVaga
+        k="Repasse inicial"
+        v={v.repasse_inicial_centavos > 0 ? fmtBRL(v.repasse_inicial_centavos / 100) : "—"}
+        t={t}
+      />
       <CampoVaga k="Descrição" v={textoMultilinha(v.descricao)} t={t} />
       <CampoVaga k="Responsabilidade" v={textoMultilinha(v.responsabilidades)} t={t} />
-      <CampoVaga k="Tags" v={formatTagsVagaLabel(v.tags)} t={t} />
+      {v.tipo_vaga !== "interna" ? <CampoVaga k="Tags" v={formatTagsVagaLabel(v.tags)} t={t} /> : null}
       {extras}
     </article>
   );
