@@ -11,12 +11,15 @@ import { supabase } from "../../../lib/supabase";
 import {
   CS_ATENDIMENTO_ATUACAO_LABEL,
   CS_ATENDIMENTO_HISTORICO_LABEL,
+  CS_ATENDIMENTO_ORIGEM_EMAIL,
   CS_ATENDIMENTO_STATUS_CORES,
   csAtuacaoExigeEmpresa,
   fmtDataChamado,
   labelStatusChamado,
   opcoesStatusAtender,
 } from "../../../lib/csAtendimentoConstants";
+import { isCsChamadoEmailLayoutMock } from "../../../lib/csAtendimentoEmailLayoutMock";
+import { assuntoEmail, solicitanteEmail } from "../../../lib/csAtendimentoTableColumns";
 import type { CsChamadoHistoricoRow, CsChamadoRow, CsChamadoStatus } from "../../../types/csAtendimento";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
@@ -64,10 +67,13 @@ function badgeStatus(status: CsChamadoRow["status"]) {
 }
 
 function tituloModal(row: CsChamadoRow): string {
+  if (row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL) {
+    return `${row.protocolo} - ${assuntoEmail(row)}`;
+  }
   return `${row.protocolo} - ${row.nome_completo}`;
 }
 
-function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
+function corpoDadosChamadoSite(row: CsChamadoRow, t: Theme) {
   const exibirEmpresa = csAtuacaoExigeEmpresa(row.atuacao);
   return (
     <>
@@ -79,6 +85,24 @@ function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
       <LinhaInfo label="Mensagem" valor={row.mensagem.trim() || "—"} t={t} />
     </>
   );
+}
+
+function corpoDadosChamadoEmail(row: CsChamadoRow, t: Theme) {
+  return (
+    <>
+      <LinhaInfo label="Remetente" valor={solicitanteEmail(row)} t={t} />
+      <LinhaInfo label="Assunto" valor={assuntoEmail(row)} t={t} />
+      <LinhaInfo label="Data de Recebimento" valor={fmtDataChamado(row.created_at)} t={t} />
+      <LinhaInfo label="Corpo do E-mail" valor={row.mensagem.trim() || "—"} t={t} />
+    </>
+  );
+}
+
+function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
+  if (row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL) {
+    return corpoDadosChamadoEmail(row, t);
+  }
+  return corpoDadosChamadoSite(row, t);
 }
 
 function BlocoHistorico({ item, t }: { item: CsChamadoHistoricoRow; t: Theme }) {
@@ -164,7 +188,7 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
           onClick={() => setAba("dados")}
           icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
         >
-          Dados do Chamado
+          {row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL ? "Dados do E-mail" : "Dados do Chamado"}
         </FiltroBarTabButton>
         <FiltroBarTabButton
           id="tab-ver-chamado-historico"
@@ -268,10 +292,12 @@ export function ModalAtenderChamado({
 
   if (!open || !row) return null;
 
+  const layoutPreview = isCsChamadoEmailLayoutMock(row.id);
   const statusAlterado = statusDraft !== row.status;
 
   async function salvar() {
     if (!row) return;
+    if (layoutPreview) return;
     setErr(null);
     if (statusAlterado && !anotacao.trim()) {
       setErr("Informe uma anotação ao alterar o status do chamado.");
@@ -330,6 +356,25 @@ export function ModalAtenderChamado({
       {err ? (
         <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, margin: "12px 20px 0" }}>
           {err}
+        </div>
+      ) : null}
+
+      {layoutPreview ? (
+        <div
+          role="status"
+          style={{
+            margin: "12px 20px 0",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+            lineHeight: 1.45,
+          }}
+        >
+          Preview de layout — a integração com a caixa Outlook será habilitada após aprovação visual.
         </div>
       ) : null}
 
@@ -420,7 +465,7 @@ export function ModalAtenderChamado({
         <button
           type="button"
           onClick={() => void salvar()}
-          disabled={saving}
+          disabled={saving || layoutPreview}
           style={{
             display: "inline-flex",
             alignItems: "center",

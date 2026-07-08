@@ -1,5 +1,5 @@
 export type CsChamadoStatus = "aberto" | "em_andamento" | "arquivado";
-export type CsChamadoOrigem = "site_spin";
+export type CsChamadoOrigem = "site_spin" | "email";
 export type CsChamadoAtuacao = "operador" | "provedor" | "parceria" | "agregador" | "jogador" | "outros";
 export type CsChamadoHistoricoTipo =
   | "abertura"
@@ -39,6 +39,8 @@ export interface CsChamadoRow {
   atuacao: CsChamadoAtuacao;
   empresa: string | null;
   mensagem: string;
+  /** Preenchido quando origem = email (assunto do e-mail recebido). */
+  assunto?: string | null;
   inicio_atendimento_em: string | null;
   arquivado_em: string | null;
   atendente_id: string | null;

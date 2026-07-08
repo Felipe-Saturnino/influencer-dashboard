@@ -19,8 +19,8 @@ globs:
 | Item | Valor |
 |------|-------|
 | Subtítulo | Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe. |
-| Origem (v1) | `site_spin` — aba única **Site Spin** |
-| Protocolo | `SITE-[ANO]/[NNNN]` (4 dígitos por ano) |
+| Origem (v1) | `site_spin` — aba **Site Spin** · `email` — aba **E-mail** (layout; ingestão Outlook pendente) |
+| Protocolo | Site: `SITE-[ANO]/[NNNN]` · E-mail: `EMAIL-[ANO]/[NNNN]` |
 | Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_protocolo_contador` |
 | Criação pública | Edge `prospecto-cs-atendimento-site` → RPC `cs_chamado_criar_site_spin` (service_role) |
 | Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
@@ -31,12 +31,23 @@ globs:
 
 ## Status e colunas da tabela
 
+### Aba Site Spin
+
 | Filtro carrossel | Colunas |
 |------------------|---------|
 | Aberto | Chamado, Data de Abertura, Solicitante, Ações |
 | Em Andamento | + Início do Atendimento, Atendente |
 | Arquivado | Chamado, Data de Abertura, Solicitante, Atendente, SLA, Ações (só Ver) |
 | Todos Status | Todas + Status; Atender exceto arquivado |
+
+### Aba E-mail (layout — preview com mock até integração Outlook)
+
+| Filtro carrossel | Colunas |
+|------------------|---------|
+| Aberto | Chamado, Data de Abertura, Solicitante (e-mail remetente), Assunto, Ações |
+| Em Andamento | Chamado, Data de Abertura, Assunto, Início do Atendimento, Atendente, Ações |
+| Arquivado | Chamado, Data de Abertura, Assunto, Atendente, SLA, Ações (só Ver) |
+| Todos Status | Todas + Status; campos vazios com `—`; Atender exceto arquivado |
 
 **SLA:** `fmtSlaChamado(created_at, arquivado_em)` — tempo abertura → arquivamento.
 
@@ -48,7 +59,7 @@ globs:
 
 **Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): ordem **Todos** → **Nenhum** (`extraOptions`) → prestadores do time **Customer Service** (A–Z, via RPC `cs_atendimento_atendentes_listar`).
 
-**Linha 2:** aba única **Site Spin** (`FiltroBarTabButton`, ícone `Globe` 16px).
+**Linha 2:** abas **Site Spin** (`Globe`) e **E-mail** (`Mail` 16px) — `FiltroBarTabButton` + `onFiltroBarTabsKeyDown`.
 
 ---
 
@@ -66,7 +77,7 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 
 ## Modais
 
-**Ver:** título `[protocolo] - [solicitante]`; subtítulo = badge status; abas **Dados do Chamado** | **Histórico**.
+**Ver:** título Site `[protocolo] - [solicitante]` · E-mail `[protocolo] - [assunto]`; abas **Dados do Chamado** / **Dados do E-mail** | **Histórico**.
 
 **Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; bloco **Histórico de Anotações**.
 
@@ -74,7 +85,7 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 
 ## Anti-patterns
 
-- Seeds ou dados fictícios na UI ou migration.
+- Seeds ou dados fictícios na UI ou migration (exceto preview temporário da aba E-mail até integração Outlook — `csAtendimentoEmailLayoutMock.ts`).
 - INSERT direto em `cs_chamados` pelo client autenticado.
 - Cadastrar chamado manualmente na plataforma (v1).
-- Múltiplas abas de origem sem spec de produto.
+- Múltiplas abas de origem sem spec de produto (exceto Site Spin + E-mail documentadas neste MDC).

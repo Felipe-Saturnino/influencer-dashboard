@@ -11,7 +11,9 @@ export const CS_ATENDIMENTO_FILTRO_TODOS_LABEL = "Todos";
 export const CS_ATENDIMENTO_FILTRO_NENHUM_LABEL = "Nenhum";
 
 export const CS_ATENDIMENTO_ORIGEM_SITE_SPIN = "site_spin" as const;
+export const CS_ATENDIMENTO_ORIGEM_EMAIL = "email" as const;
 export const CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL = "Site Spin";
+export const CS_ATENDIMENTO_ABA_EMAIL_LABEL = "E-mail";
 
 export const CS_ATENDIMENTO_STATUS_CARROSSEL: { key: CsChamadoStatus; label: string }[] = [
   { key: "aberto", label: "Aberto" },
