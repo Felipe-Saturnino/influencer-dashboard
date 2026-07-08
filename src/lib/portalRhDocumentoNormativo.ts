@@ -24,6 +24,7 @@ export const PORTAL_RH_ROLES_CIENCIA: readonly Role[] = [
   "comunicacao",
   "performance_coach",
   "service_manager",
+  "customer_service",
   "tech_ops",
   "shift_leader",
   "prestador",

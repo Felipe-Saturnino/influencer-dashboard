@@ -29,6 +29,7 @@ const ROLES_BLOQUEADOS = [
   'investidor',
   'shift_leader',
   'service_manager',
+  'customer_service',
   'tech_ops',
   'figurino',
   'comunicacao',

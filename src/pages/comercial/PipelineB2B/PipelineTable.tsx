@@ -11,6 +11,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import type { ComercialOpcao, ComercialContato, PipelineMarcaRow } from "./types";
 import {
+  AGREGADORA_POPOVER_OPTS,
   COL_LABEL,
   PIPELINE_COLOR,
   PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR,
@@ -22,6 +23,8 @@ import {
   TAB_TABLE_CONFIG,
   badgePipelineStyle,
   badgeProdutoStyle,
+  type Agregadora,
+  type AgregadoraPopoverValue,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
@@ -29,6 +32,7 @@ import {
 import {
   buildRazaoMerge,
   buildPipelineComercialPopoverOptions,
+  fmtDataNascimento,
   fmtDataPipeline,
   pipelineComercialDisplayNome,
   pipelineComercialExibeSiteOffline,
@@ -36,10 +40,11 @@ import {
   pipelineComercialPopoverLabel,
   pipelineComercialPopoverUserId,
   produtoStatus,
+  toDateInputValue,
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
 
-type PopoverKind = "comercial" | "status" | "dedicada" | "network";
+type PopoverKind = "comercial" | "status" | "dedicada" | "network" | "agregadora";
 
 const cellEditable: CSSProperties = {
   cursor: "pointer",
@@ -69,6 +74,8 @@ export function PipelineTable({
   onUpdateComercial,
   onUpdateStatus,
   onUpdateProduto,
+  onUpdateUltimoContato,
+  onUpdateAgregadora,
   t,
 }: {
   tab: import("./constants").PipelineTab;
@@ -84,6 +91,8 @@ export function PipelineTable({
   onUpdateComercial: (row: PipelineMarcaRow, userId: string | null) => void;
   onUpdateStatus: (row: PipelineMarcaRow, status: StatusPipeline) => void;
   onUpdateProduto: (row: PipelineMarcaRow, tipo: "mesa_dedicada" | "mesa_network", status: StatusProduto) => void;
+  onUpdateUltimoContato: (row: PipelineMarcaRow, date: string | null) => void;
+  onUpdateAgregadora: (row: PipelineMarcaRow, agregadora: Agregadora | null) => void;
   t: {
     text: string;
     textMuted: string;
@@ -102,6 +111,8 @@ export function PipelineTable({
     rect: DOMRect;
     produto?: "mesa_dedicada" | "mesa_network";
   } | null>(null);
+
+  const [editingUltimoContatoId, setEditingUltimoContatoId] = useState<string | null>(null);
 
   function openPopover(e: MouseEvent<HTMLElement>, kind: PopoverKind, row: PipelineMarcaRow, produto?: "mesa_dedicada" | "mesa_network") {
     if (!canEditar) return;
@@ -357,6 +368,71 @@ export function PipelineTable({
                     </td>
                   ) : null}
 
+                  {cfg.cols.includes("agregadora") ? (
+                    <td style={dataTable.tdCenter}>
+                      <div
+                        role={canEditar ? "button" : undefined}
+                        tabIndex={canEditar ? 0 : undefined}
+                        style={canEditar ? cellEditable : undefined}
+                        onClick={(e) => openPopover(e, "agregadora", row)}
+                        onKeyDown={(e) => {
+                          if (canEditar && (e.key === "Enter" || e.key === " ")) {
+                            openPopover(e as unknown as MouseEvent<HTMLElement>, "agregadora", row);
+                          }
+                        }}
+                      >
+                        {row.agregadora ?? "—"}
+                      </div>
+                    </td>
+                  ) : null}
+
+                  {cfg.cols.includes("ultimo_contato") ? (
+                    <td style={dataTable.tdCenter}>
+                      {canEditar && editingUltimoContatoId === row.id ? (
+                        <input
+                          type="date"
+                          autoFocus
+                          value={toDateInputValue(row.ultimo_contato)}
+                          aria-label={`Último contato — ${row.nome}`}
+                          style={{
+                            fontSize: 13,
+                            fontFamily: FONT.body,
+                            border: `1px solid ${t.cardBorder}`,
+                            borderRadius: 8,
+                            background: t.inputBg,
+                            color: t.text,
+                            padding: "4px 8px",
+                            maxWidth: "100%",
+                          }}
+                          onChange={(e) => {
+                            const v = e.target.value || null;
+                            onUpdateUltimoContato(row, v);
+                            setEditingUltimoContatoId(null);
+                          }}
+                          onBlur={() => setEditingUltimoContatoId(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setEditingUltimoContatoId(null);
+                          }}
+                        />
+                      ) : (
+                        <div
+                          role={canEditar ? "button" : undefined}
+                          tabIndex={canEditar ? 0 : undefined}
+                          style={canEditar ? cellEditable : undefined}
+                          onClick={() => canEditar && setEditingUltimoContatoId(row.id)}
+                          onKeyDown={(e) => {
+                            if (canEditar && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              setEditingUltimoContatoId(row.id);
+                            }
+                          }}
+                        >
+                          {fmtDataNascimento(row.ultimo_contato)}
+                        </div>
+                      )}
+                    </td>
+                  ) : null}
+
                   {cfg.cols.includes("ultima") ? (
                     <td style={dataTable.tdCenter}>{fmtDataPipeline(row.ultima_comunicacao)}</td>
                   ) : null}
@@ -426,6 +502,19 @@ export function PipelineTable({
           }
           onClose={() => setPopover(null)}
           labelOption={(v) => STATUS_PRODUTO_LABEL[v]}
+          t={t}
+        />
+      ) : null}
+
+      {popover?.kind === "agregadora" ? (
+        <CellSelectPopover
+          open
+          anchorRect={popover.rect}
+          options={AGREGADORA_POPOVER_OPTS}
+          value={(popover.row.agregadora ?? "") as AgregadoraPopoverValue}
+          onSelect={(v) => onUpdateAgregadora(popover.row, v ? (v as Agregadora) : null)}
+          onClose={() => setPopover(null)}
+          labelOption={(v) => (v ? v : "—")}
           t={t}
         />
       ) : null}

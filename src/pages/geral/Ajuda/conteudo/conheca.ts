@@ -492,6 +492,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Use os filtros de status, tipo de vaga e busca para localizar processos. Cada vaga concentra candidatos, histórico de movimentação e ações de RH conforme o perfil logado.",
       },
+      {
+        subtitulo: "Nova vaga",
+        texto:
+          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, descrição e responsabilidades. Use o campo **Tags** para criar rótulos da vaga (digite e pressione Enter). Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
+      },
     ],
   },
   rh_central_denuncias: {
@@ -500,6 +505,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         texto:
           "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
+      },
+      {
+        subtitulo: "Período",
+        texto:
+          "A página abre com **Histórico** ativo (**Todo o período** — todas as denúncias desde maio/2026). Desligue Histórico para navegar mês a mês pelas setas do carrossel.",
       },
       {
         subtitulo: "Atendimento",
@@ -724,7 +734,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova postagem",
         texto:
-          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** aceitam **vários arquivos** por postagem — selecione de uma vez ou em etapas; remova itens da lista antes de salvar se necessário.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
         subtitulo: "Manuais — tabela e ciência",
@@ -875,6 +885,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Tabela e ações",
         texto:
           "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).",
+      },
+    ],
+  },
+  cs_atendimento: {
+    titulo: "Atendimento",
+    blocos: [
+      {
+        texto:
+          "Gerencia chamados enviados pelo formulário de contato do site Spin. A equipe de Customer Service acompanha o protocolo, registra anotações e altera o status conforme o atendimento avança.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nA aba **Site Spin** concentra os chamados da origem pública do site.",
+      },
+      {
+        subtitulo: "Tabela e ações",
+        texto:
+          "As colunas mudam conforme o status selecionado. Chamados **arquivados** exibem **SLA** (tempo entre abertura e arquivamento). **Ver** abre dados do solicitante e histórico; **Atender** (permissão de Editar) permite alterar status e registrar anotação — obrigatória ao mudar o status.",
       },
     ],
   },
@@ -1125,12 +1154,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada** ou **Network** para alterar via lista. Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** aceita Alea, BetConstruct, Cactus, Cometa Gaming, Playtech ou SoftSwiss (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nA coluna **Envio de Material** exibe a data do último envio de material (somente leitura na tabela). Todas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato, Envio de Material e Ação.",
       },
       {
         subtitulo: "Comunicar",
         texto:
-          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Última Comunicação** — fluxo em implementação posterior.",
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Envio de Material** — fluxo em implementação posterior.",
       },
     ],
   },

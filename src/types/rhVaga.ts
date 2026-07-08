@@ -37,8 +37,7 @@ export type RhVagaRow = {
   data_fim_inscricoes: string;
   descricao: string;
   responsabilidades: string;
-  requisitos: string;
-  escala_trabalho: string;
+  tags: string[];
   necessario_video_apresentacao: boolean;
   necessario_turno: boolean;
   status: RhVagaStatus;

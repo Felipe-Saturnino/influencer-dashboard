@@ -85,3 +85,5 @@ Após sucesso, o registro aparece em **Afiliados → Network** com:
 *(Esta API é independente do formulário de prospecto Scout; secrets e URLs são diferentes.)*
 
 **Prospecto influencer (Scout):** ver `api-prospecto-scout-site-agencia.md`.
+
+**Formulário de contato (Atendimento):** ver `api-prospecto-cs-atendimento-site-agencia.md`.

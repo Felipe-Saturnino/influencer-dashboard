@@ -156,6 +156,18 @@ export function fmtDataNascimento(iso: string | null | undefined): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Valor para `<input type="date">` a partir de ISO date ou timestamptz. */
+export function toDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function fmtDataHora(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -426,9 +438,13 @@ export function sortMarcas(
         return compareLocaleTexto(produtoDisplay(a, "mesa_dedicada"), produtoDisplay(b, "mesa_dedicada"), dir);
       case "network":
         return compareLocaleTexto(produtoDisplay(a, "mesa_network"), produtoDisplay(b, "mesa_network"), dir);
+      case "agregadora":
+        return compareLocaleTexto(a.agregadora ?? "", b.agregadora ?? "", dir);
+      case "ultimo_contato":
       case "ultima": {
-        const da = a.ultima_comunicacao ?? "";
-        const db = b.ultima_comunicacao ?? "";
+        const field = col === "ultimo_contato" ? "ultimo_contato" : "ultima_comunicacao";
+        const da = a[field] ?? "";
+        const db = b[field] ?? "";
         if (da === db) return 0;
         if (!da) return 1;
         if (!db) return -1;
@@ -454,6 +470,9 @@ export function historicoDisplayValor(campo: string, valor: string | null): stri
   if (campo === "mesa_dedicada" || campo === "mesa_network") {
     const v = valor as StatusProduto;
     return STATUS_PRODUTO_LABEL[v] ?? valor;
+  }
+  if (campo === "ultimo_contato" || campo === "ultima_comunicacao") {
+    return fmtDataNascimento(valor) !== "—" ? fmtDataNascimento(valor) : fmtDataPipeline(valor);
   }
   return valor;
 }

@@ -1,4 +1,4 @@
-import type { ProdutoTipo, StatusFolha, StatusPipeline, StatusProduto } from "./constants";
+import type { ProdutoTipo, StatusFolha, StatusPipeline, StatusProduto, Agregadora } from "./constants";
 
 export interface TelefoneContato {
   iso: string;
@@ -46,6 +46,8 @@ export interface PipelineMarcaRow {
   status_folha: StatusFolha;
   comercial_user_id: string | null;
   comercial_nome: string | null;
+  agregadora: Agregadora | null;
+  ultimo_contato: string | null;
   ultima_comunicacao: string | null;
   empresa: ComercialEmpresa;
   contatos: ComercialContato[];

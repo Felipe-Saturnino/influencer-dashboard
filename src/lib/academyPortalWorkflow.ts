@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { anexosIguais } from "./academyPortalPostagemFiles";
 
 export type AcademyPostagemTipoUi = "comunicado" | "dica" | "manual";
 export type AcademyPostagemContentType = "comunicado" | "dica" | "manual";
@@ -90,9 +91,8 @@ export type SnapshotPostagemEdicaoAcademy = {
   versao: string;
   exigeCiencia: string;
   aplicavelA: string[];
-  imagemPath: string | null;
-  anexoPath: string | null;
-  anexoNome: string | null;
+  imagemPaths: string[];
+  anexoRefs: { path: string; nome: string }[];
 };
 
 export function validarPublicarComunicado(fields: {
@@ -206,9 +206,11 @@ export function diffEdicaoRascunho(
   ) {
     alteracoes.push("Aplicável a alterado");
   }
-  if (antes.imagemPath !== depois.imagemPath) alteracoes.push(depois.imagemPath ? "Imagem/vídeo alterado" : "Imagem/vídeo removido");
-  if (antes.anexoPath !== depois.anexoPath || antes.anexoNome !== depois.anexoNome) {
-    alteracoes.push(depois.anexoPath ? "Anexo alterado" : "Anexo removido");
+  if (antes.imagemPaths.length !== depois.imagemPaths.length || antes.imagemPaths.some((p, i) => p !== depois.imagemPaths[i])) {
+    alteracoes.push(depois.imagemPaths.length ? "Imagem/vídeo alterado" : "Imagem/vídeo removido");
+  }
+  if (!anexosIguais(antes.anexoRefs, depois.anexoRefs)) {
+    alteracoes.push(depois.anexoRefs.length ? "Anexo alterado" : "Anexo removido");
   }
   return alteracoes;
 }

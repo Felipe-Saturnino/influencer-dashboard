@@ -94,9 +94,10 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 ### Tabela
 
-- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, Última Comunicação — **sem** sort em Marca, Contato, Comercial, Status.
+- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato**, **Envio de Material** — **sem** sort em Marca, Contato, Comercial, Status.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
-- Edição inline (Comercial, Status, Dedicada, Network): popover + permissão **Editar**; grava em `comercial_marca_historico`. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
+- Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** seleção única entre Alea, BetConstruct, Cactus, Cometa Gaming, Playtech e SoftSwiss (ordem alfabética) ou **—** para limpar. **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. **Envio de Material** (`ultima_comunicacao`): somente leitura na tabela — alimentada pelo fluxo **Comunicar** (futuro). Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
+- **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Envio de Material · Ação (`PIPELINE_TABLE_COLS`).
 - **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
 - **Comercial — gestores:** nomes em `PIPELINE_COMERCIAL_NOMES` ou **—** quando domínio **Ativo** (ou após override manual) e sem atribuição.
@@ -129,7 +130,7 @@ Edge Function **`sync-comercial-spa-lista`** — import diário do CSV oficial d
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |
 | Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
-| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `ultima_comunicacao` |
+| **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `agregadora`, `ultimo_contato`, `ultima_comunicacao` |
 | **Exceção domínio** | Se `dominio` mudar no CSV → atualiza domínio e **`status_dominio` → `inativo`** (revalidação HTTP) |
 | Marca nova | defaults `disponiveis` + `sem_contato`; domínio `inativo` até cron de validação HTTP |
 | Idempotência | Hash SHA-256 do CSV em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |

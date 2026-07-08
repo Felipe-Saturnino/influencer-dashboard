@@ -37,6 +37,7 @@ import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar"
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
 import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarVaga";
+import { formatTagsVagaLabel } from "../../../lib/rhVagaTags";
 import { buscarVagaIdsComCandidaturaDoLogin } from "../../../lib/rhVagaCandidaturaInscricao";
 
 const RH_VAGAS_SELECT = `
@@ -258,8 +259,7 @@ export default function RhVagasPage() {
       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
       <CampoVaga k="Descrição" v={textoMultilinha(v.descricao)} t={t} />
       <CampoVaga k="Responsabilidade" v={textoMultilinha(v.responsabilidades)} t={t} />
-      <CampoVaga k="Requisitos" v={textoMultilinha(v.requisitos)} t={t} />
-      <CampoVaga k="Escala de trabalho" v={textoMultilinha(v.escala_trabalho)} t={t} />
+      <CampoVaga k="Tags" v={formatTagsVagaLabel(v.tags)} t={t} />
       {extras}
     </article>
   );

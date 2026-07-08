@@ -21,6 +21,7 @@ import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
+import { CampoTagsVaga } from "./CampoTagsVaga";
 
 type Theme = {
   text: string;
@@ -83,8 +84,7 @@ export function ModalAtualizarVaga({
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
   const [responsabilidades, setResponsabilidades] = useState("");
-  const [requisitos, setRequisitos] = useState("");
-  const [escalaTrabalho, setEscalaTrabalho] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [necessarioVideoApresentacao, setNecessarioVideoApresentacao] = useState(false);
   const [necessarioTurno, setNecessarioTurno] = useState(false);
 
@@ -129,8 +129,7 @@ export function ModalAtualizarVaga({
     setDataFimInscricoes(dataIsoDateOnly(vaga.data_fim_inscricoes));
     setDescricao(vaga.descricao ?? "");
     setResponsabilidades(vaga.responsabilidades ?? "");
-    setRequisitos(vaga.requisitos ?? "");
-    setEscalaTrabalho(vaga.escala_trabalho ?? "");
+    setTags(Array.isArray(vaga.tags) ? vaga.tags : []);
     setNecessarioVideoApresentacao(Boolean(vaga.necessario_video_apresentacao));
     setNecessarioTurno(Boolean(vaga.necessario_turno));
     const ab = dataIsoDateOnly(vaga.data_abertura);
@@ -246,8 +245,6 @@ export function ModalAtualizarVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
-    if (!requisitos.trim()) e.requisitos = "Informe os requisitos.";
-    if (!escalaTrabalho.trim()) e.escala = "Informe a escala de trabalho.";
     setFieldErr(e);
     return Object.keys(e).length === 0;
   }
@@ -299,8 +296,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        requisitos: requisitos.trim(),
-        escala_trabalho: escalaTrabalho.trim(),
+        tags,
         ...camposExterna,
         status: "aberta",
         data_encerramento: null,
@@ -317,8 +313,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        requisitos: requisitos.trim(),
-        escala_trabalho: escalaTrabalho.trim(),
+        tags,
         ...camposExterna,
       };
     } else if (accao === "concluir") {
@@ -532,22 +527,7 @@ export function ModalAtualizarVaga({
                 />
                 {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
               </div>
-              <div style={{ marginBottom: 14 }}>
-                {lblReq("atv-req", "Requisitos")}
-                <textarea id="atv-req" value={requisitos} onChange={(e) => setRequisitos(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
-                {fieldErr.requisitos ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.requisitos}</div> : null}
-              </div>
-              <div style={{ marginBottom: 18 }}>
-                {lblReq("atv-escala", "Escala de trabalho")}
-                <textarea
-                  id="atv-escala"
-                  value={escalaTrabalho}
-                  onChange={(e) => setEscalaTrabalho(e.target.value)}
-                  rows={3}
-                  style={{ ...inputStyle, resize: "vertical" }}
-                />
-                {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
-              </div>
+              <CampoTagsVaga id="atv-tags" value={tags} onChange={setTags} t={t} inputStyle={inputStyle} />
             </>
           ) : null}
 

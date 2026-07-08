@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { stripHtmlText, type AcademyPostagemStatus } from "../../../lib/academyPortalWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { normalizarAnexosAcademyPortal, normalizarImagensAcademyPortal } from "../../../lib/academyPortalPostagemFiles";
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -758,9 +759,8 @@ export default function PortalAcademyPage() {
                   titulo={c.titulo}
                   corpo={c.corpo}
                   categoria={c.categoria}
-                  imagemStoragePath={c.imagem_storage_path}
-                  anexoStoragePath={c.anexo_storage_path}
-                  anexoNome={c.anexo_nome}
+                  imagemStoragePaths={normalizarImagensAcademyPortal(c)}
+                  anexos={normalizarAnexosAcademyPortal(c)}
                   autorInfo={metaAutores[autorIdPostagem(c) ?? ""]}
                   dataPublicacao={c.published_at}
                   cardShadow={cardShadow}
@@ -782,9 +782,8 @@ export default function PortalAcademyPage() {
                   corpo={d.corpo}
                   categoria={d.categoria}
                   jogosMesa={d.jogo_mesa}
-                  imagemStoragePath={d.imagem_storage_path}
-                  anexoStoragePath={d.anexo_storage_path}
-                  anexoNome={d.anexo_nome}
+                  imagemStoragePaths={normalizarImagensAcademyPortal(d)}
+                  anexos={normalizarAnexosAcademyPortal(d)}
                   autorInfo={metaAutores[autorIdPostagem(d) ?? ""]}
                   dataPublicacao={d.published_at}
                   cardShadow={cardShadow}
@@ -848,8 +847,7 @@ export default function PortalAcademyPage() {
           titulo={modalManual.titulo}
           introducao={modalManual.introducao}
           corpo={modalManual.corpo}
-          anexoStoragePath={modalManual.anexo_storage_path}
-          anexoNome={modalManual.anexo_nome}
+          anexos={normalizarAnexosAcademyPortal(modalManual)}
           exigeCiencia={manualExigeCienciaDoUsuario(modalManual, setoresUsuarioAplicavel)}
           jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
           onClose={() => setModalManual(null)}

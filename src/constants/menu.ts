@@ -17,6 +17,7 @@ import {
   Link2,
   Megaphone,
   MessageCircle,
+  MessageSquare,
   Mic,
   Network,
   Newspaper,
@@ -52,7 +53,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Estúdio, Academy, Escala, RH, Conteúdo, Plataforma. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Customer Success, Estúdio, Academy, Escala, RH, Conteúdo, Plataforma. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -101,6 +102,12 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
       { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
+    ],
+  },
+  {
+    section: "Customer Success",
+    items: [
+      { key: "cs_atendimento", label: "Atendimento", icon: MessageSquare },
     ],
   },
   {

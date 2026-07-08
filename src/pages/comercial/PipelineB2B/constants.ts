@@ -28,6 +28,29 @@ export type StatusProduto =
 
 export type ProdutoTipo = "mesa_dedicada" | "mesa_network";
 
+/** Agregadoras disponíveis no Pipeline B2B — ordem alfabética por rótulo. */
+export type Agregadora =
+  | "Alea"
+  | "BetConstruct"
+  | "Cactus"
+  | "Cometa Gaming"
+  | "Playtech"
+  | "SoftSwiss";
+
+export const AGREGADORA_ORDEM: Agregadora[] = [
+  "Alea",
+  "BetConstruct",
+  "Cactus",
+  "Cometa Gaming",
+  "Playtech",
+  "SoftSwiss",
+];
+
+/** Opções do popover inline (vazio = sem agregadora). */
+export const AGREGADORA_POPOVER_OPTS = ["", ...AGREGADORA_ORDEM] as const;
+
+export type AgregadoraPopoverValue = (typeof AGREGADORA_POPOVER_OPTS)[number];
+
 export type TableCol =
   | "razao"
   | "marca"
@@ -36,8 +59,25 @@ export type TableCol =
   | "status"
   | "dedicada"
   | "network"
+  | "agregadora"
+  | "ultimo_contato"
   | "ultima"
   | "acao";
+
+/** Colunas da tabela — mesma ordem em todas as abas. */
+export const PIPELINE_TABLE_COLS: TableCol[] = [
+  "razao",
+  "marca",
+  "contato",
+  "comercial",
+  "status",
+  "dedicada",
+  "network",
+  "agregadora",
+  "ultimo_contato",
+  "ultima",
+  "acao",
+];
 
 export const PIPELINE_TABS: PipelineTab[] = ["todos", "disponiveis", "conexao", "negociacao", "fechado"];
 
@@ -170,27 +210,27 @@ export const TAB_TABLE_CONFIG: Record<
   todos: {
     title: "Todas as Marcas",
     pipelines: null,
-    cols: ["razao", "marca", "contato", "comercial", "status", "dedicada", "network", "ultima", "acao"],
+    cols: PIPELINE_TABLE_COLS,
   },
   disponiveis: {
     title: "Marcas Disponíveis",
     pipelines: ["disponiveis"],
-    cols: ["razao", "marca", "contato", "comercial", "ultima", "acao"],
+    cols: PIPELINE_TABLE_COLS,
   },
   conexao: {
     title: "Marcas em Conexão",
     pipelines: ["conexao"],
-    cols: ["razao", "marca", "contato", "comercial", "ultima", "acao"],
+    cols: PIPELINE_TABLE_COLS,
   },
   negociacao: {
     title: "Marcas em Negociação",
     pipelines: ["negociacao"],
-    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultima", "acao"],
+    cols: PIPELINE_TABLE_COLS,
   },
   fechado: {
     title: "Marcas com Contrato",
     pipelines: ["fechado"],
-    cols: ["razao", "marca", "contato", "comercial", "dedicada", "network", "ultima", "acao"],
+    cols: PIPELINE_TABLE_COLS,
   },
 };
 
@@ -202,11 +242,20 @@ export const COL_LABEL: Record<TableCol, string> = {
   status: "Status",
   dedicada: "Dedicada",
   network: "Network",
-  ultima: "Última Comunicação",
+  agregadora: "Agregadora",
+  ultimo_contato: "Último Contato",
+  ultima: "Envio de Material",
   acao: "Ação",
 };
 
-export const SORTABLE_COLS: TableCol[] = ["razao", "dedicada", "network", "ultima"];
+export const SORTABLE_COLS: TableCol[] = [
+  "razao",
+  "dedicada",
+  "network",
+  "agregadora",
+  "ultimo_contato",
+  "ultima",
+];
 
 export const COMERCIAL_FILTRO_TODOS = "todos";
 export const COMERCIAL_FILTRO_NENHUM = "nenhum";
@@ -268,5 +317,8 @@ export const HISTORICO_CAMPO_LABEL: Record<string, string> = {
   status_dominio: "Status do Domínio",
   mesa_dedicada: "Dedicada",
   mesa_network: "Network",
+  agregadora: "Agregadora",
+  ultimo_contato: "Último Contato",
+  ultima_comunicacao: "Envio de Material",
   status_folha: "Detalhe",
 };

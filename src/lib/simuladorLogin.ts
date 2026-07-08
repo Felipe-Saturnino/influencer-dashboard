@@ -15,6 +15,7 @@ export const ROLES_SIMULAVEIS: Role[] = [
   "comunicacao",
   "performance_coach",
   "service_manager",
+  "customer_service",
   "tech_ops",
   "shift_leader",
   "prestador",

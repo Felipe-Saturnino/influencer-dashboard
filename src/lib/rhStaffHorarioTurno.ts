@@ -6,15 +6,17 @@ import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTu
 
 export type OpcaoHorarioTurnoStaff = { value: string; label: string };
 
-const OPT_3X3_MANHA: OpcaoHorarioTurnoStaff[] = [
-  { value: "07-15", label: "07h às 15h" },
-  { value: "08-20", label: "08h às 20h" },
-];
+const OPT_3X3_MANHA: OpcaoHorarioTurnoStaff[] = [{ value: "08-20", label: "08h às 20h" }];
 
 const OPT_3X3_NOITE: OpcaoHorarioTurnoStaff[] = [
-  { value: "23-07", label: "23h às 07h" },
-  { value: "20-08", label: "20h às 08h" },
   { value: "18-06", label: "18h às 06h" },
+  { value: "20-08", label: "20h às 08h" },
+];
+
+/** Rótulos legados — só exibição; não aparecem em novos cadastros. */
+const LEGACY_HORARIO_TURNO_STAFF: OpcaoHorarioTurnoStaff[] = [
+  { value: "07-15", label: "07h às 15h" },
+  { value: "23-07", label: "23h às 07h" },
 ];
 
 const OPT_5X2_COMERCIAL: OpcaoHorarioTurnoStaff[] = [
@@ -22,7 +24,12 @@ const OPT_5X2_COMERCIAL: OpcaoHorarioTurnoStaff[] = [
   { value: "19-03", label: "19h às 03h" },
 ];
 
-const TODAS_OPCOES_EDITAVEIS: OpcaoHorarioTurnoStaff[] = [...OPT_3X3_MANHA, ...OPT_3X3_NOITE, ...OPT_5X2_COMERCIAL];
+const TODAS_OPCOES_EDITAVEIS: OpcaoHorarioTurnoStaff[] = [
+  ...OPT_3X3_MANHA,
+  ...OPT_3X3_NOITE,
+  ...OPT_5X2_COMERCIAL,
+  ...LEGACY_HORARIO_TURNO_STAFF,
+];
 
 /** Escala com horário editável na Gestão de Staff (fora do vínculo operadora). */
 export function escalaComHorarioTurnoEditavelNaStaff(escalaRaw: string | null | undefined): boolean {

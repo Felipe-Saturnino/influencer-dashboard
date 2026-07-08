@@ -6,6 +6,7 @@ export type Role =
   | "executivo"
   | "shift_leader"
   | "service_manager"
+  | "customer_service"
   | "tech_ops"
   | "figurino"
   | "comunicacao"
@@ -51,6 +52,7 @@ export type PageKey =
   | "galeria_fotos"
   | "comercial_overview"
   | "comercial_pipeline_b2b"
+  | "cs_atendimento"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_mesas"

@@ -9,8 +9,8 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
  * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops → perfil próprio; Facilities, Financeiro, TI, Treinamento → Gestor/Prestador) >
- *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
+ * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops, Customer Service → perfil próprio; Facilities, Financeiro, TI, Treinamento → Gestor/Prestador) >
+ *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, Customer Service, Tech Ops, GP, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
@@ -36,6 +36,7 @@ type PerfilRhSync =
   | 'performance_coach'
   | 'shift_leader'
   | 'service_manager'
+  | 'customer_service'
   | 'tech_ops'
   | 'prestador'
   | 'gestor'
@@ -302,6 +303,10 @@ function gerenciaIndicaTechOps(gerenciaNome: string | null | undefined): boolean
   return normTimeNome(gerenciaNome) === 'tech ops'
 }
 
+function gerenciaIndicaCustomerService(gerenciaNome: string | null | undefined): boolean {
+  return normTimeNome(gerenciaNome) === 'customer service'
+}
+
 async function carregarContextoOrganogramaRh(
   supabase: SupabaseSvc,
   row: { org_time_id?: string | null; org_gerencia_id?: string | null },
@@ -362,6 +367,9 @@ function resolvePerfilEscopo(
   if (gerenciaIndicaTechOps(gerenciaNome)) {
     return { role: 'tech_ops', prestadorTipo: null, gestorTipo: null }
   }
+  if (gerenciaIndicaCustomerService(gerenciaNome)) {
+    return { role: 'customer_service', prestadorTipo: null, gestorTipo: null }
+  }
   if (g === 'facilities') {
     return { role: 'prestador', prestadorTipo: 'facilities', gestorTipo: null }
   }
@@ -388,11 +396,11 @@ function resolvePerfilEscopo(
   if (t === 'service manager') {
     return { role: 'service_manager', prestadorTipo: null, gestorTipo: null }
   }
+  if (t === 'customer service') {
+    return { role: 'customer_service', prestadorTipo: null, gestorTipo: null }
+  }
   if (t === 'game presenter') {
     return { role: 'prestador', prestadorTipo: 'game_presenter', gestorTipo: null }
-  }
-  if (t === 'customer service') {
-    return { role: 'prestador', prestadorTipo: 'customer_service', gestorTipo: null }
   }
   if (t === 'shuffler') {
     return { role: 'prestador', prestadorTipo: 'shuffler', gestorTipo: null }

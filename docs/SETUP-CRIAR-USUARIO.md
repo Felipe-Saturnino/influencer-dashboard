@@ -100,6 +100,7 @@ Template canônico: `emailTemplates/boasVindasUsuario.ts` (dentro da function) v
 |-------|--------|------------|
 | Formulário site → Scout | `prospecto-scout-site` | Só insere em `scout_influencer` |
 | Formulário site → Network | `prospecto-afiliados-network-site` | Só insere em `afiliados_network` |
+| Formulário site → Atendimento | `prospecto-cs-atendimento-site` | Cria chamado em `cs_chamados` (Customer Success) |
 | Desativar / reset senha | `admin-usuario-acao` | Reset usa `recuperar-senha` (e-mail de senha redefinida) |
 | Esqueci minha senha (login) | `recuperar-senha` | E-mail transacional distinto (não é boas-vindas) |
 

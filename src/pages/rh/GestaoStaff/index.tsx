@@ -72,6 +72,7 @@ import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
   calcularResumoStaffCards,
+  staffUiTimeOcultarEstudio,
   staffUiTimeSemOperadoraHorarioModaisRestritos,
   staffUiTimeShufflerOcultarBioFotosVer,
 } from "./gestaoStaffHelpers";
@@ -673,6 +674,15 @@ export default function RhGestaoStaffPage() {
     return staffUiTimeSemOperadoraHorarioModaisRestritos(times[idxTime]!.nome);
   }, [todosTimes, times, idxTime]);
 
+  /** Vista time a time: oculta coluna Estúdio sem substituir por Horário do Turno (ex.: Shuffler). */
+  const layoutTabelaOcultarColunaEstudio = useMemo(() => {
+    if (todosTimes || !times[idxTime]) return false;
+    return staffUiTimeOcultarEstudio(times[idxTime]!.nome) && !layoutTabelaSemEstudioComHorario;
+  }, [todosTimes, times, idxTime, layoutTabelaSemEstudioComHorario]);
+
+  const colSpanTabelaStaff =
+    9 + (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0);
+
   const slugsEstudioParaFetchHorarioTabela = useMemo(() => {
     if (!layoutTabelaSemEstudioComHorario) return [] as string[];
     const set = new Set<string>();
@@ -704,10 +714,12 @@ export default function RhGestaoStaffPage() {
 
   useEffect(() => {
     setSortCol((c) => {
-      if (layoutTabelaSemEstudioComHorario) return c === "estudio" ? "nome" : c;
+      if (layoutTabelaSemEstudioComHorario || layoutTabelaOcultarColunaEstudio) {
+        return c === "estudio" ? "nome" : c;
+      }
       return c === "horario_turno" ? "nome" : c;
     });
-  }, [layoutTabelaSemEstudioComHorario]);
+  }, [layoutTabelaSemEstudioComHorario, layoutTabelaOcultarColunaEstudio]);
 
   const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
     setSortCol((prev) => {
@@ -1028,7 +1040,7 @@ export default function RhGestaoStaffPage() {
                     thStyle={dataTable.thHeader}
                     align="center"
                   />
-                ) : (
+                ) : layoutTabelaOcultarColunaEstudio ? null : (
                   <SortTableTh
                     label="Estúdio"
                     col="estudio"
@@ -1065,7 +1077,7 @@ export default function RhGestaoStaffPage() {
             <tbody>
               {linhasTabela.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ ...dataTable.tdCenter, padding: "32px 16px", color: t.textMuted }}>
+                  <td colSpan={colSpanTabelaStaff} style={{ ...dataTable.tdCenter, padding: "32px 16px", color: t.textMuted }}>
                     Nenhum prestador neste filtro.
                   </td>
                 </tr>
@@ -1099,7 +1111,7 @@ export default function RhGestaoStaffPage() {
                         <td style={dataTable.tdCenter} title="Horário do turno (Gestão de Staff)">
                           {textoHorarioTurnoStaffEmTabela(row, estudioTurnosPorSlug, opParaEstudio)}
                         </td>
-                      ) : (
+                      ) : layoutTabelaOcultarColunaEstudio ? null : (
                         <td style={dataTable.tdCenter}>{estudioNome}</td>
                       )}
                       <td style={dataTable.tdCenter}>{labelStatusPrestador(row.status)}</td>
@@ -1146,7 +1158,7 @@ export default function RhGestaoStaffPage() {
           row={modalVer}
           estudiosNome={estudiosNome}
           opParaEstudio={opParaEstudio}
-          dadosFuncaoOcultarEstudio={staffUiTimeSemOperadoraHorarioModaisRestritos(
+          dadosFuncaoOcultarEstudio={staffUiTimeOcultarEstudio(
             modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
           )}
           dadosFuncaoOcultarBioFotos={
@@ -1172,7 +1184,7 @@ export default function RhGestaoStaffPage() {
           operadorasPorEstudio={operadorasPorEstudio}
           opParaEstudio={opParaEstudio}
           userEmail={user?.email ?? null}
-          ocultarCampoEstudio={staffUiTimeSemOperadoraHorarioModaisRestritos(
+          ocultarCampoEstudio={staffUiTimeOcultarEstudio(
             modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : "",
           )}
           onClose={() => setModalEditar(null)}
@@ -1212,9 +1224,9 @@ function ModalStaffVer({
   row: RhFuncionario;
   estudiosNome: Record<string, string>;
   opParaEstudio: Record<string, string>;
-  /** Times Service Manager, Customer Service, Shift Leader, Performance Coach. */
+  /** Times sem Estúdio na aba Função (serviço, Shuffler, …). */
   dadosFuncaoOcultarEstudio?: boolean;
-  /** Inclui Shuffler (só bio/fotos) ou o grupo acima (estúdio + bio + fotos). */
+  /** Shuffler e times de serviço — oculta bio/fotos do dealer. */
   dadosFuncaoOcultarBioFotos?: boolean;
   /** Somente com permissão de Editar em Gestão de Staff. */
   exibirAbaHistorico?: boolean;

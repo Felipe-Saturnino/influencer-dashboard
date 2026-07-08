@@ -1,18 +1,18 @@
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
-import { PortalAcademyAssetLink } from "./PortalAcademyAssetLink";
+import { PortalAcademyAnexosLista } from "./PortalAcademyAnexosLista";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalAcademy } from "../../../lib/academyPortalUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
+import type { AcademyPortalAnexoRef } from "../../../lib/academyPortalPostagemFiles";
 
 export function ModalLerConteudo({
   open,
   titulo,
   introducao,
   corpo,
-  anexoStoragePath,
-  anexoNome,
+  anexos,
   exigeCiencia = false,
   jaCiente = false,
   onClose,
@@ -22,8 +22,7 @@ export function ModalLerConteudo({
   titulo: string;
   introducao: string | null | undefined;
   corpo: string;
-  anexoStoragePath: string | null | undefined;
-  anexoNome: string | null | undefined;
+  anexos: AcademyPortalAnexoRef[];
   exigeCiencia?: boolean;
   jaCiente?: boolean;
   onClose: () => void;
@@ -76,15 +75,7 @@ export function ModalLerConteudo({
             <CorpoHtmlPortalRh html={corpo} color={t.text} />
           </div>
         </div>
-        {anexoStoragePath ? (
-          <p style={{ margin: 0, fontSize: 13, fontFamily: FONT.body }}>
-            <PortalAcademyAssetLink
-              storagePath={anexoStoragePath}
-              label={anexoNome?.trim() ? `Ver anexo (${anexoNome.trim()})` : "Ver anexo"}
-              color={t.text}
-            />
-          </p>
-        ) : null}
+        {anexos.length > 0 ? <PortalAcademyAnexosLista anexos={anexos} color={t.text} /> : null}
       </div>
       {!exigeCiencia || jaCiente || !onLidoECiente ? null : (
         <button
