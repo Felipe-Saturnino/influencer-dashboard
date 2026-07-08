@@ -45,12 +45,7 @@ import {
   fmtSlaChamado,
   labelStatusChamado,
 } from "../../../lib/csAtendimentoConstants";
-import {
-  CS_ATENDIMENTO_EMAIL_LAYOUT_MOCK_ATIVO,
-  CS_ATENDIMENTO_EMAIL_MOCK_ROWS,
-  isCsChamadoEmailLayoutMock,
-} from "../../../lib/csAtendimentoEmailLayoutMock";
-import { carregarAtendentesCustomerService, unwrapCsEmbed } from "../../../lib/csAtendimentoHelpers";
+import { carregarAtendentesCustomerService, mapCsChamadoFromDb, unwrapCsEmbed, type CsChamadoRowDb } from "../../../lib/csAtendimentoHelpers";
 import {
   COL_LABEL_EMAIL,
   COL_LABEL_SITE_SPIN,
@@ -84,12 +79,14 @@ const CS_CHAMADOS_SELECT = `
   atuacao,
   empresa,
   mensagem,
+  assunto,
   inicio_atendimento_em,
   arquivado_em,
   atendente_id,
   created_at,
   updated_at,
-  atendente:profiles!cs_chamados_atendente_id_fkey ( id, name )
+  atendente:profiles!cs_chamados_atendente_id_fkey ( id, name ),
+  cs_chamado_anexos ( id, nome, storage_path, content_type )
 `.trim();
 
 const ABAS_ORIGEM: CsAtendimentoAbaOrigem[] = [CS_ATENDIMENTO_ORIGEM_SITE_SPIN, CS_ATENDIMENTO_ORIGEM_EMAIL];
@@ -193,38 +190,13 @@ export default function CsAtendimentoPage() {
     setFiltroStatus(prev.key);
   };
 
-  const aplicarFiltroStaff = useCallback((rows: CsChamadoRow[]) => {
-    if (filtroAtendente === CS_ATENDIMENTO_FILTRO_NENHUM_VALUE) {
-      return rows.filter((r) => !r.atendente_id);
-    }
-    if (filtroAtendente !== CS_ATENDIMENTO_FILTRO_TODOS_VALUE) {
-      return rows.filter((r) => r.atendente_id === filtroAtendente);
-    }
-    return rows;
-  }, [filtroAtendente]);
-
   const fetchLista = useCallback(async () => {
     setLoading(true);
-
-    if (abaOrigem === CS_ATENDIMENTO_ORIGEM_EMAIL) {
-      if (CS_ATENDIMENTO_EMAIL_LAYOUT_MOCK_ATIVO) {
-        let rows = [...CS_ATENDIMENTO_EMAIL_MOCK_ROWS];
-        if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
-          rows = rows.filter((r) => r.status === filtroStatus);
-        }
-        setLista(aplicarFiltroStaff(rows));
-        setLoading(false);
-        return;
-      }
-      setLista([]);
-      setLoading(false);
-      return;
-    }
 
     let q = supabase
       .from("cs_chamados")
       .select(CS_CHAMADOS_SELECT)
-      .eq("origem", CS_ATENDIMENTO_ORIGEM_SITE_SPIN)
+      .eq("origem", abaOrigem)
       .order("created_at", { ascending: false });
 
     if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
@@ -241,17 +213,12 @@ export default function CsAtendimentoPage() {
       console.error("[CsAtendimento]", error);
       setLista([]);
     } else {
-      setLista((data ?? []) as unknown as CsChamadoRow[]);
+      setLista(((data ?? []) as unknown as CsChamadoRowDb[]).map(mapCsChamadoFromDb));
     }
     setLoading(false);
-  }, [abaOrigem, filtroStatus, filtroAtendente, aplicarFiltroStaff]);
+  }, [abaOrigem, filtroStatus, filtroAtendente]);
 
   const carregarHistorico = useCallback(async (chamadoId: string) => {
-    if (isCsChamadoEmailLayoutMock(chamadoId)) {
-      setHistorico([]);
-      setLoadingHistorico(false);
-      return;
-    }
     setLoadingHistorico(true);
     const { data, error } = await supabase
       .from("cs_chamado_historico")

@@ -19,10 +19,12 @@ globs:
 | Item | Valor |
 |------|-------|
 | Subtítulo | Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe. |
-| Origem (v1) | `site_spin` — aba **Site Spin** · `email` — aba **E-mail** (layout; ingestão Outlook pendente) |
+| Origem | `site_spin` — aba **Site Spin** · `email` — aba **E-mail** (ingestão Outlook via RPC) |
 | Protocolo | Site: `SITE-[ANO]/[NNNN]` · E-mail: `EMAIL-[ANO]/[NNNN]` |
-| Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_protocolo_contador` |
+| Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_anexos`, contadores de protocolo |
 | Criação pública | Edge `prospecto-cs-atendimento-site` → RPC `cs_chamado_criar_site_spin` (service_role) |
+| Criação e-mail | RPC `cs_chamado_criar_email` (service_role) — integração Outlook; dedupe `email_message_id` |
+| Storage anexos | bucket `cs-atendimento-email` |
 | Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
 | Proxy site | Cloudflare `/api/prospecto-cs-atendimento-site` — doc agência: `docs/api-prospecto-cs-atendimento-site-agencia.md` |
 | Atendimento | RPC `cs_chamado_atender` — exige anotação ao alterar status |
@@ -40,7 +42,7 @@ globs:
 | Arquivado | Chamado, Data de Abertura, Solicitante, Atendente, SLA, Ações (só Ver) |
 | Todos Status | Todas + Status; Atender exceto arquivado |
 
-### Aba E-mail (layout — preview com mock até integração Outlook)
+### Aba E-mail
 
 | Filtro carrossel | Colunas |
 |------------------|---------|
@@ -77,7 +79,7 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 
 ## Modais
 
-**Ver:** título Site `[protocolo] - [solicitante]` · E-mail `[protocolo] - [assunto]`; abas **Dados do Chamado** / **Dados do E-mail** | **Histórico**.
+**Ver:** título Site `[protocolo] - [solicitante]` · E-mail `[protocolo] - [assunto]`; abas **Dados do Chamado** / **Dados do E-mail** (com bloco **Anexo** — Ver / Baixar por ficheiro) | **Histórico**.
 
 **Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; bloco **Histórico de Anotações**.
 
@@ -85,7 +87,7 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 
 ## Anti-patterns
 
-- Seeds ou dados fictícios na UI ou migration (exceto preview temporário da aba E-mail até integração Outlook — `csAtendimentoEmailLayoutMock.ts`).
+- Seeds ou dados fictícios na UI ou migration.
 - INSERT direto em `cs_chamados` pelo client autenticado.
 - Cadastrar chamado manualmente na plataforma (v1).
 - Múltiplas abas de origem sem spec de produto (exceto Site Spin + E-mail documentadas neste MDC).

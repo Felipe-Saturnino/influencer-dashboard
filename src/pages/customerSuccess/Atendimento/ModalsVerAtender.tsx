@@ -18,9 +18,9 @@ import {
   labelStatusChamado,
   opcoesStatusAtender,
 } from "../../../lib/csAtendimentoConstants";
-import { isCsChamadoEmailLayoutMock } from "../../../lib/csAtendimentoEmailLayoutMock";
 import { assuntoEmail, solicitanteEmail } from "../../../lib/csAtendimentoTableColumns";
 import type { CsChamadoHistoricoRow, CsChamadoRow, CsChamadoStatus } from "../../../types/csAtendimento";
+import { CsChamadoEmailAnexosBloco } from "./CsChamadoEmailAnexosBloco";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 
@@ -94,6 +94,7 @@ function corpoDadosChamadoEmail(row: CsChamadoRow, t: Theme) {
       <LinhaInfo label="Assunto" valor={assuntoEmail(row)} t={t} />
       <LinhaInfo label="Data de Recebimento" valor={fmtDataChamado(row.created_at)} t={t} />
       <LinhaInfo label="Corpo do E-mail" valor={row.mensagem.trim() || "—"} t={t} />
+      <CsChamadoEmailAnexosBloco anexos={row.anexos} t={t} />
     </>
   );
 }
@@ -292,12 +293,10 @@ export function ModalAtenderChamado({
 
   if (!open || !row) return null;
 
-  const layoutPreview = isCsChamadoEmailLayoutMock(row.id);
   const statusAlterado = statusDraft !== row.status;
 
   async function salvar() {
     if (!row) return;
-    if (layoutPreview) return;
     setErr(null);
     if (statusAlterado && !anotacao.trim()) {
       setErr("Informe uma anotação ao alterar o status do chamado.");
@@ -356,25 +355,6 @@ export function ModalAtenderChamado({
       {err ? (
         <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, margin: "12px 20px 0" }}>
           {err}
-        </div>
-      ) : null}
-
-      {layoutPreview ? (
-        <div
-          role="status"
-          style={{
-            margin: "12px 20px 0",
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontSize: 12,
-            fontFamily: FONT.body,
-            lineHeight: 1.45,
-          }}
-        >
-          Preview de layout — a integração com a caixa Outlook será habilitada após aprovação visual.
         </div>
       ) : null}
 
@@ -465,7 +445,7 @@ export function ModalAtenderChamado({
         <button
           type="button"
           onClick={() => void salvar()}
-          disabled={saving || layoutPreview}
+          disabled={saving}
           style={{
             display: "inline-flex",
             alignItems: "center",

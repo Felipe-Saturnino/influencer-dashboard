@@ -903,7 +903,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e ações",
         texto:
-          "As colunas mudam conforme o status selecionado. Chamados **arquivados** exibem **SLA** (tempo entre abertura e arquivamento). **Ver** abre dados do solicitante e histórico; **Atender** (permissão de Editar) permite alterar status e registrar anotação — obrigatória ao mudar o status.",
+          "As colunas mudam conforme o status selecionado. Chamados **arquivados** exibem **SLA** (tempo entre abertura e arquivamento). **Ver** abre dados do solicitante (ou do e-mail na aba E-mail) e histórico; na aba **E-mail**, **Ver** também exibe **Anexo** com ações **Ver** e **Baixar** quando o e-mail trouxer ficheiros. **Atender** (permissão de Editar) permite alterar status e registrar anotação — obrigatória ao mudar o status.",
       },
     ],
   },

@@ -41,6 +41,8 @@ export interface CsChamadoRow {
   mensagem: string;
   /** Preenchido quando origem = email (assunto do e-mail recebido). */
   assunto?: string | null;
+  /** Anexos do e-mail (origem = email). */
+  anexos?: CsChamadoEmailAnexo[] | null;
   inicio_atendimento_em: string | null;
   arquivado_em: string | null;
   atendente_id: string | null;
@@ -48,6 +50,16 @@ export interface CsChamadoRow {
   updated_at: string;
   atendente?: CsChamadoProfileEmbed | CsChamadoProfileEmbed[] | null;
   historico?: CsChamadoHistoricoRow[] | null;
+}
+
+export interface CsChamadoEmailAnexo {
+  id: string;
+  nome: string;
+  /** URL direta (preview/mock) ou resolvida após signed URL. */
+  url?: string | null;
+  /** Caminho no Storage Supabase (integração Outlook). */
+  storage_path?: string | null;
+  content_type?: string | null;
 }
 
 export interface CsAtendenteFiltroOption {
