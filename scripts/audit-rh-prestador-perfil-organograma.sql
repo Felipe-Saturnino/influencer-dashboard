@@ -1,6 +1,6 @@
 -- Auditoria: prestadores em organograma staff interno com profiles.role divergente.
 -- Rodar no Supabase → SQL Editor (service role / postgres).
--- Matriz: Gerência Figurino/Comunicação/RH/Tech Ops; Times Performance Coach, Shift Leader, Service Manager, Tech Ops.
+-- Matriz: Gerência Figurino/Comunicação/RH/Tech Ops/Customer Service; Times Performance Coach, Shift Leader, Service Manager, Tech Ops, Customer Service.
 
 WITH base AS (
   SELECT
@@ -58,6 +58,8 @@ esperado AS (
       WHEN n.gerencia_norm = 'comunicacao' THEN 'comunicacao'
       WHEN n.gerencia_norm IN ('rh', 'recursos humanos') THEN 'rh'
       WHEN n.gerencia_norm = 'tech ops' THEN 'tech_ops'
+      WHEN n.gerencia_norm = 'customer service' THEN 'customer_service'
+      WHEN n.time_norm = 'customer service' THEN 'customer_service'
       WHEN n.time_norm = 'tech ops' THEN 'tech_ops'
       WHEN n.time_norm = 'performance coach' THEN 'performance_coach'
       WHEN n.time_norm = 'shift leader' THEN 'shift_leader'

@@ -898,7 +898,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Atendente** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nA aba **Site Spin** concentra os chamados da origem pública do site.",
+          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nA aba **Site Spin** concentra os chamados da origem pública do site.",
       },
       {
         subtitulo: "Tabela e ações",

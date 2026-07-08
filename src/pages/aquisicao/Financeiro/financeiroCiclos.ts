@@ -76,6 +76,7 @@ export const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = [
   "operador",
   "shift_leader",
   "service_manager",
+  "customer_service",
   "tech_ops",
   "figurino",
   "comunicacao",

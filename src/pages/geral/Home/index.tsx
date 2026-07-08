@@ -37,6 +37,7 @@ import HomeFigurino from "./HomeFigurino";
 import HomeComunicacao from "./HomeComunicacao";
 import HomePerformanceCoach from "./HomePerformanceCoach";
 import HomeServiceManager from "./HomeServiceManager";
+import HomeCustomerService from "./HomeCustomerService";
 import HomeTechOps from "./HomeTechOps";
 import HomeShiftLeader from "./HomeShiftLeader";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
@@ -127,6 +128,7 @@ const ROLE_LABELS: Record<Role, string> = {
   executivo: "Executivo",
   shift_leader: "Shift Leader",
   service_manager: "Service Manager",
+  customer_service: "Customer Service",
   tech_ops: "Tech Ops",
   figurino: "Figurino",
   comunicacao: "Comunicação",
@@ -170,6 +172,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Service Manager",
     subtitle:
       "Gerencie fluxos de serviço e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  customer_service: {
+    title: "Customer Service",
+    subtitle:
+      "Atendimento ao jogador e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
   },
   tech_ops: {
     title: "Tech Ops",
@@ -405,6 +412,10 @@ export default function Home() {
 
   if (roleHome === "service_manager") {
     return <HomeServiceManager />;
+  }
+
+  if (roleHome === "customer_service") {
+    return <HomeCustomerService />;
   }
 
   if (roleHome === "tech_ops") {

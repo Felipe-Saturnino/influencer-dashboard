@@ -18,7 +18,7 @@ globs:
 
 | Item | Valor |
 |------|-------|
-| Subtítulo | Gerencie chamados do site Spin, acompanhe SLA e registre o atendimento da equipe. |
+| Subtítulo | Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe. |
 | Origem (v1) | `site_spin` — aba única **Site Spin** |
 | Protocolo | `SITE-[ANO]/[NNNN]` (4 dígitos por ano) |
 | Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_protocolo_contador` |
@@ -46,7 +46,7 @@ globs:
 
 ## Filtros
 
-**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Atendente** (`FiltroBarCampoSelect`, ícone `User` 15px): **Todos**, **Nenhum**, prestadores do time **Customer Service** no organograma (`carregarAtendentesCustomerService`).
+**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): **Todos**, **Nenhum**, prestadores do time **Customer Service** via RPC `cs_atendimento_atendentes_listar`.
 
 **Linha 2:** aba única **Site Spin** (`FiltroBarTabButton`, ícone `Globe` 16px).
 
@@ -60,7 +60,7 @@ globs:
 | Editar | Modal Atender |
 | Criar / Excluir | `null` — chamados só via site |
 
-Seeds: todos perfis exceto admin com **Não** até liberar em Gestão de Usuários. `prestador_tipo_pages`: `customer_service` + `cs_atendimento`.
+Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma. Legado `prestador_tipo_pages`: `customer_service` + `cs_atendimento` (perfil Prestadores + área CS).
 
 ---
 

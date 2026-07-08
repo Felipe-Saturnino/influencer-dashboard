@@ -16,6 +16,10 @@ export function gerenciaOrganogramaIndicaTechOps(gerenciaNome: string | null | u
   return normRhOrgRotuloOrganograma(gerenciaNome) === "tech ops";
 }
 
+export function gerenciaOrganogramaIndicaCustomerService(gerenciaNome: string | null | undefined): boolean {
+  return normRhOrgRotuloOrganograma(gerenciaNome) === "customer service";
+}
+
 export type PerfilRhOrganogramaSync = Extract<
   Role,
   | "figurino"
@@ -24,6 +28,7 @@ export type PerfilRhOrganogramaSync = Extract<
   | "performance_coach"
   | "shift_leader"
   | "service_manager"
+  | "customer_service"
   | "tech_ops"
   | "gestor"
   | "prestador"
@@ -49,6 +54,9 @@ export function resolvePerfilRhDeOrganograma(
   if (gerenciaOrganogramaIndicaTechOps(gerenciaNome)) {
     return { role: "tech_ops", prestadorTipo: null, gestorTipo: null };
   }
+  if (gerenciaOrganogramaIndicaCustomerService(gerenciaNome)) {
+    return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
+  }
   if (g === "facilities") return { role: "prestador", prestadorTipo: "facilities", gestorTipo: null };
   if (g === "financeiro") return { role: "prestador", prestadorTipo: "financeiro", gestorTipo: null };
   if (g === "ti") return { role: "prestador", prestadorTipo: "ti", gestorTipo: null };
@@ -59,8 +67,8 @@ export function resolvePerfilRhDeOrganograma(
   if (t === "performance coach") return { role: "performance_coach", prestadorTipo: null, gestorTipo: null };
   if (t === "shift leader") return { role: "shift_leader", prestadorTipo: null, gestorTipo: null };
   if (t === "service manager") return { role: "service_manager", prestadorTipo: null, gestorTipo: null };
+  if (t === "customer service") return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
   if (t === "game presenter") return { role: "prestador", prestadorTipo: "game_presenter", gestorTipo: null };
-  if (t === "customer service") return { role: "prestador", prestadorTipo: "customer_service", gestorTipo: null };
   if (t === "shuffler") return { role: "prestador", prestadorTipo: "shuffler", gestorTipo: null };
 
   const a = normRhOrgRotuloOrganograma(areaAtuacaoRh);
@@ -88,7 +96,6 @@ export function prestadorTipoSlugDeAreaETimeRh(
   const t = normRhOrgTimeNomeParaUsuarioSync(nomeTimeOrganograma);
   if (t === "game presenter") return "game_presenter";
   if (t === "shuffler") return "shuffler";
-  if (t === "customer service") return "customer_service";
   return "escritorio";
 }
 
@@ -152,6 +159,7 @@ export function mensagemSucessoDesativacaoPrestadorEncerrado(
 
 /**
  * Chama a Edge Function após gravar prestador (Novo, Editar, Revisão de Contrato, Reativação).
+ * Gerência ou time **Customer Service** → `profiles.role = customer_service` via `resolvePerfilEscopo` na Edge.
  * Gerência **Tech Ops** (vínculo direto ou time filho) → `profiles.role = tech_ops` via `resolvePerfilEscopo` na Edge.
  * Login na plataforma: E-mail Spin se preenchido; senão e-mail pessoal. Envie os dois no body quando possível (reforço pós-save).
  */

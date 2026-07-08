@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Globe, Loader2, Pencil, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Globe, Loader2, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -297,7 +297,7 @@ export default function CsAtendimentoPage() {
       <PageHeader
         icon={<PageMenuIcon pageKey="cs_atendimento" />}
         title={getPageMenuLabel("cs_atendimento")}
-        subtitle="Gerencie chamados do site Spin, acompanhe SLA e registre o atendimento da equipe."
+        subtitle="Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe."
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
@@ -331,12 +331,12 @@ export default function CsAtendimentoPage() {
 
           <div className="app-marketplace-filtro-minhas__cta">
             <FiltroBarCampoSelect
-              id="filtro-atendente-cs"
+              id="filtro-staff-cs"
               value={filtroAtendente}
               onChange={(v) => setFiltroAtendente(v as CsChamadoFiltroAtendente)}
               options={opcoesAtendente}
-              icon={<User size={15} strokeWidth={2} aria-hidden="true" />}
-              ariaLabel="Atendente"
+              icon={FilterBarIcons.staff}
+              ariaLabel="Staff"
               todasValue={CS_ATENDIMENTO_FILTRO_TODOS_VALUE}
               todasLabel={CS_ATENDIMENTO_FILTRO_TODOS_LABEL}
               minWidth={220}
