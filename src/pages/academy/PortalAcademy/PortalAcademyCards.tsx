@@ -6,12 +6,13 @@ import { truncPreviewHtml } from "../../../lib/academyPortalWorkflow";
 import {
   isVideoPath,
   urlAssinadaAcademyPortalAsset,
+  type AcademyPortalAnexoRef,
 } from "../../../lib/academyPortalPostagemFiles";
 import {
   linhaMetaAutorPortalAcademy,
   type AcademyPortalAutorInfo,
 } from "../../../lib/academyPortalAutorMeta";
-import { PortalAcademyAssetLink } from "./PortalAcademyAssetLink";
+import { PortalAcademyAnexosLista } from "./PortalAcademyAnexosLista";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -54,15 +55,74 @@ export type AcademyPortalCategoriaCard = {
 
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 
+function MidiaAmpliadaModal({
+  titulo,
+  paths,
+  onClose,
+}: {
+  titulo: string;
+  paths: string[];
+  onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  const [urls, setUrls] = useState<(string | null)[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all(paths.map((p) => urlAssinadaAcademyPortalAsset(p))).then((signed) => {
+      if (!cancelled) setUrls(signed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [paths]);
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={920} zIndex={1100}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar modal"
+          title="Fechar modal"
+          style={{ border: "none", background: "transparent", cursor: "pointer", color: t.textMuted, padding: 4 }}
+        >
+          <X size={22} aria-hidden />
+        </button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {paths.map((path, i) => {
+          const url = urls[i];
+          if (!url) return null;
+          return isVideoPath(path) ? (
+            <video
+              key={path}
+              src={url}
+              controls
+              style={{ width: "100%", maxHeight: "min(80dvh, 720px)", borderRadius: 10, display: "block" }}
+            />
+          ) : (
+            <img
+              key={path}
+              src={url}
+              alt={titulo}
+              style={{ width: "100%", maxHeight: "min(80dvh, 720px)", objectFit: "contain", borderRadius: 10, display: "block" }}
+            />
+          );
+        })}
+      </div>
+    </ModalBase>
+  );
+}
+
 export function PostagemAcademyCard({
   titulo,
   corpo,
   introducao,
   categoria,
   jogosMesa,
-  imagemStoragePath,
-  anexoStoragePath,
-  anexoNome,
+  imagemStoragePaths,
+  anexos,
   autorInfo,
   dataPublicacao,
   cardShadow,
@@ -74,9 +134,8 @@ export function PostagemAcademyCard({
   introducao?: string | null;
   categoria: AcademyPortalCategoriaCard | null | undefined;
   jogosMesa?: string[] | string | null;
-  imagemStoragePath: string | null | undefined;
-  anexoStoragePath: string | null | undefined;
-  anexoNome: string | null | undefined;
+  imagemStoragePaths: string[];
+  anexos: AcademyPortalAnexoRef[];
   autorInfo: AcademyPortalAutorInfo | undefined;
   dataPublicacao: string | null | undefined;
   cardShadow: string;
@@ -89,21 +148,23 @@ export function PostagemAcademyCard({
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaAmpliada, setMediaAmpliada] = useState(false);
   const jogosTags = normalizarJogosMesa(jogosMesa);
-  const isVideo = isVideoPath(imagemStoragePath);
+  const capaPath = imagemStoragePaths[0] ?? null;
+  const isVideo = isVideoPath(capaPath);
+  const midiaExtra = imagemStoragePaths.length > 1 ? imagemStoragePaths.length - 1 : 0;
 
   useEffect(() => {
     let cancelled = false;
-    if (!imagemStoragePath?.trim()) {
+    if (!capaPath?.trim()) {
       setMediaUrl(null);
       return;
     }
-    void urlAssinadaAcademyPortalAsset(imagemStoragePath).then((url) => {
+    void urlAssinadaAcademyPortalAsset(capaPath).then((url) => {
       if (!cancelled) setMediaUrl(url);
     });
     return () => {
       cancelled = true;
     };
-  }, [imagemStoragePath]);
+  }, [capaPath]);
 
   const preview = mostrarBotaoVer && introducao?.trim()
     ? introducao.trim().slice(0, PREVIEW_LEN)
@@ -138,15 +199,7 @@ export function PostagemAcademyCard({
               <CorpoHtmlPortalRh html={preview} color={t.textMuted} />
             )}
           </div>
-          {anexoStoragePath ? (
-            <p style={{ margin: "10px 0 0", fontSize: 13, fontFamily: FONT.body }}>
-              <PortalAcademyAssetLink
-                storagePath={anexoStoragePath}
-                label={anexoNome?.trim() ? `Ver anexo (${anexoNome.trim()})` : "Ver anexo"}
-                color={t.text}
-              />
-            </p>
-          ) : null}
+          <PortalAcademyAnexosLista anexos={anexos} color={t.text} />
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 14 }}>
             {mostrarBotaoVer && onVerCompleto ? (
               <button type="button" onClick={onVerCompleto} style={btnCtaPrimario(brand)}>
@@ -172,6 +225,7 @@ export function PostagemAcademyCard({
               cursor: "zoom-in",
               flexShrink: 0,
               overflow: "hidden",
+              position: "relative",
             }}
           >
             {isVideo ? (
@@ -189,37 +243,29 @@ export function PostagemAcademyCard({
                 style={{ width: 96, height: 96, objectFit: "cover", display: "block" }}
               />
             )}
+            {midiaExtra > 0 ? (
+              <span
+                style={{
+                  position: "absolute",
+                  right: 4,
+                  bottom: 4,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  background: "rgba(0,0,0,0.65)",
+                  color: "#fff",
+                }}
+              >
+                +{midiaExtra}
+              </span>
+            ) : null}
           </button>
         ) : null}
       </div>
 
-      {mediaAmpliada && mediaUrl ? (
-        <ModalBase onClose={() => setMediaAmpliada(false)} maxWidth={920} zIndex={1100}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={() => setMediaAmpliada(false)}
-              aria-label="Fechar modal"
-              title="Fechar modal"
-              style={{ border: "none", background: "transparent", cursor: "pointer", color: t.textMuted, padding: 4 }}
-            >
-              <X size={22} aria-hidden />
-            </button>
-          </div>
-          {isVideo ? (
-            <video
-              src={mediaUrl}
-              controls
-              style={{ width: "100%", maxHeight: "min(80dvh, 720px)", borderRadius: 10, display: "block" }}
-            />
-          ) : (
-            <img
-              src={mediaUrl}
-              alt={titulo}
-              style={{ width: "100%", maxHeight: "min(80dvh, 720px)", objectFit: "contain", borderRadius: 10, display: "block" }}
-            />
-          )}
-        </ModalBase>
+      {mediaAmpliada && imagemStoragePaths.length > 0 ? (
+        <MidiaAmpliadaModal titulo={titulo} paths={imagemStoragePaths} onClose={() => setMediaAmpliada(false)} />
       ) : null}
     </div>
   );

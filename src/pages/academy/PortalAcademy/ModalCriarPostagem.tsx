@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -9,7 +9,13 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SelectOrganogramaMultiForm } from "../../../components/rh/SelectOrganogramaMultiForm";
-import { uploadAcademyPortalAsset } from "../../../lib/academyPortalPostagemFiles";
+import {
+  normalizarAnexosAcademyPortal,
+  normalizarImagensAcademyPortal,
+  payloadMidiaAcademyPortal,
+  uploadAcademyPortalAssets,
+  type AcademyPortalAnexoRef,
+} from "../../../lib/academyPortalPostagemFiles";
 import { opcoesTimesAplicavelAcademyManuais } from "../../../lib/academyPortalAplicavel";
 import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
@@ -50,6 +56,59 @@ const ERRO_SALVAR =
   "Não foi possível salvar a postagem. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_UPLOAD = "Não foi possível enviar o arquivo. Tente novamente.";
 
+function ListaArquivosModalCampo({
+  items,
+  onRemove,
+  t,
+}: {
+  items: { key: string; label: string }[];
+  onRemove: (key: string) => void;
+  t: { textMuted: string; cardBorder: string; inputBg: string };
+}) {
+  if (!items.length) return null;
+  return (
+    <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none" }}>
+      {items.map((item) => (
+        <li
+          key={item.key}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 11,
+            color: t.textMuted,
+            marginTop: 4,
+            fontFamily: FONT.body,
+          }}
+        >
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(item.key)}
+            aria-label={`Remover ${item.label}`}
+            title={`Remover ${item.label}`}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.textMuted,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <X size={12} aria-hidden />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ModalCriarPostagem({
   open,
   modo,
@@ -84,11 +143,10 @@ export function ModalCriarPostagem({
   const [aplicavelA, setAplicavelA] = useState<string[]>([]);
   const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [jogosOpcoes, setJogosOpcoes] = useState<string[]>([]);
-  const [imagemFile, setImagemFile] = useState<File | null>(null);
-  const [anexoFile, setAnexoFile] = useState<File | null>(null);
-  const [imagemPath, setImagemPath] = useState<string | null>(null);
-  const [anexoPath, setAnexoPath] = useState<string | null>(null);
-  const [anexoNome, setAnexoNome] = useState<string | null>(null);
+  const [imagemPaths, setImagemPaths] = useState<string[]>([]);
+  const [imagemFiles, setImagemFiles] = useState<File[]>([]);
+  const [anexoRefs, setAnexoRefs] = useState<AcademyPortalAnexoRef[]>([]);
+  const [anexoFiles, setAnexoFiles] = useState<File[]>([]);
   const [statusAtual, setStatusAtual] = useState<AcademyPostagemStatus>("rascunho");
   const [loadingData, setLoadingData] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -97,7 +155,7 @@ export function ModalCriarPostagem({
   const [snapshotEdicao, setSnapshotEdicao] = useState<SnapshotPostagemEdicaoAcademy | null>(null);
 
   const buildSnapshot = useCallback(
-    (paths: { imagem: string | null; anexo: string | null; anexoNome: string | null }): SnapshotPostagemEdicaoAcademy | null => {
+    (paths: { imagens: string[]; anexos: AcademyPortalAnexoRef[] }): SnapshotPostagemEdicaoAcademy | null => {
       if (!tipoPostagem) return null;
       return {
         tipoPostagem,
@@ -110,9 +168,8 @@ export function ModalCriarPostagem({
         versao: versaoManual,
         exigeCiencia,
         aplicavelA,
-        imagemPath: paths.imagem,
-        anexoPath: paths.anexo,
-        anexoNome: paths.anexoNome,
+        imagemPaths: paths.imagens,
+        anexoRefs: paths.anexos,
       };
     },
     [tipoPostagem, tipoSubcategoria, titulo, introducao, descricao, jogosMesa, codigoManual, versaoManual, exigeCiencia, aplicavelA],
@@ -122,6 +179,54 @@ export function ModalCriarPostagem({
     () => opcoesTimesAplicavelAcademyManuais(organogramaGrupos),
     [organogramaGrupos],
   );
+
+  const itensImagemLista = useMemo(() => {
+    const saved = imagemPaths.map((path) => ({
+      key: `saved:${path}`,
+      label: path.split("/").pop() || path,
+    }));
+    const pending = imagemFiles.map((file, i) => ({
+      key: `pending:${i}`,
+      label: `${file.name} (pendente)`,
+    }));
+    return [...saved, ...pending];
+  }, [imagemPaths, imagemFiles]);
+
+  const itensAnexoLista = useMemo(() => {
+    const saved = anexoRefs.map((a) => ({
+      key: `saved:${a.path}`,
+      label: a.nome,
+    }));
+    const pending = anexoFiles.map((file, i) => ({
+      key: `pending:${i}`,
+      label: `${file.name} (pendente)`,
+    }));
+    return [...saved, ...pending];
+  }, [anexoRefs, anexoFiles]);
+
+  const removerImagemItem = (key: string) => {
+    if (key.startsWith("saved:")) {
+      const path = key.slice(6);
+      setImagemPaths((prev) => prev.filter((p) => p !== path));
+      return;
+    }
+    if (key.startsWith("pending:")) {
+      const idx = Number(key.slice(8));
+      setImagemFiles((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+  const removerAnexoItem = (key: string) => {
+    if (key.startsWith("saved:")) {
+      const path = key.slice(6);
+      setAnexoRefs((prev) => prev.filter((a) => a.path !== path));
+      return;
+    }
+    if (key.startsWith("pending:")) {
+      const idx = Number(key.slice(8));
+      setAnexoFiles((prev) => prev.filter((_, i) => i !== idx));
+    }
+  };
 
   const resetForm = useCallback(() => {
     setTipoPostagem("");
@@ -134,11 +239,10 @@ export function ModalCriarPostagem({
     setVersaoManual("1.0");
     setExigeCiencia("sim");
     setAplicavelA([]);
-    setImagemFile(null);
-    setAnexoFile(null);
-    setImagemPath(null);
-    setAnexoPath(null);
-    setAnexoNome(null);
+    setImagemPaths([]);
+    setImagemFiles([]);
+    setAnexoRefs([]);
+    setAnexoFiles([]);
     setStatusAtual("rascunho");
     setFieldErr({});
     setErro(null);
@@ -216,9 +320,10 @@ export function ModalCriarPostagem({
       setVersaoManual(row.versao?.trim() || "1.0");
       setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
       setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
-      setImagemPath(row.imagem_storage_path);
-      setAnexoPath(row.anexo_storage_path);
-      setAnexoNome(row.anexo_nome);
+      setImagemPaths(normalizarImagensAcademyPortal(row));
+      setAnexoRefs(normalizarAnexosAcademyPortal(row));
+      setImagemFiles([]);
+      setAnexoFiles([]);
       setStatusAtual(row.status ?? "rascunho");
       setSnapshotEdicao({
         tipoPostagem: tipoUi,
@@ -234,9 +339,8 @@ export function ModalCriarPostagem({
         versao: row.versao?.trim() || "1.0",
         exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
         aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
-        imagemPath: row.imagem_storage_path,
-        anexoPath: row.anexo_storage_path,
-        anexoNome: row.anexo_nome,
+        imagemPaths: normalizarImagensAcademyPortal(row),
+        anexoRefs: normalizarAnexosAcademyPortal(row),
       });
     })();
   }, [open, modo, editRef, resetForm]);
@@ -248,21 +352,25 @@ export function ModalCriarPostagem({
   };
 
   const uploadArquivos = async () => {
-    let img = imagemPath;
-    let anx = anexoPath;
-    let anxNome = anexoNome;
-    if (imagemFile) {
-      const up = await uploadAcademyPortalAsset(imagemFile, "imagens");
-      if (up.error) return { imagem: null, anexo: null, anexoNomeOut: null, err: up.error };
-      img = up.path;
+    const imagens = [...imagemPaths];
+    const anexos = [...anexoRefs];
+
+    if (imagemFiles.length > 0) {
+      const up = await uploadAcademyPortalAssets(imagemFiles, "imagens");
+      if (up.error) return { imagens: [] as string[], anexos: [] as AcademyPortalAnexoRef[], err: up.error };
+      imagens.push(...up.paths);
     }
-    if (anexoFile) {
-      const up = await uploadAcademyPortalAsset(anexoFile, "anexos");
-      if (up.error) return { imagem: img, anexo: null, anexoNomeOut: null, err: up.error };
-      anx = up.path;
-      anxNome = anexoFile.name;
+    if (anexoFiles.length > 0) {
+      const up = await uploadAcademyPortalAssets(anexoFiles, "anexos");
+      if (up.error) return { imagens, anexos: [] as AcademyPortalAnexoRef[], err: up.error };
+      anexos.push(
+        ...up.paths.map((path, i) => ({
+          path,
+          nome: anexoFiles[i]?.name || path.split("/").pop() || "Anexo",
+        })),
+      );
     }
-    return { imagem: img, anexo: anx, anexoNomeOut: anxNome, err: null };
+    return { imagens, anexos, err: null as string | null };
   };
 
   const persistir = async (acao: AcaoModal) => {
@@ -312,7 +420,7 @@ export function ModalCriarPostagem({
 
     const registrarEdicoesRascunho = async (contentId: string) => {
       if (modo !== "editar" || statusAnterior !== "rascunho" || !snapshotEdicao || !user?.id) return;
-      const depois = buildSnapshot({ imagem: up.imagem, anexo: up.anexo, anexoNome: up.anexoNomeOut });
+      const depois = buildSnapshot({ imagens: up.imagens, anexos: up.anexos });
       if (!depois) return;
       const alteracoes = diffEdicaoRascunho(snapshotEdicao, depois);
       await registrarHistoricoEdicoesRascunho(supabase, ct, contentId, alteracoes, user.id);
@@ -342,9 +450,7 @@ export function ModalCriarPostagem({
         corpo: descricao,
         categoria_id: catId,
         status: novoStatus,
-        imagem_storage_path: up.imagem,
-        anexo_storage_path: up.anexo,
-        anexo_nome: up.anexoNomeOut,
+        ...payloadMidiaAcademyPortal(up.imagens, up.anexos),
         created_by: user.id,
         published_at: novoStatus === "publicado" ? now : null,
         published_by: novoStatus === "publicado" ? user.id : null,
@@ -625,23 +731,34 @@ export function ModalCriarPostagem({
                   id="ap-imagem"
                   type="file"
                   accept="image/*,video/*"
-                  onChange={(e) => setImagemFile(e.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(e) => {
+                    const list = e.target.files;
+                    if (!list?.length) return;
+                    setImagemFiles((prev) => [...prev, ...Array.from(list)]);
+                    e.target.value = "";
+                  }}
                   style={{ ...inputStyle, padding: 8 }}
                   aria-label="Imagem ou vídeo"
                 />
+                <ListaArquivosModalCampo items={itensImagemLista} onRemove={removerImagemItem} t={t} />
               </div>
               <div>
                 {lbl("ap-anexo", "Anexo")}
                 <input
                   id="ap-anexo"
                   type="file"
-                  onChange={(e) => setAnexoFile(e.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(e) => {
+                    const list = e.target.files;
+                    if (!list?.length) return;
+                    setAnexoFiles((prev) => [...prev, ...Array.from(list)]);
+                    e.target.value = "";
+                  }}
                   style={{ ...inputStyle, padding: 8 }}
                   aria-label="Anexo"
                 />
-                {anexoNome && !anexoFile ? (
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>{anexoNome}</div>
-                ) : null}
+                <ListaArquivosModalCampo items={itensAnexoLista} onRemove={removerAnexoItem} t={t} />
               </div>
             </>
           ) : null}
