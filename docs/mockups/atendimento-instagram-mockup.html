@@ -321,6 +321,9 @@
       padding: 20px;
       box-shadow: var(--shadow);
     }
+    .content-box + .content-box {
+      margin-top: 14px;
+    }
     .section-title { margin-bottom: 14px; }
     .section-title h2 {
       font-family: var(--font-title);
@@ -795,9 +798,9 @@
 
     <main class="main">
       <div class="mockup-banner">
-        <strong>Mockup — aba Instagram</strong> · Proposta para <strong>@spingamingbrasil</strong>.
-        Inclui sub-abas <strong>Mensagens</strong> (DM) e <strong>Comentários</strong>, thread no modal Ver,
-        composer desabilitado (Fase 2) e indicador de janela de 24h. Interativo: carrossel de status, subtipo, Ver e Atender.
+        <strong>Mockup — aba Instagram</strong> · Conta <strong>@spingamingbrasil</strong>.
+        Dois blocos: <strong>Mensagens</strong> (DM-<code>ANO/NNNN</code>) e <strong>Comentários</strong> (COMENT-<code>ANO/NNNN</code>).
+        Colunas variam por status do carrossel. Interativo: carrossel, Staff, Ver e Atender.
       </div>
 
       <header class="page-header">
@@ -851,47 +854,46 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
             E-mail
           </button>
-          <button type="button" class="tab-btn active-ig active" role="tab" aria-selected="true" aria-controls="panel-instagram">
+          <button type="button" class="tab-btn active-ig active" role="tab" id="tab-instagram" aria-selected="true" aria-controls="panel-mensagens">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
             Instagram
           </button>
         </div>
 
-        <div class="filter-row" id="row-subtipo">
-          <span class="conta-strip" aria-label="Conta monitorada">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg>
-            Conta: <strong>@spingamingbrasil</strong>
-          </span>
-          <button type="button" class="subtipo-pill active" data-subtipo="dm" role="tab" aria-selected="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Mensagens
-          </button>
-          <button type="button" class="subtipo-pill" data-subtipo="comentario" role="tab" aria-selected="false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-            Comentários
-          </button>
-        </div>
       </div>
 
-      <section class="content-box" id="panel-instagram" role="tabpanel">
+      <section class="content-box" id="panel-mensagens" role="tabpanel" aria-labelledby="tab-instagram">
         <div class="section-title">
-          <h2>Atendimentos<span class="sub">— Instagram · <span id="subtipo-label">Mensagens</span></span></h2>
+          <h2>Mensagens</h2>
         </div>
         <div class="table-wrap">
           <table>
-            <caption style="display:none">Chamados Instagram</caption>
-            <thead><tr id="table-head"></tr></thead>
-            <tbody id="table-body"></tbody>
+            <caption style="display:none">Chamados Instagram — mensagens diretas</caption>
+            <thead><tr id="table-head-dm"></tr></thead>
+            <tbody id="table-body-dm"></tbody>
           </table>
         </div>
-        <div class="empty-state" id="empty-state">Nenhum chamado encontrado.</div>
+        <div class="empty-state" id="empty-state-dm">Nenhum chamado encontrado.</div>
+      </section>
+
+      <section class="content-box" id="panel-comentarios">
+        <div class="section-title">
+          <h2>Comentários</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Chamados Instagram — comentários</caption>
+            <thead><tr id="table-head-com"></tr></thead>
+            <tbody id="table-body-com"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empty-state-com">Nenhum chamado encontrado.</div>
 
         <div class="legend-box">
-          <strong>Regras deste mockup (produto):</strong>
-          Novos chamados chegam <strong>sem atendente</strong>.
-          Cada sessão de 24h desde a última mensagem do usuário = um chamado (<code>INSTA-ANO/NNNN</code>).
-          Após 24h sem resposta do usuário → mensagem automática de encerramento + Arquivado; nova DM = novo chamado.
-          Resposta pelo Instagram na plataforma = <strong>Fase 2</strong> (composer já reservado nos modais).
+          <strong>SLA / Tempo de Resposta (Mensagens):</strong>
+          <strong>Tempo de Resposta</strong> = intervalo entre a primeira mensagem do usuário e a primeira resposta da Spin (coluna visível em <em>Em Andamento</em>).
+          Em <strong>Todos Status</strong>, a coluna <strong>SLA</strong> exibe Tempo de Resposta se <em>Em Andamento</em>, <strong>—</strong> se <em>Aberto</em>, ou tempo abertura → arquivamento se <em>Arquivado</em>.
+          <strong>Comentários:</strong> SLA só preenchido quando arquivado; aberto/em andamento exibem <strong>—</strong> em Todos Status.
         </div>
       </section>
     </main>

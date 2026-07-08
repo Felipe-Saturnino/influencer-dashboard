@@ -227,6 +227,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "usuarios", slug: "Usuarios", label: "Usuários", access: "always" },
     { tabId: "permissoes", slug: "Permissoes", label: "Permissões", access: "always" },
     { tabId: "escopos", slug: "Escopos", label: "Escopos", access: "always" },
+    { tabId: "simulador", slug: "SimuladorDeLogin", label: "Simulador de Login", access: "always" },
   ]),
   page("Ajuda", "ajuda", "Ajuda", [
     { tabId: "conheca", slug: "ConhecaAPlataforma", label: "Conheça a Plataforma", access: "always" },

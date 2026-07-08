@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Eye, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { PageHeader } from "../../../components/PageHeader";
@@ -9,7 +9,6 @@ import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { supabase } from "../../../lib/supabase";
 import {
-  FILTROS_PERFIL_LINHAS_SIMULADOR,
   GESTOR_TIPOS,
   PRESTADOR_TIPOS,
   roleLabel,
@@ -17,6 +16,7 @@ import {
 import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import {
+  filtrarLinhasSimuladorPorRoles,
   roleExigeGestorTipoNaSimulacao,
   roleExigeOperadoraNaSimulacao,
   roleExigePrestadorTipoNaSimulacao,
@@ -27,7 +27,7 @@ type OperadoraOpt = { slug: string; nome: string; ativo: boolean };
 type ModalOpcaoPerfil = "operadora" | "gestor_tipo" | "prestador_tipo";
 
 export default function SimuladorLogin() {
-  const { theme: t, simulacaoLogin, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
+  const { theme: t, simulacaoLogin, simuladorRolesPermitidos, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("simulador_login");
 
@@ -42,6 +42,11 @@ export default function SimuladorLogin() {
   const [iniciando, setIniciando] = useState(false);
 
   const pageBox = getPageContentBoxStyle(brand, t);
+
+  const linhasPerfis = useMemo(
+    () => filtrarLinhasSimuladorPorRoles(simuladorRolesPermitidos),
+    [simuladorRolesPermitidos],
+  );
 
   const carregarOperadoras = useCallback(async () => {
     setCarregandoOperadoras(true);
@@ -187,7 +192,12 @@ export default function SimuladorLogin() {
       ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {FILTROS_PERFIL_LINHAS_SIMULADOR.map((linha) => (
+        {linhasPerfis.length === 0 ? (
+          <div style={{ ...pageBox, padding: "40px 20px", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Nenhum perfil liberado para visualização. Peça ao administrador para configurar em Gestão de Usuários → Simulador de Login.
+          </div>
+        ) : (
+          linhasPerfis.map((linha) => (
           <div key={linha.titulo} style={pageBox}>
             <h2
               style={{
@@ -216,7 +226,8 @@ export default function SimuladorLogin() {
               ))}
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       {modalOpcao && rolePendente ? (

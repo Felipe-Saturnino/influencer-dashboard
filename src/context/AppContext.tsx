@@ -39,6 +39,7 @@ import {
   aplicarOverridesPermissoesSimulacao,
   aplicarSomenteLeituraAcoes,
   buildEscoposSimulacao,
+  carregarRolesSimulaveisParaViewer,
   montarLabelSimulacao,
   readSimulacaoSession,
   resolverOperadoraNome,
@@ -117,6 +118,8 @@ interface AppContextValue {
   simulacaoLogin: SimulacaoLoginState | null;
   simulacaoSomenteLeitura: boolean;
   podeAcessarSimuladorLogin: boolean;
+  /** Perfis que o usuário real pode simular (matriz Gestão de Usuários → Simulador de Login). */
+  simuladorRolesPermitidos: Role[];
   iniciarSimulacaoLogin: (input: IniciarSimulacaoInput) => Promise<string | null>;
   encerrarSimulacaoLogin: () => Promise<void>;
   /** Permissões do usuário real (não simuladas). */
@@ -607,6 +610,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [permissionsAcoesReais, setPermissionsAcoesReais] = useState<PermissoesAcoesMapa>(emptyAcoesMapa);
   const [escoposReais, setEscoposReais] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
   const [simulacaoLogin, setSimulacaoLogin] = useState<SimulacaoLoginState | null>(null);
+  const [simuladorRolesPermitidos, setSimuladorRolesPermitidos] = useState<Role[]>([]);
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
 
   /** Refs síncronos — evitam checar permissões stale logo após `setPermissions` (antes do re-render). */
@@ -617,6 +621,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activeTabSlugRef = useRef(activeTabSlug);
   const layoutViewRef = useRef(layoutView);
   const simulacaoLoginRef = useRef(simulacaoLogin);
+  const simuladorRolesPermitidosRef = useRef(simuladorRolesPermitidos);
   const effectiveRoleRef = useRef<Role | undefined>(undefined);
   userRef.current = user;
   permissionsRef.current = permissions;
@@ -625,6 +630,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   activeTabSlugRef.current = activeTabSlug;
   layoutViewRef.current = layoutView;
   simulacaoLoginRef.current = simulacaoLogin;
+  simuladorRolesPermitidosRef.current = simuladorRolesPermitidos;
   effectiveRoleRef.current = simulacaoLogin?.role ?? user?.role;
 
   function syncAuthRefs(
@@ -859,7 +865,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!podeVerSimuladorLoginMapa(u.role, permissionsReais)) {
         return "Você não tem permissão para usar o Simulador de Login.";
       }
-      const validationErr = validarInputSimulacao(input);
+      const validationErr = validarInputSimulacao(input, simuladorRolesPermitidosRef.current);
       if (validationErr) return validationErr;
 
       let operadoraNome: string | undefined;
@@ -900,19 +906,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [navigateTo, restaurarContextoReal]);
 
   const tentarRestaurarSimulacaoSessao = useCallback(
-    async (u: User, permsReais: PermissoesMapa) => {
+    async (u: User, permsReais: PermissoesMapa, rolesPermitidos: Role[]) => {
       if (!podeVerSimuladorLoginMapa(u.role, permsReais)) {
         writeSimulacaoSession(null);
         return;
       }
-      const saved = readSimulacaoSession();
+      const saved = readSimulacaoSession(rolesPermitidos);
       if (!saved) return;
-      const validationErr = validarInputSimulacao({
-        role: saved.role,
-        operadoraSlug: saved.operadoraSlug,
-        gestorTipoSlug: saved.gestorTipoSlug,
-        prestadorTipoSlug: saved.prestadorTipoSlug,
-      });
+      const validationErr = validarInputSimulacao(
+        {
+          role: saved.role,
+          operadoraSlug: saved.operadoraSlug,
+          gestorTipoSlug: saved.gestorTipoSlug,
+          prestadorTipoSlug: saved.prestadorTipoSlug,
+        },
+        rolesPermitidos,
+      );
       if (validationErr) {
         writeSimulacaoSession(null);
         return;
@@ -949,9 +958,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPermissionsReais(perms);
         setPermissionsAcoesReais(acoes);
         setEscoposReais(escopos);
-        const savedSim = readSimulacaoSession();
+        const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
+          ? await carregarRolesSimulaveisParaViewer(u.role)
+          : [];
+        setSimuladorRolesPermitidos(rolesSimulador);
+        simuladorRolesPermitidosRef.current = rolesSimulador;
+        const savedSim = readSimulacaoSession(rolesSimulador);
         if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
-          await tentarRestaurarSimulacaoSessao(u, perms);
+          await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
         } else {
           writeSimulacaoSession(null);
           setSimulacaoLogin(null);
@@ -1010,6 +1024,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setEscoposVisiveis(ESCOPOS_VAZIOS);
       setSimulacaoLogin(null);
       simulacaoLoginRef.current = null;
+      setSimuladorRolesPermitidos([]);
+      simuladorRolesPermitidosRef.current = [];
       writeSimulacaoSession(null);
       syncAuthRefs(null, emptyPerms, emptyAcoes);
       setLayoutView("app");
@@ -1057,9 +1073,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setPermissionsReais(perms);
               setPermissionsAcoesReais(acoes);
               setEscoposReais(escopos);
-              const savedSim = readSimulacaoSession();
+              const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
+                ? await carregarRolesSimulaveisParaViewer(u.role)
+                : [];
+              setSimuladorRolesPermitidos(rolesSimulador);
+              simuladorRolesPermitidosRef.current = rolesSimulador;
+              const savedSim = readSimulacaoSession(rolesSimulador);
               if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
-                await tentarRestaurarSimulacaoSessao(u, perms);
+                await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
               } else {
                 writeSimulacaoSession(null);
                 setSimulacaoLogin(null);
@@ -1159,6 +1180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       simulacaoLogin,
       simulacaoSomenteLeitura,
       podeAcessarSimuladorLogin,
+      simuladorRolesPermitidos,
       iniciarSimulacaoLogin,
       encerrarSimulacaoLogin,
       permissionsReais,

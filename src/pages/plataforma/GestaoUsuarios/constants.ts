@@ -240,6 +240,9 @@ export const FILTROS_PERFIL_LINHAS_SIMULADOR: { titulo: string; roles: Role[] }[
   }),
 ).filter((linha) => linha.roles.length > 0);
 
+/** Perfis configuráveis como «viewer» na aba Gestão de Usuários → Simulador de Login (= ROLES_PERMISSOES). */
+export const ROLES_VIEWER_SIMULADOR_LOGIN: Role[] = [...ROLES_PERMISSOES];
+
 export type FiltroStatusUsuarios = "todos" | "ativo" | "desativado";
 
 export const STATUS_USUARIO_CARROSSEL: { key: Exclude<FiltroStatusUsuarios, "todos">; label: string }[] = [

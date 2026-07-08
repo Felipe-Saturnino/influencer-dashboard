@@ -118,8 +118,8 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 
 - **PageKey:** `simulador_login` — menu superior (avatar), entre Configurações e Ajuda; **não** no menu lateral.
 - **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
-- **Perfis simuláveis:** deriva de `ROLES` em `GestaoUsuarios/constants.ts` — **todo perfil novo** no select «Perfil» / `FILTROS_PERFIL_LINHAS` entra automaticamente em `ROLES_SIMULAVEIS`, **exceto** `ROLES_EXCLUIDOS_SIMULADOR_LOGIN` (`admin`, `executivo`). UI agrupada: `FILTROS_PERFIL_LINHAS_SIMULADOR`.
-- **Checklist perfil novo:** além de `profiles` / `role_permissions`, incluir o slug em `ROLES` + `FILTROS_PERFIL_LINHAS` (Gestão de Usuários) — o Simulador **não** mantém lista paralela.
+- **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
+- **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
 - **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
 - **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).

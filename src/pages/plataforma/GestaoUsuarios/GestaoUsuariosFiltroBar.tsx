@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Briefcase, Building2, ChevronLeft, ChevronRight, KeyRound, User, UserCog } from "lucide-react";
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, User, UserCog } from "lucide-react";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -26,7 +26,7 @@ import {
 } from "./constants";
 import { GestaoUsuariosPerfilPill } from "./GestaoUsuariosPerfilPill";
 
-export type AbaGestaoPrincipal = "usuarios" | "permissoes" | "escopos";
+export type AbaGestaoPrincipal = "usuarios" | "permissoes" | "escopos" | "simulador";
 export type AbaGestaoEscopo = "operadora" | "gestores" | "prestadores";
 
 export interface ContagensFiltroUsuarios {
@@ -54,6 +54,7 @@ const ABAS_PRINCIPAIS: { key: AbaGestaoPrincipal; label: string }[] = [
   { key: "usuarios", label: "Usuários" },
   { key: "permissoes", label: "Permissões" },
   { key: "escopos", label: "Escopos" },
+  { key: "simulador", label: "Simulador de Login" },
 ];
 
 const ABAS_ESCOPO: { key: AbaGestaoEscopo; label: string }[] = [
@@ -66,6 +67,7 @@ const GESTAO_TAB_ICONS: Record<AbaGestaoPrincipal, React.ReactNode> = {
   usuarios: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
   permissoes: <KeyRound {...FILTRO_BAR_TAB_ICON_PROPS} />,
   escopos: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  simulador: <Eye {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
 const ESCOPO_TAB_ICONS: Record<AbaGestaoEscopo, React.ReactNode> = {
@@ -333,6 +335,18 @@ export function GestaoUsuariosFiltroBar({
       ) : null}
 
       {aba === "permissoes" ? (
+        <FiltroBarSecaoSeparada>
+          <LinhasPerfis
+            linhas={FILTROS_PERFIL_LINHAS_PERMISSOES}
+            roleAtivo={roleAtivo}
+            onRoleSelect={onRoleAtivoChange}
+            contagens={contagens}
+            modo="single"
+          />
+        </FiltroBarSecaoSeparada>
+      ) : null}
+
+      {aba === "simulador" ? (
         <FiltroBarSecaoSeparada>
           <LinhasPerfis
             linhas={FILTROS_PERFIL_LINHAS_PERMISSOES}

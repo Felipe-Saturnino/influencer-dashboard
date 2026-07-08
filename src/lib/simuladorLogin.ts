@@ -5,6 +5,7 @@ import { ROLES_SEM_RESTRICAO_ESCOPO, roleParidadeInfluencer } from "./staffRoles
 import {
   GESTOR_TIPOS,
   PRESTADOR_TIPOS,
+  FILTROS_PERFIL_LINHAS_SIMULADOR,
   ROLES_SIMULAVEIS,
   roleLabel,
 } from "../pages/plataforma/GestaoUsuarios/constants";
@@ -13,6 +14,38 @@ import { supabase } from "./supabase";
 export const SIMULADOR_LOGIN_SESSION_KEY = "simulador_login_ativo";
 
 export { ROLES_SIMULAVEIS };
+
+/** Linhas da página Simulador filtradas pelos perfis permitidos ao usuário logado. */
+export function filtrarLinhasSimuladorPorRoles(
+  rolesPermitidos: readonly Role[],
+): { titulo: string; roles: Role[] }[] {
+  const set = new Set(rolesPermitidos);
+  return FILTROS_PERFIL_LINHAS_SIMULADOR.map(({ titulo, roles }) => ({
+    titulo,
+    roles: roles.filter((r) => set.has(r)),
+  })).filter((l) => l.roles.length > 0);
+}
+
+/** Perfis simuláveis configurados para o perfil logado (Gestão de Usuários → Simulador de Login). */
+export async function carregarRolesSimulaveisParaViewer(viewerRole: Role): Promise<Role[]> {
+  if (viewerRole === "admin") {
+    return [...ROLES_SIMULAVEIS];
+  }
+  const { data, error } = await supabase
+    .from("simulador_login_roles")
+    .select("simulavel_role")
+    .eq("viewer_role", viewerRole);
+  if (error) {
+    console.error("Erro ao carregar simulador_login_roles:", error);
+    return [];
+  }
+  const permitidos = new Set<Role>();
+  (data ?? []).forEach((row: { simulavel_role: string }) => {
+    const role = row.simulavel_role as Role;
+    if (ROLES_SIMULAVEIS.includes(role)) permitidos.add(role);
+  });
+  return ROLES_SIMULAVEIS.filter((r) => permitidos.has(r));
+}
 
 export const SIMULADOR_LOGIN_PAGE_KEY = "simulador_login" as const;
 
@@ -150,13 +183,14 @@ export function aplicarSomenteLeituraAcoes(acoes: PermissoesAcoesMapa): Permisso
   return next;
 }
 
-export function readSimulacaoSession(): SimulacaoLoginState | null {
+export function readSimulacaoSession(rolesPermitidos?: readonly Role[]): SimulacaoLoginState | null {
   try {
     const raw = sessionStorage.getItem(SIMULADOR_LOGIN_SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SimulacaoLoginState;
     if (!parsed?.role || !parsed.labelExibicao) return null;
-    if (!ROLES_SIMULAVEIS.includes(parsed.role)) return null;
+    const catalogo = rolesPermitidos ?? ROLES_SIMULAVEIS;
+    if (!catalogo.includes(parsed.role)) return null;
     return parsed;
   } catch {
     return null;
@@ -180,8 +214,11 @@ export async function resolverOperadoraNome(slug: string): Promise<string | null
   return data?.nome ?? null;
 }
 
-export function validarInputSimulacao(input: IniciarSimulacaoInput): string | null {
-  if (!ROLES_SIMULAVEIS.includes(input.role)) {
+export function validarInputSimulacao(
+  input: IniciarSimulacaoInput,
+  rolesPermitidos: readonly Role[] = ROLES_SIMULAVEIS,
+): string | null {
+  if (!rolesPermitidos.includes(input.role)) {
     return "Perfil inválido para visualização.";
   }
   if (roleExigeOperadoraNaSimulacao(input.role) && !input.operadoraSlug?.trim()) {
