@@ -28,6 +28,7 @@ globs:
 | Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
 | Proxy site | Cloudflare `/api/prospecto-cs-atendimento-site` — doc agência: `docs/api-prospecto-cs-atendimento-site-agencia.md` |
 | Atendimento | RPC `cs_chamado_atender` — exige anotação ao alterar status |
+| Atendente | `atendente_id` **NULL** na abertura (site e e-mail); preenchido com o **usuário autenticado** que altera o status via `cs_chamado_atender` (abas Site Spin e E-mail). Anotação sem mudança de status **não** altera o atendente. |
 
 ---
 
@@ -81,7 +82,7 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 
 **Ver:** título Site `[protocolo] - [solicitante]` · E-mail `[protocolo] - [assunto]`; abas **Dados do Chamado** / **Dados do E-mail** (com bloco **Anexo** — Ver / Baixar por ficheiro) | **Histórico**.
 
-**Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; bloco **Histórico de Anotações**.
+**Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; ao mudar status, o usuário logado vira **Atendente** na tabela; bloco **Histórico de Anotações**.
 
 ---
 

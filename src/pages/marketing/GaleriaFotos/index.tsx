@@ -225,6 +225,7 @@ export default function GaleriaFotos() {
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
+  const [prestadoresExpandidos, setPrestadoresExpandidos] = useState<Set<string>>(() => new Set());
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
@@ -266,12 +267,30 @@ export default function GaleriaFotos() {
     [fotosVisiveis, metadadosGaleria],
   );
   const forcarExpandirEventos = buscaGaleria.trim().length > 0;
+  const prestadorBlocoRecolhivel =
+    galeriaSubAba === "minhas_fotos" &&
+    podeFiltrarPrestador &&
+    filtroPrestador === FILTRO_PRESTADOR_TODOS &&
+    !forcarExpandirEventos;
+  const forcarExpandirPrestadores =
+    forcarExpandirEventos ||
+    !podeFiltrarPrestador ||
+    filtroPrestador !== FILTRO_PRESTADOR_TODOS;
 
   const toggleEventoExpandido = (eventoId: string) => {
     setEventosExpandidos((prev) => {
       const next = new Set(prev);
       if (next.has(eventoId)) next.delete(eventoId);
       else next.add(eventoId);
+      return next;
+    });
+  };
+
+  const togglePrestadorExpandido = (prestadorId: string) => {
+    setPrestadoresExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(prestadorId)) next.delete(prestadorId);
+      else next.add(prestadorId);
       return next;
     });
   };
@@ -474,7 +493,9 @@ export default function GaleriaFotos() {
         continue;
       }
       if (buscaDeb && !textoContemBuscaEmAlgum(buscaDeb, p.nome)) continue;
-      void carregarGrupoFotos("prestador", p.id);
+      if (forcarExpandirPrestadores || prestadoresExpandidos.has(p.id)) {
+        void carregarGrupoFotos("prestador", p.id);
+      }
     }
   }, [
     galeriaSubAba,
@@ -484,6 +505,8 @@ export default function GaleriaFotos() {
     meuRhFuncionarioId,
     buscaDeb,
     fotosBusca,
+    forcarExpandirPrestadores,
+    prestadoresExpandidos,
     carregarGrupoFotos,
   ]);
 
@@ -1379,14 +1402,81 @@ export default function GaleriaFotos() {
 
               return (
                 <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
-                  <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
-                  <div style={{ marginTop: 14 }}>
-                    {renderGradeFotosGaleria(
-                      bloco.fotos,
-                      chaveCacheGrupoGaleria("prestador", bloco.id),
-                      bloco.qtdFotos,
-                    )}
-                  </div>
+                  {prestadorBlocoRecolhivel ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => togglePrestadorExpandido(bloco.id)}
+                        aria-expanded={prestadoresExpandidos.has(bloco.id)}
+                        aria-controls={`panel-galeria-prestador-${bloco.id}`}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          padding: 0,
+                          margin: 0,
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          textAlign: "left",
+                        }}
+                      >
+                        <ChevronRight
+                          size={14}
+                          color={t.textMuted}
+                          aria-hidden
+                          style={{
+                            marginTop: 4,
+                            transform: prestadoresExpandidos.has(bloco.id)
+                              ? "rotate(90deg)"
+                              : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <SectionTitle sub={bloco.sub} compact>
+                            {bloco.titulo}
+                          </SectionTitle>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: t.textMuted,
+                            fontFamily: FONT.body,
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          {bloco.qtdFotos === 1 ? "1 foto" : `${bloco.qtdFotos} fotos`}
+                        </span>
+                      </button>
+                      {prestadoresExpandidos.has(bloco.id) ? (
+                        <div
+                          id={`panel-galeria-prestador-${bloco.id}`}
+                          style={{ marginTop: 14 }}
+                        >
+                          {renderGradeFotosGaleria(
+                            bloco.fotos,
+                            chaveCacheGrupoGaleria("prestador", bloco.id),
+                            bloco.qtdFotos,
+                          )}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
+                      <div style={{ marginTop: 14 }}>
+                        {renderGradeFotosGaleria(
+                          bloco.fotos,
+                          chaveCacheGrupoGaleria("prestador", bloco.id),
+                          bloco.qtdFotos,
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })

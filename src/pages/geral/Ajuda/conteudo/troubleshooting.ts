@@ -1199,7 +1199,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo atender chamado?",
         texto:
-          "O ícone **Atender** exige permissão de **Editar** em Atendimento (Gestão de Usuários). Ao alterar o status, informe uma anotação no modal.",
+          "O ícone **Atender** exige permissão de **Editar** em Atendimento (Gestão de Usuários). Chamados novos ficam sem atendente até alguém alterar o status; quem altera passa a ser o **Atendente** na lista. Ao alterar o status, informe uma anotação no modal.",
       },
     ],
   },
