@@ -93,6 +93,8 @@ const PAGES_META: {
   // Comercial
   { key: "comercial_overview", label: "Overview Comercial", secao: "Comercial", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "comercial_pipeline_b2b", label: "Pipeline B2B", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
+  // Customer Success
+  { key: "cs_atendimento", label: "Atendimento", secao: "Customer Success", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Estúdio (menu)
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   {

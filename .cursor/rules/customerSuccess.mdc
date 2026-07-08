@@ -1,0 +1,80 @@
+---
+description: Customer Success — Atendimento (chamados Site Spin)
+globs:
+  - src/pages/customerSuccess/**
+  - src/lib/csAtendimento*.ts
+  - src/types/csAtendimento.ts
+---
+
+# Customer Success — Atendimento
+
+**Antes de implementar:** `business.mdc` → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**PageKey:** `cs_atendimento` · **Menu:** Customer Success → Atendimento · **Rota:** `Atendimento`
+
+---
+
+## Identificação
+
+| Item | Valor |
+|------|-------|
+| Subtítulo | Gerencie chamados do site Spin, acompanhe SLA e registre o atendimento da equipe. |
+| Origem (v1) | `site_spin` — aba única **Site Spin** |
+| Protocolo | `SITE-[ANO]/[NNNN]` (4 dígitos por ano) |
+| Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_protocolo_contador` |
+| Criação pública | Edge `prospecto-cs-atendimento-site` → RPC `cs_chamado_criar_site_spin` (service_role) |
+| Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
+| Proxy site | Cloudflare `/api/prospecto-cs-atendimento-site` — doc agência: `docs/api-prospecto-cs-atendimento-site-agencia.md` |
+| Atendimento | RPC `cs_chamado_atender` — exige anotação ao alterar status |
+
+---
+
+## Status e colunas da tabela
+
+| Filtro carrossel | Colunas |
+|------------------|---------|
+| Aberto | Chamado, Data de Abertura, Solicitante, Ações |
+| Em Andamento | + Início do Atendimento, Atendente |
+| Arquivado | Chamado, Data de Abertura, Solicitante, Atendente, SLA, Ações (só Ver) |
+| Todos Status | Todas + Status; Atender exceto arquivado |
+
+**SLA:** `fmtSlaChamado(created_at, arquivado_em)` — tempo abertura → arquivamento.
+
+**Vazio:** `Nenhum chamado encontrado.`
+
+---
+
+## Filtros
+
+**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Atendente** (`FiltroBarCampoSelect`, ícone `User` 15px): **Todos**, **Nenhum**, prestadores do time **Customer Service** no organograma (`carregarAtendentesCustomerService`).
+
+**Linha 2:** aba única **Site Spin** (`FiltroBarTabButton`, ícone `Globe` 16px).
+
+---
+
+## Permissões
+
+| Ação | Matriz |
+|------|--------|
+| Ver | Lista + modal Ver |
+| Editar | Modal Atender |
+| Criar / Excluir | `null` — chamados só via site |
+
+Seeds: todos perfis exceto admin com **Não** até liberar em Gestão de Usuários. `prestador_tipo_pages`: `customer_service` + `cs_atendimento`.
+
+---
+
+## Modais
+
+**Ver:** título `[protocolo] - [solicitante]`; subtítulo = badge status; abas **Dados do Chamado** | **Histórico**.
+
+**Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; bloco **Histórico de Anotações**.
+
+---
+
+## Anti-patterns
+
+- Seeds ou dados fictícios na UI ou migration.
+- INSERT direto em `cs_chamados` pelo client autenticado.
+- Cadastrar chamado manualmente na plataforma (v1).
+- Múltiplas abas de origem sem spec de produto.

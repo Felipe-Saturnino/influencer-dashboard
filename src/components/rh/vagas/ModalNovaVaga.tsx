@@ -12,6 +12,7 @@ import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
+import { CampoTagsVaga } from "./CampoTagsVaga";
 
 type Theme = {
   text: string;
@@ -53,8 +54,7 @@ export function ModalNovaVaga({
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
   const [responsabilidades, setResponsabilidades] = useState("");
-  const [requisitos, setRequisitos] = useState("");
-  const [escalaTrabalho, setEscalaTrabalho] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
@@ -70,8 +70,7 @@ export function ModalNovaVaga({
     setDataFimInscricoes("");
     setDescricao("");
     setResponsabilidades("");
-    setRequisitos("");
-    setEscalaTrabalho("");
+    setTags([]);
     setFieldErr({});
     setErroSalvar(null);
   }, []);
@@ -126,8 +125,6 @@ export function ModalNovaVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
-    if (!requisitos.trim()) e.requisitos = "Informe os requisitos.";
-    if (!escalaTrabalho.trim()) e.escala = "Informe a escala de trabalho.";
     setFieldErr(e);
     return Object.keys(e).length === 0;
   }
@@ -147,8 +144,7 @@ export function ModalNovaVaga({
       data_fim_inscricoes: dataFimInscricoes.trim(),
       descricao: descricao.trim(),
       responsabilidades: responsabilidades.trim(),
-      requisitos: requisitos.trim(),
-      escala_trabalho: escalaTrabalho.trim(),
+      tags,
       necessario_video_apresentacao: tipoVaga === "externa" ? necessarioVideoApresentacao : false,
       necessario_turno: tipoVaga === "externa" ? necessarioTurno : false,
       status: "aberta" as const,
@@ -250,22 +246,7 @@ export function ModalNovaVaga({
           />
           {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
         </div>
-        <div style={{ marginBottom: 14 }}>
-          {lblReq("nv-req", "Requisitos")}
-          <textarea id="nv-req" value={requisitos} onChange={(e) => setRequisitos(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
-          {fieldErr.requisitos ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.requisitos}</div> : null}
-        </div>
-        <div style={{ marginBottom: 18 }}>
-          {lblReq("nv-escala", "Escala de trabalho")}
-          <textarea
-            id="nv-escala"
-            value={escalaTrabalho}
-            onChange={(e) => setEscalaTrabalho(e.target.value)}
-            rows={3}
-            style={{ ...inputStyle, resize: "vertical" }}
-          />
-          {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
-        </div>
+        <CampoTagsVaga id="nv-tags" value={tags} onChange={setTags} t={t} inputStyle={inputStyle} />
 
         {erroSalvar ? (
           <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>

@@ -108,3 +108,5 @@ Após sucesso, o cadastro aparece na plataforma em **Lives → Scout** com:
 Migration no banco, deploy da Edge Function `prospecto-scout-site`, secrets no Supabase e no Cloudflare alinhados. A agência só precisa do **URL final** do `POST`.
 
 **Outro formulário público (afiliados):** ver `api-prospecto-afiliados-network-site-agencia.md` — endpoint `/api/prospecto-afiliados-network-site` e secret próprio (`PROSPECTO_AFILIADOS_NETWORK_FORM_SECRET`).
+
+**Formulário de contato (Atendimento):** ver `api-prospecto-cs-atendimento-site-agencia.md` — endpoint `/api/prospecto-cs-atendimento-site` e secret `CS_ATENDIMENTO_FORM_SECRET`.

@@ -26,6 +26,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `monitor-lobby-cda` |
 | `prestador-ponto` |
 | `prospecto-afiliados-network-site` |
+| `prospecto-cs-atendimento-site` |
 | `prospecto-scout-site` |
 | `sync-metricas-cda` |
 | `sync-painel-noticias-rss` |

@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Atendimento · Customer Success · Data Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #f9fafb;
+      --green: #22c55e;
+      --red: #e84025;
+      --yellow: #f59e0b;
+      --blue: #1e36f8;
+      --gray: #6b7280;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+      --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .app-shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      background: #141414;
+      color: #e4e4e4;
+      padding: 20px 0;
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: rgba(228,228,228,0.75);
+      cursor: default;
+    }
+    .sidebar-item svg { opacity: 0.7; flex-shrink: 0; }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18);
+      color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .sidebar-item.active svg { opacity: 1; }
+
+    .main {
+      flex: 1;
+      padding: 24px 28px 48px;
+      overflow-x: auto;
+    }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--brand-primary) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      border-radius: var(--radius-box);
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .mockup-banner strong { color: var(--brand-primary); }
+
+    .page-header { margin-bottom: 18px; }
+    .page-header-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--brand-primary);
+      letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .profile-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .profile-bar span { font-size: 12px; color: var(--text-muted); }
+    .pill-profile {
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-family: var(--font-body);
+    }
+    .pill-profile.active {
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      color: var(--brand-primary);
+      border-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+      font-weight: 700;
+    }
+
+    .filter-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 12px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    .status-carousel {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .carousel-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .carousel-btn:hover { color: var(--text); }
+    .carousel-label {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-body);
+      min-width: 160px;
+      text-align: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .pill svg { opacity: 0.65; }
+    .pill.active-filter {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 12%, #fff);
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+
+    .select-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 13px;
+      color: var(--text);
+      font-family: var(--font-body);
+      cursor: pointer;
+      min-width: 200px;
+    }
+    .select-pill select {
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+      cursor: pointer;
+      flex: 1;
+      outline: none;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      font-weight: 700;
+      color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+
+    .content-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-box);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .section-title { margin-bottom: 14px; }
+    .section-title h2 {
+      font-family: var(--font-title);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand-primary);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    thead th {
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+      color: var(--text-muted);
+      background: color-mix(in srgb, var(--card-bg) 86%, var(--brand-action) 14%);
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody td {
+      padding: 11px 14px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      border-bottom: 1px solid var(--card-border);
+    }
+    tbody tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--card-bg) 92%, var(--brand-secondary) 8%);
+    }
+    tbody tr:hover td {
+      background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-primary) 12%);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-flex;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-aberto { background: #f59e0b22; color: var(--yellow); border: 1px solid #f59e0b44; }
+    .badge-andamento { background: #1e36f822; color: var(--blue); border: 1px solid #1e36f844; }
+    .badge-arquivado { background: #6b728022; color: var(--gray); border: 1px solid #6b728044; }
+    .badge-sla-ok { background: #22c55e22; color: var(--green); border: 1px solid #22c55e44; }
+    .badge-sla-warn { background: #f59e0b22; color: var(--yellow); border: 1px solid #f59e0b44; }
+
+    .actions-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .icon-btn:hover { color: var(--text); }
+
+    .empty-state {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: none;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg);
+      border-radius: var(--radius-box);
+      max-width: 640px;
+      width: 100%;
+      max-height: 90dvh;
+      overflow: auto;
+      box-shadow: var(--shadow-dark);
+    }
+    .modal-header {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .modal-title {
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .modal-subtitle { margin-top: 6px; }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .modal-body { padding: 20px; }
+
+    .modal-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .field-readonly { margin-bottom: 14px; }
+    .field-readonly .label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+    }
+    .field-readonly .value {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .hist-block {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .hist-block:last-child { border-bottom: none; }
+    .hist-line1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .hist-line2 {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .hist-line3 {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      white-space: pre-wrap;
+    }
+
+    .field-edit { margin-bottom: 16px; }
+    .field-edit label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .field-edit select,
+    .field-edit textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text);
+      resize: vertical;
+    }
+    .field-edit textarea { min-height: 88px; }
+
+    .btn-add-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-body);
+      color: var(--text);
+      margin-top: 8px;
+    }
+
+    .notes-list-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin: 18px 0 10px;
+    }
+    .note-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .note-text { font-size: 13px; color: var(--text); }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+    .btn-ghost {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-body);
+    }
+    .btn-primary {
+      padding: 10px 20px;
+      border-radius: var(--radius-tab);
+      border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .alert-error {
+      display: none;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(232,64,37,0.12);
+      border: 1px solid rgba(232,64,37,0.35);
+      color: var(--red);
+      font-size: 12px;
+    }
+    .alert-error.show { display: block; }
+
+    .panel-tab { display: none; }
+    .panel-tab.active { display: block; }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu lateral">
+      <div class="sidebar-brand">DATA INTELLIGENCE</div>
+      <div class="sidebar-section">Comercial</div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        Overview Comercial
+      </div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        Pipeline B2B
+      </div>
+      <div class="sidebar-section">Customer Success</div>
+      <div class="sidebar-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Atendimento
+      </div>
+      <div class="sidebar-section">Estúdio</div>
+      <div class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Gestão de Dealers
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="mockup-banner">
+        <strong>Mockup interativo</strong> — proposta visual da página <strong>Atendimento</strong> (seção Customer Success). Use o carrossel de status, aba <strong>Site Spin</strong>, simulação de permissão e botões Ver / Atender na tabela.
+      </div>
+
+      <header class="page-header">
+        <div class="page-header-row">
+          <div class="page-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h1>Atendimento</h1>
+        </div>
+        <p class="subtitle">Gerencie chamados do site Spin, acompanhe SLA e registre o atendimento da equipe.</p>
+      </header>
+
+      <div class="profile-bar">
+        <span>Simular permissão:</span>
+        <button type="button" class="pill-profile active" data-perm="editar">Com Editar (vê Atender)</button>
+        <button type="button" class="pill-profile" data-perm="ver">Somente Ver</button>
+      </div>
+
+      <!-- Bloco 1 — Filtros -->
+      <div class="filter-box">
+        <div class="filter-row">
+          <div class="status-carousel" role="group" aria-label="Status do chamado">
+            <button type="button" class="carousel-btn" id="btn-status-prev" aria-label="Status anterior">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span class="carousel-label" id="status-label">Aberto</span>
+            <button type="button" class="carousel-btn" id="btn-status-next" aria-label="Próximo status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <button type="button" class="pill" id="btn-todos-status" aria-pressed="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+              Todos Status
+            </button>
+          </div>
+          <label class="select-pill" aria-label="Atendente">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <select id="filtro-atendente">
+              <option value="todos">Todos</option>
+              <option value="nenhum">Nenhum</option>
+              <option value="ana">Ana Paula Ribeiro</option>
+              <option value="carlos">Carlos Mendes</option>
+              <option value="julia">Júlia Ferreira</option>
+              <option value="marcos">Marcos Oliveira</option>
+            </select>
+          </label>
+        </div>
+        <div class="filter-row" role="tablist" aria-label="Origem do atendimento">
+          <button type="button" class="tab-btn active" role="tab" id="tab-site-spin" aria-selected="true" aria-controls="panel-atendimentos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            Site Spin
+          </button>
+        </div>
+      </div>
+
+      <!-- Bloco 2 — Tabela (painel Site Spin) -->
+      <section class="content-box" id="panel-atendimentos" role="tabpanel" aria-labelledby="tab-site-spin">
+        <div class="section-title">
+          <h2>Atendimentos</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Lista de chamados de atendimento</caption>
+            <thead>
+              <tr id="table-head"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empty-state">Nenhum chamado encontrado.</div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Ver -->
+  <div class="modal-overlay" id="modal-ver" role="dialog" aria-modal="true" aria-labelledby="modal-ver-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div>
+            <div class="modal-title" id="modal-ver-title"></div>
+            <div class="modal-subtitle" id="modal-ver-status"></div>
+          </div>
+          <button type="button" class="modal-close" id="close-ver" aria-label="Fechar modal" title="Fechar modal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs" role="tablist">
+          <button type="button" class="tab-btn active" data-modal-tab="dados">Dados do Chamado</button>
+          <button type="button" class="tab-btn" data-modal-tab="historico">Histórico</button>
+        </div>
+        <div class="panel-tab active" id="panel-dados"></div>
+        <div class="panel-tab" id="panel-historico"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Atender -->
+  <div class="modal-overlay" id="modal-atender" role="dialog" aria-modal="true" aria-labelledby="modal-atender-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <div>
+            <div class="modal-title" id="modal-atender-title"></div>
+            <div class="modal-subtitle" id="modal-atender-status"></div>
+          </div>
+          <button type="button" class="modal-close" id="close-atender" aria-label="Fechar modal" title="Fechar modal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="alert-error" id="atender-error">Informe uma anotação ao alterar o status do chamado.</div>
+        <div class="field-edit">
+          <label for="status-novo">Status</label>
+          <select id="status-novo"></select>
+        </div>
+        <div class="field-edit">
+          <label for="nova-anotacao">Nova anotação</label>
+          <textarea id="nova-anotacao" placeholder="Descreva o que foi feito neste atendimento..."></textarea>
+          <button type="button" class="btn-add-note" id="btn-add-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Adicionar anotação
+          </button>
+        </div>
+        <div class="notes-list-title">Histórico de Anotações</div>
+        <div id="notes-list"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" id="cancel-atender">Cancelar</button>
+          <button type="button" class="btn-primary" id="save-atender">Salvar alterações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_ORDER = ["aberto", "em_andamento", "arquivado"];
+    const STATUS_LABEL = {
+      aberto: "Aberto",
+      em_andamento: "Em Andamento",
+      arquivado: "Arquivado",
+      todos: "Todos Status",
+    };
+    const ATUACAO_LABEL = {
+      operador: "Operador",
+      provedor: "Provedor",
+      parceria: "Parceria",
+    };
+
+    /** Identificação da aba Site Spin: SITE-[ANO]/[NNNN] (4 dígitos sequenciais). */
+    const CHAMADOS = [
+      {
+        id: "1",
+        protocolo: "SITE-2026/0042",
+        status: "aberto",
+        solicitante: "Ricardo Almeida",
+        abertura: "07/07/2026 14:32",
+        inicio: null,
+        atendente: null,
+        atendenteKey: null,
+        sla: null,
+        nome: "Ricardo Almeida",
+        telefone: "(11) 98765-4321",
+        email: "ricardo@blaze.com.br",
+        atuacao: "operador",
+        empresa: "Blaze",
+        mensagem: "Gostaria de entender o processo de integração de novas mesas dedicadas no lobby. Temos interesse em expandir o catálogo de Roleta no Q3.",
+        historico: [
+          { acao: "Abertura do chamado", data: "07/07/2026 14:32", usuario: "Ricardo Almeida", nota: null },
+        ],
+        anotacoes: [],
+      },
+      {
+        id: "2",
+        protocolo: "SITE-2026/0038",
+        status: "em_andamento",
+        solicitante: "Mariana Costa",
+        abertura: "06/07/2026 09:15",
+        inicio: "06/07/2026 10:02",
+        atendente: "Ana Paula Ribeiro",
+        atendenteKey: "ana",
+        sla: null,
+        nome: "Mariana Costa",
+        telefone: "(21) 99876-5432",
+        email: "mariana@provedorx.com",
+        atuacao: "provedor",
+        empresa: "Provedor X Studios",
+        mensagem: "Somos um provedor de sinal e buscamos parceria para mesas network no mercado brasileiro. Podemos agendar uma call?",
+        historico: [
+          { acao: "Abertura do chamado", data: "06/07/2026 09:15", usuario: "Mariana Costa", nota: null },
+          { acao: "Início do atendimento", data: "06/07/2026 10:02", usuario: "Ana Paula Ribeiro", nota: "Cliente contactado por e-mail. Agendada call para 08/07." },
+        ],
+        anotacoes: [
+          { data: "06/07/2026 10:02", autor: "Ana Paula Ribeiro", texto: "Cliente contactado por e-mail. Agendada call para 08/07." },
+        ],
+      },
+      {
+        id: "3",
+        protocolo: "SITE-2026/0031",
+        status: "em_andamento",
+        solicitante: "Felipe Nogueira",
+        abertura: "05/07/2026 16:48",
+        inicio: "06/07/2026 08:30",
+        atendente: "Carlos Mendes",
+        atendenteKey: "carlos",
+        sla: null,
+        nome: "Felipe Nogueira",
+        telefone: "(31) 97654-3210",
+        email: "felipe.n@gmail.com",
+        atuacao: "parceria",
+        empresa: "Grupo Aposta Brasil",
+        mensagem: "Tenho interesse em conhecer as soluções de Live Cassino da Spin para minha operação regional.",
+        historico: [
+          { acao: "Abertura do chamado", data: "05/07/2026 16:48", usuario: "Felipe Nogueira", nota: null },
+          { acao: "Início do atendimento", data: "06/07/2026 08:30", usuario: "Carlos Mendes", nota: "Encaminhado para equipe comercial B2B." },
+        ],
+        anotacoes: [
+          { data: "06/07/2026 08:30", autor: "Carlos Mendes", texto: "Encaminhado para equipe comercial B2B." },
+        ],
+      },
+      {
+        id: "4",
+        protocolo: "SITE-2026/0024",
+        status: "arquivado",
+        solicitante: "João Pedro Lima",
+        abertura: "01/07/2026 11:20",
+        inicio: "01/07/2026 14:05",
+        atendente: "Júlia Ferreira",
+        atendenteKey: "julia",
+        sla: "2d 5h",
+        slaOk: true,
+        nome: "João Pedro Lima",
+        telefone: "(47) 99123-4567",
+        email: "jp@techsupply.io",
+        atuacao: "provedor",
+        empresa: "Tech Supply IO",
+        mensagem: "Consulta sobre requisitos técnicos para fornecimento de equipamentos de estúdio.",
+        historico: [
+          { acao: "Abertura do chamado", data: "01/07/2026 11:20", usuario: "João Pedro Lima", nota: null },
+          { acao: "Início do atendimento", data: "01/07/2026 14:05", usuario: "Júlia Ferreira", nota: "Enviado documento de requisitos." },
+          { acao: "Arquivamento", data: "03/07/2026 16:30", usuario: "Júlia Ferreira", nota: "Cliente confirmou recebimento. Chamado encerrado." },
+        ],
+        anotacoes: [
+          { data: "01/07/2026 14:05", autor: "Júlia Ferreira", texto: "Enviado documento de requisitos." },
+          { data: "03/07/2026 16:30", autor: "Júlia Ferreira", texto: "Cliente confirmou recebimento. Chamado encerrado." },
+        ],
+      },
+      {
+        id: "5",
+        protocolo: "SITE-2026/0019",
+        status: "arquivado",
+        solicitante: "Camila Duarte",
+        abertura: "28/06/2026 08:10",
+        inicio: "28/06/2026 09:45",
+        atendente: "Marcos Oliveira",
+        atendenteKey: "marcos",
+        sla: "4d 12h",
+        slaOk: false,
+        nome: "Camila Duarte",
+        telefone: "(85) 98888-7777",
+        email: "camila@casaapostas.com",
+        atuacao: "operador",
+        empresa: "Casa de Apostas",
+        mensagem: "Solicito atualização de IDs de lobby para mesas network do Sports Club.",
+        historico: [
+          { acao: "Abertura do chamado", data: "28/06/2026 08:10", usuario: "Camila Duarte", nota: null },
+          { acao: "Início do atendimento", data: "28/06/2026 09:45", usuario: "Marcos Oliveira", nota: null },
+          { acao: "Arquivamento", data: "02/07/2026 20:30", usuario: "Marcos Oliveira", nota: "IDs atualizados e confirmados com a operadora." },
+        ],
+        anotacoes: [
+          { data: "02/07/2026 20:30", autor: "Marcos Oliveira", texto: "IDs atualizados e confirmados com a operadora." },
+        ],
+      },
+    ];
+
+    let filtroStatus = "aberto";
+    let todosStatus = false;
+    let filtroAtendente = "todos";
+    let podeEditar = true;
+    let chamadoAtual = null;
+    let draftAnotacoes = [];
+
+    function badgeStatus(status) {
+      const cls = status === "aberto" ? "badge-aberto" : status === "em_andamento" ? "badge-andamento" : "badge-arquivado";
+      return `<span class="badge ${cls}">${STATUS_LABEL[status]}</span>`;
+    }
+
+    function badgeSla(chamado) {
+      if (!chamado.sla) return "—";
+      const cls = chamado.slaOk ? "badge-sla-ok" : "badge-sla-warn";
+      return `<span class="badge ${cls}">${chamado.sla}</span>`;
+    }
+
+    function getColunas() {
+      if (todosStatus) {
+        return ["chamado", "abertura", "solicitante", "inicio", "atendente", "sla", "status", "acoes"];
+      }
+      if (filtroStatus === "aberto") {
+        return ["chamado", "abertura", "solicitante", "acoes"];
+      }
+      if (filtroStatus === "em_andamento") {
+        return ["chamado", "abertura", "solicitante", "inicio", "atendente", "acoes"];
+      }
+      return ["chamado", "abertura", "solicitante", "atendente", "sla", "acoes"];
+    }
+
+    const COL_LABEL = {
+      chamado: "Chamado",
+      abertura: "Data de Abertura",
+      solicitante: "Solicitante",
+      inicio: "Início do Atendimento",
+      atendente: "Atendente",
+      sla: "SLA",
+      status: "Status",
+      acoes: "Ações",
+    };
+
+    function filtrarChamados() {
+      return CHAMADOS.filter((c) => {
+        if (!todosStatus && c.status !== filtroStatus) return false;
+        if (filtroAtendente === "nenhum" && c.atendenteKey) return false;
+        if (filtroAtendente !== "todos" && filtroAtendente !== "nenhum" && c.atendenteKey !== filtroAtendente) return false;
+        return true;
+      });
+    }
+
+    function renderTabela() {
+      const cols = getColunas();
+      const rows = filtrarChamados();
+      document.getElementById("table-head").innerHTML = cols.map((c) => `<th scope="col">${COL_LABEL[c]}</th>`).join("");
+      const tbody = document.getElementById("table-body");
+      const empty = document.getElementById("empty-state");
+      if (!rows.length) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+      tbody.innerHTML = rows.map((c, i) => {
+        const cells = cols.map((col) => {
+          if (col === "chamado") return `<td><strong>${c.protocolo}</strong></td>`;
+          if (col === "abertura") return `<td>${c.abertura}</td>`;
+          if (col === "solicitante") return `<td>${c.solicitante}</td>`;
+          if (col === "inicio") return `<td>${c.inicio || "—"}</td>`;
+          if (col === "atendente") return `<td>${c.atendente || "—"}</td>`;
+          if (col === "sla") return `<td>${badgeSla(c)}</td>`;
+          if (col === "status") return `<td>${badgeStatus(c.status)}</td>`;
+          if (col === "acoes") {
+            const atender = (podeEditar && c.status !== "arquivado")
+              ? `<button class="icon-btn btn-atender" data-id="${c.id}" title="Atender chamado" aria-label="Atender chamado"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>`
+              : "";
+            return `<td><div class="actions-cell"><button class="icon-btn btn-ver" data-id="${c.id}" title="Ver chamado" aria-label="Ver chamado"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>${atender}</div></td>`;
+          }
+          return "<td>—</td>";
+        }).join("");
+        return `<tr>${cells}</tr>`;
+      }).join("");
+
+      document.querySelectorAll(".btn-ver").forEach((btn) => {
+        btn.addEventListener("click", () => abrirVer(btn.dataset.id));
+      });
+      document.querySelectorAll(".btn-atender").forEach((btn) => {
+        btn.addEventListener("click", () => abrirAtender(btn.dataset.id));
+      });
+    }
+
+    function updateStatusLabel() {
+      document.getElementById("status-label").textContent = todosStatus ? STATUS_LABEL.todos : STATUS_LABEL[filtroStatus];
+      document.getElementById("btn-todos-status").classList.toggle("active-filter", todosStatus);
+      document.getElementById("btn-todos-status").setAttribute("aria-pressed", String(todosStatus));
+    }
+
+    function abrirVer(id) {
+      const c = CHAMADOS.find((x) => x.id === id);
+      if (!c) return;
+      chamadoAtual = c;
+      document.getElementById("modal-ver-title").textContent = `${c.protocolo} - ${c.solicitante}`;
+      document.getElementById("modal-ver-status").innerHTML = badgeStatus(c.status);
+
+      const empresaField = ["operador", "provedor", "parceria"].includes(c.atuacao)
+        ? `<div class="field-readonly"><div class="label">Empresa</div><div class="value">${c.empresa}</div></div>`
+        : "";
+
+      document.getElementById("panel-dados").innerHTML = `
+        <div class="field-readonly"><div class="label">Nome Completo</div><div class="value">${c.nome}</div></div>
+        <div class="field-readonly"><div class="label">Número do Telefone</div><div class="value">${c.telefone}</div></div>
+        <div class="field-readonly"><div class="label">E-mail</div><div class="value">${c.email}</div></div>
+        <div class="field-readonly"><div class="label">Atuação</div><div class="value">${ATUACAO_LABEL[c.atuacao]}</div></div>
+        ${empresaField}
+        <div class="field-readonly"><div class="label">Mensagem</div><div class="value">${c.mensagem}</div></div>
+      `;
+
+      document.getElementById("panel-historico").innerHTML = c.historico.map((h) => `
+        <div class="hist-block">
+          <div class="hist-line1">${h.acao} — ${h.data}</div>
+          <div class="hist-line2">${h.usuario}</div>
+          ${h.nota ? `<div class="hist-line3">${h.nota}</div>` : ""}
+        </div>
+      `).join("");
+
+      document.querySelectorAll("#modal-ver .tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelector('#modal-ver .tab-btn[data-modal-tab="dados"]').classList.add("active");
+      document.getElementById("panel-dados").classList.add("active");
+      document.getElementById("panel-historico").classList.remove("active");
+      document.getElementById("modal-ver").classList.add("open");
+    }
+
+    function abrirAtender(id) {
+      const c = CHAMADOS.find((x) => x.id === id);
+      if (!c || !podeEditar) return;
+      chamadoAtual = c;
+      draftAnotacoes = [...c.anotacoes];
+      document.getElementById("modal-atender-title").textContent = `${c.protocolo} - ${c.solicitante}`;
+      document.getElementById("modal-atender-status").innerHTML = badgeStatus(c.status);
+      document.getElementById("nova-anotacao").value = "";
+      document.getElementById("atender-error").classList.remove("show");
+
+      const select = document.getElementById("status-novo");
+      if (c.status === "aberto") {
+        select.innerHTML = `
+          <option value="em_andamento">Em Andamento</option>
+          <option value="arquivado">Arquivado</option>
+        `;
+      } else {
+        select.innerHTML = `<option value="arquivado">Arquivado</option>`;
+      }
+      select.value = c.status === "aberto" ? "em_andamento" : "arquivado";
+
+      renderNotesList();
+      document.getElementById("modal-atender").classList.add("open");
+    }
+
+    function renderNotesList() {
+      const el = document.getElementById("notes-list");
+      if (!draftAnotacoes.length) {
+        el.innerHTML = `<div class="note-item"><div class="note-meta">Nenhuma anotação registrada.</div></div>`;
+        return;
+      }
+      el.innerHTML = draftAnotacoes.map((n) => `
+        <div class="note-item">
+          <div class="note-meta">${n.data} — ${n.autor}</div>
+          <div class="note-text">${n.texto}</div>
+        </div>
+      `).join("");
+    }
+
+    function fecharModais() {
+      document.getElementById("modal-ver").classList.remove("open");
+      document.getElementById("modal-atender").classList.remove("open");
+      chamadoAtual = null;
+    }
+
+    document.getElementById("btn-status-prev").addEventListener("click", () => {
+      todosStatus = false;
+      const idx = STATUS_ORDER.indexOf(filtroStatus);
+      filtroStatus = STATUS_ORDER[(idx - 1 + STATUS_ORDER.length) % STATUS_ORDER.length];
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("btn-status-next").addEventListener("click", () => {
+      todosStatus = false;
+      const idx = STATUS_ORDER.indexOf(filtroStatus);
+      filtroStatus = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("btn-todos-status").addEventListener("click", () => {
+      todosStatus = !todosStatus;
+      updateStatusLabel();
+      renderTabela();
+    });
+    document.getElementById("filtro-atendente").addEventListener("change", (e) => {
+      filtroAtendente = e.target.value;
+      renderTabela();
+    });
+
+    document.querySelectorAll(".pill-profile").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".pill-profile").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        podeEditar = btn.dataset.perm === "editar";
+        renderTabela();
+      });
+    });
+
+    document.querySelectorAll("#modal-ver .tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#modal-ver .tab-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.modalTab;
+        document.getElementById("panel-dados").classList.toggle("active", tab === "dados");
+        document.getElementById("panel-historico").classList.toggle("active", tab === "historico");
+      });
+    });
+
+    document.getElementById("close-ver").addEventListener("click", fecharModais);
+    document.getElementById("close-atender").addEventListener("click", fecharModais);
+    document.getElementById("cancel-atender").addEventListener("click", fecharModais);
+    document.getElementById("modal-ver").addEventListener("click", (e) => { if (e.target.id === "modal-ver") fecharModais(); });
+    document.getElementById("modal-atender").addEventListener("click", (e) => { if (e.target.id === "modal-atender") fecharModais(); });
+
+    document.getElementById("btn-add-note").addEventListener("click", () => {
+      const texto = document.getElementById("nova-anotacao").value.trim();
+      if (!texto) return;
+      draftAnotacoes.unshift({
+        data: "07/07/2026 21:00",
+        autor: "Você (mockup)",
+        texto,
+      });
+      document.getElementById("nova-anotacao").value = "";
+      renderNotesList();
+    });
+
+    document.getElementById("save-atender").addEventListener("click", () => {
+      if (!chamadoAtual) return;
+      const novoStatus = document.getElementById("status-novo").value;
+      const texto = document.getElementById("nova-anotacao").value.trim();
+      const statusMudou = novoStatus !== chamadoAtual.status;
+      const temNovaNota = texto.length > 0 || draftAnotacoes.length > chamadoAtual.anotacoes.length;
+
+      if (statusMudou && !temNovaNota) {
+        document.getElementById("atender-error").classList.add("show");
+        return;
+      }
+
+      if (texto) {
+        draftAnotacoes.unshift({ data: "07/07/2026 21:00", autor: "Você (mockup)", texto });
+      }
+
+      chamadoAtual.status = novoStatus;
+      chamadoAtual.anotacoes = [...draftAnotacoes];
+      if (novoStatus === "em_andamento" && !chamadoAtual.inicio) {
+        chamadoAtual.inicio = "07/07/2026 21:00";
+        chamadoAtual.atendente = "Você (mockup)";
+        chamadoAtual.atendenteKey = "ana";
+      }
+      if (novoStatus === "arquivado") {
+        chamadoAtual.sla = "1d 2h";
+        chamadoAtual.slaOk = true;
+      }
+
+      fecharModais();
+      renderTabela();
+      alert("Mockup: alterações simuladas com sucesso.");
+    });
+
+    updateStatusLabel();
+    renderTabela();
+  </script>
+</body>
+</html>

@@ -771,6 +771,31 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "customer_success",
+    label: "Customer Success",
+    accentColor: "#1e36f8",
+    termos: [
+      {
+        termo: "Chamado",
+        definicao:
+          "Solicitação enviada pelo formulário de contato do site Spin. Cada chamado recebe protocolo único e passa pelos status Aberto, Em Andamento e Arquivado.",
+        referencia: "Atendimento",
+      },
+      {
+        termo: "Protocolo SITE",
+        definicao:
+          "Identificador do chamado no formato SITE-ANO/NNNN (quatro dígitos sequenciais por ano civil). Ex.: SITE-2026/0042.",
+        referencia: "Atendimento",
+      },
+      {
+        termo: "SLA do chamado",
+        definicao:
+          "Tempo decorrido entre a abertura do chamado e o arquivamento. Exibido na tabela quando o status é Arquivado ou em Todos Status.",
+        referencia: "Atendimento",
+      },
+    ],
+  },
+  {
     key: "rh_portal",
     label: "Portal de RH",
     accentColor: "#a78bfa",
@@ -1079,6 +1104,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
   comercial: ["comercial_overview", "comercial_pipeline_b2b"],
+  customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [
     "rh_gestao_escala",

@@ -1,0 +1,69 @@
+## Endpoint
+
+```text
+https://influencer-dashboard-c5r.pages.dev/api/prospecto-cs-atendimento-site
+```
+
+- **Método:** `POST`
+- **Corpo:** JSON (`Content-Type: application/json`)
+- **Autenticação no browser:** nenhum header secreto — o proxy na Cloudflare injeta o segredo internamente.
+
+---
+
+## Corpo da requisição (nomes fixos)
+
+| Campo | Tipo | Obrigatório | Regras |
+|--------|------|-------------|--------|
+| `nome_completo` | string | sim | nome do solicitante (aceita alias `nome`) |
+| `telefone` | string | não | telefone / WhatsApp |
+| `email` | string | sim | formato e-mail válido |
+| `atuacao` | string | sim | `operador`, `provedor`, `parceria`, `agregador`, `jogador` ou `outros` |
+| `empresa` | string | condicional | obrigatório para `operador`, `provedor`, `parceria` e `agregador` |
+| `mensagem` | string | sim | texto da solicitação |
+
+### Exemplo de JSON (Operador)
+
+```json
+{
+  "nome_completo": "Maria Souza",
+  "telefone": "+55 11 98888-7777",
+  "email": "maria@empresa.com",
+  "atuacao": "operador",
+  "empresa": "Casa de Apostas Exemplo",
+  "mensagem": "Gostaria de entender o processo de integração de mesas dedicadas no lobby."
+}
+```
+
+### Exemplo de JSON (Jogador — sem empresa)
+
+```json
+{
+  "nome_completo": "João Silva",
+  "email": "joao@email.com",
+  "atuacao": "jogador",
+  "mensagem": "Tenho dúvida sobre como acessar as mesas ao vivo."
+}
+```
+
+Os **nomes das propriedades** devem ser exatamente estes. Os rótulos exibidos no site podem ser outros.
+
+---
+
+## Respostas
+
+### Sucesso (HTTP 200)
+
+```json
+{
+  "success": true,
+  "id": "<uuid do registro criado>"
+}
+```
+
+### Erro (HTTP 4xx / 5xx)
+
+```json
+{
+  "error": "<mensagem em português>"
+}
+```

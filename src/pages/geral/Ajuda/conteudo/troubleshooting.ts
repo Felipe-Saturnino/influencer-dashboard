@@ -1188,6 +1188,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  cs_atendimento: {
+    titulo: "Atendimento",
+    blocos: [
+      {
+        subtitulo: "Lista vazia?",
+        texto:
+          "Chamados entram pela Edge Function do formulário do site Spin — não há criação manual na plataforma. Confirme que a migration `cs_atendimento` foi aplicada no Supabase e que o secret `CS_ATENDIMENTO_FORM_SECRET` está configurado na função `prospecto-cs-atendimento-site`.",
+      },
+      {
+        subtitulo: "Não consigo atender chamado?",
+        texto:
+          "O ícone **Atender** exige permissão de **Editar** em Atendimento (Gestão de Usuários). Ao alterar o status, informe uma anotação no modal.",
+      },
+    ],
+  },
   rh_central_denuncias: {
     titulo: "Central de Denúncias",
     blocos: [
