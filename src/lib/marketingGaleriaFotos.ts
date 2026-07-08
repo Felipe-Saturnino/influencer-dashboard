@@ -290,6 +290,38 @@ export async function urlAssinadaFotoPrestador(storagePath: string): Promise<str
   return data.signedUrl;
 }
 
+/** URLs assinadas em lote para miniaturas de Minhas Fotos (bucket privado). */
+export async function urlAssinadasFotosPrestador(
+  fotos: ReadonlyArray<Pick<MarketingFotoComEvento, "id" | "storage_path">>,
+): Promise<Record<string, string>> {
+  const pendentes = fotos.filter((f) => f.storage_path?.trim());
+  if (!pendentes.length) return {};
+
+  const { data, error } = await supabase.storage
+    .from(MARKETING_FOTOS_PRESTADORES_BUCKET)
+    .createSignedUrls(
+      pendentes.map((f) => f.storage_path),
+      3600,
+    );
+
+  if (error || !data?.length) {
+    if (error) console.error("urlAssinadasFotosPrestador:", error);
+    return {};
+  }
+
+  const urlPorPath = new Map<string, string>();
+  for (const item of data) {
+    if (item.signedUrl && item.path) urlPorPath.set(item.path, item.signedUrl);
+  }
+
+  const out: Record<string, string> = {};
+  for (const f of pendentes) {
+    const url = urlPorPath.get(f.storage_path);
+    if (url) out[f.id] = url;
+  }
+  return out;
+}
+
 export async function uploadMarketingFotoArquivo(
   file: File,
   tipo: MarketingFotoTipo,

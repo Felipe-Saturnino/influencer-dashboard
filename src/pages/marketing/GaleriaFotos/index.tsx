@@ -64,6 +64,7 @@ import {
   removerMarketingFotoStorage,
   uploadMarketingFotoArquivo,
   urlAssinadaFotoPrestador,
+  urlAssinadasFotosPrestador,
   urlPublicaFotoGeral,
   buscarMeuColaboradorGaleria,
   excluirMarketingEventoGaleria,
@@ -219,6 +220,8 @@ export default function GaleriaFotos() {
   const [lightbox, setLightbox] = useState<MarketingFotoComEvento | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [urlsPrestador, setUrlsPrestador] = useState<Record<string, string>>({});
+  const urlsPrestadorRef = useRef(urlsPrestador);
+  urlsPrestadorRef.current = urlsPrestador;
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
@@ -310,6 +313,12 @@ export default function GaleriaFotos() {
           ? await listarMarketingFotosPorEvento(id)
           : await listarMarketingFotosPorPrestador(id);
       setFotosCache((prev) => (prev[key] ? prev : { ...prev, [key]: list }));
+      if (kind === "prestador" && list.length > 0) {
+        const urls = await urlAssinadasFotosPrestador(list);
+        if (Object.keys(urls).length) {
+          setUrlsPrestador((prev) => ({ ...prev, ...urls }));
+        }
+      }
     } finally {
       setFotosCacheLoading((prev) => {
         const next = new Set(prev);
@@ -353,6 +362,7 @@ export default function GaleriaFotos() {
       });
       setFotosCache({});
       setFotosBusca(null);
+      setUrlsPrestador({});
       await carregarEventosAtivos();
       if (podeUpload || podeFiltrarPrestador) await carregarPrestadores();
     } catch {
@@ -478,24 +488,22 @@ export default function GaleriaFotos() {
   ]);
 
   useEffect(() => {
-    const prestadorFotos = fotosVisiveis.filter((f) => f.tipo === "prestador");
+    const prestadorFotos = fotosVisiveis.filter(
+      (f) => f.tipo === "prestador" && !urlsPrestadorRef.current[f.id],
+    );
     if (!prestadorFotos.length) return;
+
     let cancel = false;
     void (async () => {
-      const next: Record<string, string> = {};
-      for (const f of prestadorFotos) {
-        if (urlsPrestador[f.id]) continue;
-        const url = await urlAssinadaFotoPrestador(f.storage_path);
-        if (url) next[f.id] = url;
-      }
-      if (!cancel && Object.keys(next).length) {
-        setUrlsPrestador((prev) => ({ ...prev, ...next }));
+      const urls = await urlAssinadasFotosPrestador(prestadorFotos);
+      if (!cancel && Object.keys(urls).length) {
+        setUrlsPrestador((prev) => ({ ...prev, ...urls }));
       }
     })();
     return () => {
       cancel = true;
     };
-  }, [fotosVisiveis, urlsPrestador]);
+  }, [fotosVisiveis]);
 
   useEffect(() => {
     if (!lightbox) {
