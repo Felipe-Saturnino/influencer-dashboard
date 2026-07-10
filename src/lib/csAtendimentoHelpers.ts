@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { CsAtendenteFiltroOption, CsChamadoRow } from "../types/csAtendimento";
+import type { CsAtendenteFiltroOption, CsChamadoMensagemRow, CsChamadoRow } from "../types/csAtendimento";
 
 function normNomeTime(nome: string): string {
   return nome
@@ -66,4 +66,18 @@ export function mapCsChamadoFromDb(row: CsChamadoRowDb): CsChamadoRow {
       content_type: a.content_type ?? null,
     })),
   };
+}
+
+export async function carregarMensagensChamado(chamadoId: string): Promise<CsChamadoMensagemRow[]> {
+  const { data, error } = await supabase
+    .from("cs_chamado_mensagens")
+    .select("id, chamado_id, direcao, texto, midia_url, content_type, instagram_message_id, autor_tipo, usuario_id, created_at")
+    .eq("chamado_id", chamadoId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[csAtendimento] mensagens", error);
+    return [];
+  }
+  return (data ?? []) as CsChamadoMensagemRow[];
 }

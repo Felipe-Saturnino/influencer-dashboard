@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Globe, Loader2, Mail, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Globe, Instagram, Loader2, Mail, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -29,13 +29,18 @@ import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   CS_ATENDIMENTO_ABA_EMAIL_LABEL,
+  CS_ATENDIMENTO_ABA_INSTAGRAM,
+  CS_ATENDIMENTO_ABA_INSTAGRAM_LABEL,
   CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL,
   CS_ATENDIMENTO_FILTRO_NENHUM_LABEL,
   CS_ATENDIMENTO_FILTRO_NENHUM_VALUE,
   CS_ATENDIMENTO_FILTRO_TODOS_LABEL,
   CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE,
   CS_ATENDIMENTO_FILTRO_TODOS_VALUE,
+  CS_ATENDIMENTO_INSTAGRAM_TAB_COLOR,
   CS_ATENDIMENTO_ORIGEM_EMAIL,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM,
   CS_ATENDIMENTO_ORIGEM_SITE_SPIN,
   CS_ATENDIMENTO_STATUS_CARROSSEL,
   CS_ATENDIMENTO_STATUS_CORES,
@@ -55,18 +60,19 @@ import {
   solicitanteEmail,
   type ColunaEmail,
   type ColunaSiteSpin,
-  type CsAtendimentoAbaOrigem,
   type SortColEmail,
   type SortColSiteSpin,
 } from "../../../lib/csAtendimentoTableColumns";
 import type {
   CsAtendenteFiltroOption,
+  CsAtendimentoAbaOrigem,
   CsChamadoFiltroAtendente,
   CsChamadoFiltroStatus,
   CsChamadoHistoricoRow,
   CsChamadoRow,
 } from "../../../types/csAtendimento";
 import { ModalAtenderChamado, ModalVerChamado } from "./ModalsVerAtender";
+import { CsAtendimentoInstagramPainel } from "./CsAtendimentoInstagramPainel";
 
 const CS_CHAMADOS_SELECT = `
   id,
@@ -80,6 +86,11 @@ const CS_CHAMADOS_SELECT = `
   empresa,
   mensagem,
   assunto,
+  instagram_username,
+  instagram_post_caption,
+  instagram_post_tipo,
+  primeira_resposta_em,
+  ultima_mensagem_usuario_em,
   inicio_atendimento_em,
   arquivado_em,
   atendente_id,
@@ -89,7 +100,17 @@ const CS_CHAMADOS_SELECT = `
   cs_chamado_anexos ( id, nome, storage_path, content_type )
 `.trim();
 
-const ABAS_ORIGEM: CsAtendimentoAbaOrigem[] = [CS_ATENDIMENTO_ORIGEM_SITE_SPIN, CS_ATENDIMENTO_ORIGEM_EMAIL];
+const ABAS_ORIGEM: CsAtendimentoAbaOrigem[] = [
+  CS_ATENDIMENTO_ORIGEM_SITE_SPIN,
+  CS_ATENDIMENTO_ORIGEM_EMAIL,
+  CS_ATENDIMENTO_ABA_INSTAGRAM,
+];
+
+function tabIdAbaOrigem(aba: CsAtendimentoAbaOrigem): string {
+  if (aba === CS_ATENDIMENTO_ORIGEM_EMAIL) return "tab-cs-email";
+  if (aba === CS_ATENDIMENTO_ABA_INSTAGRAM) return "tab-cs-instagram";
+  return "tab-cs-site-spin";
+}
 
 function nomeAtendente(row: CsChamadoRow): string {
   return unwrapCsEmbed(row.atendente)?.name?.trim() || "—";
@@ -155,6 +176,7 @@ export default function CsAtendimentoPage() {
   const [loadingHistorico, setLoadingHistorico] = useState(false);
 
   const isAbaEmail = abaOrigem === CS_ATENDIMENTO_ORIGEM_EMAIL;
+  const isAbaInstagram = abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM;
   const todosStatusAtivo = filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE;
 
   const labelStatusCentral = todosStatusAtivo
@@ -193,11 +215,13 @@ export default function CsAtendimentoPage() {
   const fetchLista = useCallback(async () => {
     setLoading(true);
 
-    let q = supabase
-      .from("cs_chamados")
-      .select(CS_CHAMADOS_SELECT)
-      .eq("origem", abaOrigem)
-      .order("created_at", { ascending: false });
+    let q = supabase.from("cs_chamados").select(CS_CHAMADOS_SELECT).order("created_at", { ascending: false });
+
+    if (abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM) {
+      q = q.in("origem", [CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM, CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO]);
+    } else {
+      q = q.eq("origem", abaOrigem);
+    }
 
     if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
       q = q.eq("status", filtroStatus);
@@ -312,6 +336,15 @@ export default function CsAtendimentoPage() {
     });
     return rows;
   }, [lista, sortEmail]);
+
+  const listaInstagramDm = useMemo(
+    () => lista.filter((r) => r.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM),
+    [lista],
+  );
+  const listaInstagramComentario = useMemo(
+    () => lista.filter((r) => r.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO),
+    [lista],
+  );
 
   function onSortSite(col: SortColSiteSpin) {
     setSortSite((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
@@ -546,9 +579,7 @@ export default function CsAtendimentoPage() {
           role="tablist"
           aria-label="Origem do atendimento"
           style={{ ...getFilterBarRowStyle(), justifyContent: "center", width: "100%", marginTop: 10 }}
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(e, ABAS_ORIGEM, setAbaOrigem, (k) => (k === CS_ATENDIMENTO_ORIGEM_EMAIL ? "tab-cs-email" : "tab-cs-site-spin"))
-          }
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_ORIGEM, setAbaOrigem, tabIdAbaOrigem)}
         >
           <FiltroBarTabButton
             id="tab-cs-site-spin"
@@ -568,69 +599,94 @@ export default function CsAtendimentoPage() {
           >
             {CS_ATENDIMENTO_ABA_EMAIL_LABEL}
           </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-cs-instagram"
+            active={abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM}
+            aria-controls="panel-cs-instagram"
+            onClick={() => setAbaOrigem(CS_ATENDIMENTO_ABA_INSTAGRAM)}
+            icon={<Instagram {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            activeColor={CS_ATENDIMENTO_INSTAGRAM_TAB_COLOR}
+          >
+            {CS_ATENDIMENTO_ABA_INSTAGRAM_LABEL}
+          </FiltroBarTabButton>
         </div>
       </div>
 
-      <div style={pageBox} id={panelId} role="tabpanel" aria-labelledby={tabId}>
-        <SectionTitle>Atendimentos</SectionTitle>
+      {isAbaInstagram ? (
+        <CsAtendimentoInstagramPainel
+          listaDm={listaInstagramDm}
+          listaComentario={listaInstagramComentario}
+          loading={loading}
+          filtroStatus={filtroStatus}
+          t={t}
+          dataTable={dataTable}
+          pageBox={pageBox}
+          perm={perm}
+          onVer={setModalVer}
+          onAtender={setModalAtender}
+        />
+      ) : (
+        <div style={pageBox} id={panelId} role="tabpanel" aria-labelledby={tabId}>
+          <SectionTitle>Atendimentos</SectionTitle>
 
-        {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 13 }}>Carregando…</div>
-          </div>
-        ) : listaOrdenada.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhum chamado encontrado.
-          </div>
-        ) : (
-          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: isAbaEmail ? 960 : 720 })}>
-              <caption style={{ display: "none" }}>
-                {isAbaEmail ? "Lista de chamados de atendimento por e-mail" : "Lista de chamados de atendimento do site"}
-              </caption>
-              <thead>
-                <tr>
-                  {colunasAtivas.map((col) =>
-                    col === "acoes" ? (
-                      <th key={col} scope="col" style={dataTable.thHeader}>
-                        {isAbaEmail ? COL_LABEL_EMAIL.acoes : COL_LABEL_SITE_SPIN.acoes}
-                      </th>
-                    ) : isAbaEmail ? (
-                      <SortTableTh
-                        key={col}
-                        label={COL_LABEL_EMAIL[col as ColunaEmail]}
-                        col={col}
-                        sortCol={sortEmail.col}
-                        sortDir={sortEmail.dir}
-                        onSort={(c) => onSortEmail(c as SortColEmail)}
-                        thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
-                        align="center"
-                      />
-                    ) : (
-                      <SortTableTh
-                        key={col}
-                        label={COL_LABEL_SITE_SPIN[col as ColunaSiteSpin]}
-                        col={col}
-                        sortCol={sortSite.col}
-                        sortDir={sortSite.dir}
-                        onSort={(c) => onSortSite(c as SortColSiteSpin)}
-                        thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
-                        align="center"
-                      />
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {isAbaEmail
-                  ? listaOrdenada.map((row, i) => renderLinhaEmail(row, i, colunasEmail))
-                  : listaOrdenada.map((row, i) => renderLinhaSite(row, i, colunasSite))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          {loading ? (
+            <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+              <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
+              <div style={{ fontSize: 13 }}>Carregando…</div>
+            </div>
+          ) : listaOrdenada.length === 0 ? (
+            <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Nenhum chamado encontrado.
+            </div>
+          ) : (
+            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: isAbaEmail ? 960 : 720 })}>
+                <caption style={{ display: "none" }}>
+                  {isAbaEmail ? "Lista de chamados de atendimento por e-mail" : "Lista de chamados de atendimento do site"}
+                </caption>
+                <thead>
+                  <tr>
+                    {colunasAtivas.map((col) =>
+                      col === "acoes" ? (
+                        <th key={col} scope="col" style={dataTable.thHeader}>
+                          {isAbaEmail ? COL_LABEL_EMAIL.acoes : COL_LABEL_SITE_SPIN.acoes}
+                        </th>
+                      ) : isAbaEmail ? (
+                        <SortTableTh
+                          key={col}
+                          label={COL_LABEL_EMAIL[col as ColunaEmail]}
+                          col={col}
+                          sortCol={sortEmail.col}
+                          sortDir={sortEmail.dir}
+                          onSort={(c) => onSortEmail(c as SortColEmail)}
+                          thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
+                          align="center"
+                        />
+                      ) : (
+                        <SortTableTh
+                          key={col}
+                          label={COL_LABEL_SITE_SPIN[col as ColunaSiteSpin]}
+                          col={col}
+                          sortCol={sortSite.col}
+                          sortDir={sortSite.dir}
+                          onSort={(c) => onSortSite(c as SortColSiteSpin)}
+                          thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
+                          align="center"
+                        />
+                      ),
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {isAbaEmail
+                    ? listaOrdenada.map((row, i) => renderLinhaEmail(row, i, colunasEmail))
+                    : listaOrdenada.map((row, i) => renderLinhaSite(row, i, colunasSite))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <ModalVerChamado
         open={!!modalVer}

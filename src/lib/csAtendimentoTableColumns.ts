@@ -1,5 +1,7 @@
 import { CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE } from "./csAtendimentoConstants";
-import type { CsChamadoFiltroStatus, CsChamadoOrigem } from "../types/csAtendimento";
+import type { CsAtendimentoAbaOrigem, CsChamadoFiltroStatus, CsChamadoRow } from "../types/csAtendimento";
+
+export type { CsAtendimentoAbaOrigem };
 
 export type SortColSiteSpin = "chamado" | "data" | "solicitante" | "inicio" | "atendente" | "sla" | "status";
 export type ColunaSiteSpin = SortColSiteSpin | "acoes";
@@ -64,4 +66,68 @@ export function assuntoEmail(row: { assunto?: string | null }): string {
   return row.assunto?.trim() || "—";
 }
 
-export type CsAtendimentoAbaOrigem = CsChamadoOrigem;
+export function solicitanteInstagram(row: Pick<CsChamadoRow, "nome_completo" | "instagram_username">): string {
+  const handle = row.instagram_username?.trim() || row.nome_completo?.trim();
+  if (!handle) return "—";
+  return handle.startsWith("@") ? handle : `@${handle}`;
+}
+
+export type SortColInstagramDm =
+  | "chamado"
+  | "data"
+  | "solicitante"
+  | "inicio"
+  | "atendente"
+  | "tempo_resposta"
+  | "sla"
+  | "status";
+export type ColunaInstagramDm = SortColInstagramDm | "acoes";
+
+export type SortColInstagramComent = "chamado" | "data" | "solicitante" | "inicio" | "atendente" | "sla" | "status";
+export type ColunaInstagramComent = SortColInstagramComent | "acoes";
+
+export const COL_LABEL_INSTAGRAM_DM: Record<ColunaInstagramDm, string> = {
+  chamado: "Chamado",
+  data: "Data de Abertura",
+  solicitante: "Solicitante",
+  inicio: "Início do Atendimento",
+  atendente: "Atendente",
+  tempo_resposta: "Tempo de Resposta",
+  sla: "SLA",
+  status: "Status",
+  acoes: "Ações",
+};
+
+export const COL_LABEL_INSTAGRAM_COMENT: Record<ColunaInstagramComent, string> = {
+  chamado: "Chamado",
+  data: "Data de Abertura",
+  solicitante: "Solicitante",
+  inicio: "Início do Atendimento",
+  atendente: "Atendente",
+  sla: "SLA",
+  status: "Status",
+  acoes: "Ações",
+};
+
+export function getColunasInstagramDm(filtroStatus: CsChamadoFiltroStatus): ColunaInstagramDm[] {
+  if (filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
+    return ["chamado", "data", "solicitante", "inicio", "atendente", "status", "sla", "acoes"];
+  }
+  if (filtroStatus === "aberto") {
+    return ["chamado", "data", "solicitante", "acoes"];
+  }
+  if (filtroStatus === "em_andamento") {
+    return ["chamado", "data", "solicitante", "inicio", "atendente", "tempo_resposta", "acoes"];
+  }
+  return ["chamado", "data", "solicitante", "atendente", "sla", "acoes"];
+}
+
+export function getColunasInstagramComent(filtroStatus: CsChamadoFiltroStatus): ColunaInstagramComent[] {
+  if (filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
+    return ["chamado", "data", "solicitante", "inicio", "atendente", "status", "sla", "acoes"];
+  }
+  if (filtroStatus === "arquivado") {
+    return ["chamado", "data", "solicitante", "atendente", "sla", "acoes"];
+  }
+  return ["chamado", "data", "solicitante", "acoes"];
+}

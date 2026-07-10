@@ -893,17 +893,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gerencia chamados enviados pelo formulário de contato do site Spin. A equipe de Customer Service acompanha o protocolo, registra anotações e altera o status conforme o atendimento avança.",
+          "Gerencia chamados do formulário de contato do site Spin, e-mails recebidos em **contato@spingaming.com.br** e interações do Instagram (**@spingamingbrasil**). A equipe de Customer Service acompanha protocolo, registra anotações e altera o status conforme o atendimento avança.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nAs abas **Site Spin** e **E-mail** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**; as colunas variam conforme o status, como na aba do site.",
+          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nAs abas **Site Spin**, **E-mail** e **Instagram** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**. Na aba **Instagram**, dois blocos — **Mensagens** (DM) e **Comentários** — compartilham os mesmos filtros de status e Staff.",
       },
       {
         subtitulo: "Tabela e ações",
         texto:
-          "As colunas mudam conforme o status selecionado. Chamados **arquivados** exibem **SLA** (tempo entre abertura e arquivamento). Novos chamados (site ou e-mail) chegam **sem atendente**; ao **alterar o status** no modal **Atender**, o usuário logado passa a constar como **Atendente** (anotação sem mudança de status não altera o responsável). **Ver** abre dados do solicitante (ou do e-mail na aba E-mail) e histórico; na aba **E-mail**, **Ver** também exibe **Anexo** com ações **Ver** e **Baixar** quando o e-mail trouxer ficheiros. **Atender** (permissão de Editar) permite alterar status e registrar anotação — obrigatória ao mudar o status.",
+          "As colunas mudam conforme o status selecionado. Chamados **arquivados** exibem **SLA** (tempo entre abertura e arquivamento). Na aba Instagram — **Mensagens**, **Em Andamento** mostra **Tempo de Resposta** (primeira resposta da Spin); em **Todos Status**, a coluna **SLA** combina essas regras por status. Novos chamados chegam **sem atendente**; ao **alterar o status** no modal **Atender**, o usuário logado passa a constar como **Atendente**. **Ver** abre dados conforme a origem; Instagram DM exibe a thread e **Histórico interno**; comentários exibem o post e o texto. O campo **Responder no Instagram** aparece desabilitado (Fase 2) até a integração com a Meta. **Atender** (permissão de Editar) permite alterar status e registrar anotação — obrigatória ao mudar o status.",
       },
     ],
   },
