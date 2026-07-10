@@ -2,10 +2,10 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasComunicacao } from "./comunicacao/BoasVindasComunicacao";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { AtalhosComunicacao } from "./comunicacao/AtalhosComunicacao";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 
 const HOME_COMUNICACAO_PREFIX = "home-comunicacao";
 
@@ -29,14 +29,10 @@ export default function HomeComunicacao() {
       }}
     >
       <BoasVindasComunicacao nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_COMUNICACAO_PREFIX} />
-      <InformacoesStaffHome
-        perfil="comunicacao"
-        sectionIdPrefix={HOME_COMUNICACAO_PREFIX}
-        includeGaleriaNovidades={false}
-      />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_COMUNICACAO_PREFIX} />
+      <InformacoesStaffHome perfil="comunicacao" sectionIdPrefix={HOME_COMUNICACAO_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_COMUNICACAO_PREFIX} />
       <AtalhosComunicacao />
-      <SpinNaRedeHome sectionIdPrefix={HOME_COMUNICACAO_PREFIX} />
     </div>
   );
 }

@@ -46,7 +46,7 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 |------|--------|
 | `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE` | Campo **`titulo`** = mesmo texto que `label` no menu (ex.: `Resultados`, `Feedback`, `Agenda`) |
 | Troubleshooting transversal | `TROUBLESHOOTING_TRANSVERSAL` em `conteudo/troubleshooting.ts` — blocos de plataforma (ex.: busca sem acentos) no topo da aba Troubleshooting, antes do conteúdo da página selecionada |
-| Navegação interna (Conheça / Troubleshooting) | Derivada de `MENU` em `menu.ts` — mesma ordem de secções e páginas; filtro `can_view` igual à Sidebar (`buildMenuAjudaVisivel` em `lib/ajudaVisibilidade.ts`) |
+| Navegação interna (Conheça / Troubleshooting) | Derivada de `MENU` + secção **Geral** (`configuracoes`, `simulador_login`) via `buildMenuAjudaVisivel` em `lib/ajudaVisibilidade.ts`; filtro `can_view` **sim** / **próprios** (igual à Sidebar para páginas do menu; Geral usa a mesma regra de permissão) |
 | Glossário | Categorias filtradas por `GLOSSARIO_CATEGORIA_PAGE_KEYS` — exibir se o usuário tiver **Ver** ou **Próprios** em ao menos uma página mapeada |
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
@@ -74,6 +74,10 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 4. Linha em `PAGES` (`GestaoUsuarios/constants.ts`) — ordem via `sortPagesLikeMenu` alinhada a `menu.ts`.
 5. Handoff pode completar corpo dos blocos — estrutura e nomenclatura ficam neste MDC + Brand §4.
 
+### Secção Geral na Ajuda
+
+Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no **fim** da navegação Conheça / Troubleshooting, sob **Geral**, só com permissão de Ver **sim** ou **próprios**. Conteúdo em `CONTEUDO_CONHECA` / `CONTEUDO_TROUBLE`; glossário categoria `geral_conta`. Títulos = labels de `PAGES` (Gestão de Usuários).
+
 ### Handoff pendente
 
 - Revisão contínua de **qualidade** do texto (cobertura mínima garantida pelo script `check-ajuda-coverage.mjs`).
@@ -85,16 +89,19 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 - Ponto de entrada após login.
 - **`investidor`:** layout dedicado em `HomeInvestidor.tsx` — boas-vindas (sem avatar), KPIs mesas MTD (`relatorio_daily_summary` + lista por operadora), aquisição Streamers/Mídias, Spin na Rede (MTD, oculto se vazio), informativos publicados (`perfis` contém `investidor`, HTML integral), atalhos fixos com subtítulo de `lib/pageCanonicalCopy.ts`.
 - **`executivo`:** layout dedicado em `HomeExecutivo.tsx` — mesma estrutura que Investidor (KPIs, aquisição, Spin na Rede, atalhos Agenda/Overview Spin/Streamers/Ajuda); boas-vindas com subtítulo executivo; informativos com `perfis` contém `executivo`. RLS: `_role_sem_escopo_app()` em `20260526120000_home_investidor_feed_rls.sql`.
-- **`prestador`:** layout dedicado em `HomePrestador.tsx` — boas-vindas; blocos de **aniversário pessoal** (`data_nascimento`) e **aniversário de empresa** (`data_inicio`, dia/mês vs hoje) logo abaixo — ambos no mesmo dia: pessoal primeiro, empresa abaixo; ícones Lucide (Brand §4/§6); bloco **Informações** (informativos `prestador` + cards de novidade da Galeria de Fotos — gerais por evento e Minhas Fotos, janela **7 dias** após upload em `homePrestadorGaleriaNovidades.ts`, assunto **Novo albúm disponível**); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260527200000_home_prestador_feed_rls.sql` + galeria via políticas existentes; datas via `buscarRhFuncionarioAtivoPorEmailLogin` (mesmo critério Dados de Cadastro).
-- **`figurino`:** layout dedicado em `HomeFigurino.tsx` — espelho Prestador com subtítulo de boas-vindas figurino; **Informações** com informativos `figurino` + mesma galeria/aniversários; atalhos Ajuda + Organograma + Figurinos (`pageCanonicalCopy`); Spin na Rede MTD. RLS: `20260528200000_home_figurino_feed_rls.sql`. Componentes partilhados: `shared/InformacoesStaffHome`, `CelebracoesStaffHome`, `AtalhosStaffHome`.
-- **`comunicacao`:** layout dedicado em `HomeComunicacao.tsx` — subtítulo comunicação; aniversários (cadastro RH); **Informações** só informativos `comunicacao` (`includeGaleriaNovidades={false}` — sem cards de álbum); atalhos Ajuda + Organograma + Galeria de Fotos; Spin na Rede MTD. RLS: `20260529200000_home_comunicacao_feed_rls.sql`.
-- **`performance_coach`:** layout dedicado em `HomePerformanceCoach.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `performance_coach`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
-- **`service_manager`:** layout dedicado em `HomeServiceManager.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `service_manager`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
-- **`customer_service`:** layout dedicado em `HomeCustomerService.tsx` — paridade Service Manager; atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
-- **`game_presenter`:** layout dedicado em `HomeGamePresenter.tsx` — paridade staff interno; informativos `game_presenter`; atalhos Ajuda + Organograma; RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
-- **`shuffler`:** layout dedicado em `HomeShuffler.tsx` — paridade staff interno; informativos `shuffler`; atalhos Ajuda + Organograma; RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
-- **`tech_ops`:** layout dedicado em `HomeTechOps.tsx` — paridade Service Manager (mesma estrutura de Home staff interno); informativos com perfil `tech_ops` no array `perfis`; atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260706180000_role_tech_ops.sql`.
-- **`shift_leader`:** layout dedicado em `HomeShiftLeader.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `shift_leader`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
+- **Home staff (Estúdio / Escritório)** — ordem canónica dos blocos: (1) boas-vindas; (2) atualização cadastral; (3) aniversário pessoal; (4) aniversário empresa; (5) **Informações** (só informativos do perfil + «Li e Ocultar»); (6) **Blogueiro Spin** (novidades Galeria + Spin na Rede, janela **10 dias** em `homePrestadorGaleriaNovidades.ts` / `useHomeBlogueiroSpinFeed`, «Li e Ocultar»); (7) acesso rápido. Persistência lido: `lib/homeStaffLido.ts`. Deep-link Galeria: `lib/homeGaleriaDeepLink.ts`. Componentes: `shared/InformacoesStaffHome`, `BlogueiroSpinStaffHome`, `HomeStaffAposBoasVindas`, `HomeStaffFeedCard`.
+- **`prestador`:** `HomePrestador.tsx` — baseline staff; informativos `prestador`; atalhos Ajuda + Organograma. RLS: `20260527200000_home_prestador_feed_rls.sql`.
+- **`figurino`:** `HomeFigurino.tsx` — subtítulo figurino; informativos `figurino`; atalhos + Figurinos. RLS: `20260528200000_home_figurino_feed_rls.sql`.
+- **`comunicacao`:** `HomeComunicacao.tsx` — informativos `comunicacao` + **Blogueiro Spin** (igual demais staff); atalhos + Galeria de Fotos. RLS: `20260529200000_home_comunicacao_feed_rls.sql`.
+- **`performance_coach`:** `HomePerformanceCoach.tsx` — informativos `performance_coach`. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
+- **`service_manager`:** `HomeServiceManager.tsx` — informativos `service_manager`. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
+- **`customer_service`:** `HomeCustomerService.tsx` — atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
+- **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`tech_ops`:** `HomeTechOps.tsx` — informativos `tech_ops`. RLS: `20260706180000_role_tech_ops.sql`.
+- **`shift_leader`:** `HomeShiftLeader.tsx` — informativos `shift_leader`. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
+- **`rh`:** `HomeRh.tsx` — baseline Prestador (copy a personalizar); informativos `rh`. RLS: `20260710200000_home_rh_feed_rls.sql`.
+- **Cobertura Estúdio / Escritório** (`ROLES_PERFIS_ESTUDIO` / `ROLES_PERFIS_ESCRITORIO`): cada perfil tem Home dedicada. Estúdio — Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter. Escritório — RH, Figurino, Comunicação, Tech Ops, Prestadores.
 - **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
 - **Período KPI / Aquisição (Home Investidor, Executivo e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.

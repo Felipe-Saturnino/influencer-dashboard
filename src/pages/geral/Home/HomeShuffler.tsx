@@ -2,10 +2,10 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasShuffler } from "./shuffler/BoasVindasShuffler";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosShuffler } from "./shuffler/AtalhosShuffler";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_SHUFFLER_PREFIX = "home-shuffler";
 
@@ -29,10 +29,10 @@ export default function HomeShuffler() {
       }}
     >
       <BoasVindasShuffler nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <InformacoesStaffHome perfil="shuffler" sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <AtalhosShuffler />
-      <SpinNaRedeHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
     </div>
   );
 }

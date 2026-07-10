@@ -5,7 +5,7 @@ import { BoasVindasPrestador } from "./prestador/BoasVindasPrestador";
 import { CelebracoesPrestador } from "./prestador/CelebracoesPrestador";
 import { InformacoesPrestador } from "./prestador/InformacoesPrestador";
 import { AtalhosPrestador } from "./prestador/AtalhosPrestador";
-import { SpinNaRedePrestador } from "./prestador/SpinNaRedePrestador";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 
 export default function HomePrestador() {
   const { theme: t, user } = useApp();
@@ -29,8 +29,8 @@ export default function HomePrestador() {
       <BoasVindasPrestador nome={nome} />
       <CelebracoesPrestador />
       <InformacoesPrestador />
+      <BlogueiroSpinStaffHome sectionIdPrefix="home-prestador" />
       <AtalhosPrestador />
-      <SpinNaRedePrestador />
     </div>
   );
 }

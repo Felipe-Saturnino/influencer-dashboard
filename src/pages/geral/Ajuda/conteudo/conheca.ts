@@ -1308,4 +1308,57 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  configuracoes: {
+    titulo: "Configurações",
+    blocos: [
+      {
+        texto:
+          "Página de preferências da sua conta. Permite ajustar a aparência da interface (quando o perfil permitir) e alterar a senha de acesso. O acesso fica no menu do avatar (canto superior), junto com Ajuda — não aparece no menu lateral.",
+      },
+      {
+        subtitulo: "Aparência",
+        texto:
+          "Escolha entre tema claro e escuro. A preferência vale para a sua sessão na plataforma.\n\nPerfis **Operador** usam sempre o modo escuro com a identidade visual (whitelabel) da operadora — o seletor de tema não é exibido nesses casos.",
+      },
+      {
+        subtitulo: "Alterar Senha",
+        texto:
+          "Informe a senha atual, a nova senha e a confirmação. A nova senha deve ter pelo menos 8 caracteres, combinar maiúsculas e minúsculas, incluir número e caractere especial, e ser diferente da senha atual.\n\nUm indicador de força (Fraca / Média / Forte) ajuda a validar o preenchimento antes de salvar.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "A visualização depende da permissão de **Ver** em Gestão de Usuários para a página Configurações. Sem essa permissão, a página exibe acesso restrito.",
+      },
+    ],
+  },
+  simulador_login: {
+    titulo: "Simulador de Login",
+    blocos: [
+      {
+        texto:
+          "Permite visualizar a plataforma com o menu e a identidade de outro perfil, sem trocar a sua conta real. O acesso fica no menu do avatar (entre Configurações e Ajuda) — não aparece no menu lateral. Enquanto a simulação estiver ativa, a navegação é somente leitura.",
+      },
+      {
+        subtitulo: "Como iniciar",
+        texto:
+          "Escolha um perfil na lista (agrupado por tipo: gerenciais, estúdio, escritório, externos, etc.). Alguns perfis pedem um passo extra:\n\n— **Operador:** selecione a operadora (ativas e inativas; inativas aparecem com o rótulo correspondente).\n— **Prestador** (e áreas equivalentes): selecione a área de atuação.\n\nApós confirmar, a plataforma abre a Home no modo simulado e exibe um banner para encerrar a visualização.",
+      },
+      {
+        subtitulo: "O que você vê na simulação",
+        texto:
+          "O menu e as permissões seguem o perfil simulado (e o escopo de operadora ou área, quando aplicável). Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (como Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado.",
+      },
+      {
+        subtitulo: "Quem pode usar e o que aparece na lista",
+        texto:
+          "É necessário permissão de **Ver** em Simulador de Login. Os perfis disponíveis na página são definidos em **Gestão de Usuários → Simulador de Login** (matriz do perfil viewer × perfis simuláveis). Administrador vê o catálogo completo. Se a lista estiver vazia, peça ao administrador para liberar perfis nessa aba.",
+      },
+      {
+        subtitulo: "Encerrar",
+        texto:
+          "Use **Encerrar visualização** no banner ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais.",
+      },
+    ],
+  },
 };

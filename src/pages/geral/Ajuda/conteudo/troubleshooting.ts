@@ -799,7 +799,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   afiliados: {
-    titulo: "Afiliados — Problemas Comuns",
+    titulo: "Afiliados",
     blocos: [
       {
         subtitulo: "Não consigo salvar o perfil do afiliado?",
@@ -834,7 +834,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   afiliados_network: {
-    titulo: "Network — Problemas Comuns",
+    titulo: "Network",
     blocos: [
       {
         subtitulo: "Um prospecto não aparece na lista?",
@@ -1250,6 +1250,56 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Há links que não quero mapear mas também não quero que apareçam como pendentes?",
         texto:
           "Use o botão Ignorar na aba Pendentes. O link vai para a aba Ignorados e não conta no indicador de pendentes. Se mudar de ideia, use Reabrir na aba Ignorados para devolvê-lo aos Pendentes.",
+      },
+    ],
+  },
+  configuracoes: {
+    titulo: "Configurações",
+    blocos: [
+      {
+        subtitulo: "Não encontro Configurações no menu lateral?",
+        texto:
+          "Comportamento esperado: Configurações fica no menu do avatar (canto superior), não no menu lateral. Confirme também a permissão de **Ver** para Configurações em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Não consigo mudar o tema (claro/escuro)?",
+        texto:
+          "Perfis Operador usam sempre o modo escuro com a identidade da operadora — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na secção Aparência.",
+      },
+      {
+        subtitulo: "Erro ao alterar a senha?",
+        texto:
+          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+      },
+    ],
+  },
+  simulador_login: {
+    titulo: "Simulador de Login",
+    blocos: [
+      {
+        subtitulo: "Não vejo o Simulador de Login no menu do avatar?",
+        texto:
+          "É necessário permissão de **Ver** em Simulador de Login (Gestão de Usuários). O atalho não aparece no menu lateral — só no menu do avatar, entre Configurações e Ajuda.",
+      },
+      {
+        subtitulo: "A lista de perfis está vazia?",
+        texto:
+          "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça ao administrador para marcar as opções em **Gestão de Usuários → Simulador de Login**. Administradores veem o catálogo completo sem essa matriz.",
+      },
+      {
+        subtitulo: "Não consigo criar ou editar nada durante a simulação?",
+        texto:
+          "Comportamento esperado: a simulação é somente leitura. Encerrar a visualização restaura as permissões da sua conta real.",
+      },
+      {
+        subtitulo: "O menu simulado não mostra páginas que o perfil deveria ter?",
+        texto:
+          "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
+      },
+      {
+        subtitulo: "Como sair da simulação?",
+        texto:
+          "Clique em **Encerrar visualização** no banner no topo da plataforma ou no bloco correspondente na página Simulador de Login.",
       },
     ],
   },

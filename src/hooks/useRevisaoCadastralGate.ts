@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { registerRevisaoNavGate, useApp } from "../context/AppContext";
 import type { PageKey } from "../types";
 import { REVISAO_GATE_BANNER_KEY } from "../lib/appRoutes";
+import { extrairPrimeiroNome } from "../lib/aniversarioHoje";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   destinoBloqueadoPorGateRevisaoCadastral,
@@ -13,6 +14,7 @@ export function useRevisaoCadastralGate() {
   const { user, permissionsAcoes, navigateTo } = useApp();
   const [gateLoading, setGateLoading] = useState(true);
   const [gateAtivo, setGateAtivo] = useState(false);
+  const [primeiroNome, setPrimeiroNome] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
   const bootDoneRef = useRef(false);
   const gateAtivoRef = useRef(gateAtivo);
@@ -22,6 +24,7 @@ export function useRevisaoCadastralGate() {
     async (opts?: { silent?: boolean }) => {
       if (!user?.email?.trim()) {
         setGateAtivo(false);
+        setPrimeiroNome("");
         setGateLoading(false);
         bootDoneRef.current = true;
         return;
@@ -29,6 +32,7 @@ export function useRevisaoCadastralGate() {
       const permEditar = permissionsAcoes.rh_dados_cadastro?.editar ?? null;
       if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
         setGateAtivo(false);
+        setPrimeiroNome("");
         setModalAberto(false);
         setGateLoading(false);
         bootDoneRef.current = true;
@@ -38,12 +42,14 @@ export function useRevisaoCadastralGate() {
       if (showBlockingLoader) setGateLoading(true);
       const row = await buscarFuncionarioRevisaoCadastralPorEmail(user.email);
       const ativo = revisaoCadastralPendenteParaFuncionario(row);
+      const nomeCadastro = row?.nome?.trim() || user.name?.trim() || "Colaborador";
+      setPrimeiroNome(extrairPrimeiroNome(nomeCadastro) || "Colaborador");
       setGateAtivo(ativo);
       if (!ativo) setModalAberto(false);
       setGateLoading(false);
       bootDoneRef.current = true;
     },
-    [user?.email, user?.role, permissionsAcoes.rh_dados_cadastro?.editar],
+    [user?.email, user?.name, user?.role, permissionsAcoes.rh_dados_cadastro?.editar],
   );
 
   useEffect(() => {
@@ -77,6 +83,7 @@ export function useRevisaoCadastralGate() {
   return {
     gateLoading,
     gateAtivo,
+    primeiroNome,
     modalRevisaoAberto: modalAberto,
     fecharModalRevisao,
     irParaAtualizacaoCadastral,

@@ -987,10 +987,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Home · Gestão de Operadoras",
       },
       {
+        termo: "Home staff (Estúdio / Escritório)",
+        definicao:
+          "Painel pós-login com boas-vindas, atualização cadastral, aniversários, bloco Informações (informativos), Blogueiro Spin (fotos e menções recentes) e acesso rápido — ordem fixa por perfil.",
+        referencia: "Home",
+      },
+      {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador) e exibidos no bloco de avisos da Home.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador) e exibidos no bloco Informações da Home. Em Homes staff, use «Li e Ocultar» para recolher o card até o próximo acesso.",
         referencia: "Informativos · Home",
+      },
+      {
+        termo: "Blogueiro Spin",
+        definicao:
+          "Bloco da Home staff com novidades dos últimos 10 dias: fotos novas na Galeria (álbum de evento ou Minhas Fotos) e reportagens do Spin na Rede, com link direto e «Li e Ocultar».",
+        referencia: "Home · Galeria de Fotos · Spin na Rede",
       },
     ],
   },
@@ -1069,6 +1081,33 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       },
     ],
   },
+  {
+    key: "geral_conta",
+    label: "Geral — Conta e simulação",
+    accentColor: "#64748b",
+    termos: [
+      {
+        termo: "Configurações",
+        definicao:
+          "Página de preferências da conta: aparência (tema claro/escuro, quando o perfil permitir) e alteração de senha. Acessível pelo menu do avatar — não aparece no menu lateral.",
+        referencia: "Configurações",
+      },
+      {
+        termo: "Simulador de Login",
+        definicao:
+          "Ferramenta para visualizar a plataforma com o menu e a identidade de outro perfil, sem trocar a conta real. A simulação é somente leitura e pode ser encerrada a qualquer momento.",
+        nota:
+          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. Operador e prestador pedem operadora ou área no início da simulação.",
+        referencia: "Simulador de Login · Gestão de Usuários",
+      },
+      {
+        termo: "Visualização simulada",
+        definicao:
+          "Estado em que o menu e as permissões seguem o perfil escolhido no Simulador de Login. Criar, Editar e Excluir ficam bloqueados até encerrar a visualização.",
+        referencia: "Simulador de Login",
+      },
+    ],
+  },
 ];
 
 const DASHBOARD_PAGE_KEYS: PageKey[] = [
@@ -1121,4 +1160,5 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   whitelabel: ["gestao_operadoras"],
   academy: ["academy_performance_hub", "academy_portal"],
   periodos: DASHBOARD_PAGE_KEYS,
+  geral_conta: ["configuracoes", "simulador_login"],
 };

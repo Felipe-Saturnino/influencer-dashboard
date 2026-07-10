@@ -2,10 +2,10 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasTechOps } from "./techOps/BoasVindasTechOps";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosTechOps } from "./techOps/AtalhosTechOps";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_TECH_OPS_PREFIX = "home-tech-ops";
 
@@ -29,10 +29,10 @@ export default function HomeTechOps() {
       }}
     >
       <BoasVindasTechOps nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_TECH_OPS_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_TECH_OPS_PREFIX} />
       <InformacoesStaffHome perfil="tech_ops" sectionIdPrefix={HOME_TECH_OPS_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_TECH_OPS_PREFIX} />
       <AtalhosTechOps />
-      <SpinNaRedeHome sectionIdPrefix={HOME_TECH_OPS_PREFIX} />
     </div>
   );
 }

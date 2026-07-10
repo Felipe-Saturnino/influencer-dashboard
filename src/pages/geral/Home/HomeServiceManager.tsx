@@ -2,10 +2,10 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasServiceManager } from "./serviceManager/BoasVindasServiceManager";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosServiceManager } from "./serviceManager/AtalhosServiceManager";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_SERVICE_MANAGER_PREFIX = "home-service-manager";
 
@@ -29,10 +29,10 @@ export default function HomeServiceManager() {
       }}
     >
       <BoasVindasServiceManager nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
       <InformacoesStaffHome perfil="service_manager" sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
       <AtalhosServiceManager />
-      <SpinNaRedeHome sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
     </div>
   );
 }

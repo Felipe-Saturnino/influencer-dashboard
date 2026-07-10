@@ -2,10 +2,10 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasFigurino } from "./figurino/BoasVindasFigurino";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { AtalhosFigurino } from "./figurino/AtalhosFigurino";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 
 const HOME_FIGURINO_PREFIX = "home-figurino";
 
@@ -29,10 +29,10 @@ export default function HomeFigurino() {
       }}
     >
       <BoasVindasFigurino nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_FIGURINO_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_FIGURINO_PREFIX} />
       <InformacoesStaffHome perfil="figurino" sectionIdPrefix={HOME_FIGURINO_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_FIGURINO_PREFIX} />
       <AtalhosFigurino />
-      <SpinNaRedeHome sectionIdPrefix={HOME_FIGURINO_PREFIX} />
     </div>
   );
 }

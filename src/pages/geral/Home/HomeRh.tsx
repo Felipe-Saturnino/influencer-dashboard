@@ -1,20 +1,20 @@
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
-import { BoasVindasShiftLeader } from "./shiftLeader/BoasVindasShiftLeader";
+import { BoasVindasRh } from "./rh/BoasVindasRh";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { AtalhosRh } from "./rh/AtalhosRh";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
-import { AtalhosShiftLeader } from "./shiftLeader/AtalhosShiftLeader";
 
-const HOME_SHIFT_LEADER_PREFIX = "home-shift-leader";
+const HOME_RH_PREFIX = "home-rh";
 
-export default function HomeShiftLeader() {
+export default function HomeRh() {
   const { theme: t, user } = useApp();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Shift Leader";
+  const nome = user.name?.trim() || "RH";
 
   return (
     <div
@@ -28,11 +28,11 @@ export default function HomeShiftLeader() {
         gap: PAGE_CONTENT_BOX_GAP,
       }}
     >
-      <BoasVindasShiftLeader nome={nome} />
-      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
-      <InformacoesStaffHome perfil="shift_leader" sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
-      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
-      <AtalhosShiftLeader />
+      <BoasVindasRh nome={nome} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_RH_PREFIX} />
+      <InformacoesStaffHome perfil="rh" sectionIdPrefix={HOME_RH_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_RH_PREFIX} />
+      <AtalhosRh />
     </div>
   );
 }

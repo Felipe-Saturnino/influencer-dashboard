@@ -4,15 +4,17 @@ import { FONT } from "../constants/theme";
 import { getCtaCriarGradient } from "../lib/ctaCriarStyles";
 import {
   REVISAO_CADASTRO_GATE_MODAL_CTA,
-  REVISAO_CADASTRO_GATE_MODAL_MENSAGEM,
-  REVISAO_CADASTRO_GATE_MODAL_TITULO,
+  REVISAO_CADASTRO_HOME_MENSAGEM,
+  tituloAtualizacaoCadastralPendente,
 } from "../lib/rhCadastroRevisao";
 import { ModalBase, ModalHeader } from "./OperacoesModal";
 
 export function RevisaoCadastralGateModal({
+  primeiroNome,
   onClose,
   onIrParaDadosCadastro,
 }: {
+  primeiroNome: string;
   onClose: () => void;
   onIrParaDadosCadastro: () => void;
 }) {
@@ -21,7 +23,7 @@ export function RevisaoCadastralGateModal({
 
   return (
     <ModalBase maxWidth={480} onClose={onClose} zIndex={1100}>
-      <ModalHeader title={REVISAO_CADASTRO_GATE_MODAL_TITULO} onClose={onClose} />
+      <ModalHeader title={tituloAtualizacaoCadastralPendente(primeiroNome)} onClose={onClose} />
       <p
         style={{
           margin: "0 0 20px",
@@ -31,7 +33,7 @@ export function RevisaoCadastralGateModal({
           fontFamily: FONT.body,
         }}
       >
-        {REVISAO_CADASTRO_GATE_MODAL_MENSAGEM}
+        {REVISAO_CADASTRO_HOME_MENSAGEM}
       </p>
       <button
         type="button"
