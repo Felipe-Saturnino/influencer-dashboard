@@ -58,6 +58,8 @@ export const ERRO_SYNC_SOCIAL =
   "Não foi possível disparar o sync de Social Media. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_CS_OUTLOOK =
+  "Não foi possível ingerir e-mails do CS Atendimento. Verifique a Edge Function, secrets do Graph e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_SPA =
   "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_DOMINIO =

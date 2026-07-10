@@ -2,6 +2,8 @@
 
 Lê a **Inbox** da caixa oficial via **Microsoft Graph** (app-only) e cria chamados na aba **E-mail** (`cs_chamado_criar_email`).
 
+> **Importante:** enviar e-mail para `contato@` **não** cria chamado sozinho. A Edge Function `ingest-cs-atendimento-outlook` precisa estar **publicada**, com **secrets do Graph** configurados, e ser **executada** (cron a cada 5 min, botão **Sync** no Status Técnico ou POST manual). Se não houver **nenhuma invocação** no Supabase → Edge Functions → Logs, a ingestão nunca rodou.
+
 ## Pré-requisitos (TI — concluídos)
 
 | Item | Status esperado |
@@ -21,6 +23,10 @@ Aplicar migration:
 
 (RPC `cs_chamado_criar_email`, bucket `cs-atendimento-email`, tabela `cs_chamado_anexos`.)
 
+Migration de integração (Status Técnico + `sync_logs`):
+
+- `20260710130000_integrations_cs_atendimento_outlook.sql`
+
 ## Edge Function
 
 **Nome:** `ingest-cs-atendimento-outlook`
@@ -30,8 +36,9 @@ Aplicar migration:
 - `index.ts`
 - `common.ts`
 - `graphOutlook.ts`
+- `auth.ts`
 
-Deploy: Supabase Dashboard → Edge Functions → criar/atualizar os 3 ficheiros → **Deploy updates**, ou:
+Deploy: Supabase Dashboard → Edge Functions → criar/atualizar os 4 ficheiros → **Deploy updates**, ou:
 
 ```bash
 supabase functions deploy ingest-cs-atendimento-outlook
@@ -49,7 +56,9 @@ Em `supabase/config.toml`: `verify_jwt = false` (autorização interna na funç�
 | `CS_OUTLOOK_MAILBOX` | Não | Padrão: `contato@spingaming.com.br` |
 | `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` | Recomendado | String aleatória longa — protege chamadas manuais/cron |
 
-`SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` são injetados automaticamente pelo Supabase.
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` são injetados automaticamente pelo Supabase.
+
+**Autorização:** Bearer `service_role` (cron GitHub Actions), header `x-cs-atendimento-outlook-ingest-secret`, ou sessão logada com permissão **Editar** em **Status Técnico** (disparo pelo botão **Sync** na plataforma).
 
 ## Comportamento
 
@@ -111,7 +120,13 @@ Mensagens **já lidas** não entram no modo padrão. Opções:
 
 ## Cron (produção)
 
-Agendar **a cada 5 minutos** (Supabase Dashboard → Edge Functions → `ingest-cs-atendimento-outlook` → Cron, ou GitHub Actions):
+Workflow GitHub Actions: `.github/workflows/ingest-cs-atendimento-outlook-5min.yml` (a cada **5 minutos**).
+
+Secrets no repositório: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e, se usar, `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET`.
+
+Disparo manual na plataforma: **Status Técnico** → integração **CS Atendimento (Outlook)** → **Sync**.
+
+Alternativa HTTP:
 
 ```http
 POST /functions/v1/ingest-cs-atendimento-outlook
@@ -137,7 +152,7 @@ Body vazio = processa até **25** e-mails **não lidos**.
 | `Não foi possível autenticar no Microsoft Graph` | Tenant/Client/Secret incorretos ou admin consent pendente |
 | `Não foi possível listar e-mails` | `Mail.Read` application permission ou Application Access Policy |
 | `AccessCheckResult: Denied` no teste TI | App sem policy na caixa correta |
-| Chamado não aparece | Migration e-mail não aplicada; ver Logs da Edge Function |
+| Chamado não aparece | Function não deployada ou nunca executada (zero invocações); e-mail já **lido** (usar `modo: "recent"`); migration e-mail não aplicada |
 | Duplicado ignorado | Mesmo `internetMessageId` já em `cs_chamados` (esperado) |
 
 Logs: Supabase → Edge Functions → `ingest-cs-atendimento-outlook` → **Logs**.
