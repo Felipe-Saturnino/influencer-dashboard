@@ -38,6 +38,7 @@ import {
   LABEL_UI_COMERCIAL_SPA_LISTA,
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
   LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
+  LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
@@ -1782,6 +1783,47 @@ export default function StatusTecnico() {
     [statusPorIntegracao],
   );
 
+  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
+  const csAtendimentoOutlookRow = useMemo((): StatusIntegracaoRow => {
+    const fromDb = statusPorIntegracao.find((i) => i.slug === "cs_atendimento_outlook");
+    if (fromDb) {
+      return {
+        slug: fromDb.slug,
+        nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
+        ultimoSync: fromDb.ultimoSync,
+        registrosHoje: fromDb.registrosHoje,
+        erros: fromDb.erros,
+        status: fromDb.status,
+        syncTipo: "cs_outlook",
+      };
+    }
+
+    const logsInt = syncLogs.filter((l) => l.integracao_slug === "cs_atendimento_outlook");
+    const ultimo = logsInt[0];
+    const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+    const regsHoje = syncsHoje.reduce(
+      (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+      0,
+    );
+    const regsExibir =
+      regsHoje ||
+      (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
+    let status: "ok" | "warning" | "falha" = "ok";
+    if (!ultimo) status = "falha";
+    else if (ultimo.status === "falha") status = "falha";
+    else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+
+    return {
+      slug: "cs_atendimento_outlook",
+      nome: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
+      ultimoSync: ultimo?.executado_em ?? null,
+      registrosHoje: regsExibir,
+      erros: ultimo?.erros_count ?? 0,
+      status,
+      syncTipo: "cs_outlook",
+    };
+  }, [statusPorIntegracao, syncLogs, hojeIso]);
+
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
@@ -1797,6 +1839,7 @@ export default function StatusTecnico() {
     () =>
       ordenarLinhasIntegracao(
         [
+          csAtendimentoOutlookRow,
           pickIntegracaoRow("spin_na_rede_rss"),
           pickIntegracaoRow("comercial_spa_lista"),
           pickIntegracaoRow("comercial_dominio_validacao"),
@@ -1814,7 +1857,7 @@ export default function StatusTecnico() {
         ].filter(Boolean) as StatusIntegracaoRow[],
         sortIntegracao,
       ),
-    [pickIntegracaoRow, socialKpisRow, sortIntegracao],
+    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortIntegracao],
   );
 
   const linhasEmails = useMemo(
@@ -1847,6 +1890,8 @@ export default function StatusTecnico() {
           integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
           (log.integracao_slug === "spin_na_rede_rss"
             ? "Spin na Rede (RSS)"
+            : log.integracao_slug === "cs_atendimento_outlook"
+              ? LABEL_UI_CS_ATENDIMENTO_OUTLOOK
             : log.integracao_slug === "lobby_blaze"
               ? "Lobby Blaze"
               : log.integracao_slug === "lobby_cda"
@@ -1871,6 +1916,7 @@ export default function StatusTecnico() {
           comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
           comercial_cnpj_enriquecimento: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
           painel_noticias_rss: "Painel de Notícias (RSS)",
+          cs_atendimento_outlook: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
           diagnostico_plataforma: "Diagnóstico da plataforma",
