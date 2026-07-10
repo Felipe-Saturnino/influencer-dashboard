@@ -74,6 +74,29 @@ Em `supabase/config.toml`: `verify_jwt = false` (autorização interna na funç�
 
 Substitua `PROJETO`, `SERVICE_ROLE` e, se configurado, `INGEST_SECRET`.
 
+**Diagnóstico Graph (recomendado após atualizar secrets):**
+
+```powershell
+$headers = @{
+  "Authorization" = "Bearer SERVICE_ROLE"
+  "Content-Type"  = "application/json"
+}
+$body = @{ test_graph = $true } | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "https://PROJETO.supabase.co/functions/v1/ingest-cs-atendimento-outlook" `
+  -Headers $headers `
+  -Body $body
+```
+
+Resposta OK: `"ok": true`, `"mensagem": "Conexão Microsoft Graph OK…"`.  
+Resposta erro: campos `etapa` (`secrets` | `token` | `mailbox`), `azure_erro`, `azure_detalhe`, `avisos_secrets` e `secrets.client_secret_parece_secret_id`.
+
+> Após alterar secrets no Supabase, **redeploy** da function (`supabase functions deploy ingest-cs-atendimento-outlook`) ou aguarde 1–2 min para novas instâncias.
+
+### Ingestão simulada
+
 ```powershell
 $headers = @{
   "Authorization" = "Bearer SERVICE_ROLE"
@@ -120,11 +143,51 @@ Mensagens **já lidas** não entram no modo padrão. Opções:
 
 ## Cron (produção)
 
-Workflow GitHub Actions: `.github/workflows/ingest-cs-atendimento-outlook-5min.yml` (a cada **5 minutos**).
+### Principal — Supabase `pg_cron` (recomendado, a cada 5 min)
 
-Secrets no repositório: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e, se usar, `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET`.
+Migration: `20260710150000_cs_atendimento_outlook_pg_cron.sql`
 
-Disparo manual na plataforma: **Status Técnico** → integração **CS - Caixa de Contato (Outlook)** → **Sync**.
+**Passo a passo:**
+
+1. No **SQL Editor**, gravar secrets no Vault (substituir valores):
+
+```sql
+SELECT vault.create_secret(
+  'https://SEU_PROJETO.supabase.co',
+  'supabase_project_url',
+  'URL base — cron CS Outlook'
+);
+SELECT vault.create_secret(
+  'SUA_SUPABASE_SERVICE_ROLE_KEY',
+  'supabase_service_role_key',
+  'Service role — cron CS Outlook'
+);
+```
+
+2. Aplicar a migration (`supabase db push` ou SQL Editor).
+
+3. Confirmar o job:
+
+```sql
+SELECT jobid, jobname, schedule, active FROM cron.job
+WHERE jobname = 'ingest-cs-atendimento-outlook-5min';
+```
+
+Detalhes: `scripts/setup-cs-atendimento-outlook-cron.sql`.
+
+### Backup / manual — GitHub Actions
+
+Workflow: `.github/workflows/ingest-cs-atendimento-outlook-5min.yml` (melhor esforço; **não** substitui o pg_cron).
+
+Se o schedule do GitHub **não disparar** (comum em repo privado):
+
+- **Settings → Actions → General → Allow scheduled workflows** — deve estar **ativado**
+- O workflow precisa estar na branch **`main`**
+- Mesmo assim, o GitHub pode **atrasar ou pular** runs frequentes
+
+Secrets no GitHub: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+Disparo manual na plataforma: **Status Técnico** → **CS - Caixa de Contato (Outlook)** → **Sync**.
 
 Alternativa HTTP:
 
@@ -149,13 +212,14 @@ Body vazio = processa até **25** e-mails **não lidos**.
 
 | Sintoma | Causa provável |
 |---------|----------------|
-| `Não foi possível autenticar no Microsoft Graph` / HTTP 500 no cron GitHub | **Secrets Azure ausentes ou errados no Supabase** (não no GitHub). Configurar em **Supabase → Edge Functions → Secrets**: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`. O cron só precisa de `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. |
-| `invalid_client` na resposta | Client secret expirado ou `CS_OUTLOOK_CLIENT_ID` incorreto — gerar novo secret no Azure Portal |
-| `unauthorized_client` | Falta admin consent em `Mail.Read` (application) no app Azure |
-| `CS_OUTLOOK_TENANT_ID` | Deve ser o **GUID** do tenant (Azure AD → Overview → Tenant ID), não o domínio `@spingaming.com.br` |
-| `Não foi possível listar e-mails` | `Mail.Read` application permission ou Application Access Policy |
+| `Não foi possível autenticar no Microsoft Graph` / HTTP 500 | Secrets Azure no **Supabase → Edge Functions → Secrets** (não GitHub). Rode `test_graph: true` (acima) para ver `azure_detalhe`. |
+| `client_secret_parece_secret_id: true` | Colou **Secret ID** (UUID) em vez do **Value** do client secret no Azure — gere secret novo e copie o Value |
+| `AADSTS7000215` / `invalid_client` | Client secret inválido ou expirado |
+| `etapa: mailbox` / ErrorAccessDenied | Token OK, mas **Application Access Policy** ou **Mail.Read** (Application) — TI deve validar `Test-ApplicationAccessPolicy` em contato@ |
+| Secrets atualizados e erro persiste | Redeploy: `supabase functions deploy ingest-cs-atendimento-outlook` |
 | `AccessCheckResult: Denied` no teste TI | App sem policy na caixa correta |
-| Chamado não aparece | Function não deployada ou nunca executada (zero invocações); e-mail já **lido** (usar `modo: "recent"`); migration e-mail não aplicada |
+| Chamado não aparece | Function não deployada ou nunca executada; e-mail já **lido** (usar `modo: "recent"`); migration e-mail não aplicada |
+| Cron GitHub não roda após 30 min | Normal em repo privado — usar **pg_cron** (migration `20260710150000`) + Vault; ativar **Allow scheduled workflows** se quiser manter GitHub como backup |
 | Duplicado ignorado | Mesmo `internetMessageId` já em `cs_chamados` (esperado) |
 
 Logs: Supabase → Edge Functions → `ingest-cs-atendimento-outlook` → **Logs**.

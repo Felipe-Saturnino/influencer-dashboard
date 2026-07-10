@@ -46,6 +46,7 @@ import {
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
   ERRO_SYNC_CS_OUTLOOK,
+  formatarErroRespostaCsOutlook,
   HORARIO_AGENDADO_BR,
   MODAL_OVERLAY_BG,
   MSG_SEM_PERMISSAO,
@@ -634,6 +635,9 @@ export default function StatusTecnico() {
       const resData = (resDataRaw ?? {}) as {
         ok?: boolean;
         erro?: string;
+        azure_erro?: string;
+        azure_detalhe?: string;
+        avisos_secrets?: string[];
         criados?: number;
         encontrados?: number;
         duplicados?: number;
@@ -644,9 +648,9 @@ export default function StatusTecnico() {
 
       if (invokeError) {
         const im = invokeError.message ?? "";
-        let texto =
-          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_CS_OUTLOOK;
-        if (im.includes("non-2xx") && resData.erro) texto = resData.erro;
+        let texto = formatarErroRespostaCsOutlook(resData);
+        if (!texto) texto = ERRO_SYNC_CS_OUTLOOK;
+        if (im.includes("non-2xx") && resData.erro) texto = formatarErroRespostaCsOutlook(resData);
         if (im.includes("404") || im.includes("not found")) {
           texto =
             "Edge Function ingest-cs-atendimento-outlook não encontrada. Execute: supabase functions deploy ingest-cs-atendimento-outlook";
@@ -659,7 +663,7 @@ export default function StatusTecnico() {
       }
 
       if (!resData?.ok) {
-        const extra = [resData?.erro, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        const extra = formatarErroRespostaCsOutlook(resData);
         setSyncCsOutlookMensagem({
           tipo: "erro",
           texto: extra.length > 0 ? extra : ERRO_SYNC_CS_OUTLOOK,

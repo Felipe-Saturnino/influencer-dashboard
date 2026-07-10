@@ -1,12 +1,17 @@
 # CS Atendimento — ingestão Outlook via Edge Function `ingest-cs-atendimento-outlook`
-# A cada 5 minutos (UTC)
+# BACKUP / manual — o agendamento principal é pg_cron no Supabase (migration 20260710150000).
+# GitHub schedule (*/5) é melhor esforço e pode não disparar em repos privados sem
+# "Allow scheduled workflows" ou com atrasos longos.
 # Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 name: Ingest CS Atendimento Outlook (5 min)
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   ingest:

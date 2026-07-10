@@ -13,10 +13,13 @@ import {
   type IngestOutlookBody,
 } from "./common.ts";
 import {
+  GraphOutlookError,
   listarAnexosArquivo,
   listarMensagensInbox,
   marcarMensagemComoLida,
   obterTokenGraph,
+  testarConexaoGraph,
+  verificarSecretsOutlook,
   type GraphMessage,
 } from "./graphOutlook.ts";
 
@@ -116,6 +119,30 @@ serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, serviceKey, supabaseServiceOptions);
+
+  if (body.test_graph === true) {
+    try {
+      const secrets = verificarSecretsOutlook();
+      const teste = await testarConexaoGraph(mailbox);
+      return json(
+        {
+          ok: true,
+          test_graph: true,
+          mailbox,
+          auth_via: auth.via,
+          secrets,
+          user_principal_name: teste.user_principal_name,
+          mensagem: "Conexão Microsoft Graph OK — token e caixa acessíveis.",
+        },
+        req,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro inesperado";
+      const extra = e instanceof GraphOutlookError ? e.toJson() : {};
+      const secrets = verificarSecretsOutlook();
+      return json({ ok: false, test_graph: true, erro: msg, secrets, ...extra }, req, 500);
+    }
+  }
 
   try {
     const token = await obterTokenGraph();
@@ -261,14 +288,15 @@ serve(async (req) => {
     return json(resultado, req);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro inesperado";
+    const extra = e instanceof GraphOutlookError ? e.toJson() : {};
     console.error("[ingest-cs-atendimento-outlook]", e);
     await gravarSyncLog(supabase, {
       status: "falha",
       registros_inseridos: 0,
       erros_count: 1,
-      mensagem_erro: msg.slice(0, 500),
+      mensagem_erro: [msg, extra.azure_erro, extra.azure_detalhe].filter(Boolean).join(" — ").slice(0, 500),
       duracao_ms: Date.now() - inicio,
     });
-    return json({ ok: false, erro: msg }, req, 500);
+    return json({ ok: false, erro: msg, ...extra }, req, 500);
   }
 });
