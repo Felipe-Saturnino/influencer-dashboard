@@ -1049,7 +1049,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
         texto:
-          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.",
+          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.\n\nSe o botão estiver em **Fazer Check-out**, há um check-in aberto há menos de **20 horas** — o próximo ato é encerrar esse turno (inclusive turnos que cruzam a meia-noite). Após 20h sem check-out, o sistema libera novo check-in; o turno incompleto deve ser tratado com **Justificar** no Controle de Presença.",
       },
       {
         subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
@@ -1120,6 +1120,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
           "Ações de presença e justificativa exigem permissão de **Editar** no Calendário. Se o botão não aparece, solicite liberação ao administrador.",
+      },
+      {
+        subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
+        texto:
+          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
       },
     ],
   },

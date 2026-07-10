@@ -660,6 +660,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Alterne entre visões de calendário conforme o perfil (próprio time, staff selecionado ou visão ampliada). Use filtros de time, staff e período; ações de presença e justificativa dependem de permissão de Editar.",
       },
+      {
+        subtitulo: "Check-in e Check-out (turnos noturnos)",
+        texto:
+          "Na aba **Controle de Presença**, cada linha é o **turno** do dia na escala — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na **mesma linha** do dia do check-in.\n\nO botão **Fazer Check-out** permanece disponível por **20 horas** após o check-in. Se não houver check-out nesse período, o sistema assume esquecimento e libera **Fazer Check-in** para o próximo turno. Turnos incompletos podem ser tratados com **Justificar** (motivo Esquecimento).",
+      },
     ],
   },
   escala_marketplace_turnos: {

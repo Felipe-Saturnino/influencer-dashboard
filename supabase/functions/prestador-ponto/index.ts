@@ -3,14 +3,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 /**
  * prestador-ponto — Check-in / Check-out (rede WAN + escala aprovada).
- * Qualquer utilizador autenticado pode consultar/registar; regras de negócio em montarEstado/POST.
+ * Turno noturno: check-out herda o dia_sp do check-in aberto (linha = turno).
+ * Janela de check-out: 20h após o check-in; depois o sistema assume esquecimento
+ * e libera novo check-in.
  */
 
 const MSG_REDE =
   'Você deve estar logado na rede Spin Colaboradores para realizar o Check-in/Check-out.'
 const MSG_SEM_ESCALA = 'Sem escala aprovada para hoje na Gestão de Escala.'
+const MSG_SEM_ESCALA_TURNO =
+  'Sem escala aprovada para o dia do turno na Gestão de Escala.'
 const MSG_SEM_VINCULO_RH =
-  'Não encontrámos um colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).'
+  'Não encontramos um colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).'
+const MSG_SEQUENCIA_HOJE = 'Check-in e Check-out de hoje já foram registrados.'
+
+/** Janela em que o check-out permanece habilitado após o check-in (turno noturno / esquecimento). */
+const JANELA_CHECKOUT_MS = 20 * 60 * 60 * 1000
 
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || '*'
@@ -41,6 +49,12 @@ function clientIp(req: Request): string | null {
 }
 
 type ProximoTipo = 'check_in' | 'check_out'
+
+type PontoRegistroRow = {
+  tipo: string
+  dia_sp: string
+  created_at: string
+}
 
 async function rhFuncionarioIdPorEmail(
   svc: ReturnType<typeof createClient>,
@@ -79,6 +93,86 @@ async function rhFuncionarioIdPorEmail(
   return (d?.id as string) ?? null
 }
 
+async function funcionarioEscaladoNoDia(
+  svc: ReturnType<typeof createClient>,
+  fid: string | null,
+  dia: string,
+): Promise<boolean> {
+  if (!fid) return false
+  const { data: esc } = await svc.rpc('prestador_ponto_escalado_dia', {
+    p_funcionario_id: fid,
+    p_dia: dia,
+  })
+  return esc === true
+}
+
+/**
+ * Resolve próximo ato e o dia_sp do turno (âncora = check-in).
+ * Check-out aberto só dentro de JANELA_CHECKOUT_MS; depois assume esquecimento.
+ */
+function resolverProximoPonto(
+  recent: PontoRegistroRow[],
+  diaSpHoje: string,
+): {
+  proximoTipo: ProximoTipo | null
+  turnoDiaSp: string
+  checkInAbertoAt: string | null
+  concluidoHoje: boolean
+} {
+  const ordenados = [...recent].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  )
+  const ultimo = ordenados.length > 0 ? ordenados[ordenados.length - 1]! : null
+
+  const regsHoje = ordenados.filter((r) => String(r.dia_sp).slice(0, 10) === diaSpHoje)
+  const temCiHoje = regsHoje.some((r) => r.tipo === 'check_in')
+  const temCoHoje = regsHoje.some((r) => r.tipo === 'check_out')
+  const concluidoHoje = temCiHoje && temCoHoje
+
+  if (ultimo?.tipo === 'check_in') {
+    const ageMs = Date.now() - new Date(ultimo.created_at).getTime()
+    if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= JANELA_CHECKOUT_MS) {
+      return {
+        proximoTipo: 'check_out',
+        turnoDiaSp: String(ultimo.dia_sp).slice(0, 10),
+        checkInAbertoAt: ultimo.created_at,
+        concluidoHoje: false,
+      }
+    }
+    // Esquecimento: libera novo check-in (salvo par completo hoje).
+    if (concluidoHoje) {
+      return {
+        proximoTipo: null,
+        turnoDiaSp: diaSpHoje,
+        checkInAbertoAt: null,
+        concluidoHoje: true,
+      }
+    }
+    return {
+      proximoTipo: 'check_in',
+      turnoDiaSp: diaSpHoje,
+      checkInAbertoAt: null,
+      concluidoHoje: false,
+    }
+  }
+
+  if (concluidoHoje) {
+    return {
+      proximoTipo: null,
+      turnoDiaSp: diaSpHoje,
+      checkInAbertoAt: null,
+      concluidoHoje: true,
+    }
+  }
+
+  return {
+    proximoTipo: 'check_in',
+    turnoDiaSp: diaSpHoje,
+    checkInAbertoAt: null,
+    concluidoHoje: false,
+  }
+}
+
 async function montarEstado(
   svc: ReturnType<typeof createClient>,
   userId: string,
@@ -96,38 +190,43 @@ async function montarEstado(
   }
 
   const fid = await rhFuncionarioIdPorEmail(svc, email)
-  let escaladoHoje = false
-  if (fid) {
-    const { data: esc } = await svc.rpc('prestador_ponto_escalado_dia', {
-      p_funcionario_id: fid,
-      p_dia: diaSp,
-    })
-    escaladoHoje = esc === true
-  }
+  const escaladoHoje = await funcionarioEscaladoNoDia(svc, fid, diaSp)
 
-  const { data: ultimos } = await svc
+  const { data: recentRaw } = await svc
     .from('prestador_ponto_registros')
-    .select('tipo')
+    .select('tipo, dia_sp, created_at')
     .eq('user_id', userId)
-    .eq('dia_sp', diaSp)
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(40)
 
-  const ultimo = ultimos?.[0]?.tipo as string | undefined
-  let proximoTipo: ProximoTipo | null = 'check_in'
-  if (ultimo === 'check_in') proximoTipo = 'check_out'
-  else if (ultimo === 'check_out') proximoTipo = null
+  const recent = (recentRaw ?? []) as PontoRegistroRow[]
+  const { proximoTipo, turnoDiaSp, checkInAbertoAt, concluidoHoje } = resolverProximoPonto(
+    recent,
+    diaSp,
+  )
+
+  const escaladoTurno =
+    proximoTipo === 'check_out'
+      ? await funcionarioEscaladoNoDia(svc, fid, turnoDiaSp)
+      : escaladoHoje
+
+  const escaladoParaAcao = proximoTipo == null ? false : escaladoTurno
 
   return {
     ok: true,
-    diaSp: diaSp,
+    diaSp,
+    turnoDiaSp,
     cidrsConfigured,
     clientIp: ip,
     ipPermitido,
     escaladoHoje,
+    escaladoTurno,
+    escaladoParaAcao,
     rhFuncionarioId: fid,
     proximoTipo,
-    concluidoHoje: ultimo === 'check_out',
+    checkInAbertoAt,
+    janelaCheckoutHoras: 20,
+    concluidoHoje,
   }
 }
 
@@ -208,9 +307,10 @@ serve(async (req) => {
 
     const estado = await montarEstado(svc, userId, email, ip)
     const cidrsConfigured = estado.cidrsConfigured === true
-    const escaladoHoje = estado.escaladoHoje === true
     const proximoTipo = estado.proximoTipo as ProximoTipo | null
     const rhFid = estado.rhFuncionarioId as string | null | undefined
+    const turnoDiaSp = String(estado.turnoDiaSp ?? estado.diaSp ?? hojeDiaSp()).slice(0, 10)
+    const escaladoParaAcao = estado.escaladoParaAcao === true
 
     if (!rhFid) {
       return new Response(
@@ -226,18 +326,11 @@ serve(async (req) => {
       )
     }
 
-    if (!escaladoHoje) {
-      return new Response(
-        JSON.stringify({ ok: false, error: MSG_SEM_ESCALA, code: 'escala', estado }),
-        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
-      )
-    }
-
     if (proximoTipo === null) {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: 'Check-in e Check-out de hoje já foram registados.',
+          error: MSG_SEQUENCIA_HOJE,
           code: 'sequencia',
           estado,
         }),
@@ -245,12 +338,18 @@ serve(async (req) => {
       )
     }
 
-    const diaSp = String(estado.diaSp ?? hojeDiaSp())
+    if (!escaladoParaAcao) {
+      const msgEscala = proximoTipo === 'check_out' ? MSG_SEM_ESCALA_TURNO : MSG_SEM_ESCALA
+      return new Response(
+        JSON.stringify({ ok: false, error: msgEscala, code: 'escala', estado }),
+        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
+    }
 
     const { error: insErr } = await svc.from('prestador_ponto_registros').insert({
       user_id: userId,
       tipo: proximoTipo,
-      dia_sp: diaSp,
+      dia_sp: turnoDiaSp,
       client_ip: ip,
     })
     if (insErr) {
@@ -262,10 +361,17 @@ serve(async (req) => {
     }
 
     const estadoPos = await montarEstado(svc, userId, email, ip)
-    return new Response(JSON.stringify({ ok: true, estado: estadoPos }), {
-      status: 200,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        estado: estadoPos,
+        registro: { tipo: proximoTipo, diaSp: turnoDiaSp },
+      }),
+      {
+        status: 200,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      },
+    )
   }
 
   return new Response(JSON.stringify({ ok: false, error: 'Método não permitido.' }), {

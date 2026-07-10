@@ -1939,7 +1939,9 @@ export default function RhCalendarioPage() {
               corpo: "Turno iniciado, bom turno.",
             });
           } else {
-            const diaIso = String(res.estado.diaSp ?? toISO(agora)).slice(0, 10);
+            const diaIso = String(
+              res.registro?.diaSp ?? res.estado.turnoDiaSp ?? res.estado.diaSp ?? toISO(agora),
+            ).slice(0, 10);
             let checkInAt = mapaPontoPorDiaIso.get(diaIso)?.check_in_at ?? null;
             if (!checkInAt && res.estado.rhFuncionarioId) {
               const refIso = refMesPrimeiroDiaISO(new Date(`${diaIso}T12:00:00`));
@@ -1983,11 +1985,14 @@ export default function RhCalendarioPage() {
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
   const labelBotaoPonto =
     pontoEstado?.proximoTipo === "check_out" ? "Fazer Check-out" : "Fazer Check-in";
+  const pontoEscaladoParaAcao =
+    pontoEstado?.escaladoParaAcao === true ||
+    (pontoEstado?.escaladoParaAcao == null && pontoEstado?.escaladoHoje === true);
   const pontoBotaoHabilitado =
     mostrarBotaoPontoCalendario &&
     !pontoEstadoLoading &&
     !pontoSubmitting &&
-    pontoEstado?.escaladoHoje === true &&
+    pontoEscaladoParaAcao &&
     pontoEstado?.proximoTipo != null;
   const pontoBotaoTitle = (() => {
     if (!mostrarBotaoPontoCalendario) return undefined;
@@ -1996,8 +2001,12 @@ export default function RhCalendarioPage() {
     if (!pontoEstado.rhFuncionarioId) {
       return "Não há colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).";
     }
-    if (pontoEstado.escaladoHoje !== true) return "Sem escala aprovada para hoje na Gestão de Escala.";
-    if (pontoEstado.proximoTipo == null) return "Check-in e Check-out de hoje já foram registados.";
+    if (!pontoEscaladoParaAcao) {
+      return pontoEstado.proximoTipo === "check_out"
+        ? "Sem escala aprovada para o dia do turno na Gestão de Escala."
+        : "Sem escala aprovada para hoje na Gestão de Escala.";
+    }
+    if (pontoEstado.proximoTipo == null) return "Check-in e Check-out de hoje já foram registrados.";
     return undefined;
   })();
 
