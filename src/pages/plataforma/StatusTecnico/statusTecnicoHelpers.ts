@@ -45,10 +45,14 @@ export const LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO = "Validação de domínios de
 /** Rótulo na UI de Status Técnico (slug `comercial_cnpj_enriquecimento`). */
 export const LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE = "Estado / Cidade";
 
+/** Rótulo na UI de Status Técnico (slug `cs_atendimento_outlook`). */
+export const LABEL_UI_CS_ATENDIMENTO_OUTLOOK = "CS Atendimento (Outlook)";
+
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
   if (slug === "comercial_dominio_validacao") return LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO;
   if (slug === "comercial_cnpj_enriquecimento") return LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE;
+  if (slug === "cs_atendimento_outlook") return LABEL_UI_CS_ATENDIMENTO_OUTLOOK;
   return nome;
 }
 
@@ -58,6 +62,8 @@ export const ERRO_SYNC_SOCIAL =
   "Não foi possível disparar o sync de Social Media. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_CS_OUTLOOK =
+  "Não foi possível ingerir e-mails do CS Atendimento. Verifique a Edge Function, secrets do Graph e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_SPA =
   "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_DOMINIO =

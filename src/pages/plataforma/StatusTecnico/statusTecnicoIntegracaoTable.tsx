@@ -28,6 +28,7 @@ export function StatusIntegracaoTable({
   syncExecutando,
   syncSocialExecutando,
   syncSpinRssExecutando,
+  syncCsOutlookExecutando,
   syncComercialSpaExecutando,
   syncComercialDominioExecutando,
   syncComercialCnpjExecutando,
@@ -51,13 +52,14 @@ export function StatusIntegracaoTable({
   syncExecutando: boolean;
   syncSocialExecutando: boolean;
   syncSpinRssExecutando: boolean;
+  syncCsOutlookExecutando: boolean;
   syncComercialSpaExecutando: boolean;
   syncComercialDominioExecutando: boolean;
   syncComercialCnpjExecutando: boolean;
   emailEnviando: boolean;
   emailAgendaEnviando: boolean;
   canEditarOk: boolean;
-  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") => void;
+  onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") => void;
   onConfirmarEmail: (tipo: "diretoria" | "agenda") => void;
 }) {
   const handleSort = (col: IntegracaoSortCol) => {
@@ -68,6 +70,7 @@ export function StatusIntegracaoTable({
     const isCda = row.syncTipo === "cda";
     const isSocial = row.syncTipo === "social";
     const isSpinRss = row.syncTipo === "spin_rss";
+    const isCsOutlook = row.syncTipo === "cs_outlook";
     const isComercialSpa = row.syncTipo === "comercial_spa";
     const isComercialDominio = row.syncTipo === "comercial_dominio";
     const isComercialCnpj = row.syncTipo === "comercial_cnpj";
@@ -79,6 +82,8 @@ export function StatusIntegracaoTable({
         ? syncSocialExecutando
         : isSpinRss
           ? syncSpinRssExecutando
+          : isCsOutlook
+            ? syncCsOutlookExecutando
           : isComercialSpa
             ? syncComercialSpaExecutando
             : isComercialDominio
@@ -87,7 +92,7 @@ export function StatusIntegracaoTable({
                 ? syncComercialCnpjExecutando
             : false;
 
-    if (isCda || isSocial || isSpinRss || isComercialSpa || isComercialDominio || isComercialCnpj) {
+    if (isCda || isSocial || isSpinRss || isCsOutlook || isComercialSpa || isComercialDominio || isComercialCnpj) {
       return (
         <button
           type="button"
@@ -97,6 +102,8 @@ export function StatusIntegracaoTable({
                 ? "cda"
                 : isSocial
                   ? "social"
+                  : isCsOutlook
+                    ? "cs_outlook"
                   : isComercialSpa
                     ? "comercial_spa"
                     : isComercialDominio

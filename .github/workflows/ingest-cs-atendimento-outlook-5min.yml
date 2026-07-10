@@ -1,0 +1,46 @@
+# CS Atendimento — ingestão Outlook via Edge Function `ingest-cs-atendimento-outlook`
+# A cada 5 minutos (UTC)
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+name: Ingest CS Atendimento Outlook (5 min)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar ingest-cs-atendimento-outlook
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET: ${{ secrets.CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/ingest-cs-atendimento-outlook"
+          CURL_HEADERS=(-H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" -H "Content-Type: application/json")
+          if [ -n "${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET:-}" ]; then
+            CURL_HEADERS+=(-H "x-cs-atendimento-outlook-ingest-secret: ${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET}")
+          fi
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" "${CURL_HEADERS[@]}" -d '{}')
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | sed '$d')
+          echo "HTTP ${HTTP}"
+          echo "$BODY_RES" | head -c 2000
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "Falha HTTP"
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
+          if [ "$OK" != "true" ]; then
+            echo "Resposta com ok != true (Graph, secrets ou RPC)."
+            exit 1
+          fi
+          echo "Ingestão CS Atendimento Outlook concluída com sucesso."

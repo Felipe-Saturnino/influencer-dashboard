@@ -1,11 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { validarChamadaIngest } from "./auth.ts";
 import {
   assuntoOuPadrao,
-  autorizadoIngestOutlook,
   corsHeaders,
   CS_ATENDIMENTO_EMAIL_BUCKET,
   DEFAULT_MAILBOX,
+  INTEGRACAO_SLUG,
   json,
   sanitizePathSegment,
   stripHtmlBasico,
@@ -28,7 +29,7 @@ import {
  *   CS_OUTLOOK_CLIENT_ID        (AppId Azure — ex.: 743a19bf-c96a-4acb-ba45-446269f864ef)
  *   CS_OUTLOOK_CLIENT_SECRET
  *   CS_OUTLOOK_MAILBOX          (opcional — padrão contato@spingaming.com.br)
- *   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET — opcional; header ou Bearer service_role
+ *   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET — opcional; header, Bearer service_role ou sessão admin (Status Técnico)
  */
 
 const supabaseServiceOptions = {
@@ -50,7 +51,37 @@ function messageIdDedupe(msg: GraphMessage): string {
   return (msg.internetMessageId ?? msg.id).trim();
 }
 
+async function gravarSyncLog(
+  supabase: ReturnType<typeof createClient>,
+  opts: {
+    status: "ok" | "falha";
+    registros_inseridos: number;
+    erros_count: number;
+    mensagem_erro: string | null;
+    duracao_ms: number;
+  },
+): Promise<void> {
+  try {
+    const hoje = new Date().toISOString().split("T")[0];
+    await supabase.from("sync_logs").insert({
+      integracao_slug: INTEGRACAO_SLUG,
+      status: opts.status,
+      registros_inseridos: opts.registros_inseridos,
+      registros_atualizados: 0,
+      erros_count: opts.erros_count,
+      mensagem_erro: opts.mensagem_erro,
+      duracao_ms: opts.duracao_ms,
+      periodo_inicio: hoje,
+      periodo_fim: hoje,
+    });
+  } catch (e) {
+    console.error("[ingest-cs-atendimento-outlook] Falha ao gravar sync_logs:", e);
+  }
+}
+
 serve(async (req) => {
+  const inicio = Date.now();
+
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
@@ -59,12 +90,9 @@ serve(async (req) => {
     return json({ ok: false, erro: "Método não permitido" }, req, 405);
   }
 
-  if (!autorizadoIngestOutlook(req)) {
-    return json(
-      { ok: false, erro: "Não autorizado. Use x-cs-atendimento-outlook-ingest-secret ou Bearer service_role." },
-      req,
-      401,
-    );
+  const auth = await validarChamadaIngest(req);
+  if (!auth.ok) {
+    return json({ ok: false, erro: auth.erro }, req, auth.status);
   }
 
   let body: IngestOutlookBody = {};
@@ -102,6 +130,7 @@ serve(async (req) => {
       dry_run: dryRun,
       mailbox,
       modo,
+      auth_via: auth.via,
       encontrados: mensagens.length,
       criados: 0,
       duplicados: 0,
@@ -219,10 +248,27 @@ serve(async (req) => {
       await marcarMensagemComoLida(token, mailbox, msg.id);
     }
 
+    if (!dryRun) {
+      await gravarSyncLog(supabase, {
+        status: resultado.erros.length > 0 && resultado.criados === 0 ? "falha" : "ok",
+        registros_inseridos: resultado.criados,
+        erros_count: resultado.erros.length,
+        mensagem_erro: resultado.erros.length ? resultado.erros.slice(0, 3).join("; ") : null,
+        duracao_ms: Date.now() - inicio,
+      });
+    }
+
     return json(resultado, req);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro inesperado";
     console.error("[ingest-cs-atendimento-outlook]", e);
+    await gravarSyncLog(supabase, {
+      status: "falha",
+      registros_inseridos: 0,
+      erros_count: 1,
+      mensagem_erro: msg.slice(0, 500),
+      duracao_ms: Date.now() - inicio,
+    });
     return json({ ok: false, erro: msg }, req, 500);
   }
 });

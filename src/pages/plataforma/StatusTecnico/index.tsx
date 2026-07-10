@@ -38,12 +38,14 @@ import {
   LABEL_UI_COMERCIAL_SPA_LISTA,
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
   LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
+  LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
+  ERRO_SYNC_CS_OUTLOOK,
   HORARIO_AGENDADO_BR,
   MODAL_OVERLAY_BG,
   MSG_SEM_PERMISSAO,
@@ -152,6 +154,8 @@ export default function StatusTecnico() {
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
   const [syncSpinRssMensagem, setSyncSpinRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncCsOutlookExecutando, setSyncCsOutlookExecutando] = useState(false);
+  const [syncCsOutlookMensagem, setSyncCsOutlookMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncComercialSpaExecutando, setSyncComercialSpaExecutando] = useState(false);
   const [syncComercialSpaMensagem, setSyncComercialSpaMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncComercialDominioExecutando, setSyncComercialDominioExecutando] = useState(false);
@@ -183,7 +187,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -607,6 +611,77 @@ export default function StatusTecnico() {
       setSyncSpinRssMensagem({ tipo: "erro", texto: ERRO_SYNC_SPIN_RSS });
     } finally {
       setSyncSpinRssExecutando(false);
+    }
+  };
+
+  const executarSyncCsOutlook = async () => {
+    if (syncCsOutlookExecutando || !perm.canEditarOk) return;
+    setSyncCsOutlookExecutando(true);
+    setSyncCsOutlookMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncCsOutlookMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncCsOutlookExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke(
+        "ingest-cs-atendimento-outlook",
+        { body: { max_messages: 25 } },
+      );
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        criados?: number;
+        encontrados?: number;
+        duplicados?: number;
+        ignorados?: number;
+        protocolos?: string[];
+        erros?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_CS_OUTLOOK;
+        if (im.includes("404") || im.includes("not found")) {
+          texto =
+            "Edge Function ingest-cs-atendimento-outlook não encontrada. Execute: supabase functions deploy ingest-cs-atendimento-outlook";
+        } else if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncCsOutlookMensagem({ tipo: "erro", texto });
+        setSyncCsOutlookExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros ?? [])].filter(Boolean).join(" — ");
+        setSyncCsOutlookMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : ERRO_SYNC_CS_OUTLOOK,
+        });
+        setSyncCsOutlookExecutando(false);
+        return;
+      }
+
+      const criados = resData.criados ?? 0;
+      const encontrados = resData.encontrados ?? 0;
+      const protocolos = (resData.protocolos ?? []).join(", ");
+      setSyncCsOutlookMensagem({
+        tipo: "ok",
+        texto: protocolos
+          ? `CS Atendimento Outlook: ${criados} chamado(s) criado(s) (${encontrados} e-mail(s) na fila). Protocolos: ${protocolos}.`
+          : `CS Atendimento Outlook: ${criados} chamado(s) criado(s) de ${encontrados} e-mail(s) processado(s).`,
+      });
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncCsOutlookMensagem({ tipo: "erro", texto: ERRO_SYNC_CS_OUTLOOK });
+    } finally {
+      setSyncCsOutlookExecutando(false);
     }
   };
 
@@ -1593,6 +1668,8 @@ export default function StatusTecnico() {
             ? ("cda" as const)
             : int.slug === "spin_na_rede_rss"
               ? ("spin_rss" as const)
+              : int.slug === "cs_atendimento_outlook"
+                ? ("cs_outlook" as const)
               : int.slug === "comercial_spa_lista"
                 ? ("comercial_spa" as const)
                 : int.slug === "comercial_dominio_validacao"
@@ -1706,6 +1783,47 @@ export default function StatusTecnico() {
     [statusPorIntegracao],
   );
 
+  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
+  const csAtendimentoOutlookRow = useMemo((): StatusIntegracaoRow => {
+    const fromDb = statusPorIntegracao.find((i) => i.slug === "cs_atendimento_outlook");
+    if (fromDb) {
+      return {
+        slug: fromDb.slug,
+        nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
+        ultimoSync: fromDb.ultimoSync,
+        registrosHoje: fromDb.registrosHoje,
+        erros: fromDb.erros,
+        status: fromDb.status,
+        syncTipo: "cs_outlook",
+      };
+    }
+
+    const logsInt = syncLogs.filter((l) => l.integracao_slug === "cs_atendimento_outlook");
+    const ultimo = logsInt[0];
+    const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+    const regsHoje = syncsHoje.reduce(
+      (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+      0,
+    );
+    const regsExibir =
+      regsHoje ||
+      (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
+    let status: "ok" | "warning" | "falha" = "ok";
+    if (!ultimo) status = "falha";
+    else if (ultimo.status === "falha") status = "falha";
+    else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+
+    return {
+      slug: "cs_atendimento_outlook",
+      nome: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
+      ultimoSync: ultimo?.executado_em ?? null,
+      registrosHoje: regsExibir,
+      erros: ultimo?.erros_count ?? 0,
+      status,
+      syncTipo: "cs_outlook",
+    };
+  }, [statusPorIntegracao, syncLogs, hojeIso]);
+
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
@@ -1721,6 +1839,7 @@ export default function StatusTecnico() {
     () =>
       ordenarLinhasIntegracao(
         [
+          csAtendimentoOutlookRow,
           pickIntegracaoRow("spin_na_rede_rss"),
           pickIntegracaoRow("comercial_spa_lista"),
           pickIntegracaoRow("comercial_dominio_validacao"),
@@ -1738,7 +1857,7 @@ export default function StatusTecnico() {
         ].filter(Boolean) as StatusIntegracaoRow[],
         sortIntegracao,
       ),
-    [pickIntegracaoRow, socialKpisRow, sortIntegracao],
+    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortIntegracao],
   );
 
   const linhasEmails = useMemo(
@@ -1771,6 +1890,8 @@ export default function StatusTecnico() {
           integrations.find((i) => i.slug === log.integracao_slug)?.nome ??
           (log.integracao_slug === "spin_na_rede_rss"
             ? "Spin na Rede (RSS)"
+            : log.integracao_slug === "cs_atendimento_outlook"
+              ? LABEL_UI_CS_ATENDIMENTO_OUTLOOK
             : log.integracao_slug === "lobby_blaze"
               ? "Lobby Blaze"
               : log.integracao_slug === "lobby_cda"
@@ -1795,6 +1916,7 @@ export default function StatusTecnico() {
           comercial_dominio_validacao: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
           comercial_cnpj_enriquecimento: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
           painel_noticias_rss: "Painel de Notícias (RSS)",
+          cs_atendimento_outlook: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
           diagnostico_plataforma: "Diagnóstico da plataforma",
@@ -1901,13 +2023,14 @@ export default function StatusTecnico() {
     syncExecutando,
     syncSocialExecutando,
     syncSpinRssExecutando,
+    syncCsOutlookExecutando,
     syncComercialSpaExecutando,
     syncComercialDominioExecutando,
     syncComercialCnpjExecutando,
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
+    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
       setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
@@ -2067,6 +2190,7 @@ export default function StatusTecnico() {
         syncMensagem ||
         syncSocialMensagem ||
         syncSpinRssMensagem ||
+        syncCsOutlookMensagem ||
         syncComercialSpaMensagem ||
         syncComercialDominioMensagem ||
         syncComercialCnpjMensagem ||
@@ -2080,6 +2204,7 @@ export default function StatusTecnico() {
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
+              syncCsOutlookMensagem && { prefix: "CS Atendimento Outlook", msg: syncCsOutlookMensagem },
               syncComercialSpaMensagem && { prefix: LABEL_UI_COMERCIAL_SPA_LISTA, msg: syncComercialSpaMensagem },
               syncComercialDominioMensagem && {
                 prefix: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
@@ -2723,6 +2848,7 @@ export default function StatusTecnico() {
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
+              {confirmarSync === "cs_outlook" && "Confirmar ingestão CS Atendimento (Outlook)"}
               {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
               {confirmarSync === "comercial_dominio" &&
                 `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
@@ -2776,6 +2902,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "spin_rss") {
                     setConfirmarSync(null);
                     void executarSyncSpinRss();
+                  } else if (confirmarSync === "cs_outlook") {
+                    setConfirmarSync(null);
+                    void executarSyncCsOutlook();
                   } else if (confirmarSync === "comercial_spa") {
                     setConfirmarSync(null);
                     void executarSyncComercialSpa();
