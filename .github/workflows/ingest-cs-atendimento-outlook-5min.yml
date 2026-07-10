@@ -1,13 +1,19 @@
-# CS Atendimento — ingestão Outlook via Edge Function `ingest-cs-atendimento-outlook`
-# BACKUP / manual — o agendamento principal é pg_cron no Supabase (migration 20260710150000).
-# GitHub schedule (*/5) é melhor esforço e pode não disparar em repos privados sem
-# "Allow scheduled workflows" ou com atrasos longos.
-# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-name: Ingest CS Atendimento Outlook (5 min)
+# CS Atendimento Outlook — BACKUP / manual only.
+# Agendamento PRINCIPAL: pg_cron no Supabase (scripts/setup-cs-atendimento-outlook-cron.sql).
+#
+# GitHub `schedule` é melhor esforço: em repos privados costuma atrasar horas ou pular
+# runs (não use como cron de 5 min em produção).
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET (mesmo valor da Edge Function)
+name: Ingest CS Atendimento Outlook (backup)
 
 on:
+  # A cada hora (UTC) — backup; não substitui pg_cron */5
   schedule:
-    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -24,28 +30,37 @@ jobs:
           CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET: ${{ secrets.CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET }}
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-            echo "Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY em Settings → Secrets and variables → Actions."
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::error::Secret SUPABASE_URL ausente (Settings → Secrets → Actions)."
+            exit 1
+          fi
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Secret SUPABASE_SERVICE_ROLE_KEY ausente (Settings → Secrets → Actions)."
             exit 1
           fi
           URL="${SUPABASE_URL%/}/functions/v1/ingest-cs-atendimento-outlook"
-          CURL_HEADERS=(-H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" -H "Content-Type: application/json")
+          BODY='{}'
           if [ -n "${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET:-}" ]; then
-            CURL_HEADERS+=(-H "x-cs-atendimento-outlook-ingest-secret: ${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET}")
+            BODY=$(printf '{"ingest_secret":"%s"}' "${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET}")
           fi
-          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" "${CURL_HEADERS[@]}" -d "{\"ingest_secret\":\"${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET:-}\"}")
+          echo "POST ${URL}"
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY")
           HTTP=$(echo "$RES" | tail -n1)
           BODY_RES=$(echo "$RES" | sed '$d')
           echo "HTTP ${HTTP}"
-          echo "$BODY_RES" | head -c 2000
+          echo "$BODY_RES" | head -c 3000
           echo ""
           if [ "$HTTP" != "200" ]; then
-            echo "Falha HTTP"
+            echo "::error::Falha HTTP ${HTTP}. Confira service_role, ingest_secret e Edge Function."
             exit 1
           fi
           OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
           if [ "$OK" != "true" ]; then
-            echo "Resposta com ok != true (Graph, secrets ou RPC)."
+            echo "::error::Resposta com ok != true (Graph, secrets ou RPC)."
             exit 1
           fi
           echo "Ingestão CS Atendimento Outlook concluída com sucesso."

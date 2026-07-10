@@ -230,15 +230,13 @@ Detalhes: `scripts/setup-cs-atendimento-outlook-cron.sql`.
 
 ### Backup / manual — GitHub Actions
 
-Workflow: `.github/workflows/ingest-cs-atendimento-outlook-5min.yml` (melhor esforço; **não** substitui o pg_cron).
+Workflow: `.github/workflows/ingest-cs-atendimento-outlook-5min.yml` — **backup horário** + `workflow_dispatch`. **Não** substitui o pg_cron.
 
-Se o schedule do GitHub **não disparar** (comum em repo privado):
+O `schedule` do GitHub em repo privado **atrasa ou pula** runs (por isso só 1 “Scheduled” na lista). Não use Actions como cron de 5 min.
 
-- **Settings → Actions → General → Allow scheduled workflows** — deve estar **ativado**
-- O workflow precisa estar na branch **`main`**
-- Mesmo assim, o GitHub pode **atrasar ou pular** runs frequentes
+Secrets no GitHub (Actions): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (igual à Edge Function).
 
-Secrets no GitHub: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+Se o run falhar em segundos: abra o log — quase sempre secret ausente ou `ok: false` do Graph.
 
 Disparo manual na plataforma: **Status Técnico** → **CS - Caixa de Contato (Outlook)** → **Sync**.
 
