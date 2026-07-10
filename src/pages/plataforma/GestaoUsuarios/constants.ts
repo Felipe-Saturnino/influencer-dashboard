@@ -1,5 +1,5 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
-import { ROLES_SEM_RESTRICAO_ESCOPO } from "../../../lib/staffRoles";
+import { ROLES_SEM_RESTRICAO_ESCOPO, ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles";
 import { sortPagesLikeMenu } from "../../../lib/menuPagesOrder";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
@@ -10,7 +10,7 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Customer Service, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Customer Service, Game Presenter, Shuffler, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
@@ -21,15 +21,11 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
 export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
-  { slug: "customer_service", label: "Customer Service" },
-  { slug: "game_presenter", label: "Game Presenter" },
-  { slug: "shuffler", label: "Shuffler" },
   { slug: "escritorio", label: "Escritório" },
+  { slug: "estudio", label: "Estúdio" },
   { slug: "facilities", label: "Facilities" },
   { slug: "financeiro", label: "Financeiro" },
-  { slug: "tech_ops", label: "Tech Ops" },
   { slug: "ti", label: "TI" },
-  { slug: "estudio", label: "Estúdio" },
 ];
 
 /** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
@@ -37,12 +33,19 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "executivo", label: "Executivo" },
   { value: "gestor", label: "Gestor" },
+  { value: "gestor_aquisicao", label: "Gestor de Aquisição" },
+  { value: "gestor_marketing", label: "Gestor de Marketing" },
+  { value: "gestor_operacoes", label: "Gestor de Operações" },
+  { value: "gestor_academy", label: "Gestor de Academy" },
+  { value: "gestor_rh", label: "Gestor de RH" },
   { value: "rh", label: "RH" },
   { value: "figurino", label: "Figurino" },
   { value: "comunicacao", label: "Comunicação" },
   { value: "performance_coach", label: "Performance Coach" },
   { value: "service_manager", label: "Service Manager" },
   { value: "customer_service", label: "Customer Service" },
+  { value: "game_presenter", label: "Game Presenter" },
+  { value: "shuffler", label: "Shuffler" },
   { value: "tech_ops", label: "Tech Ops" },
   { value: "shift_leader", label: "Shift Leader" },
   { value: "prestador", label: "Prestadores" },
@@ -53,10 +56,32 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "investidor", label: "Investidor" },
 ];
 
+/** Perfis internos — operação de estúdio (filtros Usuários, Permissões, Simulador). */
+export const ROLES_PERFIS_ESTUDIO: Role[] = [
+  "performance_coach",
+  "service_manager",
+  "customer_service",
+  "shift_leader",
+  "shuffler",
+  "game_presenter",
+];
+
+/** Perfis internos — escritório e suporte (filtros Usuários, Permissões, Simulador). */
+export const ROLES_PERFIS_ESCRITORIO: Role[] = ["rh", "figurino", "comunicacao", "tech_ops", "prestador"];
+
+/** Linha Gerenciais — admin, executivo, gestor genérico e gestores de departamento (atribuição manual). */
+export const ROLES_PERFIS_GERENCIAIS: Role[] = [
+  "admin",
+  "executivo",
+  "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
+];
+
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
-  { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
-  { titulo: "Perfis Internos", roles: ["rh", "figurino", "comunicacao", "performance_coach", "service_manager", "customer_service", "tech_ops", "shift_leader", "prestador"] },
+  { titulo: "Perfis Gerenciais", roles: ROLES_PERFIS_GERENCIAIS },
+  { titulo: "Estúdio", roles: ROLES_PERFIS_ESTUDIO },
+  { titulo: "Escritório", roles: ROLES_PERFIS_ESCRITORIO },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
 ];
 
@@ -197,12 +222,15 @@ export function secoesMenuFromPages(pages: readonly { secao: string }[]): string
 export const ROLES_PERMISSOES: Role[] = [
   "executivo",
   "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "rh",
   "figurino",
   "comunicacao",
   "performance_coach",
   "service_manager",
   "customer_service",
+  "game_presenter",
+  "shuffler",
   "tech_ops",
   "shift_leader",
   "prestador",
@@ -220,6 +248,28 @@ export const FILTROS_PERFIL_LINHAS_PERMISSOES: { titulo: string; roles: Role[] }
     roles: roles.filter((r) => ROLES_PERMISSOES.includes(r)),
   }),
 ).filter((linha) => linha.roles.length > 0);
+
+/** Perfis excluídos do Simulador de Login (admin irrestrito; executivo não entra na lista). */
+export const ROLES_EXCLUIDOS_SIMULADOR_LOGIN: Role[] = ["admin", "executivo"];
+
+/**
+ * Perfis disponíveis na simulação — deriva de `ROLES` (todo perfil novo no select «Perfil» entra aqui,
+ * exceto `ROLES_EXCLUIDOS_SIMULADOR_LOGIN`).
+ */
+export const ROLES_SIMULAVEIS: Role[] = ROLES.filter(
+  (r) => !ROLES_EXCLUIDOS_SIMULADOR_LOGIN.includes(r.value),
+).map((r) => r.value);
+
+/** Agrupamento na página Simulador de Login (mesmas linhas da aba Usuários, sem admin/executivo). */
+export const FILTROS_PERFIL_LINHAS_SIMULADOR: { titulo: string; roles: Role[] }[] = FILTROS_PERFIL_LINHAS.map(
+  ({ titulo, roles }) => ({
+    titulo,
+    roles: roles.filter((r) => !ROLES_EXCLUIDOS_SIMULADOR_LOGIN.includes(r)),
+  }),
+).filter((linha) => linha.roles.length > 0);
+
+/** Perfis configuráveis como «viewer» na aba Gestão de Usuários → Simulador de Login (= ROLES_PERMISSOES). */
+export const ROLES_VIEWER_SIMULADOR_LOGIN: Role[] = [...ROLES_PERMISSOES];
 
 export type FiltroStatusUsuarios = "todos" | "ativo" | "desativado";
 
@@ -244,11 +294,18 @@ export function roleBadgeColor(role: Role): string {
   const map: Record<Role, string> = {
     admin: BRAND.roxoVivo,
     gestor: BRAND.azul,
+    gestor_aquisicao: BRAND.azul,
+    gestor_marketing: BRAND.ciano,
+    gestor_operacoes: BRAND.roxo,
+    gestor_academy: BRAND.roxoVivo,
+    gestor_rh: BRAND.roxo,
     prestador: BRAND.roxo,
     executivo: BRAND.ciano,
     shift_leader: BRAND.amarelo,
     service_manager: BRAND.azul,
     customer_service: BRAND.verde,
+    game_presenter: BRAND.roxoVivo,
+    shuffler: BRAND.amarelo,
     tech_ops: BRAND.ciano,
     figurino: BRAND.roxoVivo,
     comunicacao: BRAND.ciano,

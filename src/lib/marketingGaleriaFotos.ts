@@ -58,6 +58,211 @@ export function fotoPrestadorEmbed(f: MarketingFotoComEvento): MarketingPrestado
   return unwrapEmbed(f.rh_funcionarios);
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Extrai rh_funcionario_id do path `prestadores/{uuid}/…` (fallback para registros legados). */
+export function rhFuncionarioIdFromStoragePath(storagePath: string): string | null {
+  const parts = storagePath.split("/");
+  if (parts[0] !== "prestadores" || !parts[1]) return null;
+  const id = parts[1].trim();
+  return UUID_RE.test(id) ? id : null;
+}
+
+/** ID efetivo do colaborador — coluna ou path de storage. */
+export function effectiveRhFuncionarioId(f: MarketingFotoComEvento): string | null {
+  return f.rh_funcionario_id ?? rhFuncionarioIdFromStoragePath(f.storage_path);
+}
+
+export const MARKETING_FOTOS_GALERIA_SELECT =
+  "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, descricao, ativo), rh_funcionarios!rh_funcionario_id(id, nome)";
+
+/** Select leve — carregamento por evento/colaborador (sem embed). */
+export const MARKETING_FOTOS_LISTAGEM_SELECT =
+  "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at";
+
+const GALERIA_FOTOS_PAGE_SIZE = 1000;
+
+export type GaleriaEventoResumo = MarketingEvento & { qtd_fotos: number };
+export type GaleriaPrestadorResumo = { id: string; nome: string; qtd_fotos: number };
+
+export function chaveCacheGrupoGaleria(kind: "evento" | "prestador", id: string): string {
+  return kind === "evento" ? `geral:${id}` : `prestador:${id}`;
+}
+
+async function listarMarketingFotosPaginado(
+  fetchPage: (
+    offset: number,
+    pageSize: number,
+  ) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
+): Promise<MarketingFotoComEvento[]> {
+  const all: MarketingFotoComEvento[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await fetchPage(offset, GALERIA_FOTOS_PAGE_SIZE);
+    if (error) throw error;
+
+    const batch = (data ?? []) as MarketingFotoComEvento[];
+    all.push(...batch);
+
+    if (batch.length < GALERIA_FOTOS_PAGE_SIZE) break;
+    offset += GALERIA_FOTOS_PAGE_SIZE;
+  }
+
+  return all;
+}
+
+/** Resumo de todos os eventos com fotos gerais (contagem no servidor). */
+export async function listarResumoEventosGaleria(): Promise<GaleriaEventoResumo[]> {
+  const { data, error } = await supabase.rpc("galeria_fotos_resumo_eventos");
+  if (error) throw error;
+  return ((data ?? []) as GaleriaEventoResumo[]).map((row) => ({
+    ...row,
+    qtd_fotos: Number(row.qtd_fotos) || 0,
+  }));
+}
+
+/** Resumo de colaboradores com fotos individuais (exclui encerrados no servidor). */
+export async function listarResumoPrestadoresGaleria(): Promise<GaleriaPrestadorResumo[]> {
+  const { data, error } = await supabase.rpc("galeria_fotos_resumo_prestadores");
+  if (error) throw error;
+  return ((data ?? []) as GaleriaPrestadorResumo[]).map((row) => ({
+    id: row.id,
+    nome: row.nome,
+    qtd_fotos: Number(row.qtd_fotos) || 0,
+  }));
+}
+
+/** Todas as fotos gerais de um evento (paginação interna). */
+export async function listarMarketingFotosPorEvento(eventoId: string): Promise<MarketingFotoComEvento[]> {
+  return listarMarketingFotosPaginado(async (offset, pageSize) =>
+    supabase
+      .from("marketing_fotos")
+      .select(MARKETING_FOTOS_LISTAGEM_SELECT)
+      .eq("tipo", "geral")
+      .eq("evento_id", eventoId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1),
+  );
+}
+
+/** Todas as fotos individuais de um colaborador (paginação interna). */
+export async function listarMarketingFotosPorPrestador(rhFuncionarioId: string): Promise<MarketingFotoComEvento[]> {
+  return listarMarketingFotosPaginado(async (offset, pageSize) =>
+    supabase
+      .from("marketing_fotos")
+      .select(MARKETING_FOTOS_LISTAGEM_SELECT)
+      .eq("tipo", "prestador")
+      .eq("rh_funcionario_id", rhFuncionarioId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1),
+  );
+}
+
+/** Busca server-side (complementar ao filtro insensível a acentos no cliente). */
+export async function buscarMarketingFotosGaleria(termo: string): Promise<MarketingFotoComEvento[]> {
+  const q = termo.trim();
+  if (q.length < 2) return [];
+  const { data, error } = await supabase.rpc("galeria_fotos_buscar", { p_termo: q });
+  if (error) throw error;
+  return (data ?? []) as MarketingFotoComEvento[];
+}
+
+/** @deprecated Preferir resumo + carregamento por grupo. Mantido para compatibilidade pontual. */
+export async function listarMarketingFotosGaleria(): Promise<MarketingFotoComEvento[]> {
+  return listarMarketingFotosPaginado(async (offset, pageSize) =>
+    supabase
+      .from("marketing_fotos")
+      .select(MARKETING_FOTOS_GALERIA_SELECT)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1),
+  );
+}
+
+const METADADOS_IN_CHUNK = 80;
+
+/** Busca eventos/colaboradores em lotes (evita falha silenciosa com `.in()` muito grande). */
+async function fetchInChunks<T>(
+  ids: string[],
+  fetchChunk: (chunk: string[]) => Promise<T[]>,
+): Promise<T[]> {
+  if (!ids.length) return [];
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += METADADOS_IN_CHUNK) {
+    const chunk = ids.slice(i, i + METADADOS_IN_CHUNK);
+    out.push(...(await fetchChunk(chunk)));
+  }
+  return out;
+}
+
+export type GaleriaEventoResolvido = {
+  id: string;
+  nome: string;
+  data_evento: string;
+  descricao: string | null;
+};
+
+export type GaleriaPrestadorResolvido = {
+  id: string;
+  nome: string;
+};
+
+export type GaleriaMetadadosContexto = {
+  eventosPorId?: ReadonlyMap<string, Pick<MarketingEvento, "id" | "nome" | "data_evento" | "descricao">>;
+  prestadoresPorId?: ReadonlyMap<string, GaleriaPrestadorResolvido>;
+};
+
+/** Evento da foto — embed PostgREST ou mapa local (evita descartar foto quando RLS bloqueia o join). */
+export function resolverEventoGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): GaleriaEventoResolvido | null {
+  if (f.tipo !== "geral" || !f.evento_id) return null;
+  const embed = fotoEventoEmbed(f);
+  if (embed) {
+    return {
+      id: embed.id,
+      nome: embed.nome,
+      data_evento: embed.data_evento,
+      descricao: embed.descricao?.trim() || null,
+    };
+  }
+  const fromList = ctx?.eventosPorId?.get(f.evento_id);
+  if (fromList) {
+    return {
+      id: fromList.id,
+      nome: fromList.nome,
+      data_evento: fromList.data_evento,
+      descricao: fromList.descricao?.trim() || null,
+    };
+  }
+  return {
+    id: f.evento_id,
+    nome: "Evento",
+    data_evento: "",
+    descricao: null,
+  };
+}
+
+/** Colaborador da foto — embed ou mapa local. */
+export function resolverPrestadorGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): GaleriaPrestadorResolvido | null {
+  if (f.tipo !== "prestador") return null;
+  const rhId = effectiveRhFuncionarioId(f);
+  if (!rhId) return null;
+  const embed = fotoPrestadorEmbed(f);
+  if (embed) return embed;
+  const fromList = ctx?.prestadoresPorId?.get(rhId);
+  if (fromList) return fromList;
+  return { id: rhId, nome: "Colaborador" };
+}
+
 function sanitizeStorageFileName(name: string): string {
   return name.replace(/[^\w.\-() ]/g, "_").slice(0, 120);
 }
@@ -83,6 +288,38 @@ export async function urlAssinadaFotoPrestador(storagePath: string): Promise<str
     .createSignedUrl(storagePath, 3600);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
+}
+
+/** URLs assinadas em lote para miniaturas de Minhas Fotos (bucket privado). */
+export async function urlAssinadasFotosPrestador(
+  fotos: ReadonlyArray<Pick<MarketingFotoComEvento, "id" | "storage_path">>,
+): Promise<Record<string, string>> {
+  const pendentes = fotos.filter((f) => f.storage_path?.trim());
+  if (!pendentes.length) return {};
+
+  const { data, error } = await supabase.storage
+    .from(MARKETING_FOTOS_PRESTADORES_BUCKET)
+    .createSignedUrls(
+      pendentes.map((f) => f.storage_path),
+      3600,
+    );
+
+  if (error || !data?.length) {
+    if (error) console.error("urlAssinadasFotosPrestador:", error);
+    return {};
+  }
+
+  const urlPorPath = new Map<string, string>();
+  for (const item of data) {
+    if (item.signedUrl && item.path) urlPorPath.set(item.path, item.signedUrl);
+  }
+
+  const out: Record<string, string> = {};
+  for (const f of pendentes) {
+    const url = urlPorPath.get(f.storage_path);
+    if (url) out[f.id] = url;
+  }
+  return out;
 }
 
 export async function uploadMarketingFotoArquivo(
@@ -136,19 +373,28 @@ export function fotosGeraisDoEvento(
 /** Chave de agrupamento para numeração sequencial (evento ou colaborador). */
 export function chaveGrupoFotoGaleria(f: MarketingFotoComEvento): string | null {
   if (f.tipo === "geral" && f.evento_id) return `geral:${f.evento_id}`;
-  if (f.tipo === "prestador" && f.rh_funcionario_id) return `prestador:${f.rh_funcionario_id}`;
+  if (f.tipo === "prestador") {
+    const rhId = effectiveRhFuncionarioId(f);
+    if (rhId) return `prestador:${rhId}`;
+  }
   return null;
 }
 
-export function nomeBaseGrupoFotoGaleria(f: MarketingFotoComEvento): string {
-  if (f.tipo === "geral") return fotoEventoEmbed(f)?.nome?.trim() || "Evento";
-  return fotoPrestadorEmbed(f)?.nome?.trim() || "Colaborador";
+export function nomeBaseGrupoFotoGaleria(
+  f: MarketingFotoComEvento,
+  ctx?: GaleriaMetadadosContexto,
+): string {
+  if (f.tipo === "geral") return resolverEventoGaleria(f, ctx)?.nome.trim() || "Evento";
+  return resolverPrestadorGaleria(f, ctx)?.nome.trim() || "Colaborador";
 }
 
 /**
  * Rótulos «Evento 1», «Colaborador 2»… por grupo, ordenados por data de upload (mais antigo = 1).
  */
-export function buildRotulosFotoGaleria(fotos: MarketingFotoComEvento[]): Map<string, string> {
+export function buildRotulosFotoGaleria(
+  fotos: MarketingFotoComEvento[],
+  ctx?: GaleriaMetadadosContexto,
+): Map<string, string> {
   const map = new Map<string, string>();
   const grupos = new Map<string, MarketingFotoComEvento[]>();
   for (const f of fotos) {
@@ -161,7 +407,7 @@ export function buildRotulosFotoGaleria(fotos: MarketingFotoComEvento[]): Map<st
   for (const list of grupos.values()) {
     const sorted = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
     sorted.forEach((f, i) => {
-      map.set(f.id, `${nomeBaseGrupoFotoGaleria(f)} ${i + 1}`);
+      map.set(f.id, `${nomeBaseGrupoFotoGaleria(f, ctx)} ${i + 1}`);
     });
   }
   return map;
@@ -207,6 +453,49 @@ export async function excluirMarketingEventoGaleria(
   return { ok: true };
 }
 
+/**
+ * Remove fotos individuais da Galeria (Minhas Fotos) ao encerrar o prestador.
+ * Storage via API (Supabase bloqueia DELETE direto em storage.objects); linhas via RPC.
+ */
+export async function excluirMarketingFotosDoPrestador(
+  rhFuncionarioId: string,
+): Promise<{ ok: true; removidas: number } | { ok: false }> {
+  const id = rhFuncionarioId.trim();
+  if (!id) return { ok: false };
+
+  const { data: fotos, error: fetchError } = await supabase
+    .from("marketing_fotos")
+    .select("storage_path")
+    .eq("tipo", "prestador")
+    .eq("rh_funcionario_id", id);
+
+  if (fetchError) {
+    console.error("excluirMarketingFotosDoPrestador list:", fetchError);
+    return { ok: false };
+  }
+
+  const paths = (fotos ?? []).map((f) => f.storage_path).filter((p): p is string => !!p);
+  for (let i = 0; i < paths.length; i += 100) {
+    const batch = paths.slice(i, i + 100);
+    const { error: storageError } = await supabase.storage
+      .from(MARKETING_FOTOS_PRESTADORES_BUCKET)
+      .remove(batch);
+    if (storageError) {
+      console.error("excluirMarketingFotosDoPrestador storage:", storageError);
+      return { ok: false };
+    }
+  }
+
+  const { data, error } = await supabase.rpc("marketing_galeria_excluir_fotos_prestador", {
+    p_rh_funcionario_id: id,
+  });
+  if (error) {
+    console.error("marketing_galeria_excluir_fotos_prestador:", error);
+    return { ok: false };
+  }
+  return { ok: true, removidas: typeof data === "number" ? data : paths.length };
+}
+
 export function fmtDataEvento(iso: string | null | undefined): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("T")[0].split("-");
@@ -215,6 +504,51 @@ export function fmtDataEvento(iso: string | null | undefined): string {
 }
 
 export type GaleriaMeuColaborador = { id: string; nome: string };
+
+/** Carrega metadados de eventos e colaboradores referenciados pelas fotos (inclui eventos inativos). */
+export async function enrichMetadadosGaleriaFromFotos(
+  fotosList: MarketingFotoComEvento[],
+): Promise<{ eventos: MarketingEvento[]; prestadores: GaleriaPrestadorResolvido[] }> {
+  const eventoIds = [
+    ...new Set(
+      fotosList.filter((f) => f.tipo === "geral" && f.evento_id).map((f) => f.evento_id as string),
+    ),
+  ];
+  const prestadorIds = [
+    ...new Set(
+      fotosList
+        .filter((f) => f.tipo === "prestador")
+        .map((f) => effectiveRhFuncionarioId(f))
+        .filter((id): id is string => !!id),
+    ),
+  ];
+
+  const [eventosRows, prestadorRows] = await Promise.all([
+    fetchInChunks(eventoIds, async (chunk) => {
+      const { data, error } = await supabase
+        .from("marketing_eventos")
+        .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
+        .in("id", chunk);
+      if (error) throw error;
+      return (data ?? []) as MarketingEvento[];
+    }),
+    fetchInChunks(prestadorIds, async (chunk) => {
+      const { data, error } = await supabase
+        .from("rh_funcionarios")
+        .select("id, nome")
+        .in("id", chunk);
+      if (error) throw error;
+      return (data ?? [])
+        .filter((r): r is { id: string; nome: string } => !!r.id && !!r.nome)
+        .map((r) => ({ id: r.id, nome: r.nome }));
+    }),
+  ]);
+
+  return {
+    eventos: eventosRows.sort((a, b) => b.data_evento.localeCompare(a.data_evento)),
+    prestadores: prestadorRows.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+  };
+}
 
 /** Colaborador vinculado ao login (RPC SECURITY DEFINER — mesmo critério do RLS Minhas Fotos). */
 export async function buscarMeuColaboradorGaleria(): Promise<GaleriaMeuColaborador | null> {

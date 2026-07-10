@@ -1,5 +1,9 @@
 export type CsChamadoStatus = "aberto" | "em_andamento" | "arquivado";
-export type CsChamadoOrigem = "site_spin";
+export type CsChamadoOrigem = "site_spin" | "email" | "instagram_dm" | "instagram_comentario";
+export type CsAtendimentoAbaOrigem = "site_spin" | "email" | "instagram";
+
+export type CsChamadoMensagemDirecao = "inbound" | "outbound" | "sistema";
+export type CsChamadoMensagemAutor = "cliente" | "atendente" | "sistema";
 export type CsChamadoAtuacao = "operador" | "provedor" | "parceria" | "agregador" | "jogador" | "outros";
 export type CsChamadoHistoricoTipo =
   | "abertura"
@@ -39,6 +43,18 @@ export interface CsChamadoRow {
   atuacao: CsChamadoAtuacao;
   empresa: string | null;
   mensagem: string;
+  /** Preenchido quando origem = email (assunto do e-mail recebido). */
+  assunto?: string | null;
+  /** Anexos do e-mail (origem = email). */
+  anexos?: CsChamadoEmailAnexo[] | null;
+  /** Instagram — @handle sem duplicar @ no armazenamento interno. */
+  instagram_username?: string | null;
+  instagram_post_caption?: string | null;
+  instagram_post_tipo?: string | null;
+  primeira_resposta_em?: string | null;
+  ultima_mensagem_usuario_em?: string | null;
+  /** Thread DM — carregada sob demanda no modal. */
+  mensagens?: CsChamadoMensagemRow[] | null;
   inicio_atendimento_em: string | null;
   arquivado_em: string | null;
   atendente_id: string | null;
@@ -46,6 +62,29 @@ export interface CsChamadoRow {
   updated_at: string;
   atendente?: CsChamadoProfileEmbed | CsChamadoProfileEmbed[] | null;
   historico?: CsChamadoHistoricoRow[] | null;
+}
+
+export interface CsChamadoMensagemRow {
+  id: string;
+  chamado_id: string;
+  direcao: CsChamadoMensagemDirecao;
+  texto: string | null;
+  midia_url: string | null;
+  content_type: string | null;
+  instagram_message_id: string | null;
+  autor_tipo: CsChamadoMensagemAutor;
+  usuario_id: string | null;
+  created_at: string;
+}
+
+export interface CsChamadoEmailAnexo {
+  id: string;
+  nome: string;
+  /** URL direta (preview/mock) ou resolvida após signed URL. */
+  url?: string | null;
+  /** Caminho no Storage Supabase (integração Outlook). */
+  storage_path?: string | null;
+  content_type?: string | null;
 }
 
 export interface CsAtendenteFiltroOption {

@@ -32,7 +32,7 @@ export type RhVagaRow = {
   org_time_id: string | null;
   org_gerencia_id?: string | null;
   org_diretoria_id?: string | null;
-  remuneracao_centavos: number;
+  repasse_inicial_centavos: number;
   data_abertura: string;
   data_fim_inscricoes: string;
   descricao: string;

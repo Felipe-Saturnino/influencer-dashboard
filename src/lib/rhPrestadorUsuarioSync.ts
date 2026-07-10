@@ -20,6 +20,18 @@ export function gerenciaOrganogramaIndicaCustomerService(gerenciaNome: string | 
   return normRhOrgRotuloOrganograma(gerenciaNome) === "customer service";
 }
 
+/** Time Game Presenter / Game Presenters (organograma). */
+export function timeOrganogramaIndicaGamePresenter(timeNome: string | null | undefined): boolean {
+  const t = normRhOrgRotuloOrganograma(timeNome);
+  return t === "game presenter" || t === "game presenters";
+}
+
+/** Time Shuffler / Shufflers (organograma). */
+export function timeOrganogramaIndicaShuffler(timeNome: string | null | undefined): boolean {
+  const t = normRhOrgRotuloOrganograma(timeNome);
+  return t === "shuffler" || t === "shufflers";
+}
+
 export type PerfilRhOrganogramaSync = Extract<
   Role,
   | "figurino"
@@ -29,6 +41,8 @@ export type PerfilRhOrganogramaSync = Extract<
   | "shift_leader"
   | "service_manager"
   | "customer_service"
+  | "game_presenter"
+  | "shuffler"
   | "tech_ops"
   | "gestor"
   | "prestador"
@@ -68,8 +82,12 @@ export function resolvePerfilRhDeOrganograma(
   if (t === "shift leader") return { role: "shift_leader", prestadorTipo: null, gestorTipo: null };
   if (t === "service manager") return { role: "service_manager", prestadorTipo: null, gestorTipo: null };
   if (t === "customer service") return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
-  if (t === "game presenter") return { role: "prestador", prestadorTipo: "game_presenter", gestorTipo: null };
-  if (t === "shuffler") return { role: "prestador", prestadorTipo: "shuffler", gestorTipo: null };
+  if (timeOrganogramaIndicaGamePresenter(timeNome)) {
+    return { role: "game_presenter", prestadorTipo: null, gestorTipo: null };
+  }
+  if (timeOrganogramaIndicaShuffler(timeNome)) {
+    return { role: "shuffler", prestadorTipo: null, gestorTipo: null };
+  }
 
   const a = normRhOrgRotuloOrganograma(areaAtuacaoRh);
   if (a === "escritorio") return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
@@ -89,13 +107,10 @@ export function normRhOrgTimeNomeParaUsuarioSync(nome: string | null | undefined
  */
 export function prestadorTipoSlugDeAreaETimeRh(
   area: RhAreaAtuacao | "" | null | undefined,
-  nomeTimeOrganograma: string | null | undefined,
+  _nomeTimeOrganograma: string | null | undefined,
 ): PrestadorTipoSlug {
   const a = String(area ?? "").trim().toLowerCase();
   if (a !== "estudio") return "escritorio";
-  const t = normRhOrgTimeNomeParaUsuarioSync(nomeTimeOrganograma);
-  if (t === "game presenter") return "game_presenter";
-  if (t === "shuffler") return "shuffler";
   return "escritorio";
 }
 
@@ -159,7 +174,7 @@ export function mensagemSucessoDesativacaoPrestadorEncerrado(
 
 /**
  * Chama a Edge Function após gravar prestador (Novo, Editar, Revisão de Contrato, Reativação).
- * Gerência ou time **Customer Service** → `profiles.role = customer_service` via `resolvePerfilEscopo` na Edge.
+ * Gerência ou time **Customer Service** → `customer_service`; time **Game Presenter(s)** → `game_presenter`; time **Shuffler(s)** → `shuffler`.
  * Gerência **Tech Ops** (vínculo direto ou time filho) → `profiles.role = tech_ops` via `resolvePerfilEscopo` na Edge.
  * Login na plataforma: E-mail Spin se preenchido; senão e-mail pessoal. Envie os dois no body quando possível (reforço pós-save).
  */

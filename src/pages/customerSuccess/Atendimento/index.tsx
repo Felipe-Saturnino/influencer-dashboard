@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Globe, Loader2, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Globe, Instagram, Loader2, Mail, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,7 +11,14 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
-import { FiltroBarPillButton, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, SortTableTh, type SortDir } from "../../../components/dashboard";
+import {
+  FiltroBarPillButton,
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  SortTableTh,
+  onFiltroBarTabsKeyDown,
+  type SortDir,
+} from "../../../components/dashboard";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
@@ -21,12 +28,19 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
+  CS_ATENDIMENTO_ABA_EMAIL_LABEL,
+  CS_ATENDIMENTO_ABA_INSTAGRAM,
+  CS_ATENDIMENTO_ABA_INSTAGRAM_LABEL,
+  CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL,
   CS_ATENDIMENTO_FILTRO_NENHUM_LABEL,
   CS_ATENDIMENTO_FILTRO_NENHUM_VALUE,
   CS_ATENDIMENTO_FILTRO_TODOS_LABEL,
   CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE,
   CS_ATENDIMENTO_FILTRO_TODOS_VALUE,
-  CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL,
+  CS_ATENDIMENTO_INSTAGRAM_TAB_COLOR,
+  CS_ATENDIMENTO_ORIGEM_EMAIL,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM,
   CS_ATENDIMENTO_ORIGEM_SITE_SPIN,
   CS_ATENDIMENTO_STATUS_CARROSSEL,
   CS_ATENDIMENTO_STATUS_CORES,
@@ -36,15 +50,29 @@ import {
   fmtSlaChamado,
   labelStatusChamado,
 } from "../../../lib/csAtendimentoConstants";
-import { carregarAtendentesCustomerService, unwrapCsEmbed } from "../../../lib/csAtendimentoHelpers";
+import { carregarAtendentesCustomerService, mapCsChamadoFromDb, unwrapCsEmbed, type CsChamadoRowDb } from "../../../lib/csAtendimentoHelpers";
+import {
+  COL_LABEL_EMAIL,
+  COL_LABEL_SITE_SPIN,
+  assuntoEmail,
+  getColunasEmail,
+  getColunasSiteSpin,
+  solicitanteEmail,
+  type ColunaEmail,
+  type ColunaSiteSpin,
+  type SortColEmail,
+  type SortColSiteSpin,
+} from "../../../lib/csAtendimentoTableColumns";
 import type {
   CsAtendenteFiltroOption,
+  CsAtendimentoAbaOrigem,
   CsChamadoFiltroAtendente,
   CsChamadoFiltroStatus,
   CsChamadoHistoricoRow,
   CsChamadoRow,
 } from "../../../types/csAtendimento";
 import { ModalAtenderChamado, ModalVerChamado } from "./ModalsVerAtender";
+import { CsAtendimentoInstagramPainel } from "./CsAtendimentoInstagramPainel";
 
 const CS_CHAMADOS_SELECT = `
   id,
@@ -57,16 +85,32 @@ const CS_CHAMADOS_SELECT = `
   atuacao,
   empresa,
   mensagem,
+  assunto,
+  instagram_username,
+  instagram_post_caption,
+  instagram_post_tipo,
+  primeira_resposta_em,
+  ultima_mensagem_usuario_em,
   inicio_atendimento_em,
   arquivado_em,
   atendente_id,
   created_at,
   updated_at,
-  atendente:profiles!cs_chamados_atendente_id_fkey ( id, name )
+  atendente:profiles!cs_chamados_atendente_id_fkey ( id, name ),
+  cs_chamado_anexos ( id, nome, storage_path, content_type )
 `.trim();
 
-type SortCol = "chamado" | "data" | "solicitante" | "inicio" | "atendente" | "sla" | "status";
-type ColunaTabela = SortCol | "acoes";
+const ABAS_ORIGEM: CsAtendimentoAbaOrigem[] = [
+  CS_ATENDIMENTO_ORIGEM_SITE_SPIN,
+  CS_ATENDIMENTO_ORIGEM_EMAIL,
+  CS_ATENDIMENTO_ABA_INSTAGRAM,
+];
+
+function tabIdAbaOrigem(aba: CsAtendimentoAbaOrigem): string {
+  if (aba === CS_ATENDIMENTO_ORIGEM_EMAIL) return "tab-cs-email";
+  if (aba === CS_ATENDIMENTO_ABA_INSTAGRAM) return "tab-cs-instagram";
+  return "tab-cs-site-spin";
+}
 
 function nomeAtendente(row: CsChamadoRow): string {
   return unwrapCsEmbed(row.atendente)?.name?.trim() || "—";
@@ -94,29 +138,22 @@ function badgeStatus(status: CsChamadoRow["status"]) {
   );
 }
 
-function getColunas(filtroStatus: CsChamadoFiltroStatus): ColunaTabela[] {
-  if (filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
-    return ["chamado", "data", "solicitante", "inicio", "atendente", "sla", "status", "acoes"];
-  }
-  if (filtroStatus === "aberto") {
-    return ["chamado", "data", "solicitante", "acoes"];
-  }
-  if (filtroStatus === "em_andamento") {
-    return ["chamado", "data", "solicitante", "inicio", "atendente", "acoes"];
-  }
-  return ["chamado", "data", "solicitante", "atendente", "sla", "acoes"];
+function celulaTextoEllipsis(valor: string, maxWidth = 160) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        maxWidth,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+      title={valor !== "—" ? valor : undefined}
+    >
+      {valor}
+    </span>
+  );
 }
-
-const COL_LABEL: Record<ColunaTabela, string> = {
-  chamado: "Chamado",
-  data: "Data de Abertura",
-  solicitante: "Solicitante",
-  inicio: "Início do Atendimento",
-  atendente: "Atendente",
-  sla: "SLA",
-  status: "Status",
-  acoes: "Ações",
-};
 
 export default function CsAtendimentoPage() {
   const { theme: t } = useApp();
@@ -125,17 +162,21 @@ export default function CsAtendimentoPage() {
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
 
+  const [abaOrigem, setAbaOrigem] = useState<CsAtendimentoAbaOrigem>(CS_ATENDIMENTO_ORIGEM_SITE_SPIN);
   const [filtroStatus, setFiltroStatus] = useState<CsChamadoFiltroStatus>(CS_ATENDIMENTO_STATUS_DEFAULT);
   const [filtroAtendente, setFiltroAtendente] = useState<CsChamadoFiltroAtendente>(CS_ATENDIMENTO_FILTRO_TODOS_VALUE);
   const [atendentes, setAtendentes] = useState<CsAtendenteFiltroOption[]>([]);
   const [lista, setLista] = useState<CsChamadoRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
+  const [sortSite, setSortSite] = useState<{ col: SortColSiteSpin; dir: SortDir }>({ col: "data", dir: "desc" });
+  const [sortEmail, setSortEmail] = useState<{ col: SortColEmail; dir: SortDir }>({ col: "data", dir: "desc" });
   const [modalVer, setModalVer] = useState<CsChamadoRow | null>(null);
   const [modalAtender, setModalAtender] = useState<CsChamadoRow | null>(null);
   const [historico, setHistorico] = useState<CsChamadoHistoricoRow[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
 
+  const isAbaEmail = abaOrigem === CS_ATENDIMENTO_ORIGEM_EMAIL;
+  const isAbaInstagram = abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM;
   const todosStatusAtivo = filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE;
 
   const labelStatusCentral = todosStatusAtivo
@@ -147,7 +188,8 @@ export default function CsAtendimentoPage() {
     [atendentes],
   );
 
-  const colunas = useMemo(() => getColunas(filtroStatus), [filtroStatus]);
+  const colunasSite = useMemo(() => getColunasSiteSpin(filtroStatus), [filtroStatus]);
+  const colunasEmail = useMemo(() => getColunasEmail(filtroStatus), [filtroStatus]);
 
   const avancarStatus = () => {
     if (filtroStatus === CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
@@ -172,11 +214,14 @@ export default function CsAtendimentoPage() {
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
-    let q = supabase
-      .from("cs_chamados")
-      .select(CS_CHAMADOS_SELECT)
-      .eq("origem", CS_ATENDIMENTO_ORIGEM_SITE_SPIN)
-      .order("created_at", { ascending: false });
+
+    let q = supabase.from("cs_chamados").select(CS_CHAMADOS_SELECT).order("created_at", { ascending: false });
+
+    if (abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM) {
+      q = q.in("origem", [CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM, CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO]);
+    } else {
+      q = q.eq("origem", abaOrigem);
+    }
 
     if (filtroStatus !== CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE) {
       q = q.eq("status", filtroStatus);
@@ -192,10 +237,10 @@ export default function CsAtendimentoPage() {
       console.error("[CsAtendimento]", error);
       setLista([]);
     } else {
-      setLista((data ?? []) as unknown as CsChamadoRow[]);
+      setLista(((data ?? []) as unknown as CsChamadoRowDb[]).map(mapCsChamadoFromDb));
     }
     setLoading(false);
-  }, [filtroStatus, filtroAtendente]);
+  }, [abaOrigem, filtroStatus, filtroAtendente]);
 
   const carregarHistorico = useCallback(async (chamadoId: string) => {
     setLoadingHistorico(true);
@@ -232,9 +277,9 @@ export default function CsAtendimentoPage() {
     void carregarHistorico(alvo.id);
   }, [modalVer, modalAtender, carregarHistorico]);
 
-  const listaOrdenada = useMemo(() => {
+  const listaOrdenadaSite = useMemo(() => {
     const rows = [...lista];
-    const { col, dir } = sort;
+    const { col, dir } = sortSite;
     rows.sort((a, b) => {
       switch (col) {
         case "chamado":
@@ -259,17 +304,201 @@ export default function CsAtendimentoPage() {
       }
     });
     return rows;
-  }, [lista, sort]);
+  }, [lista, sortSite]);
 
-  function onSort(col: SortCol) {
-    setSort((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
+  const listaOrdenadaEmail = useMemo(() => {
+    const rows = [...lista];
+    const { col, dir } = sortEmail;
+    rows.sort((a, b) => {
+      switch (col) {
+        case "chamado":
+          return compareLocaleTexto(a.protocolo, b.protocolo, dir);
+        case "data":
+          return (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0) * (dir === "asc" ? 1 : -1);
+        case "solicitante":
+          return compareLocaleTexto(solicitanteEmail(a), solicitanteEmail(b), dir);
+        case "assunto":
+          return compareLocaleTexto(assuntoEmail(a), assuntoEmail(b), dir);
+        case "inicio":
+          return (
+            ((a.inicio_atendimento_em ?? "") < (b.inicio_atendimento_em ?? "") ? -1 : (a.inicio_atendimento_em ?? "") > (b.inicio_atendimento_em ?? "") ? 1 : 0) *
+            (dir === "asc" ? 1 : -1)
+          );
+        case "atendente":
+          return compareLocaleTexto(nomeAtendente(a), nomeAtendente(b), dir);
+        case "sla":
+          return compareLocaleTexto(fmtSlaChamado(a.created_at, a.arquivado_em), fmtSlaChamado(b.created_at, b.arquivado_em), dir);
+        case "status":
+          return compareLocaleTexto(labelStatusChamado(a.status), labelStatusChamado(b.status), dir);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [lista, sortEmail]);
+
+  const listaInstagramDm = useMemo(
+    () => lista.filter((r) => r.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM),
+    [lista],
+  );
+  const listaInstagramComentario = useMemo(
+    () => lista.filter((r) => r.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO),
+    [lista],
+  );
+
+  function onSortSite(col: SortColSiteSpin) {
+    setSortSite((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
+  }
+
+  function onSortEmail(col: SortColEmail) {
+    setSortEmail((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "data" ? "desc" : "asc" }));
   }
 
   useEffect(() => {
-    if (!colunas.includes(sort.col)) {
-      setSort({ col: "data", dir: "desc" });
+    if (!isAbaEmail && !colunasSite.includes(sortSite.col)) {
+      setSortSite({ col: "data", dir: "desc" });
     }
-  }, [colunas, sort.col]);
+  }, [colunasSite, sortSite.col, isAbaEmail]);
+
+  useEffect(() => {
+    if (isAbaEmail && !colunasEmail.includes(sortEmail.col)) {
+      setSortEmail({ col: "data", dir: "desc" });
+    }
+  }, [colunasEmail, sortEmail.col, isAbaEmail]);
+
+  function renderAcoes(row: CsChamadoRow) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+        <BtnIconeAcaoLinha label={tooltipAcao("Ver Chamado")} onClick={() => setModalVer(row)}>
+          <Eye size={14} aria-hidden />
+        </BtnIconeAcaoLinha>
+        {row.status !== "arquivado" && perm.canEditarOk ? (
+          <BtnIconeAcaoLinha label={tooltipAcao("Atender Chamado")} onClick={() => setModalAtender(row)}>
+            <Pencil size={14} aria-hidden />
+          </BtnIconeAcaoLinha>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderLinhaSite(row: CsChamadoRow, i: number, colunas: ColunaSiteSpin[]) {
+    return (
+      <tr
+        key={row.id}
+        style={{ background: dataTable.zebraRow(i) }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = dataTable.zebraRow(i);
+        }}
+      >
+        {colunas.map((col) => {
+          if (col === "chamado") {
+            return (
+              <td key={col} style={dataTable.tdSticky({ rowIndex: i })}>
+                <strong>{row.protocolo}</strong>
+              </td>
+            );
+          }
+          if (col === "data") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.created_at)}</td>;
+          }
+          if (col === "solicitante") {
+            return (
+              <td key={col} style={dataTable.tdCenter}>
+                {celulaTextoEllipsis(row.nome_completo)}
+              </td>
+            );
+          }
+          if (col === "inicio") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.inicio_atendimento_em)}</td>;
+          }
+          if (col === "atendente") {
+            return <td key={col} style={dataTable.tdCenter}>{celulaTextoEllipsis(nomeAtendente(row))}</td>;
+          }
+          if (col === "sla") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtSlaChamado(row.created_at, row.arquivado_em)}</td>;
+          }
+          if (col === "status") {
+            return (
+              <td key={col} style={dataTable.tdCenter}>
+                <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+              </td>
+            );
+          }
+          return (
+            <td key={col} style={dataTable.tdCenter}>
+              {renderAcoes(row)}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
+
+  function renderLinhaEmail(row: CsChamadoRow, i: number, colunas: ColunaEmail[]) {
+    return (
+      <tr
+        key={row.id}
+        style={{ background: dataTable.zebraRow(i) }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = dataTable.zebraRow(i);
+        }}
+      >
+        {colunas.map((col) => {
+          if (col === "chamado") {
+            return (
+              <td key={col} style={dataTable.tdSticky({ rowIndex: i })}>
+                <strong>{row.protocolo}</strong>
+              </td>
+            );
+          }
+          if (col === "data") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.created_at)}</td>;
+          }
+          if (col === "solicitante") {
+            return (
+              <td key={col} style={dataTable.tdCenter}>
+                {celulaTextoEllipsis(solicitanteEmail(row), 200)}
+              </td>
+            );
+          }
+          if (col === "assunto") {
+            return (
+              <td key={col} style={dataTable.tdCenter}>
+                {celulaTextoEllipsis(assuntoEmail(row), 220)}
+              </td>
+            );
+          }
+          if (col === "inicio") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.inicio_atendimento_em)}</td>;
+          }
+          if (col === "atendente") {
+            return <td key={col} style={dataTable.tdCenter}>{celulaTextoEllipsis(nomeAtendente(row))}</td>;
+          }
+          if (col === "sla") {
+            return <td key={col} style={dataTable.tdCenter}>{fmtSlaChamado(row.created_at, row.arquivado_em)}</td>;
+          }
+          if (col === "status") {
+            return (
+              <td key={col} style={dataTable.tdCenter}>
+                <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
+              </td>
+            );
+          }
+          return (
+            <td key={col} style={dataTable.tdCenter}>
+              {renderAcoes(row)}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
 
   if (perm.loading) {
     return (
@@ -287,6 +516,11 @@ export default function CsAtendimentoPage() {
       </div>
     );
   }
+
+  const listaOrdenada = isAbaEmail ? listaOrdenadaEmail : listaOrdenadaSite;
+  const colunasAtivas = isAbaEmail ? colunasEmail : colunasSite;
+  const panelId = isAbaEmail ? "panel-cs-email" : "panel-cs-site-spin";
+  const tabId = isAbaEmail ? "tab-cs-email" : "tab-cs-site-spin";
 
   return (
     <div className="app-page-shell">
@@ -345,149 +579,114 @@ export default function CsAtendimentoPage() {
           role="tablist"
           aria-label="Origem do atendimento"
           style={{ ...getFilterBarRowStyle(), justifyContent: "center", width: "100%", marginTop: 10 }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_ORIGEM, setAbaOrigem, tabIdAbaOrigem)}
         >
           <FiltroBarTabButton
             id="tab-cs-site-spin"
-            active
-            aria-controls="panel-cs-atendimentos"
-            onClick={() => {}}
+            active={abaOrigem === CS_ATENDIMENTO_ORIGEM_SITE_SPIN}
+            aria-controls="panel-cs-site-spin"
+            onClick={() => setAbaOrigem(CS_ATENDIMENTO_ORIGEM_SITE_SPIN)}
             icon={<Globe {...FILTRO_BAR_TAB_ICON_PROPS} />}
           >
             {CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL}
           </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-cs-email"
+            active={abaOrigem === CS_ATENDIMENTO_ORIGEM_EMAIL}
+            aria-controls="panel-cs-email"
+            onClick={() => setAbaOrigem(CS_ATENDIMENTO_ORIGEM_EMAIL)}
+            icon={<Mail {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            {CS_ATENDIMENTO_ABA_EMAIL_LABEL}
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-cs-instagram"
+            active={abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM}
+            aria-controls="panel-cs-instagram"
+            onClick={() => setAbaOrigem(CS_ATENDIMENTO_ABA_INSTAGRAM)}
+            icon={<Instagram {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            activeColor={CS_ATENDIMENTO_INSTAGRAM_TAB_COLOR}
+          >
+            {CS_ATENDIMENTO_ABA_INSTAGRAM_LABEL}
+          </FiltroBarTabButton>
         </div>
       </div>
 
-      <div style={pageBox} id="panel-cs-atendimentos" role="tabpanel" aria-labelledby="tab-cs-site-spin">
-        <SectionTitle>Atendimentos</SectionTitle>
+      {isAbaInstagram ? (
+        <CsAtendimentoInstagramPainel
+          listaDm={listaInstagramDm}
+          listaComentario={listaInstagramComentario}
+          loading={loading}
+          filtroStatus={filtroStatus}
+          t={t}
+          dataTable={dataTable}
+          pageBox={pageBox}
+          perm={perm}
+          onVer={setModalVer}
+          onAtender={setModalAtender}
+        />
+      ) : (
+        <div style={pageBox} id={panelId} role="tabpanel" aria-labelledby={tabId}>
+          <SectionTitle>Atendimentos</SectionTitle>
 
-        {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
-            <div style={{ fontSize: 13 }}>Carregando…</div>
-          </div>
-        ) : listaOrdenada.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhum chamado encontrado.
-          </div>
-        ) : (
-          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 720 })}>
-              <caption style={{ display: "none" }}>Lista de chamados de atendimento</caption>
-              <thead>
-                <tr>
-                  {colunas.map((col) =>
-                    col === "acoes" ? (
-                      <th key={col} scope="col" style={dataTable.thHeader}>
-                        {COL_LABEL[col]}
-                      </th>
-                    ) : (
-                      <SortTableTh
-                        key={col}
-                        label={COL_LABEL[col]}
-                        col={col}
-                        sortCol={sort.col}
-                        sortDir={sort.dir}
-                        onSort={onSort}
-                        thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
-                        align="center"
-                      />
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {listaOrdenada.map((row, i) => (
-                  <tr
-                    key={row.id}
-                    style={{ background: dataTable.zebraRow(i) }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = dataTable.zebraRow(i);
-                    }}
-                  >
-                    {colunas.map((col) => {
-                      if (col === "chamado") {
-                        return (
-                          <td key={col} style={dataTable.tdSticky({ rowIndex: i })}>
-                            <strong>{row.protocolo}</strong>
-                          </td>
-                        );
-                      }
-                      if (col === "data") {
-                        return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.created_at)}</td>;
-                      }
-                      if (col === "solicitante") {
-                        return (
-                          <td key={col} style={dataTable.tdCenter} title={row.nome_completo}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                maxWidth: 160,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {row.nome_completo}
-                            </span>
-                          </td>
-                        );
-                      }
-                      if (col === "inicio") {
-                        return <td key={col} style={dataTable.tdCenter}>{fmtDataChamado(row.inicio_atendimento_em)}</td>;
-                      }
-                      if (col === "atendente") {
-                        return (
-                          <td key={col} style={dataTable.tdCenter} title={nomeAtendente(row)}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                maxWidth: 160,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {nomeAtendente(row)}
-                            </span>
-                          </td>
-                        );
-                      }
-                      if (col === "sla") {
-                        return <td key={col} style={dataTable.tdCenter}>{fmtSlaChamado(row.created_at, row.arquivado_em)}</td>;
-                      }
-                      if (col === "status") {
-                        return (
-                          <td key={col} style={dataTable.tdCenter}>
-                            <div style={{ display: "flex", justifyContent: "center" }}>{badgeStatus(row.status)}</div>
-                          </td>
-                        );
-                      }
-                      return (
-                        <td key={col} style={dataTable.tdCenter}>
-                          <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                            <BtnIconeAcaoLinha label={tooltipAcao("Ver Chamado")} onClick={() => setModalVer(row)}>
-                              <Eye size={14} aria-hidden />
-                            </BtnIconeAcaoLinha>
-                            {row.status !== "arquivado" && perm.canEditarOk ? (
-                              <BtnIconeAcaoLinha label={tooltipAcao("Atender Chamado")} onClick={() => setModalAtender(row)}>
-                                <Pencil size={14} aria-hidden />
-                              </BtnIconeAcaoLinha>
-                            ) : null}
-                          </div>
-                        </td>
-                      );
-                    })}
+          {loading ? (
+            <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+              <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 12 }} />
+              <div style={{ fontSize: 13 }}>Carregando…</div>
+            </div>
+          ) : listaOrdenada.length === 0 ? (
+            <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Nenhum chamado encontrado.
+            </div>
+          ) : (
+            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: isAbaEmail ? 960 : 720 })}>
+                <caption style={{ display: "none" }}>
+                  {isAbaEmail ? "Lista de chamados de atendimento por e-mail" : "Lista de chamados de atendimento do site"}
+                </caption>
+                <thead>
+                  <tr>
+                    {colunasAtivas.map((col) =>
+                      col === "acoes" ? (
+                        <th key={col} scope="col" style={dataTable.thHeader}>
+                          {isAbaEmail ? COL_LABEL_EMAIL.acoes : COL_LABEL_SITE_SPIN.acoes}
+                        </th>
+                      ) : isAbaEmail ? (
+                        <SortTableTh
+                          key={col}
+                          label={COL_LABEL_EMAIL[col as ColunaEmail]}
+                          col={col}
+                          sortCol={sortEmail.col}
+                          sortDir={sortEmail.dir}
+                          onSort={(c) => onSortEmail(c as SortColEmail)}
+                          thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
+                          align="center"
+                        />
+                      ) : (
+                        <SortTableTh
+                          key={col}
+                          label={COL_LABEL_SITE_SPIN[col as ColunaSiteSpin]}
+                          col={col}
+                          sortCol={sortSite.col}
+                          sortDir={sortSite.dir}
+                          onSort={(c) => onSortSite(c as SortColSiteSpin)}
+                          thStyle={col === "chamado" ? dataTable.thHeaderSticky : dataTable.thHeader}
+                          align="center"
+                        />
+                      ),
+                    )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {isAbaEmail
+                    ? listaOrdenada.map((row, i) => renderLinhaEmail(row, i, colunasEmail))
+                    : listaOrdenada.map((row, i) => renderLinhaSite(row, i, colunasSite))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <ModalVerChamado
         open={!!modalVer}

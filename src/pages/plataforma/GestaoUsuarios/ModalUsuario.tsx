@@ -9,7 +9,7 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
-import { ROLES_STAFF_APENAS_PERMISSOES, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import { ROLES_STAFF_APENAS_PERMISSOES, roleGestorDepartamento, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 import { MultiSelect, SingleSelectOperadora } from "./ModalUsuarioScopeSelects";
 import { SalvarCtaContent } from "./gestaoUsuariosUi";
@@ -73,12 +73,12 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     const scopes = editando?.scopes ?? [];
     const r = editando?.role ?? role;
     setScopeInfluencers(
-      r === "gestor" || r === "executivo" || r === "investidor"
+      r === "gestor" || r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role)
         ? []
         : scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref)
     );
     setScopeOperadoras(
-      r === "gestor" || r === "executivo" || r === "investidor" || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
+      r === "gestor" || r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role) || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
         ? []
         : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref)
     );
@@ -192,11 +192,13 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           : scopePares;
       const scopeInfluencersArrRaw = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
       const scopeInfluencersArr =
-        role === "gestor" || role === "executivo" || role === "investidor" ? [] : scopeInfluencersArrRaw;
+        role === "gestor" || role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
+          ? []
+          : scopeInfluencersArrRaw;
       const scopeOperadorasArr =
         role === "operador"
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
-          : role === "gestor" || role === "executivo" || role === "investidor"
+          : role === "gestor" || role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
             ? []
             : ROLES_STAFF_APENAS_PERMISSOES.includes(role)
               ? []
@@ -359,7 +361,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                 : "Todos os influencers e todas as operadoras — permissões apenas pela aba Permissões (sem escopo por operadora)."}
             </div>
           </div>
-        ) : role === "executivo" || role === "investidor" ? null : role === "gestor" ? (
+        ) : role === "executivo" || role === "investidor" || roleGestorDepartamento(role) ? null : role === "gestor" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <MultiSelect
               t={t}

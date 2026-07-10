@@ -17,6 +17,7 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { Banknote, Clock, Loader2 } from "lucide-react"
 import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
 import { cicloAberto, fmtCicloDatas, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
+import { fecharCicloExpiradoSeNecessario } from "./financeiroFecharCiclo"
 import { type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
 import type { BlocoFiltros } from "./financeiroFiltros"
 import { Badge, BtnAcao, BtnPrimary, SelectInput } from "./financeiroUi"
@@ -72,54 +73,6 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }, [ciclos, cicloId]);
 
   const OPERADORA_PADRAO = "casa_apostas";
-
-  const gerarPagamentosDoCiclo = useCallback(async (c: CicloPagamento) => {
-    const { data: lives } = await supabase
-      .from("lives")
-      .select("id, influencer_id, operadora_slug")
-      .eq("status", "realizada")
-      .gte("data", c.data_inicio)
-      .lte("data", c.data_fim);
-
-    const livesFiltradas = (lives ?? []) as FinanceiroLiveRow[];
-    const livesOk = livesFiltradas.filter((l) => podeVerInfluencer(l.influencer_id));
-    const liveIds = livesOk.map((l) => l.id);
-    let resultados: FinanceiroLiveResultadoRow[] = [];
-    if (liveIds.length > 0) {
-      const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
-      resultados = (resData ?? []) as FinanceiroLiveResultadoRow[];
-    }
-
-    const horasPorPar: Record<string, number> = {};
-    const key = (inf: string, op: string) => `${inf}::${op}`;
-    for (const live of livesOk) {
-      const res = resultados.find((r) => String(r.live_id) === String(live.id));
-      if (res) {
-        const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
-        const k = key(live.influencer_id, opSlug);
-        const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
-        horasPorPar[k] = (horasPorPar[k] ?? 0) + horas;
-      }
-    }
-
-    for (const [parKey, horas] of Object.entries(horasPorPar)) {
-      const [influencer_id, operadora_slug] = parKey.split("::");
-      const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
-      const cache_hora = perfil?.cache_hora ?? 0;
-      const total = Math.round(horas * cache_hora * 100) / 100;
-      await supabase.from("pagamentos").upsert({
-        ciclo_id: c.id, influencer_id, operadora_slug,
-        horas_realizadas: Math.round(horas * 100) / 100,
-        cache_hora, total, status: "em_analise",
-      }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
-    }
-  }, [podeVerInfluencer]);
-
-  const fecharCiclo = useCallback(async (c: CicloPagamento) => {
-    await gerarPagamentosDoCiclo(c);
-    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
-    onRecarregar();
-  }, [gerarPagamentosDoCiclo, onRecarregar]);
 
   const carregarPreview = useCallback(async (c: CicloPagamento) => {
     const { data: lives } = await supabase
@@ -362,11 +315,9 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   useEffect(() => {
     if (ciclos.length === 0) return;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const paraFechar = ciclos.find(cic => !cic.fechado_em && hoje > new Date((cic.data_fim || "") + "T00:00:00"));
-    if (paraFechar) void fecharCiclo(paraFechar);
-  }, [ciclos, fecharCiclo]);
+    const paraFechar = ciclos.find((cic) => !cic.fechado_em && !cicloAberto(cic));
+    if (paraFechar) void fecharCicloExpiradoSeNecessario(paraFechar).then((ok) => { if (ok) onRecarregar(); });
+  }, [ciclos, onRecarregar]);
 
   useEffect(() => {
     if (ciclo) void carregarDados(ciclo);

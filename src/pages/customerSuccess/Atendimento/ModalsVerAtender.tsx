@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { FileText, History, Loader2 } from "lucide-react";
+import { FileText, History, Loader2, MessageCircle } from "lucide-react";
 import { ModalBase } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
@@ -10,14 +10,25 @@ import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
 import {
   CS_ATENDIMENTO_ATUACAO_LABEL,
+  CS_ATENDIMENTO_CONTA_INSTAGRAM,
   CS_ATENDIMENTO_HISTORICO_LABEL,
+  CS_ATENDIMENTO_INSTAGRAM_POST_TIPO_LABEL,
+  CS_ATENDIMENTO_ORIGEM_EMAIL,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO,
+  CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM,
   CS_ATENDIMENTO_STATUS_CORES,
   csAtuacaoExigeEmpresa,
   fmtDataChamado,
+  isCsChamadoOrigemInstagram,
   labelStatusChamado,
   opcoesStatusAtender,
 } from "../../../lib/csAtendimentoConstants";
-import type { CsChamadoHistoricoRow, CsChamadoRow, CsChamadoStatus } from "../../../types/csAtendimento";
+import { assuntoEmail, solicitanteEmail, solicitanteInstagram } from "../../../lib/csAtendimentoTableColumns";
+import { carregarMensagensChamado, unwrapCsEmbed } from "../../../lib/csAtendimentoHelpers";
+import type { CsChamadoHistoricoRow, CsChamadoMensagemRow, CsChamadoRow, CsChamadoStatus } from "../../../types/csAtendimento";
+import { CsChamadoEmailAnexosBloco } from "./CsChamadoEmailAnexosBloco";
+import { CsChamadoInstagramComposerBloco } from "./CsChamadoInstagramComposerBloco";
+import { CsChamadoInstagramThreadBloco } from "./CsChamadoInstagramThreadBloco";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 
@@ -64,10 +75,20 @@ function badgeStatus(status: CsChamadoRow["status"]) {
 }
 
 function tituloModal(row: CsChamadoRow): string {
+  if (row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL) {
+    return `${row.protocolo} - ${assuntoEmail(row)}`;
+  }
+  if (isCsChamadoOrigemInstagram(row.origem)) {
+    return `${row.protocolo} - ${solicitanteInstagram(row)}`;
+  }
   return `${row.protocolo} - ${row.nome_completo}`;
 }
 
-function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
+function nomeAtendenteModal(row: CsChamadoRow): string {
+  return unwrapCsEmbed(row.atendente)?.name?.trim() || "—";
+}
+
+function corpoDadosChamadoSite(row: CsChamadoRow, t: Theme) {
   const exibirEmpresa = csAtuacaoExigeEmpresa(row.atuacao);
   return (
     <>
@@ -77,6 +98,83 @@ function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
       <LinhaInfo label="Atuação" valor={CS_ATENDIMENTO_ATUACAO_LABEL[row.atuacao]} t={t} />
       {exibirEmpresa ? <LinhaInfo label="Empresa" valor={row.empresa?.trim() || "—"} t={t} /> : null}
       <LinhaInfo label="Mensagem" valor={row.mensagem.trim() || "—"} t={t} />
+    </>
+  );
+}
+
+function corpoDadosChamadoEmail(row: CsChamadoRow, t: Theme) {
+  return (
+    <>
+      <LinhaInfo label="Remetente" valor={solicitanteEmail(row)} t={t} />
+      <LinhaInfo label="Assunto" valor={assuntoEmail(row)} t={t} />
+      <LinhaInfo label="Data de Recebimento" valor={fmtDataChamado(row.created_at)} t={t} />
+      <LinhaInfo label="Corpo do E-mail" valor={row.mensagem.trim() || "—"} t={t} />
+      <CsChamadoEmailAnexosBloco anexos={row.anexos} t={t} />
+    </>
+  );
+}
+
+function corpoDadosChamado(row: CsChamadoRow, t: Theme) {
+  if (row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL) {
+    return corpoDadosChamadoEmail(row, t);
+  }
+  return corpoDadosChamadoSite(row, t);
+}
+
+function labelPostTipo(tipo: string | null | undefined): string {
+  if (!tipo?.trim()) return "—";
+  return CS_ATENDIMENTO_INSTAGRAM_POST_TIPO_LABEL[tipo] ?? tipo;
+}
+
+function corpoVerInstagramDm(row: CsChamadoRow, t: Theme, mensagens: CsChamadoMensagemRow[], loadingMensagens: boolean) {
+  return (
+    <>
+      <LinhaInfo label="Instagram" valor={solicitanteInstagram(row)} t={t} />
+      <LinhaInfo label="Conta Spin" valor={CS_ATENDIMENTO_CONTA_INSTAGRAM} t={t} />
+      <LinhaInfo label="Data de abertura" valor={fmtDataChamado(row.created_at)} t={t} />
+      <LinhaInfo label="Atendente" valor={nomeAtendenteModal(row)} t={t} />
+      <LinhaInfo label="Última mensagem do usuário" valor={fmtDataChamado(row.ultima_mensagem_usuario_em)} t={t} />
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: t.textMuted,
+          textTransform: "uppercase",
+          margin: "16px 0 8px",
+          fontFamily: FONT.body,
+        }}
+      >
+        Conversa
+      </div>
+      <CsChamadoInstagramThreadBloco mensagens={mensagens} loading={loadingMensagens} t={t} />
+      <CsChamadoInstagramComposerBloco variant="dm" t={t} />
+    </>
+  );
+}
+
+function corpoVerInstagramComentario(row: CsChamadoRow, t: Theme) {
+  const caption = row.instagram_post_caption?.trim() || "—";
+  return (
+    <>
+      <div
+        style={{
+          padding: "12px 14px",
+          borderRadius: 10,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg,
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>Post</div>
+        <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+          {labelPostTipo(row.instagram_post_tipo)} · {CS_ATENDIMENTO_CONTA_INSTAGRAM}
+        </div>
+        <div style={{ fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap", fontFamily: FONT.body }}>{caption}</div>
+      </div>
+      <LinhaInfo label="Solicitante" valor={solicitanteInstagram(row)} t={t} />
+      <LinhaInfo label="Data de abertura" valor={fmtDataChamado(row.created_at)} t={t} />
+      <LinhaInfo label="Comentário" valor={row.mensagem.trim() || "—"} t={t} />
+      <CsChamadoInstagramComposerBloco variant="comentario" t={t} />
     </>
   );
 }
@@ -122,18 +220,45 @@ export interface ModalVerChamadoProps {
 }
 
 export function ModalVerChamado({ open, onClose, row, historico, loadingHistorico, t }: ModalVerChamadoProps) {
-  const [aba, setAba] = useState<"dados" | "historico">("dados");
+  const isDm = row?.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM;
+  const isComent = row?.origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO;
+  const isInstagram = isCsChamadoOrigemInstagram(row?.origem ?? CS_ATENDIMENTO_ORIGEM_EMAIL);
+
+  const [aba, setAba] = useState<"dados" | "historico" | "conversa" | "comentario">("dados");
+  const [mensagens, setMensagens] = useState<CsChamadoMensagemRow[]>([]);
+  const [loadingMensagens, setLoadingMensagens] = useState(false);
 
   useEffect(() => {
-    if (open) setAba("dados");
-  }, [open, row?.id]);
+    if (!open || !row) return;
+    if (isDm) setAba("conversa");
+    else if (isComent) setAba("comentario");
+    else setAba("dados");
+  }, [open, row, isDm, isComent]);
+
+  useEffect(() => {
+    if (!open || !row || !isDm) {
+      setMensagens([]);
+      return;
+    }
+    setLoadingMensagens(true);
+    void carregarMensagensChamado(row.id).then((rows) => {
+      setMensagens(rows);
+      setLoadingMensagens(false);
+    });
+  }, [open, row, isDm]);
 
   if (!open || !row) return null;
 
-  const tabs = ["dados", "historico"] as const;
+  const tabs = isDm
+    ? (["conversa", "historico"] as const)
+    : isComent
+      ? (["comentario", "historico"] as const)
+      : (["dados", "historico"] as const);
+
+  const abaAtiva = isInstagram ? (aba === "historico" ? "historico" : isDm ? "conversa" : "comentario") : aba;
 
   return (
-    <ModalBase onClose={onClose} maxWidth={640}>
+    <ModalBase onClose={onClose} maxWidth={isInstagram ? 720 : 640}>
       <div style={{ padding: "16px 20px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
         <h2
           id="modal-ver-chamado-title"
@@ -155,33 +280,67 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
         role="tablist"
         aria-label="Seções do chamado"
         style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, padding: "12px 20px 0" }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, [...tabs], setAba, (k) => `tab-ver-chamado-${k}`)}
+        onKeyDown={(e) =>
+          onFiltroBarTabsKeyDown(e, [...tabs], (k) => setAba(k as typeof aba), (k) => `tab-ver-chamado-${k}`)
+        }
       >
-        <FiltroBarTabButton
-          id="tab-ver-chamado-dados"
-          active={aba === "dados"}
-          aria-controls="panel-ver-chamado-dados"
-          onClick={() => setAba("dados")}
-          icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
-        >
-          Dados do Chamado
-        </FiltroBarTabButton>
+        {isDm ? (
+          <FiltroBarTabButton
+            id="tab-ver-chamado-conversa"
+            active={abaAtiva === "conversa"}
+            aria-controls="panel-ver-chamado-conversa"
+            onClick={() => setAba("conversa")}
+            icon={<MessageCircle {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            Conversa
+          </FiltroBarTabButton>
+        ) : isComent ? (
+          <FiltroBarTabButton
+            id="tab-ver-chamado-comentario"
+            active={abaAtiva === "comentario"}
+            aria-controls="panel-ver-chamado-comentario"
+            onClick={() => setAba("comentario")}
+            icon={<MessageCircle {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            Comentário
+          </FiltroBarTabButton>
+        ) : (
+          <FiltroBarTabButton
+            id="tab-ver-chamado-dados"
+            active={abaAtiva === "dados"}
+            aria-controls="panel-ver-chamado-dados"
+            onClick={() => setAba("dados")}
+            icon={<FileText {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            {row.origem === CS_ATENDIMENTO_ORIGEM_EMAIL ? "Dados do E-mail" : "Dados do Chamado"}
+          </FiltroBarTabButton>
+        )}
         <FiltroBarTabButton
           id="tab-ver-chamado-historico"
-          active={aba === "historico"}
+          active={abaAtiva === "historico"}
           aria-controls="panel-ver-chamado-historico"
           onClick={() => setAba("historico")}
           icon={<History {...FILTRO_BAR_TAB_ICON_PROPS} />}
         >
-          Histórico
+          Histórico interno
         </FiltroBarTabButton>
       </div>
 
-      <ModalTabPanel active={aba === "dados"} id="panel-ver-chamado-dados" labelledBy="tab-ver-chamado-dados">
-        <div style={{ padding: "0 20px 20px" }}>{corpoDadosChamado(row, t)}</div>
-      </ModalTabPanel>
+      {isDm ? (
+        <ModalTabPanel active={abaAtiva === "conversa"} id="panel-ver-chamado-conversa" labelledBy="tab-ver-chamado-conversa">
+          <div style={{ padding: "0 20px 20px" }}>{corpoVerInstagramDm(row, t, mensagens, loadingMensagens)}</div>
+        </ModalTabPanel>
+      ) : isComent ? (
+        <ModalTabPanel active={abaAtiva === "comentario"} id="panel-ver-chamado-comentario" labelledBy="tab-ver-chamado-comentario">
+          <div style={{ padding: "0 20px 20px" }}>{corpoVerInstagramComentario(row, t)}</div>
+        </ModalTabPanel>
+      ) : (
+        <ModalTabPanel active={abaAtiva === "dados"} id="panel-ver-chamado-dados" labelledBy="tab-ver-chamado-dados">
+          <div style={{ padding: "0 20px 20px" }}>{corpoDadosChamado(row, t)}</div>
+        </ModalTabPanel>
+      )}
 
-      <ModalTabPanel active={aba === "historico"} id="panel-ver-chamado-historico" labelledBy="tab-ver-chamado-historico">
+      <ModalTabPanel active={abaAtiva === "historico"} id="panel-ver-chamado-historico" labelledBy="tab-ver-chamado-historico">
         <div style={{ padding: "0 20px 20px" }}>
           {loadingHistorico ? (
             <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -269,6 +428,7 @@ export function ModalAtenderChamado({
   if (!open || !row) return null;
 
   const statusAlterado = statusDraft !== row.status;
+  const isInstagram = isCsChamadoOrigemInstagram(row.origem);
 
   async function salvar() {
     if (!row) return;
@@ -309,7 +469,7 @@ export function ModalAtenderChamado({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={640} zIndex={1100}>
+    <ModalBase onClose={onClose} maxWidth={isInstagram ? 720 : 640} zIndex={1100}>
       <div style={{ padding: "16px 20px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
         <h2
           id="modal-atender-chamado-title"
@@ -364,6 +524,8 @@ export function ModalAtenderChamado({
             style={{ ...inputStyle, minHeight: 88, resize: "vertical" }}
           />
         </label>
+
+        {isInstagram ? <CsChamadoInstagramComposerBloco variant="atender" t={t} /> : null}
 
         <div
           style={{

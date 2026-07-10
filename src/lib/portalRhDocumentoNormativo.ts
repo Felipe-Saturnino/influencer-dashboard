@@ -13,18 +13,25 @@ export const PORTAL_RH_APLICAVEL_TODOS = "Todos os prestadores";
 
 /**
  * Perfis que participam do fluxo de ciência no Portal RH — alinhado a Gestão de Usuários
- * (`FILTROS_PERFIL_LINHAS`: Perfis Gerenciais + Perfis Internos).
+ * (`FILTROS_PERFIL_LINHAS`: Perfis Gerenciais + Estúdio + Escritório).
  */
 export const PORTAL_RH_ROLES_CIENCIA: readonly Role[] = [
   "admin",
   "executivo",
   "gestor",
+  "gestor_aquisicao",
+  "gestor_marketing",
+  "gestor_operacoes",
+  "gestor_academy",
+  "gestor_rh",
   "rh",
   "figurino",
   "comunicacao",
   "performance_coach",
   "service_manager",
   "customer_service",
+  "game_presenter",
+  "shuffler",
   "tech_ops",
   "shift_leader",
   "prestador",

@@ -1194,12 +1194,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista vazia?",
         texto:
-          "Chamados entram pela Edge Function do formulário do site Spin — não há criação manual na plataforma. Confirme que a migration `cs_atendimento` foi aplicada no Supabase e que o secret `CS_ATENDIMENTO_FORM_SECRET` está configurado na função `prospecto-cs-atendimento-site`.",
+          "Na aba **Site Spin**, chamados entram pelo formulário do site (Edge `prospecto-cs-atendimento-site`). Na aba **E-mail**, chamados vêm da caixa **contato@spingaming.com.br** via Edge `ingest-cs-atendimento-outlook` (cron a cada poucos minutos). Confirme migrations `cs_atendimento` e `cs_atendimento_email`, secrets Graph (`CS_OUTLOOK_*`) e deploy da function. Guia: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.",
       },
       {
         subtitulo: "Não consigo atender chamado?",
         texto:
-          "O ícone **Atender** exige permissão de **Editar** em Atendimento (Gestão de Usuários). Ao alterar o status, informe uma anotação no modal.",
+          "O ícone **Atender** exige permissão de **Editar** em Atendimento (Gestão de Usuários). Chamados novos ficam sem atendente até alguém alterar o status; quem altera passa a ser o **Atendente** na lista. Ao alterar o status, informe uma anotação no modal.",
       },
     ],
   },

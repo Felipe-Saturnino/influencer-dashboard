@@ -145,6 +145,7 @@ export function ModalAtualizarVaga({
     if (tipoVaga !== "externa") {
       setNecessarioVideoApresentacao(false);
       setNecessarioTurno(false);
+      setTags([]);
     }
   }, [tipoVaga]);
 
@@ -245,6 +246,7 @@ export function ModalAtualizarVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
+    if (tipoVaga === "externa" && tags.length === 0) e.tags = "Adicione ao menos uma tag.";
     setFieldErr(e);
     return Object.keys(e).length === 0;
   }
@@ -296,7 +298,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        tags,
+        tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
         status: "aberta",
         data_encerramento: null,
@@ -313,7 +315,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        tags,
+        tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
       };
     } else if (accao === "concluir") {
@@ -527,7 +529,9 @@ export function ModalAtualizarVaga({
                 />
                 {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
               </div>
-              <CampoTagsVaga id="atv-tags" value={tags} onChange={setTags} t={t} inputStyle={inputStyle} />
+              {tipoVaga === "externa" ? (
+                <CampoTagsVaga id="atv-tags" value={tags} onChange={setTags} t={t} inputStyle={inputStyle} obrigatorio erro={fieldErr.tags} />
+              ) : null}
             </>
           ) : null}
 

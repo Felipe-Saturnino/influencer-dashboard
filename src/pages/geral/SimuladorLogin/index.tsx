@@ -9,7 +9,6 @@ import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { supabase } from "../../../lib/supabase";
 import {
-  FILTROS_PERFIL_LINHAS,
   GESTOR_TIPOS,
   PRESTADOR_TIPOS,
   roleLabel,
@@ -17,18 +16,18 @@ import {
 import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import {
-  ROLES_SIMULAVEIS,
+  filtrarLinhasSimuladorPorRoles,
   roleExigeGestorTipoNaSimulacao,
   roleExigeOperadoraNaSimulacao,
   roleExigePrestadorTipoNaSimulacao,
 } from "../../../lib/simuladorLogin";
 
-type OperadoraOpt = { slug: string; nome: string };
+type OperadoraOpt = { slug: string; nome: string; ativo: boolean };
 
 type ModalOpcaoPerfil = "operadora" | "gestor_tipo" | "prestador_tipo";
 
 export default function SimuladorLogin() {
-  const { theme: t, simulacaoLogin, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
+  const { theme: t, simulacaoLogin, simuladorRolesPermitidos, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("simulador_login");
 
@@ -45,21 +44,13 @@ export default function SimuladorLogin() {
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const linhasPerfis = useMemo(
-    () =>
-      FILTROS_PERFIL_LINHAS.map((linha) => ({
-        titulo: linha.titulo,
-        roles: linha.roles.filter((r) => ROLES_SIMULAVEIS.includes(r)),
-      })).filter((l) => l.roles.length > 0),
-    [],
+    () => filtrarLinhasSimuladorPorRoles(simuladorRolesPermitidos),
+    [simuladorRolesPermitidos],
   );
 
   const carregarOperadoras = useCallback(async () => {
     setCarregandoOperadoras(true);
-    const { data } = await supabase
-      .from("operadoras")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome");
+    const { data } = await supabase.from("operadoras").select("slug, nome, ativo").order("nome");
     setOperadoras((data ?? []) as OperadoraOpt[]);
     setCarregandoOperadoras(false);
   }, []);
@@ -201,7 +192,12 @@ export default function SimuladorLogin() {
       ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {linhasPerfis.map((linha) => (
+        {linhasPerfis.length === 0 ? (
+          <div style={{ ...pageBox, padding: "40px 20px", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Nenhum perfil liberado para visualização. Peça ao administrador para configurar em Gestão de Usuários → Simulador de Login.
+          </div>
+        ) : (
+          linhasPerfis.map((linha) => (
           <div key={linha.titulo} style={pageBox}>
             <h2
               style={{
@@ -230,7 +226,8 @@ export default function SimuladorLogin() {
               ))}
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       {modalOpcao && rolePendente ? (
@@ -260,7 +257,10 @@ export default function SimuladorLogin() {
               <ListaOpcoesRadio
                 t={t}
                 name="simulador-operadora"
-                opcoes={operadoras.map((op) => ({ value: op.slug, label: op.nome }))}
+                opcoes={operadoras.map((op) => ({
+                  value: op.slug,
+                  label: op.ativo ? op.nome : `${op.nome} (inativa)`,
+                }))}
                 value={operadoraSlug}
                 onChange={setOperadoraSlug}
               />

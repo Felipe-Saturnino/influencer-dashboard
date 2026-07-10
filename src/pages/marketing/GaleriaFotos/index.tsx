@@ -47,7 +47,7 @@ import {
 } from "../../../components/dashboard";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
-import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { normalizarTextoBusca, textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   getPageContentBoxStyle,
@@ -58,18 +58,28 @@ import {
   type MarketingFotoComEvento,
   type MarketingFotoTipo,
   fmtDataEvento,
-  fotoEventoEmbed,
-  fotoPrestadorEmbed,
+  resolverEventoGaleria,
+  resolverPrestadorGaleria,
+  type GaleriaMetadadosContexto,
   removerMarketingFotoStorage,
   uploadMarketingFotoArquivo,
   urlAssinadaFotoPrestador,
+  urlAssinadasFotosPrestador,
   urlPublicaFotoGeral,
   buscarMeuColaboradorGaleria,
-  fotosGeraisDoEvento,
   excluirMarketingEventoGaleria,
   buildRotulosFotoGaleria,
   rotuloExibicaoFotoGaleria,
   nomeArquivoDownloadFotoGaleria,
+  listarResumoEventosGaleria,
+  listarResumoPrestadoresGaleria,
+  listarMarketingFotosPorEvento,
+  listarMarketingFotosPorPrestador,
+  buscarMarketingFotosGaleria,
+  chaveCacheGrupoGaleria,
+  effectiveRhFuncionarioId,
+  type GaleriaEventoResumo,
+  type GaleriaPrestadorResumo,
   MARKETING_FOTO_MIME_PERMITIDOS,
   marketingFotoTamanhoMaxMb,
 } from "../../../lib/marketingGaleriaFotos";
@@ -81,6 +91,7 @@ type GaleriaBloco = {
   sub: string;
   descricao?: string | null;
   fotos: MarketingFotoComEvento[];
+  qtdFotos: number;
 };
 
 type Aba = "galeria" | "upload";
@@ -158,7 +169,13 @@ export default function GaleriaFotos() {
   const [aba, setAba] = useRouteTab("galeria_fotos", "galeria", abasDisponiveis);
 
   const [eventos, setEventos] = useState<MarketingEvento[]>([]);
-  const [fotos, setFotos] = useState<MarketingFotoComEvento[]>([]);
+  const [resumoEventos, setResumoEventos] = useState<GaleriaEventoResumo[]>([]);
+  const [resumoPrestadores, setResumoPrestadores] = useState<GaleriaPrestadorResumo[]>([]);
+  const [fotosCache, setFotosCache] = useState<Record<string, MarketingFotoComEvento[]>>({});
+  const [fotosCacheLoading, setFotosCacheLoading] = useState<Set<string>>(() => new Set());
+  const [fotosBusca, setFotosBusca] = useState<MarketingFotoComEvento[] | null>(null);
+  const [buscaFotosLoading, setBuscaFotosLoading] = useState(false);
+  const [buscaDeb, setBuscaDeb] = useState("");
   const [prestadores, setPrestadores] = useState<PrestadorOpcao[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -203,9 +220,12 @@ export default function GaleriaFotos() {
   const [lightbox, setLightbox] = useState<MarketingFotoComEvento | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [urlsPrestador, setUrlsPrestador] = useState<Record<string, string>>({});
+  const urlsPrestadorRef = useRef(urlsPrestador);
+  urlsPrestadorRef.current = urlsPrestador;
   const [fotoExcluir, setFotoExcluir] = useState<MarketingFotoComEvento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
+  const [prestadoresExpandidos, setPrestadoresExpandidos] = useState<Set<string>>(() => new Set());
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);
@@ -229,8 +249,33 @@ export default function GaleriaFotos() {
     return meuRhFuncionarioId ? [meuRhFuncionarioId] : [];
   }, [galeriaSubAba, podeFiltrarPrestador, filtroPrestador, meuRhFuncionarioId]);
 
-  const rotulosFotoGaleria = useMemo(() => buildRotulosFotoGaleria(fotos), [fotos]);
+  const metadadosGaleria = useMemo(
+    (): GaleriaMetadadosContexto => ({
+      eventosPorId: new Map(eventos.map((e) => [e.id, e])),
+      prestadoresPorId: new Map(prestadores.map((p) => [p.id, p])),
+    }),
+    [eventos, prestadores],
+  );
+
+  const fotosVisiveis = useMemo(() => {
+    if (fotosBusca) return fotosBusca;
+    return Object.values(fotosCache).flat();
+  }, [fotosBusca, fotosCache]);
+
+  const rotulosFotoGaleria = useMemo(
+    () => buildRotulosFotoGaleria(fotosVisiveis, metadadosGaleria),
+    [fotosVisiveis, metadadosGaleria],
+  );
   const forcarExpandirEventos = buscaGaleria.trim().length > 0;
+  const prestadorBlocoRecolhivel =
+    galeriaSubAba === "minhas_fotos" &&
+    podeFiltrarPrestador &&
+    filtroPrestador === FILTRO_PRESTADOR_TODOS &&
+    !forcarExpandirEventos;
+  const forcarExpandirPrestadores =
+    forcarExpandirEventos ||
+    !podeFiltrarPrestador ||
+    filtroPrestador !== FILTRO_PRESTADOR_TODOS;
 
   const toggleEventoExpandido = (eventoId: string) => {
     setEventosExpandidos((prev) => {
@@ -241,26 +286,66 @@ export default function GaleriaFotos() {
     });
   };
 
-  const carregarEventos = useCallback(async () => {
+  const togglePrestadorExpandido = (prestadorId: string) => {
+    setPrestadoresExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(prestadorId)) next.delete(prestadorId);
+      else next.add(prestadorId);
+      return next;
+    });
+  };
+
+  const carregarEventosAtivos = useCallback(async () => {
     const { data, error } = await supabase
       .from("marketing_eventos")
       .select("id, nome, data_evento, descricao, ativo, created_at, updated_at")
       .eq("ativo", true)
       .order("data_evento", { ascending: false });
     if (error) throw error;
-    setEventos((data ?? []) as MarketingEvento[]);
+    setEventos((prev) => {
+      const byId = new Map(prev.map((e) => [e.id, e]));
+      for (const row of data ?? []) byId.set(row.id, row as MarketingEvento);
+      return [...byId.values()].sort((a, b) => b.data_evento.localeCompare(a.data_evento));
+    });
   }, []);
 
-  const carregarFotos = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("marketing_fotos")
-      .select(
-        "id, evento_id, tipo, rh_funcionario_id, storage_path, file_name, mime_type, legenda, visivel_prestador, uploaded_by, created_at, marketing_eventos(id, nome, data_evento, descricao, ativo), rh_funcionarios!rh_funcionario_id(id, nome)",
-      )
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    setFotos((data ?? []) as MarketingFotoComEvento[]);
+  const sincronizarEventosResumo = useCallback((lista: GaleriaEventoResumo[]) => {
+    setEventos((prev) => {
+      const byId = new Map(prev.map((e) => [e.id, e]));
+      for (const row of lista) byId.set(row.id, row);
+      return [...byId.values()].sort((a, b) => b.data_evento.localeCompare(a.data_evento));
+    });
   }, []);
+
+  const carregarGrupoFotos = useCallback(async (kind: "evento" | "prestador", id: string) => {
+    const key = chaveCacheGrupoGaleria(kind, id);
+    if (fotosCache[key]?.length || fotosCacheLoading.has(key)) return;
+    setFotosCacheLoading((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    try {
+      const list =
+        kind === "evento"
+          ? await listarMarketingFotosPorEvento(id)
+          : await listarMarketingFotosPorPrestador(id);
+      setFotosCache((prev) => (prev[key] ? prev : { ...prev, [key]: list }));
+      if (kind === "prestador" && list.length > 0) {
+        const urls = await urlAssinadasFotosPrestador(list);
+        if (Object.keys(urls).length) {
+          setUrlsPrestador((prev) => ({ ...prev, ...urls }));
+        }
+      }
+    } finally {
+      setFotosCacheLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }, [fotosCache, fotosCacheLoading]);
 
   const carregarPrestadores = useCallback(async () => {
     const { data, error } = await supabase
@@ -269,22 +354,48 @@ export default function GaleriaFotos() {
       .in("status", ["ativo", "indisponivel"])
       .order("nome");
     if (error) throw error;
-    setPrestadores((data ?? []).map((r) => ({ id: r.id, nome: r.nome })));
+    setPrestadores((prev) => {
+      const byId = new Map(prev.map((p) => [p.id, p]));
+      for (const row of data ?? []) {
+        if (row.id && row.nome) byId.set(row.id, { id: row.id, nome: row.nome });
+      }
+      return [...byId.values()].sort((a, b) => compareLocaleTexto(a.nome, b.nome, "asc"));
+    });
   }, []);
 
   const recarregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
     try {
-      const tarefas: Promise<void>[] = [carregarEventos(), carregarFotos()];
-      if (podeUpload || podeFiltrarPrestador) tarefas.push(carregarPrestadores());
-      await Promise.all(tarefas);
+      const [evResumo, prestResumo] = await Promise.all([
+        listarResumoEventosGaleria(),
+        listarResumoPrestadoresGaleria(),
+      ]);
+      setResumoEventos(evResumo);
+      setResumoPrestadores(prestResumo);
+      sincronizarEventosResumo(evResumo);
+      setPrestadores((prev) => {
+        const byId = new Map(prev.map((p) => [p.id, p]));
+        for (const row of prestResumo) byId.set(row.id, { id: row.id, nome: row.nome });
+        return [...byId.values()].sort((a, b) => compareLocaleTexto(a.nome, b.nome, "asc"));
+      });
+      setFotosCache({});
+      setFotosBusca(null);
+      setUrlsPrestador({});
+      await carregarEventosAtivos();
+      if (podeUpload || podeFiltrarPrestador) await carregarPrestadores();
     } catch {
       setErro(MSG_ERRO_CARREGAR);
     } finally {
       setLoading(false);
     }
-  }, [carregarEventos, carregarFotos, carregarPrestadores, podeUpload, podeFiltrarPrestador]);
+  }, [
+    carregarEventosAtivos,
+    carregarPrestadores,
+    sincronizarEventosResumo,
+    podeUpload,
+    podeFiltrarPrestador,
+  ]);
 
   useEffect(() => {
     if (perm.canView !== "nao") void recarregar();
@@ -308,21 +419,114 @@ export default function GaleriaFotos() {
   }, [perm.canView]);
 
   useEffect(() => {
-    const prestadorFotos = fotos.filter((f) => f.tipo === "prestador");
+    const t = setTimeout(() => setBuscaDeb(normalizarTextoBusca(buscaGaleria)), 300);
+    return () => clearTimeout(t);
+  }, [buscaGaleria]);
+
+  useEffect(() => {
+    if (perm.canView === "nao") return;
+    if (buscaDeb.length < 2) {
+      setFotosBusca(null);
+      setBuscaFotosLoading(false);
+      return;
+    }
+    let cancel = false;
+    setBuscaFotosLoading(true);
+    void buscarMarketingFotosGaleria(buscaDeb)
+      .then((rows) => {
+        if (cancel) return;
+        const filtradas = rows.filter((f) => {
+          const ev = resolverEventoGaleria(f, metadadosGaleria);
+          const prest = resolverPrestadorGaleria(f, metadadosGaleria);
+          return textoContemBuscaEmAlgum(
+            buscaDeb,
+            ev?.nome,
+            f.legenda,
+            f.file_name,
+            prest?.nome,
+          );
+        });
+        setFotosBusca(filtradas);
+      })
+      .catch(() => {
+        if (!cancel) setFotosBusca([]);
+      })
+      .finally(() => {
+        if (!cancel) setBuscaFotosLoading(false);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [buscaDeb, perm.canView, metadadosGaleria]);
+
+  useEffect(() => {
+    if (galeriaSubAba !== "gerais" || fotosBusca) return;
+    for (const ev of resumoEventos) {
+      if (filtroEvento !== FILTRO_EVENTO_TODOS && ev.id !== filtroEvento) continue;
+      if (
+        buscaDeb &&
+        !textoContemBuscaEmAlgum(buscaDeb, ev.nome, ev.descricao ?? "")
+      ) {
+        continue;
+      }
+      if (forcarExpandirEventos || eventosExpandidos.has(ev.id)) {
+        void carregarGrupoFotos("evento", ev.id);
+      }
+    }
+  }, [
+    galeriaSubAba,
+    resumoEventos,
+    filtroEvento,
+    buscaDeb,
+    forcarExpandirEventos,
+    eventosExpandidos,
+    fotosBusca,
+    carregarGrupoFotos,
+  ]);
+
+  useEffect(() => {
+    if (galeriaSubAba !== "minhas_fotos" || fotosBusca) return;
+    for (const p of resumoPrestadores) {
+      if (podeFiltrarPrestador) {
+        if (filtroPrestador !== FILTRO_PRESTADOR_TODOS && p.id !== filtroPrestador) continue;
+      } else if (meuRhFuncionarioId && p.id !== meuRhFuncionarioId) {
+        continue;
+      }
+      if (buscaDeb && !textoContemBuscaEmAlgum(buscaDeb, p.nome)) continue;
+      if (forcarExpandirPrestadores || prestadoresExpandidos.has(p.id)) {
+        void carregarGrupoFotos("prestador", p.id);
+      }
+    }
+  }, [
+    galeriaSubAba,
+    resumoPrestadores,
+    filtroPrestador,
+    podeFiltrarPrestador,
+    meuRhFuncionarioId,
+    buscaDeb,
+    fotosBusca,
+    forcarExpandirPrestadores,
+    prestadoresExpandidos,
+    carregarGrupoFotos,
+  ]);
+
+  useEffect(() => {
+    const prestadorFotos = fotosVisiveis.filter(
+      (f) => f.tipo === "prestador" && !urlsPrestadorRef.current[f.id],
+    );
     if (!prestadorFotos.length) return;
+
     let cancel = false;
     void (async () => {
-      const next: Record<string, string> = {};
-      for (const f of prestadorFotos) {
-        const url = await urlAssinadaFotoPrestador(f.storage_path);
-        if (url) next[f.id] = url;
+      const urls = await urlAssinadasFotosPrestador(prestadorFotos);
+      if (!cancel && Object.keys(urls).length) {
+        setUrlsPrestador((prev) => ({ ...prev, ...urls }));
       }
-      if (!cancel) setUrlsPrestador((prev) => ({ ...prev, ...next }));
     })();
     return () => {
       cancel = true;
     };
-  }, [fotos]);
+  }, [fotosVisiveis]);
 
   useEffect(() => {
     if (!lightbox) {
@@ -342,96 +546,134 @@ export default function GaleriaFotos() {
     };
   }, [lightbox]);
 
-  const fotosFiltradas = useMemo(() => {
-    let list = fotos;
+  const montarBlocosDeFotos = useCallback(
+    (lista: MarketingFotoComEvento[]): GaleriaBloco[] => {
+      const eventoMap = new Map<string, GaleriaBloco>();
+      const prestadorMap = new Map<string, GaleriaBloco>();
+
+      for (const f of lista) {
+        if (f.tipo === "geral") {
+          const ev = resolverEventoGaleria(f, metadadosGaleria);
+          if (!ev) continue;
+          if (!eventoMap.has(ev.id)) {
+            eventoMap.set(ev.id, {
+              kind: "evento",
+              id: ev.id,
+              titulo: ev.nome,
+              sub: fmtDataEvento(ev.data_evento),
+              descricao: ev.descricao,
+              fotos: [],
+              qtdFotos: 0,
+            });
+          }
+          eventoMap.get(ev.id)!.fotos.push(f);
+          continue;
+        }
+
+        const prest = resolverPrestadorGaleria(f, metadadosGaleria);
+        if (!prest) continue;
+        if (!prestadorMap.has(prest.id)) {
+          prestadorMap.set(prest.id, {
+            kind: "prestador",
+            id: prest.id,
+            titulo: prest.nome,
+            sub: "Fotos individuais",
+            fotos: [],
+            qtdFotos: 0,
+          });
+        }
+        prestadorMap.get(prest.id)!.fotos.push(f);
+      }
+
+      for (const bloco of eventoMap.values()) bloco.qtdFotos = bloco.fotos.length;
+      for (const bloco of prestadorMap.values()) bloco.qtdFotos = bloco.fotos.length;
+
+      if (galeriaSubAba === "gerais") {
+        return [...eventoMap.values()].sort((a, b) => {
+          const da = resolverEventoGaleria(a.fotos[0], metadadosGaleria)?.data_evento ?? "";
+          const db = resolverEventoGaleria(b.fotos[0], metadadosGaleria)?.data_evento ?? "";
+          return db.localeCompare(da);
+        });
+      }
+      return [...prestadorMap.values()].sort((a, b) =>
+        compareLocaleTexto(a.titulo.trim(), b.titulo.trim(), "asc"),
+      );
+    },
+    [galeriaSubAba, metadadosGaleria],
+  );
+
+  const galeriaBlocos = useMemo((): GaleriaBloco[] => {
+    if (fotosBusca) {
+      let list = fotosBusca;
+      if (galeriaSubAba === "gerais") {
+        list = list.filter((f) => f.tipo === "geral");
+        if (filtroEvento !== FILTRO_EVENTO_TODOS) {
+          list = list.filter((f) => f.evento_id === filtroEvento);
+        }
+      } else {
+        list = list.filter((f) => f.tipo === "prestador");
+        if (podeFiltrarPrestador) {
+          if (filtroPrestador !== FILTRO_PRESTADOR_TODOS) {
+            list = list.filter((f) => effectiveRhFuncionarioId(f) === filtroPrestador);
+          }
+        } else if (meuRhFuncionarioId) {
+          list = list.filter((f) => effectiveRhFuncionarioId(f) === meuRhFuncionarioId);
+        }
+      }
+      return montarBlocosDeFotos(list);
+    }
 
     if (galeriaSubAba === "gerais") {
-      list = list.filter((f) => f.tipo === "geral");
+      let evs = resumoEventos;
       if (filtroEvento !== FILTRO_EVENTO_TODOS) {
-        list = list.filter((f) => f.evento_id === filtroEvento);
+        evs = evs.filter((e) => e.id === filtroEvento);
       }
-    } else {
-      list = list.filter((f) => f.tipo === "prestador");
-      if (podeFiltrarPrestador) {
-        if (filtroPrestador !== FILTRO_PRESTADOR_TODOS) {
-          list = list.filter((f) => f.rh_funcionario_id === filtroPrestador);
-        }
-      } else if (meuRhFuncionarioId) {
-        list = list.filter((f) => f.rh_funcionario_id === meuRhFuncionarioId);
+      if (buscaDeb) {
+        evs = evs.filter((e) => textoContemBuscaEmAlgum(buscaDeb, e.nome, e.descricao ?? ""));
       }
-      // Sem Editar: RLS já limita às fotos do próprio colaborador quando o vínculo existe.
+      return evs.map((ev) => ({
+        kind: "evento" as const,
+        id: ev.id,
+        titulo: ev.nome,
+        sub: fmtDataEvento(ev.data_evento),
+        descricao: ev.descricao ?? null,
+        qtdFotos: ev.qtd_fotos,
+        fotos: fotosCache[chaveCacheGrupoGaleria("evento", ev.id)] ?? [],
+      }));
     }
 
-    if (buscaGaleria.trim()) {
-      list = list.filter((f) => {
-        const ev = fotoEventoEmbed(f);
-        const prest = fotoPrestadorEmbed(f);
-        return textoContemBuscaEmAlgum(
-          buscaGaleria,
-          ev?.nome,
-          f.legenda,
-          f.file_name,
-          prest?.nome,
-        );
-      });
+    let prests = resumoPrestadores;
+    if (podeFiltrarPrestador) {
+      if (filtroPrestador !== FILTRO_PRESTADOR_TODOS) {
+        prests = prests.filter((p) => p.id === filtroPrestador);
+      }
+    } else if (meuRhFuncionarioId) {
+      prests = prests.filter((p) => p.id === meuRhFuncionarioId);
     }
-    return list;
+    if (buscaDeb) {
+      prests = prests.filter((p) => textoContemBuscaEmAlgum(buscaDeb, p.nome));
+    }
+    return prests.map((p) => ({
+      kind: "prestador" as const,
+      id: p.id,
+      titulo: p.nome,
+      sub: "Fotos individuais",
+      qtdFotos: p.qtd_fotos,
+      fotos: fotosCache[chaveCacheGrupoGaleria("prestador", p.id)] ?? [],
+    }));
   }, [
-    fotos,
+    fotosBusca,
     galeriaSubAba,
     filtroEvento,
     filtroPrestador,
     podeFiltrarPrestador,
     meuRhFuncionarioId,
-    buscaGaleria,
+    buscaDeb,
+    resumoEventos,
+    resumoPrestadores,
+    fotosCache,
+    montarBlocosDeFotos,
   ]);
-
-  const galeriaBlocos = useMemo((): GaleriaBloco[] => {
-    const eventoMap = new Map<string, GaleriaBloco>();
-    const prestadorMap = new Map<string, GaleriaBloco>();
-
-    for (const f of fotosFiltradas) {
-      if (f.tipo === "geral") {
-        const ev = fotoEventoEmbed(f);
-        if (!ev) continue;
-        if (!eventoMap.has(ev.id)) {
-          eventoMap.set(ev.id, {
-            kind: "evento",
-            id: ev.id,
-            titulo: ev.nome,
-            sub: fmtDataEvento(ev.data_evento),
-            descricao: ev.descricao?.trim() || null,
-            fotos: [],
-          });
-        }
-        eventoMap.get(ev.id)!.fotos.push(f);
-        continue;
-      }
-
-      const prest = fotoPrestadorEmbed(f);
-      if (!prest) continue;
-      if (!prestadorMap.has(prest.id)) {
-        prestadorMap.set(prest.id, {
-          kind: "prestador",
-          id: prest.id,
-          titulo: prest.nome,
-          sub: "Fotos individuais",
-          fotos: [],
-        });
-      }
-      prestadorMap.get(prest.id)!.fotos.push(f);
-    }
-
-    const eventoBlocos = [...eventoMap.values()].sort((a, b) => {
-      const da = fotoEventoEmbed(a.fotos[0])?.data_evento ?? "";
-      const db = fotoEventoEmbed(b.fotos[0])?.data_evento ?? "";
-      return db.localeCompare(da);
-    });
-    const prestadorBlocos = [...prestadorMap.values()].sort((a, b) =>
-      compareLocaleTexto(a.titulo, b.titulo, "asc"),
-    );
-    return galeriaSubAba === "gerais" ? eventoBlocos : prestadorBlocos;
-  }, [fotosFiltradas, galeriaSubAba]);
 
   const urlThumbnail = (f: MarketingFotoComEvento): string | null => {
     if (f.tipo === "geral") return urlPublicaFotoGeral(f.storage_path);
@@ -497,13 +739,14 @@ export default function GaleriaFotos() {
         .single();
       if (error) throw error;
       const atualizado = data as MarketingEvento;
-      setEventos((prev) =>
-        prev
-          .map((e) => (e.id === atualizado.id ? atualizado : e))
-          .sort((a, b) => b.data_evento.localeCompare(a.data_evento)),
+      setResumoEventos((prev) =>
+        prev.map((e) =>
+          e.id === atualizado.id
+            ? { ...e, nome: atualizado.nome, data_evento: atualizado.data_evento, descricao: atualizado.descricao ?? null, ativo: atualizado.ativo }
+            : e,
+        ),
       );
       setModalEditarEvento(false);
-      await carregarFotos();
     } catch {
       setEditEventoErro(MSG_ERRO_SALVAR);
     } finally {
@@ -518,7 +761,7 @@ export default function GaleriaFotos() {
     }
     const ev = eventos.find((e) => e.id === editEventoId);
     if (!ev) return;
-    const qtdFotos = fotosGeraisDoEvento(fotos, editEventoId).length;
+    const qtdFotos = resumoEventos.find((e) => e.id === editEventoId)?.qtd_fotos ?? 0;
     setConfirmExcluirEvento({ id: ev.id, nome: ev.nome, qtdFotos });
   };
 
@@ -526,11 +769,20 @@ export default function GaleriaFotos() {
     if (!confirmExcluirEvento) return;
     setExcluindoEvento(true);
     try {
-      const fotosDoEvento = fotosGeraisDoEvento(fotos, confirmExcluirEvento.id);
+      const cacheKey = chaveCacheGrupoGaleria("evento", confirmExcluirEvento.id);
+      let fotosDoEvento = fotosCache[cacheKey] ?? [];
+      if (!fotosDoEvento.length && confirmExcluirEvento.qtdFotos > 0) {
+        fotosDoEvento = await listarMarketingFotosPorEvento(confirmExcluirEvento.id);
+      }
       const result = await excluirMarketingEventoGaleria(confirmExcluirEvento.id, fotosDoEvento);
       if (!result.ok) throw new Error("delete failed");
       setEventos((prev) => prev.filter((e) => e.id !== confirmExcluirEvento.id));
-      setFotos((prev) => prev.filter((f) => f.evento_id !== confirmExcluirEvento.id));
+      setResumoEventos((prev) => prev.filter((e) => e.id !== confirmExcluirEvento.id));
+      setFotosCache((prev) => {
+        const next = { ...prev };
+        delete next[cacheKey];
+        return next;
+      });
       if (uploadEventoId === confirmExcluirEvento.id) setUploadEventoId("");
       if (filtroEvento === confirmExcluirEvento.id) setFiltroEvento(FILTRO_EVENTO_TODOS);
       setConfirmExcluirEvento(null);
@@ -629,7 +881,7 @@ export default function GaleriaFotos() {
         setUploadOk(
           enviadas === 1 ? "1 foto enviada com sucesso." : `${enviadas} fotos enviadas com sucesso.`,
         );
-        await carregarFotos();
+        await recarregar();
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     } finally {
@@ -644,7 +896,38 @@ export default function GaleriaFotos() {
       await removerMarketingFotoStorage(fotoExcluir.tipo, fotoExcluir.storage_path);
       const { error } = await supabase.from("marketing_fotos").delete().eq("id", fotoExcluir.id);
       if (error) throw error;
-      setFotos((prev) => prev.filter((f) => f.id !== fotoExcluir.id));
+      setFotosCache((prev) => {
+        const next: Record<string, MarketingFotoComEvento[]> = {};
+        for (const [key, list] of Object.entries(prev)) {
+          const filtrada = list.filter((f) => f.id !== fotoExcluir.id);
+          if (filtrada.length) next[key] = filtrada;
+        }
+        return next;
+      });
+      setFotosBusca((prev) => prev?.filter((f) => f.id !== fotoExcluir.id) ?? null);
+      if (fotoExcluir.tipo === "geral" && fotoExcluir.evento_id) {
+        setResumoEventos((prev) =>
+          prev
+            .map((e) =>
+              e.id === fotoExcluir.evento_id
+                ? { ...e, qtd_fotos: Math.max(0, e.qtd_fotos - 1) }
+                : e,
+            )
+            .filter((e) => e.qtd_fotos > 0),
+        );
+      }
+      if (fotoExcluir.tipo === "prestador") {
+        const rhId = effectiveRhFuncionarioId(fotoExcluir);
+        if (rhId) {
+          setResumoPrestadores((prev) =>
+            prev
+              .map((p) =>
+                p.id === rhId ? { ...p, qtd_fotos: Math.max(0, p.qtd_fotos - 1) } : p,
+              )
+              .filter((p) => p.qtd_fotos > 0),
+          );
+        }
+      }
       if (lightbox?.id === fotoExcluir.id) setLightbox(null);
       setFotoExcluir(null);
     } catch {
@@ -671,7 +954,57 @@ export default function GaleriaFotos() {
     a.remove();
   };
 
-  const renderGradeFotosGaleria = (lista: MarketingFotoComEvento[]) => (
+  const renderGradeFotosGaleria = (
+    lista: MarketingFotoComEvento[],
+    cacheKey?: string,
+    qtdEsperada?: number,
+  ) => {
+    const carregando =
+      !!cacheKey &&
+      fotosCacheLoading.has(cacheKey) &&
+      lista.length === 0 &&
+      (qtdEsperada ?? 0) > 0;
+
+    if (carregando) {
+      return (
+        <div
+          style={{
+            padding: "32px 0",
+            textAlign: "center",
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <Loader2
+            size={22}
+            className="app-lucide-spin"
+            color="var(--brand-primary, #7c3aed)"
+            aria-hidden
+            style={{ marginBottom: 10 }}
+          />
+          Carregando…
+        </div>
+      );
+    }
+
+    if (!lista.length) {
+      return (
+        <div
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          Sem fotos neste grupo.
+        </div>
+      );
+    }
+
+    return (
     <div className="app-grid-3" style={{ gap: 12 }}>
       {lista.map((f) => {
         const thumb = urlThumbnail(f);
@@ -769,7 +1102,8 @@ export default function GaleriaFotos() {
         );
       })}
     </div>
-  );
+    );
+  };
 
   if (perm.canView === "nao") {
     return (
@@ -962,7 +1296,7 @@ export default function GaleriaFotos() {
             </div>
           </div>
 
-          {loading ? (
+          {loading || buscaFotosLoading ? (
             <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
               <Loader2
                 size={24}
@@ -985,7 +1319,7 @@ export default function GaleriaFotos() {
             galeriaBlocos.map((bloco) => {
               if (bloco.kind === "evento") {
                 const expandido = forcarExpandirEventos || eventosExpandidos.has(bloco.id);
-                const qtdFotos = bloco.fotos.length;
+                const qtdFotos = bloco.qtdFotos;
                 const rotuloQtdFotos = qtdFotos === 1 ? "1 foto" : `${qtdFotos} fotos`;
                 return (
                   <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
@@ -1055,7 +1389,11 @@ export default function GaleriaFotos() {
                         id={`panel-galeria-evento-${bloco.id}`}
                         style={{ marginTop: 14 }}
                       >
-                        {renderGradeFotosGaleria(bloco.fotos)}
+                        {renderGradeFotosGaleria(
+                          bloco.fotos,
+                          chaveCacheGrupoGaleria("evento", bloco.id),
+                          bloco.qtdFotos,
+                        )}
                       </div>
                     ) : null}
                   </div>
@@ -1064,8 +1402,81 @@ export default function GaleriaFotos() {
 
               return (
                 <div key={`${bloco.kind}-${bloco.id}`} style={pageBox}>
-                  <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
-                  <div style={{ marginTop: 14 }}>{renderGradeFotosGaleria(bloco.fotos)}</div>
+                  {prestadorBlocoRecolhivel ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => togglePrestadorExpandido(bloco.id)}
+                        aria-expanded={prestadoresExpandidos.has(bloco.id)}
+                        aria-controls={`panel-galeria-prestador-${bloco.id}`}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          padding: 0,
+                          margin: 0,
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          textAlign: "left",
+                        }}
+                      >
+                        <ChevronRight
+                          size={14}
+                          color={t.textMuted}
+                          aria-hidden
+                          style={{
+                            marginTop: 4,
+                            transform: prestadoresExpandidos.has(bloco.id)
+                              ? "rotate(90deg)"
+                              : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <SectionTitle sub={bloco.sub} compact>
+                            {bloco.titulo}
+                          </SectionTitle>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: t.textMuted,
+                            fontFamily: FONT.body,
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          {bloco.qtdFotos === 1 ? "1 foto" : `${bloco.qtdFotos} fotos`}
+                        </span>
+                      </button>
+                      {prestadoresExpandidos.has(bloco.id) ? (
+                        <div
+                          id={`panel-galeria-prestador-${bloco.id}`}
+                          style={{ marginTop: 14 }}
+                        >
+                          {renderGradeFotosGaleria(
+                            bloco.fotos,
+                            chaveCacheGrupoGaleria("prestador", bloco.id),
+                            bloco.qtdFotos,
+                          )}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <SectionTitle sub={bloco.sub}>{bloco.titulo}</SectionTitle>
+                      <div style={{ marginTop: 14 }}>
+                        {renderGradeFotosGaleria(
+                          bloco.fotos,
+                          chaveCacheGrupoGaleria("prestador", bloco.id),
+                          bloco.qtdFotos,
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })

@@ -13,6 +13,7 @@ import { AbaPermissoes } from "./AbaPermissoes";
 import { AbaOperadora } from "./AbaOperadora";
 import { AbaGestores } from "./AbaGestores";
 import { AbaPrestadores } from "./AbaPrestadores";
+import { AbaSimuladorLogin } from "./AbaSimuladorLogin";
 import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import {
   GestaoUsuariosFiltroBar,
@@ -32,7 +33,7 @@ export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("gestao_usuarios");
-  const [aba, setAba] = useRouteTab("gestao_usuarios", "usuarios", ["usuarios", "permissoes", "escopos"] as const);
+  const [aba, setAba] = useRouteTab("gestao_usuarios", "usuarios", ["usuarios", "permissoes", "escopos", "simulador"] as const);
   const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
   const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
   const [busca, setBusca] = useState("");
@@ -88,7 +89,9 @@ export default function GestaoUsuarios() {
       ? `panel-gestao-${escopoSubAba}`
       : aba === "permissoes"
         ? "panel-permissoes-matriz"
-        : "panel-gestao-usuarios";
+        : aba === "simulador"
+          ? "panel-gestao-simulador"
+          : "panel-gestao-usuarios";
 
   return (
     <div className="app-page-shell">
@@ -122,7 +125,7 @@ export default function GestaoUsuarios() {
               "aria-labelledby":
                 aba === "escopos"
                   ? `tab-escopo-${escopoSubAba}`
-                  : aba === "permissoes"
+                  : aba === "permissoes" || aba === "simulador"
                     ? `tab-perm-${roleAtivo}`
                     : `tab-gestao-usuarios`,
               tabIndex: 0,
@@ -146,6 +149,7 @@ export default function GestaoUsuarios() {
         {aba === "escopos" && escopoSubAba === "operadora" && <AbaOperadora />}
         {aba === "escopos" && escopoSubAba === "gestores" && <AbaGestores />}
         {aba === "escopos" && escopoSubAba === "prestadores" && <AbaPrestadores />}
+        {aba === "simulador" && <AbaSimuladorLogin viewerRole={roleAtivo} />}
       </div>
     </div>
   );

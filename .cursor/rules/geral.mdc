@@ -90,7 +90,9 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 - **`comunicacao`:** layout dedicado em `HomeComunicacao.tsx` — subtítulo comunicação; aniversários (cadastro RH); **Informações** só informativos `comunicacao` (`includeGaleriaNovidades={false}` — sem cards de álbum); atalhos Ajuda + Organograma + Galeria de Fotos; Spin na Rede MTD. RLS: `20260529200000_home_comunicacao_feed_rls.sql`.
 - **`performance_coach`:** layout dedicado em `HomePerformanceCoach.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `performance_coach`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
 - **`service_manager`:** layout dedicado em `HomeServiceManager.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `service_manager`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
-- **`customer_service`:** layout dedicado em `HomeCustomerService.tsx` — paridade Service Manager (mesma estrutura de Home staff interno); informativos com perfil `customer_service` no array `perfis`; atalhos Atendimento + Ajuda + Organograma; Spin na Rede MTD. RLS: `20260707213000_role_customer_service.sql`.
+- **`customer_service`:** layout dedicado em `HomeCustomerService.tsx` — paridade Service Manager; atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
+- **`game_presenter`:** layout dedicado em `HomeGamePresenter.tsx` — paridade staff interno; informativos `game_presenter`; atalhos Ajuda + Organograma; RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`shuffler`:** layout dedicado em `HomeShuffler.tsx` — paridade staff interno; informativos `shuffler`; atalhos Ajuda + Organograma; RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`tech_ops`:** layout dedicado em `HomeTechOps.tsx` — paridade Service Manager (mesma estrutura de Home staff interno); informativos com perfil `tech_ops` no array `perfis`; atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** layout dedicado em `HomeShiftLeader.tsx` — espelho Prestador (aniversários + galeria 7 dias + informativos `shift_leader`); atalhos Ajuda + Organograma; Spin na Rede MTD. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
 - **`operador`:** `HomeOperadorRouter` lê `operadoras.home_template` do escopo (`operadoraBrand`). **`default` / null / chave desconhecida → `HomeOperadorPadrao`** (boas-vindas, KPIs MTD com comparativo MoM, Spin na Rede, informativos com `operador_escopo`, atalhos Overview Spin + Ajuda). Templates dedicados: `lib/homeOperadoraTemplate.ts` + `operador/templates/`; campo na Gestão de Operadoras → aba Operações.
@@ -117,8 +119,12 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 ## Simulador de Login (`geral/SimuladorLogin/`)
 
 - **PageKey:** `simulador_login` — menu superior (avatar), entre Configurações e Ajuda; **não** no menu lateral.
-- **Permissão:** Gestão de Usuários → Ver; admin acesso implícito; demais perfis seed `Não`.
-- **Perfis simuláveis:** todos exceto Administrador e Executivo; Operador exige operadora; Gestor exige tipo; Prestadores exige área.
+- **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
+- **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
+- **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
+- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
+- **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
+- **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
 - **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner`; sessão em `sessionStorage`.
 - **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado).
 

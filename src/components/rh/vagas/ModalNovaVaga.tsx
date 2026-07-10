@@ -13,6 +13,7 @@ import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 import { CampoTagsVaga } from "./CampoTagsVaga";
+import { formatarMoedaDigitos, centavosInteirosDeStringMoeda } from "../../../lib/rhFuncionarioValidators";
 
 type Theme = {
   text: string;
@@ -54,6 +55,7 @@ export function ModalNovaVaga({
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
   const [responsabilidades, setResponsabilidades] = useState("");
+  const [repasseInicialCentavos, setRepasseInicialCentavos] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
@@ -70,6 +72,7 @@ export function ModalNovaVaga({
     setDataFimInscricoes("");
     setDescricao("");
     setResponsabilidades("");
+    setRepasseInicialCentavos("");
     setTags([]);
     setFieldErr({});
     setErroSalvar(null);
@@ -91,6 +94,7 @@ export function ModalNovaVaga({
     if (tipoVaga !== "externa") {
       setNecessarioVideoApresentacao(false);
       setNecessarioTurno(false);
+      setTags([]);
     }
   }, [tipoVaga]);
 
@@ -125,6 +129,10 @@ export function ModalNovaVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
+    if (centavosInteirosDeStringMoeda(repasseInicialCentavos) <= 0) {
+      e.repasse_inicial = "Informe o repasse inicial.";
+    }
+    if (tipoVaga === "externa" && tags.length === 0) e.tags = "Adicione ao menos uma tag.";
     setFieldErr(e);
     return Object.keys(e).length === 0;
   }
@@ -139,12 +147,12 @@ export function ModalNovaVaga({
       org_time_id: orgVinculo.org_time_id,
       org_gerencia_id: orgVinculo.org_gerencia_id,
       org_diretoria_id: orgVinculo.org_diretoria_id,
-      remuneracao_centavos: 0,
+      repasse_inicial_centavos: centavosInteirosDeStringMoeda(repasseInicialCentavos),
       data_abertura: dataAbertura.trim(),
       data_fim_inscricoes: dataFimInscricoes.trim(),
       descricao: descricao.trim(),
       responsabilidades: responsabilidades.trim(),
-      tags,
+      tags: tipoVaga === "externa" ? tags : [],
       necessario_video_apresentacao: tipoVaga === "externa" ? necessarioVideoApresentacao : false,
       necessario_turno: tipoVaga === "externa" ? necessarioTurno : false,
       status: "aberta" as const,
@@ -231,6 +239,24 @@ export function ModalNovaVaga({
         </div>
 
         <div style={{ marginBottom: 14 }}>
+          {lblReq("nv-repasse", "Repasse inicial")}
+          <input
+            id="nv-repasse"
+            type="text"
+            inputMode="decimal"
+            value={repasseInicialCentavos ? formatarMoedaDigitos(repasseInicialCentavos) : ""}
+            onChange={(e) => setRepasseInicialCentavos(e.target.value.replace(/\D/g, ""))}
+            placeholder="R$ 0,00"
+            autoComplete="off"
+            aria-label="Repasse inicial em reais"
+            style={inputStyle}
+          />
+          {fieldErr.repasse_inicial ? (
+            <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.repasse_inicial}</div>
+          ) : null}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
           {lblReq("nv-desc", "Descrição")}
           <textarea id="nv-desc" value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
           {fieldErr.descricao ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.descricao}</div> : null}
@@ -246,7 +272,17 @@ export function ModalNovaVaga({
           />
           {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
         </div>
-        <CampoTagsVaga id="nv-tags" value={tags} onChange={setTags} t={t} inputStyle={inputStyle} />
+        {tipoVaga === "externa" ? (
+          <CampoTagsVaga
+            id="nv-tags"
+            value={tags}
+            onChange={setTags}
+            t={t}
+            inputStyle={inputStyle}
+            obrigatorio
+            erro={fieldErr.tags}
+          />
+        ) : null}
 
         {erroSalvar ? (
           <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>

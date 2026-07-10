@@ -1,29 +1,110 @@
-## Endpoint
+================================================================================
+SPIN GAMING — Integração do formulário de contato (Atendimento / Site Spin)
+Documento completo para TI / agência do site institucional
+================================================================================
 
-```text
-https://influencer-dashboard-c5r.pages.dev/api/prospecto-cs-atendimento-site
-```
+Layout, CMS e estilo do formulário são livres.
+O obrigatório é enviar um POST JSON para o endpoint abaixo, com os nomes de
+campo exatamente como descritos neste documento.
 
-- **Método:** `POST`
-- **Corpo:** JSON (`Content-Type: application/json`)
-- **Autenticação no browser:** nenhum header secreto — o proxy na Cloudflare injeta o segredo internamente.
 
----
+--------------------------------------------------------------------------------
+1. ENDPOINT
+--------------------------------------------------------------------------------
 
-## Corpo da requisição (nomes fixos)
+URL de produção (confirmar com o TI Spin antes de publicar, se o domínio mudar):
 
-| Campo | Tipo | Obrigatório | Regras |
-|--------|------|-------------|--------|
-| `nome_completo` | string | sim | nome do solicitante (aceita alias `nome`) |
-| `telefone` | string | não | telefone / WhatsApp |
-| `email` | string | sim | formato e-mail válido |
-| `atuacao` | string | sim | `operador`, `provedor`, `parceria`, `agregador`, `jogador` ou `outros` |
-| `empresa` | string | condicional | obrigatório para `operador`, `provedor`, `parceria` e `agregador` |
-| `mensagem` | string | sim | texto da solicitação |
+  https://influencer-dashboard-c5r.pages.dev/api/prospecto-cs-atendimento-site
 
-### Exemplo de JSON (Operador)
+Formato genérico:
 
-```json
+  https://<domínio-da-plataforma>/api/prospecto-cs-atendimento-site
+
+- Método: POST
+- Corpo: JSON
+- Header: Content-Type: application/json
+- Autenticação no browser: NENHUM header secreto.
+  O proxy na Cloudflare injeta o segredo internamente.
+- CORS: habilitado para chamadas a partir do site de vocês.
+
+
+--------------------------------------------------------------------------------
+2. FLUXO PADRÃO (RECOMENDADO)
+--------------------------------------------------------------------------------
+
+1) O visitante preenche o formulário no site Spin.
+2) O front do site faz POST JSON para o endpoint acima.
+3) A plataforma Spin cria o chamado automaticamente em:
+   Customer Success → Atendimento → aba Site Spin
+4) Status inicial: Aberto
+5) Protocolo gerado no servidor (formato SITE-[ANO]/[NNNN], ex.: SITE-2026/0042)
+   O protocolo NÃO é retornado nesta API — aparece só na plataforma Spin.
+
+
+IMPORTANTE:
+Não enviem o secret pelo browser.
+Não chamem a Edge Function do Supabase diretamente a partir do front público
+(salvo se o TI Spin autorizar envio server-to-server — ver seção 7).
+
+
+--------------------------------------------------------------------------------
+3. CAMPOS DO JSON (NOMES FIXOS)
+--------------------------------------------------------------------------------
+
+| Campo           | Tipo   | Obrigatório | Regras                                                      |
+|-----------------|--------|-------------|-------------------------------------------------------------|
+| nome_completo   | string | sim         | Nome do solicitante. Máx. 200 caracteres. Aceita alias nome |
+| telefone        | string | não         | Telefone / WhatsApp. Máx. 40 caracteres                     |
+| email           | string | sim         | E-mail válido. Máx. 200 caracteres                          |
+| atuacao         | string | sim         | Um dos valores da seção 4 (minúsculas)                      |
+| empresa         | string | condicional | Obrigatório para atuacoes que exigem empresa (seção 4)      |
+| mensagem        | string | sim         | Texto da solicitação. Máx. 4000 caracteres                  |
+
+Observações:
+- Os NOMES das propriedades no JSON devem ser exatamente estes.
+- Os rótulos exibidos no site (labels dos campos) podem ser outros.
+- Alias aceito: "nome" no lugar de "nome_completo".
+
+
+--------------------------------------------------------------------------------
+4. VALORES PERMITIDOS EM "atuacao"
+--------------------------------------------------------------------------------
+
+Enviar exatamente um destes valores (minúsculas):
+
+| Valor no JSON | Rótulo sugerido no site              | Empresa          |
+|---------------|--------------------------------------|------------------|
+| operador      | Operador / casa de apostas           | obrigatória      |
+| provedor      | Provedor de sinal ou tecnologia      | obrigatória      |
+| parceria      | Parceria comercial                   | obrigatória      |
+| agregador     | Agregador                            | obrigatória      |
+| jogador       | Jogador                              | NÃO enviar       |
+| outros        | Outros                               | NÃO enviar       |
+
+Para operador, provedor, parceria e agregador:
+  - o campo "empresa" é obrigatório e não pode estar vazio.
+
+Para jogador e outros:
+  - omitir "empresa" ou enviar string vazia.
+  - o servidor grava empresa como nulo.
+
+Aliases aceitos pelo servidor (preferir os valores da tabela acima):
+  operadora   → operador
+  provider    → provedor
+  parceiro    → parceria
+  parcerias   → parceria
+  aggregator  → agregador
+  player      → jogador
+  outro       → outros
+  other       → outros
+
+
+--------------------------------------------------------------------------------
+5. EXEMPLOS DE JSON
+--------------------------------------------------------------------------------
+
+--- Exemplo A: Operador (com empresa) ---
+
 {
   "nome_completo": "Maria Souza",
   "telefone": "+55 11 98888-7777",
@@ -32,38 +113,168 @@ https://influencer-dashboard-c5r.pages.dev/api/prospecto-cs-atendimento-site
   "empresa": "Casa de Apostas Exemplo",
   "mensagem": "Gostaria de entender o processo de integração de mesas dedicadas no lobby."
 }
-```
 
-### Exemplo de JSON (Jogador — sem empresa)
+--- Exemplo B: Agregador (com empresa) ---
 
-```json
+{
+  "nome_completo": "Carlos Mendes",
+  "telefone": "+55 11 97777-6666",
+  "email": "carlos@agregador.com",
+  "atuacao": "agregador",
+  "empresa": "Agregador Exemplo Ltda",
+  "mensagem": "Quero avaliar a integração das mesas Spin no nosso catálogo."
+}
+
+--- Exemplo C: Jogador (sem empresa) ---
+
 {
   "nome_completo": "João Silva",
+  "telefone": "+55 21 99999-8888",
   "email": "joao@email.com",
   "atuacao": "jogador",
-  "mensagem": "Tenho dúvida sobre como acessar as mesas ao vivo."
+  "mensagem": "Tenho dúvida sobre como acessar as mesas ao vivo na operadora."
 }
-```
 
-Os **nomes das propriedades** devem ser exatamente estes. Os rótulos exibidos no site podem ser outros.
+--- Exemplo D: Outros (sem empresa) ---
 
----
+{
+  "nome_completo": "Ana Costa",
+  "email": "ana@email.com",
+  "atuacao": "outros",
+  "mensagem": "Gostaria de informações gerais sobre a Spin Gaming."
+}
 
-## Respostas
+--- Exemplo E: usando alias "nome" ---
 
-### Sucesso (HTTP 200)
+{
+  "nome": "Pedro Lima",
+  "email": "pedro@provedor.com",
+  "atuacao": "provedor",
+  "empresa": "Provedor Sinal Exemplo",
+  "mensagem": "Queremos discutir parceria técnica de sinal."
+}
 
-```json
+
+--------------------------------------------------------------------------------
+6. RESPOSTAS
+--------------------------------------------------------------------------------
+
+--- Sucesso (HTTP 200) ---
+
 {
   "success": true,
-  "id": "<uuid do registro criado>"
+  "id": "<uuid do chamado criado>"
 }
-```
 
-### Erro (HTTP 4xx / 5xx)
+O campo "id" é o identificador interno do chamado.
+O protocolo legível (SITE-2026/0042 etc.) NÃO vem nesta resposta.
 
-```json
+
+--- Erro (HTTP 4xx / 5xx) ---
+
 {
   "error": "<mensagem em português>"
 }
-```
+
+Mensagens de erro mais comuns:
+  - Nome completo é obrigatório.
+  - E-mail inválido.
+  - Atuação inválida.
+  - Empresa é obrigatória para esta atuação.
+  - Mensagem é obrigatória.
+  - JSON inválido
+  - Método não permitido
+  - Não autorizado
+  - Não foi possível registrar o chamado.
+  - Servidor não configurado: defina CS_ATENDIMENTO_FORM_SECRET...
+
+
+--------------------------------------------------------------------------------
+7. ENVIO SERVER-TO-SERVER (OPCIONAL — SÓ COM AUTORIZAÇÃO DO TI SPIN)
+--------------------------------------------------------------------------------
+
+Fluxo padrão: POST no proxy Cloudflare (sem secret no browser).
+
+Se o site enviar somente pelo backend (PHP, Node, etc.) e o TI Spin autorizar
+chamada direta à Edge Function do Supabase:
+
+  - Header: x-cs-atendimento-secret: <valor do secret>
+    OU
+  - Campo no JSON: "secret": "<valor do secret>"
+
+O secret é o mesmo CS_ATENDIMENTO_FORM_SECRET configurado no Supabase / Cloudflare.
+NUNCA exponham esse valor no front, no HTML, no JavaScript público ou no repositório do site.
+
+
+--------------------------------------------------------------------------------
+8. COMPORTAMENTO NA PLATAFORMA SPIN (APÓS SUCESSO)
+--------------------------------------------------------------------------------
+
+O chamado aparece em Customer Success → Atendimento (aba Site Spin) com:
+
+  - Status: Aberto
+  - Protocolo: SITE-[ANO]/[NNNN]  (4 dígitos sequenciais por ano)
+  - Origem: Site Spin
+  - Campos: nome, telefone, e-mail, atuação, empresa (quando aplicável), mensagem
+
+A equipe de Customer Service atende na plataforma (atribuição, anotações,
+mudança de status e arquivamento).
+
+
+--------------------------------------------------------------------------------
+9. CHECKLIST RÁPIDO (SITE / AGÊNCIA)
+--------------------------------------------------------------------------------
+
+[ ] Usar a URL do proxy informada pelo TI Spin
+[ ] Método POST + Content-Type: application/json
+[ ] Enviar nome_completo (ou nome), email, atuacao, mensagem
+[ ] Enviar telefone se disponível
+[ ] Enviar empresa quando atuacao for operador, provedor, parceria ou agregador
+[ ] NÃO enviar empresa (ou enviar vazio) quando atuacao for jogador ou outros
+[ ] NÃO enviar secret pelo browser
+[ ] Tratar HTTP 200 com success: true
+[ ] Exibir mensagem amigável ao usuário em caso de error
+[ ] Não depender do protocolo na resposta da API (ele não é retornado)
+
+
+--------------------------------------------------------------------------------
+10. CHECKLIST TI SPIN (INFRA — NÃO É DA AGÊNCIA DO SITE)
+--------------------------------------------------------------------------------
+
+Migrations Supabase:
+  - 20260707160000_cs_atendimento.sql
+  - 20260707210000_cs_atendimento_atuacao_jogador_outros.sql
+  - 20260707220000_cs_atendimento_atuacao_agregador.sql
+  - (opcional UI) 20260707230000_cs_atendimento_atendentes_rpc.sql
+
+Deploy / secrets:
+  [ ] Deploy da Edge Function: prospecto-cs-atendimento-site
+  [ ] Secret CS_ATENDIMENTO_FORM_SECRET no Supabase (Edge Functions → Secrets)
+  [ ] Mesma variável CS_ATENDIMENTO_FORM_SECRET no Cloudflare Pages (Functions)
+  [ ] Valor longo e aleatório, IDÊNTICO nos dois ambientes
+  [ ] Liberar Ver / Editar em Gestão de Usuários → Atendimento para a equipe CS
+
+Esta API é independente dos formulários Scout e Afiliados Network
+(secrets e URLs diferentes).
+
+
+--------------------------------------------------------------------------------
+11. OUTROS FORMULÁRIOS PÚBLICOS (REFERÊNCIA)
+--------------------------------------------------------------------------------
+
+- Prospecto influencer (Scout):
+  /api/prospecto-scout-site
+  Doc: api-prospecto-scout-site-agencia.md
+
+- Afiliados Network:
+  /api/prospecto-afiliados-network-site
+  Doc: api-prospecto-afiliados-network-site-agencia.md
+
+- Atendimento (este documento):
+  /api/prospecto-cs-atendimento-site
+  Doc técnico expandido: api-prospecto-cs-atendimento-site-agencia.md
+
+
+================================================================================
+Fim do documento — Integração Forms / Atendimento Site Spin
+================================================================================

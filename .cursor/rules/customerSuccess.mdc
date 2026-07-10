@@ -1,5 +1,5 @@
 ---
-description: Customer Success — Atendimento (chamados Site Spin)
+description: Customer Success — Atendimento (Site Spin, E-mail, Instagram)
 globs:
   - src/pages/customerSuccess/**
   - src/lib/csAtendimento*.ts
@@ -19,17 +19,24 @@ globs:
 | Item | Valor |
 |------|-------|
 | Subtítulo | Gerencie os chamados para CS, acompanhe SLA e veja os atendimentos da equipe. |
-| Origem (v1) | `site_spin` — aba única **Site Spin** |
-| Protocolo | `SITE-[ANO]/[NNNN]` (4 dígitos por ano) |
-| Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_protocolo_contador` |
+| Origem | `site_spin` — aba **Site Spin** · `email` — aba **E-mail** · `instagram_dm` / `instagram_comentario` — aba **Instagram** (conta `@spingamingbrasil`) |
+| Protocolo | Site: `SITE-[ANO]/[NNNN]` · E-mail: `EMAIL-[ANO]/[NNNN]` · DM: `DM-[ANO]/[NNNN]` · Comentário: `COMENT-[ANO]/[NNNN]` |
+| Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_anexos`, `cs_chamado_mensagens`, contadores de protocolo |
 | Criação pública | Edge `prospecto-cs-atendimento-site` → RPC `cs_chamado_criar_site_spin` (service_role) |
+| Criação e-mail | Edge `ingest-cs-atendimento-outlook` → RPC `cs_chamado_criar_email` (Microsoft Graph, caixa `contato@spingaming.com.br`) |
+| Criação Instagram | RPC `cs_chamado_criar_instagram_dm` / `cs_chamado_criar_instagram_comentario` (service_role) — integração Meta; **sem seeds** |
+| Storage anexos | bucket `cs-atendimento-email` |
 | Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
 | Proxy site | Cloudflare `/api/prospecto-cs-atendimento-site` — doc agência: `docs/api-prospecto-cs-atendimento-site-agencia.md` |
+| Ingestão Outlook | `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md` — Graph app `743a19bf-c96a-4acb-ba45-446269f864ef`, caixa `contato@spingaming.com.br` |
 | Atendimento | RPC `cs_chamado_atender` — exige anotação ao alterar status |
+| Atendente | `atendente_id` **NULL** na abertura (todas as origens); preenchido com o **usuário autenticado** que altera o status via `cs_chamado_atender`. Anotação sem mudança de status **não** altera o atendente. |
 
 ---
 
 ## Status e colunas da tabela
+
+### Aba Site Spin
 
 | Filtro carrossel | Colunas |
 |------------------|---------|
@@ -38,9 +45,43 @@ globs:
 | Arquivado | Chamado, Data de Abertura, Solicitante, Atendente, SLA, Ações (só Ver) |
 | Todos Status | Todas + Status; Atender exceto arquivado |
 
+### Aba E-mail
+
+| Filtro carrossel | Colunas |
+|------------------|---------|
+| Aberto | Chamado, Data de Abertura, Solicitante (e-mail remetente), Assunto, Ações |
+| Em Andamento | Chamado, Data de Abertura, Assunto, Início do Atendimento, Atendente, Ações |
+| Arquivado | Chamado, Data de Abertura, Assunto, Atendente, SLA, Ações (só Ver) |
+| Todos Status | Todas + Status; campos vazios com `—`; Atender exceto arquivado |
+
 **SLA:** `fmtSlaChamado(created_at, arquivado_em)` — tempo abertura → arquivamento.
 
-**Vazio:** `Nenhum chamado encontrado.`
+### Aba Instagram
+
+Dois blocos empilhados na mesma aba — filtros globais (status + Staff) aplicam às **duas** tabelas.
+
+#### Bloco Mensagens (DM)
+
+| Filtro carrossel | Colunas |
+|------------------|---------|
+| Aberto | Chamado, Data de Abertura, Solicitante (@), Ações |
+| Em Andamento | + Início do Atendimento, Atendente, **Tempo de Resposta**, Ações |
+| Arquivado | Chamado, Data de Abertura, Solicitante, Atendente, SLA, Ações (só Ver) |
+| Todos Status | + Status; coluna **SLA** = Tempo de Resposta (Em Andamento), **—** (Aberto), abertura→arquivamento (Arquivado) |
+
+**Tempo de Resposta:** `fmtTempoRespostaChamado(created_at, primeira_resposta_em)`.
+
+#### Bloco Comentários
+
+| Filtro carrossel | Colunas |
+|------------------|---------|
+| Aberto / Em Andamento | Chamado, Data de Abertura, Solicitante, Ações |
+| Arquivado | + Atendente, SLA, Ações (só Ver) |
+| Todos Status | + Início, Atendente, Status; **SLA** = **—** (aberto/em andamento) ou abertura→arquivamento (arquivado) |
+
+**Fase 2 (fora do escopo UX atual):** composer «Responder no Instagram» nos modais Ver/Atender — **disabled** até integração Meta.
+
+**Vazio:** `Nenhum chamado encontrado.` (por bloco)
 
 ---
 
@@ -48,7 +89,7 @@ globs:
 
 **Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): ordem **Todos** → **Nenhum** (`extraOptions`) → prestadores do time **Customer Service** (A–Z, via RPC `cs_atendimento_atendentes_listar`).
 
-**Linha 2:** aba única **Site Spin** (`FiltroBarTabButton`, ícone `Globe` 16px).
+**Linha 2:** abas **Site Spin** (`Globe`), **E-mail** (`Mail`) e **Instagram** (`Instagram` 16px, `activeColor` `#e1306c`) — `FiltroBarTabButton` + `onFiltroBarTabsKeyDown`.
 
 ---
 
@@ -60,15 +101,21 @@ globs:
 | Editar | Modal Atender |
 | Criar / Excluir | `null` — chamados só via site |
 
-Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma. Legado `prestador_tipo_pages`: `customer_service` + `cs_atendimento` (perfil Prestadores + área CS).
+Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma (sem escopo `prestador_tipo`; só `role_permissions`).
 
 ---
 
 ## Modais
 
-**Ver:** título `[protocolo] - [solicitante]`; subtítulo = badge status; abas **Dados do Chamado** | **Histórico**.
+**Ver:** título Site `[protocolo] - [solicitante]` · E-mail `[protocolo] - [assunto]` · Instagram `[protocolo] - [@handle]`; abas conforme origem:
 
-**Atender:** mesmo título; select de status (transições: Aberto → Em Andamento/Arquivado; Em Andamento → Arquivado); textarea anotação obrigatória ao mudar status; bloco **Histórico de Anotações**.
+| Origem | Abas |
+|--------|------|
+| Site / E-mail | **Dados** / **Histórico interno** (E-mail inclui bloco **Anexo**) |
+| Instagram DM | **Conversa** (thread `cs_chamado_mensagens` + composer Fase 2 disabled) / **Histórico interno** |
+| Instagram Comentário | **Comentário** (post + texto + composer Fase 2 disabled) / **Histórico interno** |
+
+**Atender:** mesmo título; select de status; textarea anotação obrigatória ao mudar status; Instagram inclui bloco resposta Fase 2 **disabled**; bloco **Histórico de Anotações**.
 
 ---
 
@@ -77,4 +124,5 @@ Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil s
 - Seeds ou dados fictícios na UI ou migration.
 - INSERT direto em `cs_chamados` pelo client autenticado.
 - Cadastrar chamado manualmente na plataforma (v1).
-- Múltiplas abas de origem sem spec de produto.
+- Múltiplas abas de origem sem spec de produto (exceto Site Spin + E-mail + Instagram documentadas neste MDC).
+- Composer Instagram ativo antes da Fase 2 (integração Meta).

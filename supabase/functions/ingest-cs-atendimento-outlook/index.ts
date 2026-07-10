@@ -1,0 +1,228 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  assuntoOuPadrao,
+  autorizadoIngestOutlook,
+  corsHeaders,
+  CS_ATENDIMENTO_EMAIL_BUCKET,
+  DEFAULT_MAILBOX,
+  json,
+  sanitizePathSegment,
+  stripHtmlBasico,
+  type IngestOutlookBody,
+} from "./common.ts";
+import {
+  listarAnexosArquivo,
+  listarMensagensInbox,
+  marcarMensagemComoLida,
+  obterTokenGraph,
+  type GraphMessage,
+} from "./graphOutlook.ts";
+
+/**
+ * Edge Function: ingest-cs-atendimento-outlook
+ * Lê a Inbox de contato@spingaming.com.br via Microsoft Graph e cria chamados (RPC cs_chamado_criar_email).
+ *
+ * Secrets:
+ *   CS_OUTLOOK_TENANT_ID
+ *   CS_OUTLOOK_CLIENT_ID        (AppId Azure — ex.: 743a19bf-c96a-4acb-ba45-446269f864ef)
+ *   CS_OUTLOOK_CLIENT_SECRET
+ *   CS_OUTLOOK_MAILBOX          (opcional — padrão contato@spingaming.com.br)
+ *   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET — opcional; header ou Bearer service_role
+ */
+
+const supabaseServiceOptions = {
+  auth: { autoRefreshToken: false, persistSession: false },
+} as const;
+
+function corpoMensagem(msg: GraphMessage): string {
+  const body = msg.body;
+  if (body?.content?.trim()) {
+    if ((body.contentType ?? "").toLowerCase() === "html") {
+      return stripHtmlBasico(body.content);
+    }
+    return body.content.trim();
+  }
+  return (msg.bodyPreview ?? "").trim();
+}
+
+function messageIdDedupe(msg: GraphMessage): string {
+  return (msg.internetMessageId ?? msg.id).trim();
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
+  }
+
+  if (req.method !== "POST") {
+    return json({ ok: false, erro: "Método não permitido" }, req, 405);
+  }
+
+  if (!autorizadoIngestOutlook(req)) {
+    return json(
+      { ok: false, erro: "Não autorizado. Use x-cs-atendimento-outlook-ingest-secret ou Bearer service_role." },
+      req,
+      401,
+    );
+  }
+
+  let body: IngestOutlookBody = {};
+  try {
+    const raw = await req.text();
+    if (raw.trim()) body = JSON.parse(raw) as IngestOutlookBody;
+  } catch {
+    return json({ ok: false, erro: "JSON inválido" }, req, 400);
+  }
+
+  const dryRun = body.dry_run === true;
+  const modo = body.modo === "recent" ? "recent" : "unread";
+  const maxMessages = Math.min(Math.max(body.max_messages ?? 25, 1), 50);
+  const sinceHours = Math.min(Math.max(body.since_hours ?? 168, 1), 720);
+  const mailbox = (Deno.env.get("CS_OUTLOOK_MAILBOX") ?? DEFAULT_MAILBOX).trim().toLowerCase();
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !serviceKey) {
+    return json({ ok: false, erro: "Configuração Supabase incompleta." }, req, 500);
+  }
+
+  const supabase = createClient(supabaseUrl, serviceKey, supabaseServiceOptions);
+
+  try {
+    const token = await obterTokenGraph();
+    const mensagens = await listarMensagensInbox(token, mailbox, {
+      modo,
+      max: maxMessages,
+      sinceHours,
+    });
+
+    const resultado = {
+      ok: true,
+      dry_run: dryRun,
+      mailbox,
+      modo,
+      encontrados: mensagens.length,
+      criados: 0,
+      duplicados: 0,
+      ignorados: 0,
+      erros: [] as string[],
+      protocolos: [] as string[],
+    };
+
+    for (const msg of mensagens) {
+      const remetente = (msg.from?.emailAddress?.address ?? "").trim().toLowerCase();
+      const remetenteNome = (msg.from?.emailAddress?.name ?? "").trim();
+      const assunto = assuntoOuPadrao(msg.subject);
+      const corpo = corpoMensagem(msg);
+      const msgId = messageIdDedupe(msg);
+
+      if (!remetente) {
+        resultado.ignorados += 1;
+        continue;
+      }
+
+      if (remetente === mailbox) {
+        resultado.ignorados += 1;
+        continue;
+      }
+
+      if (!msgId) {
+        resultado.ignorados += 1;
+        continue;
+      }
+
+      const { data: jaProcessado } = await supabase
+        .from("cs_chamados")
+        .select("id, protocolo")
+        .eq("email_message_id", msgId)
+        .maybeSingle();
+
+      if (jaProcessado) {
+        resultado.duplicados += 1;
+        if (!dryRun) {
+          await marcarMensagemComoLida(token, mailbox, msg.id);
+        }
+        continue;
+      }
+
+      const recebidoEm = msg.receivedDateTime ?? new Date().toISOString();
+      const anexosPayload: Array<{
+        nome: string;
+        storage_path: string;
+        content_type: string | null;
+        tamanho_bytes: number | null;
+      }> = [];
+
+      if (!dryRun && msg.hasAttachments) {
+        const anexos = await listarAnexosArquivo(token, mailbox, msg.id);
+        const pasta = `${recebidoEm.slice(0, 10)}/${sanitizePathSegment(msgId)}`;
+
+        for (const anexo of anexos) {
+          const nome = (anexo.name ?? "anexo").trim();
+          const storagePath = `${pasta}/${sanitizePathSegment(nome)}`;
+          const bytes = Uint8Array.from(atob(anexo.contentBytes ?? ""), (c) => c.charCodeAt(0));
+
+          const { error: upErr } = await supabase.storage
+            .from(CS_ATENDIMENTO_EMAIL_BUCKET)
+            .upload(storagePath, bytes, {
+              contentType: anexo.contentType ?? "application/octet-stream",
+              upsert: true,
+            });
+
+          if (upErr) {
+            console.error("[ingest-cs-atendimento-outlook] upload", upErr);
+            resultado.erros.push(`Anexo ${nome}: falha no upload`);
+            continue;
+          }
+
+          anexosPayload.push({
+            nome,
+            storage_path: storagePath,
+            content_type: anexo.contentType ?? null,
+            tamanho_bytes: anexo.size ?? bytes.length,
+          });
+        }
+      }
+
+      if (dryRun) {
+        resultado.criados += 1;
+        continue;
+      }
+
+      const { data: chamadoId, error: rpcErr } = await supabase.rpc("cs_chamado_criar_email", {
+        p_remetente_email: remetente,
+        p_remetente_nome: remetenteNome || remetente,
+        p_assunto: assunto,
+        p_corpo: corpo,
+        p_recebido_em: recebidoEm,
+        p_email_message_id: msgId,
+        p_anexos: anexosPayload,
+      });
+
+      if (rpcErr) {
+        console.error("[ingest-cs-atendimento-outlook] rpc", rpcErr);
+        resultado.erros.push(`Mensagem ${assunto.slice(0, 40)}: falha ao criar chamado`);
+        continue;
+      }
+
+      if (chamadoId) {
+        const { data: row } = await supabase
+          .from("cs_chamados")
+          .select("protocolo")
+          .eq("id", chamadoId)
+          .maybeSingle();
+        if (row?.protocolo) resultado.protocolos.push(row.protocolo);
+      }
+
+      resultado.criados += 1;
+      await marcarMensagemComoLida(token, mailbox, msg.id);
+    }
+
+    return json(resultado, req);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erro inesperado";
+    console.error("[ingest-cs-atendimento-outlook]", e);
+    return json({ ok: false, erro: msg }, req, 500);
+  }
+});

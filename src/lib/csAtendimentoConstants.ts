@@ -1,5 +1,11 @@
 import type { FiltroBarCampoOption } from "../components/FiltroBarCampoSelect";
-import type { CsChamadoAtuacao, CsChamadoHistoricoTipo, CsChamadoStatus } from "../types/csAtendimento";
+import type {
+  CsChamadoAtuacao,
+  CsChamadoHistoricoTipo,
+  CsChamadoOrigem,
+  CsChamadoRow,
+  CsChamadoStatus,
+} from "../types/csAtendimento";
 
 export const CS_ATENDIMENTO_FILTRO_TODOS_STATUS_VALUE = "todos" as const;
 export const CS_ATENDIMENTO_TODOS_STATUS_LABEL = "Todos Status";
@@ -11,7 +17,22 @@ export const CS_ATENDIMENTO_FILTRO_TODOS_LABEL = "Todos";
 export const CS_ATENDIMENTO_FILTRO_NENHUM_LABEL = "Nenhum";
 
 export const CS_ATENDIMENTO_ORIGEM_SITE_SPIN = "site_spin" as const;
+export const CS_ATENDIMENTO_ORIGEM_EMAIL = "email" as const;
+export const CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM = "instagram_dm" as const;
+export const CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO = "instagram_comentario" as const;
+export const CS_ATENDIMENTO_ABA_INSTAGRAM = "instagram" as const;
 export const CS_ATENDIMENTO_ABA_SITE_SPIN_LABEL = "Site Spin";
+export const CS_ATENDIMENTO_ABA_EMAIL_LABEL = "E-mail";
+export const CS_ATENDIMENTO_ABA_INSTAGRAM_LABEL = "Instagram";
+export const CS_ATENDIMENTO_CONTA_INSTAGRAM = "@spingamingbrasil";
+export const CS_ATENDIMENTO_INSTAGRAM_TAB_COLOR = "#e1306c";
+
+export const CS_ATENDIMENTO_INSTAGRAM_POST_TIPO_LABEL: Record<string, string> = {
+  foto: "Foto",
+  video: "Vídeo",
+  reel: "Reel",
+  carousel: "Carrossel",
+};
 
 export const CS_ATENDIMENTO_STATUS_CARROSSEL: { key: CsChamadoStatus; label: string }[] = [
   { key: "aberto", label: "Aberto" },
@@ -59,6 +80,31 @@ export function fmtDataChamado(iso: string | null | undefined): string {
   } catch {
     return "—";
   }
+}
+
+export function isCsChamadoOrigemInstagram(origem: CsChamadoOrigem): boolean {
+  return origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM || origem === CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO;
+}
+
+export function fmtTempoRespostaChamado(aberturaIso: string, respostaIso: string | null | undefined): string {
+  return fmtSlaChamado(aberturaIso, respostaIso);
+}
+
+/** Coluna SLA na aba Instagram — Mensagens (Todos Status). */
+export function slaInstagramDmTodosStatus(row: CsChamadoRow): string {
+  if (row.status === "em_andamento") {
+    return fmtTempoRespostaChamado(row.created_at, row.primeira_resposta_em);
+  }
+  if (row.status === "aberto") return "—";
+  return fmtSlaChamado(row.created_at, row.arquivado_em);
+}
+
+/** Coluna SLA na aba Instagram — Comentários (Todos Status). */
+export function slaInstagramComentTodosStatus(row: CsChamadoRow): string {
+  if (row.status === "arquivado") {
+    return fmtSlaChamado(row.created_at, row.arquivado_em);
+  }
+  return "—";
 }
 
 export function fmtSlaChamado(aberturaIso: string, arquivadoIso: string | null | undefined): string {
