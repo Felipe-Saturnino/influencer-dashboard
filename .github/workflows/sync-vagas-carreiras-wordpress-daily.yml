@@ -1,0 +1,61 @@
+# Vagas Carreiras (WordPress) — sync diário via Edge `sync-vagas-carreiras-site`
+# ~06:00 BRT → 9h00 UTC (escalonado; ver email-agenda / daily-jobs-watchdog)
+#
+# Secrets GitHub Actions: SUPABASE_URL, SUPABASE_ANON_KEY
+# Secrets Supabase (Edge): WORDPRESS_VAGAS_SYNC_URL, SPIN_VAGAS_SYNC_SECRET
+# Doc: docs/SETUP-SYNC-VAGAS-CARREIRAS.md
+
+name: Sync Vagas Carreiras WordPress (6h BRT)
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sync-vagas-carreiras-site-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Horário da execução (UTC e Brasília)
+        run: |
+          echo "UTC:      $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "Brasília: $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M:%S %Z')"
+
+      - name: Invocar sync-vagas-carreiras-site
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Defina os secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/sync-vagas-carreiras-site"
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | sed '$d')
+          echo "HTTP ${HTTP}"
+          echo "$BODY_RES" | head -c 2000
+          echo ""
+          if [ "$HTTP" != "200" ]; then
+            echo "Falha HTTP"
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -oE '"ok"\s*:\s*(true|false)' | head -1 | grep -oE 'true|false' || true)
+          if [ "$OK" != "true" ]; then
+            echo "Resposta com ok != true."
+            exit 1
+          fi
+          echo "Sync Vagas Carreiras concluído com sucesso."
