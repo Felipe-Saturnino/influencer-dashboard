@@ -86,3 +86,11 @@ verify_jwt = false
 [functions.enrich-comercial-cnpj]
 verify_jwt = false
 # Enriquecimento cidade/UF por CNPJ em comercial_empresas (Brasil API; service role interno).
+
+[functions.prospecto-cs-atendimento-site]
+verify_jwt = false
+# Formulário site Spin → cs_chamado_criar_site_spin
+
+[functions.ingest-cs-atendimento-outlook]
+verify_jwt = false
+# Ingestão e-mail contato@ via Microsoft Graph → cs_chamado_criar_email (cron / service_role).

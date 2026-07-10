@@ -1194,7 +1194,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista vazia?",
         texto:
-          "Chamados entram pela Edge Function do formulário do site Spin — não há criação manual na plataforma. Confirme que a migration `cs_atendimento` foi aplicada no Supabase e que o secret `CS_ATENDIMENTO_FORM_SECRET` está configurado na função `prospecto-cs-atendimento-site`.",
+          "Na aba **Site Spin**, chamados entram pelo formulário do site (Edge `prospecto-cs-atendimento-site`). Na aba **E-mail**, chamados vêm da caixa **contato@spingaming.com.br** via Edge `ingest-cs-atendimento-outlook` (cron a cada poucos minutos). Confirme migrations `cs_atendimento` e `cs_atendimento_email`, secrets Graph (`CS_OUTLOOK_*`) e deploy da function. Guia: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.",
       },
       {
         subtitulo: "Não consigo atender chamado?",

@@ -23,11 +23,12 @@ globs:
 | Protocolo | Site: `SITE-[ANO]/[NNNN]` · E-mail: `EMAIL-[ANO]/[NNNN]` · DM: `DM-[ANO]/[NNNN]` · Comentário: `COMENT-[ANO]/[NNNN]` |
 | Tabelas | `cs_chamados`, `cs_chamado_historico`, `cs_chamado_anexos`, `cs_chamado_mensagens`, contadores de protocolo |
 | Criação pública | Edge `prospecto-cs-atendimento-site` → RPC `cs_chamado_criar_site_spin` (service_role) |
-| Criação e-mail | RPC `cs_chamado_criar_email` (service_role) — integração Outlook; dedupe `email_message_id` |
+| Criação e-mail | Edge `ingest-cs-atendimento-outlook` → RPC `cs_chamado_criar_email` (Microsoft Graph, caixa `contato@spingaming.com.br`) |
 | Criação Instagram | RPC `cs_chamado_criar_instagram_dm` / `cs_chamado_criar_instagram_comentario` (service_role) — integração Meta; **sem seeds** |
 | Storage anexos | bucket `cs-atendimento-email` |
 | Atuação | `operador`, `provedor`, `parceria`, `agregador` (exige `empresa`); `jogador`, `outros` (sem empresa) |
 | Proxy site | Cloudflare `/api/prospecto-cs-atendimento-site` — doc agência: `docs/api-prospecto-cs-atendimento-site-agencia.md` |
+| Ingestão Outlook | `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md` — Graph app `743a19bf-c96a-4acb-ba45-446269f864ef`, caixa `contato@spingaming.com.br` |
 | Atendimento | RPC `cs_chamado_atender` — exige anotação ao alterar status |
 | Atendente | `atendente_id` **NULL** na abertura (todas as origens); preenchido com o **usuário autenticado** que altera o status via `cs_chamado_atender`. Anotação sem mudança de status **não** altera o atendente. |
 

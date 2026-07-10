@@ -123,6 +123,22 @@ Secret: `RELATORIO_DIRETORIA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIO
 
 ---
 
+### Atendimento CS — ingestão Outlook (cron)
+
+**Function:** `ingest-cs-atendimento-outlook`
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `common.ts` |
+| `graphOutlook.ts` |
+
+Secrets: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`, `CS_OUTLOOK_MAILBOX` (opcional), `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (opcional)
+
+Detalhes: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.
+
+---
+
 ## Manutenção de templates
 
 | Alteração | Replicar em |
