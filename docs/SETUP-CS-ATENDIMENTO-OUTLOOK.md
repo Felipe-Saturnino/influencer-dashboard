@@ -46,40 +46,58 @@ supabase functions deploy ingest-cs-atendimento-outlook
 
 Em `supabase/config.toml`: `verify_jwt = false` (autorização interna na função).
 
-### Teste no Supabase Dashboard (Edge Functions → Test)
+### Teste no Supabase Dashboard (único método confiável)
 
-O painel **só** oferece Role **postgres** ou **anonymous** — **não** há `service_role` no dropdown. Por isso o teste com **postgres** retorna **403**.
+O painel **ignora headers customizados** (Authorization/apikey). Use o **secret no body**:
 
-**Passo a passo (Headers + service_role)**
+**1. Criar secret (uma vez)**
 
-1. **Project Settings → API → Project API keys**
-   - Copie **`service_role`** (Reveal) — **não** a `anon` (as duas começam com `eyJhbG…`).
-   - Para conferir: cole em [jwt.io](https://jwt.io) → payload deve ter `"role": "service_role"`.
-2. Edge Functions → `ingest-cs-atendimento-outlook` → **Details** → desative **Enforce JWT Verification** (equivale a `verify_jwt = false`).
-3. **Test** — método **POST**, body `{ "test_graph": true }`.
-4. Role: **Anonymous** (não postgres — postgres pode ignorar seus headers).
-5. **+ Add Headers** — **apenas uma linha** basta:
+Edge Functions → **Secrets** → adicione:
 
-| Enter key… | Enter value… |
-|------------|--------------|
-| `apikey` | cole a **service_role** inteira (sem `Bearer`) |
+| Nome | Valor |
+|------|--------|
+| `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` | string longa aleatória (ex.: gere no 1Password) |
 
-6. **Remova** o header `Authorization` se existir (postgres pode conflitar).
-7. **Send Request** — expanda o corpo da resposta: se falhar, `auth_diagnostico` mostra `apikey_jwt_role` (`anon` vs `service_role`).
+**2. Publicar os 4 ficheiros** (obrigatório — se faltar `auth.ts`, a function quebra com **500**):
 
-**Alternativa — secret de ingestão** (recomendado para testes no Dashboard)
+- `index.ts`, `common.ts`, `graphOutlook.ts`, **`auth.ts`**
 
-1. Edge Functions → **Secrets** → crie `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (string longa aleatória).
-2. **Deploy** a function após salvar o secret.
-3. No teste, **só** este header:
+Edge Functions → Details → **Enforce JWT Verification = OFF**.
 
-| Enter key… | Enter value… |
-|------------|--------------|
-| `x-cs-atendimento-outlook-ingest-secret` | o mesmo valor do secret |
+**3. Passo A — só autorização** (POST, Role postgres ou anonymous, **sem headers**):
 
-**Alternativa — plataforma:** login admin → **Status Técnico** → **CS - Caixa de Contato (Outlook)** → **Sync**.
+```json
+{
+  "auth_probe": true,
+  "ingest_secret": "COLE_AQUI_O_MESMO_VALOR_DO_SECRET"
+}
+```
 
-Resposta OK: `"ok": true` e `"mensagem": "Conexão Microsoft Graph OK…"`.
+Esperado: **200** + `"ok": true` + `"mensagem": "Autorização OK…"`.
+
+**4. Passo B — testar Microsoft Graph**:
+
+```json
+{
+  "test_graph": true,
+  "ingest_secret": "COLE_AQUI_O_MESMO_VALOR_DO_SECRET"
+}
+```
+
+Esperado: **200** + `"Conexão Microsoft Graph OK"`.  
+**500** aqui = secrets Azure (`CS_OUTLOOK_*`) — não é mais erro de auth.
+
+**Plataforma:** admin → **Status Técnico** → **CS - Caixa de Contato (Outlook)** → **Sync** (usa sessão logada, não precisa do ingest secret).
+
+### Troubleshooting 403 / 500
+
+| Sintoma | Causa | Ação |
+|---------|--------|------|
+| **403** + só «Edge function returned an error» **sem JSON** | Gateway (JWT Verification **ON**) ou token do Role postgres | Desligar **Enforce JWT Verification**; usar body com `ingest_secret` |
+| **403** + JSON `"erro": "…"` | Auth interna (secret errado, anon, sem permissão) | Conferir `ingest_secret` igual ao Secret; ver `auth_diagnostico` |
+| **500** genérico sem JSON | Deploy incompleto (`auth.ts` em falta) ou crash ao arrancar | Republicar **4 ficheiros**; ver Logs da function |
+| **500** + JSON `"test_graph": true` | Graph / Azure | Conferir `CS_OUTLOOK_*`; secret Azure = **Value**, não Secret ID |
+| Headers com service_role **nunca funcionam** no Test | Limitação do painel Supabase | Usar **body** `ingest_secret` (acima) |
 
 ## Secrets (Supabase → Edge Functions → Secrets)
 

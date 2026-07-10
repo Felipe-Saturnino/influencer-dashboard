@@ -102,11 +102,15 @@ export async function podeExecutarIngestOutlookAdmin(
   return ce === "sim" || ce === "proprios";
 }
 
-export async function validarChamadaIngest(req: Request): Promise<AuthResult> {
+export async function validarChamadaIngest(
+  req: Request,
+  opts?: { bodySecret?: string },
+): Promise<AuthResult> {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim() ?? "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
   const ingestSecret = Deno.env.get("CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET")?.trim() ?? "";
+  const bodySecret = opts?.bodySecret?.trim() ?? "";
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
@@ -117,8 +121,28 @@ export async function validarChamadaIngest(req: Request): Promise<AuthResult> {
     req.headers.get("x-cs-atendimento-outlook-ingest-secret") ??
     req.headers.get("X-Cs-Atendimento-Outlook-Ingest-Secret") ??
     "";
-  if (ingestSecret && headerSecret === ingestSecret) {
+
+  if (ingestSecret && (headerSecret === ingestSecret || bodySecret === ingestSecret)) {
     return { ok: true, via: "ingest_secret" };
+  }
+
+  if (bodySecret && !ingestSecret) {
+    return {
+      ok: false,
+      erro:
+        "ingest_secret no body, mas CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET não está configurado nos Secrets da Edge Function.",
+      status: 401,
+      diagnostico: diag(),
+    };
+  }
+
+  if (bodySecret && ingestSecret && bodySecret !== ingestSecret) {
+    return {
+      ok: false,
+      erro: "ingest_secret no body não confere com CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET.",
+      status: 401,
+      diagnostico: diag(),
+    };
   }
 
   // apikey primeiro — Role postgres no Dashboard pode sobrescrever Authorization
@@ -146,10 +170,11 @@ export async function validarChamadaIngest(req: Request): Promise<AuthResult> {
     };
   }
 
-  if (!ingestSecret && !bearer && !apiKey) {
+  if (!ingestSecret && !bearer && !apiKey && !bodySecret) {
     return {
       ok: false,
-      erro: "Não autorizado. Adicione header apikey com service_role ou x-cs-atendimento-outlook-ingest-secret.",
+      erro:
+        "Não autorizado. Configure CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET nos Secrets e envie no body: {\"auth_probe\":true,\"ingest_secret\":\"…\"} (teste no Dashboard Supabase).",
       status: 401,
       diagnostico: diag(),
     };

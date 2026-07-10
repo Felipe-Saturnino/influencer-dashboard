@@ -9,6 +9,10 @@ export interface IngestOutlookBody {
   max_messages?: number;
   /** Só valida secrets + token Graph + acesso à caixa (sem criar chamados). */
   test_graph?: boolean;
+  /** Só valida autorização (sem Graph) — útil no teste do Dashboard Supabase. */
+  auth_probe?: boolean;
+  /** Mesmo valor de CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET (Dashboard não envia headers customizados). */
+  ingest_secret?: string;
   /** Processa não lidos (padrão) ou janela recente com dedupe no banco. */
   modo?: "unread" | "recent";
   /** Só em modo `recent`: horas para trás (padrão 168 = 7 dias). */

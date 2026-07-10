@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { validarChamadaIngest } from "./auth.ts";
+import { authDiagnostico, validarChamadaIngest } from "./auth.ts";
 import {
   assuntoOuPadrao,
   corsHeaders,
@@ -32,8 +32,11 @@ import {
  *   CS_OUTLOOK_CLIENT_ID        (AppId Azure — ex.: 743a19bf-c96a-4acb-ba45-446269f864ef)
  *   CS_OUTLOOK_CLIENT_SECRET
  *   CS_OUTLOOK_MAILBOX          (opcional — padrão contato@spingaming.com.br)
- *   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET — opcional; header, Bearer service_role ou sessão admin (Status Técnico)
+ *   CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET — body ingest_secret, header ou service_role
  */
+
+/** Altere a cada deploy — confirme no teste auth_probe que fn_build bate. */
+export const FN_BUILD_VERSION = "20260710-cs-outlook-3";
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -93,19 +96,6 @@ serve(async (req) => {
     return json({ ok: false, erro: "Método não permitido" }, req, 405);
   }
 
-  const auth = await validarChamadaIngest(req);
-  if (!auth.ok) {
-    return json(
-      {
-        ok: false,
-        erro: auth.erro,
-        ...(auth.diagnostico ? { auth_diagnostico: auth.diagnostico } : {}),
-      },
-      req,
-      auth.status,
-    );
-  }
-
   let body: IngestOutlookBody = {};
   try {
     const raw = await req.text();
@@ -114,14 +104,48 @@ serve(async (req) => {
     return json({ ok: false, erro: "JSON inválido" }, req, 400);
   }
 
+  const auth = await validarChamadaIngest(req, { bodySecret: body.ingest_secret });
+  if (!auth.ok) {
+    return json(
+      {
+        ok: false,
+        fn_build: FN_BUILD_VERSION,
+        erro: auth.erro,
+        ...(auth.diagnostico ? { auth_diagnostico: auth.diagnostico } : {}),
+        dica_dashboard:
+          "Sem fn_build na resposta = código antigo no Supabase. Atualize index.ts (auth_probe, bodySecret) e auth.ts e faça Deploy updates.",
+      },
+      req,
+      auth.status,
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const ingestSecretEnv = Deno.env.get("CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET")?.trim() ?? "";
+
+  if (body.auth_probe === true) {
+    return json(
+      {
+        ok: true,
+        fn_build: FN_BUILD_VERSION,
+        auth_probe: true,
+        auth_via: auth.via,
+        auth_diagnostico: authDiagnostico(req, serviceKey, ingestSecretEnv),
+        graph_secrets: verificarSecretsOutlook(),
+        mensagem:
+          "Autorização OK. Próximo passo: {\"test_graph\":true,\"ingest_secret\":\"…\"} com o mesmo secret.",
+      },
+      req,
+    );
+  }
+
   const dryRun = body.dry_run === true;
   const modo = body.modo === "recent" ? "recent" : "unread";
   const maxMessages = Math.min(Math.max(body.max_messages ?? 25, 1), 50);
   const sinceHours = Math.min(Math.max(body.since_hours ?? 168, 1), 720);
   const mailbox = (Deno.env.get("CS_OUTLOOK_MAILBOX") ?? DEFAULT_MAILBOX).trim().toLowerCase();
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!supabaseUrl || !serviceKey) {
     return json({ ok: false, erro: "Configuração Supabase incompleta." }, req, 500);
   }

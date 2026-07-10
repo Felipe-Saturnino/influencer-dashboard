@@ -132,8 +132,9 @@ Secret: `RELATORIO_DIRETORIA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIO
 | `index.ts` |
 | `common.ts` |
 | `graphOutlook.ts` |
+| `auth.ts` |
 
-Secrets: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`, `CS_OUTLOOK_MAILBOX` (opcional), `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (opcional)
+Secrets: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`, `CS_OUTLOOK_MAILBOX` (opcional), `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (recomendado — teste no Dashboard via body)
 
 Detalhes: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.
 

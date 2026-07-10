@@ -33,7 +33,7 @@ jobs:
           if [ -n "${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET:-}" ]; then
             CURL_HEADERS+=(-H "x-cs-atendimento-outlook-ingest-secret: ${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET}")
           fi
-          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" "${CURL_HEADERS[@]}" -d '{}')
+          RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" "${CURL_HEADERS[@]}" -d "{\"ingest_secret\":\"${CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET:-}\"}")
           HTTP=$(echo "$RES" | tail -n1)
           BODY_RES=$(echo "$RES" | sed '$d')
           echo "HTTP ${HTTP}"
