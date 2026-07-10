@@ -646,6 +646,7 @@ export default function StatusTecnico() {
         const im = invokeError.message ?? "";
         let texto =
           typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_CS_OUTLOOK;
+        if (im.includes("non-2xx") && resData.erro) texto = resData.erro;
         if (im.includes("404") || im.includes("not found")) {
           texto =
             "Edge Function ingest-cs-atendimento-outlook não encontrada. Execute: supabase functions deploy ingest-cs-atendimento-outlook";

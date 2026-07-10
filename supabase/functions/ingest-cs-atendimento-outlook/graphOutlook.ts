@@ -50,7 +50,25 @@ export async function obterTokenGraph(): Promise<string> {
   if (!res.ok) {
     const txt = await res.text();
     console.error("[ingest-cs-atendimento-outlook] token", res.status, txt.slice(0, 400));
-    throw new Error("Não foi possível autenticar no Microsoft Graph.");
+    let hint = "Não foi possível autenticar no Microsoft Graph.";
+    try {
+      const err = JSON.parse(txt) as { error?: string; error_description?: string };
+      if (err.error === "invalid_client") {
+        hint =
+          "Microsoft Graph: Client ID ou Client Secret inválidos. Verifique CS_OUTLOOK_CLIENT_ID e CS_OUTLOOK_CLIENT_SECRET nos Secrets da Edge Function.";
+      } else if (err.error === "unauthorized_client") {
+        hint =
+          "Microsoft Graph: app não autorizado para client_credentials. Confirme permissão Mail.Read (application) e admin consent no Azure.";
+      } else if (err.error === "invalid_request") {
+        hint =
+          "Microsoft Graph: requisição de token inválida — confira CS_OUTLOOK_TENANT_ID (GUID do diretório, não domínio @).";
+      } else if (err.error) {
+        hint = `Microsoft Graph (${err.error}): verifique secrets CS_OUTLOOK_* no Supabase.`;
+      }
+    } catch {
+      /* resposta não-JSON */
+    }
+    throw new Error(hint);
   }
 
   const data = (await res.json()) as { access_token?: string };

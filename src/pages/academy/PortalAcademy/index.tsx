@@ -765,6 +765,7 @@ export default function PortalAcademyPage() {
                   dataPublicacao={c.published_at}
                   cardShadow={cardShadow}
                   descricaoCompleta
+                  mostrarNomeAnexo={false}
                 />
               ))}
             </div>

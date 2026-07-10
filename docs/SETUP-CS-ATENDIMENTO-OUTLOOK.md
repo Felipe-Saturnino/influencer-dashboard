@@ -149,7 +149,10 @@ Body vazio = processa até **25** e-mails **não lidos**.
 
 | Sintoma | Causa provável |
 |---------|----------------|
-| `Não foi possível autenticar no Microsoft Graph` | Tenant/Client/Secret incorretos ou admin consent pendente |
+| `Não foi possível autenticar no Microsoft Graph` / HTTP 500 no cron GitHub | **Secrets Azure ausentes ou errados no Supabase** (não no GitHub). Configurar em **Supabase → Edge Functions → Secrets**: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`. O cron só precisa de `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. |
+| `invalid_client` na resposta | Client secret expirado ou `CS_OUTLOOK_CLIENT_ID` incorreto — gerar novo secret no Azure Portal |
+| `unauthorized_client` | Falta admin consent em `Mail.Read` (application) no app Azure |
+| `CS_OUTLOOK_TENANT_ID` | Deve ser o **GUID** do tenant (Azure AD → Overview → Tenant ID), não o domínio `@spingaming.com.br` |
 | `Não foi possível listar e-mails` | `Mail.Read` application permission ou Application Access Policy |
 | `AccessCheckResult: Denied` no teste TI | App sem policy na caixa correta |
 | Chamado não aparece | Function não deployada ou nunca executada (zero invocações); e-mail já **lido** (usar `modo: "recent"`); migration e-mail não aplicada |
