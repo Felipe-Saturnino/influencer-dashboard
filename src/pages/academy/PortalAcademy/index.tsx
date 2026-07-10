@@ -764,6 +764,7 @@ export default function PortalAcademyPage() {
                   autorInfo={metaAutores[autorIdPostagem(c) ?? ""]}
                   dataPublicacao={c.published_at}
                   cardShadow={cardShadow}
+                  descricaoCompleta
                 />
               ))}
             </div>

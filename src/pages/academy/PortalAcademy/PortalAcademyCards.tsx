@@ -128,6 +128,7 @@ export function PostagemAcademyCard({
   cardShadow,
   onVerCompleto,
   mostrarBotaoVer,
+  descricaoCompleta = false,
 }: {
   titulo: string;
   corpo: string;
@@ -141,6 +142,7 @@ export function PostagemAcademyCard({
   cardShadow: string;
   onVerCompleto?: () => void;
   mostrarBotaoVer?: boolean;
+  descricaoCompleta?: boolean;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -167,8 +169,12 @@ export function PostagemAcademyCard({
   }, [capaPath]);
 
   const preview = mostrarBotaoVer && introducao?.trim()
-    ? introducao.trim().slice(0, PREVIEW_LEN)
-    : truncPreviewHtml(corpo, PREVIEW_LEN);
+    ? descricaoCompleta
+      ? introducao.trim()
+      : introducao.trim().slice(0, PREVIEW_LEN)
+    : descricaoCompleta
+      ? corpo
+      : truncPreviewHtml(corpo, PREVIEW_LEN);
 
   return (
     <div
@@ -194,7 +200,10 @@ export function PostagemAcademyCard({
           <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
           <div style={{ fontSize: 13, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
             {mostrarBotaoVer && introducao?.trim() ? (
-              <span>{preview}{introducao.length > PREVIEW_LEN ? "…" : ""}</span>
+              <span>
+                {preview}
+                {!descricaoCompleta && introducao.length > PREVIEW_LEN ? "…" : ""}
+              </span>
             ) : (
               <CorpoHtmlPortalRh html={preview} color={t.textMuted} />
             )}
