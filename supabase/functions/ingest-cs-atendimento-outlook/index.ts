@@ -95,7 +95,15 @@ serve(async (req) => {
 
   const auth = await validarChamadaIngest(req);
   if (!auth.ok) {
-    return json({ ok: false, erro: auth.erro }, req, auth.status);
+    return json(
+      {
+        ok: false,
+        erro: auth.erro,
+        ...(auth.diagnostico ? { auth_diagnostico: auth.diagnostico } : {}),
+      },
+      req,
+      auth.status,
+    );
   }
 
   let body: IngestOutlookBody = {};
