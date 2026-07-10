@@ -218,7 +218,6 @@ export type ScopeType =
 export type PrestadorTipoSlug =
   | "escritorio"
   | "facilities"
-  | "financeiro"
   | "ti"
   | "estudio";
 

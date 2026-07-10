@@ -1275,7 +1275,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas Operadora e Prestadores",
         texto:
-          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Prestadores: define o menu por área de atuação (ex.: Escritório, Estúdio, Facilities).\nGestores de departamento (Aquisição, Marketing, Operações, Academy, RH) usam só a matriz de Permissões, sem aba de escopo própria.\nO acesso efetivo de Operadora/Prestadores é o cruzamento destas marcações com a matriz de Permissões.",
+          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Prestadores: define o menu por área de atuação (ex.: Escritório, Estúdio, Facilities, TI).\nGestores de departamento (Aquisição, Marketing, Operações, Academy, RH) usam só a matriz de Permissões, sem aba de escopo própria.\nO acesso efetivo de Operadora/Prestadores é o cruzamento destas marcações com a matriz de Permissões.",
       },
     ],
   },

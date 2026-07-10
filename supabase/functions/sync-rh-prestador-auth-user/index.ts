@@ -19,7 +19,6 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
 type PrestadorTipoSlug =
   | 'escritorio'
   | 'facilities'
-  | 'financeiro'
   | 'ti'
   | 'estudio'
 
@@ -371,7 +370,7 @@ function resolvePerfilEscopo(
     return { role: 'prestador', prestadorTipo: 'facilities' }
   }
   if (g === 'financeiro') {
-    return { role: 'prestador', prestadorTipo: 'financeiro' }
+    return { role: 'prestador', prestadorTipo: 'escritorio' }
   }
   if (g === 'ti') {
     return { role: 'prestador', prestadorTipo: 'ti' }

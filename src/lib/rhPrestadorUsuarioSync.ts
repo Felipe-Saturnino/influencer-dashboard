@@ -72,7 +72,7 @@ export function resolvePerfilRhDeOrganograma(
     return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
   }
   if (g === "facilities") return { role: "prestador", prestadorTipo: "facilities", gestorTipo: null };
-  if (g === "financeiro") return { role: "prestador", prestadorTipo: "financeiro", gestorTipo: null };
+  if (g === "financeiro") return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
   if (g === "ti") return { role: "prestador", prestadorTipo: "ti", gestorTipo: null };
   if (g === "treinamento") return { role: "gestor_academy", prestadorTipo: null, gestorTipo: null };
 

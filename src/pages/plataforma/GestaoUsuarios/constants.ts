@@ -15,7 +15,6 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "escritorio", label: "Escritório" },
   { slug: "estudio", label: "Estúdio" },
   { slug: "facilities", label: "Facilities" },
-  { slug: "financeiro", label: "Financeiro" },
   { slug: "ti", label: "TI" },
 ];
 

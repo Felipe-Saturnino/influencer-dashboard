@@ -45,7 +45,6 @@ const ROLES_BLOQUEADOS = [
 const PRESTADOR_TIPO_SLUGS = [
   'escritorio',
   'facilities',
-  'financeiro',
   'ti',
   'estudio',
 ] as const
