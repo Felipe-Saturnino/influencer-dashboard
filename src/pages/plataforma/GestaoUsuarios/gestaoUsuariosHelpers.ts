@@ -1,5 +1,6 @@
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
+import { FONT } from "../../../constants/theme";
 
 export const BRAND_FOCUS_BORDER = "var(--brand-primary, #7c3aed)";
 
@@ -60,4 +61,30 @@ export function tabAtivaPrincipalStyle(ativa: boolean, cardBorder: string, input
 export function brandTintBg(level: "12" | "8" | "7", cssVar = "var(--brand-primary, #4a2082)"): string {
   const pct = level === "12" ? "12%" : level === "8" ? "8%" : "7%";
   return `color-mix(in srgb, ${cssVar} ${pct}, transparent)`;
+}
+
+/** Cabeçalho de seção na grade Escopos — altura uniforme (2 linhas) + título centralizado. */
+export function getEscopoSecaoHeaderStyle(
+  background: string,
+  cardBorder: string,
+  textMuted: string,
+): CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    background,
+    borderBottom: `2px solid ${cardBorder}`,
+    fontFamily: FONT.body,
+    fontWeight: 700,
+    fontSize: 11,
+    color: textMuted,
+    textTransform: "uppercase",
+    letterSpacing: "0.8px",
+    textAlign: "center",
+    lineHeight: 1.25,
+  };
 }

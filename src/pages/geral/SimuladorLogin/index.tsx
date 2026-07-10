@@ -9,22 +9,20 @@ import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { supabase } from "../../../lib/supabase";
 import {
-  GESTOR_TIPOS,
   PRESTADOR_TIPOS,
   roleLabel,
 } from "../../../pages/plataforma/GestaoUsuarios/constants";
-import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../../../types";
+import type { PrestadorTipoSlug, Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import {
   filtrarLinhasSimuladorPorRoles,
-  roleExigeGestorTipoNaSimulacao,
   roleExigeOperadoraNaSimulacao,
   roleExigePrestadorTipoNaSimulacao,
 } from "../../../lib/simuladorLogin";
 
 type OperadoraOpt = { slug: string; nome: string; ativo: boolean };
 
-type ModalOpcaoPerfil = "operadora" | "gestor_tipo" | "prestador_tipo";
+type ModalOpcaoPerfil = "operadora" | "prestador_tipo";
 
 export default function SimuladorLogin() {
   const { theme: t, simulacaoLogin, simuladorRolesPermitidos, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
@@ -36,7 +34,6 @@ export default function SimuladorLogin() {
   const [operadoras, setOperadoras] = useState<OperadoraOpt[]>([]);
   const [carregandoOperadoras, setCarregandoOperadoras] = useState(false);
   const [operadoraSlug, setOperadoraSlug] = useState("");
-  const [gestorTipo, setGestorTipo] = useState<GestorTipoSlug | "">("");
   const [prestadorTipo, setPrestadorTipo] = useState<PrestadorTipoSlug | "">("");
   const [err, setErr] = useState("");
   const [iniciando, setIniciando] = useState(false);
@@ -65,7 +62,6 @@ export default function SimuladorLogin() {
     setModalOpcao(null);
     setRolePendente(null);
     setOperadoraSlug("");
-    setGestorTipo("");
     setPrestadorTipo("");
     setErr("");
   }
@@ -74,7 +70,6 @@ export default function SimuladorLogin() {
     setErr("");
     setRolePendente(role);
     setOperadoraSlug("");
-    setGestorTipo("");
     setPrestadorTipo("");
     setModalOpcao(tipo);
   }
@@ -83,10 +78,6 @@ export default function SimuladorLogin() {
     setErr("");
     if (roleExigeOperadoraNaSimulacao(role)) {
       abrirModalOpcao(role, "operadora");
-      return;
-    }
-    if (roleExigeGestorTipoNaSimulacao(role)) {
-      abrirModalOpcao(role, "gestor_tipo");
       return;
     }
     if (roleExigePrestadorTipoNaSimulacao(role)) {
@@ -98,14 +89,13 @@ export default function SimuladorLogin() {
 
   async function confirmarInicio(
     role: Role,
-    extra?: { operadoraSlug?: string; gestorTipoSlug?: GestorTipoSlug; prestadorTipoSlug?: PrestadorTipoSlug },
+    extra?: { operadoraSlug?: string; prestadorTipoSlug?: PrestadorTipoSlug },
   ) {
     setErr("");
     setIniciando(true);
     const erro = await iniciarSimulacaoLogin({
       role,
       operadoraSlug: extra?.operadoraSlug,
-      gestorTipoSlug: extra?.gestorTipoSlug,
       prestadorTipoSlug: extra?.prestadorTipoSlug,
     });
     setIniciando(false);
@@ -123,10 +113,6 @@ export default function SimuladorLogin() {
       void confirmarInicio(rolePendente, { operadoraSlug });
       return;
     }
-    if (modalOpcao === "gestor_tipo" && gestorTipo) {
-      void confirmarInicio(rolePendente, { gestorTipoSlug: gestorTipo });
-      return;
-    }
     if (modalOpcao === "prestador_tipo" && prestadorTipo) {
       void confirmarInicio(rolePendente, { prestadorTipoSlug: prestadorTipo });
     }
@@ -135,16 +121,13 @@ export default function SimuladorLogin() {
   const modalTitulo =
     modalOpcao === "operadora"
       ? "Selecione a operadora"
-      : modalOpcao === "gestor_tipo"
-        ? "Selecione o tipo de gestor"
-        : modalOpcao === "prestador_tipo"
-          ? "Selecione a área de prestador"
-          : "";
+      : modalOpcao === "prestador_tipo"
+        ? "Selecione a área de prestador"
+        : "";
 
   const modalConfirmDisabled =
     iniciando ||
     (modalOpcao === "operadora" && (!operadoraSlug || carregandoOperadoras)) ||
-    (modalOpcao === "gestor_tipo" && !gestorTipo) ||
     (modalOpcao === "prestador_tipo" && !prestadorTipo);
 
   if (perm.canView === "nao") {
@@ -265,16 +248,6 @@ export default function SimuladorLogin() {
                 onChange={setOperadoraSlug}
               />
             )
-          ) : null}
-
-          {modalOpcao === "gestor_tipo" ? (
-            <ListaOpcoesRadio
-              t={t}
-              name="simulador-gestor-tipo"
-              opcoes={GESTOR_TIPOS.map((tipo) => ({ value: tipo.slug, label: tipo.label }))}
-              value={gestorTipo}
-              onChange={(v) => setGestorTipo(v as GestorTipoSlug)}
-            />
           ) : null}
 
           {modalOpcao === "prestador_tipo" ? (

@@ -1,4 +1,5 @@
 import type { CicloPagamento, Role } from "../../../types"
+import { ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles"
 import { MESES_NOMES } from "./financeiroConstants"
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ export function cicloAberto(ciclo: CicloPagamento): boolean {
 /** Só perfis de operação interna veem `pagamentos_agentes` (influencer e agência: apenas pagamentos dos influencers da gestão). */
 export const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = [
   "admin",
-  "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "executivo",
   "operador",
   "shift_leader",

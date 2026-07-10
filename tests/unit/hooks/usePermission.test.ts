@@ -28,7 +28,7 @@ describe("permissoesFromContext", () => {
     const acoes = {
       rh_staff: { criar: "sim", editar: "sim", excluir: "nao" },
     } as PermissoesAcoesMapa;
-    const r = permissoesFromContext("rh_staff", user("gestor"), permissions, acoes, true);
+    const r = permissoesFromContext("rh_staff", user("gestor_operacoes"), permissions, acoes, true);
     expect(r.canView).toBe("nao");
     expect(r.canCriar).toBeNull();
     expect(r.canEditarOk).toBe(false);
@@ -39,7 +39,7 @@ describe("permissoesFromContext", () => {
     const acoes = {
       rh_staff: { criar: "proprios", editar: "sim", excluir: null },
     } as PermissoesAcoesMapa;
-    const r = permissoesFromContext("rh_staff", user("gestor"), permissions, acoes, true);
+    const r = permissoesFromContext("rh_staff", user("gestor_operacoes"), permissions, acoes, true);
     expect(r.canView).toBe("proprios");
     expect(r.canCriar).toBe("proprios");
     expect(r.canCriarOk).toBe(true);

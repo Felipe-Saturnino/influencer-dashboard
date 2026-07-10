@@ -9,7 +9,7 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
  * Cria ou atualiza usuário Auth + profile + user_scopes conforme organograma do prestador.
  * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
  * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
- * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops, Customer Service → perfil próprio; Facilities, Financeiro, TI, Treinamento → Gestor/Prestador) >
+ * Perfil / escopo: gerências (Figurino, Comunicação, RH, Tech Ops, Customer Service → perfil próprio; Facilities, Financeiro, TI → Prestador; Treinamento → gestor_academy) >
  *   times (Performance Coach → performance_coach, Shift Leader, Service Manager, Customer Service, Tech Ops, GP, Shuffler) >
  *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Usuário já existente (mesmo e-mail Spin ou pessoal): atualiza `profiles.role`, escopos RH e metadata Auth — sem e-mail de boas-vindas.
@@ -23,8 +23,6 @@ type PrestadorTipoSlug =
   | 'ti'
   | 'estudio'
 
-type GestorTipoSlug = 'operacoes' | 'marketing' | 'afiliados' | 'geral' | 'treinamento'
-
 type PerfilRhSync =
   | 'figurino'
   | 'comunicacao'
@@ -37,7 +35,7 @@ type PerfilRhSync =
   | 'shuffler'
   | 'tech_ops'
   | 'prestador'
-  | 'gestor'
+  | 'gestor_academy'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -258,23 +256,14 @@ async function syncEscoposRhPrestador(
   userId: string,
   perfilRole: PerfilRhSync,
   tipoSlug: PrestadorTipoSlug | null,
-  gestorSlug: GestorTipoSlug | null,
 ): Promise<{ error?: string }> {
+  // Limpa prestador_tipo e gestor_tipo legado; só reinsere prestador_tipo quando aplicável.
   const { error: delErr } = await supabase
     .from('user_scopes')
     .delete()
     .eq('user_id', userId)
     .in('scope_type', ['prestador_tipo', 'gestor_tipo'])
   if (delErr) return { error: `Erro ao limpar escopos RH: ${delErr.message}` }
-
-  if (gestorSlug !== null && perfilRole === 'gestor') {
-    const { error: scopeGestorErr } = await supabase.from('user_scopes').insert({
-      user_id: userId,
-      scope_type: 'gestor_tipo',
-      scope_ref: gestorSlug,
-    })
-    if (scopeGestorErr) return { error: `Erro ao salvar tipo de gestor: ${scopeGestorErr.message}` }
-  }
 
   if (tipoSlug !== null && perfilRole === 'prestador') {
     const { error: scopeErr } = await supabase.from('user_scopes').insert({
@@ -354,74 +343,74 @@ async function carregarContextoOrganogramaRh(
 }
 
 /**
- * Prioridade: gerências específicas → perfil staff, Gestor (Treinamento) ou Prestador + `prestador_tipo`;
+ * Prioridade: gerências específicas → perfil staff, gestor_academy (Treinamento) ou Prestador + `prestador_tipo`;
  * depois times; por fim `rh_funcionarios.area_atuacao` (escritorio | estudio); default Escritório.
  */
 function resolvePerfilEscopo(
   gerenciaNome: string | null | undefined,
   timeNome: string | null | undefined,
   areaAtuacaoRh: string | null | undefined,
-): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null; gestorTipo: GestorTipoSlug | null } {
+): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null } {
   const g = normTimeNome(gerenciaNome)
   if (g === 'figurino') {
-    return { role: 'figurino', prestadorTipo: null, gestorTipo: null }
+    return { role: 'figurino', prestadorTipo: null }
   }
   if (g === 'comunicacao') {
-    return { role: 'comunicacao', prestadorTipo: null, gestorTipo: null }
+    return { role: 'comunicacao', prestadorTipo: null }
   }
   if (g === 'rh' || g === 'recursos humanos') {
-    return { role: 'rh', prestadorTipo: null, gestorTipo: null }
+    return { role: 'rh', prestadorTipo: null }
   }
   if (gerenciaIndicaTechOps(gerenciaNome)) {
-    return { role: 'tech_ops', prestadorTipo: null, gestorTipo: null }
+    return { role: 'tech_ops', prestadorTipo: null }
   }
   if (gerenciaIndicaCustomerService(gerenciaNome)) {
-    return { role: 'customer_service', prestadorTipo: null, gestorTipo: null }
+    return { role: 'customer_service', prestadorTipo: null }
   }
   if (g === 'facilities') {
-    return { role: 'prestador', prestadorTipo: 'facilities', gestorTipo: null }
+    return { role: 'prestador', prestadorTipo: 'facilities' }
   }
   if (g === 'financeiro') {
-    return { role: 'prestador', prestadorTipo: 'financeiro', gestorTipo: null }
+    return { role: 'prestador', prestadorTipo: 'financeiro' }
   }
   if (g === 'ti') {
-    return { role: 'prestador', prestadorTipo: 'ti', gestorTipo: null }
+    return { role: 'prestador', prestadorTipo: 'ti' }
   }
   if (g === 'treinamento') {
-    return { role: 'gestor', prestadorTipo: null, gestorTipo: 'treinamento' }
+    return { role: 'gestor_academy', prestadorTipo: null }
   }
 
   const t = normTimeNome(timeNome)
   if (t === 'tech ops') {
-    return { role: 'tech_ops', prestadorTipo: null, gestorTipo: null }
+    return { role: 'tech_ops', prestadorTipo: null }
   }
   if (t === 'performance coach') {
-    return { role: 'performance_coach', prestadorTipo: null, gestorTipo: null }
+    return { role: 'performance_coach', prestadorTipo: null }
   }
   if (t === 'shift leader') {
-    return { role: 'shift_leader', prestadorTipo: null, gestorTipo: null }
+    return { role: 'shift_leader', prestadorTipo: null }
   }
   if (t === 'service manager') {
-    return { role: 'service_manager', prestadorTipo: null, gestorTipo: null }
+    return { role: 'service_manager', prestadorTipo: null }
   }
   if (t === 'customer service') {
-    return { role: 'customer_service', prestadorTipo: null, gestorTipo: null }
+    return { role: 'customer_service', prestadorTipo: null }
   }
   if (timeIndicaGamePresenter(timeNome)) {
-    return { role: 'game_presenter', prestadorTipo: null, gestorTipo: null }
+    return { role: 'game_presenter', prestadorTipo: null }
   }
   if (timeIndicaShuffler(timeNome)) {
-    return { role: 'shuffler', prestadorTipo: null, gestorTipo: null }
+    return { role: 'shuffler', prestadorTipo: null }
   }
 
   const a = normTimeNome(areaAtuacaoRh)
   if (a === 'escritorio') {
-    return { role: 'prestador', prestadorTipo: 'escritorio', gestorTipo: null }
+    return { role: 'prestador', prestadorTipo: 'escritorio' }
   }
   if (a === 'estudio') {
-    return { role: 'prestador', prestadorTipo: 'estudio', gestorTipo: null }
+    return { role: 'prestador', prestadorTipo: 'estudio' }
   }
-  return { role: 'prestador', prestadorTipo: 'escritorio', gestorTipo: null }
+  return { role: 'prestador', prestadorTipo: 'escritorio' }
 }
 
 function corsHeaders(req: Request) {
@@ -624,7 +613,7 @@ serve(async (req) => {
   const { timeNome, gerenciaNome } = await carregarContextoOrganogramaRh(supabase, row)
 
   const nomePlataforma = String(row.nome ?? '').trim() || loginEmail.split('@')[0] || 'Prestador'
-  const { role: perfilRole, prestadorTipo: tipoSlug, gestorTipo: gestorSlug } = resolvePerfilEscopo(
+  const { role: perfilRole, prestadorTipo: tipoSlug } = resolvePerfilEscopo(
     gerenciaNome,
     timeNome,
     (row as { area_atuacao?: string | null }).area_atuacao,
@@ -669,7 +658,7 @@ serve(async (req) => {
       })
     }
 
-    const escopos = await syncEscoposRhPrestador(supabase, perfilExistente.id, perfilRole, tipoSlug, gestorSlug)
+    const escopos = await syncEscoposRhPrestador(supabase, perfilExistente.id, perfilRole, tipoSlug)
     if (escopos.error) {
       return new Response(JSON.stringify({ error: escopos.error }), {
         status: 500,
@@ -734,7 +723,7 @@ serve(async (req) => {
     })
   }
 
-  const escoposCreate = await syncEscoposRhPrestador(supabase, uid, perfilRole, tipoSlug, gestorSlug)
+  const escoposCreate = await syncEscoposRhPrestador(supabase, uid, perfilRole, tipoSlug)
   if (escoposCreate.error) {
     await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
     await supabase.from('profiles').delete().eq('id', uid)

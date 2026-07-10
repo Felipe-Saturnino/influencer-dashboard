@@ -865,7 +865,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Informativos",
         texto:
-          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (ícone Archive + pop-up de confirmação), histórico de alterações e excluir (ícone vermelho + pop-up de confirmação, quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home. Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis internos operacionais (Gestor, RH, Prestadores, etc.). Se incluir Administrador, Executivo, Operador, Agência, Influencer, Afiliado ou Investidor, use apenas Enviar para aprovação. Quem pode aprovar depende dos perfis alvo; apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
+          "Visível apenas para quem tem permissão de editar nesta página. Inclui tabela com todos os status (rascunho, aprovação, publicado, arquivado), filtros de status, carrossel de mês, Histórico e ações por linha: editar, aprovar, arquivar (ícone Archive + pop-up de confirmação), histórico de alterações e excluir (ícone vermelho + pop-up de confirmação, quando liberado). Use Novo Informativo para criar; no modal informe assunto, descrição com formatação e os perfis que verão o aviso na Home (Administrador e Executivo não entram como destino). Ao marcar o perfil Operador, escolha também a operadora de destino (operadoras com status Ativa em Gestão de Operadoras) ou a opção Todos.\n\nPublicação direta só quando o informativo for apenas para perfis de Estúdio ou Escritório (RH, Prestadores, Figurino, etc.). Se incluir Investidor, Operador, Agência, Influenciador, Afiliado ou qualquer Gestor de departamento, use apenas Enviar para aprovação.\n\nQuem pode aprovar: Investidor ou Operador → Administrador ou Executivo; Agência, Influenciador ou Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Se misturar grupos, vale a regra mais restritiva. Apenas Administradores podem aprovar a própria postagem — os demais precisam de outro usuário.",
       },
       {
         subtitulo: "Permissões",
@@ -1273,9 +1273,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Define, por perfil, o que cada papel pode Ver, Criar, Editar e Excluir em cada página da plataforma. O perfil Administrador não é configurado aqui — mantém acesso total fixo. As alterações entram em vigor no próximo carregamento de página do usuário afetado.",
       },
       {
-        subtitulo: "Abas Operadora, Gestores e Prestadores",
+        subtitulo: "Abas Operadora e Prestadores",
         texto:
-          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Gestores: define o menu por tipo de gestor (ex.: Estúdio, Marketing).\n— Prestadores: define o menu por área de atuação (ex.: Game Presenter, Customer Service).\nO acesso efetivo é sempre o cruzamento destas marcações com a matriz de Permissões.",
+          "Controlam quais páginas aparecem no menu para cada grupo operacional.\n— Operadora: define o menu visível para operadores de cada operadora.\n— Prestadores: define o menu por área de atuação (ex.: Escritório, Estúdio, Facilities).\nGestores de departamento (Aquisição, Marketing, Operações, Academy, RH) usam só a matriz de Permissões, sem aba de escopo própria.\nO acesso efetivo de Operadora/Prestadores é o cruzamento destas marcações com a matriz de Permissões.",
       },
     ],
   },

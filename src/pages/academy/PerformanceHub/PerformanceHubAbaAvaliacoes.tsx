@@ -25,6 +25,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
+import { roleGestorDepartamento } from "../../../lib/staffRoles";
 
 type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
@@ -121,7 +122,7 @@ export function PerformanceHubAbaAvaliacoes({
   const labelTerceiraDim = labelTerceiraDimensaoTime(timeSelecionado);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [busca, setBusca] = useState("");
-  const showBusca = roleUsuario === "gestor" || roleUsuario === "admin";
+  const showBusca = roleUsuario === "admin" || roleGestorDepartamento(roleUsuario);
 
   const rowsVisiveis = useMemo(() => {
     const filtradas = avaliacoes

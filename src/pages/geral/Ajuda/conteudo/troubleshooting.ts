@@ -711,6 +711,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Confirme que o status está Publicado e que o perfil do usuário foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
       },
+      {
+        subtitulo: "Não consigo aprovar um informativo?",
+        texto:
+          "O botão Aprovar só aparece em status Aprovação e para quem a regra dos perfis alvo autoriza: Investidor/Operador → Administrador ou Executivo; Agência/Influenciador/Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Misturas usam a regra mais restritiva. Exceto Administrador, ninguém aprova a própria postagem.",
+      },
     ],
   },
   rh_portal: {
@@ -974,7 +979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a página Pipeline B2B no menu?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e se a página está liberada na aba Gestores (tipo de gestor) ou Operadora, conforme seu perfil. Administradores têm acesso total.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e, se for Operador, se a página está liberada na aba Escopos → Operadora. Gestores de departamento dependem só da matriz de Permissões. Administradores têm acesso total.",
       },
       {
         subtitulo: "Não consigo editar Comercial, Status ou produtos na tabela?",

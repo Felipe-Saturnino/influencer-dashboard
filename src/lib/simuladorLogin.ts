@@ -1,9 +1,8 @@
-import type { GestorTipoSlug, PrestadorTipoSlug, Role } from "../types";
+import type { PrestadorTipoSlug, Role } from "../types";
 import type { EscoposVisiveis, PermissoesMapa } from "../context/AppContext";
 import type { PermissoesAcoesMapa } from "./appRoutes";
 import { ROLES_SEM_RESTRICAO_ESCOPO, roleParidadeInfluencer } from "./staffRoles";
 import {
-  GESTOR_TIPOS,
   PRESTADOR_TIPOS,
   FILTROS_PERFIL_LINHAS_SIMULADOR,
   ROLES_SIMULAVEIS,
@@ -53,7 +52,6 @@ export type SimulacaoLoginState = {
   role: Role;
   operadoraSlug?: string;
   operadoraNome?: string;
-  gestorTipoSlug?: GestorTipoSlug;
   prestadorTipoSlug?: PrestadorTipoSlug;
   labelExibicao: string;
   startedAt: string;
@@ -62,7 +60,6 @@ export type SimulacaoLoginState = {
 export type IniciarSimulacaoInput = {
   role: Role;
   operadoraSlug?: string;
-  gestorTipoSlug?: GestorTipoSlug;
   prestadorTipoSlug?: PrestadorTipoSlug;
 };
 
@@ -70,16 +67,8 @@ export function roleExigeOperadoraNaSimulacao(role: Role): boolean {
   return role === "operador";
 }
 
-export function roleExigeGestorTipoNaSimulacao(role: Role): boolean {
-  return role === "gestor";
-}
-
 export function roleExigePrestadorTipoNaSimulacao(role: Role): boolean {
   return role === "prestador";
-}
-
-export function gestorTipoLabel(slug: GestorTipoSlug): string {
-  return GESTOR_TIPOS.find((t) => t.slug === slug)?.label ?? slug;
 }
 
 export function prestadorTipoLabel(slug: PrestadorTipoSlug): string {
@@ -91,9 +80,6 @@ export function montarLabelSimulacao(input: IniciarSimulacaoInput, operadoraNome
   if (input.role === "operador" && operadoraNome) {
     return `${perfil} — ${operadoraNome}`;
   }
-  if (input.role === "gestor" && input.gestorTipoSlug) {
-    return `${perfil} — ${gestorTipoLabel(input.gestorTipoSlug)}`;
-  }
   if (input.role === "prestador" && input.prestadorTipoSlug) {
     return `${perfil} — ${prestadorTipoLabel(input.prestadorTipoSlug)}`;
   }
@@ -101,23 +87,13 @@ export function montarLabelSimulacao(input: IniciarSimulacaoInput, operadoraNome
 }
 
 export function buildEscoposSimulacao(state: SimulacaoLoginState): EscoposVisiveis {
-  const { role, operadoraSlug, gestorTipoSlug, prestadorTipoSlug } = state;
+  const { role, operadoraSlug, prestadorTipoSlug } = state;
 
   if (role === "operador" && operadoraSlug) {
     return {
       influencersVisiveis: [],
       operadorasVisiveis: [operadoraSlug],
       semRestricaoEscopo: false,
-      vêTodosInfluencers: true,
-    };
-  }
-
-  if (role === "gestor" && gestorTipoSlug) {
-    return {
-      influencersVisiveis: [],
-      operadorasVisiveis: [],
-      semRestricaoEscopo: false,
-      gestorTiposVisiveis: [gestorTipoSlug],
       vêTodosInfluencers: true,
     };
   }
@@ -224,9 +200,6 @@ export function validarInputSimulacao(
   if (roleExigeOperadoraNaSimulacao(input.role) && !input.operadoraSlug?.trim()) {
     return "Selecione uma operadora.";
   }
-  if (roleExigeGestorTipoNaSimulacao(input.role) && !input.gestorTipoSlug) {
-    return "Selecione um tipo de gestor.";
-  }
   if (roleExigePrestadorTipoNaSimulacao(input.role) && !input.prestadorTipoSlug) {
     return "Selecione uma área de prestador.";
   }
@@ -240,7 +213,6 @@ export function toSimulacaoState(
   return {
     role: input.role,
     operadoraSlug: input.operadoraSlug,
-    gestorTipoSlug: input.gestorTipoSlug,
     prestadorTipoSlug: input.prestadorTipoSlug,
     labelExibicao,
     startedAt: new Date().toISOString(),

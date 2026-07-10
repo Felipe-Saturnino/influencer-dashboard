@@ -118,7 +118,7 @@ export function permissoesFromContext(
   const acoes = permissionsAcoes[pageKey] ?? { criar: null, editar: null, excluir: null };
   const cvFromContext = permissions[pageKey];
 
-  if (role === "operador" || role === "gestor" || role === "prestador") {
+  if (role === "operador" || role === "prestador") {
     const canView = canViewEfetivo(cvFromContext);
     return {
       canView,
@@ -131,7 +131,7 @@ export function permissoesFromContext(
   return {
     canView,
     loading: false,
-    ...acoesEfetivas(true, acoes),
+    ...acoesEfetivas(canView !== "nao", acoes),
   };
 }
 

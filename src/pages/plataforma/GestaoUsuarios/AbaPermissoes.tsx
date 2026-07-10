@@ -235,17 +235,6 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
         <strong style={{ color: t.text }}>Administrador</strong> não é configurado aqui: na plataforma mantém acesso total
         (Ver, Criar, Editar e Excluir) a todas as páginas.
       </p>
-      {roleAtivo === "gestor" ? (
-        <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
-          Perfil <strong style={{ color: t.text }}>Gestor</strong>: aqui define-se por página o que o perfil pode{" "}
-          <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
-          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong>. Cada usuário gestor deve ter pelo menos um <strong style={{ color: t.text }}>tipo de gestor</strong> (aba Usuários); o menu
-          operacional cruza estas permissões com a união das páginas marcadas para esses tipos na aba{" "}
-          <strong style={{ color: t.text }}>Gestores</strong>.{" "}
-          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
-          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Gestores.
-        </p>
-      ) : null}
       {roleAtivo === "prestador" ? (
         <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
           Perfil <strong style={{ color: t.text }}>Prestadores</strong>: nesta aba configuram-se, por página,{" "}

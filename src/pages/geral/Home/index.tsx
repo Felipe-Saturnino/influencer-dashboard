@@ -125,7 +125,6 @@ function PlatLogoHome({
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
-  gestor: "Gestor",
   gestor_aquisicao: "Gestor de Aquisição",
   gestor_marketing: "Gestor de Marketing",
   gestor_operacoes: "Gestor de Operações",
@@ -156,11 +155,6 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Painel completo",
     subtitle:
       "Você tem acesso total à plataforma. Gerencie operadoras, usuários e visualize todos os dashboards.",
-  },
-  gestor: {
-    title: "Visão geral",
-    subtitle:
-      "Acesse todos os dashboards e operações. Gerencie campanhas, influencers e acompanhe métricas.",
   },
   gestor_aquisicao: {
     title: "Gestão de Aquisição",

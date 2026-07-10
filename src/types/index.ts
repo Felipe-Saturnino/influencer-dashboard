@@ -1,7 +1,6 @@
 // ─── ROLES ───────────────────────────────────────────────────────────────────
 export type Role =
   | "admin"
-  | "gestor"
   | "gestor_aquisicao"
   | "gestor_marketing"
   | "gestor_operacoes"
@@ -208,16 +207,12 @@ export interface RolePermission {
 // "influencer"   → scope_ref = UUID do influencer
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-// "gestor_tipo"   → scope_ref = tipo de gestor (aba Gestores)
 // "prestador_tipo" → scope_ref = área de atuação do perfil Prestadores (aba Prestadores)
 export type ScopeType =
   | "influencer"
   | "operadora"
   | "agencia_par"
-  | "gestor_tipo"
   | "prestador_tipo";
-
-export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral" | "treinamento";
 
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =
@@ -295,14 +290,6 @@ export interface OperadoraPage {
   operadora_slug: string;
   page_key:       PageKey;
   created_at?:    string;
-}
-
-/** Páginas habilitadas por tipo de gestor (aba Gestores) */
-export interface GestorTipoPage {
-  id:                 string;
-  gestor_tipo_slug:   GestorTipoSlug;
-  page_key:           PageKey;
-  created_at?:        string;
 }
 
 /** Páginas habilitadas por área de prestador (aba Prestadores) */

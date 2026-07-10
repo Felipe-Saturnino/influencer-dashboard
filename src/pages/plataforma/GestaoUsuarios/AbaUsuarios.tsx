@@ -9,7 +9,7 @@ import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdg
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
-import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
@@ -64,13 +64,6 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
     if (s.scope_type === "agencia_par") {
       const [, slug] = s.scope_ref.split(":");
       return { texto: ops.find((o) => o.slug === slug)?.nome ?? slug, ordem: 50 };
-    }
-    if (s.scope_type === "gestor_tipo") {
-      const idx = GESTOR_TIPOS.findIndex((g) => g.slug === s.scope_ref);
-      return {
-        texto: GESTOR_TIPOS.find((g) => g.slug === s.scope_ref)?.label ?? s.scope_ref,
-        ordem: idx >= 0 ? idx : 40,
-      };
     }
     if (s.scope_type === "prestador_tipo") {
       const idx = PRESTADOR_TIPOS.findIndex((p) => p.slug === s.scope_ref);

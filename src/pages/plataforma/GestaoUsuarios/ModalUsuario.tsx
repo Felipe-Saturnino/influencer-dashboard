@@ -8,8 +8,8 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
-import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
-import { ROLES_STAFF_APENAS_PERMISSOES, roleGestorDepartamento, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import { BRAND, ROLES, roleBadgeColor, PRESTADOR_TIPOS } from "./constants";
+import { ROLES_GESTOR_DEPARTAMENTO, ROLES_STAFF_APENAS_PERMISSOES, roleGestorDepartamento, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 import { MultiSelect, SingleSelectOperadora } from "./ModalUsuarioScopeSelects";
 import { SalvarCtaContent } from "./gestaoUsuariosUi";
@@ -27,11 +27,10 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
   const brand = useDashboardBrand();
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
-  const [role, setRole] = useState<Role>(editando?.role ?? "gestor");
+  const [role, setRole] = useState<Role>(editando?.role ?? ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo");
   const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);
   const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);
   const [scopePares, setScopePares] = useState<string[]>([]);
-  const [scopeGestorTipos, setScopeGestorTipos] = useState<string[]>([]);
   const [scopePrestadorTipos, setScopePrestadorTipos] = useState<string[]>([]);
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
@@ -65,7 +64,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
   useEffect(() => {
     setNome(editando?.name ?? "");
     setEmail(editando?.email ?? "");
-    setRole((editando?.role ?? "gestor") as Role);
+    setRole((editando?.role ?? ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo") as Role);
     setErro("");
   }, [editando?.id, editando?.name, editando?.email, editando?.role]);
 
@@ -73,17 +72,16 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     const scopes = editando?.scopes ?? [];
     const r = editando?.role ?? role;
     setScopeInfluencers(
-      r === "gestor" || r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role)
+      r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role)
         ? []
         : scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref)
     );
     setScopeOperadoras(
-      r === "gestor" || r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role) || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
+      r === "executivo" || r === "investidor" || roleGestorDepartamento(r as Role) || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
         ? []
         : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref)
     );
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
-    setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
     setScopePrestadorTipos(scopes.filter((s) => s.scope_type === "prestador_tipo").map((s) => s.scope_ref));
   }, [editando, role]);
 
@@ -94,7 +92,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
-    setScopeGestorTipos([]);
     setScopePrestadorTipos([]);
   };
 
@@ -170,10 +167,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
       setErro("O perfil Operador permite apenas uma operadora.");
       return;
     }
-    if (role === "gestor" && scopeGestorTipos.length === 0) {
-      setErro("Selecione pelo menos um tipo de gestor.");
-      return;
-    }
     if (role === "prestador" && scopePrestadorTipos.length === 0) {
       setErro("Selecione pelo menos uma área de atuação.");
       return;
@@ -192,20 +185,19 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           : scopePares;
       const scopeInfluencersArrRaw = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
       const scopeInfluencersArr =
-        role === "gestor" || role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
+        role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
           ? []
           : scopeInfluencersArrRaw;
       const scopeOperadorasArr =
         role === "operador"
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
-          : role === "gestor" || role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
+          : role === "executivo" || role === "investidor" || roleGestorDepartamento(role)
             ? []
             : ROLES_STAFF_APENAS_PERMISSOES.includes(role)
               ? []
               : Array.isArray(scopeOperadoras)
                 ? scopeOperadoras
                 : [];
-      const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
       const scopePrestadorTiposArr =
         role === "prestador" ? (Array.isArray(scopePrestadorTipos) ? scopePrestadorTipos : []) : [];
 
@@ -218,7 +210,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
-          scopeGestorTipos: scopeGestorTiposArr,
           scopePrestadorTipos: scopePrestadorTiposArr,
         });
         onSalvo();
@@ -232,7 +223,6 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
-          scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
           scopePrestadorTipos: role === "prestador" ? scopePrestadorTiposArr : [],
           loginUrl,
         });
@@ -361,21 +351,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
                 : "Todos os influencers e todas as operadoras — permissões apenas pela aba Permissões (sem escopo por operadora)."}
             </div>
           </div>
-        ) : role === "executivo" || role === "investidor" || roleGestorDepartamento(role) ? null : role === "gestor" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <MultiSelect
-              t={t}
-              field={field}
-              labelStyle={labelStyle}
-              label="Tipos de gestor"
-              obrigatorio
-              cor={roleBadgeColor("gestor")}
-              items={GESTOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
-              selected={scopeGestorTipos}
-              onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
-            />
-          </div>
-        ) : role === "prestador" ? (
+        ) : role === "executivo" || role === "investidor" || roleGestorDepartamento(role) ? null : role === "prestador" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <MultiSelect
               t={t}

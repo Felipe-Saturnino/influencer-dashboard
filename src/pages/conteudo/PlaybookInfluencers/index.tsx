@@ -19,12 +19,12 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_HEADER_SUBTITLE_PADDING_LEFT } from "../../../lib/pageHeaderStyles";
 import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
-import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
+import { ROLES_GESTOR_DEPARTAMENTO, ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
   "admin",
-  "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "executivo",
   "agencia",
   "shift_leader",
