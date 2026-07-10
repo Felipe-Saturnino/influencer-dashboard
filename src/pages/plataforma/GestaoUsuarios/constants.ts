@@ -1,5 +1,5 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
-import { ROLES_SEM_RESTRICAO_ESCOPO } from "../../../lib/staffRoles";
+import { ROLES_SEM_RESTRICAO_ESCOPO, ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles";
 import { sortPagesLikeMenu } from "../../../lib/menuPagesOrder";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
@@ -21,15 +21,11 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
 export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
-  { slug: "customer_service", label: "Customer Service" },
-  { slug: "game_presenter", label: "Game Presenter" },
-  { slug: "shuffler", label: "Shuffler" },
   { slug: "escritorio", label: "Escritório" },
+  { slug: "estudio", label: "Estúdio" },
   { slug: "facilities", label: "Facilities" },
   { slug: "financeiro", label: "Financeiro" },
-  { slug: "tech_ops", label: "Tech Ops" },
   { slug: "ti", label: "TI" },
-  { slug: "estudio", label: "Estúdio" },
 ];
 
 /** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
@@ -37,6 +33,11 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "executivo", label: "Executivo" },
   { value: "gestor", label: "Gestor" },
+  { value: "gestor_aquisicao", label: "Gestor de Aquisição" },
+  { value: "gestor_marketing", label: "Gestor de Marketing" },
+  { value: "gestor_operacoes", label: "Gestor de Operações" },
+  { value: "gestor_academy", label: "Gestor de Academy" },
+  { value: "gestor_rh", label: "Gestor de RH" },
   { value: "rh", label: "RH" },
   { value: "figurino", label: "Figurino" },
   { value: "comunicacao", label: "Comunicação" },
@@ -68,9 +69,17 @@ export const ROLES_PERFIS_ESTUDIO: Role[] = [
 /** Perfis internos — escritório e suporte (filtros Usuários, Permissões, Simulador). */
 export const ROLES_PERFIS_ESCRITORIO: Role[] = ["rh", "figurino", "comunicacao", "tech_ops", "prestador"];
 
+/** Linha Gerenciais — admin, executivo, gestor genérico e gestores de departamento (atribuição manual). */
+export const ROLES_PERFIS_GERENCIAIS: Role[] = [
+  "admin",
+  "executivo",
+  "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
+];
+
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
-  { titulo: "Perfis Gerenciais", roles: ["admin", "executivo", "gestor"] },
+  { titulo: "Perfis Gerenciais", roles: ROLES_PERFIS_GERENCIAIS },
   { titulo: "Estúdio", roles: ROLES_PERFIS_ESTUDIO },
   { titulo: "Escritório", roles: ROLES_PERFIS_ESCRITORIO },
   { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "afiliado", "investidor"] },
@@ -213,6 +222,7 @@ export function secoesMenuFromPages(pages: readonly { secao: string }[]): string
 export const ROLES_PERMISSOES: Role[] = [
   "executivo",
   "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "rh",
   "figurino",
   "comunicacao",
@@ -284,6 +294,11 @@ export function roleBadgeColor(role: Role): string {
   const map: Record<Role, string> = {
     admin: BRAND.roxoVivo,
     gestor: BRAND.azul,
+    gestor_aquisicao: BRAND.azul,
+    gestor_marketing: BRAND.ciano,
+    gestor_operacoes: BRAND.roxo,
+    gestor_academy: BRAND.roxoVivo,
+    gestor_rh: BRAND.roxo,
     prestador: BRAND.roxo,
     executivo: BRAND.ciano,
     shift_leader: BRAND.amarelo,

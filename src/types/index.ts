@@ -2,6 +2,11 @@
 export type Role =
   | "admin"
   | "gestor"
+  | "gestor_aquisicao"
+  | "gestor_marketing"
+  | "gestor_operacoes"
+  | "gestor_academy"
+  | "gestor_rh"
   | "prestador"
   | "executivo"
   | "shift_leader"
@@ -216,13 +221,9 @@ export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral" |
 
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =
-  | "customer_service"
-  | "game_presenter"
-  | "shuffler"
   | "escritorio"
   | "facilities"
   | "financeiro"
-  | "tech_ops"
   | "ti"
   | "estudio";
 

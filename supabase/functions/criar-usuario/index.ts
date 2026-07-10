@@ -24,6 +24,11 @@ interface CriarUsuarioRequest {
 const ROLES_BLOQUEADOS = [
   'admin',
   'gestor',
+  'gestor_aquisicao',
+  'gestor_marketing',
+  'gestor_operacoes',
+  'gestor_academy',
+  'gestor_rh',
   'prestador',
   'executivo',
   'investidor',
@@ -37,7 +42,7 @@ const ROLES_BLOQUEADOS = [
   'comunicacao',
   'performance_coach',
   'rh',
-] // sem user_scopes genérico; staff Spin só role_permissions (aba Permissões)
+] // sem user_scopes genérico; staff Spin e gestores de departamento só role_permissions (aba Permissões)
 
 const GESTOR_TIPO_SLUGS = [
   'operacoes',
@@ -48,13 +53,9 @@ const GESTOR_TIPO_SLUGS = [
 ] as const
 
 const PRESTADOR_TIPO_SLUGS = [
-  'customer_service',
-  'game_presenter',
-  'shuffler',
   'escritorio',
   'facilities',
   'financeiro',
-  'tech_ops',
   'ti',
   'estudio',
 ] as const

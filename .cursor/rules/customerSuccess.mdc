@@ -74,7 +74,7 @@ globs:
 | Editar | Modal Atender |
 | Criar / Excluir | `null` — chamados só via site |
 
-Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma. Legado `prestador_tipo_pages`: `customer_service` + `cs_atendimento` (perfil Prestadores + área CS).
+Seeds: demais perfis com **Não** até liberar em Gestão de Usuários. Perfil staff **Customer Service** (`customer_service`): **Atendimento** Ver/Editar **Sim** por defeito (`20260707233000_customer_service_organograma_sync.sql`) — sync RH atribui o perfil ao vincular gerência ou time Customer Service no organograma (sem escopo `prestador_tipo`; só `role_permissions`).
 
 ---
 

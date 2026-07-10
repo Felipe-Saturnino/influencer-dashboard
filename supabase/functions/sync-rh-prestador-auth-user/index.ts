@@ -17,13 +17,9 @@ import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
  */
 
 type PrestadorTipoSlug =
-  | 'customer_service'
-  | 'game_presenter'
-  | 'shuffler'
   | 'escritorio'
   | 'facilities'
   | 'financeiro'
-  | 'tech_ops'
   | 'ti'
   | 'estudio'
 

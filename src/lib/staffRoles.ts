@@ -7,6 +7,19 @@ export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
   return !!role && ROLES_PARIDADE_INFLUENCER.includes(role);
 }
 
+/** Gestores de departamento — perfil próprio, atribuição manual, só `role_permissions` (sem `gestor_tipo`). */
+export const ROLES_GESTOR_DEPARTAMENTO: readonly Role[] = [
+  "gestor_aquisicao",
+  "gestor_marketing",
+  "gestor_operacoes",
+  "gestor_academy",
+  "gestor_rh",
+];
+
+export function roleGestorDepartamento(role: Role | undefined | null): boolean {
+  return !!role && ROLES_GESTOR_DEPARTAMENTO.includes(role);
+}
+
 /**
  * Perfis sem escopo operadora/influencer na Gestão nem na app — só `role_permissions` (aba Permissões).
  * Visão global de dados quando Ver = sim; ações conforme Criar/Editar/Excluir.
@@ -14,6 +27,7 @@ export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
 export const ROLES_SEM_RESTRICAO_ESCOPO: readonly Role[] = [
   "executivo",
   "investidor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "shift_leader",
   "service_manager",
   "customer_service",
@@ -50,6 +64,7 @@ export const ROLES_ESCOPO_TIPO_EXECUTIVO = ROLES_STAFF_APENAS_PERMISSOES;
 export const ROLES_VISAO_OPERACAO_SPIN: readonly Role[] = [
   "admin",
   "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "prestador",
   "executivo",
   "investidor",
@@ -69,6 +84,7 @@ export const ROLES_VISAO_OPERACAO_SPIN: readonly Role[] = [
 export const ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM: readonly Role[] = [
   "admin",
   "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "prestador",
   "executivo",
   "investidor",
@@ -88,6 +104,7 @@ export const ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM: readonly Role[] = [
 export const ROLES_STAFF_OPERACOES_LIVES: readonly Role[] = [
   "admin",
   "gestor",
+  ...ROLES_GESTOR_DEPARTAMENTO,
   "executivo",
   "shift_leader",
   "service_manager",

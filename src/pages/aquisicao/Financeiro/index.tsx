@@ -16,7 +16,6 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { roleParidadeInfluencer } from "../../../lib/staffRoles"
 import {
-  cicloAberto,
   cicloSemanalParaData,
   gerarCiclosProativos,
   mesCalendarioDeHoje,
@@ -24,6 +23,7 @@ import {
   periodoDoMes,
   podeVerPagamentosAgenteFinanceiro,
 } from "./financeiroCiclos"
+import { fecharCiclosExpiradosPendentes } from "./financeiroFecharCiclo"
 import type {
   FinanceiroAgenteCicloEscopo,
   FinanceiroLiveEscopoRow,
@@ -146,11 +146,57 @@ export default function Financeiro() {
     // Remove ciclos antes de 19/12 (lives iniciaram nessa data)
     let ciclosFiltrados = ciclosExistentes.filter(c => (c.data_inicio || "") >= PRIMEIRO_CICLO_INICIO);
 
+    // Encerra ciclos expirados antes do filtro de escopo — não depender de admin abrir a página
+    ciclosFiltrados = await fecharCiclosExpiradosPendentes(ciclosFiltrados);
+
+    const OPERADORA_PADRAO = "casa_apostas";
+
+    /** Ciclos com lives realizadas + resultado no escopo do usuário (abertos ou expirados ainda não fechados). */
+    async function ciclosVisiveisPorLivesNoEscopo(lista: CicloPagamento[]): Promise<CicloPagamento[]> {
+      if (lista.length === 0) return [];
+      const dataMin = lista.reduce(
+        (acc, c) => ((c.data_inicio || "") < acc ? c.data_inicio! : acc),
+        lista[0].data_inicio!,
+      );
+      const dataMax = lista.reduce(
+        (acc, c) => ((c.data_fim || "") > acc ? c.data_fim! : acc),
+        lista[0].data_fim!,
+      );
+
+      const { data: lives } = await supabase
+        .from("lives")
+        .select("id, data, influencer_id, operadora_slug")
+        .eq("status", "realizada")
+        .gte("data", dataMin)
+        .lte("data", dataMax);
+
+      const livesEscopo = (lives ?? []) as FinanceiroLiveEscopoRow[];
+      const liveIds = livesEscopo.map((l) => l.id);
+      let resIds = new Set<string>();
+      if (liveIds.length > 0) {
+        const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
+        resIds = new Set((resData ?? []).map((r: { live_id: string }) => String(r.live_id)));
+      }
+
+      return lista.filter((c) =>
+        livesEscopo.some((l) => {
+          const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
+          return (
+            l.data >= (c.data_inicio || "") &&
+            l.data <= (c.data_fim || "") &&
+            resIds.has(String(l.id)) &&
+            podeVerInfluencer(l.influencer_id) &&
+            podeVerOperadora(opSlug)
+          );
+        }),
+      );
+    }
+
     // Filtro por escopo: influencer, agência e operadora só veem ciclos com pagamento no seu escopo
     if (!escoposVisiveis.semRestricaoEscopo) {
-      const fechados = ciclosFiltrados.filter(c => !cicloAberto(c));
-      const abertos = ciclosFiltrados.filter(c => cicloAberto(c));
-      const fechadoIds = fechados.map(c => c.id);
+      const fechadosDefinitivos = ciclosFiltrados.filter((c) => !!c.fechado_em);
+      const previewOuAbertos = ciclosFiltrados.filter((c) => !c.fechado_em);
+      const fechadoIds = fechadosDefinitivos.map(c => c.id);
 
       const [pagsRes, agtsRes] = await Promise.all([
         fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as FinanceiroPagamentoCicloEscopo[] },
@@ -174,39 +220,9 @@ export default function Financeiro() {
         }
       }
 
-      const ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
-
-      if (abertos.length > 0) {
-        const dataMin = abertos.reduce((acc, c) => (c.data_inicio || "") < acc ? c.data_inicio! : acc, abertos[0].data_inicio!);
-        const dataMax = abertos.reduce((acc, c) => (c.data_fim || "") > acc ? c.data_fim! : acc, abertos[0].data_fim!);
-
-        const { data: lives } = await supabase
-          .from("lives")
-          .select("id, data, influencer_id, operadora_slug")
-          .eq("status", "realizada")
-          .gte("data", dataMin)
-          .lte("data", dataMax);
-
-        const livesEscopo = (lives ?? []) as FinanceiroLiveEscopoRow[];
-        const liveIds = livesEscopo.map((l) => l.id);
-        let resIds = new Set<string>();
-        if (liveIds.length > 0) {
-          const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
-          resIds = new Set((resData ?? []).map((r: { live_id: string }) => String(r.live_id)));
-        }
-
-        const OPERADORA_PADRAO = "casa_apostas";
-        for (const c of abertos) {
-          const temVisible = livesEscopo.some((l) => {
-            const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
-            return l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || "") &&
-              resIds.has(String(l.id)) &&
-              podeVerInfluencer(l.influencer_id) &&
-              podeVerOperadora(opSlug);
-          });
-          if (temVisible) ciclosVisiveis.push(c);
-        }
-      }
+      const ciclosVisiveis = fechadosDefinitivos.filter(c => ciclosComPagVisible.has(c.id));
+      const ciclosPorLives = await ciclosVisiveisPorLivesNoEscopo(previewOuAbertos);
+      ciclosVisiveis.push(...ciclosPorLives);
 
       ciclosFiltrados = ciclosVisiveis.sort((a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || ""));
     }

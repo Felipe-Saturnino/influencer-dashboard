@@ -126,6 +126,11 @@ function PlatLogoHome({
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
   gestor: "Gestor",
+  gestor_aquisicao: "Gestor de Aquisição",
+  gestor_marketing: "Gestor de Marketing",
+  gestor_operacoes: "Gestor de Operações",
+  gestor_academy: "Gestor de Academy",
+  gestor_rh: "Gestor de RH",
   prestador: "Prestadores",
   executivo: "Executivo",
   shift_leader: "Shift Leader",
@@ -156,6 +161,31 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Visão geral",
     subtitle:
       "Acesse todos os dashboards e operações. Gerencie campanhas, influencers e acompanhe métricas.",
+  },
+  gestor_aquisicao: {
+    title: "Gestão de Aquisição",
+    subtitle:
+      "Financeiro, banca de jogo e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_marketing: {
+    title: "Gestão de Marketing",
+    subtitle:
+      "Campanhas, mídias e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_operacoes: {
+    title: "Gestão de Operações",
+    subtitle:
+      "Estúdio, escala e páginas operacionais liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_academy: {
+    title: "Gestão de Academy",
+    subtitle:
+      "Performance Hub, portal da Academy e páginas liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_rh: {
+    title: "Gestão de RH",
+    subtitle:
+      "Prestadores, escala e ferramentas de RH liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
   },
   prestador: {
     title: "Área de atuação",
