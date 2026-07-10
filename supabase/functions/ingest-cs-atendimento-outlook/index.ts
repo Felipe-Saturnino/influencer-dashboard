@@ -36,7 +36,7 @@ import {
  */
 
 /** Altere a cada deploy — confirme no teste auth_probe que fn_build bate. */
-export const FN_BUILD_VERSION = "20260710-cs-outlook-3";
+export const FN_BUILD_VERSION = "20260710-cs-outlook-5";
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -159,12 +159,14 @@ serve(async (req) => {
       return json(
         {
           ok: true,
+          fn_build: FN_BUILD_VERSION,
           test_graph: true,
           mailbox,
           auth_via: auth.via,
           secrets,
           user_principal_name: teste.user_principal_name,
-          mensagem: "Conexão Microsoft Graph OK — token e caixa acessíveis.",
+          mensagens_amostra: teste.mensagens_amostra,
+          mensagem: "Conexão Microsoft Graph OK — token e Inbox acessíveis.",
         },
         req,
       );
@@ -172,7 +174,20 @@ serve(async (req) => {
       const msg = e instanceof Error ? e.message : "Erro inesperado";
       const extra = e instanceof GraphOutlookError ? e.toJson() : {};
       const secrets = verificarSecretsOutlook();
-      return json({ ok: false, test_graph: true, erro: msg, secrets, ...extra }, req, 500);
+      const etapa = extra.etapa;
+      const httpStatus = etapa === "secrets" ? 500 : 502;
+      return json(
+        {
+          ok: false,
+          fn_build: FN_BUILD_VERSION,
+          test_graph: true,
+          erro: msg,
+          secrets,
+          ...extra,
+        },
+        req,
+        httpStatus,
+      );
     }
   }
 

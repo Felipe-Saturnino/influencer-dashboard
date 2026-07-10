@@ -230,41 +230,48 @@ export async function obterTokenGraph(): Promise<string> {
   return data.access_token;
 }
 
-/** Testa token + acesso à caixa (sem ingerir chamados). */
+/**
+ * Testa token + acesso à Inbox (sem ingerir chamados).
+ * Usa GET .../mailFolders/Inbox/messages (Mail.Read Application) —
+ * NÃO usa GET /users/{id} (exige User.Read.All e gera falso negativo).
+ */
 export async function testarConexaoGraph(mailbox: string): Promise<{
   ok: true;
   secrets: GraphOutlookSecretsCheck;
   mailbox: string;
   user_principal_name?: string;
   inbox_acessivel: boolean;
+  mensagens_amostra: number;
 }> {
   const secrets = verificarSecretsOutlook();
   const token = await obterTokenGraph();
-  const user = encodeURIComponent(mailbox);
-  const url = `${GRAPH_BASE}/users/${user}?$select=displayName,mail,userPrincipalName`;
+  const user = mailboxPath(mailbox);
+  // Mesmo caminho da ingestão — só Mail.Read + Application Access Policy
+  const url =
+    `${GRAPH_BASE}/users/${user}/mailFolders/Inbox/messages?$select=id&$top=1`;
 
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     const txt = await res.text();
     console.error("[ingest-cs-atendimento-outlook] test mailbox", res.status, txt.slice(0, 500));
+    const odata = parseGraphError(txt);
     throw new GraphOutlookError(mensagemMailboxAzure(res.status, txt), {
       etapa: "mailbox",
       http_status: res.status,
+      azure_erro: odata?.code,
+      azure_detalhe: (odata?.message ?? txt).slice(0, 280),
     });
   }
 
-  const data = (await res.json()) as {
-    displayName?: string;
-    mail?: string;
-    userPrincipalName?: string;
-  };
+  const data = (await res.json()) as { value?: unknown[] };
 
   return {
     ok: true,
     secrets,
     mailbox,
-    user_principal_name: data.userPrincipalName ?? data.mail,
+    user_principal_name: mailbox,
     inbox_acessivel: true,
+    mensagens_amostra: data.value?.length ?? 0,
   };
 }
 
