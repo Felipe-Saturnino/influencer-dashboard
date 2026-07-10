@@ -124,7 +124,7 @@ Workflow GitHub Actions: `.github/workflows/ingest-cs-atendimento-outlook-5min.y
 
 Secrets no repositório: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e, se usar, `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET`.
 
-Disparo manual na plataforma: **Status Técnico** → integração **CS Atendimento (Outlook)** → **Sync**.
+Disparo manual na plataforma: **Status Técnico** → integração **CS - Caixa de Contato (Outlook)** → **Sync**.
 
 Alternativa HTTP:
 

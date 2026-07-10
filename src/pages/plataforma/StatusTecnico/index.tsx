@@ -673,8 +673,8 @@ export default function StatusTecnico() {
       setSyncCsOutlookMensagem({
         tipo: "ok",
         texto: protocolos
-          ? `CS Atendimento Outlook: ${criados} chamado(s) criado(s) (${encontrados} e-mail(s) na fila). Protocolos: ${protocolos}.`
-          : `CS Atendimento Outlook: ${criados} chamado(s) criado(s) de ${encontrados} e-mail(s) processado(s).`,
+          ? `${LABEL_UI_CS_ATENDIMENTO_OUTLOOK}: ${criados} chamado(s) criado(s) (${encontrados} e-mail(s) na fila). Protocolos: ${protocolos}.`
+          : `${LABEL_UI_CS_ATENDIMENTO_OUTLOOK}: ${criados} chamado(s) criado(s) de ${encontrados} e-mail(s) processado(s).`,
       });
       void carregar();
     } catch (e) {
@@ -2204,7 +2204,7 @@ export default function StatusTecnico() {
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
-              syncCsOutlookMensagem && { prefix: "CS Atendimento Outlook", msg: syncCsOutlookMensagem },
+              syncCsOutlookMensagem && { prefix: LABEL_UI_CS_ATENDIMENTO_OUTLOOK, msg: syncCsOutlookMensagem },
               syncComercialSpaMensagem && { prefix: LABEL_UI_COMERCIAL_SPA_LISTA, msg: syncComercialSpaMensagem },
               syncComercialDominioMensagem && {
                 prefix: LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
@@ -2848,7 +2848,7 @@ export default function StatusTecnico() {
               {confirmarSync === "cda" && "Confirmar Sync CDA"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
-              {confirmarSync === "cs_outlook" && "Confirmar ingestão CS Atendimento (Outlook)"}
+              {confirmarSync === "cs_outlook" && `Confirmar ingestão ${LABEL_UI_CS_ATENDIMENTO_OUTLOOK}`}
               {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
               {confirmarSync === "comercial_dominio" &&
                 `Confirmar ${LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO}`}
