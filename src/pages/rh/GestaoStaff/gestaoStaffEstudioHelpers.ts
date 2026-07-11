@@ -10,7 +10,7 @@ export type EstudioStaffRow = { slug: string; nome: string; tipo: string };
 
 type JunctionRow = { operadora_slug: string; estudio_slug: string; tipo: string };
 
-/** Mapa operadora → estúdio (preferência dedicado). */
+/** Mapa operadora → estúdio (preferência dedicado). Uso: fallback legado / insert — NÃO para escopo de listagem. */
 export function buildOperadoraParaEstudioMap(junction: readonly JunctionRow[]): Record<string, string> {
   const m: Record<string, string> = {};
   const sorted = [...junction].sort((a, b) => {
@@ -25,6 +25,25 @@ export function buildOperadoraParaEstudioMap(junction: readonly JunctionRow[]): 
     m[op] = row.estudio_slug;
   }
   return m;
+}
+
+/**
+ * Todos os estúdios vinculados às operadoras do escopo (dedicado + network).
+ * Usar no filtro de listagem do Operador — o mapa 1:1 esconde network.
+ */
+export function buildEstudiosSlugsParaOperadoras(
+  junction: readonly { operadora_slug: string; estudio_slug: string }[],
+  operadoraSlugs: readonly string[],
+): string[] {
+  const ops = new Set(operadoraSlugs.map((s) => s.trim()).filter(Boolean));
+  if (ops.size === 0) return [];
+  const set = new Set<string>();
+  for (const row of junction) {
+    const op = row.operadora_slug.trim();
+    const est = row.estudio_slug.trim();
+    if (op && est && ops.has(op)) set.add(est);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 /** Mapa estúdio → operadoras vinculadas (ordem estável). */
