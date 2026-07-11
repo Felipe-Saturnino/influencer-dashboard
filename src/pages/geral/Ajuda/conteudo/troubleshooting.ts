@@ -1069,10 +1069,10 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um usuário diz que não vê determinada página no menu após alteração?",
         texto:
-          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Operadora, Gestores ou Prestadores, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
+          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Escopos (Operadora / Prestadores) ou Simulador de Login, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
       },
       {
-        subtitulo: "As abas Permissões, Operadora, Gestores e Prestadores não aparecem?",
+        subtitulo: "As abas Permissões, Escopos e Simulador de Login não aparecem?",
         texto:
           "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
       },
@@ -1094,7 +1094,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Gestão de Escala no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários e liberação da página nas abas Operadora, Gestores ou Prestadores, conforme seu perfil.",
+          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões.",
       },
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",

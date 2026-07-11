@@ -1,8 +1,10 @@
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 import type { Role } from "../../../../types";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { CorpoHtmlInformativo } from "../../../../components/conteudo/CorpoHtmlInformativo";
+import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 import { fmtDataColunaGerenciamento } from "../../../../lib/informativosWorkflow";
 import { getPageContentBoxStyle } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
@@ -25,10 +27,13 @@ export function InformacoesStaffHome({
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const { loading, erro, lista } = useHomeInformativos(perfil);
+  const publicadoDesdeIso = useMemo(() => getHomeStaffFeedNovidadeDesdeIso(), []);
+  const { loading, erro, lista } = useHomeInformativos(perfil, { publicadoDesdeIso });
   const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(user?.id, "informativo");
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-info-title`;
+
+  if (!loading && !erro && lista.length === 0) return null;
 
   return (
     <section style={box} aria-labelledby={titleId}>
@@ -44,10 +49,6 @@ export function InformacoesStaffHome({
       ) : erro ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
           Não foi possível carregar as informações. Se o problema persistir, entre em contato com o suporte.
-        </p>
-      ) : lista.length === 0 ? (
-        <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
-          Nenhuma informação publicada para seu perfil no momento.
         </p>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>

@@ -22,16 +22,21 @@ const BTN_LI_OCULTAR: CSSProperties = {
 
 export function HomeStaffFeedCard({
   title,
+  titleIcon,
   recolhido,
   onExpandir,
   onLiEOcultar,
+  mostrarLiEOcultar = true,
   rodape,
   children,
 }: {
   title: string;
+  titleIcon?: ReactNode;
   recolhido: boolean;
   onExpandir: () => void;
   onLiEOcultar: () => void;
+  /** Default true. Manuais com ciência pendente ficam sem o botão. */
+  mostrarLiEOcultar?: boolean;
   rodape?: string;
   children: ReactNode;
 }) {
@@ -39,7 +44,26 @@ export function HomeStaffFeedCard({
   const brand = useDashboardBrand();
   const cardShadow = getPageContentBoxShadow(t.isDark ?? false);
 
-  if (recolhido) {
+  const tituloEl = (
+    <h3
+      style={{
+        margin: 0,
+        flex: 1,
+        fontSize: 15,
+        fontWeight: 800,
+        color: t.text,
+        fontFamily: FONT.body,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      {titleIcon ? <span style={{ display: "inline-flex", flexShrink: 0 }}>{titleIcon}</span> : null}
+      <span>{title}</span>
+    </h3>
+  );
+
+  if (recolhido && mostrarLiEOcultar) {
     return (
       <article
         style={{
@@ -68,18 +92,7 @@ export function HomeStaffFeedCard({
             fontFamily: FONT.body,
           }}
         >
-          <h3
-            style={{
-              margin: 0,
-              flex: 1,
-              fontSize: 15,
-              fontWeight: 800,
-              color: t.text,
-              fontFamily: FONT.body,
-            }}
-          >
-            {title}
-          </h3>
+          {tituloEl}
           <ChevronRight
             size={18}
             color={brand.primary}
@@ -101,24 +114,16 @@ export function HomeStaffFeedCard({
         boxShadow: cardShadow,
       }}
     >
-      <h3
-        style={{
-          margin: 0,
-          fontSize: 15,
-          fontWeight: 800,
-          color: t.text,
-          fontFamily: FONT.body,
-        }}
-      >
-        {title}
-      </h3>
+      {tituloEl}
       <div style={{ marginTop: 12 }}>{children}</div>
       {rodape ? (
         <p style={{ fontSize: 12, color: t.textMuted, margin: "14px 0 0", fontFamily: FONT.body }}>{rodape}</p>
       ) : null}
-      <button type="button" onClick={onLiEOcultar} style={{ ...BTN_LI_OCULTAR, borderColor: t.cardBorder }}>
-        Li e Ocultar
-      </button>
+      {mostrarLiEOcultar ? (
+        <button type="button" onClick={onLiEOcultar} style={{ ...BTN_LI_OCULTAR, borderColor: t.cardBorder }}>
+          Li e Ocultar
+        </button>
+      ) : null}
     </article>
   );
 }

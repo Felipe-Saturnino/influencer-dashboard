@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasCustomerService } from "./customerService/BoasVindasCustomerService";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosCustomerService } from "./customerService/AtalhosCustomerService";
 
@@ -31,6 +32,7 @@ export default function HomeCustomerService() {
       <BoasVindasCustomerService nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <InformacoesStaffHome perfil="customer_service" sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <AtalhosCustomerService />
     </div>

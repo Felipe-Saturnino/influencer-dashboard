@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasShiftLeader } from "./shiftLeader/BoasVindasShiftLeader";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosShiftLeader } from "./shiftLeader/AtalhosShiftLeader";
 
@@ -31,6 +32,7 @@ export default function HomeShiftLeader() {
       <BoasVindasShiftLeader nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
       <InformacoesStaffHome perfil="shift_leader" sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
       <AtalhosShiftLeader />
     </div>

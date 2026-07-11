@@ -1,11 +1,11 @@
 /**
- * Persistência de «Li e Ocultar» na Home staff (Informações + Blogueiro Spin).
+ * Persistência de «Li e Ocultar» na Home staff (Informações, Blogueiro Spin, Central Academy).
  * No próximo acesso o card inicia recolhido; expandir na sessão não limpa o lido.
  */
 
 const STORAGE_PREFIX = "home-staff-lido-v1:";
 
-export type HomeStaffLidoBucket = "informativo" | "blogueiro";
+export type HomeStaffLidoBucket = "informativo" | "blogueiro" | "academy";
 
 type HomeStaffLidoStore = Partial<Record<HomeStaffLidoBucket, string[]>>;
 

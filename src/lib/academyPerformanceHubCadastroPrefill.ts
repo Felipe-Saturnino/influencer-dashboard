@@ -19,6 +19,8 @@ import type {
 
 export type PerformanceHubMesaCadastro = {
   estudio_slug: string | null;
+  /** Legado: mesas sem `estudio_slug` ainda vinculadas pela operadora (ex.: Sports Club). */
+  operadora_slug: string | null;
   tipo_jogo: string;
   nome_mesa: string;
   mesa_identificacao: string;
@@ -71,13 +73,31 @@ export function mapEstudioRhParaPerformanceHub(
   return efetivo || null;
 }
 
+/** Mesa pertence ao estúdio (Gestão de Estúdios → Mesas) ou legado por operadora = slug do estúdio. */
+export function mesaPertenceAoEstudio(
+  mesa: PerformanceHubMesaCadastro,
+  estudioId: string,
+): boolean {
+  const alvo = estudioId.trim();
+  if (!alvo) return false;
+  const est = (mesa.estudio_slug ?? "").trim();
+  if (est && est === alvo) return true;
+  // Legado: mesa ainda sem estúdio, mas operadora com o mesmo slug (ex.: Sports Club).
+  if (!est && (mesa.operadora_slug ?? "").trim() === alvo) return true;
+  return false;
+}
+
+/**
+ * Jogos do estúdio a partir de `mesas_spin_cadastro` (Gestão de Estúdios).
+ * Fonte da verdade do select Jogo no modal — não filtrar por skills do staff.
+ */
 export function jogosDoEstudioNoCatalogo(
   estudioId: string,
   mesas: readonly PerformanceHubMesaCadastro[],
 ): PerformanceHubJogoKey[] {
   const keys = new Set<PerformanceHubJogoKey>();
   for (const mesa of mesas) {
-    if (mesa.estudio_slug !== estudioId) continue;
+    if (!mesaPertenceAoEstudio(mesa, estudioId)) continue;
     for (const key of jogoComparativoKeysFromCadastroMesa(mesa.tipo_jogo, mesa.nome_mesa)) {
       if (key === "baccarat" || key === "blackjack" || key === "roleta" || key === "futebol_brasileiro") {
         keys.add(key);
@@ -87,14 +107,13 @@ export function jogosDoEstudioNoCatalogo(
   return [...keys];
 }
 
+/** Lista de jogos do estúdio (Gestão de Estúdios). `jogosStaff` só ordena o preferido no prefill. */
 export function jogosDisponiveisModalPerformanceHub(
   estudioId: string,
   mesas: readonly PerformanceHubMesaCadastro[],
-  jogosStaff: readonly PerformanceHubJogoKey[],
+  _jogosStaff?: readonly PerformanceHubJogoKey[],
 ): PerformanceHubJogoKey[] {
-  const doCatalogo = jogosDoEstudioNoCatalogo(estudioId, mesas);
-  const doStaff = jogosStaff.filter((j) => doCatalogo.includes(j));
-  return doStaff.length > 0 ? doStaff : doCatalogo;
+  return jogosDoEstudioNoCatalogo(estudioId, mesas);
 }
 
 export function mesasDoEstudioJogoNoCatalogo(
@@ -105,7 +124,7 @@ export function mesasDoEstudioJogoNoCatalogo(
   if (!estudioId || !jogo) return [];
   return mesas
     .filter((mesa) => {
-      if (mesa.estudio_slug !== estudioId) return false;
+      if (!mesaPertenceAoEstudio(mesa, estudioId)) return false;
       const keys = jogoComparativoKeysFromCadastroMesa(mesa.tipo_jogo, mesa.nome_mesa);
       return keys.includes(jogo);
     })
@@ -131,7 +150,11 @@ export function mapRhFuncionarioParaPerformanceHubDados(
   const turno = mapTurnoRhParaPerformanceHub(row);
   const jogosStaff = mapJogosStaffRhParaPerformanceHub(row);
   const estudioId = mapEstudioRhParaPerformanceHub(row, opParaEstudio);
-  const jogo = jogosStaff[0] ?? null;
+  const jogosCatalogo = estudioId ? jogosDoEstudioNoCatalogo(estudioId, mesas) : [];
+  const jogo =
+    jogosStaff.find((j) => jogosCatalogo.includes(j)) ??
+    jogosCatalogo[0] ??
+    null;
   const mesaId = mapMesaSugeridaPerformanceHub(estudioId, jogo, mesas);
   return { turno, estudioId, jogo, mesaId, jogosStaff };
 }

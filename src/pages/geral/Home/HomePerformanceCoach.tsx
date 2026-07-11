@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasPerformanceCoach } from "./performanceCoach/BoasVindasPerformanceCoach";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosPerformanceCoach } from "./performanceCoach/AtalhosPerformanceCoach";
 
@@ -31,6 +32,7 @@ export default function HomePerformanceCoach() {
       <BoasVindasPerformanceCoach nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
       <InformacoesStaffHome perfil="performance_coach" sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
       <AtalhosPerformanceCoach />
     </div>

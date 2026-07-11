@@ -33,36 +33,11 @@ SET role = d.novo_role
 FROM destino d
 WHERE p.id = d.user_id;
 
--- Copiar permissões do gestor genérico para departamentos que ainda estão só em «Não»
--- (preserva acesso operacional após a conversão).
-INSERT INTO public.role_permissions (role, page_key, can_view, can_criar, can_editar, can_excluir)
-SELECT d.role, g.page_key, g.can_view, g.can_criar, g.can_editar, g.can_excluir
-FROM public.role_permissions g
-CROSS JOIN (
-  SELECT unnest(ARRAY[
-    'gestor_aquisicao',
-    'gestor_marketing',
-    'gestor_operacoes',
-    'gestor_academy',
-    'gestor_rh'
-  ]::text[]) AS role
-) d
-WHERE g.role = 'gestor'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.role_permissions rp
-    WHERE rp.role = d.role
-      AND rp.page_key = g.page_key
-      AND rp.can_view IN ('sim', 'proprios')
-  )
-ON CONFLICT (role, page_key) DO UPDATE
-SET
-  can_view = EXCLUDED.can_view,
-  can_criar = EXCLUDED.can_criar,
-  can_editar = EXCLUDED.can_editar,
-  can_excluir = EXCLUDED.can_excluir
-WHERE public.role_permissions.can_view IS DISTINCT FROM 'sim'
-  AND public.role_permissions.can_view IS DISTINCT FROM 'proprios';
+-- NÃO copiar role_permissions do gestor genérico para os departamentos.
+-- Cada gestor_* tem matriz própria (configurada na aba Permissões). Uma cópia em massa
+-- igualava Marketing / Academy / Aquisição / Operações / RH e sobrescrevia «Não» com a
+-- matriz do antigo gestor. Usuários convertidos abaixo herdam o role; as permissões
+-- continuam as já gravadas em role_permissions por role.
 
 DELETE FROM public.role_permissions WHERE role = 'gestor';
 

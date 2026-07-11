@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasGamePresenter } from "./gamePresenter/BoasVindasGamePresenter";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosGamePresenter } from "./gamePresenter/AtalhosGamePresenter";
 
@@ -31,6 +32,7 @@ export default function HomeGamePresenter() {
       <BoasVindasGamePresenter nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
       <InformacoesStaffHome perfil="game_presenter" sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
       <AtalhosGamePresenter />
     </div>

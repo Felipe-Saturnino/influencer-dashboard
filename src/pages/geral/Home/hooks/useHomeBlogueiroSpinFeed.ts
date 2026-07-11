@@ -5,7 +5,7 @@ import {
   fotoEventoEmbed,
   type MarketingFotoComEvento,
 } from "../../../../lib/marketingGaleriaFotos";
-import { getHomeBlogueiroSpinNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
+import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 
 export type HomeBlogueiroGaleriaGerais = {
   kind: "galeria_gerais";
@@ -148,7 +148,7 @@ export function useHomeBlogueiroSpinFeed() {
       setLoading(true);
       setErro(false);
       try {
-        const desdeIso = getHomeBlogueiroSpinNovidadeDesdeIso();
+        const desdeIso = getHomeStaffFeedNovidadeDesdeIso();
         const [galeria, spin] = await Promise.all([buscarGaleriaCards(desdeIso), buscarSpinCards(desdeIso)]);
         if (cancelled) return;
         setLista([...galeria, ...spin].sort((a, b) => tsItem(b) - tsItem(a)));

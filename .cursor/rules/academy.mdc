@@ -36,6 +36,20 @@ Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHu
 
 ---
 
+### Home — Central Academy (perfis Estúdio)
+
+Bloco **Central Academy** na Home dos perfis `ROLES_PERFIS_ESTUDIO` (`CentralAcademyStaffHome` / `useHomeCentralAcademyFeed`):
+
+| Tipo | Ícone (aba) | Janela / «Li e Ocultar» | Deep-link |
+|------|-------------|-------------------------|-----------|
+| Comunicado | `Megaphone` | 10 dias + «Li e Ocultar» | `academy_portal` → `Comunicados` |
+| Dica | `Newspaper` | 10 dias + «Li e Ocultar» | `academy_portal` → `Dicas` |
+| Manual | `BookOpen` | Se exige ciência do usuário e ainda pendente: **sem** limite de 10 dias e **sem** «Li e Ocultar» até `academy_portal_read_receipt.acknowledged_at`; demais: 10 dias + «Li e Ocultar» | `academy_portal` → `Manuais` |
+
+Ordem na Home Estúdio: Informações → **Central Academy** → Blogueiro Spin → Acesso rápido. Oculto se vazio ou sem permissão de Ver em Portal da Academy.
+
+---
+
 ## Portal da Academy (`academy_portal`)
 
 ### Personas
@@ -177,6 +191,8 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 | **Comunicação / Imagem** | Critérios da Config GP | Critérios da Config Shuffler |
 | Aba técnica | **Mesa** | **Procedimentos** |
 | **Considerações** | Pontos Fortes + Pontos a Desenvolver | Idem |
+
+**Jogo / Mesa (GP):** opções do select **Jogo** = tipos distintos das mesas do estúdio selecionado em **Gestão de Estúdios** (`mesas_spin_cadastro` via `jogosDoEstudioNoCatalogo`) — **não** filtrar pela interseção com `staff_skills`. Skills do staff só sugerem o valor inicial (prefill). Mesa = IDs Spin das mesas daquele estúdio + jogo.
 
 Demais blocos comuns: cabeçalho, tipo de avaliação, rodapé Salvar/Concluir.
 

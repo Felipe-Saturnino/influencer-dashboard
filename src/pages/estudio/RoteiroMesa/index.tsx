@@ -22,6 +22,9 @@ import {
 import {
   operadoraSlugParaRoteiroInsert,
   roteiroEstudioLabelFromRow,
+  roteiroRecordShallowEqual,
+  roteiroEstudiosListEqual,
+  roteiroOperadorasPorEstEqual,
 } from "./roteiroMesaEstudioHelpers";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
@@ -1051,18 +1054,26 @@ export default function RoteiroMesa() {
   const [campanhas, setCampanhas] = useState<RoteiroCampanha[]>([]);
   const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Evita fetch de roteiros do operador antes do mapa operadora→estúdio (e quebra loop de loading). */
+  const [estudiosReady, setEstudiosReady] = useState(false);
 
   const mostrarFiltroEstudio = showFiltroOperadora;
 
-  const estudioSlugsForcado = useMemo(() => {
-    if (!operadoraSlugsForcado?.length) return null;
+  /** Chave estável — evita novo array a cada render e loop `carregarDados` ↔ `setOpParaEstudio`. */
+  const estudioSlugsForcadoKey = useMemo(() => {
+    if (!operadoraSlugsForcado?.length) return "";
     const set = new Set<string>();
     for (const op of operadoraSlugsForcado) {
       const e = opParaEstudio[op];
       if (e) set.add(e);
     }
-    return set.size > 0 ? [...set] : null;
+    return set.size > 0 ? [...set].sort().join("|") : "";
   }, [operadoraSlugsForcado, opParaEstudio]);
+
+  const estudioSlugsForcado = useMemo(
+    () => (estudioSlugsForcadoKey ? estudioSlugsForcadoKey.split("|") : null),
+    [estudioSlugsForcadoKey],
+  );
 
   const estudioSlugSelecionada: string | null =
     estudioSlugsForcado?.length === 1
@@ -1109,17 +1120,26 @@ export default function RoteiroMesa() {
     }
     const opMap = buildOperadoraParaEstudioMap(junctionFlat);
     const opPorEst = buildOperadorasPorEstudioMap(junctionFlat);
-    setEstudiosNome(nomeMap);
-    setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
-    setOpParaEstudio(opMap);
-    setOperadorasPorEstudio(opPorEst);
-    return opMap;
+    const optsSorted = opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    setEstudiosNome((prev) => (roteiroRecordShallowEqual(prev, nomeMap) ? prev : nomeMap));
+    setEstudios((prev) => (roteiroEstudiosListEqual(prev, optsSorted) ? prev : optsSorted));
+    setOpParaEstudio((prev) => (roteiroRecordShallowEqual(prev, opMap) ? prev : opMap));
+    setOperadorasPorEstudio((prev) => (roteiroOperadorasPorEstEqual(prev, opPorEst) ? prev : opPorEst));
+    setEstudiosReady(true);
   }, []);
 
   const carregarDados = useCallback(async () => {
-    if (!estudioSlugSelecionada) { setSugestoes([]); setCampanhas([]); setLoading(false); return; }
+    // Operador com escopo: espera o mapa estúdio antes de buscar (evita loop loading infinito).
+    if (user?.role === "operador" && operadoraSlugsForcado?.length && !estudiosReady) {
+      return;
+    }
+    if (!estudioSlugSelecionada) {
+      setSugestoes([]);
+      setCampanhas([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    await carregarEstudios();
 
     let qSug = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
     if (user?.role === "operador" && estudioSlugsForcado?.length && estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS) {
@@ -1150,7 +1170,14 @@ export default function RoteiroMesa() {
     setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
 
     setLoading(false);
-  }, [estudioSlugSelecionada, user?.role, estudioSlugsForcado, operadoraSlugsForcado, carregarEstudios]);
+  }, [
+    estudioSlugSelecionada,
+    user?.role,
+    estudioSlugsForcadoKey,
+    estudioSlugsForcado,
+    operadoraSlugsForcado,
+    estudiosReady,
+  ]);
 
   useEffect(() => { void carregarDados(); }, [carregarDados]);
 
@@ -1164,7 +1191,7 @@ export default function RoteiroMesa() {
     if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
       setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, estudioSlugsForcado]);
+  }, [user?.role, estudioSlugsForcadoKey, estudioSlugsForcado]);
 
   if (perm.canView === "nao") {
     return (

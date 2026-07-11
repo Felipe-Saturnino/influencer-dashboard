@@ -989,19 +989,25 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Home staff (Estúdio / Escritório)",
         definicao:
-          "Painel pós-login com boas-vindas, atualização cadastral, aniversários, bloco Informações (informativos), Blogueiro Spin (fotos e menções recentes) e acesso rápido — ordem fixa por perfil.",
+          "Painel pós-login com boas-vindas, atualização cadastral, aniversários, Informações, Blogueiro Spin e acesso rápido. Perfis de Estúdio incluem também a Central Academy (entre Informações e Blogueiro Spin).",
         referencia: "Home",
+      },
+      {
+        termo: "Central Academy",
+        definicao:
+          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar».",
+        referencia: "Home · Portal da Academy",
       },
       {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador) e exibidos no bloco Informações da Home. Em Homes staff, use «Li e Ocultar» para recolher o card até o próximo acesso.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso.",
         referencia: "Informativos · Home",
       },
       {
         termo: "Blogueiro Spin",
         definicao:
-          "Bloco da Home staff com novidades dos últimos 10 dias: fotos novas na Galeria (álbum de evento ou Minhas Fotos) e reportagens do Spin na Rede, com link direto e «Li e Ocultar».",
+          "Bloco da Home staff com novidades dos últimos 10 dias: fotos novas na Galeria (álbum de evento ou Minhas Fotos) e reportagens do Spin na Rede, com link direto e «Li e Ocultar». Some se não houver itens na janela.",
         referencia: "Home · Galeria de Fotos · Spin na Rede",
       },
     ],

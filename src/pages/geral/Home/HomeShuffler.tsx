@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasShuffler } from "./shuffler/BoasVindasShuffler";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosShuffler } from "./shuffler/AtalhosShuffler";
 
@@ -31,6 +32,7 @@ export default function HomeShuffler() {
       <BoasVindasShuffler nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <InformacoesStaffHome perfil="shuffler" sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <AtalhosShuffler />
     </div>

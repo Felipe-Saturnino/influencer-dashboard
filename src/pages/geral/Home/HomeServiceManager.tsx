@@ -4,6 +4,7 @@ import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasServiceManager } from "./serviceManager/BoasVindasServiceManager";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosServiceManager } from "./serviceManager/AtalhosServiceManager";
 
@@ -31,6 +32,7 @@ export default function HomeServiceManager() {
       <BoasVindasServiceManager nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
       <InformacoesStaffHome perfil="service_manager" sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SERVICE_MANAGER_PREFIX} />
       <AtalhosServiceManager />
     </div>
