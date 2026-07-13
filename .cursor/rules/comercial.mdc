@@ -87,6 +87,7 @@ Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não
 
 - CTA **Nova Integração** (`CtaCriarButton`) — permissão de **Criar**. Modal: seleção única de marca da aba **Fechado** (Dedicada/Network em Contrato Assinado ou Ativo) + busca; campos obrigatórios Prioridade, Tipo, Caminho, PAM, Agregador (nomes de `comercial_agregadoras`). **Sem** trava «já integrada» — permite outra integração na mesma marca.
 - Colunas: Operador · Prioridade · Tipo · Caminho · PAM · Agregador · Status · Comentário · Ação.
+- Clique no **Operador**: abre o mesmo modal Ver do Pipeline B2B (domínio, portaria, requerimento, produtos, contatos e marcas da mesma licença) — **somente leitura** nesta página.
 - Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
 - Com **Editar:** Prioridade, Status e Agregador via popover (Agregador com **barra de pesquisa**); Caminho e PAM via clique inline.
 - Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
@@ -97,7 +98,7 @@ Trigger `comercial_integracao_from_assinado` em `comercial_marca_produtos`: ao p
 
 ### Dados (Supabase)
 
-Tabelas: `comercial_integracoes`, `comercial_integracao_historico`. RLS: `_comercial_integracao_perm`. SELECT auxiliar em marcas/produtos/agregadoras para quem tem Ver na página. Permissões iniciais **Não** para todos exceto Admin.
+Tabelas: `comercial_integracoes`, `comercial_integracao_historico`. RLS: `_comercial_integracao_perm`. SELECT auxiliar em marcas/produtos/agregadoras/**empresas/contatos** (modal Ver) para quem tem Ver na página. Permissões iniciais **Não** para todos exceto Admin.
 
 ---
 

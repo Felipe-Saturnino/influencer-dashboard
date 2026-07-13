@@ -1164,7 +1164,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e Nova Integração",
         texto:
-          "Cada linha vincula um Operador (marca) a um Tipo (**Dedicada** ou **Network**). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca da aba **Fechado** do Pipeline B2B (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios). É possível criar mais de uma integração para a mesma marca.\n\nAo marcar Dedicada ou Network como **Contrato Assinado** ou **Ativo**, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco), se ainda não existir para aquele tipo.",
+          "Cada linha vincula um Operador (marca) a um Tipo (**Dedicada** ou **Network**). Clique no **Operador** para abrir o mesmo modal de dados da marca do Pipeline B2B (domínio, licença, contatos — somente leitura). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca da aba **Fechado** do Pipeline B2B (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios). É possível criar mais de uma integração para a mesma marca.\n\nAo marcar Dedicada ou Network como **Contrato Assinado** ou **Ativo**, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco), se ainda não existir para aquele tipo.",
       },
     ],
   },

@@ -539,6 +539,61 @@ export function mapContatoFromDb(raw: Record<string, unknown>): import("./types"
   };
 }
 
+/** Select PostgREST completo da marca (Pipeline B2B / modal Ver). */
+export const PIPELINE_MARCA_SELECT_EMBED = `
+  id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao,
+  empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano),
+  contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
+  produtos:comercial_marca_produtos(produto, status_produto)
+`;
+
+/** Mapeia linha do banco para `PipelineMarcaRow` (modal Ver / tabela B2B). */
+export function mapPipelineMarcaFromDb(
+  raw: Record<string, unknown>,
+  comercialNames: Record<string, string> = {},
+): PipelineMarcaRow {
+  const empresaRaw = raw.empresa as Record<string, unknown>;
+  const contatosRaw = (raw.contatos as Record<string, unknown>[] | null) ?? [];
+  const produtosRaw = (raw.produtos as Record<string, unknown>[] | null) ?? [];
+  const comercialId = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
+  const rawComercialNome = comercialId ? comercialNames[comercialId] ?? null : null;
+  const comercialNomeCanonico =
+    rawComercialNome &&
+    (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(rawComercialNome)
+      ? rawComercialNome
+      : null;
+
+  return {
+    id: String(raw.id),
+    nome: String(raw.nome ?? ""),
+    dominio: raw.dominio ? String(raw.dominio) : null,
+    status_dominio: raw.status_dominio === "ok" ? "ok" : "inativo",
+    status_pipeline: raw.status_pipeline as StatusPipeline,
+    status_folha: raw.status_folha as PipelineMarcaRow["status_folha"],
+    comercial_user_id: comercialId,
+    comercial_nome: comercialNomeCanonico,
+    agregadora: raw.agregadora ? String(raw.agregadora) : null,
+    ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
+    ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
+    empresa: {
+      id: String(empresaRaw.id),
+      razao_social: String(empresaRaw.razao_social ?? ""),
+      cnpj: String(empresaRaw.cnpj ?? ""),
+      portaria: empresaRaw.portaria ? String(empresaRaw.portaria) : null,
+      portaria_retificacoes: normalizeRetificacoes(empresaRaw.portaria_retificacoes),
+      requerimento_numero: empresaRaw.requerimento_numero
+        ? String(empresaRaw.requerimento_numero)
+        : null,
+      requerimento_ano: empresaRaw.requerimento_ano ? String(empresaRaw.requerimento_ano) : null,
+    },
+    contatos: contatosRaw.map(mapContatoFromDb),
+    produtos: produtosRaw.map((p) => ({
+      produto: p.produto as ProdutoTipo,
+      status_produto: p.status_produto as StatusProduto | null,
+    })),
+  };
+}
+
 export function telefonesDisplay(contato: ComercialContato): string {
   const nums = contato.telefones
     .map((t) => [t.ddi, t.numero].filter(Boolean).join(" ").trim())

@@ -36,6 +36,12 @@ import { IntegracaoTable } from "./IntegracaoTable";
 import { ModalNovaIntegracao } from "./ModalNovaIntegracao";
 import { ModalHistoricoIntegracao } from "./ModalHistoricoIntegracao";
 import { ModalComentarIntegracao } from "./ModalComentarIntegracao";
+import { ModalVerMarca } from "../PipelineB2B/ModalVerMarca";
+import {
+  mapPipelineMarcaFromDb,
+  PIPELINE_MARCA_SELECT_EMBED,
+} from "../PipelineB2B/helpers";
+import type { PipelineMarcaRow } from "../PipelineB2B/types";
 import {
   INTEGRACAO_TABS,
   INTEGRACAO_TAB_LABEL,
@@ -98,6 +104,9 @@ export default function Integracao() {
   const [mostrarNova, setMostrarNova] = useState(false);
   const [historicoRow, setHistoricoRow] = useState<IntegracaoRow | null>(null);
   const [comentarRow, setComentarRow] = useState<IntegracaoRow | null>(null);
+  const [verMarca, setVerMarca] = useState<PipelineMarcaRow | null>(null);
+  const [marcasVerCache, setMarcasVerCache] = useState<PipelineMarcaRow[]>([]);
+  const [carregandoVer, setCarregandoVer] = useState(false);
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const filterBox = getPageFilterBoxStyle(brand, t);
@@ -323,6 +332,30 @@ export default function Integracao() {
     return null;
   }
 
+  async function openVerOperador(row: IntegracaoRow) {
+    if (carregandoVer) return;
+    const cached = marcasVerCache.find((m) => m.id === row.marca_id);
+    if (cached && marcasVerCache.length > 0) {
+      setVerMarca(cached);
+      return;
+    }
+    setCarregandoVer(true);
+    const { data, error } = await supabase
+      .from("comercial_marcas")
+      .select(PIPELINE_MARCA_SELECT_EMBED)
+      .order("nome")
+      .limit(5000);
+    setCarregandoVer(false);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    const mapped = (data ?? []).map((r) => mapPipelineMarcaFromDb(r as Record<string, unknown>));
+    setMarcasVerCache(mapped);
+    const alvo = mapped.find((m) => m.id === row.marca_id) ?? null;
+    setVerMarca(alvo);
+  }
+
   function toggleSort(col: TableColIntegracao) {
     setSort((prev) =>
       prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" },
@@ -488,6 +521,7 @@ export default function Integracao() {
             sort={sort}
             onSort={toggleSort}
             canEditar={perm.canEditarOk}
+            onVerOperador={(row) => void openVerOperador(row)}
             onHistorico={setHistoricoRow}
             onComentar={setComentarRow}
             onUpdatePrioridade={updatePrioridade}
@@ -520,6 +554,17 @@ export default function Integracao() {
           onClose={() => setComentarRow(null)}
           onSave={handleComentar}
           canEditar={perm.canEditarOk}
+        />
+      ) : null}
+
+      {verMarca ? (
+        <ModalVerMarca
+          marca={verMarca}
+          allMarcas={marcasVerCache}
+          onClose={() => setVerMarca(null)}
+          onOpenMarca={(m) => setVerMarca(m)}
+          canEditar={false}
+          onSavedDominio={async () => false}
         />
       ) : null}
     </div>

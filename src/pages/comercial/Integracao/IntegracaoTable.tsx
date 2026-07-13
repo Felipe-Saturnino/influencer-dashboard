@@ -46,6 +46,7 @@ export function IntegracaoTable({
   sort,
   onSort,
   canEditar,
+  onVerOperador,
   onHistorico,
   onComentar,
   onUpdatePrioridade,
@@ -60,6 +61,7 @@ export function IntegracaoTable({
   sort: { col: TableColIntegracao; dir: SortDir };
   onSort: (col: TableColIntegracao) => void;
   canEditar: boolean;
+  onVerOperador: (row: IntegracaoRow) => void;
   onHistorico: (row: IntegracaoRow) => void;
   onComentar: (row: IntegracaoRow) => void;
   onUpdatePrioridade: (row: IntegracaoRow, prioridade: PrioridadeIntegracao) => void;
@@ -183,7 +185,27 @@ export function IntegracaoTable({
                 onMouseEnter={() => setHoverId(row.id)}
                 onMouseLeave={() => setHoverId(null)}
               >
-                <td style={dataTable.tdSticky({ rowIndex: i })}>{row.operador_nome}</td>
+                <td style={{ ...dataTable.tdSticky({ rowIndex: i }), textAlign: "left" }}>
+                  <button
+                    type="button"
+                    onClick={() => onVerOperador(row)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "var(--brand-accent, #1e36f8)",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 2,
+                      textAlign: "left",
+                    }}
+                  >
+                    {row.operador_nome}
+                  </button>
+                </td>
                 <td style={dataTable.tdCenter}>
                   <button
                     type="button"
