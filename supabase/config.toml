@@ -94,3 +94,7 @@ verify_jwt = false
 [functions.ingest-cs-atendimento-outlook]
 verify_jwt = false
 # Ingestão e-mail contato@ via Microsoft Graph → cs_chamado_criar_email (cron / service_role).
+
+[functions.sync-vagas-carreiras-site]
+verify_jwt = false
+# Snapshot diário vagas externas abertas → WordPress Carreiras (WORDPRESS_VAGAS_SYNC_URL + SPIN_VAGAS_SYNC_SECRET).

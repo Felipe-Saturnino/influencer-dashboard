@@ -71,7 +71,10 @@ import {
   proximaRevisaoCadastralEm,
   revisaoCadastralPendenteParaFuncionario,
   notificarRevisaoCadastralAtualizada,
+  REVISAO_CADASTRO_HOME_MENSAGEM,
+  tituloAtualizacaoCadastralPendente,
 } from "../../../lib/rhCadastroRevisao";
+import { extrairPrimeiroNome } from "../../../lib/aniversarioHoje";
 import {
   avaliarCompletudeCadastroRevisao,
   camposCadastraisIncompletos,
@@ -1044,8 +1047,11 @@ export default function RhDadosCadastroPage() {
                   color: t.text,
                 }}
               >
-                Atualização cadastral obrigatória
+                {tituloAtualizacaoCadastralPendente(extrairPrimeiroNome(row.nome?.trim() || user?.name?.trim() || "Colaborador"))}
               </h2>
+              <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT.body }}>
+                {REVISAO_CADASTRO_HOME_MENSAGEM}
+              </p>
               <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT.body }}>
                 A cada {MESES_CICLO_REVISAO_CADASTRO} meses você deve revisar seu cadastro nesta página. Se algo mudou,
                 atualize os dados nas abas <strong>Dados cadastrais</strong>, <strong>Documentos</strong>,{" "}

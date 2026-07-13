@@ -76,22 +76,20 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "configuracoes", "simulador_login", "ajuda",
 ];
 
-/** Home e páginas gerais: só `role_permissions`; sem interseção com `gestor_tipo_pages` nem `prestador_tipo_pages`. */
+/** Home e páginas gerais: só `role_permissions`; sem interseção com `prestador_tipo_pages`. */
 const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "simulador_login", "ajuda"]);
 
 // Tipo do mapa de permissões de visualização
 export type PermissoesMapa = Record<PageKey, PermissaoValor>;
 
 // Escopos visíveis
-// semRestricaoEscopo=true (admin): vê todos influencers e operadoras no produto
-// semRestricaoEscopo=false: influencers/operadoras conforme listas; gestor vê todas as operadoras (como executivo), opcionalmente limita influencers
+// semRestricaoEscopo=true (admin / staff sem escopo): vê todos influencers e operadoras no produto
+// semRestricaoEscopo=false: influencers/operadoras conforme listas
 export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
-  semRestricaoEscopo?: boolean;   // true = só admin (dados globais)
-  vêTodosInfluencers?: boolean;   // true = executivo, perfis em ROLES_STAFF_APENAS_PERMISSOES, ou gestor sem influencers explícitos em user_scopes
-  /** Tipos de gestor (user_scopes gestor_tipo); usado para filtrar menu vs gestor_tipo_pages */
-  gestorTiposVisiveis?: string[];
+  semRestricaoEscopo?: boolean;   // true = admin e perfis sem restrição de escopo
+  vêTodosInfluencers?: boolean;   // true = executivo, staff Spin, gestores de departamento
   /** Áreas de prestador (user_scopes prestador_tipo); menu vs prestador_tipo_pages */
   prestadorTiposVisiveis?: string[];
 }
@@ -306,31 +304,6 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: true };
   }
 
-  if (role === "gestor") {
-    const { data: scopes } = await supabase
-      .from("user_scopes")
-      .select("scope_type, scope_ref")
-      .eq("user_id", userId);
-    const lista = scopes ?? [];
-    const gestorTiposVisiveis = lista
-      .filter((s) => s.scope_type === "gestor_tipo")
-      .map((s) => s.scope_ref)
-      .filter(Boolean);
-    const influencersVisiveis = lista
-      .filter((s) => s.scope_type === "influencer")
-      .map((s) => s.scope_ref)
-      .filter(Boolean);
-    return {
-      influencersVisiveis,
-      /** Gestor: mesma visão global de operadoras que executivo (sem segregação por escopo operadora). */
-      operadorasVisiveis: [],
-      semRestricaoEscopo: false,
-      gestorTiposVisiveis,
-      /** Sem influencers explícitos no cadastro: mantém visão ampla de influencers nos dashboards (com filtro por operadora). */
-      vêTodosInfluencers: influencersVisiveis.length === 0,
-    };
-  }
-
   if (role === "prestador") {
     const { data: scopes } = await supabase
       .from("user_scopes")
@@ -407,12 +380,10 @@ async function carregarPermissoes(
   role: User["role"],
   options?: {
     operadorasVisiveis?: string[];
-    gestorTiposVisiveis?: string[];
     prestadorTiposVisiveis?: string[];
   }
 ): Promise<PermissoesMapa> {
   const operadorasVisiveis = options?.operadorasVisiveis;
-  const gestorTiposVisiveis = options?.gestorTiposVisiveis;
   const prestadorTiposVisiveis = options?.prestadorTiposVisiveis;
 
   if (role === "admin") {
@@ -469,30 +440,6 @@ async function carregarPermissoes(
     }
   }
 
-  // Gestor: Ver efetivo = role_permissions ∩ união(gestor_tipo_pages dos tipos do utilizador).
-  // Tipos de gestor são obrigatórios no cadastro; sem tipos, páginas operacionais ficam bloqueadas.
-  // home / configuracoes / ajuda: só role_permissions (fora da matriz da aba Gestores — ver PAGES_SEM_MATRIZ_ESCOPO_TIPO).
-  if (role === "gestor") {
-    if (!gestorTiposVisiveis || gestorTiposVisiveis.length === 0) {
-      ALL_PAGE_KEYS.forEach((k) => {
-        if (!PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) mapa[k] = "nao";
-      });
-    } else {
-      const { data: gtPages } = await supabase
-        .from("gestor_tipo_pages")
-        .select("page_key")
-        .in("gestor_tipo_slug", gestorTiposVisiveis);
-      const pagesPermitidas = new Set((gtPages ?? []).map((r) => r.page_key));
-      ALL_PAGE_KEYS.forEach((k) => {
-        if (PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) return;
-        const cv = mapa[k];
-        if (cv === "sim" || cv === "proprios") {
-          if (!pagesPermitidas.has(k)) mapa[k] = "nao";
-        }
-      });
-    }
-  }
-
   // Prestador: Ver efetivo = role_permissions ∩ união(prestador_tipo_pages das áreas do utilizador).
   // Áreas obrigatórias no cadastro; sem áreas, páginas operacionais bloqueadas.
   // home / configuracoes / ajuda: só role_permissions (fora da aba Prestadores).
@@ -536,7 +483,6 @@ async function carregarContextoSimulado(
   const [perms, acoes] = await Promise.all([
     carregarPermissoes(state.role, {
       operadorasVisiveis: state.role === "operador" ? escopos.operadorasVisiveis : undefined,
-      gestorTiposVisiveis: state.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
       prestadorTiposVisiveis: state.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
     }),
     carregarPermissoesAcoes(state.role),
@@ -917,7 +863,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           role: saved.role,
           operadoraSlug: saved.operadoraSlug,
-          gestorTipoSlug: saved.gestorTipoSlug,
           prestadorTipoSlug: saved.prestadorTipoSlug,
         },
         rolesPermitidos,
@@ -950,7 +895,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const [perms, acoes] = await Promise.all([
           carregarPermissoes(u.role, {
             operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
-            gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
             prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
           }),
           carregarPermissoesAcoes(u.role),
@@ -1065,7 +1009,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const [perms, acoes] = await Promise.all([
                 carregarPermissoes(u.role, {
                   operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
-                  gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
                   prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
                 }),
                 carregarPermissoesAcoes(u.role),
@@ -1163,9 +1106,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const podeVerOperadora = useCallback(
     (slug: string) =>
       escoposVisiveis.semRestricaoEscopo === true ||
-      effectiveRole === "gestor" ||
       escoposVisiveis.operadorasVisiveis.includes(slug),
-    [escoposVisiveis, effectiveRole],
+    [escoposVisiveis],
   );
 
   const setTheme = (v: boolean) => {

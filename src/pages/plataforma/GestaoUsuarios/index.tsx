@@ -11,7 +11,6 @@ import { FONT } from "../../../constants/theme";
 import { AbaUsuarios } from "./AbaUsuarios";
 import { AbaPermissoes } from "./AbaPermissoes";
 import { AbaOperadora } from "./AbaOperadora";
-import { AbaGestores } from "./AbaGestores";
 import { AbaPrestadores } from "./AbaPrestadores";
 import { AbaSimuladorLogin } from "./AbaSimuladorLogin";
 import { GestaoUsuariosLoading } from "./gestaoUsuariosUi";
@@ -22,6 +21,7 @@ import {
 } from "./GestaoUsuariosFiltroBar";
 import type { Role } from "../../../types";
 import type { FiltroStatusUsuarios } from "./constants";
+import { ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles";
 
 const CONTAGENS_VAZIAS: ContagensFiltroUsuarios = {
   qtdAtivos: 0,
@@ -35,7 +35,7 @@ export default function GestaoUsuarios() {
   const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useRouteTab("gestao_usuarios", "usuarios", ["usuarios", "permissoes", "escopos", "simulador"] as const);
   const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
-  const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
+  const [roleAtivo, setRoleAtivo] = useState<Role>(ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo");
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusUsuarios>("ativo");
   const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(() => new Set());
@@ -147,7 +147,6 @@ export default function GestaoUsuarios() {
         )}
         {aba === "permissoes" && <AbaPermissoes roleAtivo={roleAtivo} />}
         {aba === "escopos" && escopoSubAba === "operadora" && <AbaOperadora />}
-        {aba === "escopos" && escopoSubAba === "gestores" && <AbaGestores />}
         {aba === "escopos" && escopoSubAba === "prestadores" && <AbaPrestadores />}
         {aba === "simulador" && <AbaSimuladorLogin viewerRole={roleAtivo} />}
       </div>

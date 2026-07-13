@@ -184,6 +184,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const {
     gateAtivo: revisaoGateAtivo,
+    primeiroNome: revisaoPrimeiroNome,
     modalRevisaoAberto,
     fecharModalRevisao,
     irParaAtualizacaoCadastral,
@@ -223,6 +224,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
     <div className="app-layout-shell" style={{ display: "flex", background: t.bg }}>
       {modalRevisaoAberto ? (
         <RevisaoCadastralGateModal
+          primeiroNome={revisaoPrimeiroNome}
           onClose={fecharModalRevisao}
           onIrParaDadosCadastro={irParaAtualizacaoCadastral}
         />

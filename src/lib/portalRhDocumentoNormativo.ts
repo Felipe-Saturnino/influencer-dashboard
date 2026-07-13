@@ -18,7 +18,6 @@ export const PORTAL_RH_APLICAVEL_TODOS = "Todos os prestadores";
 export const PORTAL_RH_ROLES_CIENCIA: readonly Role[] = [
   "admin",
   "executivo",
-  "gestor",
   "gestor_aquisicao",
   "gestor_marketing",
   "gestor_operacoes",

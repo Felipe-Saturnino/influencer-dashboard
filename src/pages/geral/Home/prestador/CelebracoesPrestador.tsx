@@ -1,5 +1,5 @@
-import { CelebracoesStaffHome } from "../shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "../shared/HomeStaffAposBoasVindas";
 
 export function CelebracoesPrestador() {
-  return <CelebracoesStaffHome sectionIdPrefix="home-prestador" />;
+  return <HomeStaffAposBoasVindas sectionIdPrefix="home-prestador" />;
 }

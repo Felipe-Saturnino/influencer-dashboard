@@ -2,10 +2,11 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasPerformanceCoach } from "./performanceCoach/BoasVindasPerformanceCoach";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosPerformanceCoach } from "./performanceCoach/AtalhosPerformanceCoach";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_PERFORMANCE_COACH_PREFIX = "home-performance-coach";
 
@@ -29,10 +30,11 @@ export default function HomePerformanceCoach() {
       }}
     >
       <BoasVindasPerformanceCoach nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
       <InformacoesStaffHome perfil="performance_coach" sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
       <AtalhosPerformanceCoach />
-      <SpinNaRedeHome sectionIdPrefix={HOME_PERFORMANCE_COACH_PREFIX} />
     </div>
   );
 }

@@ -2,10 +2,11 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasGamePresenter } from "./gamePresenter/BoasVindasGamePresenter";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosGamePresenter } from "./gamePresenter/AtalhosGamePresenter";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_GAME_PRESENTER_PREFIX = "home-game-presenter";
 
@@ -29,10 +30,11 @@ export default function HomeGamePresenter() {
       }}
     >
       <BoasVindasGamePresenter nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
       <InformacoesStaffHome perfil="game_presenter" sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
       <AtalhosGamePresenter />
-      <SpinNaRedeHome sectionIdPrefix={HOME_GAME_PRESENTER_PREFIX} />
     </div>
   );
 }

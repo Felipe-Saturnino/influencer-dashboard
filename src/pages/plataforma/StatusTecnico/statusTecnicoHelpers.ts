@@ -46,7 +46,7 @@ export const LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO = "Validação de domínios de
 export const LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE = "Estado / Cidade";
 
 /** Rótulo na UI de Status Técnico (slug `cs_atendimento_outlook`). */
-export const LABEL_UI_CS_ATENDIMENTO_OUTLOOK = "CS Atendimento (Outlook)";
+export const LABEL_UI_CS_ATENDIMENTO_OUTLOOK = "CS - Caixa de Contato (Outlook)";
 
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
@@ -64,6 +64,23 @@ export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_CS_OUTLOOK =
   "Não foi possível ingerir e-mails do CS Atendimento. Verifique a Edge Function, secrets do Graph e tente novamente.";
+
+/** Monta mensagem de erro da Edge ingest-cs-atendimento-outlook (Graph / secrets). */
+export function formatarErroRespostaCsOutlook(resData: {
+  erro?: string;
+  azure_erro?: string;
+  azure_detalhe?: string;
+  avisos_secrets?: string[];
+  erros?: string[];
+}): string {
+  const partes: string[] = [];
+  if (resData.erro) partes.push(resData.erro);
+  if (resData.azure_detalhe) partes.push(resData.azure_detalhe);
+  else if (resData.azure_erro) partes.push(resData.azure_erro);
+  if (resData.avisos_secrets?.length) partes.push(...resData.avisos_secrets);
+  if (resData.erros?.length) partes.push(...resData.erros);
+  return partes.filter(Boolean).join(" — ");
+}
 export const ERRO_SYNC_COMERCIAL_SPA =
   "Não foi possível sincronizar a lista SPA/MF do Pipeline B2B. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_COMERCIAL_DOMINIO =

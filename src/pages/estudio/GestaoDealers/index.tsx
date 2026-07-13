@@ -32,12 +32,14 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import {
+  buildEstudiosSlugsParaOperadoras,
   buildOperadoraParaEstudioMap,
   FILTRO_STAFF_ESTUDIO_NENHUM,
   FILTRO_STAFF_ESTUDIO_TODOS,
 } from "../../rh/GestaoStaff/gestaoStaffEstudioHelpers";
 import {
   dealerEstudioLabelFromRow,
+  dealerNoEscopoEstudio,
   dealerRowPassaFiltroEstudio,
 } from "./gestaoDealersEstudioHelpers";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -69,8 +71,13 @@ const JOGOS_OPTS: { value: DealerJogoCadastro; label: string }[] = [
   { value: "futebol_brasileiro", label: "Futebol Brasileiro" },
 ];
 
-function passaFiltroEstudio(d: Dealer, filtroEstudio: string, opParaEstudio: Record<string, string>): boolean {
-  return dealerRowPassaFiltroEstudio(d, filtroEstudio, opParaEstudio);
+function passaFiltroEstudio(
+  d: Dealer,
+  filtroEstudio: string,
+  opParaEstudio: Record<string, string>,
+  estudioSlugsPermitidos?: readonly string[] | null,
+): boolean {
+  return dealerRowPassaFiltroEstudio(d, filtroEstudio, opParaEstudio, estudioSlugsPermitidos);
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
@@ -135,17 +142,23 @@ const DEALER_FOTO_IMG_STYLE: CSSProperties = {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GestaoDealers() {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, effectiveRole } = useApp();
   const brand = useDashboardBrand();
   const consolidadoBox = getPageContentBoxStyle(brand, t, { padding: "14px 18px" });
   const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
   const permCentral = usePermission("central_notificacoes");
+  const role = effectiveRole ?? user?.role;
+  const isOperadorEscopo = role === "operador" && !!operadoraSlugsForcado?.length;
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [estudios, setEstudios] = useState<{ slug: string; nome: string }[]>([]);
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
+  /** Junction bruta — escopo Operador usa todos os estúdios (dedicado + network), não o mapa 1:1. */
+  const [junctionEstudio, setJunctionEstudio] = useState<
+    { operadora_slug: string; estudio_slug: string; tipo: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
   const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
@@ -189,21 +202,17 @@ export default function GestaoDealers() {
     setEstudiosNome(nomeMap);
     setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
     setOpParaEstudio(opMap);
-    return opMap;
+    setJunctionEstudio(junctionFlat);
+    return { opMap, junctionFlat };
   }, []);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const opMap = await carregarEstudios();
-    let slugsForcado: string[] | null = null;
-    if (operadoraSlugsForcado?.length) {
-      const set = new Set<string>();
-      for (const op of operadoraSlugsForcado) {
-        const e = opMap[op];
-        if (e) set.add(e);
-      }
-      slugsForcado = set.size > 0 ? [...set] : null;
-    }
+    const { opMap, junctionFlat } = await carregarEstudios();
+    const slugsForcado =
+      isOperadorEscopo && operadoraSlugsForcado?.length
+        ? buildEstudiosSlugsParaOperadoras(junctionFlat, operadoraSlugsForcado)
+        : null;
     const { data: dealersRpc, error: dealersErr } = await supabase.rpc("dealers_lista_elenco");
     let dealersLista: Dealer[];
     if (dealersErr) {
@@ -218,11 +227,11 @@ export default function GestaoDealers() {
     } else {
       dealersLista = (dealersRpc ?? []) as Dealer[];
     }
-    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      dealersLista = dealersLista.filter((d) => {
-        if (slugsForcado?.some((s) => d.estudio_slug === s)) return true;
-        return operadoraSlugsForcado.some((s) => d.operadora_slug === s);
-      });
+    if (isOperadorEscopo && slugsForcado?.length) {
+      dealersLista = dealersLista.filter((d) => dealerNoEscopoEstudio(d, slugsForcado, opMap));
+    } else if (isOperadorEscopo) {
+      // Escopo sem junction resolvida — não exibir elenco global.
+      dealersLista = [];
     }
     dealersLista.sort((a, b) => (a.nickname ?? "").localeCompare(b.nickname ?? "", "pt-BR"));
     const [operadorasRes] = await Promise.all([
@@ -231,25 +240,21 @@ export default function GestaoDealers() {
     setDealers(dealersLista);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
     setLoading(false);
-  }, [user?.role, operadoraSlugsForcado, carregarEstudios]);
+  }, [isOperadorEscopo, operadoraSlugsForcado, carregarEstudios]);
 
   const estudioSlugsForcado = useMemo(() => {
-    if (!operadoraSlugsForcado?.length) return null;
-    const set = new Set<string>();
-    for (const op of operadoraSlugsForcado) {
-      const e = opParaEstudio[op];
-      if (e) set.add(e);
-    }
-    return set.size > 0 ? [...set] : null;
-  }, [operadoraSlugsForcado, opParaEstudio]);
+    if (!isOperadorEscopo || !operadoraSlugsForcado?.length) return null;
+    const slugs = buildEstudiosSlugsParaOperadoras(junctionEstudio, operadoraSlugsForcado);
+    return slugs.length > 0 ? slugs : null;
+  }, [isOperadorEscopo, operadoraSlugsForcado, junctionEstudio]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
   useEffect(() => {
-    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+    if (isOperadorEscopo && estudioSlugsForcado?.length === 1) {
       setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, estudioSlugsForcado]);
+  }, [isOperadorEscopo, estudioSlugsForcado]);
 
   const estudiosVisiveis = useMemo(() => {
     if (estudioSlugsForcado?.length) {
@@ -259,8 +264,8 @@ export default function GestaoDealers() {
   }, [estudios, estudioSlugsForcado]);
 
   const dealersPorEstudio = useMemo(
-    () => dealers.filter((d) => passaFiltroEstudio(d, filtroEstudio, opParaEstudio)),
-    [dealers, filtroEstudio, opParaEstudio],
+    () => dealers.filter((d) => passaFiltroEstudio(d, filtroEstudio, opParaEstudio, estudioSlugsForcado)),
+    [dealers, filtroEstudio, opParaEstudio, estudioSlugsForcado],
   );
 
   const filtered = useMemo(() => {
@@ -341,7 +346,7 @@ export default function GestaoDealers() {
 
   /** Slug da operadora para solicitações (operador com escopo — fluxo Central permanece por operadora). */
   const operadoraSlugAtiva = useMemo(() => {
-    if (user?.role !== "operador" || !operadoraSlugsForcado?.length) return null;
+    if (!isOperadorEscopo || !operadoraSlugsForcado?.length) return null;
     if (operadoraSlugsForcado.length === 1) return operadoraSlugsForcado[0];
     if (
       filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS &&
@@ -351,7 +356,7 @@ export default function GestaoDealers() {
       if (op) return op;
     }
     return operadoraSlugsForcado[0] ?? null;
-  }, [user?.role, operadoraSlugsForcado, filtroEstudio, opParaEstudio]);
+  }, [isOperadorEscopo, operadoraSlugsForcado, filtroEstudio, opParaEstudio]);
 
   const operadoraBySlug = useMemo(() => buildOperadoraBySlugMap(operadoras), [operadoras]);
 
@@ -372,7 +377,7 @@ export default function GestaoDealers() {
         subtitle="Catálogo de Game Presenters em operação — especialidades, turnos e solicitações das operadoras."
       />
 
-      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+      {isOperadorEscopo ? (
         <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} podeInteragir={permCentral.canEditarOk} />
       ) : null}
 
@@ -403,6 +408,7 @@ export default function GestaoDealers() {
                 value={filtroEstudio}
                 onChange={setFiltroEstudio}
                 estudios={estudiosVisiveis}
+                showTodosOption={!estudioSlugsForcado || estudioSlugsForcado.length !== 1}
                 extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum estúdio" }]}
               />
             ) : null}
@@ -577,7 +583,7 @@ export default function GestaoDealers() {
               onHistoricoSolicitacoes={
                 !permCentral.loading &&
                 (permCentral.canView === "sim" || permCentral.canView === "proprios") &&
-                (user?.role !== "operador" || !!operadoraSlugAtiva)
+                (role !== "operador" || !!operadoraSlugAtiva)
                   ? () => setModalHistoricoDealer(d)
                   : undefined
               }
@@ -599,7 +605,7 @@ export default function GestaoDealers() {
         <ModalHistoricoSolicitacoesDealer
           dealer={modalHistoricoDealer}
           operadoraBySlug={operadoraBySlug}
-          slugSolicitacaoFiltro={user?.role === "operador" ? operadoraSlugAtiva : null}
+          slugSolicitacaoFiltro={isOperadorEscopo ? operadoraSlugAtiva : null}
           onClose={() => setModalHistoricoDealer(null)}
           onAbrirThread={(id) => {
             setModalHistoricoDealer(null);

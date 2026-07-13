@@ -28,6 +28,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `prospecto-afiliados-network-site` |
 | `prospecto-cs-atendimento-site` |
 | `prospecto-scout-site` |
+| `sync-vagas-carreiras-site` |
 | `sync-metricas-cda` |
 | `sync-painel-noticias-rss` |
 | `sync-spin-na-rede-rss` |
@@ -132,10 +133,25 @@ Secret: `RELATORIO_DIRETORIA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIO
 | `index.ts` |
 | `common.ts` |
 | `graphOutlook.ts` |
+| `auth.ts` |
 
-Secrets: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`, `CS_OUTLOOK_MAILBOX` (opcional), `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (opcional)
+Secrets: `CS_OUTLOOK_TENANT_ID`, `CS_OUTLOOK_CLIENT_ID`, `CS_OUTLOOK_CLIENT_SECRET`, `CS_OUTLOOK_MAILBOX` (opcional), `CS_ATENDIMENTO_OUTLOOK_INGEST_SECRET` (recomendado — teste no Dashboard via body)
 
 Detalhes: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.
+
+---
+
+### Vagas Carreiras — sync WordPress (cron)
+
+**Function:** `sync-vagas-carreiras-site`
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+
+Secrets: `WORDPRESS_VAGAS_SYNC_URL`, `SPIN_VAGAS_SYNC_SECRET` · opcional `SPIN_VAGAS_CARREIRAS_INGEST_SECRET`
+
+Detalhes: `docs/SETUP-SYNC-VAGAS-CARREIRAS.md` · contrato agência: `docs/api-sync-vagas-carreiras-site-agencia.md`.
 
 ---
 

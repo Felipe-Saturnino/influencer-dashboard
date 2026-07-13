@@ -129,6 +129,7 @@ export function PostagemAcademyCard({
   onVerCompleto,
   mostrarBotaoVer,
   descricaoCompleta = false,
+  mostrarNomeAnexo = true,
 }: {
   titulo: string;
   corpo: string;
@@ -143,6 +144,7 @@ export function PostagemAcademyCard({
   onVerCompleto?: () => void;
   mostrarBotaoVer?: boolean;
   descricaoCompleta?: boolean;
+  mostrarNomeAnexo?: boolean;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -208,7 +210,7 @@ export function PostagemAcademyCard({
               <CorpoHtmlPortalRh html={preview} color={t.textMuted} />
             )}
           </div>
-          <PortalAcademyAnexosLista anexos={anexos} color={t.text} />
+          <PortalAcademyAnexosLista anexos={anexos} color={t.text} mostrarNomeAnexo={mostrarNomeAnexo} />
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 14 }}>
             {mostrarBotaoVer && onVerCompleto ? (
               <button type="button" onClick={onVerCompleto} style={btnCtaPrimario(brand)}>

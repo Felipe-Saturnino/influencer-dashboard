@@ -1,38 +1,42 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
-import type { Role } from "../../../../types";
 import {
   buscarMeuColaboradorGaleria,
   fotoEventoEmbed,
   type MarketingFotoComEvento,
 } from "../../../../lib/marketingGaleriaFotos";
-import { getHomePrestadorGaleriaNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
-import { useHomeInformativos, type HomeInformativoItem } from "./useHomeInformativos";
+import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 
-export type HomeGaleriaNovidadeGerais = {
+export type HomeBlogueiroGaleriaGerais = {
   kind: "galeria_gerais";
   id: string;
+  eventoId: string;
   eventoNome: string;
   created_at: string;
   autorNome: string;
 };
 
-export type HomeGaleriaNovidadeMinhas = {
+export type HomeBlogueiroGaleriaMinhas = {
   kind: "galeria_minhas";
   id: string;
   created_at: string;
   autorNome: string;
 };
 
-export type HomeInformacaoInformativo = HomeInformativoItem & { kind: "informativo" };
+export type HomeBlogueiroSpinMencao = {
+  kind: "spin_na_rede";
+  id: string;
+  titulo: string;
+  published_at: string | null;
+};
 
-export type HomeStaffInformacaoItem =
-  | HomeInformacaoInformativo
-  | HomeGaleriaNovidadeGerais
-  | HomeGaleriaNovidadeMinhas;
+export type HomeBlogueiroSpinItem =
+  | HomeBlogueiroGaleriaGerais
+  | HomeBlogueiroGaleriaMinhas
+  | HomeBlogueiroSpinMencao;
 
-function tsItem(item: HomeStaffInformacaoItem): number {
-  const iso = item.kind === "informativo" ? item.published_at : item.created_at;
+function tsItem(item: HomeBlogueiroSpinItem): number {
+  const iso = item.kind === "spin_na_rede" ? item.published_at : item.created_at;
   if (!iso) return 0;
   const t = Date.parse(iso);
   return Number.isFinite(t) ? t : 0;
@@ -49,9 +53,8 @@ async function resolverNomesUploaders(ids: string[]): Promise<Record<string, str
   return nomes;
 }
 
-async function buscarNovidadesGaleria(): Promise<(HomeGaleriaNovidadeGerais | HomeGaleriaNovidadeMinhas)[]> {
-  const desdeIso = getHomePrestadorGaleriaNovidadeDesdeIso();
-  const cards: (HomeGaleriaNovidadeGerais | HomeGaleriaNovidadeMinhas)[] = [];
+async function buscarGaleriaCards(desdeIso: string): Promise<(HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[]> {
+  const cards: (HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[] = [];
 
   const { data: geraisRows, error: errGerais } = await supabase
     .from("marketing_fotos")
@@ -74,10 +77,11 @@ async function buscarNovidadesGaleria(): Promise<(HomeGaleriaNovidadeGerais | Ho
 
     for (const row of porEvento.values()) {
       const ev = fotoEventoEmbed(row);
-      if (!ev?.nome) continue;
+      if (!ev?.nome || !row.evento_id) continue;
       cards.push({
         kind: "galeria_gerais",
         id: `galeria-gerais-${row.evento_id}`,
+        eventoId: row.evento_id,
         eventoNome: ev.nome,
         created_at: row.created_at,
         autorNome: nomes[row.uploaded_by ?? ""] ?? "",
@@ -111,54 +115,58 @@ async function buscarNovidadesGaleria(): Promise<(HomeGaleriaNovidadeGerais | Ho
   return cards;
 }
 
-export function useHomeStaffInformacoesFeed(
-  perfil: Role,
-  { includeGaleriaNovidades = true }: { includeGaleriaNovidades?: boolean } = {},
-) {
-  const informativos = useHomeInformativos(perfil);
-  const [galeriaLoading, setGaleriaLoading] = useState(includeGaleriaNovidades);
-  const [galeriaErro, setGaleriaErro] = useState(false);
-  const [galeriaCards, setGaleriaCards] = useState<(HomeGaleriaNovidadeGerais | HomeGaleriaNovidadeMinhas)[]>([]);
+async function buscarSpinCards(desdeIso: string): Promise<HomeBlogueiroSpinMencao[]> {
+  const { data, error } = await supabase
+    .from("spin_na_rede_mencao")
+    .select("id, titulo, published_at")
+    .eq("passou_filtro", true)
+    .gte("published_at", desdeIso)
+    .order("published_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    console.error("[Home Blogueiro Spin] spin_na_rede:", error.message);
+    throw error;
+  }
+
+  return ((data ?? []) as { id: string; titulo: string; published_at: string | null }[]).map((row) => ({
+    kind: "spin_na_rede" as const,
+    id: `spin-${row.id}`,
+    titulo: row.titulo?.trim() || "Reportagem",
+    published_at: row.published_at,
+  }));
+}
+
+export function useHomeBlogueiroSpinFeed() {
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
+  const [lista, setLista] = useState<HomeBlogueiroSpinItem[]>([]);
 
   useEffect(() => {
-    if (!includeGaleriaNovidades) {
-      setGaleriaLoading(false);
-      setGaleriaErro(false);
-      setGaleriaCards([]);
-      return;
-    }
-
     let cancelled = false;
 
     void (async () => {
-      setGaleriaLoading(true);
-      setGaleriaErro(false);
+      setLoading(true);
+      setErro(false);
       try {
-        const cards = await buscarNovidadesGaleria();
-        if (!cancelled) setGaleriaCards(cards);
+        const desdeIso = getHomeStaffFeedNovidadeDesdeIso();
+        const [galeria, spin] = await Promise.all([buscarGaleriaCards(desdeIso), buscarSpinCards(desdeIso)]);
+        if (cancelled) return;
+        setLista([...galeria, ...spin].sort((a, b) => tsItem(b) - tsItem(a)));
       } catch (e) {
-        console.error(`[Home ${perfil}] galeria novidades:`, e);
+        console.error("[Home Blogueiro Spin]:", e);
         if (!cancelled) {
-          setGaleriaErro(true);
-          setGaleriaCards([]);
+          setErro(true);
+          setLista([]);
         }
       } finally {
-        if (!cancelled) setGaleriaLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [perfil, includeGaleriaNovidades]);
-
-  const loading = informativos.loading || galeriaLoading;
-  const erro = informativos.erro || galeriaErro;
-
-  const lista: HomeStaffInformacaoItem[] = [
-    ...informativos.lista.map((item) => ({ ...item, kind: "informativo" as const })),
-    ...galeriaCards,
-  ].sort((a, b) => tsItem(b) - tsItem(a));
+  }, []);
 
   return { loading, erro, lista };
 }

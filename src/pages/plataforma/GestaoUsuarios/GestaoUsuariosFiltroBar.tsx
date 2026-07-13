@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, User, UserCog } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Eye, KeyRound, User, UserCog } from "lucide-react";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -27,7 +27,7 @@ import {
 import { GestaoUsuariosPerfilPill } from "./GestaoUsuariosPerfilPill";
 
 export type AbaGestaoPrincipal = "usuarios" | "permissoes" | "escopos" | "simulador";
-export type AbaGestaoEscopo = "operadora" | "gestores" | "prestadores";
+export type AbaGestaoEscopo = "operadora" | "prestadores";
 
 export interface ContagensFiltroUsuarios {
   qtdAtivos: number;
@@ -59,7 +59,6 @@ const ABAS_PRINCIPAIS: { key: AbaGestaoPrincipal; label: string }[] = [
 
 const ABAS_ESCOPO: { key: AbaGestaoEscopo; label: string }[] = [
   { key: "operadora", label: "Operadora" },
-  { key: "gestores", label: "Gestores" },
   { key: "prestadores", label: "Prestadores" },
 ];
 
@@ -72,7 +71,6 @@ const GESTAO_TAB_ICONS: Record<AbaGestaoPrincipal, React.ReactNode> = {
 
 const ESCOPO_TAB_ICONS: Record<AbaGestaoEscopo, React.ReactNode> = {
   operadora: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  gestores: <Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />,
   prestadores: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 

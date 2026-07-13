@@ -1,4 +1,4 @@
-import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
+import type { Role, PageKey, PermissaoValor, PrestadorTipoSlug } from "../../../types";
 import { ROLES_SEM_RESTRICAO_ESCOPO, ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles";
 import { sortPagesLikeMenu } from "../../../lib/menuPagesOrder";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
@@ -10,21 +10,11 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Customer Service, Game Presenter, Shuffler, Tech Ops, Figurino, Comunicação, Performance Coach e RH são perfis próprios. */
-export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
-  { slug: "operacoes", label: "Estúdio" },
-  { slug: "marketing", label: "Marketing" },
-  { slug: "afiliados", label: "Afiliados" },
-  { slug: "geral", label: "Geral" },
-  { slug: "treinamento", label: "Treinamento" },
-];
-
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
 export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "escritorio", label: "Escritório" },
   { slug: "estudio", label: "Estúdio" },
   { slug: "facilities", label: "Facilities" },
-  { slug: "financeiro", label: "Financeiro" },
   { slug: "ti", label: "TI" },
 ];
 
@@ -32,7 +22,6 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
 export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "executivo", label: "Executivo" },
-  { value: "gestor", label: "Gestor" },
   { value: "gestor_aquisicao", label: "Gestor de Aquisição" },
   { value: "gestor_marketing", label: "Gestor de Marketing" },
   { value: "gestor_operacoes", label: "Gestor de Operações" },
@@ -69,11 +58,10 @@ export const ROLES_PERFIS_ESTUDIO: Role[] = [
 /** Perfis internos — escritório e suporte (filtros Usuários, Permissões, Simulador). */
 export const ROLES_PERFIS_ESCRITORIO: Role[] = ["rh", "figurino", "comunicacao", "tech_ops", "prestador"];
 
-/** Linha Gerenciais — admin, executivo, gestor genérico e gestores de departamento (atribuição manual). */
+/** Linha Gerenciais — admin, executivo e gestores de departamento (atribuição manual). */
 export const ROLES_PERFIS_GERENCIAIS: Role[] = [
   "admin",
   "executivo",
-  "gestor",
   ...ROLES_GESTOR_DEPARTAMENTO,
 ];
 
@@ -104,7 +92,7 @@ const PAGES_META: {
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "feedback", label: "Feedback", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: true },
-  { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   // Afiliados
   { key: "afiliados", label: "Afiliados", secao: "Afiliados", hasCriar: false, hasEditar: true, hasExcluir: false },
@@ -221,7 +209,6 @@ export function secoesMenuFromPages(pages: readonly { secao: string }[]): string
  */
 export const ROLES_PERMISSOES: Role[] = [
   "executivo",
-  "gestor",
   ...ROLES_GESTOR_DEPARTAMENTO,
   "rh",
   "figurino",
@@ -293,7 +280,6 @@ export function roleLabel(role: Role): string {
 export function roleBadgeColor(role: Role): string {
   const map: Record<Role, string> = {
     admin: BRAND.roxoVivo,
-    gestor: BRAND.azul,
     gestor_aquisicao: BRAND.azul,
     gestor_marketing: BRAND.ciano,
     gestor_operacoes: BRAND.roxo,

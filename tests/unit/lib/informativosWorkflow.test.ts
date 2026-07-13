@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   acaoEnvioPermitida,
+  aprovadoresPermitidosInformativo,
   perfisRequeremFluxoAprovacao,
   podeEditarInformativoGerenciamento,
   podeExcluirInformativoGerenciamento,
@@ -10,13 +11,15 @@ import {
 } from "../../../src/lib/informativosWorkflow";
 
 describe("informativosWorkflow — aprovação", () => {
-  it("perfis externos exigem fluxo de aprovação", () => {
+  it("destinos de aquisição / investidor / gestores exigem fluxo de aprovação", () => {
     expect(perfisRequeremFluxoAprovacao(["influencer"])).toBe(true);
-    expect(perfisRequeremFluxoAprovacao(["gestor", "influencer"])).toBe(true);
+    expect(perfisRequeremFluxoAprovacao(["investidor"])).toBe(true);
+    expect(perfisRequeremFluxoAprovacao(["gestor_operacoes"])).toBe(true);
+    expect(perfisRequeremFluxoAprovacao(["gestor_operacoes", "rh"])).toBe(true);
   });
 
-  it("perfis internos operacionais permitem publicação direta", () => {
-    expect(perfisRequeremFluxoAprovacao(["gestor", "rh"])).toBe(false);
+  it("perfis internos operacionais (sem gestores) permitem publicação direta", () => {
+    expect(perfisRequeremFluxoAprovacao(["rh", "figurino"])).toBe(false);
     expect(podePublicarDiretoInformativo(["prestador"])).toBe(true);
   });
 
@@ -25,23 +28,42 @@ describe("informativosWorkflow — aprovação", () => {
     expect(acaoEnvioPermitida("aprovacao", ["figurino"])).toBe(false);
     expect(acaoEnvioPermitida("aprovacao", ["operador"])).toBe(true);
     expect(acaoEnvioPermitida("publicar", ["operador"])).toBe(false);
+    expect(acaoEnvioPermitida("aprovacao", ["gestor_rh"])).toBe(true);
   });
 
-  it("aprovação admin/executivo/operador — só administrador", () => {
-    expect(rolePodeAprovarInformativo("admin", ["executivo"])).toBe(true);
-    expect(rolePodeAprovarInformativo("gestor", ["executivo"])).toBe(false);
-    expect(rolePodeAprovarInformativo("executivo", ["operador"])).toBe(false);
+  it("Investidor / Operador — Admin ou Executivo", () => {
+    expect(aprovadoresPermitidosInformativo(["operador"])).toEqual(["admin", "executivo"]);
+    expect(rolePodeAprovarInformativo("admin", ["investidor"])).toBe(true);
+    expect(rolePodeAprovarInformativo("executivo", ["operador"])).toBe(true);
+    expect(rolePodeAprovarInformativo("gestor_aquisicao", ["operador"])).toBe(false);
+    expect(rolePodeAprovarInformativo("gestor_rh", ["investidor"])).toBe(false);
   });
 
-  it("aprovação agência/influencer/afiliado — admin, executivo ou gestor", () => {
-    expect(rolePodeAprovarInformativo("gestor", ["influencer"])).toBe(true);
-    expect(rolePodeAprovarInformativo("rh", ["afiliado"])).toBe(false);
+  it("Agência / Influenciador / Afiliado — Admin, Executivo ou Gestor de Aquisição", () => {
+    expect(rolePodeAprovarInformativo("gestor_aquisicao", ["influencer"])).toBe(true);
+    expect(rolePodeAprovarInformativo("gestor_operacoes", ["influencer"])).toBe(false);
+    expect(rolePodeAprovarInformativo("gestor_rh", ["afiliado"])).toBe(false);
     expect(rolePodeAprovarInformativo("admin", ["agencia"])).toBe(true);
+    expect(rolePodeAprovarInformativo("executivo", ["agencia"])).toBe(true);
   });
 
-  it("mistura restrita — prevalece só admin", () => {
-    expect(rolePodeAprovarInformativo("gestor", ["influencer", "operador"])).toBe(false);
+  it("Gestores de departamento — Admin, Executivo ou Gestor de RH", () => {
+    expect(rolePodeAprovarInformativo("gestor_rh", ["gestor_marketing"])).toBe(true);
+    expect(rolePodeAprovarInformativo("gestor_aquisicao", ["gestor_operacoes"])).toBe(false);
+    expect(rolePodeAprovarInformativo("admin", ["gestor_academy"])).toBe(true);
+    expect(rolePodeAprovarInformativo("executivo", ["gestor_rh"])).toBe(true);
+  });
+
+  it("mistura de grupos — interseção (mais restritivo)", () => {
+    expect(aprovadoresPermitidosInformativo(["influencer", "operador"])).toEqual(["admin", "executivo"]);
+    expect(rolePodeAprovarInformativo("gestor_aquisicao", ["influencer", "operador"])).toBe(false);
     expect(rolePodeAprovarInformativo("admin", ["influencer", "operador"])).toBe(true);
+    expect(aprovadoresPermitidosInformativo(["influencer", "gestor_marketing"])).toEqual([
+      "admin",
+      "executivo",
+    ]);
+    expect(rolePodeAprovarInformativo("gestor_aquisicao", ["influencer", "gestor_marketing"])).toBe(false);
+    expect(rolePodeAprovarInformativo("gestor_rh", ["influencer", "gestor_marketing"])).toBe(false);
   });
 
   it("editar e excluir no gerenciamento respeitam sim e próprios", () => {
@@ -56,7 +78,8 @@ describe("informativosWorkflow — aprovação", () => {
   it("autoaprovação só para administrador", () => {
     const autor = "user-a";
     expect(podeUsuarioAprovarInformativo("admin", autor, autor, ["influencer"])).toBe(true);
-    expect(podeUsuarioAprovarInformativo("gestor", "user-b", "user-b", ["influencer"])).toBe(false);
-    expect(podeUsuarioAprovarInformativo("gestor", "user-b", "user-c", ["influencer"])).toBe(true);
+    expect(podeUsuarioAprovarInformativo("gestor_aquisicao", "user-b", "user-b", ["influencer"])).toBe(false);
+    expect(podeUsuarioAprovarInformativo("gestor_aquisicao", "user-b", "user-c", ["influencer"])).toBe(true);
+    expect(podeUsuarioAprovarInformativo("executivo", autor, autor, ["operador"])).toBe(false);
   });
 });

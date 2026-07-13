@@ -14,6 +14,8 @@ Documento **simplificado** para a **agência / admin WordPress** (`https://sping
 2. O corpo é um **JSON com a lista completa** de vagas abertas no momento.
 3. O site **substitui** a listagem publicada: vagas que não vierem no JSON **somem** da página; vagas novas ou alteradas **aparecem/atualizam**.
 
+O lado Spin (Edge Function + cron) **já está implementado**. Assim que vocês publicarem o endpoint e alinharem o segredo, o sync diário passa a funcionar.
+
 Não é necessário o WordPress “buscar” a plataforma — quem **envia** os dados é a Spin.
 
 ---
@@ -193,12 +195,18 @@ curl -X POST "https://spingaming.com.br/wp-json/spin/v1/vagas/sync" \
 
 ## O que o TI Spin entrega para vocês
 
-| Item | Quem |
-|------|------|
-| Valor do header `x-spin-vagas-sync-secret` (produção e homologação) | TI Spin |
-| Confirmação de horário do cron (~06:00 BRT) | TI Spin |
-| Aviso antes do primeiro sync em produção | TI Spin |
-| Payload real assim que a Edge Function estiver publicada | TI Spin |
+| Item | Status / valor |
+|------|----------------|
+| Header de autenticação | `x-spin-vagas-sync-secret` |
+| Valor do segredo (produção / homologação) | Enviado pelo TI Spin em canal seguro (mesmo valor cadastrado em `SPIN_VAGAS_SYNC_SECRET` na plataforma) |
+| Horário do sync | **~06:00 horário de Brasília**, 1× por dia (snapshot completo) |
+| Método | `POST` + `Content-Type: application/json` |
+| Payload | Conforme secção «Corpo do JSON» deste documento (já implementado na plataforma) |
+| Aviso antes do 1º sync em produção | TI Spin |
+
+**O que vocês devolvem ao TI Spin:** URL final do endpoint (ex.: `https://spingaming.com.br/wp-json/spin/v1/vagas/sync`) para cadastro em `WORDPRESS_VAGAS_SYNC_URL`.
+
+A plataforma Spin **já está preparada** para enviar o sync assim que a URL e o segredo estiverem alinhados.
 
 ---
 

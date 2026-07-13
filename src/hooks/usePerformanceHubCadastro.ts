@@ -80,6 +80,7 @@ export function usePerformanceHubCadastro() {
       const opParaEstudio = buildOperadoraParaEstudioMap(junctionFlat);
       const mesasCatalogo: PerformanceHubMesaCadastro[] = mesasRows.map((m) => ({
         estudio_slug: m.estudio_slug,
+        operadora_slug: m.operadora_slug ?? null,
         tipo_jogo: m.tipo_jogo ?? "",
         nome_mesa: m.nome_mesa ?? "",
         mesa_identificacao: m.mesa_identificacao ?? "",

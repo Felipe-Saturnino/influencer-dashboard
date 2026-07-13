@@ -2,10 +2,11 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasCustomerService } from "./customerService/BoasVindasCustomerService";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosCustomerService } from "./customerService/AtalhosCustomerService";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_CUSTOMER_SERVICE_PREFIX = "home-customer-service";
 
@@ -29,10 +30,11 @@ export default function HomeCustomerService() {
       }}
     >
       <BoasVindasCustomerService nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <InformacoesStaffHome perfil="customer_service" sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
       <AtalhosCustomerService />
-      <SpinNaRedeHome sectionIdPrefix={HOME_CUSTOMER_SERVICE_PREFIX} />
     </div>
   );
 }

@@ -12,12 +12,21 @@ export const PAGES_ISENTAS_GATE_REVISAO_CADASTRO: readonly PageKey[] = [
   "rh_central_denuncias",
 ];
 
-export const REVISAO_CADASTRO_GATE_MODAL_TITULO = "Atualização Cadastral pendente";
-
-export const REVISAO_CADASTRO_GATE_MODAL_MENSAGEM =
-  "Você tem Atualização Cadastral pendente. Acesse a página de Dados de Cadastro e faça a verificação para retornar à navegação.";
-
 export const REVISAO_CADASTRO_GATE_MODAL_CTA = "Ir para Dados de Cadastro";
+
+export const REVISAO_CADASTRO_HOME_MENSAGEM =
+  "Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos ou confirme que nada mudou no período. Você não conseguirá realizar nenhuma ação na plataforma até que este processo seja concluído, caso tenha dúvidas de como realizar o processo procure orientação com a liderança ou RH.";
+
+/** Título do card/modal de atualização cadastral pendente. */
+export function tituloAtualizacaoCadastralPendente(primeiroNome: string): string {
+  const nome = primeiroNome.trim() || "Colaborador";
+  return `${nome}, AÇÃO NECESSÁRIA!`;
+}
+
+/** @deprecated Preferir `tituloAtualizacaoCadastralPendente(primeiroNome)`. */
+export const REVISAO_CADASTRO_GATE_MODAL_TITULO = "AÇÃO NECESSÁRIA!";
+
+export const REVISAO_CADASTRO_GATE_MODAL_MENSAGEM = REVISAO_CADASTRO_HOME_MENSAGEM;
 
 export function destinoBloqueadoPorGateRevisaoCadastral(
   gateAtivo: boolean,

@@ -24,6 +24,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
+import { consumeHomeGaleriaFocus } from "../../../lib/homeGaleriaDeepLink";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -226,6 +227,17 @@ export default function GaleriaFotos() {
   const [excluindo, setExcluindo] = useState(false);
   const [eventosExpandidos, setEventosExpandidos] = useState<Set<string>>(() => new Set());
   const [prestadoresExpandidos, setPrestadoresExpandidos] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const focus = consumeHomeGaleriaFocus();
+    if (!focus) return;
+    setAba("galeria");
+    setGaleriaSubAba(focus.subAba);
+    if (focus.subAba === "gerais" && focus.eventoId) {
+      setFiltroEvento(focus.eventoId);
+      setEventosExpandidos(new Set([focus.eventoId]));
+    }
+  }, [setAba]);
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const ctaGrad = getCtaCriarGradient(brand);

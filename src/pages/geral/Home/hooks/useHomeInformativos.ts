@@ -10,7 +10,13 @@ export type HomeInformativoItem = {
   autorNome: string;
 };
 
-export function useHomeInformativos(perfil: Role) {
+export type UseHomeInformativosOptions = {
+  /** Se definido, só informativos com `published_at` >= este ISO (ex.: janela de 10 dias na Home staff). */
+  publicadoDesdeIso?: string;
+};
+
+export function useHomeInformativos(perfil: Role, options: UseHomeInformativosOptions = {}) {
+  const { publicadoDesdeIso } = options;
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [lista, setLista] = useState<HomeInformativoItem[]>([]);
@@ -22,7 +28,7 @@ export function useHomeInformativos(perfil: Role) {
       setLoading(true);
       setErro(false);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("conteudo_informativo")
           .select(
             "id, assunto, descricao, published_at, created_by, published_by, perfis, operador_escopo, status",
@@ -30,6 +36,12 @@ export function useHomeInformativos(perfil: Role) {
           .eq("status", "publicado")
           .contains("perfis", [perfil])
           .order("published_at", { ascending: false });
+
+        if (publicadoDesdeIso) {
+          query = query.gte("published_at", publicadoDesdeIso);
+        }
+
+        const { data, error } = await query;
 
         if (cancelled) return;
         if (error) {
@@ -89,7 +101,7 @@ export function useHomeInformativos(perfil: Role) {
     return () => {
       cancelled = true;
     };
-  }, [perfil]);
+  }, [perfil, publicadoDesdeIso]);
 
   return { loading, erro, lista };
 }

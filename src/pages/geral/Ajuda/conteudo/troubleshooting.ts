@@ -711,6 +711,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Confirme que o status está Publicado e que o perfil do usuário foi marcado no campo Perfil ao criar o informativo. Para o perfil Operador, verifique também o campo Operadora: Todos envia a todas as operadoras; uma operadora específica só aparece na Home dos operadores daquela parceira. A integração na Home depende do perfil logado e, no caso de Operador, do escopo de operadora configurado na postagem.",
       },
+      {
+        subtitulo: "Não consigo aprovar um informativo?",
+        texto:
+          "O botão Aprovar só aparece em status Aprovação e para quem a regra dos perfis alvo autoriza: Investidor/Operador → Administrador ou Executivo; Agência/Influenciador/Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Misturas usam a regra mais restritiva. Exceto Administrador, ninguém aprova a própria postagem.",
+      },
     ],
   },
   rh_portal: {
@@ -794,7 +799,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   afiliados: {
-    titulo: "Afiliados — Problemas Comuns",
+    titulo: "Afiliados",
     blocos: [
       {
         subtitulo: "Não consigo salvar o perfil do afiliado?",
@@ -829,7 +834,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   afiliados_network: {
-    titulo: "Network — Problemas Comuns",
+    titulo: "Network",
     blocos: [
       {
         subtitulo: "Um prospecto não aparece na lista?",
@@ -974,7 +979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a página Pipeline B2B no menu?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e se a página está liberada na aba Gestores (tipo de gestor) ou Operadora, conforme seu perfil. Administradores têm acesso total.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline B2B e, se for Operador, se a página está liberada na aba Escopos → Operadora. Gestores de departamento dependem só da matriz de Permissões. Administradores têm acesso total.",
       },
       {
         subtitulo: "Não consigo editar Comercial, Status ou produtos na tabela?",
@@ -1049,7 +1054,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
         texto:
-          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.",
+          "O sistema de ponto bloqueia IPs não cobertos por CIDR autorizado. Verifique o IP público da rede do prestador e confira se ele está dentro de algum dos prefixos listados em 'Redes Permitidas'. Se necessário, adicione o CIDR correspondente.\n\nSe o botão estiver em **Fazer Check-out**, há um check-in aberto há menos de **20 horas** — o próximo ato é encerrar esse turno (inclusive turnos que cruzam a meia-noite). Após 20h sem check-out, o sistema libera novo check-in; o turno incompleto deve ser tratado com **Justificar** no Controle de Presença.",
       },
       {
         subtitulo: "O alerta 'E-mail não enviado hoje' está aparecendo mesmo após o envio?",
@@ -1064,10 +1069,10 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um usuário diz que não vê determinada página no menu após alteração?",
         texto:
-          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Operadora, Gestores ou Prestadores, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
+          "As permissões e menus são carregados no login. Após salvar qualquer alteração nas abas Permissões, Escopos (Operadora / Prestadores) ou Simulador de Login, o usuário afetado precisa fazer logout e login novamente para que as mudanças reflitam no menu.",
       },
       {
-        subtitulo: "As abas Permissões, Operadora, Gestores e Prestadores não aparecem?",
+        subtitulo: "As abas Permissões, Escopos e Simulador de Login não aparecem?",
         texto:
           "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
       },
@@ -1089,7 +1094,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Gestão de Escala no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários e liberação da página nas abas Operadora, Gestores ou Prestadores, conforme seu perfil.",
+          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões.",
       },
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
@@ -1120,6 +1125,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
           "Ações de presença e justificativa exigem permissão de **Editar** no Calendário. Se o botão não aparece, solicite liberação ao administrador.",
+      },
+      {
+        subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
+        texto:
+          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
       },
     ],
   },
@@ -1240,6 +1250,56 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Há links que não quero mapear mas também não quero que apareçam como pendentes?",
         texto:
           "Use o botão Ignorar na aba Pendentes. O link vai para a aba Ignorados e não conta no indicador de pendentes. Se mudar de ideia, use Reabrir na aba Ignorados para devolvê-lo aos Pendentes.",
+      },
+    ],
+  },
+  configuracoes: {
+    titulo: "Configurações",
+    blocos: [
+      {
+        subtitulo: "Não encontro Configurações no menu lateral?",
+        texto:
+          "Comportamento esperado: Configurações fica no menu do avatar (canto superior), não no menu lateral. Confirme também a permissão de **Ver** para Configurações em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Não consigo mudar o tema (claro/escuro)?",
+        texto:
+          "Perfis Operador usam sempre o modo escuro com a identidade da operadora — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na secção Aparência.",
+      },
+      {
+        subtitulo: "Erro ao alterar a senha?",
+        texto:
+          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+      },
+    ],
+  },
+  simulador_login: {
+    titulo: "Simulador de Login",
+    blocos: [
+      {
+        subtitulo: "Não vejo o Simulador de Login no menu do avatar?",
+        texto:
+          "É necessário permissão de **Ver** em Simulador de Login (Gestão de Usuários). O atalho não aparece no menu lateral — só no menu do avatar, entre Configurações e Ajuda.",
+      },
+      {
+        subtitulo: "A lista de perfis está vazia?",
+        texto:
+          "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça ao administrador para marcar as opções em **Gestão de Usuários → Simulador de Login**. Administradores veem o catálogo completo sem essa matriz.",
+      },
+      {
+        subtitulo: "Não consigo criar ou editar nada durante a simulação?",
+        texto:
+          "Comportamento esperado: a simulação é somente leitura. Encerrar a visualização restaura as permissões da sua conta real.",
+      },
+      {
+        subtitulo: "O menu simulado não mostra páginas que o perfil deveria ter?",
+        texto:
+          "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
+      },
+      {
+        subtitulo: "Como sair da simulação?",
+        texto:
+          "Clique em **Encerrar visualização** no banner no topo da plataforma ou no bloco correspondente na página Simulador de Login.",
       },
     ],
   },

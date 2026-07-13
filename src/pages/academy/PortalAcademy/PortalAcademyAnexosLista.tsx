@@ -5,9 +5,12 @@ import { FONT } from "../../../constants/theme";
 export function PortalAcademyAnexosLista({
   anexos,
   color,
+  mostrarNomeAnexo = true,
 }: {
   anexos: AcademyPortalAnexoRef[];
   color: string;
+  /** Comunicados: só «Ver anexo»; dicas/manuais mantêm o nome do arquivo. */
+  mostrarNomeAnexo?: boolean;
 }) {
   if (!anexos.length) return null;
   return (
@@ -16,7 +19,7 @@ export function PortalAcademyAnexosLista({
         <p key={anexo.path} style={{ margin: 0, fontSize: 13 }}>
           <PortalAcademyAssetLink
             storagePath={anexo.path}
-            label={`Ver anexo (${anexo.nome})`}
+            label={mostrarNomeAnexo && anexo.nome.trim() ? `Ver anexo (${anexo.nome})` : "Ver anexo"}
             color={color}
           />
         </p>

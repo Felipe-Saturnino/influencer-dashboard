@@ -1,10 +1,7 @@
 import type { Role } from "../../types";
 import { FONT } from "../../constants/theme";
-import {
-  FILTROS_PERFIL_LINHAS,
-  roleBadgeColor,
-  roleLabel,
-} from "../../pages/plataforma/GestaoUsuarios/constants";
+import { roleBadgeColor, roleLabel } from "../../pages/plataforma/GestaoUsuarios/constants";
+import { INFORMATIVO_FILTROS_PERFIL_LINHAS } from "../../lib/informativosRoles";
 
 type ThemePick = {
   cardBorder: string;
@@ -41,7 +38,7 @@ export function InformativoPerfilMultiSelect({
         border: hasError ? "1px solid #e84025" : undefined,
       }}
     >
-      {FILTROS_PERFIL_LINHAS.map(({ titulo, roles }) => (
+      {INFORMATIVO_FILTROS_PERFIL_LINHAS.map(({ titulo, roles }) => (
         <div key={titulo} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span
             style={{

@@ -8,7 +8,7 @@ import type { Operadora } from "../../../types";
 import { BRAND, PAGES, secoesMenuFromPages } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
-import { brandTintBg, ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { brandTintBg, ctaGradientSalvar, getEscopoSecaoHeaderStyle } from "./gestaoUsuariosHelpers";
 import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 export function AbaOperadora() {
@@ -161,17 +161,7 @@ export function AbaOperadora() {
                       }}
                     >
                       <div
-                        style={{
-                          padding: "10px 16px",
-                          background: brandTintBg("8"),
-                          borderBottom: `2px solid ${t.cardBorder}`,
-                          fontFamily: FONT.body,
-                          fontWeight: 700,
-                          fontSize: 11,
-                          color: t.textMuted,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.8px",
-                        }}
+                        style={getEscopoSecaoHeaderStyle(brandTintBg("8"), t.cardBorder, t.textMuted)}
                       >
                         {secao}
                       </div>

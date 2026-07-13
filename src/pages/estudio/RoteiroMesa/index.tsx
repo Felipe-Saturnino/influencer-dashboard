@@ -15,6 +15,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import { FiltroSemanticoTabPill } from "../../../components/dashboard";
 import {
+  buildEstudiosSlugsParaOperadoras,
   buildOperadoraParaEstudioMap,
   buildOperadorasPorEstudioMap,
   FILTRO_STAFF_ESTUDIO_TODOS,
@@ -22,6 +23,9 @@ import {
 import {
   operadoraSlugParaRoteiroInsert,
   roteiroEstudioLabelFromRow,
+  roteiroRecordShallowEqual,
+  roteiroEstudiosListEqual,
+  roteiroOperadorasPorEstEqual,
 } from "./roteiroMesaEstudioHelpers";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
@@ -1030,7 +1034,7 @@ function BlocoCampanhas({ estudioSlug, campanhas, podeExcluir, podeCriar, onCarr
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, effectiveRole } = useApp();
   const brand = useDashboardBrand();
   const narrowMobile = useMediaQuery("(max-width: 479px)");
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
@@ -1038,12 +1042,16 @@ export default function RoteiroMesa() {
   /** Responder solicitações a partir do banner (mesma matriz da Central). */
   const permCentral = usePermission("central_notificacoes");
   const dark = t.isDark;
+  const role = effectiveRole ?? user?.role;
 
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string; brand_action?: string | null }[]>([]);
   const [estudios, setEstudios] = useState<{ slug: string; nome: string }[]>([]);
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [operadorasPorEstudio, setOperadorasPorEstudio] = useState<Record<string, readonly string[]>>({});
+  const [junctionEstudio, setJunctionEstudio] = useState<
+    { operadora_slug: string; estudio_slug: string; tipo: string }[]
+  >([]);
   const [filtroEstudio, setFiltroEstudio] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
   const [filtroJogo, setFiltroJogo] = useState<JogoTag | "todos">("todos");
   const [filtroTipo, setFiltroTipo] = useState<TipoSugestao | "todos">("todos");
@@ -1051,18 +1059,24 @@ export default function RoteiroMesa() {
   const [campanhas, setCampanhas] = useState<RoteiroCampanha[]>([]);
   const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Evita fetch de roteiros do operador antes do mapa operadora→estúdio (e quebra loop de loading). */
+  const [estudiosReady, setEstudiosReady] = useState(false);
 
-  const mostrarFiltroEstudio = showFiltroOperadora;
+  const isOperadorEscopo = role === "operador" && !!operadoraSlugsForcado?.length;
 
-  const estudioSlugsForcado = useMemo(() => {
-    if (!operadoraSlugsForcado?.length) return null;
-    const set = new Set<string>();
-    for (const op of operadoraSlugsForcado) {
-      const e = opParaEstudio[op];
-      if (e) set.add(e);
-    }
-    return set.size > 0 ? [...set] : null;
-  }, [operadoraSlugsForcado, opParaEstudio]);
+  /** Operador também vê o filtro de estúdio (opções já restritas ao escopo). */
+  const mostrarFiltroEstudio = showFiltroOperadora || isOperadorEscopo;
+
+  /** Chave estável — todos os estúdios das operadoras do escopo (dedicado + network). */
+  const estudioSlugsForcadoKey = useMemo(() => {
+    if (!isOperadorEscopo || !operadoraSlugsForcado?.length) return "";
+    return buildEstudiosSlugsParaOperadoras(junctionEstudio, operadoraSlugsForcado).join("|");
+  }, [isOperadorEscopo, operadoraSlugsForcado, junctionEstudio]);
+
+  const estudioSlugsForcado = useMemo(
+    () => (estudioSlugsForcadoKey ? estudioSlugsForcadoKey.split("|") : null),
+    [estudioSlugsForcadoKey],
+  );
 
   const estudioSlugSelecionada: string | null =
     estudioSlugsForcado?.length === 1
@@ -1070,7 +1084,7 @@ export default function RoteiroMesa() {
       : estudioSlugsForcado?.length
         ? filtroEstudio !== FILTRO_STAFF_ESTUDIO_TODOS && estudioSlugsForcado.includes(filtroEstudio)
           ? filtroEstudio
-          : estudioSlugsForcado[0]!
+          : FILTRO_STAFF_ESTUDIO_TODOS
         : filtroEstudio;
 
   const estudiosVisiveis = useMemo(() => {
@@ -1109,20 +1123,53 @@ export default function RoteiroMesa() {
     }
     const opMap = buildOperadoraParaEstudioMap(junctionFlat);
     const opPorEst = buildOperadorasPorEstudioMap(junctionFlat);
-    setEstudiosNome(nomeMap);
-    setEstudios(opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
-    setOpParaEstudio(opMap);
-    setOperadorasPorEstudio(opPorEst);
-    return opMap;
+    const optsSorted = opts.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    setEstudiosNome((prev) => (roteiroRecordShallowEqual(prev, nomeMap) ? prev : nomeMap));
+    setEstudios((prev) => (roteiroEstudiosListEqual(prev, optsSorted) ? prev : optsSorted));
+    setOpParaEstudio((prev) => (roteiroRecordShallowEqual(prev, opMap) ? prev : opMap));
+    setOperadorasPorEstudio((prev) => (roteiroOperadorasPorEstEqual(prev, opPorEst) ? prev : opPorEst));
+    setJunctionEstudio((prev) => {
+      if (
+        prev.length === junctionFlat.length &&
+        prev.every(
+          (r, i) =>
+            r.operadora_slug === junctionFlat[i]?.operadora_slug &&
+            r.estudio_slug === junctionFlat[i]?.estudio_slug &&
+            r.tipo === junctionFlat[i]?.tipo,
+        )
+      ) {
+        return prev;
+      }
+      return junctionFlat;
+    });
+    setEstudiosReady(true);
   }, []);
 
   const carregarDados = useCallback(async () => {
-    if (!estudioSlugSelecionada) { setSugestoes([]); setCampanhas([]); setLoading(false); return; }
+    // Operador com escopo: espera o mapa estúdio antes de buscar (evita loop loading infinito).
+    if (role === "operador" && operadoraSlugsForcado?.length && !estudiosReady) {
+      return;
+    }
+    if (role === "operador" && operadoraSlugsForcado?.length && estudiosReady && !estudioSlugsForcado?.length) {
+      setSugestoes([]);
+      setCampanhas([]);
+      setLoading(false);
+      return;
+    }
+    if (!estudioSlugSelecionada) {
+      setSugestoes([]);
+      setCampanhas([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    await carregarEstudios();
 
     let qSug = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
-    if (user?.role === "operador" && estudioSlugsForcado?.length && estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS) {
+    if (
+      role === "operador" &&
+      estudioSlugsForcado?.length &&
+      estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
+    ) {
       const parts: string[] = [];
       for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
       if (operadoraSlugsForcado?.length) {
@@ -1133,10 +1180,23 @@ export default function RoteiroMesa() {
       qSug = qSug.eq("estudio_slug", estudioSlugSelecionada);
     }
     const { data: dataSug } = await qSug;
-    setSugestoes((dataSug ?? []) as RoteiroSugestao[]);
+    let sugLista = (dataSug ?? []) as RoteiroSugestao[];
+    if (role === "operador" && estudioSlugsForcado?.length) {
+      sugLista = sugLista.filter((s) => {
+        const est = (s.estudio_slug ?? "").trim();
+        if (est) return estudioSlugsForcado.includes(est);
+        const op = (s.operadora_slug ?? "").trim();
+        return !!op && !!operadoraSlugsForcado?.includes(op);
+      });
+    }
+    setSugestoes(sugLista);
 
     let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
-    if (user?.role === "operador" && estudioSlugsForcado?.length && estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS) {
+    if (
+      role === "operador" &&
+      estudioSlugsForcado?.length &&
+      estudioSlugSelecionada === FILTRO_STAFF_ESTUDIO_TODOS
+    ) {
       const parts: string[] = [];
       for (const s of estudioSlugsForcado) parts.push(`estudio_slug.eq.${s}`);
       if (operadoraSlugsForcado?.length) {
@@ -1147,10 +1207,25 @@ export default function RoteiroMesa() {
       qCamp = qCamp.eq("estudio_slug", estudioSlugSelecionada);
     }
     const { data: dataCamp } = await qCamp;
-    setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
+    let campLista = (dataCamp ?? []) as RoteiroCampanha[];
+    if (role === "operador" && estudioSlugsForcado?.length) {
+      campLista = campLista.filter((c) => {
+        const est = (c.estudio_slug ?? "").trim();
+        if (est) return estudioSlugsForcado.includes(est);
+        const op = (c.operadora_slug ?? "").trim();
+        return !!op && !!operadoraSlugsForcado?.includes(op);
+      });
+    }
+    setCampanhas(campLista);
 
     setLoading(false);
-  }, [estudioSlugSelecionada, user?.role, estudioSlugsForcado, operadoraSlugsForcado, carregarEstudios]);
+  }, [
+    estudioSlugSelecionada,
+    role,
+    estudioSlugsForcado,
+    operadoraSlugsForcado,
+    estudiosReady,
+  ]);
 
   useEffect(() => { void carregarDados(); }, [carregarDados]);
 
@@ -1161,10 +1236,10 @@ export default function RoteiroMesa() {
   }, [carregarEstudios]);
 
   useEffect(() => {
-    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+    if (role === "operador" && estudioSlugsForcado?.length === 1) {
       setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, estudioSlugsForcado]);
+  }, [role, estudioSlugsForcado]);
 
   if (perm.canView === "nao") {
     return (
@@ -1196,7 +1271,7 @@ export default function RoteiroMesa() {
   return (
     <div className="app-page-shell">
 
-      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+      {isOperadorEscopo ? (
         <BannerPendencias
           operadoraSlugs={operadoraSlugsForcado}
           operadoras={operadorasList}
@@ -1273,7 +1348,7 @@ export default function RoteiroMesa() {
                 value={filtroEstudio}
                 onChange={setFiltroEstudio}
                 estudios={opcoesFiltroEstudio}
-                showTodosOption={!estudioSlugsForcado?.length}
+                showTodosOption={!estudioSlugsForcado || estudioSlugsForcado.length !== 1}
               />
             )}
           </div>

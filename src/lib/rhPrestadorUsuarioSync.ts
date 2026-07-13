@@ -44,7 +44,7 @@ export type PerfilRhOrganogramaSync = Extract<
   | "game_presenter"
   | "shuffler"
   | "tech_ops"
-  | "gestor"
+  | "gestor_academy"
   | "prestador"
 >;
 
@@ -72,9 +72,9 @@ export function resolvePerfilRhDeOrganograma(
     return { role: "customer_service", prestadorTipo: null, gestorTipo: null };
   }
   if (g === "facilities") return { role: "prestador", prestadorTipo: "facilities", gestorTipo: null };
-  if (g === "financeiro") return { role: "prestador", prestadorTipo: "financeiro", gestorTipo: null };
+  if (g === "financeiro") return { role: "prestador", prestadorTipo: "escritorio", gestorTipo: null };
   if (g === "ti") return { role: "prestador", prestadorTipo: "ti", gestorTipo: null };
-  if (g === "treinamento") return { role: "gestor", prestadorTipo: null, gestorTipo: "treinamento" };
+  if (g === "treinamento") return { role: "gestor_academy", prestadorTipo: null, gestorTipo: null };
 
   const t = normRhOrgRotuloOrganograma(timeNome);
   if (t === "tech ops") return { role: "tech_ops", prestadorTipo: null, gestorTipo: null };

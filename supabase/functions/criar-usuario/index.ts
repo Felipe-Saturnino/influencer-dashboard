@@ -16,14 +16,12 @@ interface CriarUsuarioRequest {
   scopeInfluencers: string[]
   scopeOperadoras: string[]
   scopePares: string[]
-  scopeGestorTipos?: string[]
   scopePrestadorTipos?: string[]
   loginUrl?: string  // URL da aplicação para o link no e-mail (ex: window.location.origin)
 }
 
 const ROLES_BLOQUEADOS = [
   'admin',
-  'gestor',
   'gestor_aquisicao',
   'gestor_marketing',
   'gestor_operacoes',
@@ -44,18 +42,9 @@ const ROLES_BLOQUEADOS = [
   'rh',
 ] // sem user_scopes genérico; staff Spin e gestores de departamento só role_permissions (aba Permissões)
 
-const GESTOR_TIPO_SLUGS = [
-  'operacoes',
-  'marketing',
-  'afiliados',
-  'geral',
-  'treinamento',
-] as const
-
 const PRESTADOR_TIPO_SLUGS = [
   'escritorio',
   'facilities',
-  'financeiro',
   'ti',
   'estudio',
 ] as const
@@ -268,7 +257,6 @@ serve(async (req) => {
     scopeInfluencers,
     scopeOperadoras,
     scopePares,
-    scopeGestorTipos,
     scopePrestadorTipos,
   } = body
   const emprestadoParaDb =
@@ -280,9 +268,6 @@ serve(async (req) => {
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
   let scopeOperadorasArr = toStrArr(scopeOperadoras)
   const scopeParesArr = toStrArr(scopePares)
-  const scopeGestorTiposArr = toStrArr(scopeGestorTipos).filter((s) =>
-    (GESTOR_TIPO_SLUGS as readonly string[]).includes(s)
-  )
   const scopePrestadorTiposArr = toStrArr(scopePrestadorTipos).filter((s) =>
     (PRESTADOR_TIPO_SLUGS as readonly string[]).includes(s)
   )
@@ -323,12 +308,6 @@ serve(async (req) => {
   }
   if (role === 'agencia' && scopeParesArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos um par influencer+operadora para a agência' }), {
-      status: 400,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-  if (role === 'gestor' && scopeGestorTiposArr.length === 0) {
-    return new Response(JSON.stringify({ error: 'Selecione pelo menos um tipo de gestor' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -388,24 +367,7 @@ serve(async (req) => {
     }
 
     // 3. Escopos (user_scopes)
-    if (role === 'gestor') {
-      const novasTipos = scopeGestorTiposArr.map((scope_ref) => ({
-        user_id: uid,
-        scope_type: 'gestor_tipo',
-        scope_ref,
-      }))
-      const novasLinhas = [...novasTipos]
-      const { error: scopeErr } = await supabase.from('user_scopes').insert(novasLinhas)
-      if (scopeErr) {
-        await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-        return new Response(
-          JSON.stringify({
-            error: `Erro ao salvar tipos de gestor: ${scopeErr.message}. Verifique a migration user_scopes (scope_type gestor_tipo).`,
-          }),
-          { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
-        )
-      }
-    } else if (role === 'prestador') {
+    if (role === 'prestador') {
       const novasAreas = scopePrestadorTiposArr.map((scope_ref) => ({
         user_id: uid,
         scope_type: 'prestador_tipo',

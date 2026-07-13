@@ -30,7 +30,6 @@ import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 export const ROLE_PERM_TAB_ICONS: Partial<Record<Role, ReactNode>> = {
   admin: <ShieldCheck {...FILTRO_BAR_TAB_ICON_PROPS} />,
   executivo: <Crown {...FILTRO_BAR_TAB_ICON_PROPS} />,
-  gestor: <UserCog {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_aquisicao: <HandCoins {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_marketing: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_operacoes: <Settings {...FILTRO_BAR_TAB_ICON_PROPS} />,

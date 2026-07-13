@@ -42,6 +42,7 @@ import HomeGamePresenter from "./HomeGamePresenter";
 import HomeShuffler from "./HomeShuffler";
 import HomeTechOps from "./HomeTechOps";
 import HomeShiftLeader from "./HomeShiftLeader";
+import HomeRh from "./HomeRh";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
@@ -49,7 +50,11 @@ import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
   usuarioSujeitoGateRevisaoCadastral,
+  REVISAO_CADASTRO_GATE_MODAL_CTA,
+  REVISAO_CADASTRO_HOME_MENSAGEM,
+  tituloAtualizacaoCadastralPendente,
 } from "../../../lib/rhCadastroRevisao";
+import { extrairPrimeiroNome } from "../../../lib/aniversarioHoje";
 
 const BRAND = {
   roxo: "#4a2082",
@@ -125,7 +130,6 @@ function PlatLogoHome({
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
-  gestor: "Gestor",
   gestor_aquisicao: "Gestor de Aquisição",
   gestor_marketing: "Gestor de Marketing",
   gestor_operacoes: "Gestor de Operações",
@@ -156,11 +160,6 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Painel completo",
     subtitle:
       "Você tem acesso total à plataforma. Gerencie operadoras, usuários e visualize todos os dashboards.",
-  },
-  gestor: {
-    title: "Visão geral",
-    subtitle:
-      "Acesse todos os dashboards e operações. Gerencie campanhas, influencers e acompanhe métricas.",
   },
   gestor_aquisicao: {
     title: "Gestão de Aquisição",
@@ -478,6 +477,10 @@ export default function Home() {
     return <HomeShiftLeader />;
   }
 
+  if (roleHome === "rh") {
+    return <HomeRh />;
+  }
+
   if (roleHome === "operador") {
     return <HomeOperadorRouter />;
   }
@@ -630,11 +633,10 @@ export default function Home() {
                 fontFamily: FONT_TITLE,
               }}
             >
-              AÇÃO NECESSÁRIA
+              {tituloAtualizacaoCadastralPendente(extrairPrimeiroNome(user.name?.trim() || "Colaborador"))}
             </div>
             <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos
-              ou confirme que nada mudou no período.
+              {REVISAO_CADASTRO_HOME_MENSAGEM}
             </p>
             <a
               {...propsFor("rh_dados_cadastro")}
@@ -652,7 +654,7 @@ export default function Home() {
                 textDecoration: "none",
               }}
             >
-              Ir para Dados de Cadastro
+              {REVISAO_CADASTRO_GATE_MODAL_CTA}
             </a>
           </div>
         </div>

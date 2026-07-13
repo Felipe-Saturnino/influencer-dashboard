@@ -2,10 +2,11 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasShiftLeader } from "./shiftLeader/BoasVindasShiftLeader";
-import { CelebracoesStaffHome } from "./shared/CelebracoesStaffHome";
+import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
+import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
+import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 import { AtalhosShiftLeader } from "./shiftLeader/AtalhosShiftLeader";
-import { SpinNaRedeHome } from "./shared/SpinNaRedeHome";
 
 const HOME_SHIFT_LEADER_PREFIX = "home-shift-leader";
 
@@ -29,10 +30,11 @@ export default function HomeShiftLeader() {
       }}
     >
       <BoasVindasShiftLeader nome={nome} />
-      <CelebracoesStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
+      <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
       <InformacoesStaffHome perfil="shift_leader" sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
+      <CentralAcademyStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
+      <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
       <AtalhosShiftLeader />
-      <SpinNaRedeHome sectionIdPrefix={HOME_SHIFT_LEADER_PREFIX} />
     </div>
   );
 }

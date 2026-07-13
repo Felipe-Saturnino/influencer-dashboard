@@ -4,38 +4,79 @@ import { validarOperadorEscopoInformativo } from "./informativosOperadorEscopo";
 
 export type InformativoStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
 
-/** Destinos que não permitem publicação direta — só «Enviar para aprovação». */
-export const PERFIS_INFORMATIVO_FLUXO_APROVACAO: readonly Role[] = [
-  "admin",
-  "executivo",
-  "operador",
-  "agencia",
-  "influencer",
-  "afiliado",
+/** Investidor / Operador → aprovação: Admin ou Executivo. */
+export const PERFIS_INFORMATIVO_APROVACAO_INVESTIDOR_OPERADOR: readonly Role[] = [
   "investidor",
-] as const;
-
-/** Se o informativo incluir algum destes perfis, só Administrador pode aprovar. */
-export const PERFIS_INFORMATIVO_APROVACAO_SOMENTE_ADMIN: readonly Role[] = [
-  "admin",
-  "executivo",
   "operador",
 ] as const;
 
-/** Se o informativo incluir algum destes (e nenhum de aprovação restrita a admin), Admin/Executivo/Gestor aprovam. */
-export const PERFIS_INFORMATIVO_APROVACAO_GESTAO: readonly Role[] = [
+/** Agência / Influenciador / Afiliado → aprovação: Admin, Executivo ou Gestor de Aquisição. */
+export const PERFIS_INFORMATIVO_APROVACAO_AQUISICAO: readonly Role[] = [
   "agencia",
   "influencer",
   "afiliado",
 ] as const;
 
+/** Gestores de departamento → aprovação: Admin, Executivo ou Gestor de RH. */
+export const PERFIS_INFORMATIVO_APROVACAO_GESTORES: readonly Role[] = [
+  "gestor_aquisicao",
+  "gestor_marketing",
+  "gestor_operacoes",
+  "gestor_academy",
+  "gestor_rh",
+] as const;
+
+/** União dos destinos que exigem «Enviar para aprovação» (sem Publicar direto). */
+export const PERFIS_INFORMATIVO_FLUXO_APROVACAO: readonly Role[] = [
+  ...PERFIS_INFORMATIVO_APROVACAO_INVESTIDOR_OPERADOR,
+  ...PERFIS_INFORMATIVO_APROVACAO_AQUISICAO,
+  ...PERFIS_INFORMATIVO_APROVACAO_GESTORES,
+] as const;
+
+const APROVADORES_INVESTIDOR_OPERADOR: readonly Role[] = ["admin", "executivo"];
+const APROVADORES_AQUISICAO: readonly Role[] = ["admin", "executivo", "gestor_aquisicao"];
+const APROVADORES_GESTORES: readonly Role[] = ["admin", "executivo", "gestor_rh"];
+
+function intersecaoRoles(a: readonly Role[], b: readonly Role[]): Role[] {
+  const setB = new Set(b);
+  return a.filter((r) => setB.has(r));
+}
+
+/** Papéis autorizados a aprovar, conforme os perfis alvo (interseção = regra mais restritiva). */
+export function aprovadoresPermitidosInformativo(perfisAlvo: string[]): Role[] {
+  if (!perfisAlvo.length) return [];
+
+  const temInvestidorOperador = perfisAlvo.some((p) =>
+    PERFIS_INFORMATIVO_APROVACAO_INVESTIDOR_OPERADOR.includes(p as Role),
+  );
+  const temAquisicao = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_AQUISICAO.includes(p as Role));
+  const temGestores = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_GESTORES.includes(p as Role));
+
+  if (!temInvestidorOperador && !temAquisicao && !temGestores) return [];
+
+  let permitidos: readonly Role[] | null = null;
+  if (temInvestidorOperador) {
+    permitidos = APROVADORES_INVESTIDOR_OPERADOR;
+  }
+  if (temAquisicao) {
+    permitidos = permitidos
+      ? intersecaoRoles(permitidos, APROVADORES_AQUISICAO)
+      : APROVADORES_AQUISICAO;
+  }
+  if (temGestores) {
+    permitidos = permitidos
+      ? intersecaoRoles(permitidos, APROVADORES_GESTORES)
+      : APROVADORES_GESTORES;
+  }
+  return permitidos ? [...permitidos] : [];
+}
 
 /** Pelo menos um perfil alvo exige fluxo de aprovação (sem botão Publicar). */
 export function perfisRequeremFluxoAprovacao(perfis: string[]): boolean {
   return perfis.some((p) => PERFIS_INFORMATIVO_FLUXO_APROVACAO.includes(p as Role));
 }
 
-/** Todos os perfis alvo permitem publicação direta (ex.: só Gestor, RH, Prestadores…). */
+/** Todos os perfis alvo permitem publicação direta (ex.: só RH, Prestadores, Estúdio…). */
 export function podePublicarDiretoInformativo(perfis: string[]): boolean {
   return perfis.length > 0 && !perfisRequeremFluxoAprovacao(perfis);
 }
@@ -47,19 +88,11 @@ export function podeAutoAprovarInformativo(role: Role | undefined | null): boole
 
 /**
  * Quem pode aprovar conforme os perfis alvo do informativo.
- * Regra mais restritiva prevalece (admin/executivo/operador → só admin).
+ * Mistura de grupos → interseção dos aprovadores (mais restritivo).
  */
 export function rolePodeAprovarInformativo(role: Role | undefined | null, perfisAlvo: string[]): boolean {
   if (!role) return false;
-  if (!perfisAlvo.length) return false;
-
-  const exigeAdmin = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_SOMENTE_ADMIN.includes(p as Role));
-  if (exigeAdmin) return role === "admin";
-
-  const exigeGestao = perfisAlvo.some((p) => PERFIS_INFORMATIVO_APROVACAO_GESTAO.includes(p as Role));
-  if (exigeGestao) return role === "admin" || role === "executivo" || role === "gestor";
-
-  return false;
+  return aprovadoresPermitidosInformativo(perfisAlvo).includes(role);
 }
 
 export function podeUsuarioAprovarInformativo(
