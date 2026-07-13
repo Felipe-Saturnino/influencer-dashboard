@@ -24,12 +24,16 @@ import {
 } from "../../../components/dashboard";
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { textoContemBusca } from "../../../lib/searchText";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
+import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 
 const COR = {
   vermelho: "#e84025",
@@ -112,6 +116,7 @@ export default function GestaoLinks() {
     | "visitas"
     | "registros";
   const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "primeiro", dir: "desc" });
+  const [buscaUtm, setBuscaUtm] = useState("");
 
   function fecharModalLimpo() {
     setModalAberto(false);
@@ -272,6 +277,7 @@ export default function GestaoLinks() {
     mapeados:  "Nenhum link mapeado ainda.",
     ignorados: "Nenhum link ignorado.",
   };
+  const MSG_VAZIO_BUSCA = "Nenhum link encontrado para a busca.";
 
   const statusInfluencerPorId = useMemo(() => {
     const m = new Map<string, string>();
@@ -289,7 +295,7 @@ export default function GestaoLinks() {
   );
 
   const aliasesOrdenados = useMemo(() => {
-    const arr = [...aliases];
+    const arr = aliases.filter((a) => textoContemBusca(a.utm_source, buscaUtm));
     const { col, dir } = sortLinks;
     const nomeOp = (a: UtmAlias) =>
       (operadorasList.find((o) => o.slug === a.operadora_slug)?.nome ?? a.operadora_slug ?? "").toLowerCase();
@@ -329,7 +335,14 @@ export default function GestaoLinks() {
       return compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, "desc");
     });
     return arr;
-  }, [aliases, sortLinks, statusDoLink, operadorasList, aba]);
+  }, [aliases, buscaUtm, sortLinks, statusDoLink, operadorasList, aba]);
+
+  const mensagemVazia =
+    aliases.length === 0
+      ? emptyMessages[aba]
+      : aliasesOrdenados.length === 0 && buscaUtm.trim()
+        ? MSG_VAZIO_BUSCA
+        : emptyMessages[aba];
 
   useEffect(() => {
     const defaults: Record<Aba, { col: LinkSortCol; dir: SortDir }> = {
@@ -499,6 +512,16 @@ export default function GestaoLinks() {
               />
             ) : null}
           </div>
+
+          <div style={{ ...getFilterBarRowStyle(), width: "100%", marginTop: 12 }}>
+            <BarraPesquisaPagina
+              value={buscaUtm}
+              onChange={setBuscaUtm}
+              placeholder={PAGE_SEARCH.utmSource}
+              aria-label="Buscar por UTM Source"
+              wrapperStyle={{ width: "100%", maxWidth: 480 }}
+            />
+          </div>
       </div>
 
       <div
@@ -646,7 +669,7 @@ export default function GestaoLinks() {
               {aliasesOrdenados.length === 0 ? (
                 <tr>
                   <td colSpan={colunasPorAba(aba)} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
-                    {emptyMessages[aba]}
+                    {mensagemVazia}
                   </td>
                 </tr>
               ) : aliasesOrdenados.map((alias, idx) => {

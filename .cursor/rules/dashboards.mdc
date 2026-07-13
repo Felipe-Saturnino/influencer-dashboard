@@ -174,6 +174,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
   Declarado em escopo de módulo. Aceito como componente local desta página.
 - **GGR em Mídias Sociais:** calculado como `deposit_total - withdrawal_total` nas campanhas —
   mesmo cálculo, canal diferente (UTMs mapeadas).
+- **Campanhas inativas:** RPCs `get_campanhas_performance` / funil — no **mês** do carrossel, inativa só aparece (e entra nos totais) se gerou métricas no período; com **Histórico**, inativas **sempre** entram na listagem (`p_modo_historico`). Funil e série temporal somam UTMs mapeadas a campanhas ativas **ou** inativas.
 - **`getMesesDisponiveis`:** importar de `lib/dashboardHelpers` com `MES_INICIO` local (Jan/2026) — não declarar cópia local da função.
 
 ---

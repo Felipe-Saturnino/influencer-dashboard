@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Check, Copy, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -8,34 +8,61 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 
-const SLUG_CASA_APOSTAS = "casa_apostas";
+type LinkGeracaoConfig = {
+  urlBase: string;
+  /** Nome do parâmetro na URL (utm_source | utm_campaign). */
+  paramLabel: string;
+};
 
-/** URL base de afiliado CDA para Geração de Links (Campanhas) — distinta de Links e Materiais. */
-export const CAMPANHA_LINK_BASE_CASA_APOSTAS =
-  "https://go.aff.casadeapostas.bet.br/290td2jz?utm_source=";
+/** Operadoras com geração de link habilitada — valor ainda grava em utm_aliases.utm_source. */
+const LINK_GERACAO_POR_OPERADORA: Record<string, LinkGeracaoConfig> = {
+  casa_apostas: {
+    urlBase: "https://go.aff.casadeapostas.bet.br/290td2jz?utm_source=",
+    paramLabel: "utm_source",
+  },
+  blaze: {
+    urlBase: "https://blaze.cxclick.com/visit/?bta=52546&brand=blaze&utm_campaign=",
+    paramLabel: "utm_campaign",
+  },
+};
 
 const MSG_ERRO_GERAR =
   "Não foi possível gerar o link. Se o problema persistir, entre em contato com o suporte.";
-const MSG_ERRO_DUPLICADO = "Já existe um link com esta UTM para a operadora selecionada.";
 const MSG_ERRO_OPERADORA = "Selecione a operadora.";
-const MSG_ERRO_UTM = "Informe o utm_source do link.";
+const MSG_ERRO_CAMPANHA = "Selecione a campanha.";
+const MSG_ERRO_UTM = "Informe o valor do parâmetro UTM do link.";
 const MSG_OPERADORA_EM_BREVE =
   "A geração de links para esta operadora estará disponível em breve.";
+const MSG_SEM_CAMPANHAS =
+  "Não há campanhas ativas para esta operadora. Cadastre uma campanha na aba Campanhas antes de gerar o link.";
 
-/**
- * utm_source: só letras sem acento (A–Z, a–z), números e _.
- * Espelha a regra de Links e Materiais.
- */
-export function sanitizarUtmCampanha(val: string): string {
+const ERRO_RPC: Record<string, string> = {
+  duplicado: "Já existe um link com esta UTM para a operadora selecionada.",
+  utm_influencer: "Esta UTM já está vinculada a um influencer.",
+  utm_outra_campanha: "Esta UTM já está vinculada a outra campanha.",
+  utm_outra_operadora: "Esta UTM já está vinculada a outra operadora.",
+  utm_indisponivel: "Esta UTM não está disponível.",
+  campanha_inativa: "A campanha selecionada não está ativa.",
+  campanha_operadora: "A campanha selecionada não pertence a esta operadora.",
+  campanha: "Selecione a campanha.",
+  operadora: MSG_OPERADORA_EM_BREVE,
+  utm: MSG_ERRO_UTM,
+  utm_invalido: "Use apenas letras, números e underscore (_) no parâmetro UTM.",
+  utm_longo: "O parâmetro UTM deve ter no máximo 200 caracteres.",
+  permissao: "Você não tem permissão para gerar links.",
+};
+
+function sanitizarUtmCampanha(val: string): string {
   let s = val.normalize("NFD").replace(/\p{M}/gu, "");
   s = s.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]+/g, "_");
   s = s.replace(/[^a-zA-Z0-9_]/g, "");
   return s;
 }
 
+type CampanhaOpcao = { id: string; nome: string; operadora_slug: string | null };
+
 interface ModalNovoLinkProps {
   operadoras: { slug: string; nome: string }[];
-  /** Pré-seleciona operadora quando o filtro da página não está em «Todas». */
   operadoraInicial?: string;
   onClose: () => void;
   onGerado: () => void | Promise<void>;
@@ -47,7 +74,7 @@ export function ModalNovoLink({
   onClose,
   onGerado,
 }: ModalNovoLinkProps) {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [operadoraSlug, setOperadoraSlug] = useState(() => {
     if (operadoraInicial && operadoras.some((o) => o.slug === operadoraInicial)) {
@@ -55,6 +82,9 @@ export function ModalNovoLink({
     }
     return "";
   });
+  const [campanhaId, setCampanhaId] = useState("");
+  const [campanhas, setCampanhas] = useState<CampanhaOpcao[]>([]);
+  const [loadingCampanhas, setLoadingCampanhas] = useState(false);
   const [utmInput, setUtmInput] = useState("");
   const [linkCompleto, setLinkCompleto] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
@@ -62,13 +92,50 @@ export function ModalNovoLink({
   const [copiado, setCopiado] = useState(false);
   const selectRef = useRef<HTMLSelectElement>(null);
 
-  const isCasaApostas = operadoraSlug === SLUG_CASA_APOSTAS;
+  const linkCfg = operadoraSlug ? LINK_GERACAO_POR_OPERADORA[operadoraSlug] : undefined;
+  const geracaoHabilitada = !!linkCfg;
   const gerado = linkCompleto != null;
+
+  const campanhasDaOperadora = useMemo(() => {
+    if (!operadoraSlug) return [];
+    return campanhas
+      .filter((c) => c.operadora_slug === operadoraSlug)
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [campanhas, operadoraSlug]);
 
   useEffect(() => {
     const id = window.setTimeout(() => selectRef.current?.focus(), 100);
     return () => window.clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    if (!geracaoHabilitada || !operadoraSlug) {
+      setCampanhas([]);
+      setCampanhaId("");
+      return;
+    }
+    let cancelled = false;
+    setLoadingCampanhas(true);
+    void supabase
+      .from("campanhas")
+      .select("id, nome, operadora_slug")
+      .eq("ativo", true)
+      .eq("operadora_slug", operadoraSlug)
+      .order("nome")
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[Campanhas] Erro ao carregar campanhas do modal:", error.message);
+          setCampanhas([]);
+        } else {
+          setCampanhas((data ?? []) as CampanhaOpcao[]);
+        }
+        setLoadingCampanhas(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [geracaoHabilitada, operadoraSlug]);
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -98,6 +165,14 @@ export function ModalNovoLink({
   const linkStripDivider = t.cardBorder;
   const linkStripInputBg = t.inputBg ?? t.cardBg;
 
+  const utmOk = sanitizarUtmCampanha(utmInput).trim().length > 0;
+  const podeGerar =
+    geracaoHabilitada &&
+    !!campanhaId &&
+    utmOk &&
+    !loadingCampanhas &&
+    campanhasDaOperadora.length > 0;
+
   const gerar = async () => {
     setErro("");
     setCopiado(false);
@@ -105,8 +180,12 @@ export function ModalNovoLink({
       setErro(MSG_ERRO_OPERADORA);
       return;
     }
-    if (!isCasaApostas) {
+    if (!linkCfg) {
       setErro(MSG_OPERADORA_EM_BREVE);
+      return;
+    }
+    if (!campanhaId) {
+      setErro(MSG_ERRO_CAMPANHA);
       return;
     }
     const raw = sanitizarUtmCampanha(utmInput).trim();
@@ -117,26 +196,28 @@ export function ModalNovoLink({
 
     setGerando(true);
     try {
-      const { data, error } = await supabase
-        .from("campanha_links")
-        .insert({
-          utm_source: raw,
-          operadora_slug: operadoraSlug,
-          created_by: user?.id ?? null,
-        })
-        .select("id, utm_source")
-        .single();
+      const { data, error } = await supabase.rpc("gerar_campanha_link", {
+        p_utm_source: raw,
+        p_campanha_id: campanhaId,
+        p_operadora_slug: operadoraSlug,
+      });
 
       if (error) {
-        if (error.code === "23505") {
-          setErro(MSG_ERRO_DUPLICADO);
-          return;
-        }
-        throw error;
+        console.error("[Campanhas] RPC gerar link:", error.message);
+        setErro(MSG_ERRO_GERAR);
+        return;
       }
 
-      const utmFinal = (data?.utm_source as string | undefined)?.trim() || raw;
-      setLinkCompleto(`${CAMPANHA_LINK_BASE_CASA_APOSTAS}${encodeURIComponent(utmFinal)}`);
+      const res = data as { ok?: boolean; error?: string; utm_source?: string } | null;
+      if (!res?.ok) {
+        const code = res?.error ?? "interno";
+        console.error("[Campanhas] gerar link:", code);
+        setErro(ERRO_RPC[code] ?? MSG_ERRO_GERAR);
+        return;
+      }
+
+      const utmFinal = (res.utm_source ?? raw).trim();
+      setLinkCompleto(`${linkCfg.urlBase}${encodeURIComponent(utmFinal)}`);
       await onGerado();
     } catch (e: unknown) {
       console.error("[Campanhas] Erro ao gerar link:", e);
@@ -157,6 +238,8 @@ export function ModalNovoLink({
       setErro("Não foi possível copiar o link. Se o problema persistir, entre em contato com o suporte.");
     }
   };
+
+  const paramLabel = linkCfg?.paramLabel ?? "utm_source";
 
   return (
     <ModalBase
@@ -184,6 +267,7 @@ export function ModalNovoLink({
               value={operadoraSlug}
               onChange={(e) => {
                 setOperadoraSlug(e.target.value);
+                setCampanhaId("");
                 setUtmInput("");
                 setErro("");
               }}
@@ -202,7 +286,7 @@ export function ModalNovoLink({
             </select>
           </div>
 
-          {operadoraSlug && !isCasaApostas ? (
+          {operadoraSlug && !geracaoHabilitada ? (
             <div
               role="status"
               style={{
@@ -220,83 +304,146 @@ export function ModalNovoLink({
             </div>
           ) : null}
 
-          {isCasaApostas ? (
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>
-                Link (URL base + utm_source)
-                <CampoObrigatorioMark />
-              </label>
-              <div
-                style={{
-                  borderRadius: 12,
-                  border: linkStripOuterBorder,
-                  background: linkStripBg,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "stretch", minHeight: 44, overflowX: "auto" }}>
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      padding: "10px 12px",
-                      fontFamily: "ui-monospace, monospace",
-                      fontSize: 12,
-                      color: t.text,
-                      whiteSpace: "nowrap",
-                      display: "flex",
-                      alignItems: "center",
-                      lineHeight: 1.4,
-                      background: linkStripBg,
-                    }}
-                  >
-                    {CAMPANHA_LINK_BASE_CASA_APOSTAS}
-                  </span>
+          {geracaoHabilitada && linkCfg ? (
+            <>
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>
+                  Campanha
+                  <CampoObrigatorioMark />
+                </label>
+                {loadingCampanhas ? (
                   <div
                     style={{
-                      width: 1,
-                      flexShrink: 0,
-                      background: linkStripDivider,
-                      alignSelf: "stretch",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: t.textMuted,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      padding: "10px 0",
                     }}
-                    aria-hidden
-                  />
-                  <input
-                    type="text"
-                    value={utmInput}
-                    onChange={(e) => setUtmInput(sanitizarUtmCampanha(e.target.value))}
-                    onKeyDown={(e) => {
-                      if (e.key === " ") e.preventDefault();
+                  >
+                    <Loader2
+                      size={14}
+                      className="app-lucide-spin"
+                      color="var(--brand-primary, #7c3aed)"
+                      aria-hidden
+                    />
+                    Carregando…
+                  </div>
+                ) : campanhasDaOperadora.length === 0 ? (
+                  <div
+                    role="status"
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg ?? t.cardBg,
+                      fontSize: 13,
+                      color: t.textMuted,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    {MSG_SEM_CAMPANHAS}
+                  </div>
+                ) : (
+                  <select
+                    value={campanhaId}
+                    onChange={(e) => {
+                      setCampanhaId(e.target.value);
+                      setErro("");
                     }}
                     disabled={gerando}
-                    placeholder="utm_source"
-                    autoComplete="off"
-                    aria-label="Valor do utm_source"
-                    style={{
-                      flex: "1 1 140px",
-                      minWidth: 100,
-                      boxSizing: "border-box",
-                      padding: "10px 12px",
-                      border: "none",
-                      background: linkStripInputBg,
-                      color: t.text,
-                      fontSize: 13,
-                      fontFamily: "ui-monospace, monospace",
-                      outline: "none",
-                    }}
-                  />
-                </div>
+                    aria-label="Campanha"
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    <option value="">Selecione…</option>
+                    {campanhasDaOperadora.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
-              <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                O trecho à direita é o utm_source — construa do zero. Não use espaços (use _) nem caracteres
-                especiais (~, ^, ç, etc.).
-              </p>
-            </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>
+                  {`Link (URL base + ${paramLabel})`}
+                  <CampoObrigatorioMark />
+                </label>
+                <div
+                  style={{
+                    borderRadius: 12,
+                    border: linkStripOuterBorder,
+                    background: linkStripBg,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "stretch", minHeight: 44, overflowX: "auto" }}>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        padding: "10px 12px",
+                        fontFamily: "ui-monospace, monospace",
+                        fontSize: 12,
+                        color: t.text,
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        lineHeight: 1.4,
+                        background: linkStripBg,
+                      }}
+                    >
+                      {linkCfg.urlBase}
+                    </span>
+                    <div
+                      style={{
+                        width: 1,
+                        flexShrink: 0,
+                        background: linkStripDivider,
+                        alignSelf: "stretch",
+                      }}
+                      aria-hidden
+                    />
+                    <input
+                      type="text"
+                      value={utmInput}
+                      onChange={(e) => setUtmInput(sanitizarUtmCampanha(e.target.value))}
+                      onKeyDown={(e) => {
+                        if (e.key === " ") e.preventDefault();
+                      }}
+                      disabled={gerando}
+                      placeholder={paramLabel}
+                      autoComplete="off"
+                      aria-label={`Valor do ${paramLabel}`}
+                      style={{
+                        flex: "1 1 140px",
+                        minWidth: 100,
+                        boxSizing: "border-box",
+                        padding: "10px 12px",
+                        border: "none",
+                        background: linkStripInputBg,
+                        color: t.text,
+                        fontSize: 13,
+                        fontFamily: "ui-monospace, monospace",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  O trecho à direita é o {paramLabel} — construa do zero. Não use espaços (use _) nem caracteres
+                  especiais (~, ^, ç, etc.). Ao gerar, o link é mapeado automaticamente à campanha selecionada.
+                </p>
+              </div>
+            </>
           ) : null}
         </>
       ) : (
         <div style={{ marginBottom: 18 }} aria-live="polite">
           <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-            Link gerado. Copie a URL completa para divulgação.
+            Link gerado e mapeado à campanha. Copie a URL completa para divulgação.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: 10 }}>
             <div
@@ -388,24 +535,18 @@ export function ModalNovoLink({
           <button
             type="button"
             onClick={() => void gerar()}
-            disabled={gerando || !operadoraSlug || (isCasaApostas ? !sanitizarUtmCampanha(utmInput).trim() : true)}
+            disabled={gerando || !podeGerar}
             style={{
               background: getCtaCriarGradient(brand),
               color: "#fff",
               border: "none",
               borderRadius: 10,
               padding: "9px 20px",
-              cursor:
-                gerando || !operadoraSlug || (isCasaApostas ? !sanitizarUtmCampanha(utmInput).trim() : true)
-                  ? "not-allowed"
-                  : "pointer",
+              cursor: gerando || !podeGerar ? "not-allowed" : "pointer",
               fontFamily: FONT.body,
               fontSize: 13,
               fontWeight: 700,
-              opacity:
-                gerando || !operadoraSlug || (isCasaApostas ? !sanitizarUtmCampanha(utmInput).trim() : true)
-                  ? 0.7
-                  : 1,
+              opacity: gerando || !podeGerar ? 0.7 : 1,
               display: "inline-flex",
               alignItems: "center",
               gap: 8,

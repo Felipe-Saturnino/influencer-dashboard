@@ -20,6 +20,7 @@ type CampanhaLinkRow = {
   id: string;
   utm_source: string;
   operadora_slug: string;
+  campanha_id: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -32,7 +33,7 @@ export async function carregarCampanhaLinks(
 ): Promise<CampanhaLink[]> {
   let query = supabase
     .from("campanha_links")
-    .select("id, utm_source, operadora_slug, created_by, created_at")
+    .select("id, utm_source, operadora_slug, campanha_id, created_by, created_at")
     .order("created_at", { ascending: false })
     .limit(2000);
 
@@ -117,6 +118,7 @@ export async function carregarCampanhaLinks(
       id: r.id,
       utm_source: r.utm_source,
       operadora_slug: r.operadora_slug,
+      campanha_id: r.campanha_id,
       created_by: r.created_by,
       created_at: r.created_at,
       usuario_nome: r.created_by ? (nomeMap.get(r.created_by) ?? "—") : "—",

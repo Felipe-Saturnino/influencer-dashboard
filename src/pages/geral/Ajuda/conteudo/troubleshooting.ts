@@ -89,7 +89,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparecem dados no Overview mesmo com o mês selecionado?",
         texto:
-          "O Overview exibe dados de campanhas com UTMs mapeadas. Se nenhuma campanha tiver UTMs vinculadas no período, as tabelas ficam vazias e os KPIs mostram zero. Verifique se as campanhas estão ativas e com UTMs cadastradas em Marketing → Gestão de Links. O dashboard de Mídias Sociais só exibe dados de tráfego originado por links rastreados.",
+          "O Overview exibe dados de campanhas com UTMs mapeadas. Se nenhuma campanha tiver UTMs vinculadas no período, as tabelas ficam vazias e os KPIs mostram zero. Verifique se há UTMs mapeadas em Marketing → Gestão de Links e se houve tráfego no mês. Campanhas inativas ainda entram nos totais e nas tabelas quando geraram métricas no período (ou sempre, com Histórico ativo).",
       },
       {
         subtitulo: "Os KPIs de alcance na aba Alcance estão zerados ou com '—'?",
@@ -104,7 +104,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Comparativo de campanha não mostra todas as campanhas?",
         texto:
-          "Apenas campanhas com pelo menos uma UTM mapeada e tráfego registrado no período aparecem na tabela. Campanhas criadas mas sem UTMs vinculadas ou sem acessos no período não aparecem. Para verificar as UTMs cadastradas, acesse Marketing → Gestão de Links.",
+          "Campanhas **ativas** aparecem mesmo sem tráfego no período. Campanhas **inativas** só aparecem no mês do carrossel se geraram métricas (visitas, registros, FTDs ou volume financeiro) naquele período; com o botão **Histórico** ativo, as inativas aparecem sempre. Sem UTM mapeada, a campanha pode listar zeros. Para verificar UTMs, use Marketing → Gestão de Links.",
+      },
+      {
+        subtitulo: "Uma campanha inativa sumiu do dashboard?",
+        texto:
+          "No mês específico do carrossel, campanha inativa sem métricas naquele período não aparece. Ative **Histórico** para ver todas as campanhas (ativas e inativas), ou navegue até um mês em que ela tenha gerado resultados.",
       },
       {
         subtitulo: "O GGR do Overview de Mídias Sociais é diferente do GGR do Streamers?",
@@ -937,9 +942,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A lista só exibe links gerados nesta aba (botão **Novo Link**). Não é a mesma fila da Gestão de Links (UTMs detectados automaticamente). Confira também o filtro de operadora. Se a tabela permanecer vazia após gerar um link e o problema persistir, entre em contato com o suporte.",
       },
       {
-        subtitulo: "Não consigo gerar link para outra operadora além da Casa de Apostas?",
+        subtitulo: "Não consigo gerar link para outra operadora além da Casa de Apostas e Blaze?",
         texto:
-          "Por enquanto a URL base de afiliado está disponível apenas para **Casa de Apostas**. As demais operadoras serão liberadas em atualizações futuras — o modal informa quando a geração ainda não está disponível.",
+          "Por enquanto a geração de links está disponível para **Casa de Apostas** e **Blaze**. As demais operadoras serão liberadas em atualizações futuras — o modal informa quando a geração ainda não está disponível.",
       },
       {
         subtitulo: "O que significa Status Ativo ou Inativo nos links gerados?",

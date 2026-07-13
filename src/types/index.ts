@@ -164,6 +164,7 @@ export interface CampanhaLink {
   id: string;
   utm_source: string;
   operadora_slug: string;
+  campanha_id?: string | null;
   created_by: string | null;
   created_at: string;
   /** Nome do usuário que criou (join em profiles). */

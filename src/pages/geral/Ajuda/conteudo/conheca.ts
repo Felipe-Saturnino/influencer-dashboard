@@ -92,7 +92,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
         texto:
-          "Apresenta três blocos (KPIs e comparativos com subtítulo \"acumulado\" no modo Histórico):\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior quando não está em Histórico.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.",
+          "Apresenta três blocos (KPIs e comparativos com subtítulo \"acumulado\" no modo Histórico):\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior quando não está em Histórico.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.\n\nCampanhas **inativas** no cadastro: no mês selecionado no carrossel, só aparecem se geraram métricas naquele período; com **Histórico** ativo, aparecem sempre. Os totais do funil incluem UTMs mapeadas a campanhas ativas e inativas.",
       },
       {
         subtitulo: "Aba Conversão — Funis de Campanha",
@@ -1102,7 +1102,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Geração de Links",
         texto:
-          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora e, para **Casa de Apostas**, informe o utm_source na URL base fixa. Ao gerar, a URL completa aparece com botão **Copiar** e o link entra na tabela.",
+          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora (**Casa de Apostas** ou **Blaze**), a **campanha ativa** da mesma operadora e o parâmetro UTM na URL base fixa (utm_source na CDA; utm_campaign na Blaze). Ao gerar, o link é mapeado automaticamente à campanha (como na Gestão de Links), a URL completa aparece com **Copiar** e o registro entra na tabela.",
       },
     ],
   },
@@ -1295,6 +1295,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Filtro de Operadora",
         texto:
           "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione **Todas Operadoras** no filtro para ver tudo junto.",
+      },
+      {
+        subtitulo: "Busca por UTM Source",
+        texto:
+          "Abaixo das abas, use a barra de pesquisa para filtrar a lista pelo **UTM Source**. A busca ignora maiúsculas/minúsculas e acentos. O filtro vale para a aba ativa (Pendentes, Mapeados ou Ignorados).",
       },
       {
         subtitulo: "Tabela de Links",

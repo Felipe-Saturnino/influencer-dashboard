@@ -58,7 +58,7 @@ Perfis: Gestor (operação interna).
 
 - **KPIs:** **TOTAL** (links na tabela), **ATIVOS** (métricas/resultados nos últimos 30 dias em `utm_metricas_diarias`), **INATIVOS** (resto) — mesma grelha KPI da aba Campanhas.
 - **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**.
-- **Modal Novo Link:** Operadora obrigatória (só ativas). **Casa de Apostas** (`casa_apostas`): strip URL base travada `https://go.aff.casadeapostas.bet.br/290td2jz?utm_source=` + input `utm_source` (sanitização igual Links e Materiais; UTM construída do zero). Demais operadoras: aviso «em breve»; **Gerar Link** desabilitado. Após gerar: URL completa + **Copiar**; persiste em `campanha_links` e atualiza a tabela. Duplicata `(utm_source, operadora_slug)` → mensagem amigável.
+- **Modal Novo Link:** Operadora obrigatória (só ativas). Operadoras com geração: **Casa de Apostas** (`utm_source`, base `go.aff.casadeapostas…`) e **Blaze** (`utm_campaign`, base `blaze.cxclick.com/visit/?bta=52546&brand=blaze&utm_campaign=`). Select obrigatório **Campanha** (ativas da mesma operadora). Demais operadoras: aviso «em breve». **Gerar Link** chama RPC `gerar_campanha_link` — grava `campanha_links` + mapeia `utm_aliases` (`status = mapeado`, `campanha_id`). Valor editável sanitizado e persistido em `utm_source` (identificador interno).
 - Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts`).
 - Vazio: `Nenhum link cadastrado.`
 - **Handoff:** bases de URL das demais operadoras; sync opcional com `utm_aliases` na emissão.
@@ -69,6 +69,7 @@ Perfis: Gestor (operação interna).
 
 - Filtro operadora: **`FiltroOperadoraSelect`** (`pill`) **dentro** do strip `primaryTransparent*` — nunca solto entre header e abas; agregadora **Todas Operadoras**.
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
+- **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
 - Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
 - `SortTableTh` + default em coluna de data quando existir (Global).
@@ -104,6 +105,7 @@ Perfis: Gestor (operação interna).
 | Links pendentes vazio | `Nenhum link pendente. Tudo mapeado!` |
 | Mapeados vazio | `Nenhum link mapeado ainda.` |
 | Ignorados vazio | `Nenhum link ignorado.` |
+| Busca UTM sem resultado (Gestão de Links) | `Nenhum link encontrado para a busca.` |
 | Galeria sem fotos (filtros) | `Nenhuma foto encontrada para os filtros selecionados.` |
 | Minhas Fotos sem vínculo de login | `Nenhum colaborador vinculado ao seu login.` |
 | Sem permissão | String Global |
